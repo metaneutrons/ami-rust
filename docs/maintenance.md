@@ -3,9 +3,11 @@
 Fabian Schmieder owns ami-rust SDK maintenance, dependency/security intake and
 the qualification decision for compiler, Cargo, LLVM, collector and AROS SDK
 upgrades. No duration of support or response-time commitment has been made.
-Until a repository and its private security channel are designated, report
-findings directly to the maintainer through the established project contact;
-there is no published security mailbox or public issue tracker to assume.
+The public source repository is https://github.com/metaneutrons/ami-rust.
+Use its issue tracker for ordinary defects and GitHub private vulnerability
+reporting under Security for confidential reports. No separate public security
+mailbox or guaranteed response time is implied. Public source availability
+does not authorise SDK release assets.
 
 The supported target remains the measured PC x86-64 ABI-v1 QEMU profile in the
 immutable M0/R3 inputs. Host support is the exact macOS Apple Silicon and Linux
