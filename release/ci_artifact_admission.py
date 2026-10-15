@@ -1,0 +1,71 @@
+"""Bound aggregate public CI metadata retention before a protected build."""
+import json
+import os
+from pathlib import Path
+import urllib.request
+
+REPOSITORY = 'metaneutrons/ami-rust'
+
+
+def admit(pages, ceiling, pending_bytes):
+    if type(ceiling) is not int or type(pending_bytes) is not int or not 0 < pending_bytes <= ceiling:
+        raise ValueError('invalid artifact admission policy')
+    ids = set()
+    total = 0
+    expected = None
+    for page in pages:
+        if not isinstance(page, dict) or type(page.get('total_count')) is not int:
+            raise ValueError('invalid artifact API response')
+        if expected is None:
+            expected = page['total_count']
+        if expected != page['total_count']:
+            raise ValueError('artifact set changed during admission; retry a fresh preflight')
+        rows = page.get('artifacts')
+        if not isinstance(rows, list):
+            raise ValueError('artifact list missing')
+        for row in rows:
+            if (not isinstance(row, dict) or type(row.get('id')) is not int
+                    or row['id'] <= 0 or row['id'] in ids
+                    or type(row.get('size_in_bytes')) is not int or row['size_in_bytes'] < 0):
+                raise ValueError('invalid or duplicate retained artifact')
+            ids.add(row['id'])
+            total += row['size_in_bytes']
+        if total + pending_bytes > ceiling:
+            raise ValueError('retained CI artifact quota would be exceeded')
+    if expected is None or len(ids) != expected:
+        raise ValueError('incomplete artifact inventory')
+    return {'schema': 'ami-rust-CI-artifact-admission-v1',
+            'existing_artifact_count': len(ids), 'existing_artifact_bytes': total,
+            'pending_workflow_metadata_ceiling_bytes': pending_bytes,
+            'global_artifact_pool_bytes': ceiling, 'SDK_payload_upload_allowed': False}
+
+
+def main():
+    policy = json.loads((Path(__file__).parent/'ci-resources.json').read_text())
+    ceiling = policy['retention']['CI_artifact_pool_bytes']
+    pending = 2*32*1024**2
+    token = os.environ.get('GH_TOKEN')
+    if not token or os.environ.get('GITHUB_REPOSITORY') != REPOSITORY:
+        raise ValueError('repository-scoped Actions read token required')
+    pages = []
+    for number in range(1, 21):
+        url = f'https://api.github.com/repos/{REPOSITORY}/actions/artifacts?per_page=100&page={number}'
+        request = urllib.request.Request(url, headers={
+            'Authorization': 'Bearer '+token, 'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'ami-rust-artifact-admission'})
+        with urllib.request.urlopen(request, timeout=30) as response:
+            raw = response.read(2*1024**2+1)
+            if len(raw) > 2*1024**2:
+                raise ValueError('artifact metadata response exceeds bound')
+        page = json.loads(raw)
+        pages.append(page)
+        if not isinstance(page.get('artifacts'), list):
+            raise ValueError('artifact API did not return the required inventory')
+        if len(page['artifacts']) < 100:
+            break
+    report = admit(pages, ceiling, pending)
+    print(json.dumps(report, sort_keys=True))
+
+
+if __name__ == '__main__':
+    main()

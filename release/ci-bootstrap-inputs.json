@@ -1,0 +1,123 @@
+{
+  "custom_cargo": {
+    "cargo_lock": {
+      "bytes": 136479,
+      "git_packages": 0,
+      "packages": 550,
+      "path": "Cargo.lock",
+      "registry_packages": 523,
+      "sha256": "b4ccfa53ccf8d7360c0359c1533d801759629f9cdd486d9a0a88e512717058d9",
+      "verification": "all 523 locked registry checksums matched retained vendor checksum records",
+      "workspace_path_packages": 27
+    },
+    "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+    "patch_path": "host/cargo-repro/cargo-metadata.patch",
+    "patch_sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f",
+    "patch_targets": [
+      {
+        "patched_sha256": "b572e74e742cca08765540aa9f611b1877defc08d146cff52fcd9b0c039106db",
+        "path": "src/compiler/build_runner/compilation_files.rs",
+        "upstream_sha256": "275e1ff7e6512bbbb3b30a7f0ceb9c7d455745e6aafce0484cb73d8fe31e0e67"
+      },
+      {
+        "patched_sha256": "0db8ba62877729fdee23ee8ae26f11a7b79fdd8bf086845a53c5f097eb1eacc3",
+        "path": "src/workspace/features.rs",
+        "upstream_sha256": "2747b5598654963df7d9270b07fc7dbd80a700cf219b26db71b0d2291ea74638"
+      }
+    ],
+    "upstream": "https://github.com/rust-lang/cargo.git",
+    "vendor_reconstruction": "Use pinned Cargo 1.98.1 `cargo vendor --locked --versioned-dirs` into a fresh vendor path; crates.io registry checksums in Cargo.lock pin all 523 external packages. No local vendor archive needed."
+  },
+  "openssl_overlay": {
+    "checksum_record": "openssl-src-300.6.1+3.6.3/.cargo-checksum.json",
+    "exact_changed_paths": [
+      "openssl-src-300.6.1+3.6.3/src/lib.rs",
+      "openssl-src-300.6.1+3.6.3/.cargo-checksum.json"
+    ],
+    "expected_patched_sha256": "827fd5be4e8db4d489796e3c4b85c383c423181b590ffc7fb8604eb17778952d",
+    "helper": "host/cargo-repro/prepare-overlay.py; validates input and emits inventory receipt; Cargo.lock is unchanged.",
+    "lock_checksum": "46eb8fb9fb3b61ce1c0f8a026c4c1a0714d3a9e138e7fbde78753ce2babc3846",
+    "original_sha256": "53ed472f6696aabb72f79713f2313d3173bd0b4c94986de7c5138844ac140a34",
+    "package": "openssl-src 300.6.1+3.6.3",
+    "patch": "host/cargo-repro/openssl-paths.patch",
+    "patch_sha256": "67f92b277d2cb9508ca3d6d041ebf9feb0ddbf05e97a9419960f313344cd6de8",
+    "patched_sha256": "992641416caf72adc67e9196ee4e452f5ba284e8586050c9d2ed8bb1d287c1a5",
+    "recipe": "host/cargo-repro/openssl-overlay.json",
+    "recipe_sha256": "15fbc9da969b32968884c24bf47f2d8b61b8f7d46ac73947faade43569569077",
+    "source_sha256": "c0f7ee0384ee12835abc6197122dc60ac75e33a3906dfe90bc378e62df56839d",
+    "vendor_source": "openssl-src-300.6.1+3.6.3/src/lib.rs"
+  },
+  "producer_helpers": {
+    "host_supervisor_path": "host/build.py",
+    "host_supervisor_sha256": "bc6df2632d19cb10306356ac2a3349355d5d6030c665d43beecb59cd61d2e3dc",
+    "overlay_helper_sha256": "cb2834a2c22d5b70555759c685425a4e42f5df12e2ad8ff48b63afc5836795d3",
+    "policy_extension": "Explicit hosted resource contract and fail-closed process-group cleanup; Cargo source, compiler, patch, build flags and target/runtime sources unchanged.",
+    "producer_path": "host/cargo-repro/produce.py",
+    "producer_sha256": "5379771762b9f45c261df8c1acd3dc1ee0cf85fae9cb86b36d409bf56da1b8cc"
+  },
+  "python": {
+    "linux-x86_64": {
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+    },
+    "macos-aarch64": {
+      "sha256": "1955899cb535256cfa477d926d016819e52e747984722c44f76e39a4950fee0e"
+    }
+  },
+  "rust": {
+    "cargo_commit": "797e8a9bca276c1c9f9f738d2a20f484fa4eea9d",
+    "commit": "48a229ceaefd4985c50990b14116b6d856af0985",
+    "components": {
+      "aarch64-apple-darwin": {
+        "cargo": {
+          "head": 200,
+          "http_content_length": 8898152,
+          "sha256": "de51d4fade4f31ad8ec405261cc96bedc000d905f98980027610d6e288dbe21b",
+          "url": "https://static.rust-lang.org/dist/2026-09-03/cargo-1.98.1-aarch64-apple-darwin.tar.xz"
+        },
+        "rust-std": {
+          "head": 200,
+          "http_content_length": 29763340,
+          "sha256": "2de831ef563ce772519a4d18ba2659f0f7428d497ef66dad24b5a35e8f8cd177",
+          "url": "https://static.rust-lang.org/dist/2026-09-03/rust-std-1.98.1-aarch64-apple-darwin.tar.xz"
+        },
+        "rustc": {
+          "head": 200,
+          "http_content_length": 48951152,
+          "sha256": "738e3f60114b20550fcf4f8a57c9cea0544239f214709f45594ff3fde327f577",
+          "url": "https://static.rust-lang.org/dist/2026-09-03/rustc-1.98.1-aarch64-apple-darwin.tar.xz"
+        },
+        "total_archive_bytes": 87612644
+      },
+      "x86_64-unknown-linux-gnu": {
+        "cargo": {
+          "head": 200,
+          "http_content_length": 11662108,
+          "sha256": "ea1de9f9e23107d97ee2b41a72c552f34064a593da503789218387aee59f3ba4",
+          "url": "https://static.rust-lang.org/dist/2026-09-03/cargo-1.98.1-x86_64-unknown-linux-gnu.tar.xz"
+        },
+        "rust-std": {
+          "head": 200,
+          "http_content_length": 30715684,
+          "sha256": "fa3ff450172a16c026944030230c5069947af93c728d9179971d44e5e0cfb561",
+          "url": "https://static.rust-lang.org/dist/2026-09-03/rust-std-1.98.1-x86_64-unknown-linux-gnu.tar.xz"
+        },
+        "rustc": {
+          "head": 200,
+          "http_content_length": 79727616,
+          "sha256": "e974f036b28565f37c0f3bd92ddefa809bee16c04f9dcf07b9ed96e05aaaf7c4",
+          "url": "https://static.rust-lang.org/dist/2026-09-03/rustc-1.98.1-x86_64-unknown-linux-gnu.tar.xz"
+        },
+        "total_archive_bytes": 122105408
+      }
+    },
+    "manifest": {
+      "bytes": 898637,
+      "sha256": "a7c8774a5fd8441c997d94c029776cbc5eb111e9d72ab5d256fa69866644347e",
+      "sidecar": "https://static.rust-lang.org/dist/channel-rust-1.98.1.toml.sha256",
+      "url": "https://static.rust-lang.org/dist/channel-rust-1.98.1.toml",
+      "verification": "Complete manifest read under 1 MiB; SHA-256 matches official sidecar. Official version entry is 1.98.1 (48a229cea, 2026-09-01); GitHub rust-lang/rust resolves the full commit SHA."
+    },
+    "release": "1.98.1"
+  },
+  "schema": "ami-rust-ci-cargo-inputs-v1"
+}
