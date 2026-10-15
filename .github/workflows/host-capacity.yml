@@ -1,0 +1,75 @@
+name: Hosted capacity survey
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    name: Measure ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-26
+            arch: arm64
+          - os: ubuntu-24.04
+            arch: x86_64
+    steps:
+      - name: Measure the supplied host without installing SDK inputs
+        shell: bash
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+          SELECTED_RUNNER: ${{ matrix.os }}
+        run: |
+          python3 -I -B - <<'PY'
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import platform
+          import shutil
+          import subprocess
+          import sys
+
+          arch = platform.machine()
+          if arch != os.environ["EXPECTED_ARCH"]:
+              raise SystemExit("Unexpected runner architecture: " + arch)
+          if sys.platform == "darwin":
+              ram = int(subprocess.check_output(
+                  ["/usr/sbin/sysctl", "-n", "hw.memsize"], text=True))
+          else:
+              ram = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE")
+          roots = {}
+          for name in ("GITHUB_WORKSPACE", "RUNNER_TEMP"):
+              path = pathlib.Path(os.environ[name])
+              usage = shutil.disk_usage(path)
+              roots[name] = {"path": str(path), "total_bytes": usage.total,
+                             "free_bytes": usage.free}
+          python = pathlib.Path(sys.executable).resolve()
+          record = {
+              "schema": "ami-rust-host-capacity-v1",
+              "runner": os.environ["SELECTED_RUNNER"],
+              "runner_environment": os.environ.get("RUNNER_ENVIRONMENT"),
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "source_commit": os.environ["GITHUB_SHA"],
+              "image_version": os.environ.get("ImageVersion"),
+              "os": platform.platform(), "arch": arch,
+              "physical_ram_bytes": ram, "cpu_count": os.cpu_count(),
+              "filesystems": roots,
+              "python": {"path": str(python), "version": sys.version,
+                         "sha256": hashlib.sha256(python.read_bytes()).hexdigest()},
+              "existing_preflight": {
+                  "ram_minimum_bytes": 16 * 1024**3,
+                  "disk_free_minimum_bytes": 24 * 1024**3,
+                  "ram_pass": ram >= 16 * 1024**3,
+                  "workspace_disk_pass": roots["GITHUB_WORKSPACE"]["free_bytes"] >= 24 * 1024**3},
+              "SDK_build_performed": False,
+              "qualification_pass_claimed": False}
+          print("AMI_RUST_HOST_CAPACITY=" + json.dumps(record, sort_keys=True))
+          PY
