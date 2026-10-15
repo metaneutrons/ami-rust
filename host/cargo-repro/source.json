@@ -1,0 +1,20 @@
+{
+  "upstream": "https://github.com/rust-lang/cargo",
+  "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+  "path": "src/compiler/build_runner/compilation_files.rs",
+  "original_sha256": "275e1ff7e6512bbbb3b30a7f0ceb9c7d455745e6aafce0484cb73d8fe31e0e67",
+  "patched_sha256": "b572e74e742cca08765540aa9f611b1877defc08d146cff52fcd9b0c039106db",
+  "patch_sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f",
+  "purpose": "development-only opt-in cross-host metadata repair; no release qualification yet",
+  "scope": "Dedicated SDK backend and fresh private caches; host/compiler reporting and upstream default behavior retained",
+  "rustc_or_rust_src_changes": false,
+  "additional_files": [
+    {
+      "path": "src/workspace/features.rs",
+      "original_sha256": "2747b5598654963df7d9270b07fc7dbd80a700cf219b26db71b0d2291ea74638",
+      "patched_sha256": "0db8ba62877729fdee23ee8ae26f11a7b79fdd8bf086845a53c5f097eb1eacc3"
+    }
+  ],
+  "opt_in": "-Zami-rust-reproducible-cross or [unstable] ami-rust-reproducible-cross=true",
+  "environment_marker_required": false
+}

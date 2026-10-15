@@ -1,0 +1,8 @@
+[package]
+name = "amiga-alloc"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+[dependencies]
+aros-alloc = { path = "../../../crates/aros-alloc" }

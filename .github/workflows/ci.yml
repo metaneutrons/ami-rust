@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  installer-fixtures:
+    name: Installer fixtures (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run isolated installer fixture tests
+        run: |
+          python3 --version
+          test -x /usr/bin/ssh-keygen
+          python3 -I -B release/test_install.py
+
+  ci-success:
+    name: CI Success
+    if: always()
+    needs: [installer-fixtures]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every fixture matrix job to pass
+        env:
+          MATRIX_RESULT: ${{ needs.installer-fixtures.result }}
+        run: test "$MATRIX_RESULT" = success

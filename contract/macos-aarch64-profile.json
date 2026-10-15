@@ -1,0 +1,32 @@
+{
+  "rust_host": "aarch64-apple-darwin",
+  "collector_binary": "bin/aros-collect",
+  "cargo_binary": "bin/cargo",
+  "cargo_metadata_mode": "ami-rust-reproducible-cross-v1",
+  "components": {
+    "rust": {
+      "manifest": "host/profiles/macos-aarch64/rust.json",
+      "sha256": "991372a7d82568f465c351349643ffb8c21f8e78d9c158e8f70e4a9ae3d5c8da"
+    },
+    "cargo": {
+      "manifest": "host/profiles/macos-aarch64/cargo.json",
+      "sha256": "25b16c8d105b2c729f6806d63c51e6c1b3492c88affaa07f0a1c03c147caf303"
+    },
+    "toolchain": {
+      "manifest": "host/profiles/macos-aarch64/toolchain.json",
+      "sha256": "28237af9576e852451fcdf0470a904edb34a70232feb41d0c56be246313baadf"
+    },
+    "collector": {
+      "manifest": "host/profiles/macos-aarch64/collector.json",
+      "sha256": "34e7e069a72ac84d980f15c797b4250f324eee19088f55d135c9e4eafa0d88de"
+    },
+    "csdk": {
+      "manifest": "host/profiles/macos-aarch64/csdk.json",
+      "sha256": "79ac09e3b2237ea432bdc2a0e3b1cb0d91d36a37b6e53ce0d5c710a1cbd7b71e"
+    },
+    "vendor": {
+      "manifest": "host/profiles/macos-aarch64/vendor.json",
+      "sha256": "f5fcdd2d3daaae4d2f40d69269c49533fc40adc807c555f2213238b2c3557ad6"
+    }
+  }
+}

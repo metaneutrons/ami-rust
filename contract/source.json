@@ -1,0 +1,15 @@
+{
+  "packaging": {
+    "base_archive_sha256": "f498680b1d928d830136f85da397edba0f6ea7050357762638d24218b367df90",
+    "base_sdk_manifest_sha256": "c662dbf1b7a7bdea9325e1e56312bc8027da568d76bc1459d2967dff62fb622a",
+    "license_metadata": "owner selected MIT OR Apache-2.0 for first-party code; third-party terms retained",
+    "omitted_development_test": {
+      "bytes": 16625,
+      "path": "host/cargo-repro/tests/test_hash_rustc_version_probe.py",
+      "sha256": "bd41608f0d87a4f87b2fce1bae1699ad4ac80130290472d21ba8d5e041ab673b"
+    },
+    "runtime_and_compiler_sources": "unchanged from R3; candidate consumer outputs must be compared"
+  },
+  "scope": "SDK/host/test sources exported from exact committed candidate; generated component inventories separately frozen",
+  "source_commit": "82edf967fe4a84cde43680108873a44ce8c71b4f"
+}

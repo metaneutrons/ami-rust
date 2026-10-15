@@ -1,0 +1,15 @@
+[package]
+name = "ami-rust-minimal"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+[lib]
+crate-type = ["staticlib"]
+[features]
+default = []
+alloc = ["aros-runtime/alloc"]
+[dependencies]
+aros-runtime = { path = "../../crates/aros-runtime" }
+aros-sys = { path = "../../crates/aros-sys" }
+aros-sdk = { path = "../../crates/aros-sdk" }

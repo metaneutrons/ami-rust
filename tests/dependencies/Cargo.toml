@@ -1,0 +1,14 @@
+[package]
+name = "ami-rust-dependencies"
+version.workspace = true
+edition.workspace = true
+publish = false
+license.workspace = true
+[lib]
+crate-type = ["staticlib"]
+[dependencies]
+aros-runtime = { path = "../../crates/aros-runtime", features = ["alloc"] }
+aros-sys = { path = "../../crates/aros-sys" }
+serde = { version = "=1.0.228", default-features = false, features = ["alloc", "derive"] }
+serde_json = { version = "=1.0.145", default-features = false, features = ["alloc"] }
+ed25519-dalek = { version = "=2.2.0", default-features = false, features = ["alloc"] }

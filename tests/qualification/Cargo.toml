@@ -1,0 +1,15 @@
+[package]
+name = "ami-rust-qualification"
+version.workspace = true
+edition.workspace = true
+publish = false
+license.workspace = true
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+aros-runtime = { path = "../../crates/aros-runtime", features = ["alloc"] }
+aros-sdk = { path = "../../crates/aros-sdk" }
+aros-sys = { path = "../../crates/aros-sys" }
+aros-alloc = { path = "../../crates/aros-alloc" }

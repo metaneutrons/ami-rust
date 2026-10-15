@@ -1,0 +1,14 @@
+[package]
+name = "aros-sdk"
+version.workspace = true
+edition.workspace = true
+publish = false
+license.workspace = true
+description = "Task-affine, allocation-free safe wrappers for the bounded AROS M1 SDK"
+
+[dependencies]
+aros-runtime = { path = "../aros-runtime", default-features = false }
+aros-sys = { path = "../aros-sys", default-features = false }
+
+[features]
+default = []

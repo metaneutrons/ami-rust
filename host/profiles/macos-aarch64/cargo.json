@@ -1,0 +1,15 @@
+{
+  "files": [
+    {
+      "path": "bin/cargo",
+      "bytes": 38232784,
+      "sha256": "e463b22d514cf3cbe9b36dc874869331c33a1cb53187225db07d63bfeb394e54"
+    },
+    {
+      "path": "producer.json",
+      "bytes": 590,
+      "sha256": "0cc0e635420d74e7b16d745060928768982c2b8187d8bcd0e735f3c6a829de4a"
+    }
+  ],
+  "symlinks": []
+}

@@ -1,0 +1,8 @@
+[package]
+name = "amiga-sys"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+[dependencies]
+aros-sys = { path = "../../../crates/aros-sys" }

@@ -1,0 +1,32 @@
+{
+  "rust_host": "x86_64-unknown-linux-gnu",
+  "collector_binary": "bin/aros-collect",
+  "cargo_binary": "bin/cargo",
+  "cargo_metadata_mode": "ami-rust-reproducible-cross-v1",
+  "components": {
+    "rust": {
+      "manifest": "host/profiles/linux-x86_64/rust.json",
+      "sha256": "ea8051ad8aee578a16f92fee9e43304067803ba2d552f0dabba67624d7bdb0f8"
+    },
+    "cargo": {
+      "manifest": "host/profiles/linux-x86_64/cargo.json",
+      "sha256": "1f568cee08c94edd451f639b296a799f06a3aa768fa6aad5bc80d8402f0b7abd"
+    },
+    "toolchain": {
+      "manifest": "host/profiles/linux-x86_64/toolchain.json",
+      "sha256": "a68f0d3d6b6d9e9678dca0af25b083d6b00f67fd4f806adcb6a2e16af1a19a6d"
+    },
+    "collector": {
+      "manifest": "host/profiles/linux-x86_64/collector.json",
+      "sha256": "0e97967a63d6ec868edcf26e2b2c08a9c36a292416aa0f7ae016564369551caa"
+    },
+    "csdk": {
+      "manifest": "host/profiles/linux-x86_64/csdk.json",
+      "sha256": "79ac09e3b2237ea432bdc2a0e3b1cb0d91d36a37b6e53ce0d5c710a1cbd7b71e"
+    },
+    "vendor": {
+      "manifest": "host/profiles/linux-x86_64/vendor.json",
+      "sha256": "f5fcdd2d3daaae4d2f40d69269c49533fc40adc807c555f2213238b2c3557ad6"
+    }
+  }
+}
