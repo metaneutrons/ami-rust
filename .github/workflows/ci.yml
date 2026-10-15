@@ -26,11 +26,19 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            host/
+            release/*.py
+            release/ci-*.json
       - name: Run isolated installer fixture tests
         run: |
           python3 --version
           test -x /usr/bin/ssh-keygen
           python3 -I -B release/test_install.py
+          python3 -I -B host/tests/test_host_capacity.py
+          python3 -I -B release/test_ci_cargo.py
+          python3 -I -B release/test_ci_artifact_admission.py
 
   ci-success:
     name: CI Success

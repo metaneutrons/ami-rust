@@ -11,7 +11,6 @@ import os
 from pathlib import Path
 import platform
 import runpy
-import signal
 import stat
 import subprocess
 import time
@@ -45,6 +44,38 @@ def rss(pid):
         children |= added
 
 
+def supervisor_group_is_private():
+    """True only when this producer is its own session and process-group leader."""
+    pid = os.getpid()
+    return os.getpgrp() == pid and os.getsid(0) == pid
+
+
+def spawn_build_child(command, *, cwd, env, stdout, stderr,
+                      share_supervisor_group=False):
+    """Launch Cargo isolated by default, or in the outer CI supervisor's group."""
+    return subprocess.Popen(command, cwd=cwd, env=env, stdout=stdout, stderr=stderr,
+                            start_new_session=not share_supervisor_group)
+
+
+def stop_build_child(child, supervisor, *, share_supervisor_group=False):
+    """Stop Cargo without killing an unrelated parent process group."""
+    if not share_supervisor_group:
+        supervisor["stop_group"](child)
+        return
+    try:
+        child.terminate()
+    except ProcessLookupError:
+        pass
+    try:
+        child.wait(timeout=1)
+    except subprocess.TimeoutExpired:
+        try:
+            child.kill()
+        except ProcessLookupError:
+            pass
+        child.wait(timeout=2)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("phase", choices=("provision", "build"))
@@ -54,11 +85,45 @@ def main():
     parser.add_argument("--vendor", required=True, type=Path)
     parser.add_argument("--record", required=True, type=Path)
     parser.add_argument("--vendor-overlay-receipt", type=Path)
+    parser.add_argument("--resource-policy", type=Path,
+                        help="explicit prospective hosted CI resource contract")
     parser.add_argument("--profile", choices=("dev", "release"), default="dev")
+    parser.add_argument("--share-supervisor-group", action="store_true",
+                        help="keep Cargo in this producer's externally supervised process group")
     args = parser.parse_args()
+    if args.share_supervisor_group and not supervisor_group_is_private():
+        parser.error("--share-supervisor-group requires this producer to lead its own session/group")
     source = args.source.resolve(strict=True)
     rust = args.host_rust.resolve(strict=True) / "bin"
     recipe = Path(__file__).resolve().parent
+    supervisor = runpy.run_path(str(recipe.parent / "build.py"))
+    limits = {"seconds": 1200, "rss_bytes": 8 * 1024**3,
+              "workspace_bytes": 12 * 1024**3, "jobs": 2,
+              "log_bytes": 16 * 1024**2}
+    resource_identity = None
+    if args.resource_policy:
+        policy = json.loads(args.resource_policy.read_text())
+        if policy.get("schema") != "ami-rust-hosted-resources-v1":
+            raise ValueError("incompatible hosted producer resource policy")
+        selected = policy["build"]
+        if set(selected) != set(limits):
+            raise ValueError("hosted producer resource fields differ")
+        ceilings = {**limits, "rss_bytes": 4 * 1024**3}
+        if any(type(selected[name]) is not int or not 0 < selected[name] <= ceilings[name]
+               for name in limits) or selected["jobs"] != 2:
+            raise ValueError("hosted producer limits exceed admitted caps")
+        limits = selected
+        ram = (int(subprocess.check_output(["/usr/sbin/sysctl", "-n", "hw.memsize"], text=True))
+               if platform.system() == "Darwin" else
+               os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE"))
+        import shutil
+        supervisor["require_host_capacity"](
+            {"host_capacity": policy["host_capacity"],
+             "budgets": {"build_rss_bytes": limits["rss_bytes"]}}, ram,
+            shutil.disk_usage(args.source).free)
+        resource_identity = {"sha256": digest(args.resource_policy),
+                             "host_capacity": policy["host_capacity"],
+                             "physical_ram_bytes": ram}
     pin = json.loads((recipe / "source.json").read_text())
     assert subprocess.check_output(["/usr/bin/git", "rev-parse", "HEAD"], cwd=source, text=True).strip() == pin["commit"]
     assert digest(source / pin["path"]) == pin["patched_sha256"]
@@ -111,7 +176,8 @@ def main():
     identity = {"phase": args.phase, "claim": "prerequisite producer only; not release qualification", "upstream_commit": pin["commit"],
                 "patch_sha256": pin["patch_sha256"], "producer_sha256": digest(Path(__file__).resolve()),
                 "cargo_lock_sha256": digest(source / "Cargo.lock"), "compiler": compiler, "host": platform.platform(),
-                "command": command, "environment": env, "budgets": {"seconds": 1200, "rss_bytes": 8 * 1024**3, "workspace_bytes": 12 * 1024**3, "jobs": 2}}
+                "command": command, "environment": env, "budgets": limits,
+                "explicit_resource_policy": resource_identity}
     identity["vendor_overlay"] = overlay_identity
     identity["profile"] = args.profile
     if overlay_identity:
@@ -122,26 +188,33 @@ def main():
     next_size = 0
     reason = None
     with (record / "stdout.log").open("wb") as stdout, (record / "stderr.log").open("wb") as stderr:
-        child = subprocess.Popen(command, cwd=source, env=env, stdout=stdout, stderr=stderr, start_new_session=True)
-        while child.poll() is None:
-            peak_rss = max(peak_rss, rss(child.pid))
-            now = time.monotonic()
-            if now >= next_size:
-                peak_work = max(peak_work, size(work) + size(source) + size(vendor) + size(record))
-                next_size = now + 2
-            if now - start > 1200: reason = "producer timeout"
-            if peak_rss > 8 * 1024**3: reason = "producer aggregate RSS"
-            if peak_work > 12 * 1024**3: reason = "producer workspace"
-            if stdout.tell() + stderr.tell() > 16 * 1024**2: reason = "producer log limit"
-            if reason:
-                os.killpg(child.pid, signal.SIGTERM)
-                break
-            time.sleep(0.2)
+        child = spawn_build_child(command, cwd=source, env=env, stdout=stdout, stderr=stderr,
+                                  share_supervisor_group=args.share_supervisor_group)
         try:
-            child.wait(timeout=3)
-        except subprocess.TimeoutExpired:
-            os.killpg(child.pid, signal.SIGKILL)
-            child.wait()
+            while child.poll() is None:
+                peak_rss = max(peak_rss, supervisor["rss_tree"](child.pid))
+                now = time.monotonic()
+                if now >= next_size:
+                    peak_work = max(peak_work, size(work) + size(source) + size(vendor) + size(record))
+                    next_size = now + 2
+                if now - start > limits["seconds"]: reason = "producer timeout"
+                if peak_rss > limits["rss_bytes"]: reason = "producer aggregate RSS"
+                if peak_work > limits["workspace_bytes"]: reason = "producer workspace"
+                if stdout.tell() + stderr.tell() > limits["log_bytes"]: reason = "producer log limit"
+                if reason:
+                    break
+                time.sleep(0.2)
+        except Exception as error:
+            reason = "producer monitor failed: " + repr(error)
+        finally:
+            if reason:
+                stop_build_child(child, supervisor,
+                                 share_supervisor_group=args.share_supervisor_group)
+            elif not args.share_supervisor_group and supervisor["group_alive"](child.pid):
+                reason = "producer leader exited with live process group"
+                stop_build_child(child, supervisor, share_supervisor_group=False)
+            else:
+                child.wait(timeout=3)
     peak_work = max(peak_work, size(work) + size(source) + size(vendor) + size(record))
     result = {"exit_code": child.returncode, "stop_reason": reason, "elapsed_seconds": time.monotonic()-start,
               "rss_peak_observed_bytes": peak_rss, "workspace_peak_observed_bytes": peak_work}

@@ -1,0 +1,154 @@
+name: Hosted Cargo producer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ami-rust-protected-builds
+  cancel-in-progress: false
+
+jobs:
+  cargo:
+    name: Cargo producer (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    environment: release
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - os: macos-26
+            profile: macos-aarch64
+          - os: ubuntu-24.04
+            profile: linux-x86_64
+    steps:
+      - name: Require protected main and the designated publisher repository
+        shell: bash
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+        run: |
+          test "$GITHUB_REPOSITORY" = metaneutrons/ami-rust
+          test "$GITHUB_REF" = refs/heads/main
+          test "$SOURCE_IS_PROTECTED" = true
+      - name: Check out the exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            host/
+            release/ci_cargo.py
+            release/ci-bootstrap-inputs.json
+            release/ci-resources.json
+            release/ci_artifact_admission.py
+      - name: Admit aggregate retained CI metadata before production
+        id: admission
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -I -B release/ci_artifact_admission.py
+      - name: Produce the pinned Cargo prerequisite
+        id: producer
+        shell: bash
+        run: |
+          python3 -I -B release/ci_cargo.py \
+            --work "$RUNNER_TEMP/ami-rust-cargo-work" \
+            --output "$RUNNER_TEMP/ami-rust-cargo-output" \
+            --inputs release/ci-bootstrap-inputs.json \
+            --resources release/ci-resources.json
+      - name: Retire the managed work tree and bound retained metadata
+        id: cleanup
+        if: always()
+        shell: bash
+        env:
+          PRODUCER_RESULT: ${{ steps.producer.outcome }}
+          EXPECTED_HOST_PROFILE: ${{ matrix.profile }}
+        run: |
+          python3 -I -B - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import shutil
+          import stat
+
+          temporary = Path(os.environ["RUNNER_TEMP"]).resolve(strict=True)
+          work = temporary / "ami-rust-cargo-work"
+          output = temporary / "ami-rust-cargo-output"
+          if work.is_symlink() or output.is_symlink():
+              raise SystemExit("Managed producer roots must not be symlinks")
+          if work.exists():
+              shutil.rmtree(work)
+          if work.exists():
+              raise SystemExit("Managed producer work tree was not retired")
+          output.mkdir(mode=0o700, exist_ok=True)
+          def pairs(rows):
+              value = {}
+              for key, item in rows:
+                  if key in value:
+                      raise ValueError("Duplicate metadata JSON key")
+                  value[key] = item
+              return value
+          def constant(value):
+              raise ValueError("Non-finite metadata number: " + value)
+          def bounded(value, depth=0):
+              if depth > 16:
+                  raise ValueError("Metadata nesting limit")
+              if isinstance(value, str) and len(value) > 16384:
+                  raise ValueError("Metadata string limit")
+              if isinstance(value, (dict, list)):
+                  if len(value) > 2048:
+                      raise ValueError("Metadata collection limit")
+                  for item in (value.values() if isinstance(value, dict) else value):
+                      bounded(item, depth + 1)
+          retained = 0
+          seen = set()
+          for path in output.rglob("*"):
+              info = path.lstat()
+              if stat.S_ISDIR(info.st_mode):
+                  continue
+              if not stat.S_ISREG(info.st_mode) or path.relative_to(output).as_posix() != "producer.json":
+                  raise SystemExit("Producer exports must be regular JSON metadata only")
+              value = json.loads(path.read_text(), object_pairs_hook=pairs, parse_constant=constant)
+              if (not isinstance(value, dict)
+                      or value.get("schema") != "ami-rust-hosted-custom-cargo-producer-v1"
+                      or value.get("host") != os.environ["EXPECTED_HOST_PROFILE"]
+                      or value.get("status") not in ("FAILED", "PRODUCED_PREREQUISITE_ONLY_NOT_R1_QUALIFICATION")):
+                  raise SystemExit("Unrecognised producer metadata schema/profile/status")
+              bounded(value)
+              seen.add(path.name)
+              retained += info.st_size
+          if os.environ["PRODUCER_RESULT"] == "success" and seen != {"producer.json"}:
+              raise SystemExit("Successful producer did not export its receipt")
+          if retained > 32 * 1024**2 - 65536:
+              raise SystemExit("Producer metadata retention ceiling exceeded")
+          checkout = Path(os.environ["GITHUB_WORKSPACE"])
+          checkout_bytes = sum(path.stat().st_size for path in checkout.rglob("*")
+                               if path.is_file() and not path.is_symlink())
+          if checkout_bytes + retained > 32 * 1024**2 - 65536:
+              raise SystemExit("Checkout and metadata retention ceiling exceeded")
+          receipt = {"schema": "ami-rust-cargo-cleanup-v1", "work_tree_remaining_bytes": 0,
+                     "metadata_bytes_observed": retained, "checkout_bytes_observed": checkout_bytes,
+                     "source_commit": os.environ["GITHUB_SHA"],
+                     "run_id": os.environ["GITHUB_RUN_ID"],
+                     "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+                     "managed_local_retention_ceiling_bytes": 32 * 1024**2,
+                     "checkout_metadata_and_provider_log_reservation_bytes": 64 * 1024**2,
+                     "separate_global_artifact_pool_bytes": 512 * 1024**2,
+                     "uploaded_metadata_ceiling_bytes": 32 * 1024**2,
+                     "SDK_payload_uploaded": False, "Cargo_binary_uploaded": False}
+          (output / "cleanup.json").write_text(json.dumps(receipt, sort_keys=True, indent=2) + "\n")
+          print(json.dumps(receipt, sort_keys=True))
+          PY
+      - name: Preserve producer metadata only
+        if: always() && steps.admission.outcome == 'success' && steps.cleanup.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cargo-producer-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-cargo-output
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9

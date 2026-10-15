@@ -114,6 +114,33 @@ def reject_ambient_cargo_config(work):
                                  + str(config) + "; use an output directory outside its ancestry")
 
 
+def require_host_capacity(manifest, physical_ram, free_disk):
+    """Select a manifest-bound capacity profile; legacy SDKs keep their gate."""
+    policy = manifest.get("host_capacity")
+    if policy is None:
+        policy = {"schema": "ami-rust-host-capacity-v1",
+                  "ram_minimum_bytes": 16 * 1024**3,
+                  "disk_free_minimum_bytes": 24 * 1024**3}
+    else:
+        if (not isinstance(policy, dict)
+                or set(policy) != {"schema", "ram_minimum_bytes", "disk_free_minimum_bytes"}
+                or policy["schema"] != "ami-rust-host-capacity-v1"):
+            raise ValueError("incompatible manifest host capacity policy")
+        for name, floor in (("ram_minimum_bytes", 6 * 1024**3),
+                            ("disk_free_minimum_bytes", 24 * 1024**3)):
+            value = policy[name]
+            if type(value) is not int or value < floor:
+                raise ValueError("host capacity policy is below the admitted floor: " + name)
+        rss = manifest["budgets"]["build_rss_bytes"]
+        if type(rss) is not int or not 0 < rss <= 4 * 1024**3:
+            raise ValueError("hosted capacity policy requires at most 4 GiB build RSS")
+    if physical_ram < policy["ram_minimum_bytes"] or free_disk < policy["disk_free_minimum_bytes"]:
+        raise ValueError("host capacity refused: requires "
+                         + str(policy["ram_minimum_bytes"]) + " bytes RAM and "
+                         + str(policy["disk_free_minimum_bytes"]) + " bytes free workspace")
+    return dict(policy)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-lock", type=Path, required=True)
@@ -132,8 +159,8 @@ def main():
     output = args.output_dir.absolute()
     if output.exists() or not output.parent.is_dir():
         raise ValueError("output directory must be fresh with an existing parent")
-    if ram < 16 * 1024**3 or shutil.disk_usage(output.parent).free < 24 * 1024**3:
-        raise ValueError("host capacity requires at least 16 GiB RAM and 24 GiB free workspace")
+    free_disk = shutil.disk_usage(output.parent).free
+    capacity_policy = require_host_capacity(manifest, ram, free_disk)
     reject_ambient_cargo_config((output / "work").resolve())
     rust = components["rust"] / "bin"
     cargo = relative(components["cargo"], profile["cargo_binary"])
@@ -259,6 +286,8 @@ def main():
     receipt = {"status": "PASS", "claim": "native build only; runtime and release qualification require separate evidence", "host": host_key(), "platform": platform.platform(), "host_ram_bytes": ram, "source_date_epoch": manifest["source_date_epoch"], "project_lock_sha256": sha256(lock), "sdk_manifest_sha256": project["sdk"]["manifest_sha256"], "prerequisite_inventory_counts": counts, "compiler_verbose": compiler, "forwarded_cargo_arguments": forwarded, "verbose_build_script_lines": len(build_script_lines), "deterministic_rust_flags": flags, "canonical_artifacts": canonical, "elapsed_seconds": time.monotonic()-begin, "commands": records}
     receipt["cargo_frontend"] = {"path": str(cargo), "sha256": sha256(cargo),
                                 "metadata_mode": profile["cargo_metadata_mode"], "version": cargo_version}
+    receipt["host_capacity"] = {"policy": capacity_policy, "physical_ram_bytes": ram,
+                                "free_disk_bytes_before_build": free_disk}
     (output / "build-receipt.json").write_text(json.dumps(receipt, indent=2)+"\n")
     # Complete native archive/object evidence is retained before cold cache retirement.
     shutil.rmtree(work)
