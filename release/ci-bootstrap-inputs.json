@@ -53,15 +53,25 @@
     "overlay_helper_sha256": "cb2834a2c22d5b70555759c685425a4e42f5df12e2ad8ff48b63afc5836795d3",
     "policy_extension": "Explicit hosted resource contract and fail-closed process-group cleanup; Cargo source, compiler, patch, build flags and target/runtime sources unchanged.",
     "producer_path": "host/cargo-repro/produce.py",
-    "producer_sha256": "5379771762b9f45c261df8c1acd3dc1ee0cf85fae9cb86b36d409bf56da1b8cc"
+    "producer_sha256": "5379771762b9f45c261df8c1acd3dc1ee0cf85fae9cb86b36d409bf56da1b8cc",
+    "python_bootstrap_path": "release/ci_python.py",
+    "python_bootstrap_sha256": "b25514fbf2f11d5802dc37c2771ef68f15ece3dbd975f40838d0cd70e3cd1fb7"
   },
   "python": {
     "linux-x86_64": {
-      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+      "sha256": "b61d8a15a8a302e6c45d2747ca40cee1568167031abf4cee948771f8314cea6c",
+      "source": "pinned standalone CI runtime; runner system Python is bootstrap TCB only",
+      "version": "3.12.15"
     },
     "macos-aarch64": {
-      "sha256": "1955899cb535256cfa477d926d016819e52e747984722c44f76e39a4950fee0e"
+      "sha256": "aed8ed802d0387d6831dead5885840e4e2ff3a7984dd7297e9a5f4466e9cda1d",
+      "source": "pinned standalone CI runtime; runner system Python is bootstrap TCB only",
+      "version": "3.12.15"
     }
+  },
+  "python_runtime_manifest": {
+    "path": "release/ci-python-inputs.json",
+    "sha256": "221d8a52b034c54d60e5f3ac6043d3155492f440051a77bd2dfe9b6a3eab5437"
   },
   "rust": {
     "cargo_commit": "797e8a9bca276c1c9f9f738d2a20f484fa4eea9d",
