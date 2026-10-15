@@ -1,6 +1,7 @@
 """Offline synthetic tests for the hosted Cargo producer's guardrails."""
 import hashlib
 import io
+import json
 import os
 from pathlib import Path
 import signal
@@ -131,7 +132,49 @@ class ArchiveTests(unittest.TestCase):
             self.assertFalse(output.exists())
 
 
+class PreflightFailureTests(unittest.TestCase):
+    def test_failed_admission_preserves_host_python_and_no_work_observation(self):
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            work, output = base / "work", base / "output"
+            with mock.patch.object(ci_cargo, "produce", side_effect=ValueError("pinned Python refusal")):
+                with contextlib.redirect_stderr(io.StringIO()):
+                    code = ci_cargo.main(["--work", str(work), "--output", str(output),
+                                          "--inputs", str(base / "inputs.json"),
+                                          "--resources", str(base / "resources.json")])
+            self.assertEqual(code, 1)
+            record = json.loads((output / "producer.json").read_text())
+            self.assertEqual(record["host"], ci_cargo.host_identity()[0])
+            self.assertEqual(record["rust_target"], ci_cargo.host_identity()[1])
+            self.assertEqual(record["python_observed"]["sha256"],
+                             ci_cargo.sha256(Path(sys.executable).resolve(strict=True)))
+            self.assertFalse(record["managed_work_tree_exists_at_failure"])
+            self.assertFalse(work.exists())
+            self.assertEqual(record["status"], "FAILED")
+
+
 class ResourceTests(unittest.TestCase):
+    def test_portable_runtime_counts_before_process_admission(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            work, output, bootstrap = root / "work", root / "output", root / "bootstrap"
+            logs = work / "logs"
+            logs.mkdir(parents=True)
+            output.mkdir()
+            bootstrap.mkdir()
+            base = ci_cargo.Supervisor(work, output, os.environ.copy(), logs).managed_bytes()
+            (bootstrap / "runtime.bin").write_bytes(b"x" * 2048)
+            supervisor = ci_cargo.Supervisor(work, output, os.environ.copy(), logs,
+                                             extra_roots=(bootstrap,))
+            self.assertEqual(supervisor.managed_bytes(), base + 2048)
+            with mock.patch.object(ci_cargo, "MAX_WORK_BYTES", base + 2047):
+                with mock.patch.object(ci_cargo.subprocess, "Popen") as spawn:
+                    with self.assertRaisesRegex(RuntimeError, "workspace ceiling"):
+                        supervisor.run([sys.executable, "-c", "pass"], cwd=root, label="runtime-budget")
+                    spawn.assert_not_called()
+
     def test_capacity_threshold_is_fail_closed(self):
         policy = {"host_capacity": {"schema": "ami-rust-host-capacity-v1",
                                     "ram_minimum_bytes": 6 * 1024**3,

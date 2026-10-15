@@ -38,6 +38,7 @@ jobs:
           python3 -I -B release/test_install.py
           python3 -I -B host/tests/test_host_capacity.py
           python3 -I -B release/test_ci_cargo.py
+          python3 -I -B release/test_ci_python.py
           python3 -I -B release/test_ci_artifact_admission.py
 
   ci-success:

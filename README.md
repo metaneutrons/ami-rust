@@ -19,3 +19,10 @@ Version 2.0. Third-party files retain their own notices and license terms; see
 THIRD_PARTY_NOTICES.md and the individual crate notices.
 
 The [release qualification status](docs/release-status.md) records completed installation/licence checks and the still-open protected SDK provenance gate. Source publication does not authorise SDK release assets.
+
+The manual hosted Cargo prerequisite workflow uses a pinned standalone Python
+3.12.15 input on both hosts. The runner system Python performs only the initial
+verified runtime bootstrap and cleanup. Cargo production and its resource
+receipts use the fixed runtime; bootstrap archives and runtime files are
+included in managed workspace accounting and explicitly removed before metadata
+upload. This is prerequisite qualification, not an SDK release.

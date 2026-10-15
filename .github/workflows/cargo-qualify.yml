@@ -43,6 +43,8 @@ jobs:
           sparse-checkout: |
             host/
             release/ci_cargo.py
+            release/ci_python.py
+            release/ci-python-inputs.json
             release/ci-bootstrap-inputs.json
             release/ci-resources.json
             release/ci_artifact_admission.py
@@ -51,15 +53,23 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 -I -B release/ci_artifact_admission.py
+      - name: Install the fixed portable Python input
+        id: python-runtime
+        shell: bash
+        run: |
+          python3 -I -B release/ci_python.py \
+            --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" \
+            --inputs release/ci-python-inputs.json
       - name: Produce the pinned Cargo prerequisite
         id: producer
         shell: bash
         run: |
-          python3 -I -B release/ci_cargo.py \
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_cargo.py \
             --work "$RUNNER_TEMP/ami-rust-cargo-work" \
             --output "$RUNNER_TEMP/ami-rust-cargo-output" \
             --inputs release/ci-bootstrap-inputs.json \
-            --resources release/ci-resources.json
+            --resources release/ci-resources.json \
+            --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap"
       - name: Retire the managed work tree and bound retained metadata
         id: cleanup
         if: always()
@@ -77,14 +87,26 @@ jobs:
 
           temporary = Path(os.environ["RUNNER_TEMP"]).resolve(strict=True)
           work = temporary / "ami-rust-cargo-work"
+          python_root = temporary / "ami-rust-python-bootstrap"
           output = temporary / "ami-rust-cargo-output"
-          if work.is_symlink() or output.is_symlink():
+          if work.is_symlink() or output.is_symlink() or python_root.is_symlink():
               raise SystemExit("Managed producer roots must not be symlinks")
           if work.exists():
               shutil.rmtree(work)
           if work.exists():
               raise SystemExit("Managed producer work tree was not retired")
           output.mkdir(mode=0o700, exist_ok=True)
+          # Preserve the bounded bootstrap metadata before retiring its runtime.
+          bootstrap_receipt = python_root / "bootstrap.json"
+          if bootstrap_receipt.exists():
+              if (bootstrap_receipt.is_symlink() or not bootstrap_receipt.is_file()
+                      or bootstrap_receipt.stat().st_size > 65536):
+                  raise SystemExit("Invalid Python bootstrap receipt")
+              (output / "python-bootstrap.json").write_bytes(bootstrap_receipt.read_bytes())
+          if python_root.exists():
+              shutil.rmtree(python_root)
+          if python_root.exists():
+              raise SystemExit("Managed Python runtime prefix was not retired")
           def pairs(rows):
               value = {}
               for key, item in rows:
@@ -110,18 +132,24 @@ jobs:
               info = path.lstat()
               if stat.S_ISDIR(info.st_mode):
                   continue
-              if not stat.S_ISREG(info.st_mode) or path.relative_to(output).as_posix() != "producer.json":
-                  raise SystemExit("Producer exports must be regular JSON metadata only")
+              relative = path.relative_to(output).as_posix()
+              allowed = {
+                  "producer.json": ("ami-rust-hosted-custom-cargo-producer-v1",
+                                    {"FAILED", "PRODUCED_PREREQUISITE_ONLY_NOT_R1_QUALIFICATION"}),
+                  "python-bootstrap.json": ("ami-rust-ci-python-bootstrap-v1",
+                                            {"FAILED", "READY_CI_RUNTIME_NOT_SDK_QUALIFICATION"})}
+              if not stat.S_ISREG(info.st_mode) or relative not in allowed:
+                  raise SystemExit("Producer exports must be regular selected JSON metadata only")
               value = json.loads(path.read_text(), object_pairs_hook=pairs, parse_constant=constant)
-              if (not isinstance(value, dict)
-                      or value.get("schema") != "ami-rust-hosted-custom-cargo-producer-v1"
+              schema, statuses = allowed[relative]
+              if (not isinstance(value, dict) or value.get("schema") != schema
                       or value.get("host") != os.environ["EXPECTED_HOST_PROFILE"]
-                      or value.get("status") not in ("FAILED", "PRODUCED_PREREQUISITE_ONLY_NOT_R1_QUALIFICATION")):
+                      or value.get("status") not in statuses):
                   raise SystemExit("Unrecognised producer metadata schema/profile/status")
               bounded(value)
               seen.add(path.name)
               retained += info.st_size
-          if os.environ["PRODUCER_RESULT"] == "success" and seen != {"producer.json"}:
+          if os.environ["PRODUCER_RESULT"] == "success" and seen != {"producer.json", "python-bootstrap.json"}:
               raise SystemExit("Successful producer did not export its receipt")
           if retained > 32 * 1024**2 - 65536:
               raise SystemExit("Producer metadata retention ceiling exceeded")
@@ -131,6 +159,7 @@ jobs:
           if checkout_bytes + retained > 32 * 1024**2 - 65536:
               raise SystemExit("Checkout and metadata retention ceiling exceeded")
           receipt = {"schema": "ami-rust-cargo-cleanup-v1", "work_tree_remaining_bytes": 0,
+                     "python_runtime_remaining_bytes": 0,
                      "metadata_bytes_observed": retained, "checkout_bytes_observed": checkout_bytes,
                      "source_commit": os.environ["GITHUB_SHA"],
                      "run_id": os.environ["GITHUB_RUN_ID"],

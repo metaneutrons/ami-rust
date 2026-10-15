@@ -164,6 +164,22 @@ def validate_pins(inputs: dict, resources: dict) -> tuple[str, str]:
                 "workspace_bytes": MAX_WORK_BYTES, "log_bytes": MAX_LOG_BYTES}
     if build != expected:
         raise ValueError("resource policy does not match the admitted Cargo producer ceilings")
+    runtime_pin = inputs.get("python_runtime_manifest")
+    if runtime_pin is not None:
+        runtime_path = ROOT / "release/ci-python-inputs.json"
+        bootstrap_path = ROOT / "release/ci_python.py"
+        if (runtime_pin.get("path") != "release/ci-python-inputs.json"
+                or sha256(runtime_path) != runtime_pin.get("sha256")
+                or helper_pins.get("python_bootstrap_path") != "release/ci_python.py"
+                or sha256(bootstrap_path) != helper_pins.get("python_bootstrap_sha256")):
+            raise ValueError("portable Python manifest/helper differs from the normative pins")
+        runtime_inputs = json.loads(runtime_path.read_text())
+        if (runtime_inputs.get("schema") != "ami-rust-ci-python-inputs-v1"
+                or set(runtime_inputs.get("hosts", {})) != {"macos-aarch64", "linux-x86_64"}):
+            raise ValueError("portable Python inputs do not cover the admitted hosts")
+        for profile, row in runtime_inputs["hosts"].items():
+            if inputs["python"][profile]["sha256"] != row["runtime_sha256"]:
+                raise ValueError("Python runtime executable pin disagrees with the pinned archive")
     host, target = host_identity()
     python_pin = inputs.get("python", {}).get(host, {}).get("sha256", "")
     if len(python_pin) != 64:
@@ -173,11 +189,19 @@ def validate_pins(inputs: dict, resources: dict) -> tuple[str, str]:
 
 def download_verified(url: str, expected_bytes: int, expected_sha256: str,
                       destination: Path, opener=urllib.request.urlopen,
-                      total_timeout: int = 300) -> dict:
+                      total_timeout: int = 300,
+                      expected_origin: str = "static.rust-lang.org",
+                      redirect_hosts: tuple[str, ...] = ()) -> dict:
     """Stream one pinned HTTPS object to a fresh file, validating size and hash."""
     parsed = urllib.parse.urlparse(url)
-    if parsed.scheme != "https" or parsed.hostname != "static.rust-lang.org":
-        raise ValueError("Rust component URL must use the pinned static.rust-lang.org HTTPS origin")
+    if expected_origin not in {"static.rust-lang.org", "github.com"}:
+        raise ValueError("unrecognised pinned input origin")
+    permitted_cdn = {"release-assets.githubusercontent.com", "objects.githubusercontent.com"}
+    if (any(host not in permitted_cdn for host in redirect_hosts)
+            or (expected_origin == "static.rust-lang.org" and redirect_hosts)):
+        raise ValueError("unrecognised pinned input redirect policy")
+    if parsed.scheme != "https" or parsed.hostname != expected_origin:
+        raise ValueError("component URL must use its pinned HTTPS origin")
     if type(expected_bytes) is not int or expected_bytes <= 0:
         raise ValueError("invalid pinned download size")
     if len(expected_sha256) != 64:
@@ -193,8 +217,8 @@ def download_verified(url: str, expected_bytes: int, expected_sha256: str,
     try:
         with opener(request, timeout=30) as response:
             final = urllib.parse.urlparse(response.geturl())
-            if final.scheme != "https" or final.hostname != parsed.hostname:
-                raise ValueError("download redirected outside the pinned HTTPS origin")
+            if final.scheme != "https" or final.hostname not in {expected_origin, *redirect_hosts}:
+                raise ValueError("download redirected outside the pinned HTTPS origins")
             content_length = response.headers.get("Content-Length")
             if content_length is not None and int(content_length) != expected_bytes:
                 raise ValueError("download Content-Length differs from the pinned size")
@@ -240,13 +264,13 @@ def safe_extract_tar(archive: Path, destination: Path,
                      expanded_limit: int = MAX_EXPANDED_ARCHIVE,
                      current_managed_bytes: int = 0,
                      overall_limit: int = MAX_WORK_BYTES) -> dict:
-    """Extract tar.xz without traversal, link pivots, devices, or overwrite."""
+    """Extract a verified tar without traversal, link pivots, devices, or overwrite."""
     destination = destination.absolute()
     if destination.exists() or destination.is_symlink():
         raise ValueError("archive extraction directory must be fresh")
     created = False
     try:
-        with tarfile.open(archive, mode="r:xz") as bundle:
+        with tarfile.open(archive, mode="r:*") as bundle:
             members = bundle.getmembers()
             by_name = {}
             expanded = 0
@@ -437,8 +461,10 @@ def stop_group(child: subprocess.Popen, rows_reader=process_rows) -> None:
 
 
 class Supervisor:
-    def __init__(self, work: Path, output: Path, env: dict[str, str], log_dir: Path):
+    def __init__(self, work: Path, output: Path, env: dict[str, str], log_dir: Path,
+                 extra_roots: tuple[Path, ...] = ()):
         self.work, self.output, self.env, self.log_dir = work, output, env, log_dir
+        self.extra_roots = extra_roots
         self.checkout_bytes = directory_bytes(ROOT)
         self.work_under_checkout = work.resolve().is_relative_to(ROOT.resolve())
         self.output_under_checkout = output.resolve().is_relative_to(ROOT.resolve())
@@ -454,6 +480,7 @@ class Supervisor:
         total = self.checkout_bytes
         total += work_bytes - self.initial_work_bytes if self.work_under_checkout else work_bytes
         total += output_bytes - self.initial_output_bytes if self.output_under_checkout else output_bytes
+        total += sum(directory_bytes(path) for path in self.extra_roots)
         return total
 
     def logs_bytes(self):
@@ -666,6 +693,34 @@ def produce(args) -> dict:
     inputs = json.loads(inputs_path.read_text())
     resources = json.loads(resources_path.read_text())
     host, rust_target = validate_pins(inputs, resources)
+    python_bootstrap = None
+    extra_roots = ()
+    runtime_pin = inputs.get("python_runtime_manifest")
+    if runtime_pin is not None:
+        manifest_path = ROOT / "release/ci-python-inputs.json"
+        if (runtime_pin.get("path") != "release/ci-python-inputs.json"
+                or sha256(manifest_path) != runtime_pin.get("sha256")):
+            raise ValueError("portable Python manifest differs from its normative pin")
+        bootstrap_root = args.python_bootstrap_root
+        if (bootstrap_root is None or not bootstrap_root.is_absolute()
+                or bootstrap_root.is_symlink() or not bootstrap_root.is_dir()
+                or bootstrap_root.parent.resolve() != work.parent.resolve()
+                or bootstrap_root.name != "ami-rust-python-bootstrap"):
+            raise ValueError("portable Python bootstrap must be the managed sibling runtime prefix")
+        bootstrap_root = bootstrap_root.resolve(strict=True)
+        python_bootstrap = json.loads((bootstrap_root / "bootstrap.json").read_text())
+        runtime_inputs = json.loads(manifest_path.read_text())
+        selected_python = runtime_inputs["hosts"][host]
+        if (python_bootstrap.get("status") != "READY_CI_RUNTIME_NOT_SDK_QUALIFICATION"
+                or python_bootstrap.get("host") != host
+                or python_bootstrap.get("archive_sha256") != selected_python["sha256"]
+                or python_bootstrap.get("runtime_sha256") != selected_python["runtime_sha256"]
+                or Path(sys.executable).resolve(strict=True) !=
+                   (bootstrap_root / "runtime" / selected_python["runtime_relative_path"]).resolve(strict=True)):
+            raise ValueError("portable Python runtime receipt or executable is not the admitted input")
+        extra_roots = (bootstrap_root,)
+    elif args.python_bootstrap_root is not None:
+        raise ValueError("unselected portable Python prefix")
     capacity = {"work": check_capacity(host, work.parent, resources),
                 "output": check_capacity(host, output.parent, resources)}
     python_path = Path(sys.executable).resolve(strict=True)
@@ -685,7 +740,7 @@ def produce(args) -> dict:
     bootstrap_prefix = work / "bootstrap"
     bootstrap_prefix.mkdir()
     env = safe_run_env(work, work / "bootstrap/bin")
-    supervisor = Supervisor(work, output, env, log_dir)
+    supervisor = Supervisor(work, output, env, log_dir, extra_roots=extra_roots)
     stage = "preflight"
     start = time.monotonic()
     materials = []
@@ -785,6 +840,7 @@ def produce(args) -> dict:
                 "inputs_sha256": sha256(inputs_path), "resource_policy_sha256": sha256(resources_path),
                 "python": {"executable_basename": python_path.name, "sha256": python_digest,
                            "pinned_sha256": python_pin, "version": platform.python_version()},
+                "python_runtime": python_bootstrap,
                 "rust_archives": materials,
                 "rust_channel_manifest": inputs["rust"]["manifest"],
                 "rust_release": inputs["rust"]["release"], "rust_commit": inputs["rust"]["commit"],
@@ -857,6 +913,7 @@ def main(argv=None) -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--inputs", type=Path, required=True)
     parser.add_argument("--resources", type=Path, required=True)
+    parser.add_argument("--python-bootstrap-root", type=Path)
     args = parser.parse_args(argv)
     try:
         produce(args)
@@ -869,11 +926,18 @@ def main(argv=None) -> int:
             for path_arg in (args.work, args.output):
                 if path_arg.is_absolute():
                     message = message.replace(str(path_arg), "<managed-path>")
+            failure_host, failure_target = host_identity()
+            observed_python = Path(sys.executable).resolve(strict=True)
             write_json(output / "producer.json", {
                 "schema": "ami-rust-hosted-custom-cargo-producer-v1",
                 "status": "FAILED", "stage": "preflight",
+                "host": failure_host, "rust_target": failure_target,
                 "error_type": type(error).__name__,
                 "error": message.replace("\n", " ")[:1024],
+                "python_observed": {"executable_basename": observed_python.name,
+                                    "sha256": sha256(observed_python),
+                                    "version": platform.python_version()},
+                "managed_work_tree_exists_at_failure": args.work.exists(),
                 "claim": "Failed prerequisite producer attempt; this is not R1 qualification."})
             validate_output_metadata(output)
         print(f"ci_cargo: {type(error).__name__}: {error}", file=sys.stderr)
