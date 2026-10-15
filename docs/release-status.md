@@ -45,3 +45,5 @@ before a hosted SDK build is accepted. Guest/baseline limits remain unchanged.
 ## Operating limits
 
 The source snapshot/installation recipe requires a fresh WORK root disjoint from the bundle and installed SDK. Review found that a caller can currently choose a fresh destination inside the bundle; the qualified recipe avoids that destination. Installed SDK inventory validation rejects modifications. Same-user hostile concurrent mutation is outside the verified installation model. The generated demo preserves license files in its SDK source subtree; publishing an adapted application requires its own licensing decision.
+
+The [actual hosted capacity measurement](hosted-ci-preparation-20261015.md) now confirms that both runners pass the existing disk gate and fail the existing RAM gate. The resource proposal is not enabled or qualified; R1-A6 remains open.

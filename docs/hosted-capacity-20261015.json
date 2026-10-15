@@ -1,0 +1,87 @@
+{
+  "status": "PASS_MEASUREMENT_ONLY",
+  "run_url": "https://github.com/metaneutrons/ami-rust/actions/runs/38807604508",
+  "source_commit": "e779d46d529bddc742b9d937e5461284916665f2",
+  "logs_sha256": "6c6a98b4eece76cd2ed87eaef47cc76a5b0ef3103adb96b1e6933c85043e7392",
+  "rows": [
+    {
+      "SDK_build_performed": false,
+      "arch": "arm64",
+      "cpu_count": 3,
+      "existing_preflight": {
+        "disk_free_minimum_bytes": 25769803776,
+        "ram_minimum_bytes": 17179869184,
+        "ram_pass": false,
+        "workspace_disk_pass": true
+      },
+      "filesystems": {
+        "GITHUB_WORKSPACE": {
+          "free_bytes": 103125716992,
+          "path": "/Users/runner/work/ami-rust/ami-rust",
+          "total_bytes": 343073095680
+        },
+        "RUNNER_TEMP": {
+          "free_bytes": 103125716992,
+          "path": "/Users/runner/work/_temp",
+          "total_bytes": 343073095680
+        }
+      },
+      "image_version": "20261013.0424.1",
+      "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+      "physical_ram_bytes": 7516192768,
+      "python": {
+        "path": "/opt/homebrew/Cellar/python@3.15/3.15.0/Frameworks/Python.framework/Versions/3.15/bin/python3.15",
+        "sha256": "1955899cb535256cfa477d926d016819e52e747984722c44f76e39a4950fee0e",
+        "version": "3.15.0 (main, Oct  9 2026, 11:16:41) [Clang 21.0.0 (clang-2100.3.34.2)]"
+      },
+      "qualification_pass_claimed": false,
+      "run_attempt": "1",
+      "run_id": "38807604508",
+      "runner": "macos-26",
+      "runner_environment": "github-hosted",
+      "schema": "ami-rust-host-capacity-v1",
+      "source_commit": "e779d46d529bddc742b9d937e5461284916665f2"
+    },
+    {
+      "SDK_build_performed": false,
+      "arch": "x86_64",
+      "cpu_count": 4,
+      "existing_preflight": {
+        "disk_free_minimum_bytes": 25769803776,
+        "ram_minimum_bytes": 17179869184,
+        "ram_pass": false,
+        "workspace_disk_pass": true
+      },
+      "filesystems": {
+        "GITHUB_WORKSPACE": {
+          "free_bytes": 92126691328,
+          "path": "/home/runner/work/ami-rust/ami-rust",
+          "total_bytes": 154894188544
+        },
+        "RUNNER_TEMP": {
+          "free_bytes": 92126691328,
+          "path": "/home/runner/work/_temp",
+          "total_bytes": 154894188544
+        }
+      },
+      "image_version": "20261012.334.1",
+      "os": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+      "physical_ram_bytes": 16766414848,
+      "python": {
+        "path": "/usr/bin/python3.12",
+        "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+        "version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+      },
+      "qualification_pass_claimed": false,
+      "run_attempt": "1",
+      "run_id": "38807604508",
+      "runner": "ubuntu-24.04",
+      "runner_environment": "github-hosted",
+      "schema": "ami-rust-host-capacity-v1",
+      "source_commit": "e779d46d529bddc742b9d937e5461284916665f2"
+    }
+  ],
+  "R1_A6_status": "OPEN",
+  "no_limits_changed": true,
+  "recorded_unix": 1792098568.525324
+}
