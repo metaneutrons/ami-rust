@@ -1,6 +1,6 @@
 # Release qualification status — 2026-10-15
 
-Public source publication is authorised. No SDK archive, native executable release asset or GitHub Release has been published. This source repository is not yet an R1-qualified SDK distribution.
+Public source publication is authorised. On 2026-10-15 the owner also authorised SDK publication conditional on all release acceptance criteria passing. No SDK archive, native executable release asset or GitHub Release has been published. This source repository is not yet an R1-qualified SDK distribution.
 
 ## Completed candidate checks
 
@@ -19,7 +19,28 @@ A public repository and green installer fixture CI do not authenticate an SDK pr
 
 The complete C SDK and dependency vendor inputs currently lack an accepted immutable CI producer/provisioning path. Custom Cargo and its bootstrap inputs must also be provisioned under the protected producer contract. Existing pinned compiler/toolchain public inputs remain separate producer identities. Resolve these inputs, run the real protected candidate producer, qualify its authentic consumer path, then obtain independent R1-A1 through R1-A7 acceptance. All existing resource and runtime criteria remain in force.
 
-Only after separate SDK publication authorisation may the exact accepted bytes be released and publicly replayed for R1-A8. Source publication does not authorise SDK release assets. nxpk is outside this gate. This is cross-development for AROS, not native AROS-hosted rustc/Cargo, full std, or official rustup target distribution.
+Conditional publication authorisation is now recorded; it does not close R1-A6 or replace independent R1-A1 through R1-A7 acceptance. Once those gates pass, release the exact accepted bytes and perform the public readback and two-host replay required by R1-A8. nxpk is outside this gate. This is cross-development for AROS, not native AROS-hosted rustc/Cargo, full std, or official rustup target distribution.
+
+## CI ownership and capacity
+
+The approved design uses this repository and standard GitHub-hosted runners.
+An additional private input repository was created during preparation and then
+deleted at the owner's explicit request. Its two deploy keys were revoked and
+their two environment secrets removed; all build inputs remain preserved locally.
+No self-hosted runner was registered or started.
+
+Build recipes, input pins, packaging data and redistributable dependency sources
+belong in this repository. Publishing the complete compiled C SDK still requires
+checking its full redistribution/source obligations; the existing review covers
+the selected release candidate, not every file of that prerequisite SDK.
+
+The manual `Hosted capacity survey` workflow measures actual RAM, free disk,
+architecture and Python identity on macOS ARM64 and Linux x86-64. It has read-only
+permissions, installs no SDK inputs and neither builds nor signs a release.
+Published runner specifications do not establish actual available free disk.
+The existing build preflight requires 16 GiB physical RAM and 24 GiB free disk.
+Any prospective revision must be explicit, based on measurements, and qualified
+before a hosted SDK build is accepted. Guest/baseline limits remain unchanged.
 
 ## Operating limits
 
