@@ -1,8 +1,9 @@
 # ami-rust production installation recipe
 
-This recipe applies to the first PC x86-64 AROS ABI-v1 SDK candidate, version
-`0.1.0`. A protected CI candidate is not an accepted public release. Use a
-version as supported only after its R1 acceptance and public replay are recorded.
+This recipe documents consumer preparation and use for the initial PC x86-64
+AROS ABI-v1 SDK version, `0.1.0`, under the host and target profiles below.
+Consult the [dated release status](https://github.com/metaneutrons/ami-rust/blob/main/docs/release-status.md) before treating any
+version as supported; support requires recorded R1 acceptance and public replay.
 
 Select the exact 40-character publisher source and workflow commits through the
 trusted public source/release channel, independently of this downloaded bundle.
@@ -67,8 +68,9 @@ increased for preparation. Downloads happen here; the subsequent builds use lock
 inputs. Network, pin or inventory errors stop preparation and preserve previous
 installations. Use a fresh STATE for another attempt; do not bypass a mismatch.
 
-The following commands are the delivered recipe on both supported hosts. Use
-the variables established above; WORK is the fresh private project directory.
+The following commands are the delivered recipe for both documented host
+profiles. Use the variables established above; WORK is the fresh private project
+directory.
 
 The qualification driver supplies those paths explicitly and runs every command
 below without alteration. `receipt.sha256` is saved outside the installed prefix.

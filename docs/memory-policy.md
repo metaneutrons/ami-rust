@@ -54,8 +54,10 @@ Acceptance requires:
   generic auditor; malformed ABI/section/relocation controls still fail.
 
 Host-only arithmetic and ELF fixtures do not establish native acceptance.
-Protected release production and signatures remain separate R1 gates. Until
-new native evidence is accepted, the changed SDK remains unqualified.
+The [R4 qualification record](https://github.com/metaneutrons/ami-rust/blob/main/release/candidate-r4/qualification.json)
+records native-profile acceptance for the identified changed runtime and pinned
+QEMU baseline. Exact-version SDK production, authentication, final consumer
+qualification and independent R1 acceptance remain separate, open release gates.
 
 ## Development and CI
 

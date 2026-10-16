@@ -8,10 +8,15 @@ workspace metadata does not relicense it.
 ## Native reference and Rust target libraries
 
 SHAUTIL statically incorporates Rust core/alloc/compiler-builtins and selected
-AROS native startup and C library members. The retained R3 native reference is
-928,144 bytes, SHA-256
-`b9521e15361e26b22db49c1e8953a1d29940313a5214507d023c2d953ad4acd4`.
-Qualification must compare the actual delivered native bytes with that reference.
+AROS native startup and C library members. The qualified R4 native-profile
+reference is 928,208 bytes, SHA-256
+`85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162`. It is
+bound to source commit `1d0fe4f10c8f264fd4b8fd50baccadd34869a802` and source SDK
+archive SHA-256 `fec161ac9d80f3775ce413e45279cc708dfe0e14403879001ff2cdcd249c3e34`.
+The R4 native profile qualifies the changed allocator/runtime implementation;
+compiler and Rust target input pins and dependency licence inputs remain
+unchanged. Final candidate consumer outputs must still be compared with the
+reference, and final binary/licence review and R1 acceptance remain pending.
 The selected target crates include sha2, digest, block-buffer, crypto-common,
 generic-array, typenum, cfg-if and cpufeatures. Original manifest declarations
 and notices are in `licence-review.json`, `sbom.spdx.json` and `licences/`.

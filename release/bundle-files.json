@@ -1,9 +1,9 @@
 {
   "files": [
     {
-      "bytes": 3924,
+      "bytes": 4243,
       "path": "COMPATIBILITY.md",
-      "sha256": "076f93363503b3c8b8533d9455d261b6782c3684aa8bee92fcea54b2d8cf044c",
+      "sha256": "dc269a5a487c740311feff28c0910904de78c6ef3c2b690df9b87e2c7de5bca1",
       "source": "docs/compatibility.md"
     },
     {
@@ -31,21 +31,21 @@
       "source": "docs/maintenance.md"
     },
     {
-      "bytes": 11177,
+      "bytes": 11316,
       "path": "QUICKSTART.md",
-      "sha256": "1a18ab68b6d89837a7510e6df3e34b584d9b808b5a67eea0a3b69c216d234f1e",
+      "sha256": "c26a25a0c9e953e7f9fb779fb6413a4720dd3256ef53373bbb4ab4a42519fea1",
       "source": "release/bundle-assets/QUICKSTART.md"
     },
     {
-      "bytes": 13419,
+      "bytes": 13858,
       "path": "SDK-API.md",
-      "sha256": "d8001c394ca68f3f79b9fdb8cc65bc0f0006a6551b7d7e2eb47ba921ac4be1da",
+      "sha256": "f924a9bf729ee87dad4da50e0021b0bbb086d648872d2902c9e0440a233339d9",
       "source": "docs/api.md"
     },
     {
-      "bytes": 12624,
+      "bytes": 13026,
       "path": "THIRD_PARTY_NOTICES.md",
-      "sha256": "5ecd2bdf943fce1d41686af47434382d79e4e8e3a63e3a448e3b245fcc235096",
+      "sha256": "57b1462ab5258ba342fa75a52af52677513b6e4696f988948484cc03e511a86e",
       "source": "release/bundle-assets/THIRD_PARTY_NOTICES.md"
     },
     {
@@ -85,9 +85,9 @@
       "source": "release/install_publisher.py"
     },
     {
-      "bytes": 77965,
+      "bytes": 78712,
       "path": "licence-review.json",
-      "sha256": "47cb41ddba8aa196b6c7a24daa3309af5835470a105a2c77d1100826f5833f4a",
+      "sha256": "def62789e89d8d93a3870acd0769e70501108e8d0f4fd60629189ac0dbe8d23c",
       "source": "release/bundle-assets/licence-review.json"
     },
     {
@@ -589,9 +589,9 @@
       "source": "licences/082-378f5840b258e277.txt"
     },
     {
-      "bytes": 4194,
+      "bytes": 4407,
       "path": "memory-policy.md",
-      "sha256": "bd00d2bd9254a6cef839518108a86f9ddf64924c6cedefa0a1361d74aadb8a3d",
+      "sha256": "3d53e9d16069d5a4d641f9a7ee28169eb7bf65138fd502b7c8f9bd379aae2e18",
       "source": "docs/memory-policy.md"
     },
     {
@@ -613,6 +613,6 @@
       "source": "release/verify_publisher.py"
     }
   ],
-  "historical_review_scope": "Unchanged qualified native reference, selected AROS source and runtime crate notices; new Cargo/C-SDK source and production authentication remain separately qualified.",
+  "historical_review_scope": "Historical dependency/source licence reviews remain scoped to their recorded inputs. R4 qualifies the changed allocator/runtime native profile; final candidate output comparison, binary/licence review, production authentication and R1 acceptance remain separate requirements.",
   "schema": "ami-rust-bundle-files-v1"
 }

@@ -35,6 +35,7 @@ jobs:
             release/ci-cargo-producers/
             release/portable-csdk/spec.json
             release/native-reference.json
+            release/candidate-r4/
             release/bundle-assets/
             release/bundle-files.json
             release/cargo-notices/payload-v3/

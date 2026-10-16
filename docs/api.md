@@ -1,29 +1,32 @@
-# M1 API, lifetime and failure inventory
+# API, lifetime and failure inventory
 
-The next candidate removes the historical 1 MiB per-allocation and 16 MiB
-heap quotas. Allocations use available native memory with checked sizes,
-accounting, alignment and ownership. Native memory exhaustion and checked
-size, accounting or ownership refusal remain possible. Reference-program
-code/file/whole-memory thresholds do not constrain arbitrary applications.
-The fixed startup stack and other stated API capacities remain unchanged.
-Fresh native qualification is pending for this changed allocator; see
-[memory policy](memory-policy.md).
+The facade's global allocator uses public Exec allocation for valid Rust layouts,
+with checked sizes, accounting, supported alignment and ownership. Native memory
+exhaustion and checked size, accounting or ownership refusal remain possible. The
+SDK does not impose the historical 1 MiB per-allocation or 16 MiB heap quotas;
+reference-program code, file and whole-memory thresholds do not constrain
+arbitrary applications. The fixed startup stack and other stated API capacities
+remain unchanged. See the [memory policy](memory-policy.md) for the allocation
+contract and qualification criteria.
 
-The source SDK is limited to the exact pinned native x86-64 ABI-v1 image. It
-provides no target std, foreign-task API, asynchronous callback, hardware or
-public release. R3 qualifies the pinned macOS and Linux host profiles and exact
-native artifact bytes; installation and publisher acceptance are separate gates.
-All crates remain unpublished.
+The source SDK targets the exact pinned native x86-64 ABI-v1 image. Target std,
+foreign-task APIs, asynchronous callbacks, native AROS-hosted Rust tools,
+hardware and other CPU/ABI combinations remain outside scope. The
+[compatibility profile](https://github.com/metaneutrons/ami-rust/blob/main/docs/compatibility.md) records the host and target identities.
+Historical R3 evidence is limited to the exact artifact bytes and host profile it
+identifies; it does not establish acceptance for another artifact or release.
+Consult the [dated release status](https://github.com/metaneutrons/ami-rust/blob/main/docs/release-status.md) for current qualification
+and acceptance state.
 
 ## Source-level `amiga-os` public API index
 
 `amiga-os` is the `no_std` task-affine facade. This index records the current
-source reexports and signatures; it is not a stability promise or an accepted
-release API. Native R4/latest-final-SDK qualification, hosted replay and R1
-acceptance remain pending. The `aros-*` names in the inventory below identify
-internal implementation and qualification crates, not additional consumer
-packages. Use `amiga-sys` only at the unsafe raw ABI boundary; raw calls sit
-outside the safe guarantees summarized here.
+source reexports and signatures; it does not promise API stability. The dated
+[release status](https://github.com/metaneutrons/ami-rust/blob/main/docs/release-status.md) records qualification and acceptance state
+for a particular source snapshot. The `aros-*` names in the inventory below
+identify internal implementation and qualification crates, not additional
+consumer packages. Use `amiga-sys` only at the unsafe raw ABI boundary; raw calls
+sit outside the safe guarantees summarized here.
 
 | Surface | Current signature and semantics |
 | --- | --- |
