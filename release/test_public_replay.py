@@ -1,6 +1,7 @@
 """Offline orchestration fixtures for the public consumer replay driver."""
 from __future__ import annotations
 
+import ast
 from contextlib import redirect_stderr
 import hashlib
 import importlib.util
@@ -12,6 +13,8 @@ import subprocess
 import tempfile
 import types
 import unittest
+import urllib.parse
+from unittest import mock
 
 
 SCRIPT = Path(__file__).with_name("public_replay.py")
@@ -19,6 +22,49 @@ SPEC = importlib.util.spec_from_file_location("r1_public_replay_fixture_target",
 assert SPEC is not None and SPEC.loader is not None
 public_replay = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(public_replay)
+WORKFLOW = SCRIPT.parents[1] / ".github" / "workflows" / "public-replay.yml"
+
+
+def _public_transport_workflow_tree() -> ast.Module:
+    """Parse the transport step's embedded Python control block."""
+    lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
+    blocks = []
+    for index, line in enumerate(lines):
+        if "-I -B - <<'PYCODE'" not in line:
+            continue
+        indentation = len(line) - len(line.lstrip())
+        end = next((position for position in range(index + 1, len(lines))
+                    if lines[position] == " " * indentation + "PYCODE"), None)
+        if end is None:
+            raise AssertionError("workflow Python heredoc has no terminator")
+        body = []
+        for body_line in lines[index + 1:end]:
+            if body_line.strip():
+                if not body_line.startswith(" " * indentation):
+                    raise AssertionError("workflow Python block escapes its YAML run body")
+                body.append(body_line[indentation:])
+            else:
+                body.append("")
+        blocks.append("\n".join(body) + "\n")
+
+    for block in blocks:
+        tree = ast.parse(block, filename=str(WORKFLOW))
+        if any(isinstance(node, ast.Assign)
+               and any(isinstance(target, ast.Name) and target.id == "expected_archive_name"
+                       for target in node.targets)
+               for node in tree.body):
+            return tree
+    raise AssertionError("public transport Python block is missing expected_archive_name")
+
+
+def _workflow_assignment(tree: ast.Module, name: str) -> ast.Assign:
+    matches = [node for node in tree.body
+               if isinstance(node, ast.Assign)
+               and any(isinstance(target, ast.Name) and target.id == name
+                       for target in node.targets)]
+    if len(matches) != 1:
+        raise AssertionError(f"expected one workflow assignment to {name}")
+    return matches[0]
 
 
 class FakeSupervisor:
@@ -325,14 +371,17 @@ class PublicReplayTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def replay(self, helpers=None, *, digest=None, release_tag="v0.1.0"):
-        return public_replay.replay_public_candidate(
-            source=self.source, source_commit=self.commit, bundle=self.bundle,
-            manifest_sha256=digest or self.bundle_digest, release_tag=release_tag,
-            work=self.work,
-            output=self.output, python_bootstrap_root=self.python_root,
-            helpers=helpers or self.helpers,
-        )
+    def replay(self, helpers=None, *, digest=None, release_tag="v0.1.0",
+               tag_verifier=None):
+        verifier = tag_verifier or mock.Mock(return_value=self.commit)
+        with mock.patch.object(public_replay, "_verify_release_tag_target", verifier):
+            return public_replay.replay_public_candidate(
+                source=self.source, source_commit=self.commit, bundle=self.bundle,
+                manifest_sha256=digest or self.bundle_digest, release_tag=release_tag,
+                work=self.work,
+                output=self.output, python_bootstrap_root=self.python_root,
+                helpers=helpers or self.helpers,
+            )
 
     def make_git_source(self, name, origin="https://github.com/metaneutrons/ami-rust.git"):
         source = self.root / name
@@ -375,9 +424,12 @@ class PublicReplayTests(unittest.TestCase):
         self.assertFalse(self.output.exists())
 
     def test_matching_release_tag_runs_public_flow_and_is_recorded(self):
-        report = self.replay()
+        tag_verifier = mock.Mock(return_value=self.commit)
+        report = self.replay(tag_verifier=tag_verifier)
+        tag_verifier.assert_called_once_with(self.source, "v0.1.0", self.commit)
         event_names = [event[0] for event in self.helpers.events]
         self.assertLess(event_names.index("source_identity"), event_names.index("bootstrap_tools"))
+        self.assertLess(event_names.index("source_identity"), event_names.index("candidate_inventory"))
         self.assertLess(event_names.index("bootstrap_tools"), event_names.index("write_source_policy"))
         self.assertLess(event_names.index("protected_verify"), event_names.index("preparation_commands"))
         self.assertLess(event_names.index("recipe_line"), event_names.index("install_and_run_recipe"))
@@ -389,27 +441,157 @@ class PublicReplayTests(unittest.TestCase):
         self.assertEqual(install_call[1], tuple(self.helpers.EXPECTED_RECIPE))
         self.assertEqual(report["status"], public_replay.RESULT_STATUS)
         self.assertEqual(report["release_tag"], "v0.1.0")
+        self.assertEqual(report["release_tag_target_commit"], self.commit)
         self.assertEqual(report["candidate"]["release_manifest_sha256"], self.bundle_digest)
         self.assertEqual(report["candidate"]["version"], "0.1.0")
         self.assertEqual(report["claims"]["r1_accepted"], False)
         self.assertEqual(report["claims"]["aros_guest_run"], False)
         self.assertTrue((self.output / public_replay.RESULT_NAME).is_file())
 
-    def test_authenticated_manifest_wrong_version_stops_before_preparation_or_recipe(self):
+    def test_prerelease_tag_compares_authenticated_manifest_release_core(self):
+        report = self.replay(release_tag="v0.1.0-rc.2+build.7")
+        self.assertEqual(report["release_tag"], "v0.1.0-rc.2+build.7")
+        self.assertEqual(report["candidate"]["version"], "0.1.0")
+
+    def test_release_core_accepts_stable_prerelease_and_build_metadata(self):
+        for tag, expected in (
+            ("v1.2.3", "1.2.3"),
+            ("v1.2.3-rc.4", "1.2.3"),
+            ("v1.2.3+ci.5", "1.2.3"),
+            ("v1.2.3-rc.4+ci.5", "1.2.3"),
+        ):
+            with self.subTest(tag=tag):
+                self.assertEqual(public_replay.release_core(tag), expected)
+
+    def test_release_core_rejects_malformed_semver_tags(self):
+        for tag in ("1.2.3", "v01.2.3", "v1.2.3-01", "v1.2.3-"):
+            with self.subTest(tag=tag):
+                with self.assertRaisesRegex(ValueError, "canonical v-prefixed SemVer"):
+                    public_replay.release_core(tag)
+
+    def test_transport_workflow_uses_shared_core_for_filenames_and_full_tag_urls(self):
+        tree = _public_transport_workflow_tree()
+        controls = Path("/frozen-controls")
+        loads = []
+
+        def load_control(name, path):
+            loads.append((name, path))
+            return public_replay
+
+        namespace = {"controls": controls, "load": load_control, "urllib": urllib}
+
+        def execute(name):
+            statement = _workflow_assignment(tree, name)
+            exec(compile(ast.Module(body=[statement], type_ignores=[]),
+                         str(WORKFLOW), "exec"), namespace)
+
+        execute("replay_control")
+        self.assertEqual(loads, [("_ami_rust_public_replay_control",
+                                  controls / "public_replay.py")])
+
+        base = "https://github.com/metaneutrons/ami-rust/releases/download/"
+        for tag, core in (("v1.2.3", "1.2.3"),
+                          ("v1.2.3-rc.4+ci.5", "1.2.3")):
+            with self.subTest(tag=tag):
+                namespace["tag"] = tag
+                for name in ("version", "archive_path", "encoded_tag", "encoded_version",
+                             "expected_archive_name", "inventory_url", "archive_url"):
+                    execute(name)
+                encoded_tag = urllib.parse.quote(tag, safe="v.-")
+                encoded_core = urllib.parse.quote(core, safe=".-")
+                archive_name = "ami-rust-" + core + "-release.tar.xz"
+                self.assertEqual(namespace["version"], core)
+                self.assertEqual(namespace["archive_path"].name, archive_name)
+                self.assertEqual(namespace["expected_archive_name"], archive_name)
+                self.assertEqual(
+                    namespace["inventory_url"],
+                    base + encoded_tag + "/ami-rust-" + encoded_core + "-transport.json")
+                self.assertEqual(
+                    namespace["archive_url"],
+                    base + encoded_tag + "/" + urllib.parse.quote(archive_name, safe=".-"))
+
+    def test_prerelease_tag_with_wrong_manifest_core_stops_before_preparation(self):
         helpers = FakeTrustedHelpers(self.source, self.commit, self.bundle_digest,
                                      candidate_version="0.1.1")
         with self.assertRaisesRegex(ValueError, "authenticated release manifest version"):
-            self.replay(helpers, release_tag="v0.1.0")
+            self.replay(helpers, release_tag="v0.1.0-rc.2")
 
         event_names = [event[0] for event in helpers.events]
         self.assertLess(event_names.index("protected_verify"), event_names.index("manifest_parse"))
         self.assertTrue((self.output / public_replay.FAILURE_NAME).is_file())
         failure = json.loads((self.output / public_replay.FAILURE_NAME).read_text())
-        self.assertEqual(failure["release_tag"], "v0.1.0")
+        self.assertEqual(failure["release_tag"], "v0.1.0-rc.2")
+        self.assertEqual(failure["release_tag_target_commit"], self.commit)
         self.assertFalse(any(name in event_names for name in (
             "negative_probes", "preparation_commands", "recipe_line",
             "install_and_run_recipe")))
         self.assertFalse((self.output / public_replay.RESULT_NAME).exists())
+
+    def test_tag_binding_failure_stops_before_bundle_access_and_records_phase(self):
+        self.output.mkdir(mode=0o700)
+        tag_verifier = mock.Mock(side_effect=ValueError(
+            "selected release tag target differs from the external source commit"))
+        with self.assertRaisesRegex(ValueError, "release tag target differs"):
+            self.replay(tag_verifier=tag_verifier)
+
+        tag_verifier.assert_called_once_with(self.source, "v0.1.0", self.commit)
+        self.assertEqual([event[0] for event in self.helpers.events], ["source_identity"])
+        failure = json.loads((self.output / public_replay.FAILURE_NAME).read_text())
+        self.assertEqual(failure["phase"], "release-tag-source-binding")
+        self.assertNotIn("release_tag_target_commit", failure)
+        self.assertFalse(self.work.exists())
+
+    def test_lightweight_and_annotated_release_tags_peel_to_the_pinned_commit(self):
+        for name, tag, annotated in (
+            ("lightweight-tag-source", "v1.2.3", False),
+            ("annotated-tag-source", "v2.3.4-rc.1", True),
+        ):
+            with self.subTest(tag=tag):
+                source, revision, _, _ = self.make_git_source(name)
+                arguments = (["tag", "-a", tag, "-m", "isolated fixture tag"]
+                             if annotated else ["tag", tag])
+                subprocess.run(["/usr/bin/git", "-C", str(source), *arguments],
+                               check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                self.assertEqual(
+                    public_replay._verify_release_tag_target(source, tag, revision), revision)
+
+    def test_missing_release_tag_is_rejected(self):
+        source, revision, _, _ = self.make_git_source("missing-tag-source")
+        with self.assertRaisesRegex(ValueError, "release tag Git verification failed"):
+            public_replay._verify_release_tag_target(source, "v1.2.3", revision)
+
+    def test_release_tag_pointing_at_another_commit_is_rejected(self):
+        source, first_revision, _, script = self.make_git_source("wrong-tag-target-source")
+        subprocess.run(["/usr/bin/git", "-C", str(source), "tag", "v1.2.3", first_revision],
+                       check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        script.write_text(script.read_text(encoding="utf-8") + "# second fixture commit\n",
+                          encoding="utf-8")
+        subprocess.run(["/usr/bin/git", "-C", str(source), "add", "release/ci_verify.py"],
+                       check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(["/usr/bin/git", "-C", str(source), "commit", "--quiet", "-m",
+                        "second fixture source"], check=True, stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE)
+        second_revision = subprocess.run(
+            ["/usr/bin/git", "-C", str(source), "rev-parse", "HEAD"], check=True,
+            stdout=subprocess.PIPE, text=True).stdout.strip()
+        self.assertNotEqual(first_revision, second_revision)
+        with self.assertRaisesRegex(ValueError, "tag target differs"):
+            public_replay._verify_release_tag_target(source, "v1.2.3", second_revision)
+
+    def test_release_tag_binding_rejects_head_different_from_external_source(self):
+        source, first_revision, _, script = self.make_git_source("wrong-head-source")
+        subprocess.run(["/usr/bin/git", "-C", str(source), "tag", "-a", "v1.2.3",
+                        "-m", "isolated fixture tag", first_revision], check=True,
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        script.write_text(script.read_text(encoding="utf-8") + "# second fixture commit\n",
+                          encoding="utf-8")
+        subprocess.run(["/usr/bin/git", "-C", str(source), "add", "release/ci_verify.py"],
+                       check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(["/usr/bin/git", "-C", str(source), "commit", "--quiet", "-m",
+                        "second fixture source"], check=True, stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE)
+        with self.assertRaisesRegex(ValueError, "HEAD differs from the external source commit"):
+            public_replay._verify_release_tag_target(source, "v1.2.3", first_revision)
 
     def test_malformed_release_tag_is_rejected_before_source_or_bundle_access(self):
         for release_tag in ("0.1.0", "v01.2.3", "v1.2.3-01"):

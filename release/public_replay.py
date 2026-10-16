@@ -63,6 +63,13 @@ def _absolute_real_directory(label: str, value: Path) -> Path:
     return resolved
 
 
+def release_core(release_tag: str) -> str:
+    """Return the SemVer release core from a canonical v-prefixed tag."""
+    if not isinstance(release_tag, str) or RELEASE_TAG_RE.fullmatch(release_tag) is None:
+        raise ValueError("release tag must be a canonical v-prefixed SemVer value")
+    return release_tag[1:].split("-", 1)[0].split("+", 1)[0]
+
+
 def _load_trusted_helpers(source: Path) -> ModuleType:
     script = source / "release" / "ci_verify.py"
     if script.is_symlink() or not script.is_file():
@@ -127,6 +134,55 @@ def _git_preflight(source: Path, expected_commit: str) -> None:
         raise ValueError("selected source origin is not the approved publisher repository")
 
 
+def _verify_release_tag_target(source: Path, release_tag: str,
+                              expected_commit: str) -> str:
+    """Peel one exact release tag and bind it and HEAD to the external source pin."""
+    if RELEASE_TAG_RE.fullmatch(release_tag) is None:
+        raise ValueError("release tag must be a canonical v-prefixed SemVer value")
+    if not COMMIT_RE.fullmatch(expected_commit):
+        raise ValueError("publisher source must be an exact lowercase 40-character Git commit")
+
+    git_env = {
+        "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
+        "HOME": str(source),
+        "LANG": "C",
+        "LC_ALL": "C",
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GIT_TERMINAL_PROMPT": "0",
+    }
+
+    def git(*arguments: str) -> str:
+        try:
+            result = subprocess.run(
+                ["/usr/bin/git", "-C", str(source), "-c", "core.fsmonitor=false", *arguments],
+                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True, encoding="utf-8", errors="replace", timeout=30,
+                env=git_env, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise ValueError("selected release tag Git verification could not complete") from error
+        if result.returncode != 0:
+            raise ValueError("selected release tag Git verification failed")
+        return result.stdout.strip()
+
+    head = git("rev-parse", "--verify", "HEAD")
+    if head != expected_commit:
+        raise ValueError("selected source HEAD differs from the external source commit")
+
+    # A fully qualified tag ref avoids DWIM and abbreviated-ref selection.
+    # ^{commit} peels annotated tags and accepts lightweight tags while
+    # rejecting tags that do not ultimately name a commit.
+    target = git("rev-parse", "--verify", "--quiet",
+                 "refs/tags/" + release_tag + "^{commit}")
+    if COMMIT_RE.fullmatch(target) is None:
+        raise ValueError("selected release tag did not resolve to one exact commit")
+    if target != expected_commit:
+        raise ValueError("selected release tag target differs from the external source commit")
+    return target
+
+
 def _load_selected_trusted_helpers(source: Path, expected_commit: str) -> ModuleType:
     """Run the clean checkout preflight before importing its trusted helpers."""
     _git_preflight(source, expected_commit)
@@ -147,7 +203,8 @@ def _empty_managed_roots(work: Path, output: Path) -> None:
 
 def _write_failure(output: Path, phase: str, error: Exception,
                    release_tag: str, source_commit: str, manifest_sha256: str,
-                   supervisor: Any | None) -> None:
+                   supervisor: Any | None,
+                   release_tag_target_commit: str | None = None) -> None:
     """Keep a bounded, environment-free failure receipt when output is safe."""
     try:
         if output.is_symlink() or not output.is_dir():
@@ -172,6 +229,8 @@ def _write_failure(output: Path, phase: str, error: Exception,
             "claims": {"R1_accepted": False, "published_by_harness": False,
                        "aros_guest_run": False},
         }
+        if release_tag_target_commit is not None:
+            record["release_tag_target_commit"] = release_tag_target_commit
         raw = _canonical_json(record)
         if len(raw) > 256 * 1024:
             record["commands"] = []
@@ -223,6 +282,7 @@ def replay_public_candidate(*, source: Path, source_commit: str, bundle: Path,
     """Verify and replay a safe-extracted public bundle using selected source helpers."""
     phase = "input-validation"
     supervisor = None
+    release_tag_target_commit = None
     source_commit = str(source_commit)
     manifest_sha256 = str(manifest_sha256)
     release_tag = str(release_tag)
@@ -255,6 +315,10 @@ def replay_public_candidate(*, source: Path, source_commit: str, bundle: Path,
             raise ValueError("consumer source identity differs from the externally selected source commit")
         if trusted.ci_auth.REPO != APPROVED_REPOSITORY:
             raise ValueError("selected source helper repository identity differs from the approved origin")
+
+        phase = "release-tag-source-binding"
+        release_tag_target_commit = _verify_release_tag_target(
+            source_path, release_tag, source_commit)
 
         phase = "external-manifest-pin"
         original_bundle = bundle_path.absolute()
@@ -340,7 +404,7 @@ def replay_public_candidate(*, source: Path, source_commit: str, bundle: Path,
         # Read candidate metadata and documentation only after protected verify.
         candidate_manifest = trusted.strict_json(candidate / "release.json", 1024 * 1024)
         if (not isinstance(candidate_manifest, dict)
-                or candidate_manifest.get("version") != release_tag[1:]):
+                or candidate_manifest.get("version") != release_core(release_tag)):
             raise ValueError("authenticated release manifest version differs from selected release tag")
         asset_rows = {row["path"]: row for row in candidate_manifest.get("assets", [])
                       if isinstance(row, dict) and isinstance(row.get("path"), str)}
@@ -429,6 +493,7 @@ def replay_public_candidate(*, source: Path, source_commit: str, bundle: Path,
             "schema": RESULT_SCHEMA,
             "status": RESULT_STATUS,
             "release_tag": release_tag,
+            "release_tag_target_commit": release_tag_target_commit,
             "host": host,
             "source_policy": {
                 "source_sha": identity["source_sha"],
@@ -507,7 +572,7 @@ def replay_public_candidate(*, source: Path, source_commit: str, bundle: Path,
         return report
     except Exception as error:
         _write_failure(output_path, phase, error, release_tag, source_commit,
-                       manifest_sha256, supervisor)
+                       manifest_sha256, supervisor, release_tag_target_commit)
         raise
 
 

@@ -13,7 +13,9 @@ Before dispatch, record these values in the campaign evidence from sources indep
 
 The transport inventory is downloaded from the fixed public GitHub release URL and its full SHA-256 is checked before JSON parsing. Its archive name must be `ami-rust-<version>-release.tar.xz`; the archive must be between 1 byte and 32 MiB and match the inventory's byte count and SHA-256. The transport decoder then checks each regular file against the complete inventory, with limits of 32 MiB raw file bytes and 512 files; the compressed transport archive also has a 32 MiB limit. Do not choose the inventory digest from the inventory download itself or use data from the candidate bundle alone as an external trust pin.
 
-Keep the release-tag, source-commit, manifest-digest, and inventory-digest evidence with the campaign record. The replay rejects an authenticated manifest whose version differs from the selected tag. The workflow report binds each host result to those four values, the workflow-control commit, and the current GitHub run ID and attempt.
+Keep the release-tag, source-commit, manifest-digest, and inventory-digest evidence with the campaign record. The workflow fetches the exact tag from the designated public repository and requires its peeled commit to equal `publisher_source`. The replay independently checks that local tag and source `HEAD` against the same external commit before accessing the bundle or installing tools. Lightweight and annotated tags are supported; missing tags and tags naming another commit are rejected. A standalone replay therefore needs the exact tag fetched from the designated origin beforehand.
+
+The authenticated manifest version must equal the selected tag's SemVer release core, excluding a prerelease suffix and build metadata. The full tag remains the download identity. The workflow report binds each host result to the four external pins, the verified `release_tag_target_commit`, the workflow-control commit, and the current GitHub run ID and attempt.
 
 ## Dispatch
 
@@ -35,7 +37,7 @@ The example values are syntactically valid placeholders. Replace them with the f
 
 ## What the workflow records
 
-Each hosted job first checks the designated repository, protected `main`, the selected ref, and exact input formats. It checks out the workflow commit identified by `github.sha`, records hashes of the tracked replay and transport controls under the checkout's `.git/ami-rust-public-controls`, then fetches the externally selected publisher commit and detaches the same checkout at that exact commit. This avoids a second checkout and keeps the private controller files out of the selected source tree. The selected source's `release/ci_python.py` installs the pinned Python runtime.
+Each hosted job first checks the designated repository, protected `main`, the selected ref, and exact input formats. It checks out the workflow commit identified by `github.sha`, records hashes of the tracked replay and transport controls under the checkout's `.git/ami-rust-public-controls`, then fetches the externally selected publisher commit and detaches the same checkout at that exact commit. This avoids a second checkout and keeps the private controller files out of the selected source tree. It then fetches and verifies the exact selected tag before the selected source's `release/ci_python.py` installs the pinned Python runtime.
 
 Only the artifact-admission step receives `GH_TOKEN`; it calls `release/ci_artifact_admission.py` without `--sdk-candidate` to reserve two 32 MiB consumer outputs against the existing aggregate 512 MiB retention pool. The replay and public-download steps receive no token or authorization headers. Job permissions remain `contents: read` and `actions: read`, and the job uses the `release` environment.
 
