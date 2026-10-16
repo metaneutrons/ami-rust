@@ -1,4 +1,4 @@
-# ami-rust M2 and independent R1 plan — revision 20
+# ami-rust M2 and independent R1 plan — revision 21
 
 Status: the inherited third qualification campaign (retained development record: `r1-qualification-r3-20261015.md`) remains technically PASS. The installation/licensing follow-up (retained development record: `r1-installation-qualification-20261015.md`) closes the two-host installation/deinstallation recipe, project reproduction and candidate licence/source review. The public source repository is [metaneutrons/ami-rust](https://github.com/metaneutrons/ami-rust); its protected source CI passes. **R1-A6 remains OPEN: actual protected SDK producer provenance and its production consumer verification have not been qualified. R1 is not release-qualified. SDK publication is conditionally authorised after every release acceptance gate passes; no SDK has been published.** The approved comparison contract and all sealed campaign/runtime budgets remain unchanged. The prospective hosted CI resource amendment below applies to new CI phases.
 M0 has GO and M1 technical acceptance is recorded in
@@ -211,6 +211,22 @@ The minimum delivery comprises target specification, startup/FFI bridge sources,
 
 Measured hosted capacity, remaining prerequisite blockers and the original resource proposal are recorded in the hosted preparation record (retained development record: `r1-hosted-ci-preparation-20261015.md`). This record does not close R1-A6.
 
+## Local storage amendment — revision 21 (2026-10-16)
+
+Fabian explicitly replaces the small local file/directory quotas and fixed
+4 GiB incremental / 6 GiB combined archive ceilings with realistic free-space
+accounting. [Local storage policy](local-storage-policy.md) is authoritative for
+new maintainer preparation, evidence and backup operations. Keep at least
+32 GiB free on each affected volume after the estimated additional peak of a
+large operation. Ordinary source, documentation and licence edits/copies use
+a session-level free-space check; they require no per-file reservation ledger.
+There is no fixed cumulative local archive quota. Retain all original evidence,
+failed attempts, hashes and backups. Historic resource results and clocks are
+unchanged. This amendment supersedes only the local retained-storage part of
+the earlier decision below; hosted RAM/workspace/log/time/remote-artifact limits,
+consumer installation requirements, AROS ABI/boot baseline and guest budgets
+remain unchanged. No release gate is closed by this amendment.
+
 ## Prospective hosted resource decision — revision 16
 
 After the completed standard-host survey, the owner’s instruction to measure and
@@ -221,7 +237,8 @@ it does not revise prior pass/fail, peaks, retained holdings, or clocks.
 - Minimum physical RAM: 6 GiB; minimum free disk remains 24 GiB.
 - Per build: two jobs, 1,200 seconds, at most 4 GiB observed aggregate RSS and
   12 GiB workspace. The RSS ceiling is stricter than the historical 8 GiB cap.
-- Retained ami-rust evidence, including local files, Git objects, backups,
+- Historical retained-evidence adoption (superseded for new local work by revision 21):
+  retained ami-rust evidence, including local files, Git objects, backups,
   remotely retained source/proof copies, uploads and reservations: at most
   4 GiB incremental and 6 GiB combined with the unchanged conservative M0 charge.
   The former 2/4 GiB limits remain the authority for the sealed prior campaigns.
