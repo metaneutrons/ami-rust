@@ -1,9 +1,9 @@
 {
   "files": [
     {
-      "bytes": 3278,
+      "bytes": 3553,
       "path": "COMPATIBILITY.md",
-      "sha256": "781b90f08a461d43e6c1e9151c1d1eaad0de478d647148935040c79a8fccfbcf",
+      "sha256": "100ca8bc1a2956004057e55c06b577e18714b0109eaa7f561ab1136fe1909dbe",
       "source": "docs/compatibility.md"
     },
     {
@@ -37,9 +37,9 @@
       "source": "release/bundle-assets/QUICKSTART.md"
     },
     {
-      "bytes": 7391,
+      "bytes": 7880,
       "path": "SDK-API.md",
-      "sha256": "c574ac09a24e641003afb1a4d1612c5605bb4bf930599ccdb717a4e3ad20daa6",
+      "sha256": "ad395ca9659ea7bf0c13d05c2414d5014f219a21489f8d98aa44860666df6fb5",
       "source": "docs/api.md"
     },
     {
@@ -587,6 +587,12 @@
       "path": "licences/082-378f5840b258e277.txt",
       "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
       "source": "licences/082-378f5840b258e277.txt"
+    },
+    {
+      "bytes": 4194,
+      "path": "memory-policy.md",
+      "sha256": "bd00d2bd9254a6cef839518108a86f9ddf64924c6cedefa0a1361d74aadb8a3d",
+      "source": "docs/memory-policy.md"
     },
     {
       "bytes": 9179,
