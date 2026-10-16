@@ -1,9 +1,9 @@
 {
   "files": [
     {
-      "bytes": 2515,
+      "bytes": 3278,
       "path": "COMPATIBILITY.md",
-      "sha256": "dc9ab4919715e17257ea0c3c49f83205b5f896489cb584ec6019b1fbabf55cf9",
+      "sha256": "781b90f08a461d43e6c1e9151c1d1eaad0de478d647148935040c79a8fccfbcf",
       "source": "docs/compatibility.md"
     },
     {

@@ -33,7 +33,12 @@ jobs:
             release/ci-*.json
             release/portable-csdk/spec.json
             release/native-reference.json
-            release/bundle-assets/QUICKSTART.md
+            release/bundle-assets/
+            release/bundle-files.json
+            release/cargo-notices/payload-v3/
+            docs/
+            licences/
+            LICENSE*
       - name: Run isolated installer fixture tests
         run: |
           python3 --version
