@@ -3,22 +3,28 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import importlib.util
+import importlib.machinery
+import io
+import json
+import os
 from pathlib import Path
 import tempfile
+import types
 import unittest
+from unittest import mock
+import urllib.parse
 
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "public-replay.yml"
-PUBLIC_CONTROLS = ("release/public_replay.py", "release/public_transport.py")
-
 SPEC = importlib.util.spec_from_file_location(
-    "r1_public_replay_workflow_transport", ROOT / "release" / "public_transport.py"
+    "r1_public_replay_workflow_public_replay", ROOT / "release" / "public_replay.py"
 )
 assert SPEC is not None and SPEC.loader is not None
-public_transport = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(public_transport)
+public_replay = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(public_replay)
 
 
 def embedded_python_blocks(source: str) -> list[str]:
@@ -55,25 +61,6 @@ def assignment(tree: ast.Module, name: str) -> ast.Assign:
     return matches[0]
 
 
-def evaluate_workflow_expression(expression: ast.expr, values: dict[str, object]) -> object:
-    """Evaluate only names, string literals, concatenation, and Path joining."""
-    if isinstance(expression, ast.Name) and expression.id in values:
-        return values[expression.id]
-    if isinstance(expression, ast.Constant) and type(expression.value) is str:
-        return expression.value
-    if isinstance(expression, ast.BinOp) and isinstance(expression.op, ast.Add):
-        left = evaluate_workflow_expression(expression.left, values)
-        right = evaluate_workflow_expression(expression.right, values)
-        if type(left) is str and type(right) is str:
-            return left + right
-    if isinstance(expression, ast.BinOp) and isinstance(expression.op, ast.Div):
-        left = evaluate_workflow_expression(expression.left, values)
-        right = evaluate_workflow_expression(expression.right, values)
-        if isinstance(left, Path) and type(right) is str:
-            return left / right
-    raise AssertionError("workflow assignment uses an unsupported expression")
-
-
 class PublicReplayWorkflowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -91,66 +78,170 @@ class PublicReplayWorkflowTests(unittest.TestCase):
         with self.assertRaises(SyntaxError):
             compile(damaged, "public-replay.yml:damaged-PYCODE", "exec")
 
-    def test_controls_loop_names_the_existing_public_replay_modules(self):
-        loops = [node for tree in self.trees for node in ast.walk(tree)
-                 if isinstance(node, ast.For)
-                 and isinstance(node.target, ast.Name)
-                 and node.target.id == "relative"
-                 and isinstance(node.iter, ast.Tuple)]
-        self.assertEqual(len(loops), 1)
-        control_paths = tuple(element.value for element in loops[0].iter.elts
+    def test_freeze_step_names_the_hierarchical_public_replay_controls(self):
+        matches = [tree for tree in self.trees
+                   if any(isinstance(statement, ast.Assign)
+                          and any(isinstance(target, ast.Name)
+                                  and target.id == "control_sources"
+                                  for target in statement.targets)
+                          for statement in tree.body)]
+        self.assertEqual(len(matches), 1)
+        control_sources = assignment(matches[0], "control_sources")
+        control_paths = tuple(element.value for element in control_sources.value.elts
                               if isinstance(element, ast.Constant)
                               and type(element.value) is str)
-        self.assertEqual(control_paths, PUBLIC_CONTROLS)
+        self.assertEqual(control_paths, public_replay.PUBLIC_REPLAY_CONTROL_PATHS)
         for relative in control_paths:
             with self.subTest(control=relative):
                 self.assertTrue((ROOT / relative).is_file())
 
-    def test_workflow_archive_path_round_trips_under_its_inventory_name(self):
-        transport_trees = [tree for tree in self.trees
-                           if any(isinstance(statement, ast.Assign)
-                                  and any(isinstance(target, ast.Name)
-                                          and target.id == "archive_path"
-                                          for target in statement.targets)
-                                  for statement in tree.body)]
-        self.assertEqual(len(transport_trees), 1)
-        tree = transport_trees[0]
-        archive_assignment = assignment(tree, "archive_path")
-        inventory_name_assignment = assignment(tree, "expected_archive_name")
-        version = "0.7.3"
+    def test_download_step_fetches_exact_six_assets_in_order_without_unpacking(self):
+        blocks = embedded_python_blocks(WORKFLOW.read_text(encoding="utf-8"))
+        block = next(body for body in blocks
+                     if '"ami-rust-public-candidate-download-v1"' in body)
+        self.assertNotIn("unpack_bundle", block)
+        self.assertNotIn("tarfile", block)
+        tree = ast.parse(block, filename="public-replay.yml:candidate-download")
+        key_loops = [node for node in ast.walk(tree)
+                     if isinstance(node, ast.For)
+                     and isinstance(node.target, ast.Name)
+                     and node.target.id == "key"
+                     and isinstance(node.iter, ast.Tuple)]
+        self.assertEqual(len(key_loops), 1)
+        key_order = tuple(item.value for item in key_loops[0].iter.elts)
+        self.assertEqual(key_order, (
+            "payload", "sbom", "payload_signature", "transport",
+            "transport_signature", "checksums",
+        ))
 
-        with tempfile.TemporaryDirectory(prefix="public-replay-workflow-test-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="public-replay-download-test-") as temporary:
             root = Path(temporary).resolve(strict=True)
-            controls = root / "controls"
-            controls.mkdir()
-            archive_path = evaluate_workflow_expression(
-                archive_assignment.value, {"controls": controls, "version": version}
-            )
-            inventory_name = evaluate_workflow_expression(
-                inventory_name_assignment.value, {"version": version}
-            )
-            self.assertIsInstance(archive_path, Path)
-            self.assertEqual(archive_path.parent, controls)
-            self.assertEqual(archive_path.name, inventory_name)
+            workspace = root / "workspace"
+            controls = workspace / ".git" / "ami-rust-public-controls"
+            (controls / "release").mkdir(parents=True)
+            (controls / "control-source.json").write_text("{}\n", encoding="utf-8")
+            for relative in ("release/stage_candidate.py", "release/ci_sdk.py"):
+                path = controls / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("fixture\n", encoding="utf-8")
+            runtime = root / "runtime"
+            runtime.mkdir()
+            names = {
+                "payload": "ami-rust-1.2.3-release.tar.xz",
+                "sbom": "ami-rust-1.2.3-release.tar.xz.spdx.json",
+                "payload_signature": "ami-rust-1.2.3-release.tar.xz.sigstore.json",
+                "transport": "ami-rust-1.2.3-transport.json",
+                "transport_signature": "ami-rust-1.2.3-transport.json.sigstore.json",
+                "checksums": "SHA256SUMS",
+            }
+            transport_bytes = b"fixture transport metadata\n"
+            bodies = {names[key]: (transport_bytes if key == "transport"
+                                   else ("fixture:" + names[key]).encode())
+                      for key in ("payload", "sbom", "payload_signature", "transport",
+                                  "transport_signature", "checksums")}
+            requested = []
 
-            bundle = root / "candidate"
-            bundle.mkdir()
-            (bundle / "release.json").write_bytes(b'{"version":"0.7.3"}\n')
-            record = public_transport.pack_bundle(bundle, archive_path)
-            self.assertEqual(record["archive"]["name"], inventory_name)
+            class Stage:
+                @staticmethod
+                def asset_names(tag):
+                    if tag != "v1.2.3":
+                        raise AssertionError("download used an unexpected tag")
+                    return names
 
-            wrong_name = controls / "public-release.tar.xz"
-            wrong_name.write_bytes(archive_path.read_bytes())
-            rejected_destination = root / "rejected-readback"
-            with self.assertRaisesRegex(ValueError, "archive name differs"):
-                public_transport.unpack_bundle(wrong_name, record, rejected_destination)
-            self.assertFalse(rejected_destination.exists())
+                @staticmethod
+                def _outer_limits(_names):
+                    return {name: 1024 * 1024 for name in names.values()}
 
-            destination = root / "readback"
-            receipt = public_transport.unpack_bundle(archive_path, record, destination)
-            self.assertEqual(receipt, record)
-            self.assertEqual((destination / "release.json").read_bytes(),
-                             (bundle / "release.json").read_bytes())
+            class SDK:
+                MAX_WORK_BYTES = 12 * 1024**3
+                MAX_RSS_BYTES = 4 * 1024**3
+
+                @staticmethod
+                def directory_bytes(_path):
+                    return 100
+
+            class Loader:
+                def create_module(self, _spec):
+                    return None
+
+                def exec_module(self, module):
+                    if module.__name__.endswith("stage_candidate"):
+                        module.asset_names = Stage.asset_names
+                        module._outer_limits = Stage._outer_limits
+                    else:
+                        module.MAX_WORK_BYTES = SDK.MAX_WORK_BYTES
+                        module.MAX_RSS_BYTES = SDK.MAX_RSS_BYTES
+                        module.directory_bytes = SDK.directory_bytes
+
+            def fake_spec(name, _path):
+                return importlib.machinery.ModuleSpec(name, Loader())
+
+            class Response(io.BytesIO):
+                def __init__(self, url, content):
+                    super().__init__(content)
+                    self.headers = {"Content-Length": str(len(content))}
+                    self._url = url
+
+                def geturl(self):
+                    return self._url
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *_args):
+                    self.close()
+
+            def fake_urlopen(request, timeout):
+                self.assertEqual(timeout, 30)
+                url = request.full_url
+                name = urllib.parse.unquote(urllib.parse.urlparse(url).path.rsplit("/", 1)[1])
+                requested.append(name)
+                return Response(url, bodies[name])
+
+            env = {
+                "GITHUB_WORKSPACE": str(workspace),
+                "RUNNER_TEMP": str(runtime),
+                "RELEASE_TAG": "v1.2.3",
+                "PUBLISHER_SOURCE": "a" * 40,
+                "RELEASE_MANIFEST_SHA256": "b" * 64,
+                "TRANSPORT_INVENTORY_SHA256": hashlib.sha256(transport_bytes).hexdigest(),
+                "WORKFLOW_SOURCE_COMMIT": "c" * 40,
+                "WORKFLOW_RUN_ID": "123",
+                "WORKFLOW_RUN_ATTEMPT": "1",
+            }
+            with mock.patch.dict(os.environ, env, clear=True), \
+                    mock.patch("importlib.util.spec_from_file_location", side_effect=fake_spec), \
+                    mock.patch("urllib.request.urlopen", side_effect=fake_urlopen):
+                exec(compile(block, "public-replay.yml:candidate-download", "exec"), {})
+
+            expected_order = tuple(names[key] for key in (
+                "payload", "sbom", "payload_signature", "transport",
+                "transport_signature", "checksums",
+            ))
+            self.assertEqual(tuple(requested), expected_order)
+            candidate = runtime / "ami-rust-public-bundle"
+            self.assertEqual(tuple(sorted(path.name for path in candidate.iterdir())),
+                             tuple(sorted(names.values())))
+            receipt = json.loads((controls / "transport-receipt.json").read_text())
+            self.assertEqual(receipt["status"], "DOWNLOADED_SIX_PUBLIC_ASSETS_NOT_AUTHENTICATED")
+            self.assertFalse(receipt["claims"]["assets_authenticated"])
+            self.assertEqual(set(receipt["assets"]), set(names.values()))
+
+    def test_production_replay_invocation_requires_candidate_assets_and_external_pins(self):
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn(
+            '"$GITHUB_WORKSPACE/.git/ami-rust-public-controls/release/public_replay.py"',
+            workflow,
+        )
+        self.assertIn('--candidate-assets "$RUNNER_TEMP/ami-rust-public-bundle"', workflow)
+        self.assertIn('--transport-sha256 "$TRANSPORT_INVENTORY_SHA256"', workflow)
+        self.assertIn('--manifest-sha256 "$RELEASE_MANIFEST_SHA256"', workflow)
+        self.assertIn("GH_TOKEN: ${{ github.token }}", workflow)
+        parser = public_replay._parser()
+        actions = {action.dest: action for action in parser._actions}
+        self.assertTrue(actions["candidate_assets"].required)
+        self.assertTrue(actions["transport_sha256"].required)
+        self.assertNotIn("bundle", actions)
 
 
 if __name__ == "__main__":

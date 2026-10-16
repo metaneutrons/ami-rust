@@ -69,6 +69,7 @@ jobs:
           python3 -I -B release/test_ci_auth.py
           python3 -I -B release/test_ci_verify.py
           python3 -I -B release/test_public_transport.py
+          python3 -I -B release/test_public_candidate.py
           python3 -I -B release/test_public_replay_workflow.py
           python3 -I -B release/test_public_replay.py
           python3 -I -B release/test_stage_candidate.py

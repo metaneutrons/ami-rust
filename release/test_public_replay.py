@@ -7,13 +7,13 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
 import tempfile
 import types
 import unittest
-import urllib.parse
 from unittest import mock
 
 
@@ -25,8 +25,8 @@ SPEC.loader.exec_module(public_replay)
 WORKFLOW = SCRIPT.parents[1] / ".github" / "workflows" / "public-replay.yml"
 
 
-def _public_transport_workflow_tree() -> ast.Module:
-    """Parse the transport step's embedded Python control block."""
+def _public_candidate_download_workflow_tree() -> ast.Module:
+    """Parse the workflow's six-asset download block without executing network I/O."""
     lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
     blocks = []
     for index, line in enumerate(lines):
@@ -50,21 +50,14 @@ def _public_transport_workflow_tree() -> ast.Module:
     for block in blocks:
         tree = ast.parse(block, filename=str(WORKFLOW))
         if any(isinstance(node, ast.Assign)
-               and any(isinstance(target, ast.Name) and target.id == "expected_archive_name"
+               and any(isinstance(target, ast.Name) and target.id == "names"
                        for target in node.targets)
+               and isinstance(node.value, ast.Call)
+               and isinstance(node.value.func, ast.Attribute)
+               and node.value.func.attr == "asset_names"
                for node in tree.body):
             return tree
-    raise AssertionError("public transport Python block is missing expected_archive_name")
-
-
-def _workflow_assignment(tree: ast.Module, name: str) -> ast.Assign:
-    matches = [node for node in tree.body
-               if isinstance(node, ast.Assign)
-               and any(isinstance(target, ast.Name) and target.id == name
-                       for target in node.targets)]
-    if len(matches) != 1:
-        raise AssertionError(f"expected one workflow assignment to {name}")
-    return matches[0]
+    raise AssertionError("public download Python block is missing stage.asset_names(tag)")
 
 
 class FakeSupervisor:
@@ -154,11 +147,13 @@ class FakeTrustedHelpers:
         self.EXPECTED_CHECK = "trusted check command supplied by signed QUICKSTART"
         self.EXPECTED_RECIPE = [f"signed recipe line {index}" for index in range(12)]
         self.tool_bytes = {"gh": b"pinned-gh", "cosign": b"pinned-cosign"}
-        self.tool_pins = {name: {"binary_sha256": hashlib.sha256(data).hexdigest()}
+        self.tool_pins = {name: {"bytes": 1,
+                                 "binary_sha256": hashlib.sha256(data).hexdigest()}
                           for name, data in self.tool_bytes.items()}
         self.preparation = None
         self.policy = {"inputs_manifest_sha256": "4" * 64}
         self.policy_sha = "5" * 64
+        self.MAX_BUNDLE_BYTES = 32 * 1024**2
 
     @staticmethod
     def canonical_json(value):
@@ -258,8 +253,10 @@ class FakeTrustedHelpers:
             raise ValueError("unexpected fake command status: " + label)
         return value
 
-    def _validate_trusted_consumer_assets(self, bundle, verified, policy):
-        self.events.append(("validate_trusted_assets",))
+    def _validate_trusted_consumer_assets(self, bundle, verified, policy, *, trusted_source):
+        if Path(trusted_source) != self.ROOT:
+            raise AssertionError("trusted consumer assets must come from the selected source checkout")
+        self.events.append(("validate_trusted_assets", str(trusted_source)))
 
     def run_negative_probes(self, bundle, policy_path, work, install_prefix, callback):
         self.events.append(("negative_probes",))
@@ -432,6 +429,9 @@ class PublicReplayTests(unittest.TestCase):
         self.assertLess(event_names.index("source_identity"), event_names.index("candidate_inventory"))
         self.assertLess(event_names.index("bootstrap_tools"), event_names.index("write_source_policy"))
         self.assertLess(event_names.index("protected_verify"), event_names.index("preparation_commands"))
+        trusted_assets_call = next(event for event in self.helpers.events
+                                   if event[0] == "validate_trusted_assets")
+        self.assertEqual(trusted_assets_call[1], str(self.source))
         self.assertLess(event_names.index("recipe_line"), event_names.index("install_and_run_recipe"))
         self.assertEqual(event_names.count("recipe_line"), 2)
         self.assertEqual(self.helpers.events[1][0], "candidate_inventory")
@@ -469,46 +469,14 @@ class PublicReplayTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "canonical v-prefixed SemVer"):
                     public_replay.release_core(tag)
 
-    def test_transport_workflow_uses_shared_core_for_filenames_and_full_tag_urls(self):
-        tree = _public_transport_workflow_tree()
-        controls = Path("/frozen-controls")
-        loads = []
-
-        def load_control(name, path):
-            loads.append((name, path))
-            return public_replay
-
-        namespace = {"controls": controls, "load": load_control, "urllib": urllib}
-
-        def execute(name):
-            statement = _workflow_assignment(tree, name)
-            exec(compile(ast.Module(body=[statement], type_ignores=[]),
-                         str(WORKFLOW), "exec"), namespace)
-
-        execute("replay_control")
-        self.assertEqual(loads, [("_ami_rust_public_replay_control",
-                                  controls / "public_replay.py")])
-
-        base = "https://github.com/metaneutrons/ami-rust/releases/download/"
-        for tag, core in (("v1.2.3", "1.2.3"),
-                          ("v1.2.3-rc.4+ci.5", "1.2.3")):
-            with self.subTest(tag=tag):
-                namespace["tag"] = tag
-                for name in ("version", "archive_path", "encoded_tag", "encoded_version",
-                             "expected_archive_name", "inventory_url", "archive_url"):
-                    execute(name)
-                encoded_tag = urllib.parse.quote(tag, safe="v.-")
-                encoded_core = urllib.parse.quote(core, safe=".-")
-                archive_name = "ami-rust-" + core + "-release.tar.xz"
-                self.assertEqual(namespace["version"], core)
-                self.assertEqual(namespace["archive_path"].name, archive_name)
-                self.assertEqual(namespace["expected_archive_name"], archive_name)
-                self.assertEqual(
-                    namespace["inventory_url"],
-                    base + encoded_tag + "/ami-rust-" + encoded_core + "-transport.json")
-                self.assertEqual(
-                    namespace["archive_url"],
-                    base + encoded_tag + "/" + urllib.parse.quote(archive_name, safe=".-"))
+    def test_transport_workflow_uses_shared_six_asset_names_and_external_pin(self):
+        tree = _public_candidate_download_workflow_tree()
+        self.assertIn("inventory_sha", ast.unparse(tree))
+        url_calls = [node for node in ast.walk(tree)
+                     if isinstance(node, ast.Call)
+                     and isinstance(node.func, ast.Name) and node.func.id == "download"]
+        self.assertEqual(len(url_calls), 1)
+        self.assertIn("quote(name", ast.unparse(url_calls[0]))
 
     def test_prerelease_tag_with_wrong_manifest_core_stops_before_preparation(self):
         helpers = FakeTrustedHelpers(self.source, self.commit, self.bundle_digest,
@@ -606,7 +574,8 @@ class PublicReplayTests(unittest.TestCase):
         parser = public_replay._parser()
         required_args = [
             "--source", str(self.source), "--source-commit", self.commit,
-            "--bundle", str(self.bundle), "--manifest-sha256", self.bundle_digest,
+            "--candidate-assets", str(self.bundle), "--transport-sha256", "c" * 64,
+            "--manifest-sha256", self.bundle_digest,
             "--work", str(self.work),
             "--output", str(self.output),
             "--python-bootstrap-root", str(self.python_root),
@@ -667,6 +636,257 @@ class PublicReplayTests(unittest.TestCase):
         module = public_replay._load_selected_trusted_helpers(source, revision)
         self.assertEqual(Path(module.ROOT), source)
         self.assertEqual(marker.read_text(), "imported\n")
+
+
+class PublicReplayOuterIntegrationTests(unittest.TestCase):
+    """Synthetic replay wiring checks; they do not claim real cryptographic acceptance."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="public-replay-outer-test-")
+        self.root = Path(self.temp.name).resolve()
+        self.source = self.root / "selected-publisher-source"
+        (self.source / "release").mkdir(parents=True)
+        for name in ("install_publisher.py", "ci-auth-tools.json", "ci-sdk-inputs.json",
+                     "ci-resources.json", "native-reference.json"):
+            (self.source / "release" / name).write_text("external source fixture\n")
+        self.commit = "a" * 40
+        self.controls_commit = "b" * 40
+        self.controls = self.root / "frozen-controls"
+        self._create_frozen_controls()
+        self.candidate_assets = self.root / "candidate-assets"
+        self.candidate_assets.mkdir(mode=0o700)
+        self.names = {
+            "payload": "ami-rust-0.1.0-release.tar.xz",
+            "sbom": "ami-rust-0.1.0-release.tar.xz.spdx.json",
+            "payload_signature": "ami-rust-0.1.0-release.tar.xz.sigstore.json",
+            "transport": "ami-rust-0.1.0-transport.json",
+            "transport_signature": "ami-rust-0.1.0-transport.json.sigstore.json",
+            "checksums": "SHA256SUMS",
+        }
+        for index, name in enumerate(self.names.values()):
+            (self.candidate_assets / name).write_bytes(("candidate-" + str(index)).encode())
+        self.manifest_bytes = b"authenticated public release manifest fixture\n"
+        self.manifest_sha256 = hashlib.sha256(self.manifest_bytes).hexdigest()
+        self.transport_sha256 = "c" * 64
+        self.work = self.root / "work"
+        self.output = self.root / "output"
+        self.python_root = self.root / "python-bootstrap"
+        self.python_root.mkdir(mode=0o700)
+        self.helpers = FakeTrustedHelpers(self.source, self.commit, self.manifest_sha256)
+        self.inputs_bytes = b'{"schema":"fixture-inputs","materials":[]}\n'
+        self.helpers.ci_auth.input_manifest = lambda _source: []
+        self.helpers.ci_auth.encoded = lambda _materials: self.inputs_bytes
+        self.helpers.policy["inputs_manifest_sha256"] = hashlib.sha256(self.inputs_bytes).hexdigest()
+        original_strict_json = self.helpers.strict_json
+
+        def integration_strict_json(path, maximum=None):
+            if Path(path).name == "ci-auth-tools.json":
+                return {"roots": {"gh": {"bytes": 1}, "cosign": {"bytes": 1}}}
+            return original_strict_json(path, maximum)
+
+        self.helpers.strict_json = integration_strict_json
+        self.gh_bundles = self._make_gh_inputs()
+        self.auth_calls = []
+
+        class Stage:
+            @staticmethod
+            def asset_names(tag):
+                if tag != "v0.1.0":
+                    raise AssertionError("verifier received an unexpected release tag")
+                return self.names
+
+            @staticmethod
+            def _outer_limits(_names):
+                return {name: 1024 * 1024 for name in self.names.values()}
+
+        self.fake_public_candidate = types.SimpleNamespace(
+            stage_candidate=Stage,
+            RECEIPT_STATUS=(
+                "PUBLIC_CANDIDATE_AUTHENTICATED_AND_UNPACKED_NOT_INSTALLED_NOT_R1_ACCEPTED"
+            ),
+            verify_and_unpack=self._fake_verify_and_unpack,
+        )
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def _create_frozen_controls(self):
+        rows = {}
+        for relative in public_replay.PUBLIC_REPLAY_CONTROL_PATHS:
+            path = self.controls / relative
+            path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            raw = ("frozen control:" + relative + "\n").encode()
+            path.write_bytes(raw)
+            path.chmod(0o600)
+            rows[relative] = {
+                "source_path": relative,
+                "bytes": len(raw),
+                "sha256": hashlib.sha256(raw).hexdigest(),
+            }
+        record = {
+            "schema": "ami-rust-public-replay-control-source-v1",
+            "workflow_source_commit": self.controls_commit,
+            "workflow_run_id": "123",
+            "workflow_run_attempt": "1",
+            "controls": rows,
+        }
+        (self.controls / "control-source.json").write_bytes(public_replay._canonical_json(record))
+        (self.controls / "control-source.json").chmod(0o600)
+
+    def _make_gh_inputs(self):
+        root = self.root / "gh-inputs"
+        root.mkdir(mode=0o700)
+        result = {}
+        for key in ("payload", "sbom", "transport", "checksums"):
+            subject = self.names[key]
+            path = root / (key + ".json")
+            path.write_bytes(public_replay._canonical_json({"fixture_subject": subject}))
+            result[subject] = [path]
+        return result
+
+    def _fake_verify_and_unpack(self, candidate, tag, source_commit, transport_sha256,
+                                manifest_sha256, policy, trusted_inputs_root, gh_bundles,
+                                destination, work, runner=None):
+        self.auth_calls.append({
+            "candidate": Path(candidate), "tag": tag, "source_commit": source_commit,
+            "transport_sha256": transport_sha256, "manifest_sha256": manifest_sha256,
+            "policy": policy, "trusted_inputs_root": Path(trusted_inputs_root),
+            "gh_bundles": gh_bundles, "destination": Path(destination),
+            "work": Path(work), "runner": runner,
+        })
+        expected_subjects = {self.names[key] for key in ("payload", "sbom", "transport", "checksums")}
+        if set(gh_bundles) != expected_subjects or any(not gh_bundles[name] for name in expected_subjects):
+            raise ValueError("synthetic missing GH proof")
+        for subject in expected_subjects:
+            proof = gh_bundles[subject][0]
+            expected = public_replay._canonical_json({"fixture_subject": subject})
+            if Path(proof).read_bytes() != expected:
+                raise ValueError("synthetic wrong GH proof")
+        self.assertFalse(Path(destination).exists(), "bundle was unpacked before crypto completed")
+        self.helpers.events.append(("outer_crypto_complete",))
+        evidence = Path(work) / "public-candidate-fixture"
+        evidence.mkdir(mode=0o700)
+        proof_root = evidence / "gh"
+        proof_root.mkdir(mode=0o700)
+        selected = {}
+        for subject in sorted(expected_subjects):
+            source_proof = Path(gh_bundles[subject][0])
+            raw = source_proof.read_bytes()
+            digest = hashlib.sha256(raw).hexdigest()
+            (proof_root / (digest + ".json")).write_bytes(raw)
+            selected[subject] = [{"sha256": digest, "statement_sha256": "d" * 64}]
+        Path(destination).mkdir(mode=0o700)
+        (Path(destination) / "release.json").write_bytes(self.manifest_bytes)
+        self.helpers.events.append(("safe_unpack",))
+        receipt = {
+            "schema": "ami-rust-public-candidate-authentication-v1",
+            "status": self.fake_public_candidate.RECEIPT_STATUS,
+            "authenticated": True,
+            "unpacked": True,
+            "installed": False,
+            "r1_accepted": False,
+            "source_commit": source_commit,
+            "workflow_commit": source_commit,
+            "transport_sha256": transport_sha256,
+            "manifest_sha256": manifest_sha256,
+            "candidate_assets": [{"path": name} for name in sorted(self.names.values())],
+            "selected_gh_proofs": selected,
+            "cosign_proofs": {
+                self.names["payload"]: {"bundle_sha256": "e" * 64},
+                self.names["transport"]: {"bundle_sha256": "f" * 64},
+            },
+            "evidence_directory": str(evidence),
+            "destination": str(destination),
+            "run_id": 123,
+            "run_attempt": 1,
+            "receipt_path": str(evidence / "receipt.json"),
+        }
+        (evidence / "receipt.json").write_bytes(public_replay._canonical_json(receipt))
+        return receipt
+
+    def replay(self, *, gh_bundles=None):
+        with mock.patch.object(public_replay, "_verify_release_tag_target",
+                               return_value=self.commit), \
+                mock.patch.object(public_replay, "_load_public_candidate",
+                                  return_value=self.fake_public_candidate):
+            return public_replay.replay_public_candidate(
+                source=self.source,
+                source_commit=self.commit,
+                candidate_assets=self.candidate_assets,
+                transport_sha256=self.transport_sha256,
+                manifest_sha256=self.manifest_sha256,
+                release_tag="v0.1.0",
+                work=self.work,
+                output=self.output,
+                python_bootstrap_root=self.python_root,
+                controls_root=self.controls,
+                gh_bundles=self.gh_bundles if gh_bundles is None else gh_bundles,
+                helpers=self.helpers,
+            )
+
+    def test_production_path_authenticates_then_unpacks_before_consumer_install(self):
+        with mock.patch.dict(os.environ, {
+            "GH_TOKEN": "retrieve-only-token",
+            "GITHUB_TOKEN": "ambient-token",
+        }, clear=False):
+            report = self.replay()
+
+        self.assertEqual(len(self.auth_calls), 1)
+        call = self.auth_calls[0]
+        self.assertEqual(call["tag"], "v0.1.0")
+        self.assertEqual(call["source_commit"], self.commit)
+        self.assertEqual(call["transport_sha256"], self.transport_sha256)
+        self.assertEqual(call["manifest_sha256"], self.manifest_sha256)
+        self.assertTrue((call["trusted_inputs_root"] / ".auth" / "inputs.json").is_file())
+        self.assertEqual(call["work"].parent, self.work)
+        self.assertTrue(call["work"].is_relative_to(self.work))
+        self.assertEqual(call["destination"].parent, self.work.parent)
+        self.assertNotEqual(call["destination"], self.work)
+        self.assertNotIn("GH_TOKEN", os.environ)
+        self.assertNotIn("GITHUB_TOKEN", os.environ)
+
+        event_names = [event[0] for event in self.helpers.events]
+        self.assertLess(event_names.index("outer_crypto_complete"), event_names.index("safe_unpack"))
+        self.assertLess(event_names.index("safe_unpack"), event_names.index("protected_verify"))
+        self.assertLess(event_names.index("protected_verify"), event_names.index("install_and_run_recipe"))
+        self.assertTrue(report["claims"]["public_transport_verified_by_harness"])
+        self.assertEqual(report["source_policy"]["source_sha"], self.commit)
+        self.assertEqual(report["source_policy"]["workflow_sha"], self.commit)
+        self.assertNotEqual(self.controls_commit, self.commit)
+        self.assertEqual(report["workflow_control_sources"]["workflow_source_commit"],
+                         self.controls_commit)
+        self.assertTrue((self.output / public_replay.OUTER_RECEIPT_NAME).is_file())
+        self.assertFalse((self.output / "candidate-assets").exists())
+        self.assertFalse((self.output / self.names["payload"]).exists())
+        retained = report["public_candidate_authentication"]["selected_proofs"]
+        self.assertEqual(len(retained), 4)
+        for row in retained:
+            path = self.output / row["path"]
+            self.assertEqual(path.stat().st_size, row["bytes"])
+            self.assertEqual(public_replay.sha256(path), row["sha256"])
+
+    def test_missing_or_wrong_proof_fails_before_unpack_and_never_claims_verification(self):
+        cases = ("missing", "wrong")
+        for label in cases:
+            with self.subTest(proof=label):
+                self.work = self.root / ("work-" + label)
+                self.output = self.root / ("output-" + label)
+                proofs = {subject: list(paths) for subject, paths in self.gh_bundles.items()}
+                if label == "missing":
+                    proofs.pop(next(iter(proofs)))
+                else:
+                    wrong = self.root / "wrong-proof.json"
+                    wrong.write_text("{\"fixture_subject\":\"wrong\"}\n", encoding="utf-8")
+                    proofs[next(iter(proofs))] = [wrong]
+                with self.assertRaisesRegex(ValueError, "synthetic (missing|wrong) GH proof"):
+                    self.replay(gh_bundles=proofs)
+                self.assertFalse((self.work.parent / "ami-rust-public-authenticated-bundle").exists())
+                self.assertFalse((self.output / public_replay.RESULT_NAME).exists())
+                failure = json.loads((self.output / public_replay.FAILURE_NAME).read_text())
+                self.assertFalse(failure["claims"]["public_transport_verified_by_harness"])
+                event_names = [event[0] for event in self.helpers.events]
+                self.assertNotIn("safe_unpack", event_names)
+                self.assertNotIn("install_and_run_recipe", event_names)
 
 
 if __name__ == "__main__":
