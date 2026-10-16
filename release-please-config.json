@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/05c6a4f71022304d4edad24ea90c1c16324503d5/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "ami-rust",
+      "changelog-path": "CHANGELOG.md",
+      "initial-version": "0.1.0",
+      "bump-minor-pre-major": true,
+      "draft": true,
+      "force-tag-creation": true,
+      "include-component-in-tag": false,
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "Cargo.toml",
+          "jsonpath": "$.workspace.package.version"
+        }
+      ]
+    }
+  }
+}
