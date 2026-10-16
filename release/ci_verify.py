@@ -85,6 +85,8 @@ def load_helper(name: str, relative: str):
 ci_sdk = load_helper("_ami_rust_ci_sdk_for_verify", "release/ci_sdk.py")
 ci_auth = load_helper("_ami_rust_ci_auth_for_verify", "release/ci_auth.py")
 consumer_inputs = load_helper("_ami_rust_consumer_inputs", "release/consumer_inputs.py")
+contract_probes = load_helper("_ami_rust_compile_contract_probes", "release/contract_probes.py")
+selection_probes = load_helper("_ami_rust_selection_contract_probes", "release/selection_probes.py")
 ci_cargo = ci_sdk.ci_cargo
 
 
@@ -1378,6 +1380,31 @@ def _install_and_run_recipe(bundle: Path, work: Path, output: Path, python: Path
         # result records alongside the install/lock records.
         command_rows[name].extend(build_records["roots"][name])
 
+    # Companion evidence for inherited M1/M2 criteria uses the same installed
+    # candidate and selected roots after the signed recipe builds, before uninstall.
+    compile_report = contract_probes.qualify_compile_contract(
+        supervisor=supervisor, python=python, bundle=bundle, consumer=consumers[0],
+        host=host, sdk=sdk, components=component_copies[0])
+    if (compile_report.get("status") != "PASS_COMPILE_CONTRACT_PROBES_ONLY"
+            or compile_report.get("host") != host
+            or compile_report.get("candidate", {}).get("sdk_files", {}).get("manifest", {}).get("sha256")
+                != sdk["manifest_sha256"]):
+        raise ValueError("compile contract probes did not bind the installed SDK and host")
+    selection_report = selection_probes.qualify_selection_contract(
+        supervisor=supervisor, python=python, bundle=bundle, consumer=consumers[0],
+        host=host, sdk=sdk, components=component_copies[0])
+    if (selection_report.get("status") != "PASS_SELECTION_CONTRACT_PROBES_ONLY"
+            or selection_report.get("host") != host
+            or selection_report.get("candidate", {}).get("sdk_manifest_sha256") != sdk["manifest_sha256"]):
+        raise ValueError("selection contract probes did not bind the installed SDK and host")
+    final_contract_probes = {
+        "root": "absolute-a", "host": host,
+        "sdk_manifest_sha256": sdk["manifest_sha256"],
+        "source_sdk_identity": sdk["manifest"].get("source_identity"),
+        "compile": compile_report, "selection": selection_report,
+        "r1_acceptance": False,
+    }
+
     uninstall_rows = {}
     for consumer, name, env, other in zip(consumers, ("absolute-a", "absolute-b"), envs,
                                          (consumers[1], consumers[0]), strict=True):
@@ -1423,6 +1450,7 @@ def _install_and_run_recipe(bundle: Path, work: Path, output: Path, python: Path
                 for name, rows in zip(("absolute-a", "absolute-b"), component_copies, strict=True)},
             "retained_native": build_records["retained_native"],
             "retained_metadata": build_records["retained_metadata"],
+            "final_contract_probes": final_contract_probes,
             "unrelated_sibling_marker_sha256": sha256(marker)}
 
 
@@ -1590,6 +1618,7 @@ def qualify(bundle_path: Path, work: Path, output: Path, python_root: Path) -> d
                                 consumer_report["unrelated_sibling_marker_sha256"]},
         "retained_native": consumer_report["retained_native"],
         "retained_metadata": consumer_report["retained_metadata"],
+        "final_contract_probes": consumer_report["final_contract_probes"],
         "budgets": {"workspace_bytes": ci_sdk.MAX_WORK_BYTES,
                     "rss_bytes": ci_sdk.MAX_RSS_BYTES, "log_bytes": ci_sdk.MAX_LOG_BYTES,
                     "command_seconds": ci_sdk.MAX_COMMAND_SECONDS,

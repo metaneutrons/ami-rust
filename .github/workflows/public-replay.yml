@@ -169,6 +169,8 @@ jobs:
               "release/stage_candidate.py",
               "release/verify_publisher.py",
               "release/ci_verify.py",
+              "release/contract_probes.py",
+              "release/selection_probes.py",
               "release/ci_auth.py",
               "release/ci_sdk.py",
               "release/ci_cargo.py",

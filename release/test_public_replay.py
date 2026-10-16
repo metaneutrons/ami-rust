@@ -358,6 +358,7 @@ class FakeTrustedHelpers:
             "unrelated_sibling_marker_sha256": "9" * 64,
             "retained_native": native,
             "retained_metadata": retained_metadata,
+            "final_contract_probes": {"fixture_only": True, "r1_acceptance": False},
         }
 
     def _assert_source_clean(self, source_commit):
@@ -467,6 +468,8 @@ class PublicReplayTests(unittest.TestCase):
         self.assertEqual(report["claims"]["r1_accepted"], False)
         self.assertEqual(report["claims"]["aros_guest_run"], False)
         self.assertEqual(len(report["retained_metadata"]), 6)
+        self.assertTrue(report["final_contract_probes"]["fixture_only"])
+        self.assertFalse(report["final_contract_probes"]["r1_acceptance"])
         self.assertEqual({row["root"] for row in report["retained_metadata"]},
                          {"absolute-a", "absolute-b"})
         self.assertEqual({row["path"] for row in report["retained_metadata"]},

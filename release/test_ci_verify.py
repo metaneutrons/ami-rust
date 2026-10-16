@@ -91,6 +91,30 @@ class HostedConsumerVerifyTests(unittest.TestCase):
                "component_info": {name: {"manifest": {"fixture": name}} for name in components}}
         supervisor = SimpleNamespace(work=self.work, env={}, check_limits=lambda label: None)
         self.recipe_calls = []
+        self.probe_calls = []
+
+        def compile_companion(**kwargs):
+            self.assertEqual(kwargs["consumer"], first)
+            self.assertEqual(kwargs["components"], components)
+            self.assertEqual(set(self.recipe_calls), {(root, i)
+                for root in ("absolute-a", "absolute-b") for i in range(11)})
+            self.assertTrue((first / "sdk-0.1.0").is_dir())
+            self.probe_calls.append("compile")
+            if corrupt == "compile-probe":
+                raise ValueError("synthetic compile companion failure")
+            return {"status": "PASS_COMPILE_CONTRACT_PROBES_ONLY", "host": host,
+                    "candidate": {"sdk_files": {"manifest": {"sha256": sdk_digest}}},
+                    "fixture_only": True}
+
+        def selection_companion(**kwargs):
+            self.assertEqual(self.probe_calls, ["compile"])
+            self.assertEqual(kwargs["consumer"], first)
+            self.assertTrue((first / "sdk-0.1.0").is_dir())
+            self.probe_calls.append("selection")
+            return {"status": "PASS_SELECTION_CONTRACT_PROBES_ONLY", "host": host,
+                    "candidate": {"sdk_manifest_sha256":
+                        "f" * 64 if corrupt == "selection-probe-binding" else sdk_digest},
+                    "fixture_only": True}
 
         def execute(supervisor, env, consumer, line, label):
             index = commands.index(line)
@@ -147,15 +171,35 @@ class HostedConsumerVerifyTests(unittest.TestCase):
                 mock.patch.object(ci_verify, "_build_receipt", side_effect=receipt), \
                 mock.patch.object(ci_verify, "_copy_components_to_consumers",
                                   return_value=[components, components]), \
-                mock.patch.object(ci_verify.ci_sdk, "verify_component", return_value={"fixture": "unchanged"}):
+                mock.patch.object(ci_verify.ci_sdk, "verify_component", return_value={"fixture": "unchanged"}), \
+                mock.patch.object(ci_verify.contract_probes, "qualify_compile_contract", side_effect=compile_companion), \
+                mock.patch.object(ci_verify.selection_probes, "qualify_selection_contract", side_effect=selection_companion):
             return ci_verify._install_and_run_recipe(
                 bundle, self.work, output, python, supervisor, host, sdk, components, reference, commands)
+
+    def test_compile_companion_failure_stops_before_uninstall(self):
+        with self.assertRaisesRegex(ValueError, "synthetic compile companion failure"):
+            self._exercise_complete_install_recipe(corrupt="compile-probe")
+        self.assertFalse(any(index == 11 for _, index in self.recipe_calls))
+        self.assertEqual(self.probe_calls, ["compile"])
+        self.assertTrue((self.work / "consumers/absolute-a/sdk-0.1.0").is_dir())
+
+    def test_selection_companion_wrong_candidate_stops_before_uninstall(self):
+        with self.assertRaisesRegex(ValueError, "selection contract probes did not bind"):
+            self._exercise_complete_install_recipe(corrupt="selection-probe-binding")
+        self.assertFalse(any(index == 11 for _, index in self.recipe_calls))
+        self.assertEqual(self.probe_calls, ["compile", "selection"])
+        self.assertTrue((self.work / "consumers/absolute-a/sdk-0.1.0").is_dir())
 
     def test_complete_recipe_passes_project_context_and_keeps_receipts_per_root(self):
         result = self._exercise_complete_install_recipe()
         self.assertEqual(set(self.recipe_calls), {(root, i) for root in ("absolute-a", "absolute-b")
                                                  for i in range(12)})
         self.assertEqual(len(self.recipe_calls), 24)
+        self.assertEqual(self.probe_calls, ["compile", "selection"])
+        self.assertEqual(result["final_contract_probes"]["root"], "absolute-a")
+        self.assertTrue(result["final_contract_probes"]["compile"]["fixture_only"])
+        self.assertFalse(result["final_contract_probes"]["r1_acceptance"])
         self.assertEqual(len(result["retained_native"]), 5)
         self.assertEqual(len(result["retained_metadata"]), 6)
         expected_paths = {f"metadata/{root}/{crate}.rlib"

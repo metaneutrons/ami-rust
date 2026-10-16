@@ -69,6 +69,8 @@ jobs:
           python3 -I -B release/test_csdk_producer.py
           python3 -I -B release/test_prepare_sdk.py
           python3 -I -B release/test_ci_auth.py
+          python3 -I -B release/test_contract_probes.py
+          python3 -I -B release/test_selection_probes.py
           python3 -I -B release/test_ci_verify.py
           python3 -I -B release/test_public_transport.py
           python3 -I -B release/test_public_candidate.py
