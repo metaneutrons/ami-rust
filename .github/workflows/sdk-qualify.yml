@@ -1,0 +1,537 @@
+name: Hosted SDK candidate producer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ami-rust-protected-builds
+  cancel-in-progress: false
+
+jobs:
+  producer:
+    name: SDK producer (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    environment: release
+    timeout-minutes: 80
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - os: macos-26
+            profile: macos-aarch64
+          - os: ubuntu-24.04
+            profile: linux-x86_64
+    steps:
+      - name: Require protected main and the designated repository
+        shell: bash
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+        run: |
+          test "$GITHUB_REPOSITORY" = metaneutrons/ami-rust
+          test "$GITHUB_REF" = refs/heads/main
+          test "$SOURCE_IS_PROTECTED" = true
+      - name: Check out the exact public source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Admit aggregate CI artifact retention
+        id: admission
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+        run: python3 -I -B release/ci_artifact_admission.py --sdk-candidate
+      - name: Install the pinned standalone Python runtime
+        id: python-runtime
+        shell: bash
+        run: |
+          python3 -I -B release/ci_python.py \
+            --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" \
+            --inputs release/ci-python-inputs.json
+      - name: Produce host SDK candidate and native evidence
+        id: producer
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_sdk.py \
+            --work "$RUNNER_TEMP/ami-rust-sdk-work" \
+            --output "$RUNNER_TEMP/ami-rust-sdk-output" \
+            --inputs release/ci-sdk-inputs.json \
+            --cargo-inputs release/ci-bootstrap-inputs.json \
+            --resources release/ci-resources.json \
+            --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap"
+      - name: Retire managed work and validate bounded candidate payloads
+        id: cleanup
+        if: always()
+        shell: bash
+        env:
+          PRODUCER_RESULT: ${{ steps.producer.outcome }}
+          PYTHON_RESULT: ${{ steps.python-runtime.outcome }}
+          EXPECTED_HOST: ${{ matrix.profile }}
+          WORKFLOW_SOURCE_COMMIT: ${{ github.sha }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          python3 -I -B - <<'PYCODE'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path, PurePosixPath
+          import shutil
+          import stat
+
+          temporary = Path(os.environ["RUNNER_TEMP"]).resolve(strict=True)
+          work = temporary / "ami-rust-sdk-work"
+          python_root = temporary / "ami-rust-python-bootstrap"
+          output = temporary / "ami-rust-sdk-output"
+          for root in (work, python_root, output):
+              if root.is_symlink():
+                  raise SystemExit("Managed SDK roots must not be symlinks")
+          output.mkdir(mode=0o700, exist_ok=True)
+
+          bootstrap = python_root / "bootstrap.json"
+          if bootstrap.exists():
+              if bootstrap.is_symlink() or not bootstrap.is_file() or bootstrap.stat().st_size > 65536:
+                  raise SystemExit("Invalid pinned Python bootstrap receipt")
+              (output / "python-bootstrap.json").write_bytes(bootstrap.read_bytes())
+          if work.exists():
+              shutil.rmtree(work)
+          if work.exists():
+              raise SystemExit("Managed SDK work tree was not retired")
+          if python_root.exists():
+              shutil.rmtree(python_root)
+          if python_root.exists():
+              raise SystemExit("Pinned Python runtime was not retired")
+
+          def pairs(items):
+              result = {}
+              for key, value in items:
+                  if key in result:
+                      raise ValueError("Duplicate JSON key")
+                  result[key] = value
+              return result
+
+          def sha256(path):
+              digest = hashlib.sha256()
+              with path.open("rb") as stream:
+                  for block in iter(lambda: stream.read(1024 * 1024), b""):
+                      digest.update(block)
+              return digest.hexdigest()
+
+          def read_json(path):
+              if path.is_symlink() or not path.is_file() or path.stat().st_size > 8 * 1024 * 1024:
+                  raise ValueError("Missing, linked or oversized metadata: " + path.name)
+              return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=pairs,
+                                parse_constant=lambda token: (_ for _ in ()).throw(ValueError("Non-finite JSON")))
+
+          def regular(path):
+              info = path.lstat()
+              if not stat.S_ISREG(info.st_mode):
+                  raise ValueError("Candidate payload must be a regular file: " + str(path))
+              return info
+
+          expected_host = os.environ["EXPECTED_HOST"]
+          success = os.environ["PRODUCER_RESULT"] == "success"
+          cargo_path = output / "producer.json"
+          sdk_path = output / "sdk-producer.json"
+          if not sdk_path.exists():
+              failure = {"schema": "ami-rust-hosted-sdk-producer-v1", "status": "FAILED",
+                         "host": expected_host, "error": "producer did not write sdk-producer.json",
+                         "claim": "No SDK qualification or publication claim."}
+              sdk_path.write_text(json.dumps(failure, sort_keys=True, indent=2) + "\n")
+          sdk = read_json(sdk_path)
+          if (sdk.get("schema") != "ami-rust-hosted-sdk-producer-v1"
+                  or sdk.get("host") != expected_host
+                  or sdk.get("status") not in {"FAILED", "PRODUCED_HOSTED_SDK_CANDIDATE_NOT_R1_ACCEPTED"}):
+              raise SystemExit("Unrecognized SDK producer receipt")
+          if cargo_path.exists():
+              cargo = read_json(cargo_path)
+              if (cargo.get("schema") != "ami-rust-hosted-custom-cargo-producer-v1"
+                      or cargo.get("host") != expected_host
+                      or cargo.get("status") not in {"FAILED", "PRODUCED_PREREQUISITE_ONLY_NOT_R1_QUALIFICATION"}):
+                  raise SystemExit("Unrecognized Cargo producer receipt")
+          elif success:
+              raise SystemExit("Successful SDK producer omitted the Cargo receipt")
+
+          payload_names = {
+              "sdk.tar.xz", "cargo-component.tar.xz",
+              "native/minimal-noalloc.AMIRUST", "native/minimal-alloc.AMIRUST",
+              "native/qualification.AMIRUST", "native/dependencies.AMIRUST",
+              "native/sha256sum.AMIRUST"}
+          if not success:
+              for relative in sorted(payload_names):
+                  path = output / relative
+                  if path.is_symlink():
+                      raise SystemExit("Unexpected linked partial payload")
+                  if path.is_file():
+                      path.unlink()
+              native = output / "native"
+              if native.exists():
+                  if native.is_symlink() or not native.is_dir() or any(native.iterdir()):
+                      raise SystemExit("Unexpected partial native output tree")
+                  native.rmdir()
+
+          allowed = {"producer.json", "sdk-producer.json", "csdk-producer.json", "python-bootstrap.json", "cleanup.json"}
+          if success:
+              allowed |= payload_names
+              if (sdk.get("status") != "PRODUCED_HOSTED_SDK_CANDIDATE_NOT_R1_ACCEPTED"
+                      or sdk.get("source", {}).get("qualification_only") is not False):
+                  raise SystemExit("Successful SDK producer did not emit a production trust candidate")
+              csdk_path = output / "csdk-producer.json"
+              csdk = read_json(csdk_path)
+              csdk_binding = sdk.get("inputs", {}).get("portable_csdk", {})
+              if (csdk.get("schema") != "ami-rust-portable-csdk-producer-v1"
+                      or csdk.get("status") != "PRODUCED_CSDK_COMPONENT_CANDIDATE_NOT_R1_ACCEPTED"
+                      or csdk.get("host") != expected_host
+                      or sha256(csdk_path) != csdk_binding.get("producer_receipt_sha256")
+                      or csdk.get("spec_sha256") != csdk_binding.get("spec", {}).get("sha256")):
+                  raise SystemExit("Successful SDK producer omitted its exact fresh C-SDK proof")
+              payload_rows = {}
+              payload_rows[sdk["source"]["sdk_archive"]["path"]] = sdk["source"]["sdk_archive"]
+              payload_rows[sdk["cargo_component"]["archive"]["path"]] = sdk["cargo_component"]["archive"]
+              for row in sdk.get("native_payloads", []):
+                  payload_rows[row["path"]] = row
+              if set(payload_rows) != payload_names:
+                  raise SystemExit("SDK receipt payload inventory is incomplete")
+              for relative, row in payload_rows.items():
+                  path = output / relative
+                  info = regular(path)
+                  if info.st_size != row.get("bytes") or sha256(path) != row.get("sha256"):
+                      raise SystemExit("Candidate payload differs from its receipt: " + relative)
+              if (len(sdk.get("native_builds", [])) != 10
+                      or any(row.get("reference_match") is not True for row in sdk["native_builds"])):
+                  raise SystemExit("SDK producer did not complete both full five-variant native roots")
+              if (not (output / "python-bootstrap.json").is_file()
+                      or os.environ["PYTHON_RESULT"] != "success"):
+                  raise SystemExit("Successful build is missing its pinned Python receipt")
+
+          observed = set()
+          total = 0
+          for path in output.rglob("*"):
+              info = path.lstat()
+              if stat.S_ISDIR(info.st_mode):
+                  continue
+              relative = path.relative_to(output).as_posix()
+              if not stat.S_ISREG(info.st_mode) or relative not in allowed:
+                  raise SystemExit("Output may contain only selected JSON and candidate files")
+              observed.add(relative)
+              total += info.st_size
+          if success and not payload_names <= observed:
+              raise SystemExit("Successful SDK candidate omitted one or more payloads")
+          if total > 32 * 1024 * 1024 - 4096:
+              raise SystemExit("SDK metadata and candidate payloads exceed the 32 MiB retained ceiling")
+
+          receipt = {"schema": "ami-rust-sdk-cleanup-v1",
+                     "status": "PASS" if success else "PRODUCER_FAILED_METADATA_ONLY",
+                     "producer_outcome": os.environ["PRODUCER_RESULT"],
+                     "python_bootstrap_outcome": os.environ["PYTHON_RESULT"],
+                     "source_commit": os.environ["WORKFLOW_SOURCE_COMMIT"],
+                     "run_id": os.environ["WORKFLOW_RUN_ID"],
+                     "run_attempt": os.environ["WORKFLOW_RUN_ATTEMPT"],
+                     "candidate_output_bytes_observed": total,
+                     "candidate_retention_ceiling_bytes": 32 * 1024 * 1024,
+                     "managed_work_remaining_bytes": 0,
+                     "python_runtime_remaining_bytes": 0,
+                     "native_guest_tested": False,
+                     "R1_accepted": False,
+                     "SDK_publication_authorized": False}
+          (output / "cleanup.json").write_text(json.dumps(receipt, sort_keys=True, indent=2) + "\n")
+          final_bytes = sum(path.stat().st_size for path in output.rglob("*") if path.is_file() and not path.is_symlink())
+          if final_bytes > 32 * 1024 * 1024:
+              raise SystemExit("Final retained SDK artifact exceeds 32 MiB")
+          print(json.dumps(receipt, sort_keys=True))
+          PYCODE
+      - name: Upload bounded host candidate and receipts
+        if: always() && steps.admission.outcome == 'success' && steps.cleanup.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sdk-candidate-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-sdk-output
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
+
+  assemble:
+    name: Assemble common unsigned candidate
+    needs: producer
+    runs-on: ubuntu-24.04
+    environment: release
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned Python
+        run: python3 -I -B release/ci_python.py --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" --inputs release/ci-python-inputs.json
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sdk-candidate-macos-aarch64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-payloads/macos-aarch64
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sdk-candidate-linux-x86_64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-payloads/linux-x86_64
+      - name: Assemble exact common candidate from both producer payloads
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+          PUBLISHER_ENVIRONMENT: release
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_auth.py prepare \
+            --source "$GITHUB_WORKSPACE" \
+            --macos "$RUNNER_TEMP/ami-rust-payloads/macos-aarch64" \
+            --linux "$RUNNER_TEMP/ami-rust-payloads/linux-x86_64" \
+            --output "$RUNNER_TEMP/ami-rust-common-candidate"
+      - name: Preserve bounded unsigned candidate
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sdk-common-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-common-candidate
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
+      - name: Retire assembly inputs and runtime
+        if: always()
+        run: |
+          python3 -I -B - <<'PY'
+          import json, os, shutil
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']).resolve(strict=True)
+          retired = []
+          for name in ('ami-rust-payloads', 'ami-rust-common-candidate', 'ami-rust-python-bootstrap'):
+              path = root / name
+              if path.is_symlink():
+                  raise SystemExit('linked assembly root')
+              if path.exists():
+                  shutil.rmtree(path)
+              if path.exists():
+                  raise SystemExit('assembly retirement failed')
+              retired.append(name)
+          print(json.dumps({'schema':'ami-rust-assembly-cleanup-v1', 'retired':retired, 'remaining_bytes':0}))
+          PY
+
+  authenticate:
+    name: Authenticate candidate (${{ matrix.profile }})
+    needs: assemble
+    runs-on: ${{ matrix.os }}
+    environment: release
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - os: macos-26
+            profile: macos-aarch64
+          - os: ubuntu-24.04
+            profile: linux-x86_64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned Python
+        run: python3 -I -B release/ci_python.py --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" --inputs release/ci-python-inputs.json
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sdk-common-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-auth-candidate
+      - name: Bootstrap pinned authentication tools
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+          PUBLISHER_ENVIRONMENT: release
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_verify.py bootstrap-tools \
+            --work "$RUNNER_TEMP/ami-rust-auth-work" --output "$RUNNER_TEMP/ami-rust-auth-metadata" \
+            --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap"
+      - name: Independently reconstruct the candidate before signing
+        id: subjects
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+          PUBLISHER_ENVIRONMENT: release
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_auth.py audit \
+            --source "$GITHUB_WORKSPACE" --bundle "$RUNNER_TEMP/ami-rust-auth-candidate" \
+            --work "$RUNNER_TEMP/ami-rust-signer-audit"
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_auth.py predicate \
+            --bundle "$RUNNER_TEMP/ami-rust-auth-candidate" --host '${{ matrix.profile }}' \
+            --output "$RUNNER_TEMP/ami-rust-predicate.json"
+      - name: Attest release manifest
+        id: attest-manifest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: release.json
+          subject-digest: sha256:${{ steps.subjects.outputs.manifest }}
+          predicate-type: https://slsa.dev/provenance/v1
+          predicate-path: ${{ runner.temp }}/ami-rust-predicate.json
+      - name: Preserve manifest attestation before the next invocation
+        env:
+          BUNDLE_PATH: ${{ steps.attest-manifest.outputs.bundle-path }}
+        run: python3 -I -B -c 'import os,pathlib; pathlib.Path(os.environ["RUNNER_TEMP"],"ami-rust-gh-manifest.json").write_bytes(pathlib.Path(os.environ["BUNDLE_PATH"]).read_bytes())'
+      - name: Attest source SDK
+        id: attest-sdk
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: sdk.tar.xz
+          subject-digest: sha256:${{ steps.subjects.outputs.sdk }}
+          predicate-type: https://slsa.dev/provenance/v1
+          predicate-path: ${{ runner.temp }}/ami-rust-predicate.json
+      - name: Preserve SDK attestation before the next invocation
+        env:
+          BUNDLE_PATH: ${{ steps.attest-sdk.outputs.bundle-path }}
+        run: python3 -I -B -c 'import os,pathlib; pathlib.Path(os.environ["RUNNER_TEMP"],"ami-rust-gh-sdk.json").write_bytes(pathlib.Path(os.environ["BUNDLE_PATH"]).read_bytes())'
+      - name: Attest native reference utility
+        id: attest-utility
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: SHAUTIL
+          subject-digest: sha256:${{ steps.subjects.outputs.utility }}
+          predicate-type: https://slsa.dev/provenance/v1
+          predicate-path: ${{ runner.temp }}/ami-rust-predicate.json
+      - name: Preserve utility attestation
+        env:
+          BUNDLE_PATH: ${{ steps.attest-utility.outputs.bundle-path }}
+        run: python3 -I -B -c 'import os,pathlib; pathlib.Path(os.environ["RUNNER_TEMP"],"ami-rust-gh-utility.json").write_bytes(pathlib.Path(os.environ["BUNDLE_PATH"]).read_bytes())'
+      - name: Create real keyless signatures for the three exact subjects
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/ami-rust-auth-work/tools/cosign" sign-blob --yes \
+            --bundle "$RUNNER_TEMP/ami-rust-cosign-manifest.json" "$RUNNER_TEMP/ami-rust-auth-candidate/release.json"
+          "$RUNNER_TEMP/ami-rust-auth-work/tools/cosign" sign-blob --yes \
+            --bundle "$RUNNER_TEMP/ami-rust-cosign-sdk.json" "$RUNNER_TEMP/ami-rust-auth-candidate/sdk.tar.xz"
+          "$RUNNER_TEMP/ami-rust-auth-work/tools/cosign" sign-blob --yes \
+            --bundle "$RUNNER_TEMP/ami-rust-cosign-utility.json" "$RUNNER_TEMP/ami-rust-auth-candidate/SHAUTIL"
+      - name: Freeze authentication mappings
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_auth.py finalize \
+            --bundle "$RUNNER_TEMP/ami-rust-auth-candidate" --host '${{ matrix.profile }}' \
+            --gh "release.json=$RUNNER_TEMP/ami-rust-gh-manifest.json" \
+            --gh "sdk.tar.xz=$RUNNER_TEMP/ami-rust-gh-sdk.json" \
+            --gh "SHAUTIL=$RUNNER_TEMP/ami-rust-gh-utility.json" \
+            --cosign "release.json=$RUNNER_TEMP/ami-rust-cosign-manifest.json" \
+            --cosign "sdk.tar.xz=$RUNNER_TEMP/ami-rust-cosign-sdk.json" \
+            --cosign "SHAUTIL=$RUNNER_TEMP/ami-rust-cosign-utility.json"
+      - name: Preserve authenticated candidate for independent consumption
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sdk-authenticated-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-auth-candidate
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
+      - name: Retire signer inputs, tools and runtime
+        if: always()
+        run: |
+          python3 -I -B - <<'PY'
+          import json, os, shutil
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']).resolve(strict=True)
+          names = ('ami-rust-auth-candidate', 'ami-rust-auth-work', 'ami-rust-auth-metadata',
+                   'ami-rust-python-bootstrap', 'ami-rust-signer-audit', 'ami-rust-predicate.json',
+                   'ami-rust-gh-manifest.json', 'ami-rust-gh-sdk.json', 'ami-rust-gh-utility.json',
+                   'ami-rust-cosign-manifest.json', 'ami-rust-cosign-sdk.json', 'ami-rust-cosign-utility.json')
+          for name in names:
+              path = root / name
+              if path.is_symlink():
+                  raise SystemExit('linked signer root')
+              if path.is_dir():
+                  shutil.rmtree(path)
+              elif path.exists():
+                  path.unlink()
+              if path.exists():
+                  raise SystemExit('signer retirement failed')
+          print(json.dumps({'schema':'ami-rust-authentication-cleanup-v1', 'remaining_bytes':0}))
+          PY
+
+  consumer:
+    name: Independent consumer (${{ matrix.profile }})
+    needs: authenticate
+    runs-on: ${{ matrix.os }}
+    environment: release
+    timeout-minutes: 80
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - os: macos-26
+            profile: macos-aarch64
+          - os: ubuntu-24.04
+            profile: linux-x86_64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned Python
+        run: python3 -I -B release/ci_python.py --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" --inputs release/ci-python-inputs.json
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sdk-authenticated-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-consumer-candidate
+      - name: Verify real evidence, counter-probes and complete consumer replay
+        id: qualification
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+          PUBLISHER_ENVIRONMENT: release
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_verify.py qualify \
+            --bundle "$RUNNER_TEMP/ami-rust-consumer-candidate" \
+            --work "$RUNNER_TEMP/ami-rust-consumer-work" --output "$RUNNER_TEMP/ami-rust-consumer-output" \
+            --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap"
+      - name: Retire consumer work and preserve bounded evidence
+        id: cleanup
+        if: always()
+        run: |
+          python3 -I -B - <<'PY'
+          import json, os, shutil, stat
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']).resolve(strict=True)
+          for name in ('ami-rust-consumer-candidate', 'ami-rust-consumer-work', 'ami-rust-python-bootstrap'):
+              path = root / name
+              if path.is_symlink():
+                  raise SystemExit('linked consumer root')
+              if path.exists():
+                  shutil.rmtree(path)
+              if path.exists():
+                  raise SystemExit('consumer retirement failed')
+          output = root / 'ami-rust-consumer-output'
+          if output.is_symlink():
+              raise SystemExit('linked consumer output')
+          output.mkdir(exist_ok=True)
+          total = 0
+          for path in output.rglob('*'):
+              info = path.lstat()
+              if stat.S_ISDIR(info.st_mode):
+                  continue
+              if not stat.S_ISREG(info.st_mode):
+                  raise SystemExit('nonregular consumer evidence')
+              total += info.st_size
+          if total > 32 * 1024**2 - 4096:
+              raise SystemExit('consumer evidence exceeds retained ceiling')
+          receipt = {'schema':'ami-rust-consumer-cleanup-v1', 'remaining_work_bytes':0,
+                     'source_sha':os.environ['GITHUB_SHA'], 'run_id':os.environ['GITHUB_RUN_ID'],
+                     'run_attempt':os.environ['GITHUB_RUN_ATTEMPT'], 'output_bytes_observed':total}
+          (output / 'cleanup.json').write_text(json.dumps(receipt, sort_keys=True) + '\n')
+          print(json.dumps(receipt))
+          PY
+      - name: Preserve independent verification and native replay evidence
+        if: always() && steps.cleanup.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sdk-consumer-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-consumer-output
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9

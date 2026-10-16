@@ -1,0 +1,155 @@
+{
+  "schema": "ami-rust-ci-sdk-inputs-v1",
+  "rust_channel": "nightly-2026-09-18",
+  "rust_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
+  "rust_llvm": "23.1.1",
+  "channel_manifest": {
+    "url": "https://static.rust-lang.org/dist/2026-09-18/channel-rust-nightly.toml",
+    "sha256": "2b7ae1e4e2d50e09e80312706032ee8409ff7ace5c7d4faa78c40dce2c58c86d"
+  },
+  "shared": {
+    "csdk": {
+      "kind": "repository-tar",
+      "path": "release/inputs/csdk.tar.xz",
+      "bytes": 5621776,
+      "sha256": "70cc3e45969c6e1eca7e4c5c2183429b88424f6c22c8ec6bb90e6cc70452ab87",
+      "archive_root": "Developer"
+    },
+    "vendor": {
+      "kind": "repository-tar",
+      "path": "release/inputs/vendor.tar.xz",
+      "bytes": 3264952,
+      "sha256": "84fb6e3e1710f13e85450cce1db541c3967520f996a3f17efbd5a7a8345b1c7e",
+      "archive_root": "vendor"
+    }
+  },
+  "hosts": {
+    "macos-aarch64": {
+      "rust": {
+        "kind": "rust-installer",
+        "archive_order": [
+          "rustc",
+          "rust-std",
+          "rust-src",
+          "cargo"
+        ],
+        "archives": [
+          {
+            "component": "rustc",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rustc-nightly-aarch64-apple-darwin.tar.xz",
+            "sha256": "80803ea169647e026499a205269c46a2632a14f312478b1ec8a089c322f55a88",
+            "bytes": 51581740
+          },
+          {
+            "component": "rust-std",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rust-std-nightly-aarch64-apple-darwin.tar.xz",
+            "sha256": "06268b6cd0fdaccd7e36a5731dcba1d0fb8b44cf01b874ac772001a1b5aba9eb",
+            "bytes": 30504920
+          },
+          {
+            "component": "rust-src",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rust-src-nightly.tar.xz",
+            "sha256": "8de4a7bc2ba7fd977a3ec74ae2794fee99c6f987e5f022ba2ff4b0ca8a5d1004",
+            "bytes": 5934836
+          },
+          {
+            "component": "cargo",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/cargo-nightly-aarch64-apple-darwin.tar.xz",
+            "sha256": "01a4aa9cbbbd0a799f134b530d4ce3e913ae3aaa73bbad0417d4ae4ecc1fc4bd",
+            "bytes": 8947472
+          }
+        ],
+        "remove_installer_administrative_files": [
+          "lib/rustlib/install.log",
+          "lib/rustlib/manifest-cargo",
+          "lib/rustlib/manifest-rust-src",
+          "lib/rustlib/manifest-rust-std-aarch64-apple-darwin",
+          "lib/rustlib/manifest-rustc"
+        ]
+      },
+      "toolchain": {
+        "kind": "tar",
+        "url": "https://github.com/metaneutrons/aros-toolchains/releases/download/v0.1.4/aros-toolchain-v1-llvm11.0.0-macos-aarch64-pc-x86_64.tar.xz",
+        "bytes": 26451000,
+        "sha256": "969d150761a2a999a43992660ab6c84d8ab07c1396ce49b17024bb5b08993342",
+        "archive_root": "toolchain"
+      },
+      "collector": {
+        "kind": "tar",
+        "url": "https://github.com/metaneutrons/aros-tools/releases/download/v0.3.19/aros-tools-v0.3.19-aarch64-apple-darwin.tar.gz",
+        "bytes": 15697348,
+        "sha256": "8eb7c8e1ea40dae35943295c01b208a07b4264cf6c41e9b498f3fb0493e44625",
+        "archive_root": "aros-tools-v0.3.19-aarch64-apple-darwin"
+      }
+    },
+    "linux-x86_64": {
+      "rust": {
+        "kind": "rust-installer",
+        "archive_order": [
+          "rustc",
+          "rust-std",
+          "rust-src",
+          "cargo"
+        ],
+        "archives": [
+          {
+            "component": "rustc",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz",
+            "sha256": "a0f5685f293fb6fc2c3b0ba1e67f24a38c688259ad1b4f04596ec4c86ec5a435",
+            "bytes": 85397620
+          },
+          {
+            "component": "rust-std",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz",
+            "sha256": "d04688ad62025ca2afe16e86243994c43fa63802934ca3f64290756dc792a200",
+            "bytes": 31384072
+          },
+          {
+            "component": "rust-src",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rust-src-nightly.tar.xz",
+            "sha256": "8de4a7bc2ba7fd977a3ec74ae2794fee99c6f987e5f022ba2ff4b0ca8a5d1004",
+            "bytes": 5934836
+          },
+          {
+            "component": "cargo",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz",
+            "sha256": "f909437ddd1790402eab07d178d3d6ca3a901bd0928f686157ea4dfd559974d8",
+            "bytes": 10935476
+          }
+        ],
+        "remove_installer_administrative_files": [
+          "lib/rustlib/install.log",
+          "lib/rustlib/manifest-cargo",
+          "lib/rustlib/manifest-rust-src",
+          "lib/rustlib/manifest-rust-std-x86_64-unknown-linux-gnu",
+          "lib/rustlib/manifest-rustc"
+        ]
+      },
+      "toolchain": {
+        "kind": "tar",
+        "url": "https://github.com/metaneutrons/aros-toolchains/releases/download/v0.1.4/aros-toolchain-v1-llvm11.0.0-linux-x86_64-pc-x86_64.tar.xz",
+        "bytes": 38647276,
+        "sha256": "9661c2a000893f811a2bb0c442d9121e74cb0a2743b8d541e121061713bcbcaf",
+        "archive_root": "toolchain"
+      },
+      "collector": {
+        "kind": "tar",
+        "url": "https://github.com/metaneutrons/aros-tools/releases/download/v0.3.19/aros-tools-v0.3.19-x86_64-unknown-linux-gnu.tar.gz",
+        "bytes": 17612628,
+        "sha256": "96b0219d6cf29460fee07fd415978f52bc91d2d8ac3f484195cb63f7e11d984a",
+        "archive_root": "aros-tools-v0.3.19-x86_64-unknown-linux-gnu"
+      }
+    }
+  },
+  "provisioning_contract": "Fresh owned roots only; exact full component inventories after dropping only the five explicitly listed path-dependent Rust installer administrative files. Compiler, standard libraries and rust-src bytes are unchanged. No metadata within .rlib/.rmeta is edited. C-SDK public input check-in requires source/licence closure.",
+  "native_reference": {
+    "path": "release/native-reference.json",
+    "sha256": "ce1a9213ba4e58f038ebe66b8979bd4751b268e9d8b4911b0ae784ee3bd3bf43",
+    "basis_source_record_sha256": "64de65e5155238e72610485d1a81431bb53b1d5d81f7780807a1020217a86650"
+  },
+  "portable_csdk": {
+    "path": "release/portable-csdk/spec.json",
+    "bytes": 2900,
+    "sha256": "7cb73dd7057feac1bf1a7f1bbf2172934cc06555e2b83938a93cb1b2bfe3178f"
+  }
+}

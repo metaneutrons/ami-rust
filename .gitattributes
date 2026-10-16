@@ -1,1 +1,4 @@
 * -text
+
+# Preserve versioned third-party patch context byte for byte.
+release/patches/** -whitespace

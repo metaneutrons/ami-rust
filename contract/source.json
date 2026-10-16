@@ -2,6 +2,20 @@
   "packaging": {
     "base_archive_sha256": "f498680b1d928d830136f85da397edba0f6ea7050357762638d24218b367df90",
     "base_sdk_manifest_sha256": "c662dbf1b7a7bdea9325e1e56312bc8027da568d76bc1459d2967dff62fb622a",
+    "distribution_notices_update": {
+      "current": {
+        "bytes": 5653,
+        "path": "THIRD_PARTY_NOTICES.md",
+        "sha256": "e1f47837fe592dbeb38af5de595822b4ca16c757c19b857e9d66c35e7008e70a"
+      },
+      "date": "2026-10-16",
+      "previous": {
+        "bytes": 4061,
+        "path": "THIRD_PARTY_NOTICES.md",
+        "sha256": "04984862dbd4f8bd7f1a1c906dbaa5acee7dc8559773141e9626cab24eb8ed40"
+      },
+      "reason": "Complete C-SDK source availability and Cargo bundle/source notices; runtime sources unchanged"
+    },
     "license_metadata": "owner selected MIT OR Apache-2.0 for first-party code; third-party terms retained",
     "omitted_development_test": {
       "bytes": 16625,

@@ -1,0 +1,1905 @@
+{
+  "aros_source_evidence": {
+    "license_review_status": "PASS_FOR_QUALIFICATION_CANDIDATE",
+    "pinned_upstream": {
+      "commit": "e0d5e367d15cc7da4ebac8f9db17868756c79569",
+      "content_access": "git show <commit>:<path>; checkout and build tree were not read or changed",
+      "repository": "AROS-NX"
+    },
+    "preparation_records": [
+      {
+        "bytes": 33287,
+        "path": "release/preparation/aros-legal-closure.json",
+        "schema": "ami-rust-aros-legal-closure-v1",
+        "sha256": "d84dc4599722727d4b4409d803a64969a6382cc10fb9455e3dc817f92b097f20"
+      },
+      {
+        "bytes": 43977,
+        "path": "release/preparation/aros-generated-closure.json",
+        "schema": "ami-rust-aros-generated-closure-v1",
+        "sha256": "014126f1625bdc430a6f2fb22b3a782dbc3f21c5c756aac81f5da1c22a6a11aa"
+      },
+      {
+        "bytes": 24421,
+        "path": "release/preparation/aros-actual-object-provenance.json",
+        "schema": "aros-actual-object-provenance-v1",
+        "sha256": "4f83067bbef1bdec588929141e8065ab10a024a72a177e52a3c0e2bd07af318b"
+      },
+      {
+        "bytes": 196800,
+        "path": "release/preparation/aros-header-closure.json",
+        "schema": "aros-r1-actual-header-closure-v1",
+        "sha256": "2087cb7c4d330387bf7cbd8fd4de4a62d48bafcff0bb5a343e6138383b6d4748"
+      }
+    ],
+    "preserved_notice_texts": [
+      {
+        "bytes": 24679,
+        "component": "AROS-NX@e0d5e367d15cc7da4ebac8f9db17868756c79569",
+        "delivered_path": "licences/000-825705f4b1240cf5.txt",
+        "sha256": "825705f4b1240cf5b88f44ac745dc9d9ebaa71ac087e53bbd69a1c3064ceb9c8",
+        "source_provenance": {
+          "closure": "release/preparation/aros-legal-closure.json",
+          "kind": "pinned-source-closure",
+          "upstream_path": "LICENSE"
+        },
+        "source_relative_path": "LICENSE"
+      },
+      {
+        "bytes": 3019,
+        "component": "AROS-NX@e0d5e367d15cc7da4ebac8f9db17868756c79569",
+        "delivered_path": "licences/001-e4de7b47f775d918.txt",
+        "sha256": "e4de7b47f775d91810f6f2a1c04fd9af8b722ab4328f67cd0616cce5901b3f39",
+        "source_provenance": {
+          "closure": "release/preparation/aros-legal-closure.json",
+          "kind": "pinned-source-closure",
+          "upstream_path": "LEGAL"
+        },
+        "source_relative_path": "LEGAL"
+      },
+      {
+        "bytes": 3906,
+        "component": "AROS-NX@e0d5e367d15cc7da4ebac8f9db17868756c79569",
+        "delivered_path": "licences/002-9f721f7026bbf47c.txt",
+        "sha256": "9f721f7026bbf47c6a8df87acca91a5a110faa3dfae388de72e02513202450ae",
+        "source_provenance": {
+          "closure": "release/preparation/aros-legal-closure.json",
+          "kind": "pinned-source-closure",
+          "upstream_path": "compiler/crt/stdc/LEGAL"
+        },
+        "source_relative_path": "compiler/crt/stdc/LEGAL"
+      },
+      {
+        "bytes": 1909,
+        "component": "AROS-NX@e0d5e367d15cc7da4ebac8f9db17868756c79569",
+        "delivered_path": "licences/003-95ba0ed38b22eff0.txt",
+        "sha256": "95ba0ed38b22eff040c9fa4ded7ff69451b7b959cc3f1389570da4016515fae4",
+        "source_provenance": {
+          "closure": "release/preparation/aros-legal-closure.json",
+          "kind": "pinned-source-closure",
+          "upstream_path": "compiler/crt/stdc/math/LEGAL"
+        },
+        "source_relative_path": "compiler/crt/stdc/math/LEGAL"
+      }
+    ]
+  },
+  "blockers": [],
+  "cargo_lock_sha256": "193e4abca19f511cd264375dfdc05c915b8182988de55e60b49553140b2b1596",
+  "cargo_source_provenance": {
+    "cargo_lock_sha256": "b4ccfa53ccf8d7360c0359c1533d801759629f9cdd486d9a0a88e512717058d9",
+    "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+    "license_texts": [
+      {
+        "bytes": 10860,
+        "component": "cargo-source@3efb1f477e99b42974b982d939fd100303cdf7db",
+        "delivered_path": "licences/078-8ada45cd9f843acf.txt",
+        "sha256": "8ada45cd9f843acf64e4722ae262c622a2b3b3007c7310ef36ac1061a30f6adb",
+        "source_provenance": {
+          "blob_sha256": "8ada45cd9f843acf64e4722ae262c622a2b3b3007c7310ef36ac1061a30f6adb",
+          "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+          "kind": "git-blob",
+          "path": "LICENSE-APACHE",
+          "repository": "rust-lang/cargo"
+        },
+        "source_relative_path": "LICENSE-APACHE"
+      },
+      {
+        "bytes": 1023,
+        "component": "cargo-source@3efb1f477e99b42974b982d939fd100303cdf7db",
+        "delivered_path": "licences/079-23f18e03dc49df91.txt",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "source_provenance": {
+          "blob_sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+          "kind": "git-blob",
+          "path": "LICENSE-MIT",
+          "repository": "rust-lang/cargo"
+        },
+        "source_relative_path": "LICENSE-MIT"
+      },
+      {
+        "bytes": 68430,
+        "component": "cargo-source@3efb1f477e99b42974b982d939fd100303cdf7db",
+        "delivered_path": "licences/080-cbc759b1f17a2ac3.txt",
+        "sha256": "cbc759b1f17a2ac38fe3eb9e9563b1a08ba0f900611c49faaf68b46907b6d898",
+        "source_provenance": {
+          "blob_sha256": "cbc759b1f17a2ac38fe3eb9e9563b1a08ba0f900611c49faaf68b46907b6d898",
+          "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+          "kind": "git-blob",
+          "path": "LICENSE-THIRD-PARTY",
+          "repository": "rust-lang/cargo"
+        },
+        "source_relative_path": "LICENSE-THIRD-PARTY"
+      }
+    ],
+    "repository": "rust-lang/cargo"
+  },
+  "decision": {
+    "date": "2026-10-15",
+    "evidence_limits": [
+      "Historical generator execution logs and five historical M0 generated-header copies are unavailable. The delivered current generated files are associated with exact current compile commands/objects; this is documented and does not assert byte-reproducible historical C compilation.",
+      "Publisher CI must authenticate the final candidate and all material digests before R1-A6 can close. This review does not replace protected provenance or independent final acceptance."
+    ],
+    "findings": [
+      "AROS pinned root LICENSE section 5.2 applies APL 1.1 subject to preserved LEGAL/file-level exceptions. The linked 23 archive members and startup source are mapped; stdc BSD memmove/strlcpy/strlcat exceptions do not occur in this link map. No mapped path falls under the root GPL exceptions.",
+      "AROS-derived Rust declarations retain APL scope in the crate license and dated modifications. Additional original contributions retain the owner-selected MIT OR Apache-2.0 grant without relicensing Covered Code.",
+      "341 exact or explicitly comment-adjusted corresponding source/notices files are delivered in the same-media capsule, including 24 C compilation dependency closures, generator/configuration/build-rule inputs, Boost headers and original BSL text; full archive readback passes.",
+      "Generated-source private prefixes are changed only in automatically generated comments, with before/after SHA records and unchanged non-comment bytes. The startup symbol rename and ABI translations are recorded with dates and original AROS origin.",
+      "Full locked Rust crate/runtime notices are preserved. Cargo patch notices are checked against pinned Git; openssl-src notices are checked against the complete registry archive checksum from pinned Cargo.lock, not only mutable checksum JSON.",
+      "External qualified toolchain/C SDK/vendor prerequisites are inventoried and separately provisioned; they are not redistributed as bundled prerequisites. This review does not assign a single license to entire mixed C SDK archives."
+    ],
+    "first_party_owner_decision": "MIT OR Apache-2.0, explicitly selected by Fabian Schmieder",
+    "materials": {
+      "THIRD_PARTY_NOTICES.md": "04984862dbd4f8bd7f1a1c906dbaa5acee7dc8559773141e9626cab24eb8ed40",
+      "crates/aros-sys/LICENSE": "e624036c03e1e98fa7df3ef84161fd22ace61998e2fdd077c5a92221547cc5fb",
+      "crates/aros-sys/MODIFICATIONS.md": "2b672cfad8162acd93ee0b1234a42841905be29252161890a07efe292063bea7",
+      "release/licences/aros-corresponding-sources.tar.xz": "7d817b4370ea4fcd11f215c9d0aa9ea93b955f521e6bda65606c8b6c4d761e36",
+      "release/licences/aros-source-inventory.json": "5e81744140846be3c0f16d05badc3a888048fe082d6d4ed89235f24701af8d5e",
+      "release/preparation/aros-actual-object-provenance.json": "4f83067bbef1bdec588929141e8065ab10a024a72a177e52a3c0e2bd07af318b",
+      "release/preparation/aros-generated-closure.json": "014126f1625bdc430a6f2fb22b3a782dbc3f21c5c756aac81f5da1c22a6a11aa",
+      "release/preparation/aros-header-closure.json": "2087cb7c4d330387bf7cbd8fd4de4a62d48bafcff0bb5a343e6138383b6d4748",
+      "release/preparation/aros-legal-closure.json": "d84dc4599722727d4b4409d803a64969a6382cc10fb9455e3dc817f92b097f20"
+    },
+    "release_distribution_authorized": false,
+    "schema": "ami-rust-licence-decision-v1",
+    "scope": "Exact source SDK and retained R3 native SHAUTIL, with same-media corresponding sources/notices; no publication authorization",
+    "status": "PASS_FOR_QUALIFICATION_CANDIDATE"
+  },
+  "decision_sha256": "5fe18c21d2063b2976f6265c4176d9cdcae1bf68f3db49028f01117c45b3c3ca",
+  "first_party": {
+    "decision_date": "2026-10-15",
+    "license": "MIT OR Apache-2.0",
+    "owner": "Fabian Schmieder",
+    "status": "IMPLEMENTED"
+  },
+  "locked_packages": [
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "ami-rust-dependencies",
+      "scope": "first-party source",
+      "texts": [
+        "LICENSE-MIT",
+        "LICENSE-APACHE"
+      ],
+      "third_party_exceptions": "AROS-derived contracts retain their applicable terms",
+      "version": "0.1.0"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "ami-rust-minimal",
+      "scope": "first-party source",
+      "texts": [
+        "LICENSE-MIT",
+        "LICENSE-APACHE"
+      ],
+      "third_party_exceptions": "AROS-derived contracts retain their applicable terms",
+      "version": "0.1.0"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "ami-rust-qualification",
+      "scope": "first-party source",
+      "texts": [
+        "LICENSE-MIT",
+        "LICENSE-APACHE"
+      ],
+      "third_party_exceptions": "AROS-derived contracts retain their applicable terms",
+      "version": "0.1.0"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "ami-rust-sha256sum",
+      "scope": "first-party source",
+      "texts": [
+        "LICENSE-MIT",
+        "LICENSE-APACHE"
+      ],
+      "third_party_exceptions": "AROS-derived contracts retain their applicable terms",
+      "version": "0.1.0"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "amiga-alloc",
+      "scope": "first-party source",
+      "texts": [
+        "LICENSE-MIT",
+        "LICENSE-APACHE"
+      ],
+      "third_party_exceptions": "AROS-derived contracts retain their applicable terms",
+      "version": "0.1.0"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "amiga-os",
+      "scope": "first-party source",
+      "texts": [
+        "LICENSE-MIT",
+        "LICENSE-APACHE"
+      ],
+      "third_party_exceptions": "AROS-derived contracts retain their applicable terms",
+      "version": "0.1.0"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "amiga-sys",
+      "scope": "first-party source",
+      "texts": [
+        "LICENSE-MIT",
+        "LICENSE-APACHE"
+      ],
+      "third_party_exceptions": "AROS-derived contracts retain their applicable terms",
+      "version": "0.1.0"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "aros-alloc",
+      "scope": "first-party source",
+      "texts": [
+        "LICENSE-MIT",
+        "LICENSE-APACHE"
+      ],
+      "third_party_exceptions": "AROS-derived contracts retain their applicable terms",
+      "version": "0.1.0"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "aros-runtime",
+      "scope": "first-party source",
+      "texts": [
+        "LICENSE-MIT",
+        "LICENSE-APACHE"
+      ],
+      "third_party_exceptions": "AROS-derived contracts retain their applicable terms",
+      "version": "0.1.0"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "aros-sdk",
+      "scope": "first-party source",
+      "texts": [
+        "LICENSE-MIT",
+        "LICENSE-APACHE"
+      ],
+      "third_party_exceptions": "AROS-derived contracts retain their applicable terms",
+      "version": "0.1.0"
+    },
+    {
+      "aros_derived_license_text": {
+        "bytes": 24679,
+        "component": "AROS-NX@e0d5e367d15cc7da4ebac8f9db17868756c79569",
+        "delivered_path": "licences/000-825705f4b1240cf5.txt",
+        "sha256": "825705f4b1240cf5b88f44ac745dc9d9ebaa71ac087e53bbd69a1c3064ceb9c8",
+        "source_provenance": {
+          "closure": "release/preparation/aros-legal-closure.json",
+          "kind": "pinned-source-closure",
+          "upstream_path": "LICENSE"
+        },
+        "source_relative_path": "LICENSE"
+      },
+      "declared_license": "(MIT OR Apache-2.0) AND LicenseRef-AROS-Public-License-1.1",
+      "name": "aros-sys",
+      "scope": "first-party source plus AROS-derived ABI material",
+      "texts": [
+        "LICENSE-MIT",
+        "LICENSE-APACHE"
+      ],
+      "third_party_exceptions": "AROS-derived contracts retain their applicable terms",
+      "version": "0.1.0"
+    },
+    {
+      "cargo_toml_sha256": "950ec911574afbf038e970968c9bcd03df0fe56d78eabee157012e54d487cb29",
+      "declared_license": "Apache-2.0 OR MIT",
+      "missing_licence_text": false,
+      "name": "base64ct",
+      "registry_checksum": "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10849,
+          "component": "base64ct@1.8.3",
+          "delivered_path": "licences/004-a9040321c3712d8f.txt",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1148,
+          "component": "base64ct@1.8.3",
+          "delivered_path": "licences/005-2d1c57bff28344b9.txt",
+          "sha256": "2d1c57bff28344b9e698f51063bc8509799cc4c99a4e0cf2aa3f7e7c3e1f9a9d",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "1.8.3"
+    },
+    {
+      "cargo_toml_sha256": "c76e4bd298cd6223882238449e31939d75613e82757ca87e249df843decf5f9a",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "block-buffer",
+      "registry_checksum": "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10849,
+          "component": "block-buffer@0.10.4",
+          "delivered_path": "licences/006-a9040321c3712d8f.txt",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1082,
+          "component": "block-buffer@0.10.4",
+          "delivered_path": "licences/007-d5c22aa3118d240e.txt",
+          "sha256": "d5c22aa3118d240e877ad41c5d9fa232f9c77d757d4aac0c2f943afc0a95e0ef",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "0.10.4"
+    },
+    {
+      "cargo_toml_sha256": "d646663ec1bd4e8e795bd6a386cff9c374880d6237bbfa36bbac08b7f26ce65c",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "cfg-if",
+      "registry_checksum": "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10847,
+          "component": "cfg-if@1.0.5",
+          "delivered_path": "licences/008-a60eea8175145316.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1057,
+          "component": "cfg-if@1.0.5",
+          "delivered_path": "licences/009-378f5840b258e277.txt",
+          "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "1.0.5"
+    },
+    {
+      "cargo_toml_sha256": "c646206dd9067b48ca550efcedd9eed7fd2ed230e7d05757a569bbe18f01081c",
+      "declared_license": "Apache-2.0 OR MIT",
+      "missing_licence_text": false,
+      "name": "const-oid",
+      "registry_checksum": "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10849,
+          "component": "const-oid@0.9.6",
+          "delivered_path": "licences/010-a9040321c3712d8f.txt",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1082,
+          "component": "const-oid@0.9.6",
+          "delivered_path": "licences/011-bada9e7ed8dc00d6.txt",
+          "sha256": "bada9e7ed8dc00d63502053c455d7c8d7575dfb7e8277a2a832531844d900682",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "0.9.6"
+    },
+    {
+      "cargo_toml_sha256": "25160ea4dfa195721d352d42827b882a41f18f4c55fff58e5c3878ecae84ca44",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "cpufeatures",
+      "registry_checksum": "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10849,
+          "component": "cpufeatures@0.2.17",
+          "delivered_path": "licences/012-a9040321c3712d8f.txt",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1082,
+          "component": "cpufeatures@0.2.17",
+          "delivered_path": "licences/013-ae9baa7beea91027.txt",
+          "sha256": "ae9baa7beea910273c2f384c2a6b721fb7bd02bda3436074a1072e4ee689f985",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "0.2.17"
+    },
+    {
+      "cargo_toml_sha256": "303682a6a66fdc98de8a011ac275e18c523f1535ed8de2a291a4fcad91de8348",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "crypto-common",
+      "registry_checksum": "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10849,
+          "component": "crypto-common@0.1.7",
+          "delivered_path": "licences/014-a9040321c3712d8f.txt",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1065,
+          "component": "crypto-common@0.1.7",
+          "delivered_path": "licences/015-3521672491a34794.txt",
+          "sha256": "3521672491a3479422d5fe1aca6645dd2984090f85da6e5205abfb18fb7a6897",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "0.1.7"
+    },
+    {
+      "cargo_toml_sha256": "ef9a2ca89de6eb3e09adf27478df06d246f27ee025150241e847aff26d78129d",
+      "declared_license": "BSD-3-Clause",
+      "missing_licence_text": false,
+      "name": "curve25519-dalek",
+      "registry_checksum": "97fb8b7c4503de7d6ae7b42ab72a5a59857b4c937ec27a3d4539dba95b5ab2be",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 3362,
+          "component": "curve25519-dalek@4.1.3",
+          "delivered_path": "licences/016-cca0bd3c4fcdba74.txt",
+          "sha256": "cca0bd3c4fcdba74145ef9d49c62337e2c9fbf9368288f11d0547f1b0273219f",
+          "source_relative_path": "LICENSE"
+        }
+      ],
+      "version": "4.1.3"
+    },
+    {
+      "cargo_toml_sha256": "60d2093fbabea9e72ad1350ae4a616ae56b2592742a64d2bd679a749f7a6bb4d",
+      "declared_license": "MIT/Apache-2.0",
+      "missing_licence_text": false,
+      "name": "curve25519-dalek-derive",
+      "registry_checksum": "f46882e17999c6cc590af592290432be3bce0428cb0d5f8b6715e4dc7b383eb3",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10847,
+          "component": "curve25519-dalek-derive@0.1.1",
+          "delivered_path": "licences/017-a60eea8175145316.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1023,
+          "component": "curve25519-dalek-derive@0.1.1",
+          "delivered_path": "licences/018-23f18e03dc49df91.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "0.1.1"
+    },
+    {
+      "cargo_toml_sha256": "ab115a95d89b2a7da3cd8264684f74f905322331db94ec7044511ad87d1cf331",
+      "declared_license": "Apache-2.0 OR MIT",
+      "missing_licence_text": false,
+      "name": "der",
+      "registry_checksum": "e7c1832837b905bbfb5101e07cc24c8deddf52f93225eee6ead5f4d63d53ddcb",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10849,
+          "component": "der@0.7.10",
+          "delivered_path": "licences/019-a9040321c3712d8f.txt",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1082,
+          "component": "der@0.7.10",
+          "delivered_path": "licences/020-ad64fcb9589f1627.txt",
+          "sha256": "ad64fcb9589f162720f3cc5010ad76ca6ad3764e11861f9192c489df176bb71d",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "0.7.10"
+    },
+    {
+      "cargo_toml_sha256": "f0cc2fc18c6e7f3533658b9e59d71b55e641e7d8226e5d1b915a5e7c0a1d3f36",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "digest",
+      "registry_checksum": "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10849,
+          "component": "digest@0.10.7",
+          "delivered_path": "licences/021-a9040321c3712d8f.txt",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1057,
+          "component": "digest@0.10.7",
+          "delivered_path": "licences/022-9e0dfd2dd4173a53.txt",
+          "sha256": "9e0dfd2dd4173a530e238cb6adb37aa78c34c6bc7444e0e10c1ab5d8881f63ba",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "0.10.7"
+    },
+    {
+      "cargo_toml_sha256": "c6fffc86c6297739753fd78ad9ccb9c15385704329259a986530e09732957c82",
+      "declared_license": "Apache-2.0 OR MIT",
+      "missing_licence_text": false,
+      "name": "ed25519",
+      "registry_checksum": "115531babc129696a58c64a4fef0a8bf9e9698629fb97e9e40767d235cfbcd53",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10846,
+          "component": "ed25519@2.2.3",
+          "delivered_path": "licences/023-78779d420019e6b4.txt",
+          "sha256": "78779d420019e6b4630376af8e86b6b335ee8a2f89ede6e0411e0469a326aaa4",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1070,
+          "component": "ed25519@2.2.3",
+          "delivered_path": "licences/024-b3470648aff02beb.txt",
+          "sha256": "b3470648aff02beb36d7a53240fc9260ed80ed93bd43bace6b67d7ef7336ee33",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "2.2.3"
+    },
+    {
+      "cargo_toml_sha256": "65e415110f13ea42e3205a6d49426257c3242aa1f46ffca2e6cbafae0b205b14",
+      "declared_license": "BSD-3-Clause",
+      "missing_licence_text": false,
+      "name": "ed25519-dalek",
+      "registry_checksum": "70e796c081cee67dc755e1a36a0a172b897fab85fc3f6bc48307991f64e4eca9",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 1497,
+          "component": "ed25519-dalek@2.2.0",
+          "delivered_path": "licences/025-7a313964a6e05079.txt",
+          "sha256": "7a313964a6e050794d2ad57f4863c11f6bbe055c0ae6ce2cf3b9fc45150bada3",
+          "source_relative_path": "LICENSE"
+        }
+      ],
+      "version": "2.2.0"
+    },
+    {
+      "cargo_toml_sha256": "33265490768ba75aae4d3fc75e786eb1d00ee6404a8eac26db80f46c128c6ef4",
+      "declared_license": "MIT OR Apache-2.0 OR BSD-1-Clause",
+      "missing_licence_text": false,
+      "name": "fiat-crypto",
+      "registry_checksum": "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 375,
+          "component": "fiat-crypto@0.2.9",
+          "delivered_path": "licences/026-6c935d087a2992d0.txt",
+          "sha256": "6c935d087a2992d0f092665400a2fa99c98db58d96fbe29368f8f48182bed9aa",
+          "source_relative_path": "COPYRIGHT"
+        },
+        {
+          "bytes": 638,
+          "component": "fiat-crypto@0.2.9",
+          "delivered_path": "licences/027-9eacbcb81be66084.txt",
+          "sha256": "9eacbcb81be660840c714a560a9d65ba07913db98dd4baf969f78dd499fdd60f",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1153,
+          "component": "fiat-crypto@0.2.9",
+          "delivered_path": "licences/028-0c1240e29b4a2c52.txt",
+          "sha256": "0c1240e29b4a2c528bcc3ccc38a98b1dba5e3e6b465da910208935f082e2ced6",
+          "source_relative_path": "LICENSE-BSD-1"
+        },
+        {
+          "bytes": 1119,
+          "component": "fiat-crypto@0.2.9",
+          "delivered_path": "licences/029-0034712d5e97a4f5.txt",
+          "sha256": "0034712d5e97a4f5b900a160a5c19d582b740d8e0638b4e44fd07e7b492dcd13",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "0.2.9"
+    },
+    {
+      "cargo_toml_sha256": "4b5daed75505275d11f4854dd9172f910da61d9856ca2936d95e2e6e0c9040e4",
+      "declared_license": "MIT",
+      "missing_licence_text": false,
+      "name": "generic-array",
+      "registry_checksum": "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 1107,
+          "component": "generic-array@0.14.7",
+          "delivered_path": "licences/030-c09aae9d3c77b531.txt",
+          "sha256": "c09aae9d3c77b531f56351a9947bc7446511d6b025b3255312d3e3442a9a7583",
+          "source_relative_path": "LICENSE"
+        }
+      ],
+      "version": "0.14.7"
+    },
+    {
+      "cargo_toml_sha256": "894c215e4e7e973b556b0e9627bf9b6a719a043fac9b5af9838660816392a09f",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "itoa",
+      "registry_checksum": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 9723,
+          "component": "itoa@1.0.18",
+          "delivered_path": "licences/031-62c7a1e35f564068.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1023,
+          "component": "itoa@1.0.18",
+          "delivered_path": "licences/032-23f18e03dc49df91.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "1.0.18"
+    },
+    {
+      "cargo_toml_sha256": "5d410962aefee7ac5916c9cdd915a717228576dbe3c8a09460fd58c4ec751e2c",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "libc",
+      "registry_checksum": "ce5d3ddc6d3fa000eb1536d85e147bfe31aacaba692ed6a876f95cb7c855be78",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 9723,
+          "component": "libc@0.2.190",
+          "delivered_path": "licences/033-62c7a1e35f564068.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1066,
+          "component": "libc@0.2.190",
+          "delivered_path": "licences/034-123a331b5dbf04c3.txt",
+          "sha256": "123a331b5dbf04c30097fa43b8f858bc85df671fe776de498d01f3d6b7c1f69e",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "0.2.190"
+    },
+    {
+      "cargo_toml_sha256": "a14f68b8fa55f15fd03b15dced37bcf66a0a628f568eedc82817cdb7f9281951",
+      "declared_license": "Unlicense OR MIT",
+      "missing_licence_text": false,
+      "name": "memchr",
+      "registry_checksum": "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 126,
+          "component": "memchr@2.8.3",
+          "delivered_path": "licences/035-01c266bced4a434d.txt",
+          "sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f",
+          "source_relative_path": "COPYING"
+        },
+        {
+          "bytes": 1081,
+          "component": "memchr@2.8.3",
+          "delivered_path": "licences/036-0f96a83840e146e4.txt",
+          "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "2.8.3"
+    },
+    {
+      "cargo_toml_sha256": "440cf271c696da0bcef123a4e005f9f47273d140b9b824f4b7b0d4fa4639cb12",
+      "declared_license": "Apache-2.0 OR MIT",
+      "missing_licence_text": false,
+      "name": "pkcs8",
+      "registry_checksum": "f950b2377845cebe5cf8b5165cb3cc1a5e0fa5cfa3e1f7f55707d8fd82e0a7b7",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10849,
+          "component": "pkcs8@0.10.2",
+          "delivered_path": "licences/037-a9040321c3712d8f.txt",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1082,
+          "component": "pkcs8@0.10.2",
+          "delivered_path": "licences/038-ad64fcb9589f1627.txt",
+          "sha256": "ad64fcb9589f162720f3cc5010ad76ca6ad3764e11861f9192c489df176bb71d",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "0.10.2"
+    },
+    {
+      "cargo_toml_sha256": "6bdbe54a7f052e552dcfca90351764476e2767237ec3f954df8bd9f602861056",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "proc-macro2",
+      "registry_checksum": "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 9723,
+          "component": "proc-macro2@1.0.107",
+          "delivered_path": "licences/039-62c7a1e35f564068.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1023,
+          "component": "proc-macro2@1.0.107",
+          "delivered_path": "licences/040-23f18e03dc49df91.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "1.0.107"
+    },
+    {
+      "cargo_toml_sha256": "13d8c50837f14aff48cd622349f98fb2c46350b7a0c08fd574cf7de4def27d06",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "quote",
+      "registry_checksum": "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 9723,
+          "component": "quote@1.0.47",
+          "delivered_path": "licences/041-62c7a1e35f564068.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1023,
+          "component": "quote@1.0.47",
+          "delivered_path": "licences/042-23f18e03dc49df91.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "1.0.47"
+    },
+    {
+      "cargo_toml_sha256": "c7d1d07fcb4f604eac7c2f9ad1262f93c81f2e45c6be6031de2d83da5ab59ccb",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "rustc_version",
+      "registry_checksum": "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10847,
+          "component": "rustc_version@0.4.1",
+          "delivered_path": "licences/043-a60eea8175145316.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1071,
+          "component": "rustc_version@0.4.1",
+          "delivered_path": "licences/044-c9a75f18b9ab2927.txt",
+          "sha256": "c9a75f18b9ab2927829a208fc6aa2cf4e63b8420887ba29cdb265d6619ae82d5",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "0.4.1"
+    },
+    {
+      "cargo_toml_sha256": "410de3eae58a75b9d2558d0a4e3ed43c2c8317781ffbd30a7cbe4aebaa833e1a",
+      "declared_license": "Apache-2.0 OR BSL-1.0",
+      "missing_licence_text": false,
+      "name": "ryu",
+      "registry_checksum": "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 9723,
+          "component": "ryu@1.0.23",
+          "delivered_path": "licences/045-62c7a1e35f564068.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1338,
+          "component": "ryu@1.0.23",
+          "delivered_path": "licences/046-c9bff75738922193.txt",
+          "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566",
+          "source_relative_path": "LICENSE-BOOST"
+        }
+      ],
+      "version": "1.0.23"
+    },
+    {
+      "cargo_toml_sha256": "cf7fb84578260eec81ce5af4bdb176ec590d45fdcb78f06710f0aa13e3078761",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "semver",
+      "registry_checksum": "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 9723,
+          "component": "semver@1.0.28",
+          "delivered_path": "licences/047-62c7a1e35f564068.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1023,
+          "component": "semver@1.0.28",
+          "delivered_path": "licences/048-23f18e03dc49df91.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "1.0.28"
+    },
+    {
+      "cargo_toml_sha256": "d7fc24e39691a0831eaa0eac677b46ecbae407a40fa816b904759822d10f42e8",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "serde",
+      "registry_checksum": "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 9723,
+          "component": "serde@1.0.228",
+          "delivered_path": "licences/049-62c7a1e35f564068.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1023,
+          "component": "serde@1.0.228",
+          "delivered_path": "licences/050-23f18e03dc49df91.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "1.0.228"
+    },
+    {
+      "cargo_toml_sha256": "b1c07acb994f88418a0bbb0d393f76c4ca4276d9f4497ca734eb182286169ea8",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "serde_core",
+      "registry_checksum": "41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 9723,
+          "component": "serde_core@1.0.228",
+          "delivered_path": "licences/051-62c7a1e35f564068.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1023,
+          "component": "serde_core@1.0.228",
+          "delivered_path": "licences/052-23f18e03dc49df91.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "1.0.228"
+    },
+    {
+      "cargo_toml_sha256": "3de014980e9645f2e33779acd06919c9f3b717a79e10f56004918d12c4365c27",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "serde_derive",
+      "registry_checksum": "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 9723,
+          "component": "serde_derive@1.0.228",
+          "delivered_path": "licences/053-62c7a1e35f564068.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1023,
+          "component": "serde_derive@1.0.228",
+          "delivered_path": "licences/054-23f18e03dc49df91.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "1.0.228"
+    },
+    {
+      "cargo_toml_sha256": "a603996936a2ed8d62e4bf158aeacd830b7c8f237cefc31c3bf6313fbf26d214",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "serde_json",
+      "registry_checksum": "402a6f66d8c709116cf22f558eab210f5a50187f702eb4d7e5ef38d9a7f1c79c",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 9723,
+          "component": "serde_json@1.0.145",
+          "delivered_path": "licences/055-62c7a1e35f564068.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1023,
+          "component": "serde_json@1.0.145",
+          "delivered_path": "licences/056-23f18e03dc49df91.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "1.0.145"
+    },
+    {
+      "cargo_toml_sha256": "f5b86209df69360114aaee67a66c3fcd31d8c840b8f34b9ad383aacd63cd15da",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "sha2",
+      "registry_checksum": "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10849,
+          "component": "sha2@0.10.9",
+          "delivered_path": "licences/057-a9040321c3712d8f.txt",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1138,
+          "component": "sha2@0.10.9",
+          "delivered_path": "licences/058-b4eb00df6e2a4d22.txt",
+          "sha256": "b4eb00df6e2a4d22518fcaa6a2b4646f249b3a3c9814509b22bd2091f1392ff1",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "0.10.9"
+    },
+    {
+      "cargo_toml_sha256": "9a0ed264f832101d9e2e786db0e22d90a2a2544ed19c760ec7f2d501d950a9dd",
+      "declared_license": "Apache-2.0 OR MIT",
+      "missing_licence_text": false,
+      "name": "signature",
+      "registry_checksum": "77549399552de45a898a580c1b41d445bf730df867cc44e6c0233bbc4b8329de",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10849,
+          "component": "signature@2.2.0",
+          "delivered_path": "licences/059-a9040321c3712d8f.txt",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1070,
+          "component": "signature@2.2.0",
+          "delivered_path": "licences/060-b3470648aff02beb.txt",
+          "sha256": "b3470648aff02beb36d7a53240fc9260ed80ed93bd43bace6b67d7ef7336ee33",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "2.2.0"
+    },
+    {
+      "cargo_toml_sha256": "c2ce81d32a2e9586591d313c324e83bd3822ba13736fdd5209f06da1ac27bd5e",
+      "declared_license": "Apache-2.0 OR MIT",
+      "missing_licence_text": false,
+      "name": "spki",
+      "registry_checksum": "d91ed6c858b01f942cd56b37a94b3e0a1798290327d1236e4d9cf4eaca44d29d",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10849,
+          "component": "spki@0.7.3",
+          "delivered_path": "licences/061-a9040321c3712d8f.txt",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1082,
+          "component": "spki@0.7.3",
+          "delivered_path": "licences/062-c995204cc6bad2ed.txt",
+          "sha256": "c995204cc6bad2ed67dd41f7d89bb9f1a9d48e0edd745732b30640d7912089a4",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "0.7.3"
+    },
+    {
+      "cargo_toml_sha256": "a3b9aefa358b0cd742de62e880ea080414ead838847a95892acaa58575dfc4cf",
+      "declared_license": "BSD-3-Clause",
+      "missing_licence_text": false,
+      "name": "subtle",
+      "registry_checksum": "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 1582,
+          "component": "subtle@2.6.1",
+          "delivered_path": "licences/063-d1fc1bc0d155df60.txt",
+          "sha256": "d1fc1bc0d155df60b2e7705b6b2ae02a05c96f948e1cec6e2fb86360b09f346b",
+          "source_relative_path": "LICENSE"
+        }
+      ],
+      "version": "2.6.1"
+    },
+    {
+      "cargo_toml_sha256": "da8b83ac2c66a7b404dc55d88ae42592f70714823251f51b620ae349b246a18f",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "syn",
+      "registry_checksum": "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 9723,
+          "component": "syn@2.0.119",
+          "delivered_path": "licences/064-62c7a1e35f564068.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1023,
+          "component": "syn@2.0.119",
+          "delivered_path": "licences/065-23f18e03dc49df91.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "2.0.119"
+    },
+    {
+      "cargo_toml_sha256": "00785a81eae34b3298dfdde78a6bd96fe3ec000de46edd509bd13b7cab7a9870",
+      "declared_license": "MIT OR Apache-2.0",
+      "missing_licence_text": false,
+      "name": "typenum",
+      "registry_checksum": "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 17,
+          "component": "typenum@1.20.1",
+          "delivered_path": "licences/066-db11fec9946737df.txt",
+          "sha256": "db11fec9946737df39ca3898d9cd8c10ec6f6c3a884a6802b0ad0b81b4e8f23a",
+          "source_relative_path": "LICENSE"
+        },
+        {
+          "bytes": 10835,
+          "component": "typenum@1.20.1",
+          "delivered_path": "licences/067-516b24e051bf5630.txt",
+          "sha256": "516b24e051bf5630880ebbd55c40a25ce9552ebaf8970a53e8976eb70e522406",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1083,
+          "component": "typenum@1.20.1",
+          "delivered_path": "licences/068-a825bd853ab71619.txt",
+          "sha256": "a825bd853ab71619a4923d7b4311221427848070ff44d990da39b0b274c1683f",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "1.20.1"
+    },
+    {
+      "cargo_toml_sha256": "c0e96a9c7ee62f5f9ab12de69e0ad44826ad753911d47638f605c936f7ea2c1c",
+      "declared_license": "(MIT OR Apache-2.0) AND Unicode-3.0",
+      "missing_licence_text": false,
+      "name": "unicode-ident",
+      "registry_checksum": "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 9723,
+          "component": "unicode-ident@1.0.27",
+          "delivered_path": "licences/069-62c7a1e35f564068.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1023,
+          "component": "unicode-ident@1.0.27",
+          "delivered_path": "licences/070-23f18e03dc49df91.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "source_relative_path": "LICENSE-MIT"
+        },
+        {
+          "bytes": 1995,
+          "component": "unicode-ident@1.0.27",
+          "delivered_path": "licences/071-f7db81051789b729.txt",
+          "sha256": "f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1",
+          "source_relative_path": "LICENSE-UNICODE"
+        }
+      ],
+      "version": "1.0.27"
+    },
+    {
+      "cargo_toml_sha256": "399ea74400a173c02eabe91cb9487d0cf351117857a5d2ebc6231f0efde67681",
+      "declared_license": "MIT/Apache-2.0",
+      "missing_licence_text": false,
+      "name": "version_check",
+      "registry_checksum": "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 10847,
+          "component": "version_check@0.9.5",
+          "delivered_path": "licences/072-a60eea8175145316.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1085,
+          "component": "version_check@0.9.5",
+          "delivered_path": "licences/073-b7e650f3fce5c532.txt",
+          "sha256": "b7e650f3fce5c53249d1cdc608b54df156a97edd636cf9d23498d0cfe7aec63e",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "0.9.5"
+    },
+    {
+      "cargo_toml_sha256": "71dd9b47dcf1ea92e55517d3543d1524448c76582a0a49d1d4c16c24a09f7cb0",
+      "declared_license": "Apache-2.0 OR MIT",
+      "missing_licence_text": false,
+      "name": "zeroize",
+      "registry_checksum": "e13084392c5e4bc371903e2935a5eaeed24905a7511356b883835e18a78f6879",
+      "scope": "locked dependency; target/test/build role must follow receipts",
+      "texts": [
+        {
+          "bytes": 11358,
+          "component": "zeroize@1.9.1",
+          "delivered_path": "licences/074-cfc7749b96f63bd3.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "source_relative_path": "LICENSE-APACHE"
+        },
+        {
+          "bytes": 1082,
+          "component": "zeroize@1.9.1",
+          "delivered_path": "licences/075-8c7516d4b27b1e49.txt",
+          "sha256": "8c7516d4b27b1e495be5e38b612298b63de48d05f49cdac94f70f3cd70f8864b",
+          "source_relative_path": "LICENSE-MIT"
+        }
+      ],
+      "version": "1.9.1"
+    }
+  ],
+  "native_reference": {
+    "bytes": 928144,
+    "link_map_sha256": "dd91974fc708c8c12594f577ffcedb138a7d4d29fbef3237a083d7785f6c80d1",
+    "sha256": "b9521e15361e26b22db49c1e8953a1d29940313a5214507d023c2d953ad4acd4"
+  },
+  "openssl_checksum_provenance": {
+    "cargo_lock_package": {
+      "checksum": "46eb8fb9fb3b61ce1c0f8a026c4c1a0714d3a9e138e7fbde78753ce2babc3846",
+      "dependencies": [
+        "cc"
+      ],
+      "name": "openssl-src",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "300.6.1+3.6.3"
+    },
+    "checksum_files": [
+      {
+        "checksum_file_sha256": "827fd5be4e8db4d489796e3c4b85c383c423181b590ffc7fb8604eb17778952d",
+        "license_files": {
+          "LICENSE-APACHE": {
+            "bytes": 10847,
+            "checksum_file_entry": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+            "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+          },
+          "LICENSE-MIT": {
+            "bytes": 1057,
+            "checksum_file_entry": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+            "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397"
+          }
+        },
+        "package_checksum": "46eb8fb9fb3b61ce1c0f8a026c4c1a0714d3a9e138e7fbde78753ce2babc3846",
+        "source_directory": "cargo-producer-vendor-paths-v3/openssl-src-300.6.1+3.6.3"
+      },
+      {
+        "checksum_file_sha256": "53ed472f6696aabb72f79713f2313d3173bd0b4c94986de7c5138844ac140a34",
+        "license_files": {
+          "LICENSE-APACHE": {
+            "bytes": 10847,
+            "checksum_file_entry": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+            "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+          },
+          "LICENSE-MIT": {
+            "bytes": 1057,
+            "checksum_file_entry": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+            "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397"
+          }
+        },
+        "package_checksum": "46eb8fb9fb3b61ce1c0f8a026c4c1a0714d3a9e138e7fbde78753ce2babc3846",
+        "source_directory": "cargo-producer-vendor/openssl-src-300.6.1+3.6.3"
+      }
+    ],
+    "complete_registry_archive_sha256": "46eb8fb9fb3b61ce1c0f8a026c4c1a0714d3a9e138e7fbde78753ce2babc3846"
+  },
+  "preserved_licence_texts": [
+    {
+      "bytes": 24679,
+      "component": "AROS-NX@e0d5e367d15cc7da4ebac8f9db17868756c79569",
+      "delivered_path": "licences/000-825705f4b1240cf5.txt",
+      "sha256": "825705f4b1240cf5b88f44ac745dc9d9ebaa71ac087e53bbd69a1c3064ceb9c8",
+      "source_provenance": {
+        "closure": "release/preparation/aros-legal-closure.json",
+        "kind": "pinned-source-closure",
+        "upstream_path": "LICENSE"
+      },
+      "source_relative_path": "LICENSE"
+    },
+    {
+      "bytes": 3019,
+      "component": "AROS-NX@e0d5e367d15cc7da4ebac8f9db17868756c79569",
+      "delivered_path": "licences/001-e4de7b47f775d918.txt",
+      "sha256": "e4de7b47f775d91810f6f2a1c04fd9af8b722ab4328f67cd0616cce5901b3f39",
+      "source_provenance": {
+        "closure": "release/preparation/aros-legal-closure.json",
+        "kind": "pinned-source-closure",
+        "upstream_path": "LEGAL"
+      },
+      "source_relative_path": "LEGAL"
+    },
+    {
+      "bytes": 3906,
+      "component": "AROS-NX@e0d5e367d15cc7da4ebac8f9db17868756c79569",
+      "delivered_path": "licences/002-9f721f7026bbf47c.txt",
+      "sha256": "9f721f7026bbf47c6a8df87acca91a5a110faa3dfae388de72e02513202450ae",
+      "source_provenance": {
+        "closure": "release/preparation/aros-legal-closure.json",
+        "kind": "pinned-source-closure",
+        "upstream_path": "compiler/crt/stdc/LEGAL"
+      },
+      "source_relative_path": "compiler/crt/stdc/LEGAL"
+    },
+    {
+      "bytes": 1909,
+      "component": "AROS-NX@e0d5e367d15cc7da4ebac8f9db17868756c79569",
+      "delivered_path": "licences/003-95ba0ed38b22eff0.txt",
+      "sha256": "95ba0ed38b22eff040c9fa4ded7ff69451b7b959cc3f1389570da4016515fae4",
+      "source_provenance": {
+        "closure": "release/preparation/aros-legal-closure.json",
+        "kind": "pinned-source-closure",
+        "upstream_path": "compiler/crt/stdc/math/LEGAL"
+      },
+      "source_relative_path": "compiler/crt/stdc/math/LEGAL"
+    },
+    {
+      "bytes": 10849,
+      "component": "base64ct@1.8.3",
+      "delivered_path": "licences/004-a9040321c3712d8f.txt",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1148,
+      "component": "base64ct@1.8.3",
+      "delivered_path": "licences/005-2d1c57bff28344b9.txt",
+      "sha256": "2d1c57bff28344b9e698f51063bc8509799cc4c99a4e0cf2aa3f7e7c3e1f9a9d",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 10849,
+      "component": "block-buffer@0.10.4",
+      "delivered_path": "licences/006-a9040321c3712d8f.txt",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1082,
+      "component": "block-buffer@0.10.4",
+      "delivered_path": "licences/007-d5c22aa3118d240e.txt",
+      "sha256": "d5c22aa3118d240e877ad41c5d9fa232f9c77d757d4aac0c2f943afc0a95e0ef",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 10847,
+      "component": "cfg-if@1.0.5",
+      "delivered_path": "licences/008-a60eea8175145316.txt",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1057,
+      "component": "cfg-if@1.0.5",
+      "delivered_path": "licences/009-378f5840b258e277.txt",
+      "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 10849,
+      "component": "const-oid@0.9.6",
+      "delivered_path": "licences/010-a9040321c3712d8f.txt",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1082,
+      "component": "const-oid@0.9.6",
+      "delivered_path": "licences/011-bada9e7ed8dc00d6.txt",
+      "sha256": "bada9e7ed8dc00d63502053c455d7c8d7575dfb7e8277a2a832531844d900682",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 10849,
+      "component": "cpufeatures@0.2.17",
+      "delivered_path": "licences/012-a9040321c3712d8f.txt",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1082,
+      "component": "cpufeatures@0.2.17",
+      "delivered_path": "licences/013-ae9baa7beea91027.txt",
+      "sha256": "ae9baa7beea910273c2f384c2a6b721fb7bd02bda3436074a1072e4ee689f985",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 10849,
+      "component": "crypto-common@0.1.7",
+      "delivered_path": "licences/014-a9040321c3712d8f.txt",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1065,
+      "component": "crypto-common@0.1.7",
+      "delivered_path": "licences/015-3521672491a34794.txt",
+      "sha256": "3521672491a3479422d5fe1aca6645dd2984090f85da6e5205abfb18fb7a6897",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 3362,
+      "component": "curve25519-dalek@4.1.3",
+      "delivered_path": "licences/016-cca0bd3c4fcdba74.txt",
+      "sha256": "cca0bd3c4fcdba74145ef9d49c62337e2c9fbf9368288f11d0547f1b0273219f",
+      "source_relative_path": "LICENSE"
+    },
+    {
+      "bytes": 10847,
+      "component": "curve25519-dalek-derive@0.1.1",
+      "delivered_path": "licences/017-a60eea8175145316.txt",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1023,
+      "component": "curve25519-dalek-derive@0.1.1",
+      "delivered_path": "licences/018-23f18e03dc49df91.txt",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 10849,
+      "component": "der@0.7.10",
+      "delivered_path": "licences/019-a9040321c3712d8f.txt",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1082,
+      "component": "der@0.7.10",
+      "delivered_path": "licences/020-ad64fcb9589f1627.txt",
+      "sha256": "ad64fcb9589f162720f3cc5010ad76ca6ad3764e11861f9192c489df176bb71d",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 10849,
+      "component": "digest@0.10.7",
+      "delivered_path": "licences/021-a9040321c3712d8f.txt",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1057,
+      "component": "digest@0.10.7",
+      "delivered_path": "licences/022-9e0dfd2dd4173a53.txt",
+      "sha256": "9e0dfd2dd4173a530e238cb6adb37aa78c34c6bc7444e0e10c1ab5d8881f63ba",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 10846,
+      "component": "ed25519@2.2.3",
+      "delivered_path": "licences/023-78779d420019e6b4.txt",
+      "sha256": "78779d420019e6b4630376af8e86b6b335ee8a2f89ede6e0411e0469a326aaa4",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1070,
+      "component": "ed25519@2.2.3",
+      "delivered_path": "licences/024-b3470648aff02beb.txt",
+      "sha256": "b3470648aff02beb36d7a53240fc9260ed80ed93bd43bace6b67d7ef7336ee33",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 1497,
+      "component": "ed25519-dalek@2.2.0",
+      "delivered_path": "licences/025-7a313964a6e05079.txt",
+      "sha256": "7a313964a6e050794d2ad57f4863c11f6bbe055c0ae6ce2cf3b9fc45150bada3",
+      "source_relative_path": "LICENSE"
+    },
+    {
+      "bytes": 375,
+      "component": "fiat-crypto@0.2.9",
+      "delivered_path": "licences/026-6c935d087a2992d0.txt",
+      "sha256": "6c935d087a2992d0f092665400a2fa99c98db58d96fbe29368f8f48182bed9aa",
+      "source_relative_path": "COPYRIGHT"
+    },
+    {
+      "bytes": 638,
+      "component": "fiat-crypto@0.2.9",
+      "delivered_path": "licences/027-9eacbcb81be66084.txt",
+      "sha256": "9eacbcb81be660840c714a560a9d65ba07913db98dd4baf969f78dd499fdd60f",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1153,
+      "component": "fiat-crypto@0.2.9",
+      "delivered_path": "licences/028-0c1240e29b4a2c52.txt",
+      "sha256": "0c1240e29b4a2c528bcc3ccc38a98b1dba5e3e6b465da910208935f082e2ced6",
+      "source_relative_path": "LICENSE-BSD-1"
+    },
+    {
+      "bytes": 1119,
+      "component": "fiat-crypto@0.2.9",
+      "delivered_path": "licences/029-0034712d5e97a4f5.txt",
+      "sha256": "0034712d5e97a4f5b900a160a5c19d582b740d8e0638b4e44fd07e7b492dcd13",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 1107,
+      "component": "generic-array@0.14.7",
+      "delivered_path": "licences/030-c09aae9d3c77b531.txt",
+      "sha256": "c09aae9d3c77b531f56351a9947bc7446511d6b025b3255312d3e3442a9a7583",
+      "source_relative_path": "LICENSE"
+    },
+    {
+      "bytes": 9723,
+      "component": "itoa@1.0.18",
+      "delivered_path": "licences/031-62c7a1e35f564068.txt",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1023,
+      "component": "itoa@1.0.18",
+      "delivered_path": "licences/032-23f18e03dc49df91.txt",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 9723,
+      "component": "libc@0.2.190",
+      "delivered_path": "licences/033-62c7a1e35f564068.txt",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1066,
+      "component": "libc@0.2.190",
+      "delivered_path": "licences/034-123a331b5dbf04c3.txt",
+      "sha256": "123a331b5dbf04c30097fa43b8f858bc85df671fe776de498d01f3d6b7c1f69e",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 126,
+      "component": "memchr@2.8.3",
+      "delivered_path": "licences/035-01c266bced4a434d.txt",
+      "sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f",
+      "source_relative_path": "COPYING"
+    },
+    {
+      "bytes": 1081,
+      "component": "memchr@2.8.3",
+      "delivered_path": "licences/036-0f96a83840e146e4.txt",
+      "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 10849,
+      "component": "pkcs8@0.10.2",
+      "delivered_path": "licences/037-a9040321c3712d8f.txt",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1082,
+      "component": "pkcs8@0.10.2",
+      "delivered_path": "licences/038-ad64fcb9589f1627.txt",
+      "sha256": "ad64fcb9589f162720f3cc5010ad76ca6ad3764e11861f9192c489df176bb71d",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 9723,
+      "component": "proc-macro2@1.0.107",
+      "delivered_path": "licences/039-62c7a1e35f564068.txt",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1023,
+      "component": "proc-macro2@1.0.107",
+      "delivered_path": "licences/040-23f18e03dc49df91.txt",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 9723,
+      "component": "quote@1.0.47",
+      "delivered_path": "licences/041-62c7a1e35f564068.txt",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1023,
+      "component": "quote@1.0.47",
+      "delivered_path": "licences/042-23f18e03dc49df91.txt",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 10847,
+      "component": "rustc_version@0.4.1",
+      "delivered_path": "licences/043-a60eea8175145316.txt",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1071,
+      "component": "rustc_version@0.4.1",
+      "delivered_path": "licences/044-c9a75f18b9ab2927.txt",
+      "sha256": "c9a75f18b9ab2927829a208fc6aa2cf4e63b8420887ba29cdb265d6619ae82d5",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 9723,
+      "component": "ryu@1.0.23",
+      "delivered_path": "licences/045-62c7a1e35f564068.txt",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1338,
+      "component": "ryu@1.0.23",
+      "delivered_path": "licences/046-c9bff75738922193.txt",
+      "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566",
+      "source_relative_path": "LICENSE-BOOST"
+    },
+    {
+      "bytes": 9723,
+      "component": "semver@1.0.28",
+      "delivered_path": "licences/047-62c7a1e35f564068.txt",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1023,
+      "component": "semver@1.0.28",
+      "delivered_path": "licences/048-23f18e03dc49df91.txt",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 9723,
+      "component": "serde@1.0.228",
+      "delivered_path": "licences/049-62c7a1e35f564068.txt",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1023,
+      "component": "serde@1.0.228",
+      "delivered_path": "licences/050-23f18e03dc49df91.txt",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 9723,
+      "component": "serde_core@1.0.228",
+      "delivered_path": "licences/051-62c7a1e35f564068.txt",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1023,
+      "component": "serde_core@1.0.228",
+      "delivered_path": "licences/052-23f18e03dc49df91.txt",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 9723,
+      "component": "serde_derive@1.0.228",
+      "delivered_path": "licences/053-62c7a1e35f564068.txt",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1023,
+      "component": "serde_derive@1.0.228",
+      "delivered_path": "licences/054-23f18e03dc49df91.txt",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 9723,
+      "component": "serde_json@1.0.145",
+      "delivered_path": "licences/055-62c7a1e35f564068.txt",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1023,
+      "component": "serde_json@1.0.145",
+      "delivered_path": "licences/056-23f18e03dc49df91.txt",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 10849,
+      "component": "sha2@0.10.9",
+      "delivered_path": "licences/057-a9040321c3712d8f.txt",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1138,
+      "component": "sha2@0.10.9",
+      "delivered_path": "licences/058-b4eb00df6e2a4d22.txt",
+      "sha256": "b4eb00df6e2a4d22518fcaa6a2b4646f249b3a3c9814509b22bd2091f1392ff1",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 10849,
+      "component": "signature@2.2.0",
+      "delivered_path": "licences/059-a9040321c3712d8f.txt",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1070,
+      "component": "signature@2.2.0",
+      "delivered_path": "licences/060-b3470648aff02beb.txt",
+      "sha256": "b3470648aff02beb36d7a53240fc9260ed80ed93bd43bace6b67d7ef7336ee33",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 10849,
+      "component": "spki@0.7.3",
+      "delivered_path": "licences/061-a9040321c3712d8f.txt",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1082,
+      "component": "spki@0.7.3",
+      "delivered_path": "licences/062-c995204cc6bad2ed.txt",
+      "sha256": "c995204cc6bad2ed67dd41f7d89bb9f1a9d48e0edd745732b30640d7912089a4",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 1582,
+      "component": "subtle@2.6.1",
+      "delivered_path": "licences/063-d1fc1bc0d155df60.txt",
+      "sha256": "d1fc1bc0d155df60b2e7705b6b2ae02a05c96f948e1cec6e2fb86360b09f346b",
+      "source_relative_path": "LICENSE"
+    },
+    {
+      "bytes": 9723,
+      "component": "syn@2.0.119",
+      "delivered_path": "licences/064-62c7a1e35f564068.txt",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1023,
+      "component": "syn@2.0.119",
+      "delivered_path": "licences/065-23f18e03dc49df91.txt",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 17,
+      "component": "typenum@1.20.1",
+      "delivered_path": "licences/066-db11fec9946737df.txt",
+      "sha256": "db11fec9946737df39ca3898d9cd8c10ec6f6c3a884a6802b0ad0b81b4e8f23a",
+      "source_relative_path": "LICENSE"
+    },
+    {
+      "bytes": 10835,
+      "component": "typenum@1.20.1",
+      "delivered_path": "licences/067-516b24e051bf5630.txt",
+      "sha256": "516b24e051bf5630880ebbd55c40a25ce9552ebaf8970a53e8976eb70e522406",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1083,
+      "component": "typenum@1.20.1",
+      "delivered_path": "licences/068-a825bd853ab71619.txt",
+      "sha256": "a825bd853ab71619a4923d7b4311221427848070ff44d990da39b0b274c1683f",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 9723,
+      "component": "unicode-ident@1.0.27",
+      "delivered_path": "licences/069-62c7a1e35f564068.txt",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1023,
+      "component": "unicode-ident@1.0.27",
+      "delivered_path": "licences/070-23f18e03dc49df91.txt",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 1995,
+      "component": "unicode-ident@1.0.27",
+      "delivered_path": "licences/071-f7db81051789b729.txt",
+      "sha256": "f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1",
+      "source_relative_path": "LICENSE-UNICODE"
+    },
+    {
+      "bytes": 10847,
+      "component": "version_check@0.9.5",
+      "delivered_path": "licences/072-a60eea8175145316.txt",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1085,
+      "component": "version_check@0.9.5",
+      "delivered_path": "licences/073-b7e650f3fce5c532.txt",
+      "sha256": "b7e650f3fce5c53249d1cdc608b54df156a97edd636cf9d23498d0cfe7aec63e",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 11358,
+      "component": "zeroize@1.9.1",
+      "delivered_path": "licences/074-cfc7749b96f63bd3.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1082,
+      "component": "zeroize@1.9.1",
+      "delivered_path": "licences/075-8c7516d4b27b1e49.txt",
+      "sha256": "8c7516d4b27b1e495be5e38b612298b63de48d05f49cdac94f70f3cd70f8864b",
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 1527758,
+      "component": "rust-library@330d317121e16b5db8e5adc63595910528ff2ee7",
+      "delivered_path": "licences/076-45b93bff5295cfb5.txt",
+      "sha256": "45b93bff5295cfb5e187713b028a6d7653f55557d3e05b9bf8dd04400daf7b89",
+      "source_relative_path": "COPYRIGHT-library.html"
+    },
+    {
+      "bytes": 15078,
+      "component": "compiler-builtins@qualified-rust-src",
+      "delivered_path": "licences/077-ab6eec6caf0fa577.txt",
+      "sha256": "ab6eec6caf0fa5775e411c7a8bc6a45c4ef2956b0980b157ab74fc5cd62a928b",
+      "source_relative_path": "LICENSE.txt"
+    },
+    {
+      "bytes": 10860,
+      "component": "cargo-source@3efb1f477e99b42974b982d939fd100303cdf7db",
+      "delivered_path": "licences/078-8ada45cd9f843acf.txt",
+      "sha256": "8ada45cd9f843acf64e4722ae262c622a2b3b3007c7310ef36ac1061a30f6adb",
+      "source_provenance": {
+        "blob_sha256": "8ada45cd9f843acf64e4722ae262c622a2b3b3007c7310ef36ac1061a30f6adb",
+        "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+        "kind": "git-blob",
+        "path": "LICENSE-APACHE",
+        "repository": "rust-lang/cargo"
+      },
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1023,
+      "component": "cargo-source@3efb1f477e99b42974b982d939fd100303cdf7db",
+      "delivered_path": "licences/079-23f18e03dc49df91.txt",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "source_provenance": {
+        "blob_sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+        "kind": "git-blob",
+        "path": "LICENSE-MIT",
+        "repository": "rust-lang/cargo"
+      },
+      "source_relative_path": "LICENSE-MIT"
+    },
+    {
+      "bytes": 68430,
+      "component": "cargo-source@3efb1f477e99b42974b982d939fd100303cdf7db",
+      "delivered_path": "licences/080-cbc759b1f17a2ac3.txt",
+      "sha256": "cbc759b1f17a2ac38fe3eb9e9563b1a08ba0f900611c49faaf68b46907b6d898",
+      "source_provenance": {
+        "blob_sha256": "cbc759b1f17a2ac38fe3eb9e9563b1a08ba0f900611c49faaf68b46907b6d898",
+        "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+        "kind": "git-blob",
+        "path": "LICENSE-THIRD-PARTY",
+        "repository": "rust-lang/cargo"
+      },
+      "source_relative_path": "LICENSE-THIRD-PARTY"
+    },
+    {
+      "bytes": 10847,
+      "component": "openssl-src-source-patch@300.6.1+3.6.3",
+      "delivered_path": "licences/081-a60eea8175145316.txt",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "source_provenance": {
+        "file_sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "kind": "cargo-checksum-file-entry",
+        "manifest_sha256": "827fd5be4e8db4d489796e3c4b85c383c423181b590ffc7fb8604eb17778952d",
+        "package_checksum": "46eb8fb9fb3b61ce1c0f8a026c4c1a0714d3a9e138e7fbde78753ce2babc3846"
+      },
+      "source_relative_path": "LICENSE-APACHE"
+    },
+    {
+      "bytes": 1057,
+      "component": "openssl-src-source-patch@300.6.1+3.6.3",
+      "delivered_path": "licences/082-378f5840b258e277.txt",
+      "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+      "source_provenance": {
+        "file_sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+        "kind": "cargo-checksum-file-entry",
+        "manifest_sha256": "827fd5be4e8db4d489796e3c4b85c383c423181b590ffc7fb8604eb17778952d",
+        "package_checksum": "46eb8fb9fb3b61ce1c0f8a026c4c1a0714d3a9e138e7fbde78753ce2babc3846"
+      },
+      "source_relative_path": "LICENSE-MIT"
+    }
+  ],
+  "publication_authorized": false,
+  "release_redistribution_cleared": true,
+  "rust_runtime_attribution": "preserved full COPYRIGHT-library.html, including Unicode terms, and compiler-builtins LICENSE; no unused-attribution stripping",
+  "schema": "ami-rust-licence-review-v1",
+  "source_inventory_sha256": "6ed1f3e65caaec9d0649fd5e54fcf980c49bbf0bf76fa7d59090b594553d146b",
+  "status": "PASS_FOR_QUALIFICATION_CANDIDATE"
+}

@@ -1,28 +1,29 @@
 # ami-rust
 
-ami-rust is a source SDK and a small Rust interface for the PC x86-64 AROS
-ABI-v1 target. This repository is a source and review surface. It does not
-publish SDK archives or binary releases.
+ami-rust is a source SDK and a small Rust interface for native PC x86-64 AROS
+ABI-v1. Development uses standard rustup and Cargo with a pinned cross-development
+SDK and a small installation, verification and linker boundary.
 
-The current compatibility evidence is limited to the documented x86-64 AROS
-ABI-v1 environment. It does not establish support for other AROS targets,
-Amiga-compatible systems, physical machines, or arbitrary Rust crates. See
-the compatibility and API documents before relying on the interface.
+The initial development hosts are macOS Apple Silicon and Linux x86-64. The
+supported target profile is the qualified x86-64 ABI-v1 environment; see
+[compatibility](docs/compatibility.md) and the [API scope](docs/api.md).
+Native AROS-hosted rustc/Cargo, full Rust std and official rustup target
+distribution are outside the current release scope.
 
-The CI workflow runs isolated installer regression fixtures on Linux and macOS.
-It does not build or qualify the SDK, run AROS, validate a publisher identity,
-or create release artifacts. An offline test signature is not a publisher
-signature. No SDK publication is authorized by this repository workflow.
+R1 remains under qualification; no ami-rust SDK release is published. The
+[authoritative release plan](docs/m2-r1-plan.md) defines the acceptance gates.
+The [release status](docs/release-status.md) distinguishes inherited local
+candidate evidence from protected production and consumer verification.
 
-First-party code is available under either the MIT License or Apache License,
-Version 2.0. Third-party files retain their own notices and license terms; see
-THIRD_PARTY_NOTICES.md and the individual crate notices.
+Source CI runs regression fixtures on both development hosts. The manual
+[protected SDK producer](docs/hosted-sdk-producer.md) builds, authenticates and
+checks candidates on standard GitHub-hosted runners. Its output is qualification
+evidence until every release gate passes. Consumer asset distribution remains separate.
+The protected Cargo prerequisite workflow retains its separate producer identity.
 
-The [release qualification status](docs/release-status.md) records completed installation/licence checks and the still-open protected SDK provenance gate. Source publication does not authorise SDK release assets.
-
-The manual hosted Cargo prerequisite workflow uses a pinned standalone Python
-3.12.15 input on both hosts. The runner system Python performs only the initial
-verified runtime bootstrap and cleanup. Cargo production and its resource
-receipts use the fixed runtime; bootstrap archives and runtime files are
-included in managed workspace accounting and explicitly removed before metadata
-upload. This is prerequisite qualification, not an SDK release.
+The pinned original and source-derived C-SDK prerequisites and corresponding
+source live in this repository. Read their conspicuous
+[source-availability notice](release/portable-csdk/SOURCE-AVAILABILITY.md),
+[dated changes](release/portable-csdk/CHANGES.md) and original licence terms.
+First-party ami-rust code is MIT OR Apache-2.0; third-party code retains its own
+terms. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

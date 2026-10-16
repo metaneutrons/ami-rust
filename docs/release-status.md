@@ -47,3 +47,23 @@ before a hosted SDK build is accepted. Guest/baseline limits remain unchanged.
 The source snapshot/installation recipe requires a fresh WORK root disjoint from the bundle and installed SDK. Review found that a caller can currently choose a fresh destination inside the bundle; the qualified recipe avoids that destination. Installed SDK inventory validation rejects modifications. Same-user hostile concurrent mutation is outside the verified installation model. The generated demo preserves license files in its SDK source subtree; publishing an adapted application requires its own licensing decision.
 
 The [actual hosted capacity measurement](hosted-ci-preparation-20261015.md) now confirms that both runners pass the existing disk gate and fail the existing RAM gate. The resource proposal is not enabled or qualified; R1-A6 remains open.
+
+
+## Protected SDK follow-up — 2026-10-16
+
+The later hosted resource policy is adopted in `release/ci-resources.json`:
+6 GiB physical RAM and 24 GiB free disk. Earlier numeric gates and sealed
+campaign outcomes remain historical evidence. Both hosted Cargo prerequisite
+builds passed in [run 38860315967](https://github.com/metaneutrons/ami-rust/actions/runs/38860315967).
+
+The complete original and derived C-SDK prerequisites, complete corresponding
+source and selected vendor archive are now included as pinned repository inputs
+with preserved third-party terms, dated changes and source-availability notices.
+The shared C-SDK producer passed its complete local macOS component campaign;
+that result is not latest-source two-host protected SDK qualification.
+
+The [revision 19 release plan](m2-r1-plan.md) is authoritative for remaining
+gates. Protected SDK production, production signature/provenance verification,
+clean consumer replay, binary-linkage/licence acceptance and final independent
+review remain open. SDK release publication remains conditional on all gates;
+no SDK release is created by the qualification workflow.

@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-15]
+        os: [ubuntu-24.04, macos-26]
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -31,6 +31,8 @@ jobs:
             host/
             release/*.py
             release/ci-*.json
+            release/portable-csdk/spec.json
+            release/native-reference.json
       - name: Run isolated installer fixture tests
         run: |
           python3 --version
@@ -40,6 +42,18 @@ jobs:
           python3 -I -B release/test_ci_cargo.py
           python3 -I -B release/test_ci_python.py
           python3 -I -B release/test_ci_artifact_admission.py
+          python3 -I -B release/test_ci_sdk.py
+          python3 -I -B release/test_ci_csdk.py
+          python3 -I -B release/test_csdk_recipes.py
+          python3 -I -B release/test_csdk_nouveau.py
+          python3 -I -B release/test_csdk_archive.py
+          python3 -I -B release/test_csdk_metadata.py
+          python3 -I -B release/test_csdk_producer.py
+          python3 -I -B release/test_prepare_sdk.py
+          python3 -I -B release/test_ci_auth.py
+          python3 -I -B release/test_ci_verify.py
+          python3 -I -B release/test_verify_publisher.py
+          python3 -I -B release/test_install_publisher.py
 
   ci-success:
     name: CI Success
