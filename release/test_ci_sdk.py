@@ -109,6 +109,69 @@ class HostedSdkProducerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ci_sdk.validate_inputs(altered, inputs, "macos-aarch64")
 
+    def test_distribution_sbom_identifies_the_selected_cargo_reports_and_artifacts(self):
+        sbom = ci_sdk.read_json(ROOT / "release/bundle-assets/sbom.spdx.json", 2 * 1024**2)
+        identifiers = {
+            "linux-x86_64": "SPDXRef-HostCargoArtifact-Linux-x86-64",
+            "macos-aarch64": "SPDXRef-HostCargoArtifact-macOS-aarch64",
+        }
+        for host, identifier in identifiers.items():
+            with self.subTest(host=host):
+                path = ROOT / "release/ci-cargo-producers" / (host + ".json")
+                artifact = ci_sdk.read_json(path)["custom_cargo_artifact"]
+                rows = [row for row in sbom["packages"] if row["SPDXID"] == identifier]
+                self.assertEqual(len(rows), 1)
+                row = rows[0]
+                self.assertEqual(row["checksums"], [
+                    {"algorithm": "SHA256", "checksumValue": artifact["sha256"]}])
+                self.assertIn(f"Exact size {artifact['bytes']} bytes.", row["sourceInfo"])
+                self.assertIn(f"{path.relative_to(ROOT)} SHA-256 {ci_sdk.sha256(path)} ",
+                              row["sourceInfo"])
+
+    def test_pinned_cargo_reports_pass_strict_preflight(self):
+        ci_sdk.preflight_cargo_producers(ROOT / "release/ci-resources.json")
+
+    def test_pinned_cargo_reports_reject_stale_policy_digests(self):
+        resources_path = ROOT / "release/ci-resources.json"
+        listing = subprocess.run(["/usr/bin/git", "-C", str(ROOT), "ls-files", "-z"],
+                                 check=True, capture_output=True, timeout=30).stdout
+        tracked = {item.decode("utf-8") for item in listing.split(b"\0") if item}
+        inputs, resources, inputs_sha, resources_sha = ci_sdk.prepare_sdk.verify_expected_inputs(
+            ROOT, tracked, resources_path)
+        for host in ci_sdk.HOST_TARGETS:
+            with self.subTest(host=host):
+                report = ci_sdk.read_json(ROOT / "release/ci-cargo-producers" / (host + ".json"))
+                report["input_materials"]["resource_policy_sha256"] = "0" * 64
+                fixture = self.temporary / (host + ".json")
+                fixture.write_bytes(ci_sdk.canonical_json(report))
+                with self.assertRaisesRegex(ValueError, "input/resource policy digests"):
+                    ci_sdk.prepare_sdk.canonical_producer(
+                        fixture, host, inputs, resources, inputs_sha, resources_sha, ROOT, tracked)
+
+    def test_stale_resource_policy_stops_before_native_cargo_producer(self):
+        stale_resources = self.temporary / "stale-ci-resources.json"
+        stale = ci_sdk.read_json(ROOT / "release/ci-resources.json")
+        stale["build"]["jobs"] += 1
+        stale_resources.write_bytes(ci_sdk.canonical_json(stale))
+        managed = self.temporary / "early-produce"
+        managed.mkdir()
+        args = type("Args", (), {
+            "work": managed / "work", "output": managed / "output",
+            "python_bootstrap_root": managed / "ami-rust-python-bootstrap",
+            "resources": stale_resources,
+            "inputs": ROOT / "release/ci-sdk-inputs.json",
+            "cargo_inputs": ROOT / "release/ci-bootstrap-inputs.json"})()
+        host = "linux-x86_64"
+        with (patch.object(ci_sdk, "host_identity", return_value=(host, ci_sdk.HOST_TARGETS[host])),
+              patch.object(ci_sdk, "resolve_linkage_audit_utility", return_value={}),
+              patch.object(ci_sdk, "csdk_host_tools", return_value={}),
+              patch.object(ci_sdk, "verify_python_bootstrap",
+                           side_effect=AssertionError("stale pins must fail before bootstrap validation")),
+              patch.object(ci_sdk.ci_cargo, "produce") as cargo_produce):
+            with self.assertRaisesRegex(ValueError, "resources bytes differ"):
+                ci_sdk.produce(args)
+            cargo_produce.assert_not_called()
+
     def test_channel_manifest_download_is_bounded_and_hash_pinned(self):
         payload = b"[pkg.rustc]\nversion = 'fixture'\n"
 

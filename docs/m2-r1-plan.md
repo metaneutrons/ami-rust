@@ -11,6 +11,11 @@ derivation gates. A prepared source patch or a macOS-only
 probe does not close R1-A6. Derived C-SDK bytes require their own component
 identity and complete affected release qualification before publication.
 
+The [protected SDK producer attempt of 2026-10-16](r1-sdk-producer-20261016.md)
+failed after successful Cargo prerequisites because the source-frozen reports
+bound the earlier resource policy. Refreshed reports and early validation
+prepare a new attempt; they do not establish SDK or R1 acceptance.
+
 ## Authority and authorised amendment
 
 This repository owns the ami-rust SDK and its host integration. Fabian explicitly
