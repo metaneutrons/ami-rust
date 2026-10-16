@@ -53,6 +53,7 @@ MAX_WORK_BYTES = 12 * 1024**3
 MAX_COMMAND_SECONDS = 1200
 MAX_CHANNEL_MANIFEST_BYTES = 4 * 1024**2
 METADATA_CRATES = ("serde", "curve25519_dalek", "ed25519_dalek")
+NATIVE_BUILD_BYPRODUCTS = ("AMIRUST.map", "AMIRUST.unstripped", "AMIRUST.stripped")
 DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 GIT_COMMIT = re.compile(r"[0-9a-f]{40}\Z")
 ARCHIVE_CHUNK = 1024 * 1024
@@ -1368,24 +1369,62 @@ def _verify_native_receipt(build_output: Path, reference_rows: dict | None,
                            supervisor: Supervisor, label: str) -> tuple[dict, Path]:
     receipt_path = build_output / "build-receipt.json"
     receipt = read_json(receipt_path, 4 * 1024**2)
+    if receipt.get("status") != "PASS":
+        raise ValueError("native build receipt status is not PASS: " + label)
     actual = receipt.get("canonical_artifacts")
     if (not isinstance(actual, dict) or not actual or "AMIRUST" not in actual
             or (reference_rows is not None and actual != reference_rows)):
         raise ValueError("native canonical outputs differ from the accepted host reference: " + label)
     artifacts = build_output / "artifacts"
+    try:
+        artifacts_info = artifacts.lstat()
+    except OSError as error:
+        raise ValueError("native artifact directory is missing or inaccessible") from error
+    if not stat.S_ISDIR(artifacts_info.st_mode):
+        raise ValueError("native artifact directory is not a regular directory")
+
+    expected_paths = set(actual) | set(NATIVE_BUILD_BYPRODUCTS)
+    if set(actual) & set(NATIVE_BUILD_BYPRODUCTS):
+        raise ValueError("native canonical receipt includes a noncanonical build byproduct")
+    for name, row in actual.items():
+        _safe_relative(name)
+        if (not isinstance(row, dict) or isinstance(row.get("bytes"), bool)
+                or not isinstance(row.get("bytes"), int) or row["bytes"] < 0
+                or not _is_digest(row.get("sha256"))):
+            raise ValueError("native canonical receipt row is malformed: " + name)
+
+    regular_paths = set()
+    invalid_paths = set()
+    for path in artifacts.rglob("*"):
+        relative = path.relative_to(artifacts).as_posix()
+        info = path.lstat()
+        if stat.S_ISREG(info.st_mode):
+            regular_paths.add(relative)
+        elif stat.S_ISDIR(info.st_mode):
+            if not any(name.startswith(relative + "/") for name in expected_paths):
+                invalid_paths.add(relative)
+        else:
+            invalid_paths.add(relative)
+    extra = (regular_paths - expected_paths) | invalid_paths
+    missing = expected_paths - regular_paths
+    if extra or missing:
+        raise ValueError("native artifact inventory mismatch: extra=" + repr(sorted(extra))
+                         + "; missing=" + repr(sorted(missing)))
+
     observed = {}
     for name, row in actual.items():
         rel = _safe_relative(name)
         path = artifacts.joinpath(*rel.parts)
         info = path.lstat()
-        if (not stat.S_ISREG(info.st_mode) or info.st_size != row["bytes"]
-                or sha256(path) != row["sha256"]):
+        digest = sha256(path)
+        if info.st_size != row["bytes"] or digest != row["sha256"]:
             raise ValueError("native output file differs from its canonical receipt: " + name)
-        observed[name] = {"bytes": info.st_size, "sha256": row["sha256"]}
-    actual_paths = {path.relative_to(artifacts).as_posix() for path in artifacts.rglob("*")
-                    if path.is_file() or path.is_symlink()}
-    if actual_paths != set(actual):
-        raise ValueError("native artifact directory contains unrecorded or missing files")
+        observed[name] = {"bytes": info.st_size, "sha256": digest}
+    build_byproducts = {}
+    for name in NATIVE_BUILD_BYPRODUCTS:
+        path = artifacts / name
+        info = path.lstat()
+        build_byproducts[name] = {"bytes": info.st_size, "sha256": sha256(path)}
     if receipt.get("host") != host_identity()[0]:
         raise ValueError("native build receipt identifies a different host")
     frontend = receipt.get("cargo_frontend", {})
@@ -1393,6 +1432,7 @@ def _verify_native_receipt(build_output: Path, reference_rows: dict | None,
         raise ValueError("native build receipt omits its Cargo frontend identity")
     supervisor.check_limits("completed native build")
     return {"receipt_sha256": sha256(receipt_path), "artifacts": observed,
+            "build_byproducts": build_byproducts,
             "rss_peak_observed_bytes": max((row.get("rss_peak_observed_bytes", 0)
                                              for row in receipt.get("commands", [])), default=0),
             "elapsed_seconds": receipt.get("elapsed_seconds")}, artifacts / "AMIRUST"
@@ -1620,6 +1660,7 @@ def produce(args) -> dict:
                                   "process": run_record, "build_receipt_sha256": result["receipt_sha256"],
                                   "canonical_artifact_count": len(result["artifacts"]),
                                   "canonical_artifacts": result["artifacts"],
+                                  "build_byproducts": result["build_byproducts"],
                                   "AMIRUST": {"bytes": native_bytes, "sha256": native_hash},
                                   "reference_match": result["artifacts"] == expected_rows})
             _retire_successful_build(build_output, args.work)

@@ -38,25 +38,44 @@ class HostedSdkProducerTests(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.temporary)
 
-    def test_reference_proposal_verifies_real_files_but_default_requires_accepted_map(self):
-        build = self.work / "reference-proposal"
+    def _native_build_fixture(self, name="reference-proposal"):
+        build = self.work / name
         artifacts = build / "artifacts"
         artifacts.mkdir(parents=True)
         (artifacts / "AMIRUST").write_bytes(b"fresh native fixture")
         rows = {"AMIRUST": {"bytes": 20, "sha256": ci_sdk.sha256(artifacts / "AMIRUST")}}
+        byproduct_bytes = {
+            "AMIRUST.map": b"link map with private build paths\n",
+            "AMIRUST.unstripped": b"unstripped native image",
+            "AMIRUST.stripped": b"stripped native image",
+        }
+        for name, data in byproduct_bytes.items():
+            (artifacts / name).write_bytes(data)
         host, _ = ci_sdk.host_identity()
         (build / "build-receipt.json").write_bytes(ci_sdk.canonical_json({
-            "canonical_artifacts": rows, "host": host,
+            "status": "PASS", "canonical_artifacts": rows, "host": host,
             "cargo_frontend": {"sha256": "a" * 64}, "commands": []}))
+        return build, artifacts, rows, byproduct_bytes
+
+    def test_reference_proposal_and_default_verify_canonical_files_and_byproducts(self):
+        build, artifacts, rows, byproduct_bytes = self._native_build_fixture()
 
         class Limits:
             def check_limits(self, label):
                 self.checked = label
 
         limits = Limits()
-        result, native = ci_sdk._verify_native_receipt(build, None, limits, "proposal")
-        self.assertEqual(result["artifacts"], rows)
+        proposal, native = ci_sdk._verify_native_receipt(build, None, limits, "proposal")
+        self.assertEqual(proposal["artifacts"], rows)
         self.assertEqual(native, artifacts / "AMIRUST")
+        expected_byproducts = {
+            name: {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+            for name, data in byproduct_bytes.items()
+        }
+        self.assertEqual(proposal["build_byproducts"], expected_byproducts)
+        default, _ = ci_sdk._verify_native_receipt(build, rows, limits, "production")
+        self.assertEqual(default["artifacts"], rows)
+        self.assertEqual(default["build_byproducts"], expected_byproducts)
         accepted = copy.deepcopy(rows)
         accepted["AMIRUST"]["sha256"] = "b" * 64
         with self.assertRaisesRegex(ValueError, "accepted host reference"):
@@ -64,6 +83,38 @@ class HostedSdkProducerTests(unittest.TestCase):
         (artifacts / "AMIRUST").write_bytes(b"changed native file!")
         with self.assertRaisesRegex(ValueError, "differs from its canonical receipt"):
             ci_sdk._verify_native_receipt(build, None, limits, "corrupt proposal")
+
+    def test_native_receipt_rejects_unknown_extra_artifact(self):
+        build, artifacts, _, _ = self._native_build_fixture("unknown-extra")
+        extra = artifacts / "target/release/deps/libunknown-abc123.rlib"
+        extra.parent.mkdir(parents=True)
+        extra.write_bytes(b"unrecorded library")
+        with self.assertRaisesRegex(ValueError, "extra=.*libunknown-abc123\\.rlib"):
+            ci_sdk._verify_native_receipt(build, None, object(), "unknown extra")
+
+    def test_native_receipt_requires_each_build_byproduct(self):
+        build, artifacts, _, _ = self._native_build_fixture("missing-byproduct")
+        (artifacts / "AMIRUST.map").unlink()
+        with self.assertRaisesRegex(ValueError, "missing=.*AMIRUST\\.map"):
+            ci_sdk._verify_native_receipt(build, None, object(), "missing byproduct")
+
+    def test_native_receipt_rejects_linked_build_byproduct(self):
+        build, artifacts, _, _ = self._native_build_fixture("linked-byproduct")
+        (artifacts / "AMIRUST.map").unlink()
+        (artifacts / "AMIRUST.map").symlink_to(artifacts / "AMIRUST")
+        with self.assertRaisesRegex(ValueError, "inventory mismatch") as raised:
+            ci_sdk._verify_native_receipt(build, None, object(), "linked byproduct")
+        self.assertIn("extra=['AMIRUST.map']", str(raised.exception))
+        self.assertIn("missing=['AMIRUST.map']", str(raised.exception))
+
+    def test_native_receipt_requires_pass_status(self):
+        build, _, _, _ = self._native_build_fixture("nonpass")
+        receipt_path = build / "build-receipt.json"
+        receipt = ci_sdk.read_json(receipt_path)
+        receipt["status"] = "FAILED"
+        receipt_path.write_bytes(ci_sdk.canonical_json(receipt))
+        with self.assertRaisesRegex(ValueError, "status is not PASS"):
+            ci_sdk._verify_native_receipt(build, None, object(), "non-PASS receipt")
 
     def test_raw_metadata_retention_preserves_exact_canonical_archives(self):
         artifacts = self.work / "artifacts"
