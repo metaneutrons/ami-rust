@@ -55,6 +55,8 @@ jobs:
           python3 -I -B host/tests/test_allocation_layout.py
           python3 -I -B host/tests/test_elf_audit.py
           python3 -I -B release/test_ci_cargo.py
+          python3 -I -B release/test_cargo_context_probe.py
+          python3 -I -B release/test_finalize_cargo_probe.py
           python3 -I -B release/test_ci_python.py
           python3 -I -B release/test_ci_artifact_admission.py
           python3 -I -B release/test_ci_sdk.py
