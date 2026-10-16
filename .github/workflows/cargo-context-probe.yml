@@ -1,0 +1,107 @@
+name: Hosted Cargo context probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ami-rust-protected-builds
+  cancel-in-progress: false
+
+jobs:
+  admission:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: release
+    steps:
+      - name: Require protected main and the designated repository
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+        run: |
+          test "$GITHUB_REPOSITORY" = metaneutrons/ami-rust
+          test "$GITHUB_REF" = refs/heads/main
+          test "$SOURCE_IS_PROTECTED" = true
+      - name: Check out the exact admission source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            release/ci_artifact_admission.py
+            release/ci-resources.json
+      - name: Admit both diagnostic exports before production
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -I -B release/ci_artifact_admission.py
+
+  probe:
+    needs: admission
+    name: Cargo context (${{ matrix.profile }})
+    runs-on: ${{ matrix.os }}
+    environment: release
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - os: macos-26
+            profile: macos-aarch64
+          - os: ubuntu-24.04
+            profile: linux-x86_64
+    steps:
+      - name: Check out the exact diagnostic source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            host/
+            release/ci_cargo.py
+            release/ci_python.py
+            release/ci-python-inputs.json
+            release/ci-bootstrap-inputs.json
+            release/ci-resources.json
+            release/cargo_context_probe.py
+            release/finalize_cargo_probe.py
+            release/bundle-files.json
+            release/bundle-assets/THIRD_PARTY_NOTICES.md
+            release/cargo-notices/payload-v3/
+            licences/
+            LICENSE*
+      - name: Install the pinned portable Python runtime
+        run: |
+          python3 -I -B release/ci_python.py \
+            --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" \
+            --inputs release/ci-python-inputs.json
+      - name: Preserve and compare both fresh Cargo binaries
+        id: producer
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/cargo_context_probe.py \
+            --temporary "$RUNNER_TEMP" \
+            --output "$RUNNER_TEMP/ami-rust-context-output" \
+            --inputs release/ci-bootstrap-inputs.json \
+            --resources release/ci-resources.json \
+            --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap"
+      - name: Retire work and preserve accompanying source and notices
+        id: cleanup
+        if: always()
+        env:
+          PRODUCER_RESULT: ${{ steps.producer.outcome }}
+        run: |
+          python3 -I -B release/finalize_cargo_probe.py \
+            --temporary "$RUNNER_TEMP" \
+            --output "$RUNNER_TEMP/ami-rust-context-output" \
+            --producer-result "$PRODUCER_RESULT"
+      - name: Preserve bounded diagnostics including both original binaries
+        if: always() && steps.cleanup.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cargo-context-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-context-output
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

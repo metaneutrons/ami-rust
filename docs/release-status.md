@@ -24,6 +24,13 @@ passed the strict input/resource/helper validation. The macOS Cargo binary has a
 new identity; the Linux binary retains its previous identity. This prerequisite
 success does not qualify an SDK or transfer historical native results.
 
+The subsequent complete [protected proposal 38922417085](https://github.com/metaneutrons/ami-rust/actions/runs/38922417085)
+failed. Linux completed all five variants in two fresh roots; macOS stopped
+before SDK compilation because its newly built Cargo differed from the frozen
+prerequisite receipt. The [Cargo context diagnostic](hosted-cargo-context-probe.md)
+preserves both actual binaries and build contexts for investigation. No new
+Cargo reference identity or native acceptance follows from that diagnostic.
+
 The complete original and derived C-SDK prerequisites, corresponding source,
 patches and selected vendor archive are public repository inputs with their
 own pinned identities and preserved notices. The shared portable C-SDK producer
