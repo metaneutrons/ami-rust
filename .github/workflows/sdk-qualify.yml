@@ -2,6 +2,11 @@ name: Hosted SDK candidate producer
 
 on:
   workflow_dispatch:
+    inputs:
+      reference_proposal:
+        description: Collect new native references for guest qualification; skip authentication
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -55,14 +60,21 @@ jobs:
       - name: Produce host SDK candidate and native evidence
         id: producer
         shell: bash
+        env:
+          REFERENCE_PROPOSAL: ${{ inputs.reference_proposal }}
         run: |
+          proposal_args=()
+          if [ "$REFERENCE_PROPOSAL" = true ]; then
+            proposal_args+=(--reference-proposal)
+          fi
           "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_sdk.py \
             --work "$RUNNER_TEMP/ami-rust-sdk-work" \
             --output "$RUNNER_TEMP/ami-rust-sdk-output" \
             --inputs release/ci-sdk-inputs.json \
             --cargo-inputs release/ci-bootstrap-inputs.json \
             --resources release/ci-resources.json \
-            --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap"
+            --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap" \
+            "${proposal_args[@]}"
       - name: Retire managed work and validate bounded candidate payloads
         id: cleanup
         if: always()
@@ -74,6 +86,7 @@ jobs:
           WORKFLOW_SOURCE_COMMIT: ${{ github.sha }}
           WORKFLOW_RUN_ID: ${{ github.run_id }}
           WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
+          REFERENCE_PROPOSAL: ${{ inputs.reference_proposal }}
         run: |
           python3 -I -B - <<'PYCODE'
           import hashlib
@@ -134,6 +147,9 @@ jobs:
               return info
 
           expected_host = os.environ["EXPECTED_HOST"]
+          reference_proposal = os.environ["REFERENCE_PROPOSAL"] == "true"
+          expected_status = ("PRODUCED_NATIVE_REFERENCE_PROPOSAL_NOT_FOR_AUTHENTICATION"
+                             if reference_proposal else "PRODUCED_HOSTED_SDK_CANDIDATE_NOT_R1_ACCEPTED")
           success = os.environ["PRODUCER_RESULT"] == "success"
           cargo_path = output / "producer.json"
           sdk_path = output / "sdk-producer.json"
@@ -145,7 +161,7 @@ jobs:
           sdk = read_json(sdk_path)
           if (sdk.get("schema") != "ami-rust-hosted-sdk-producer-v1"
                   or sdk.get("host") != expected_host
-                  or sdk.get("status") not in {"FAILED", "PRODUCED_HOSTED_SDK_CANDIDATE_NOT_R1_ACCEPTED"}):
+                  or sdk.get("status") not in {"FAILED", expected_status}):
               raise SystemExit("Unrecognized SDK producer receipt")
           if cargo_path.exists():
               cargo = read_json(cargo_path)
@@ -161,6 +177,9 @@ jobs:
               "native/minimal-noalloc.AMIRUST", "native/minimal-alloc.AMIRUST",
               "native/qualification.AMIRUST", "native/dependencies.AMIRUST",
               "native/sha256sum.AMIRUST"}
+          if reference_proposal:
+              payload_names |= {"metadata/" + name + ".rlib" for name in
+                                ("serde", "curve25519_dalek", "ed25519_dalek")}
           if not success:
               for relative in sorted(payload_names):
                   path = output / relative
@@ -173,11 +192,17 @@ jobs:
                   if native.is_symlink() or not native.is_dir() or any(native.iterdir()):
                       raise SystemExit("Unexpected partial native output tree")
                   native.rmdir()
+              metadata = output / "metadata"
+              if metadata.exists():
+                  if metadata.is_symlink() or not metadata.is_dir() or any(metadata.iterdir()):
+                      raise SystemExit("Unexpected partial metadata output tree")
+                  metadata.rmdir()
 
           allowed = {"producer.json", "sdk-producer.json", "csdk-producer.json", "python-bootstrap.json", "cleanup.json"}
           if success:
               allowed |= payload_names
-              if (sdk.get("status") != "PRODUCED_HOSTED_SDK_CANDIDATE_NOT_R1_ACCEPTED"
+              if (sdk.get("status") != expected_status
+                      or sdk.get("reference_proposal") is not reference_proposal
                       or sdk.get("source", {}).get("qualification_only") is not False):
                   raise SystemExit("Successful SDK producer did not emit a production trust candidate")
               csdk_path = output / "csdk-producer.json"
@@ -194,6 +219,8 @@ jobs:
               payload_rows[sdk["cargo_component"]["archive"]["path"]] = sdk["cargo_component"]["archive"]
               for row in sdk.get("native_payloads", []):
                   payload_rows[row["path"]] = row
+              for row in sdk.get("metadata_archives", []):
+                  payload_rows[row["path"]] = row
               if set(payload_rows) != payload_names:
                   raise SystemExit("SDK receipt payload inventory is incomplete")
               for relative, row in payload_rows.items():
@@ -202,8 +229,15 @@ jobs:
                   if info.st_size != row.get("bytes") or sha256(path) != row.get("sha256"):
                       raise SystemExit("Candidate payload differs from its receipt: " + relative)
               if (len(sdk.get("native_builds", [])) != 10
-                      or any(row.get("reference_match") is not True for row in sdk["native_builds"])):
+                      or (not reference_proposal and
+                          any(row.get("reference_match") is not True for row in sdk["native_builds"]))):
                   raise SystemExit("SDK producer did not complete both full five-variant native roots")
+              for variant in ("minimal-noalloc", "minimal-alloc", "qualification", "dependencies", "sha256sum"):
+                  builds = [row for row in sdk["native_builds"] if row.get("variant") == variant]
+                  if (len(builds) != 2 or {row.get("layout") for row in builds} != {"sdk-layout-a", "sdk-layout-b"}
+                          or builds[0].get("canonical_artifacts") != builds[1].get("canonical_artifacts")
+                          or not builds[0].get("canonical_artifacts")):
+                      raise SystemExit("SDK producer did not prove matching cold roots for " + variant)
               if (not (output / "python-bootstrap.json").is_file()
                       or os.environ["PYTHON_RESULT"] != "success"):
                   raise SystemExit("Successful build is missing its pinned Python receipt")
@@ -236,6 +270,7 @@ jobs:
                      "managed_work_remaining_bytes": 0,
                      "python_runtime_remaining_bytes": 0,
                      "native_guest_tested": False,
+                     "reference_proposal": reference_proposal,
                      "R1_accepted": False,
                      "SDK_publication_authorized": False}
           (output / "cleanup.json").write_text(json.dumps(receipt, sort_keys=True, indent=2) + "\n")
@@ -255,6 +290,7 @@ jobs:
           compression-level: 9
 
   assemble:
+    if: ${{ !inputs.reference_proposal }}
     name: Assemble common unsigned candidate
     needs: producer
     runs-on: ubuntu-24.04

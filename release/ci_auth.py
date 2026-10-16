@@ -34,6 +34,8 @@ PORTABLE_CSDK_ORIGINAL_ARCHIVE = "release/inputs/csdk.tar.xz"
 PORTABLE_CSDK_CANDIDATE_ARCHIVE = "release/inputs/portable-csdk.tar.xz"
 PORTABLE_CSDK_CANDIDATE_ARCHIVE_NAME = "csdk-component.tar.xz"
 PORTABLE_CSDK_COUNTS = {"changed_files": 532, "public_headers": 530, "regular_files": 2835}
+SDK_PRODUCER_RECEIPT_SCHEMA = "ami-rust-hosted-sdk-producer-v1"
+SDK_PRODUCER_RECEIPT_STATUS = "PRODUCED_HOSTED_SDK_CANDIDATE_NOT_R1_ACCEPTED"
 
 
 def sha(raw):
@@ -431,7 +433,23 @@ def static_assets(source, reserved=()):
     return assets
 
 
-def assemble(source, payloads, output):
+def validate_sdk_producer_receipt(payload, host, source_sha):
+    try:
+        receipt = parsed(read(below(Path(payload), "sdk-producer.json")))
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise ValueError("missing or invalid SDK producer receipt for " + host) from exc
+    source = receipt.get("source") if isinstance(receipt, dict) else None
+    if (not isinstance(receipt, dict)
+            or receipt.get("schema") != SDK_PRODUCER_RECEIPT_SCHEMA
+            or receipt.get("status") != SDK_PRODUCER_RECEIPT_STATUS
+            or receipt.get("host") != host
+            or receipt.get("reference_proposal") is not False
+            or not isinstance(source, dict)
+            or source.get("commit") != source_sha):
+        raise ValueError("SDK producer receipt is not an accepted non-proposal candidate for " + host)
+
+
+def _assemble(source, payloads, output, *, check_sdk_producer_receipts):
     source = Path(source).resolve(strict=True)
     output = Path(output)
     if output.exists() or output.is_symlink() or not output.parent.is_dir():
@@ -448,6 +466,9 @@ def assemble(source, payloads, output):
     identity = context(source)
     sdk_inputs = parsed(read(below(source, "release/ci-sdk-inputs.json")))
     portable_csdk = load_portable_csdk(source, sdk_inputs)
+    if check_sdk_producer_receipts:
+        for host in HOSTS:
+            validate_sdk_producer_receipt(payloads[host], host, identity["source_sha"])
     sdk = [read(below(Path(payloads[h]), "sdk.tar.xz")) for h in HOSTS]
     if sdk[0] != sdk[1]:
         raise ValueError("host SDK archives are not byte-identical")
@@ -526,6 +547,11 @@ def assemble(source, payloads, output):
             "claim": "Unsigned candidate prepared; real signatures, independent verification and R1 acceptance required"}
 
 
+def assemble(source, payloads, output):
+    """Assemble only payloads backed by accepted non-proposal SDK receipts."""
+    return _assemble(source, payloads, output, check_sdk_producer_receipts=True)
+
+
 def predicate(bundle, host):
     if host not in HOSTS:
         raise ValueError("invalid predicate host profile")
@@ -575,7 +601,10 @@ def audit(source, bundle, work):
             (payload / destination).write_bytes(read(below(bundle, original)))
         payloads[host] = payload
     expected = work / "expected"
-    report = assemble(source, payloads, expected)
+    # The signer reconstructs from the final bundle, which does not carry the
+    # producer's potentially large diagnostic receipt. Receipt admission was
+    # enforced before the publisher created that bundle.
+    report = _assemble(source, payloads, expected, check_sdk_producer_receipts=False)
     expected_files = {p.relative_to(expected).as_posix() for p in expected.rglob("*") if p.is_file()}
     observed = set()
     total = 0
