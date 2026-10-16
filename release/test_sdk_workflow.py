@@ -18,12 +18,14 @@ OUTER_CLEANUP = textwrap.dedent(OUTER.split("name: Retire release work and prese
 
 
 class WorkflowProposalTests(unittest.TestCase):
-    def run_cleanup(self, proposal, *, selected=None, different_roots=False):
+    def run_cleanup(self, proposal, *, selected=None, different_roots=False,
+                    producer_success=True, diagnostics=False, diagnostic_link=False):
         with tempfile.TemporaryDirectory(prefix="sdk-proposal-gates-") as directory:
             root = Path(directory)
             output = root / "ami-rust-sdk-output"
             output.mkdir()
             (root / "ami-rust-sdk-work").mkdir()
+            work = root / "ami-rust-sdk-work"
             python_root = root / "ami-rust-python-bootstrap"
             python_root.mkdir()
             (python_root / "bootstrap.json").write_text("{}")
@@ -57,31 +59,94 @@ class WorkflowProposalTests(unittest.TestCase):
                    "inputs": {"portable_csdk": {"producer_receipt_sha256": csdk_sha, "spec": {"sha256": "a" * 64}}}}
             write("sdk-producer.json", sdk)
             write("producer.json", {"schema": "ami-rust-hosted-custom-cargo-producer-v1", "host": "linux-x86_64", "status": "PRODUCED_PREREQUISITE_ONLY_NOT_R1_QUALIFICATION"})
+            if not producer_success:
+                sdk.update(status="FAILED", error="fixture failure")
+                write("sdk-producer.json", sdk)
+            if diagnostics:
+                diag = work / "cold-root-diagnostics"
+                raw = diag / "raw"
+                raw.mkdir(parents=True)
+                first_bytes = b"first rlib bytes"
+                second_bytes = b"second rlib bytes"
+                first_sha = hashlib.sha256(first_bytes).hexdigest()
+                second_sha = hashlib.sha256(second_bytes).hexdigest()
+                member = "target/release/deps/libserde-abc123.rlib"
+                first_map = {"AMIRUST": {"bytes": 1, "sha256": "b" * 64},
+                             member: {"bytes": len(first_bytes), "sha256": first_sha}}
+                second_map = {"AMIRUST": {"bytes": 1, "sha256": "b" * 64},
+                              member: {"bytes": len(second_bytes), "sha256": second_sha}}
+                for name, content in (("member-000-first.bin", first_bytes),
+                                      ("member-000-second.bin", second_bytes)):
+                    (raw / name).write_bytes(content)
+                if diagnostic_link:
+                    (raw / "member-000-first.bin").unlink()
+                    (raw / "member-000-first.bin").symlink_to(raw / "member-000-second.bin")
+                report = {"schema": "ami-rust-cold-root-diagnostics-v1",
+                          "status": "COLD_ROOT_NATIVE_MISMATCH", "variant": "dependencies",
+                          "first_layout": "sdk-layout-a", "second_layout": "sdk-layout-b",
+                          "first_canonical_artifacts": first_map,
+                          "second_canonical_artifacts": second_map,
+                          "first_native": {"bytes": 1, "sha256": "b" * 64},
+                          "second_native": {"bytes": 1, "sha256": "b" * 64},
+                          "differing_members": [{"member": member,
+                              "first": {"present": True, "bytes": len(first_bytes), "sha256": first_sha,
+                                        "retained": True, "path": "raw/member-000-first.bin"},
+                              "second": {"present": True, "bytes": len(second_bytes), "sha256": second_sha,
+                                         "retained": True, "path": "raw/member-000-second.bin"}}],
+                          "raw_retention_limit_bytes": 24 * 1024 * 1024,
+                          "raw_retained_bytes": len(first_bytes) + len(second_bytes),
+                          "raw_omitted_bytes": 0,
+                          "host_artifact_retention_limit_bytes": 32 * 1024 * 1024}
+                (diag / "report.json").write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
             environment = {**os.environ, "RUNNER_TEMP": str(root), "REFERENCE_PROPOSAL": str(proposal if selected is None else selected).lower(),
-                           "EXPECTED_HOST": "linux-x86_64", "PRODUCER_RESULT": "success", "PYTHON_RESULT": "success",
+                           "EXPECTED_HOST": "linux-x86_64", "PRODUCER_RESULT": "success" if producer_success else "failure", "PYTHON_RESULT": "success",
                            "WORKFLOW_SOURCE_COMMIT": "d" * 40, "WORKFLOW_RUN_ID": "1", "WORKFLOW_RUN_ATTEMPT": "1"}
             result = subprocess.run([sys.executable, "-I", "-B", "-c", CLEANUP], env=environment, capture_output=True, text=True)
             retained = all((output / p).is_file() for p in payloads)
-            return result, retained
+            retained_diagnostics = None
+            report_path = output / "cold-root-diagnostics/report.json"
+            if report_path.is_file():
+                report_value = json.loads(report_path.read_text())
+                raw_files = {path.relative_to(output / "cold-root-diagnostics").as_posix(): path.read_bytes()
+                             for path in (output / "cold-root-diagnostics/raw").glob("*")}
+                retained_diagnostics = {"report": report_value, "raw": raw_files}
+            return result, retained, retained_diagnostics
 
     def test_actual_cleanup_preserves_proposals_and_verified_normal_outputs(self):
         compile(CLEANUP, str(WORKFLOW), "exec")
         for proposal in (False, True):
             with self.subTest(proposal=proposal):
-                result, retained = self.run_cleanup(proposal)
+                result, retained, _ = self.run_cleanup(proposal)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertTrue(retained)
                 self.assertIs(json.loads(result.stdout)["R1_accepted"], False)
 
     def test_proposal_cannot_be_accepted_under_normal_workflow_selection(self):
-        result, _ = self.run_cleanup(True, selected=False)
+        result, _, _ = self.run_cleanup(True, selected=False)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Unrecognized SDK producer receipt", result.stderr)
 
     def test_proposal_cold_roots_must_really_match(self):
-        result, _ = self.run_cleanup(True, different_roots=True)
+        result, _, _ = self.run_cleanup(True, different_roots=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("matching cold roots", result.stderr)
+
+    def test_failed_cleanup_retains_validated_cold_root_diagnostics(self):
+        result, payloads_retained, evidence = self.run_cleanup(
+            False, producer_success=False, diagnostics=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(payloads_retained)
+        self.assertIsNotNone(evidence)
+        self.assertEqual(evidence["report"]["status"], "COLD_ROOT_NATIVE_MISMATCH")
+        self.assertIn("artifact_raw_retained_bytes", evidence["report"])
+        self.assertEqual(evidence["raw"]["raw/member-000-first.bin"], b"first rlib bytes")
+        self.assertEqual(evidence["raw"]["raw/member-000-second.bin"], b"second rlib bytes")
+
+    def test_failed_cleanup_rejects_linked_cold_root_diagnostic_bytes(self):
+        result, _, _ = self.run_cleanup(False, producer_success=False,
+                                        diagnostics=True, diagnostic_link=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("regular file", result.stderr)
 
     def test_assembly_is_explicitly_skipped_for_proposals(self):
         self.assertIn("  assemble:\n    if: ${{ !inputs.reference_proposal }}", SOURCE)
