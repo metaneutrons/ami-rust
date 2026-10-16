@@ -130,10 +130,16 @@ or explicitly review that snapshot when selecting a new SDK version.
 
 Use SDK `amiga-sys` only at the unsafe ABI boundary; prefer the task-affine
 `amiga-os` API. Tasks, library lifetime, buffer ownership and callbacks remain
-bounded by the delivered `SDK-API.md`. Panic aborts the current
-application path; allocation failure is an explicit error where the API exposes
-it. `std`, networking, a compiler running on AROS, other ABI/CPU/OS combinations
-and physical hardware are excluded. No arbitrary crate compatibility is claimed.
+bounded by the delivered `SDK-API.md`. A fallible allocation operation such as
+`Vec::try_reserve` can report refusal in its own error type; `amiga_os::ErrorKind`
+has no out-of-memory variant. The global allocator returns null on native
+refusal. If an infallible allocation reaches Rust's allocation-error handler,
+the installed entry hook follows the nonreturning native fatal path and ends the
+current application with status 20. Rust `Drop` does not unwind on this path;
+native registry cleanup runs separately. Actual memory exhaustion and checked
+size, accounting or ownership refusals remain possible. `std`, networking, a
+compiler running on AROS, other ABI/CPU/OS combinations and physical hardware
+are excluded. No arbitrary crate compatibility is claimed.
 
 Install versions side by side. Verification failures and interrupted staging do
 not replace an old installation. SIGTERM/ordinary exceptions clean the private
@@ -143,7 +149,11 @@ modified/extra files, symlinks or a wrong externally pinned receipt; move person
 files out first, then restore the exact installed bytes if removal is intended.
 It retains projects, shared prerequisites, sibling SDKs and rustup configuration.
 The owner must exclude concurrent writes by the same user while verifying,
-building or uninstalling. This is not a hostile same-user sandbox.
+building or uninstalling. This is not a hostile same-user sandbox. To restore a
+removed version, reuse the same authenticated `BUNDLE` and external `POLICY`,
+verify and install again at the same prefix, and provide a fresh unused external
+`--receipt-pin` path. Keep the prior receipt pin; it remains outside the
+installation and is not overwritten by uninstall or restoration.
 
 Missing or altered prerequisites: prepare a fresh STATE against the
 authenticated host profile. An ambient Cargo configuration: choose a private output

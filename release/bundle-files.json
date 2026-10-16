@@ -1,9 +1,9 @@
 {
   "files": [
     {
-      "bytes": 3553,
+      "bytes": 3924,
       "path": "COMPATIBILITY.md",
-      "sha256": "100ca8bc1a2956004057e55c06b577e18714b0109eaa7f561ab1136fe1909dbe",
+      "sha256": "076f93363503b3c8b8533d9455d261b6782c3684aa8bee92fcea54b2d8cf044c",
       "source": "docs/compatibility.md"
     },
     {
@@ -31,15 +31,15 @@
       "source": "docs/maintenance.md"
     },
     {
-      "bytes": 10408,
+      "bytes": 11177,
       "path": "QUICKSTART.md",
-      "sha256": "f133c8ef0b9143bcc3375f6929a118debd18c6dd32759976b295bbecc0857ad0",
+      "sha256": "1a18ab68b6d89837a7510e6df3e34b584d9b808b5a67eea0a3b69c216d234f1e",
       "source": "release/bundle-assets/QUICKSTART.md"
     },
     {
-      "bytes": 7880,
+      "bytes": 13419,
       "path": "SDK-API.md",
-      "sha256": "ad395ca9659ea7bf0c13d05c2414d5014f219a21489f8d98aa44860666df6fb5",
+      "sha256": "d8001c394ca68f3f79b9fdb8cc65bc0f0006a6551b7d7e2eb47ba921ac4be1da",
       "source": "docs/api.md"
     },
     {
