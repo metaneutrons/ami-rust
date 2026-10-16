@@ -3,7 +3,12 @@
 R1 is not release-qualified. The owner authorised SDK publication only after
 R1-A1 through R1-A7 pass; public readback and two-host replay remain mandatory
 under R1-A8. No ami-rust SDK GitHub Release is published. The
-[revision 20 repository plan](m2-r1-plan.md) is the acceptance authority.
+[revision 22 repository plan](m2-r1-plan.md) is the acceptance authority.
+
+The [prospective memory change](memory-policy.md) removes artificial application
+allocation/heap and generic ELF size quotas. Changed native code requires a new
+runtime/memory qualification; the following R3 evidence remains historical and
+cannot substitute for that rerun.
 
 The inherited local R3 candidate passed its four clean consumer builds,
 new-project builds, installation/deinstallation and native runtime, memory and

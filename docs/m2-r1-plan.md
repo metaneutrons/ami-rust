@@ -1,4 +1,13 @@
-# ami-rust M2 and independent R1 plan — revision 21
+# ami-rust M2 and independent R1 plan — revision 22
+
+**Prospective memory amendment — revision 22:** Fabian directs realistic
+memory requirements. [Memory policy](memory-policy.md) supersedes inherited
+application heap/whole-owner and generic ELF size quotas for the next candidate.
+The immutable boot/ABI profile and historical results remain unchanged. Changed
+allocator/native sources require fresh native qualification; inherited R3
+hashes cannot establish acceptance of this candidate. Hosted CI resources remain
+separate. Earlier statements below retaining every runtime budget describe the
+prior candidate and are superseded only within this explicit amendment.
 
 Status: the inherited third qualification campaign (retained development record: `r1-qualification-r3-20261015.md`) remains technically PASS. The installation/licensing follow-up (retained development record: `r1-installation-qualification-20261015.md`) closes the two-host installation/deinstallation recipe, project reproduction and candidate licence/source review. The public source repository is [metaneutrons/ami-rust](https://github.com/metaneutrons/ami-rust); its protected source CI passes. **R1-A6 remains OPEN: actual protected SDK producer provenance and its production consumer verification have not been qualified. R1 is not release-qualified. SDK publication is conditionally authorised after every release acceptance gate passes; no SDK has been published.** The approved comparison contract and all sealed campaign/runtime budgets remain unchanged. The prospective hosted CI resource amendment below applies to new CI phases.
 M0 has GO and M1 technical acceptance is recorded in

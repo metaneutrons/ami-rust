@@ -22,7 +22,69 @@
       "path": "host/cargo-repro/tests/test_hash_rustc_version_probe.py",
       "sha256": "bd41608f0d87a4f87b2fce1bae1699ad4ac80130290472d21ba8d5e041ab673b"
     },
-    "runtime_and_compiler_sources": "unchanged from R3; candidate consumer outputs must be compared"
+    "runtime_and_compiler_sources": "Runtime sources changed by owner-authorised memory policy; compiler inputs unchanged; historical native hashes do not qualify this candidate",
+    "memory_policy_amendment": {
+      "date": "2026-10-16",
+      "base_template_sha256": "ffb67d50bb0364e8c0a41b688efe3640b34c9f44d0db91ed5eb8c957293c9d46",
+      "changed_source_files": [
+        {
+          "path": "crates/aros-sys/src/lib.rs",
+          "previous": {
+            "bytes": 12315,
+            "sha256": "ea21e85b141b487176b9e8d75167dcf149f237e7a6f8ad1dbca18c76bd0d8e30"
+          },
+          "current": {
+            "bytes": 12136,
+            "sha256": "f9814d7eb83656ab4878877ab28d56062ebe3defa675e896717785bd24ef3337"
+          }
+        },
+        {
+          "path": "host/elf_audit.py",
+          "previous": {
+            "bytes": 3947,
+            "sha256": "22fb5599c3902c32418ccce778004b808f343771230dd2ad0330c5ec82f8a40f"
+          },
+          "current": {
+            "bytes": 4312,
+            "sha256": "fa2cafc555e382129f120ed60f6b99135526942245b5d1316f0195edc2bcb8f2"
+          }
+        },
+        {
+          "path": "native/sdk.c",
+          "previous": {
+            "bytes": 26003,
+            "sha256": "a85053d79cef55d6082f7730909f9daa80f197d5701bf429b65038403879bfcf"
+          },
+          "current": {
+            "bytes": 25753,
+            "sha256": "66ee66b3888a998abf99026a6e16320c8af9840b0d37c2bd239e203c11ce189c"
+          }
+        },
+        {
+          "path": "native/sdk.h",
+          "previous": {
+            "bytes": 2088,
+            "sha256": "5892bc89b5eb2f710d857c1b032d1434c85c4c1aea9e40fec9aaac036863c008"
+          },
+          "current": {
+            "bytes": 4781,
+            "sha256": "5bfa5447c5d2f8d1a5abc9bd4ba2cb968d74ed5c9d7bdaf4ef2a523799e30799"
+          }
+        },
+        {
+          "path": "tests/qualification/src/lib.rs",
+          "previous": {
+            "bytes": 74603,
+            "sha256": "8fe5b80272ce68f0b7ef1f2b72cef7a2864c9cd4643cea1458932716afd18dbb"
+          },
+          "current": {
+            "bytes": 77137,
+            "sha256": "6228d77218ad1516e8eda06bdd9c5105a43c8975bb58e4bbcc5a8c378e3b9eaf"
+          }
+        }
+      ],
+      "native_qualification": "pending; preserve historical R3 evidence"
+    }
   },
   "scope": "SDK/host/test sources exported from exact committed candidate; generated component inventories separately frozen",
   "source_commit": "82edf967fe4a84cde43680108873a44ce8c71b4f"

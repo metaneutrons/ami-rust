@@ -39,3 +39,9 @@ crates, other Amiga operating systems and hardware support remain excluded.
 Rust and C dependency licenses are component-specific. First-party dual licensing
 does not replace AROS, LLVM/compiler runtime or dependency conditions. The signed
 license review must clear every shipped source/binary before R1 qualification.
+
+
+Application memory follows the [prospective memory policy](memory-policy.md).
+The 512 MiB guest is the qualification environment; it is not an SDK-imposed
+whole-application quota. The changed allocator still requires native evidence
+before the next candidate is supported.

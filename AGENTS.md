@@ -38,3 +38,15 @@ do not revive the historical reservation
 ledger. Preserve original evidence, failures and backup integrity. See
 `docs/local-storage-policy.md`. Hosted CI limits, bounded untrusted-input parsing
 and AROS runtime/ABI acceptance criteria remain separate and unchanged.
+
+
+## Practical memory policy
+
+Owner decision, 2026-10-16: use realistic memory requirements. Do not turn
+feasibility/reference-program budgets into general SDK application quotas.
+Remove the 1 MiB allocation / 16 MiB heap policy and generic ELF size rejection;
+use public Exec allocation, representability/overflow checks and actual OOM.
+Keep full memory/ownership measurement, leak detection and safe cleanup. The
+512 MiB QEMU baseline remains a repeatable test profile. Historical evidence is
+immutable; changed native code requires new qualification. See
+`docs/memory-policy.md` for exact prospective acceptance and CI separation.
