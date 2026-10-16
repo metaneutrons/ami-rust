@@ -8,7 +8,7 @@
   "cargo_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
   "cargo_lock_sha256": "b4ccfa53ccf8d7360c0359c1533d801759629f9cdd486d9a0a88e512717058d9",
   "claim": "Complete original notices for all 523 registry packages in the lock closure; full unmodified source for all three MPL-2.0+ packages; selected notice/attribution records for 25 packages lacking standalone license files; and a checksum-matched complete libgit2-sys source archive. No legal clearance or link-membership claim.",
-  "expanded_bytes_before_inventory": 17593766,
+  "expanded_bytes_before_inventory": 16772015,
   "files": [
     {
       "bytes": 3007,
@@ -59,11 +59,6 @@
       "bytes": 130202,
       "path": "corresponding-source/libgit2-sys-0.18.5+1.9.4.crate.members.json",
       "sha256": "05a14f6a5651d109ed4cd4b2e64b271c201e36cf10735938171fe4c8bb6ec4a0"
-    },
-    {
-      "bytes": 821751,
-      "path": "inventory.json",
-      "sha256": "08992f320827cdbd60bda452c80b853d9e4519417745538faa7910e1777ab6d1"
     },
     {
       "bytes": 111868,
@@ -13375,7 +13370,8 @@
     "Cargo lock closure includes optional and platform-specific dependencies; no claim all are linked into host Cargo binaries.",
     "The nested libgit2-sys source input is checksum-pinned; this capsule does not prove that the built Cargo executable links it.",
     "The MIT template contains placeholders; no package copyright year or holder is inferred.",
-    "This capsule does not resolve the objc2 Apple-SDK derived-work caveat or final legal acceptance."
+    "This capsule does not resolve the objc2 Apple-SDK derived-work caveat or final legal acceptance.",
+    "inventory.json is excluded from its own files list; its bytes and SHA-256 are authenticated by the external release bundle manifest release/bundle-files.json."
   ],
   "matched_hosted_vendor_inventory": {
     "entry_count": 30517,

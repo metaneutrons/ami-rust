@@ -50,6 +50,7 @@ jobs:
           python3 --version
           test -x /usr/bin/ssh-keygen
           python3 -I -B release/test_install.py
+          python3 -I -B release/test_cargo_notice_inventory.py
           python3 -I -B host/tests/test_host_capacity.py
           python3 -I -B host/tests/test_allocation_layout.py
           python3 -I -B host/tests/test_elf_audit.py

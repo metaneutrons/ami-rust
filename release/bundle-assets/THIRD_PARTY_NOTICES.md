@@ -77,7 +77,7 @@ locked host registry packages, complete source for the three selected MPL
 packages, recovered original licence texts, and the complete lock-matched
 libgit2-sys source including its libgit2 notices and linking-exception terms.
 Its SHA-256 is
-`da23b154fd15d595329de28cbf1db650bf8b1da57679ef270c09c9d7e84dc62f`.
+`a86b2e26191c7d59ed123d401de589850c5a7880de6bc09d81c6ab92c26ae6d1`.
 Extract it using standard tar/XZ tools. Package declarations, source inventory
 and per-component SBOM records retain their respective scopes. Actual packaged
 Cargo linkage is captured separately for final distribution review on each host;
