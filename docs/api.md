@@ -2,7 +2,8 @@
 
 The next candidate removes the historical 1 MiB per-allocation and 16 MiB
 heap quotas. Allocations use available native memory with checked sizes,
-accounting, alignment and ownership; OOM remains explicit. Reference-program
+accounting, alignment and ownership. Native memory exhaustion and checked
+size, accounting or ownership refusal remain possible. Reference-program
 code/file/whole-memory thresholds do not constrain arbitrary applications.
 The fixed startup stack and other stated API capacities remain unchanged.
 Fresh native qualification is pending for this changed allocator; see
@@ -13,6 +14,46 @@ provides no target std, foreign-task API, asynchronous callback, hardware or
 public release. R3 qualifies the pinned macOS and Linux host profiles and exact
 native artifact bytes; installation and publisher acceptance are separate gates.
 All crates remain unpublished.
+
+## Source-level `amiga-os` public API index
+
+`amiga-os` is the `no_std` task-affine facade. This index records the current
+source reexports and signatures; it is not a stability promise or an accepted
+release API. Native R4/latest-final-SDK qualification, hosted replay and R1
+acceptance remain pending. The `aros-*` names in the inventory below identify
+internal implementation and qualification crates, not additional consumer
+packages. Use `amiga-sys` only at the unsafe raw ABI boundary; raw calls sit
+outside the safe guarantees summarized here.
+
+| Surface | Current signature and semantics |
+| --- | --- |
+| Entry and status | `amiga_os::entry!(application)` installs the entry for `application: fn(&Context) -> AppStatus`; `amiga_os::entry!(application, alloc)` also installs the global allocator when the default `alloc` feature is enabled. `AppStatus` is `Success = 0`, `Error = 10`, or `Fatal = 20`. |
+| `Context` | `Context::args(&self) -> Args<'_>` yields borrowed argument byte slices for the active application frame (`Args` is the returned iterator type, not separately re-exported by the facade); `Context::diagnostic(&self, label: &[u8], code: u64)` emits a bounded diagnostic; `Context::statistics(&self) -> aros_sys::SdkStats` returns native resource counters from the raw ABI, also re-exported by `amiga-sys`. The context is supplied by the entry and is task-affine. |
+| Errors | `ErrorKind` is `Native`, `Input`, `Limit`, `Owner`, `State`, `Eof`, or `ZeroProgress`; `Operation` identifies the operation. `Error { kind: ErrorKind, native: i64, operation: Operation }` is allocation-free and has `kind_code(self) -> u8`. There is no `OutOfMemory` error kind. |
+| Paths and files | `BytePath::new(path: &[u8]) -> Result<Self, Error>` rejects embedded NUL and payloads over 127 bytes; `len(&self) -> usize` and `is_empty(&self) -> bool` inspect it. `FileMode` is `ReadExisting`, `CreateTruncate`, or `ReadWrite`. `File::open(context: &'ctx Context, path: &BytePath, mode: FileMode) -> Result<File<'ctx>, Error>` creates an owned context-bound handle. `File::read(&mut self, &mut [u8]) -> Result<usize, Error>`, `File::write(&mut self, &[u8]) -> Result<usize, Error>`, `File::read_exact(&mut self, &mut [u8]) -> Result<(), Error>`, `File::write_all(&mut self, &[u8]) -> Result<(), Error>`, and consuming `File::close(self) -> Result<(), Error>` operate on borrowed buffers; one transfer is at most 64 KiB. |
+| Standard streams | `Stdout::new(context: &'ctx Context) -> Result<Stdout<'ctx>, Error>` and `Stderr::new(context: &'ctx Context) -> Result<Stderr<'ctx>, Error>` borrow process handles. `Stdout::write(&mut self, &[u8]) -> Result<usize, Error>` and `Stdout::write_all(&mut self, &[u8]) -> Result<(), Error>` write borrowed buffers; `Stderr::write(&mut self, &[u8]) -> Result<usize, Error>` and `Stderr::write_all(&mut self, &[u8]) -> Result<(), Error>` do the same for standard error. Each single transfer is at most 64 KiB. `Stderr` requires a DOS process and selects `pr_CES`, falling back to `pr_COS`; neither wrapper closes its borrowed handle. A DOS handler may allocate while writing. |
+| Libraries and signals | `Library::open(context: &'ctx Context, name: &BytePath, minimum_version: u16) -> Result<Library<'ctx>, Error>` and consuming `Library::close(self) -> Result<(), Error>` manage an owned library reference. `Signal::new(context: &'ctx Context) -> Result<Signal<'ctx>, Error>`, `Signal::post(&self) -> Result<(), Error>`, and `Signal::wait(&self) -> Result<(), Error>` manage a signal in the creating task. |
+| Local ports and messages | `Port::new(context: &'ctx Context) -> Result<Port<'ctx>, Error>` creates an owner-task port; `Port::send(&self, message: &mut Message<'ctx>, reply: &Port<'ctx>) -> Result<(), Error>` queues an owned message and reply route; `Port::receive(&self, message: &mut Message<'ctx>) -> Result<bool, Error>` reports whether that message is queued there. `Message::new(context: &'ctx Context, payload: &[u8]) -> Result<Message<'ctx>, Error>` owns at most 256 payload bytes; `Message::copy_to(&self, output: &mut [u8]) -> Result<usize, Error>` copies into caller storage, and `Message::reply(&self) -> Result<(), Error>` replies to a received local message. |
+| Synchronous callback | `call<F>(context: &Context, callback: &mut F, input: u64) -> Result<u64, Error> where F: FnMut(u64) -> u64` invokes a callback synchronously; callback state is not retained. |
+
+Owned handles borrow their creating context and remain confined to that task;
+the context and handles are neither `Send` nor `Sync`. `amiga-sys` is the
+separate unsafe raw ABI boundary.
+
+Global allocator refusal is distinct from a fallible API error. A Rust
+fallible allocation operation such as `Vec::try_reserve` reports refusal in
+its own error type. The `GlobalAlloc` implementation returns null when native
+allocation is refused; if an infallible allocation reaches Rust's allocation
+error handler, the installed entry hook follows the nonreturning native fatal
+path and ends the current application with status 20. This does not unwind
+Rust `Drop`; native registry cleanup runs separately. There is no facade
+`ErrorKind::OutOfMemory`, and removing fixed quotas does not remove actual
+out-of-memory, overflow or ownership failures.
+
+## Internal implementation and qualification inventory
+
+The following `aros-*` table is internal implementation and qualification
+inventory, not a consumer API list or a separate compatibility promise.
 
 | Boundary | Preconditions and enforcement | Native qualification |
 | --- | --- | --- |

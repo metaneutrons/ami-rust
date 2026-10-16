@@ -18,6 +18,12 @@ authenticated SDK contract. Selection fails on any changed or missing input.
 | Boot image | SHA-256 9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1, 143360000 bytes |
 | QEMU | 11.1.2; pc-i440fx-11.1, qemu64-v1, TCG single, one CPU, 512 MiB RAM, no network, immutable ISO, full 512 MiB FAT test medium |
 
+The candidate qualification profile uses a 128 KiB startup stack and requires
+measured stack use of at most 96 KiB. These are stack conditions for this
+PC x86-64 ABI-v1 QEMU profile, not an application heap or whole-memory cap.
+Native R4/latest-final-SDK qualification and the protected two-host replays
+remain pending; this candidate profile is not release acceptance.
+
 The inherited local candidate passed on macOS 26.5.1 and CachyOS Linux
 7.2.3-1 (glibc 2.44), using their recorded Python 3.15/3.14 identities. Those
 interpreter identities are historical evidence, not the production selection.
