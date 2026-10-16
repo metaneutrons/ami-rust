@@ -23,6 +23,7 @@ on:
 permissions:
   contents: read
   actions: read
+  attestations: read
 
 concurrency:
   group: ami-rust-protected-builds
@@ -92,7 +93,8 @@ jobs:
 
           temporary = Path(os.environ["RUNNER_TEMP"]).resolve(strict=True)
           names = ["ami-rust-python-bootstrap", "ami-rust-public-bundle",
-                   "ami-rust-public-work", "ami-rust-public-output"]
+                   "ami-rust-public-work", "ami-rust-public-authenticated-bundle",
+                   "ami-rust-public-output"]
           for name in names:
               path = temporary / name
               if path.exists() or path.is_symlink():
@@ -160,23 +162,37 @@ jobs:
 
           controls = git_dir / "ami-rust-public-controls"
           controls.mkdir(mode=0o700)
+          control_sources = (
+              "release/public_replay.py",
+              "release/public_candidate.py",
+              "release/candidate_auth.py",
+              "release/stage_candidate.py",
+              "release/verify_publisher.py",
+              "release/ci_verify.py",
+              "release/ci_auth.py",
+              "release/ci_sdk.py",
+              "release/ci_cargo.py",
+              "release/prepare_sdk.py",
+              "release/consumer_inputs.py",
+              "release/public_transport.py",
+          )
           source_rows = {}
-          for relative in ("release/public_replay.py",
-                           "release/public_transport.py"):
+          for relative in control_sources:
               git("ls-files", "--error-unmatch", "--", relative)
               source = root / relative
               info = source.lstat()
               if not stat.S_ISREG(info.st_mode):
                   raise SystemExit("workflow control source must be a tracked regular file: " + relative)
               before = hashlib.sha256(source.read_bytes()).hexdigest()
-              destination = controls / Path(relative).name
+              destination = controls / relative
+              destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
               data = source.read_bytes()
               if hashlib.sha256(data).hexdigest() != before:
                   raise SystemExit("workflow control source changed while it was copied")
               with destination.open("xb") as stream:
                   stream.write(data)
               destination.chmod(0o600)
-              source_rows[Path(relative).name] = {
+              source_rows[relative] = {
                   "source_path": relative,
                   "bytes": len(data),
                   "sha256": hashlib.sha256(data).hexdigest(),
@@ -216,7 +232,7 @@ jobs:
           if record.get("workflow_source_commit") != os.environ["EXPECTED_WORKFLOW_COMMIT"]:
               raise SystemExit("control record workflow source commit changed")
           for name, row in record["controls"].items():
-              path = controls / name
+              path = root / ".git" / "ami-rust-public-controls" / name
               if (path.is_symlink() or not stat.S_ISREG(path.lstat().st_mode)
                       or path.stat().st_size != row["bytes"]
                       or hashlib.sha256(path.read_bytes()).hexdigest() != row["sha256"]):
@@ -245,7 +261,7 @@ jobs:
             --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" \
             --inputs release/ci-python-inputs.json
 
-      - name: Verify and safely unpack public transport
+      - name: Download exact public candidate assets without unpacking
         id: transport
         if: steps.python-runtime.outcome == 'success'
         shell: bash
@@ -269,6 +285,7 @@ jobs:
           import platform
           import re
           import resource
+          import stat
           import time
           import urllib.parse
           import urllib.request
@@ -276,173 +293,132 @@ jobs:
           root = Path(os.environ["GITHUB_WORKSPACE"]).resolve(strict=True)
           temporary = Path(os.environ["RUNNER_TEMP"]).resolve(strict=True)
           controls = root / ".git" / "ami-rust-public-controls"
-          inventory_path = controls / "transport-inventory.json"
-          receipt_path = controls / "transport-receipt.json"
-          bundle = temporary / "ami-rust-public-bundle"
-          python_root = temporary / "ami-rust-python-bootstrap"
-          tag = os.environ["RELEASE_TAG"]
-          inventory_sha = os.environ["TRANSPORT_INVENTORY_SHA256"]
-          if not re.fullmatch(r"[0-9a-f]{64}", inventory_sha):
-              raise SystemExit("external transport inventory SHA-256 is malformed")
+          control_receipt = controls / "control-source.json"
+          if control_receipt.is_symlink() or not stat.S_ISREG(control_receipt.lstat().st_mode):
+              raise SystemExit("frozen public replay controls are missing")
 
-          def load(name, path):
+          def load(name, relative):
+              path = controls / relative
+              if path.is_symlink() or not stat.S_ISREG(path.lstat().st_mode):
+                  raise ValueError("frozen replay helper is missing or linked: " + relative)
               spec = importlib.util.spec_from_file_location(name, path)
               if spec is None or spec.loader is None:
-                  raise RuntimeError("cannot load selected-source helper: " + str(path))
+                  raise RuntimeError("cannot load frozen replay helper: " + relative)
               module = importlib.util.module_from_spec(spec)
               spec.loader.exec_module(module)
               return module
 
-          replay_control = load(
-              "_ami_rust_public_replay_control", controls / "public_replay.py")
-          version = replay_control.release_core(tag)
-          archive_path = controls / ("ami-rust-" + version + "-release.tar.xz")
-          ci_sdk = load("_ami_rust_public_replay_ci_sdk", root / "release" / "ci_sdk.py")
-          ci_cargo = ci_sdk.ci_cargo
-          transport = load("_ami_rust_public_replay_transport", controls / "public_transport.py")
-          if (ci_sdk.MAX_WORK_BYTES != 12 * 1024**3
-                  or ci_sdk.MAX_RSS_BYTES != 4 * 1024**3
-                  or ci_sdk.MAX_LOG_BYTES != 16 * 1024**2
-                  or ci_sdk.MAX_COMMAND_SECONDS != 1200):
-              raise SystemExit("selected-source replay resource ceilings differ from the admitted policy")
-          if tuple(ci_sdk.REDIRECT_HOSTS) != (
-                  "release-assets.githubusercontent.com", "objects.githubusercontent.com"):
-              raise SystemExit("selected-source public download redirect hosts differ from the admitted policy")
-          if (transport.MAX_TOTAL_BYTES != 32 * 1024**2 or transport.MAX_FILES != 512
-                  or transport.MAX_ARCHIVE_BYTES != 32 * 1024**2):
-              raise SystemExit("public transport limits differ from the admitted 32 MiB / 512 file bounds")
+          stage = load("_ami_rust_public_replay_stage_candidate", "release/stage_candidate.py")
+          sdk = load("_ami_rust_public_replay_ci_sdk", "release/ci_sdk.py")
+          tag = os.environ["RELEASE_TAG"]
+          names = stage.asset_names(tag)
+          if len(names) != 6 or len(set(names.values())) != 6:
+              raise ValueError("selected release tag did not produce the exact six public candidate assets")
+          if sdk.MAX_WORK_BYTES != 12 * 1024**3 or sdk.MAX_RSS_BYTES != 4 * 1024**3:
+              raise ValueError("selected-source replay ceilings differ from the admitted hosted profile")
+          inventory_sha = os.environ["TRANSPORT_INVENTORY_SHA256"]
+          if re.fullmatch(r"[0-9a-f]{64}", inventory_sha) is None:
+              raise ValueError("external transport inventory SHA-256 is malformed")
+          candidate = temporary / "ami-rust-public-bundle"
+          if candidate.exists() or candidate.is_symlink():
+              raise ValueError("public candidate asset directory must be fresh")
+          candidate.mkdir(mode=0o700)
+          limits = stage._outer_limits(names)
+          if set(limits) != set(names.values()):
+              raise ValueError("frozen candidate helper does not bound the exact six asset names")
 
-          def strict_json(raw):
-              def pairs(rows):
-                  result = {}
-                  for key, value in rows:
-                      if key in result:
-                          raise ValueError("duplicate JSON key: " + key)
-                      result[key] = value
-                  return result
-              return json.loads(raw.decode("utf-8"), object_pairs_hook=pairs,
-                                parse_constant=lambda token: (_ for _ in ()).throw(ValueError("invalid JSON constant")))
-
-          def download_inventory(url, destination):
+          def download(url, destination, maximum):
               request = urllib.request.Request(url, headers={"User-Agent": "ami-rust-public-replay/1"})
               deadline = time.monotonic() + 300
-              received = bytearray()
+              received = 0
+              digest = hashlib.sha256()
               with urllib.request.urlopen(request, timeout=30) as response:
                   final = urllib.parse.urlparse(response.geturl())
                   if (final.scheme != "https"
-                          or final.hostname not in {"github.com", *ci_sdk.REDIRECT_HOSTS}):
-                      raise ValueError("transport inventory redirected outside approved public HTTPS hosts")
+                          or final.hostname not in {"github.com", "release-assets.githubusercontent.com",
+                                                    "objects.githubusercontent.com"}):
+                      raise ValueError("public asset redirected outside approved HTTPS hosts")
+                  length = response.headers.get("Content-Length")
+                  if length is not None and (not length.isdecimal() or int(length) > maximum):
+                      raise ValueError("public candidate asset exceeds its existing per-file bound")
                   with destination.open("xb") as stream:
                       while True:
                           if time.monotonic() > deadline:
-                              raise TimeoutError("transport inventory download exceeded 300 seconds")
+                              raise TimeoutError("public asset download exceeded 300 seconds")
                           block = response.read(64 * 1024)
                           if not block:
                               break
-                          if len(received) + len(block) > 1024 * 1024:
-                              raise ValueError("transport inventory exceeds the 1 MiB bound")
+                          received += len(block)
+                          if received > maximum:
+                              raise ValueError("public candidate asset exceeds its existing per-file bound")
                           stream.write(block)
-                          received.extend(block)
-              actual = hashlib.sha256(received).hexdigest()
-              if actual != inventory_sha:
-                  raise ValueError("transport inventory SHA-256 differs from the external pin")
+                          digest.update(block)
+              if received == 0:
+                  raise ValueError("public candidate asset is empty")
               destination.chmod(0o600)
-              return len(received), actual, bytes(received)
+              return {"bytes": received, "sha256": digest.hexdigest()}
 
           encoded_tag = urllib.parse.quote(tag, safe="v.-")
-          encoded_version = urllib.parse.quote(version, safe=".-")
-          inventory_url = (
-              "https://github.com/metaneutrons/ami-rust/releases/download/"
-              + encoded_tag + "/ami-rust-" + encoded_version + "-transport.json"
-          )
-          inventory_bytes, inventory_digest, inventory_data = download_inventory(inventory_url, inventory_path)
-          raw_record = strict_json(inventory_data)
-          if (type(raw_record) is not dict or set(raw_record) != {"archive", "files"}
-                  or type(raw_record.get("archive")) is not dict):
-              raise ValueError("transport inventory has an unexpected schema")
-          archive_row = raw_record["archive"]
-          expected_archive_name = "ami-rust-" + version + "-release.tar.xz"
-          if (set(archive_row) != {"name", "bytes", "sha256"}
-                  or archive_row.get("name") != expected_archive_name
-                  or type(archive_row.get("bytes")) is not int
-                  or not 1 <= archive_row["bytes"] <= 32 * 1024**2
-                  or not isinstance(archive_row.get("sha256"), str)
-                  or re.fullmatch(r"[0-9a-f]{64}", archive_row["sha256"]) is None):
-              raise ValueError("transport archive name, size or SHA-256 is outside the admitted bounds")
-          if type(raw_record.get("files")) is not list or len(raw_record["files"]) > 512:
-              raise ValueError("transport inventory file list exceeds the 512-file limit")
+          base = "https://github.com/metaneutrons/ami-rust/releases/download/" + encoded_tag + "/"
+          assets = {}
+          candidate_bytes = 0
+          for key in ("payload", "sbom", "payload_signature", "transport",
+                      "transport_signature", "checksums"):
+              name = names[key]
+              destination = candidate / name
+              row = download(base + urllib.parse.quote(name, safe=".-"), destination, limits[name])
+              assets[name] = row
+              candidate_bytes += row["bytes"]
+              if candidate_bytes > 96 * 1024**2:
+                  raise ValueError("public candidate exceeds the existing candidate-and-proof storage bound")
+          if assets[names["transport"]]["sha256"] != inventory_sha:
+              raise ValueError("transport inventory SHA-256 differs from the external pin")
 
-          archive_url = (
-              "https://github.com/metaneutrons/ami-rust/releases/download/"
-              + encoded_tag + "/" + urllib.parse.quote(expected_archive_name, safe=".-")
-          )
-          downloaded = ci_cargo.download_verified(
-              archive_url, archive_row["bytes"], archive_row["sha256"], archive_path,
-              expected_origin="github.com", redirect_hosts=ci_sdk.REDIRECT_HOSTS,
-              total_timeout=300,
-          )
-          archive_path.chmod(0o600)
-          before_unpack_bytes = ci_sdk.directory_bytes(root) + ci_sdk.directory_bytes(python_root)
-          raw_stage_upper_bound = transport.MAX_TOTAL_BYTES
-          if before_unpack_bytes + raw_stage_upper_bound > 12 * 1024**3:
-              raise ValueError("source, pinned Python and bounded unpack stage exceed the 12 GiB managed-file bound")
-          unpack_receipt = transport.unpack_bundle(archive_path, raw_record, bundle)
-          if unpack_receipt != raw_record:
-              raise ValueError("unpacked transport receipt differs from the externally pinned inventory")
-
-          source_bytes = ci_sdk.directory_bytes(root)
-          python_bytes = ci_sdk.directory_bytes(python_root)
-          bundle_bytes = ci_sdk.directory_bytes(bundle)
-          known_bytes = source_bytes + python_bytes + bundle_bytes
-          peak_known_file_bound = max(known_bytes, before_unpack_bytes + raw_stage_upper_bound)
-          if peak_known_file_bound > 12 * 1024**3:
-              raise ValueError("source, pinned Python and unpacked transport exceed the 12 GiB managed-file bound")
+          source_bytes = sdk.directory_bytes(root)
+          python_root = temporary / "ami-rust-python-bootstrap"
+          python_bytes = sdk.directory_bytes(python_root)
+          known_bytes = source_bytes + python_bytes + candidate_bytes
+          if known_bytes > sdk.MAX_WORK_BYTES:
+              raise ValueError("source, pinned Python and downloaded candidate exceed the 12 GiB managed-file bound")
           rss_value = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-          transport_rss = int(rss_value if platform.system() == "Darwin" else rss_value * 1024)
-          if transport_rss > 4 * 1024**3:
-              raise ValueError("transport phase process peak RSS exceeds the 4 GiB bound")
-          control_path = controls / "control-source.json"
-          control_record = json.loads(control_path.read_text(encoding="utf-8"))
+          measured_rss = int(rss_value if platform.system() == "Darwin" else rss_value * 1024)
+          if measured_rss > sdk.MAX_RSS_BYTES:
+              raise ValueError("asset download process peak RSS exceeds the 4 GiB bound")
           receipt = {
-              "schema": "ami-rust-public-transport-receipt-v1",
-              "status": "PASS_TRANSPORT_INVENTORY_AND_ARCHIVE_VERIFIED",
+              "schema": "ami-rust-public-candidate-download-v1",
+              "status": "DOWNLOADED_SIX_PUBLIC_ASSETS_NOT_AUTHENTICATED",
               "release_tag": tag,
               "publisher_source": os.environ["PUBLISHER_SOURCE"],
               "release_manifest_sha256": os.environ["RELEASE_MANIFEST_SHA256"],
-              "transport_inventory": {"name": inventory_path.name,
-                                       "bytes": inventory_bytes,
-                                       "sha256": inventory_digest},
-              "archive_download": {"url": archive_url, **downloaded},
-              "inventory_record": unpack_receipt,
-              "resource_measurement": {
-                  "scope": "transport orchestrator process only; replay driver later measures its managed process tree",
-                  "source_checkout_including_git_bytes": source_bytes,
-                  "pinned_python_bytes": python_bytes,
-                  "unpacked_bundle_bytes": bundle_bytes,
-                  "combined_known_managed_file_bytes": known_bytes,
-                  "measured_file_bytes_before_unpack": before_unpack_bytes,
-                  "unpack_stage_upper_bound_bytes": raw_stage_upper_bound,
-                  "peak_known_managed_file_bound_bytes": peak_known_file_bound,
-                  "combined_known_managed_file_limit_bytes": 12 * 1024**3,
-                  "transport_process_peak_rss_bytes": transport_rss,
-                  "transport_process_peak_rss_limit_bytes": 4 * 1024**3,
-                  "bundle_file_count": len(unpack_receipt["files"]),
-                  "bundle_raw_file_bytes": sum(row["bytes"] for row in unpack_receipt["files"]),
-              },
-              "workflow_source_commit": control_record["workflow_source_commit"],
+              "transport_inventory_sha256": inventory_sha,
+              "assets": assets,
+              "candidate_asset_bytes": candidate_bytes,
+              "candidate_directory": str(candidate),
+              "workflow_source_commit": os.environ["WORKFLOW_SOURCE_COMMIT"],
               "workflow_run_id": os.environ["WORKFLOW_RUN_ID"],
               "workflow_run_attempt": os.environ["WORKFLOW_RUN_ATTEMPT"],
-              "control_workflow_run_id": control_record["workflow_run_id"],
-              "control_workflow_run_attempt": control_record["workflow_run_attempt"],
-              "claims": {"R1_accepted": False, "SDK_publication": False,
+              "resource_measurement": {
+                  "source_checkout_including_git_bytes": source_bytes,
+                  "pinned_python_bytes": python_bytes,
+                  "candidate_asset_bytes": candidate_bytes,
+                  "combined_known_managed_file_bytes": known_bytes,
+                  "combined_known_managed_file_limit_bytes": sdk.MAX_WORK_BYTES,
+                  "download_process_peak_rss_bytes": measured_rss,
+                  "download_process_peak_rss_limit_bytes": sdk.MAX_RSS_BYTES,
+              },
+              "claims": {"assets_authenticated": False, "publisher_evidence_verified": False,
+                         "R1_accepted": False, "SDK_publication": False,
                          "AROS_guest_run": False},
           }
-          raw_receipt = (json.dumps(receipt, sort_keys=True, indent=2) + "\n").encode()
-          if len(raw_receipt) > 1024 * 1024:
-              raise ValueError("transport receipt exceeds the 1 MiB retained metadata limit")
-          with receipt_path.open("xb") as stream:
-              stream.write(raw_receipt)
-          receipt_path.chmod(0o600)
+          raw = (json.dumps(receipt, sort_keys=True, indent=2) + "\n").encode()
+          if len(raw) > 1024 * 1024:
+              raise ValueError("candidate download receipt exceeds the 1 MiB metadata bound")
+          destination = controls / "transport-receipt.json"
+          if destination.exists() or destination.is_symlink():
+              raise ValueError("candidate download receipt destination must be fresh")
+          with destination.open("xb") as stream:
+              stream.write(raw)
+          destination.chmod(0o600)
           print(json.dumps(receipt["resource_measurement"], sort_keys=True))
           PYCODE
 
@@ -454,13 +430,16 @@ jobs:
           PUBLISHER_SOURCE: ${{ inputs.publisher_source }}
           RELEASE_TAG: ${{ inputs.release_tag }}
           RELEASE_MANIFEST_SHA256: ${{ inputs.release_manifest_sha256 }}
+          TRANSPORT_INVENTORY_SHA256: ${{ inputs.transport_inventory_sha256 }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B \
-            "$GITHUB_WORKSPACE/.git/ami-rust-public-controls/public_replay.py" \
+            "$GITHUB_WORKSPACE/.git/ami-rust-public-controls/release/public_replay.py" \
             --source "$GITHUB_WORKSPACE" \
             --source-commit "$PUBLISHER_SOURCE" \
-            --bundle "$RUNNER_TEMP/ami-rust-public-bundle" \
+            --candidate-assets "$RUNNER_TEMP/ami-rust-public-bundle" \
+            --transport-sha256 "$TRANSPORT_INVENTORY_SHA256" \
             --manifest-sha256 "$RELEASE_MANIFEST_SHA256" \
             --release-tag "$RELEASE_TAG" \
             --work "$RUNNER_TEMP/ami-rust-public-work" \
@@ -502,7 +481,8 @@ jobs:
                   or owner.get("run_id") != os.environ["WORKFLOW_RUN_ID"]
                   or owner.get("run_attempt") != os.environ["WORKFLOW_RUN_ATTEMPT"]
                   or owner.get("roots") != ["ami-rust-python-bootstrap", "ami-rust-public-bundle",
-                                             "ami-rust-public-work", "ami-rust-public-output"]):
+                                             "ami-rust-public-work", "ami-rust-public-authenticated-bundle",
+                                             "ami-rust-public-output"]):
               raise SystemExit("public replay ownership record does not match this run")
           names = owner["roots"]
           paths = [temporary / name for name in names]
@@ -588,7 +568,7 @@ jobs:
           if observed > raw_limit:
               raise SystemExit("public replay receipts and native files exceed the 31 MiB raw artifact bound")
 
-          for path in paths[:3]:
+          for path in paths[:4]:
               if path.exists():
                   shutil.rmtree(path)
               if path.exists() or path.is_symlink():
