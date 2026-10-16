@@ -414,6 +414,23 @@ def cargo_matches(raw, profile):
         raise ValueError("Cargo component payload differs from the SDK profile")
 
 
+def static_assets(source, reserved=()):
+    """Read the exact pinned static distribution files without building an SDK."""
+    assets = {}
+    static = parsed(read(source / "release/bundle-files.json"))
+    if static.get("schema") != "ami-rust-bundle-files-v1":
+        raise ValueError("invalid static release bundle map")
+    for row in static["files"]:
+        name = rel(row["path"])
+        if name in assets or name in reserved or name == "release.json" or name.startswith(".auth/"):
+            raise ValueError("duplicate/reserved static asset")
+        raw = read(below(source, row["source"]))
+        if len(raw) != row["bytes"] or sha(raw) != row["sha256"]:
+            raise ValueError("static release asset differs from tracked publisher pin")
+        assets[name] = raw
+    return assets
+
+
 def assemble(source, payloads, output):
     source = Path(source).resolve(strict=True)
     output = Path(output)
@@ -483,17 +500,7 @@ def assemble(source, payloads, output):
         profile = parsed(sdk_files[f"host/profiles/{host}/cargo.json"])
         cargo_matches(cargo, profile)
         assets[f"cargo-{host}.tar.xz"] = cargo
-    static = parsed(read(source / "release/bundle-files.json"))
-    if static.get("schema") != "ami-rust-bundle-files-v1":
-        raise ValueError("invalid static release bundle map")
-    for row in static["files"]:
-        name = rel(row["path"])
-        if name in assets or name == "release.json" or name.startswith(".auth/"):
-            raise ValueError("duplicate/reserved static asset")
-        raw = read(below(source, row["source"]))
-        if len(raw) != row["bytes"] or sha(raw) != row["sha256"]:
-            raise ValueError("static release asset differs from tracked publisher pin")
-        assets[name] = raw
+    assets.update(static_assets(source, set(assets)))
     if sum(map(len, assets.values())) > TREE_LIMIT - 1024 * 1024:
         raise ValueError("release payload exceeds the authentication bundle ceiling")
     python = parsed(read(source / "release/ci-python-inputs.json"))

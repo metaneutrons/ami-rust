@@ -342,6 +342,27 @@ class PublisherAssemblyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "SDK host C-SDK profile differs from the source-pinned"):
             self.assemble()
 
+    def test_actual_static_release_assets_match_the_complete_tracked_map(self):
+        static = auth.static_assets(auth.ROOT)
+        declared = auth.parsed(auth.read(auth.ROOT / "release/bundle-files.json"))["files"]
+        self.assertEqual(set(static), {row["path"] for row in declared})
+        self.assertEqual(len(static), len(declared))
+        self.assertIn("COMPATIBILITY.md", static)
+        self.assertIn("QUICKSTART.md", static)
+
+    def test_static_asset_corruption_and_reserved_destination_are_rejected(self):
+        raw = b"original document\n"
+        self.write(self.source, "doc.md", raw)
+        self.write(self.source, "release/bundle-files.json", auth.encoded({
+            "schema": "ami-rust-bundle-files-v1", "files": [{
+                "path": "DOC.md", "source": "doc.md", "bytes": len(raw), "sha256": auth.sha(raw)}]}))
+        self.assertEqual(auth.static_assets(self.source), {"DOC.md": raw})
+        with self.assertRaisesRegex(ValueError, "duplicate/reserved"):
+            auth.static_assets(self.source, {"DOC.md"})
+        self.write(self.source, "doc.md", b"changed document!\n")
+        with self.assertRaisesRegex(ValueError, "differs from tracked"):
+            auth.static_assets(self.source)
+
     def test_sdk_csdk_profile_reference_digest_must_match_candidate_bytes(self):
         host = auth.HOSTS[0]
         self.contract["profiles"][host]["components"]["csdk"]["sha256"] = "f" * 64
