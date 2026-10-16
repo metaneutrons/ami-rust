@@ -51,9 +51,9 @@
     "host_supervisor_path": "host/build.py",
     "host_supervisor_sha256": "88839d90b25c8962929501b5c97886c7531b1775c467f510b772b532578684f6",
     "overlay_helper_sha256": "cb2834a2c22d5b70555759c685425a4e42f5df12e2ad8ff48b63afc5836795d3",
-    "policy_extension": "Explicit hosted resource contract, process-group cleanup and compile-time host path remapping for SDK build scripts/proc macros; Cargo prerequisite source, compiler, patch and build flags unchanged.",
+    "policy_extension": "Explicit hosted resource contract, process-group cleanup and compile-time host path remapping for SDK build scripts/proc macros; Darwin Cargo prerequisite links bootstrap N_OSO paths relative to the pinned Rust sysroot. Cargo/Rust source and compiler pins and the Cargo source patch are unchanged.",
     "producer_path": "host/cargo-repro/produce.py",
-    "producer_sha256": "5379771762b9f45c261df8c1acd3dc1ee0cf85fae9cb86b36d409bf56da1b8cc",
+    "producer_sha256": "e91757106409643855ac4053540f4d018839937eada7a24f8be504c27b1e423f",
     "python_bootstrap_path": "release/ci_python.py",
     "python_bootstrap_sha256": "b25514fbf2f11d5802dc37c2771ef68f15ece3dbd975f40838d0cd70e3cd1fb7"
   },

@@ -1,0 +1,20 @@
+{
+  "schema": "ami-rust-cargo-prerequisite-pending-v1",
+  "status": "PENDING_PROTECTED_TWO_HOST_RUN",
+  "inputs_sha256": "5c3557a2696457d76562f8883efa2c7d2c4cfc583f4f5814a722907a1f639f81",
+  "resource_policy_sha256": "b9a5fbfff842847c30b5f56ea4e1d3a368f4bda30689f0407ed9d33610571646",
+  "host_supervisor_sha256": "88839d90b25c8962929501b5c97886c7531b1775c467f510b772b532578684f6",
+  "reports": {
+    "linux-x86_64": {
+      "sha256": "9a771203242c7afb26cc3719efb27477a78935465ad2e4a62c598816f1a5daa9",
+      "previous_inputs_sha256": "3ba7ef5e924e0f643923f54f80d631b16411b89c55103a991a2f08eeae915e11",
+      "previous_host_supervisor_sha256": "88839d90b25c8962929501b5c97886c7531b1775c467f510b772b532578684f6"
+    },
+    "macos-aarch64": {
+      "sha256": "024dd4c2276e6536876934617b50a4792fd7d0ce653a2430d23cc4f1b098ed85",
+      "previous_inputs_sha256": "3ba7ef5e924e0f643923f54f80d631b16411b89c55103a991a2f08eeae915e11",
+      "previous_host_supervisor_sha256": "88839d90b25c8962929501b5c97886c7531b1775c467f510b772b532578684f6"
+    }
+  },
+  "reason": "The reviewed Darwin Cargo linker recipe has a new producer/input identity. Retained producer reports remain immutable historical evidence and must be rejected until fresh protected paired builds and independent review establish replacement references. The shared host supervisor and resource policy are unchanged."
+}
