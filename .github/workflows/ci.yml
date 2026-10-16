@@ -32,6 +32,7 @@ jobs:
             release/*.py
             release/ci-*.json
             release/portable-csdk/spec.json
+            release/native-reference.json
       - name: Run isolated installer fixture tests
         run: |
           python3 --version
