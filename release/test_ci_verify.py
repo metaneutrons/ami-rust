@@ -51,6 +51,106 @@ class HostedConsumerVerifyTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def _exercise_complete_install_recipe(self, corrupt=None):
+        """Exercise the real two-root coordinator through project lock and uninstall."""
+        host = "linux-x86_64"
+        sdk_digest = "d" * 64
+        components = {name: self.work / "components" / name for name in
+                      ("rust", "cargo", "toolchain", "collector", "csdk", "vendor")}
+        for path in components.values():
+            path.mkdir(parents=True)
+        first = self.work / "consumers" / "absolute-a"
+        first.mkdir(parents=True)
+        python = self.root / "python"
+        python.write_bytes(b"fixture interpreter")
+        write_json(first / "selection.json", {
+            "python": str(python.resolve()),
+            "components": {name: str(path.resolve()) for name, path in components.items()}})
+        bundle = self.work / "candidate"
+        write_json(bundle / "release.json", {"fixture": "authenticated elsewhere"})
+        output = self.root / "output"
+        output.mkdir()
+        commands = ["recipe-" + str(i) for i in range(12)]
+        variant_order = ("sha256sum", "minimal-noalloc", "minimal-alloc", "qualification", "dependencies")
+        build_names = ("utility-build", "minimal-noalloc-build", "minimal-alloc-build",
+                       "qualification-build", "dependencies-build")
+        payloads = {name: ("native-" + name).encode() for name in variant_order}
+        reference = {"hosts": {host: {name: {"AMIRUST": {"bytes": len(raw), "sha256": sha(raw)}}
+                                     for name, raw in payloads.items()}}}
+        sdk = {"manifest_sha256": sdk_digest, "manifest": {"version": "0.1.0"},
+               "component_info": {name: {"manifest": {"fixture": name}} for name in components}}
+        supervisor = SimpleNamespace(work=self.work, env={}, check_limits=lambda label: None)
+        self.recipe_calls = []
+
+        def execute(supervisor, env, consumer, line, label):
+            index = commands.index(line)
+            self.recipe_calls.append((consumer.name, index))
+            receipt = ("a" if consumer.name == "absolute-a" else "b") * 64
+            result = {"host": host, "sdk_manifest_sha256": sdk_digest, "receipt_sha256": receipt}
+            if index == 0:
+                result.update(status="verified", qualification_only=False)
+            elif index == 1:
+                (consumer / "sdk-0.1.0").mkdir()
+                (consumer / "receipt.sha256").write_text(receipt + "\n")
+                result.update(status="installed", version="0.1.0", qualification_only=False,
+                              release_manifest_sha256=sha((bundle / "release.json").read_bytes()))
+            elif index in (2, 9):
+                result["status"] = "locked"
+                if index == 9 and corrupt == "receipt":
+                    result["receipt_sha256"] = "f" * 64
+            elif index == 8:
+                project = consumer / "hello-aros"
+                project.mkdir()
+                (project / "Cargo.toml").write_text('[package]\nname="hello-aros"\n')
+                result.update(package="hello-aros", project=str(project))
+                if corrupt == "manifest":
+                    result["sdk_manifest_sha256"] = "e" * 64
+            elif index == 11:
+                shutil.rmtree(consumer / "sdk-0.1.0")
+                result.update(status="uninstalled", version="0.1.0")
+            else:
+                build_name = build_names[index - 3] if index < 8 else "hello-build"
+                raw = payloads[variant_order[index - 3]] if index < 8 else b"hello-native"
+                target = consumer / build_name / "artifacts"
+                target.mkdir(parents=True)
+                (target / "AMIRUST").write_bytes(raw)
+            return {"exit_code": 0}, json.dumps(result), ""
+
+        def receipt(path, host, expected, supervisor, label):
+            artifact = path / "artifacts/AMIRUST"
+            raw = artifact.read_bytes()
+            return {"receipt_sha256": "c" * 64, "AMIRUST_path": str(artifact),
+                    "canonical_artifacts": expected or {"AMIRUST": {"bytes": len(raw), "sha256": sha(raw)}}}
+
+        with mock.patch.object(ci_verify, "_run_recipe_line", side_effect=execute), \
+                mock.patch.object(ci_verify, "_build_receipt", side_effect=receipt), \
+                mock.patch.object(ci_verify, "_copy_components_to_consumers",
+                                  return_value=[components, components]), \
+                mock.patch.object(ci_verify.ci_sdk, "verify_component", return_value={"fixture": "unchanged"}):
+            return ci_verify._install_and_run_recipe(
+                bundle, self.work, output, python, supervisor, host, sdk, components, reference, commands)
+
+    def test_complete_recipe_passes_project_context_and_keeps_receipts_per_root(self):
+        result = self._exercise_complete_install_recipe()
+        self.assertEqual(set(self.recipe_calls), {(root, i) for root in ("absolute-a", "absolute-b")
+                                                 for i in range(12)})
+        self.assertEqual(len(self.recipe_calls), 24)
+        self.assertEqual(len(result["retained_native"]), 5)
+        for root, digest in (("absolute-a", "a" * 64), ("absolute-b", "b" * 64)):
+            lock = next(row for row in result["commands"][root] if row["recipe_index"] == 9)
+            self.assertEqual(lock["result"]["receipt_sha256"], digest)
+            self.assertTrue(result["uninstall"][root]["selected_prefix_absent"])
+
+    def test_complete_recipe_rejects_new_project_from_different_sdk(self):
+        with self.assertRaisesRegex(ValueError, "unexpected package"):
+            self._exercise_complete_install_recipe(corrupt="manifest")
+        self.assertNotIn(("absolute-a", 9), self.recipe_calls)
+
+    def test_complete_recipe_rejects_new_project_lock_with_wrong_install_receipt(self):
+        with self.assertRaisesRegex(ValueError, "does not bind the installed SDK and receipt"):
+            self._exercise_complete_install_recipe(corrupt="receipt")
+        self.assertNotIn(("absolute-a", 10), self.recipe_calls)
+
     def test_client_source_identity_uses_explicit_clean_publisher_checkout_without_ci(self):
         source, workflow = "1" * 40, "1" * 40
         with mock.patch.object(ci_verify, "_assert_source_clean") as clean, \

@@ -1086,7 +1086,8 @@ def _build_receipt(path: Path, host: str, reference: dict | None, supervisor,
 
 
 def _run_recipe_builds(supervisor, python: Path, host: str, reference: dict,
-                       consumers: list[Path], commands: list[str], output: Path) -> dict:
+                       consumers: list[Path], commands: list[str], output: Path, *,
+                       sdk_manifest_sha256: str, receipt_pins: dict[str, str]) -> dict:
     names = ("sha256sum", "minimal-noalloc", "minimal-alloc", "qualification", "dependencies")
     output_native = output / "native"
     output_native.mkdir(mode=0o700)
@@ -1151,7 +1152,7 @@ def _run_recipe_builds(supervisor, python: Path, host: str, reference: dict,
                     raise ValueError("signed new-project command did not return JSON") from error
                 if (not isinstance(result, dict) or result.get("package") != "hello-aros"
                         or result.get("project") != str(consumer / "hello-aros")
-                        or result.get("sdk_manifest_sha256") != sdk["manifest_sha256"]):
+                        or result.get("sdk_manifest_sha256") != sdk_manifest_sha256):
                     raise ValueError("signed new-project command created an unexpected package")
                 if not (consumer / "hello-aros/Cargo.toml").is_file():
                     raise ValueError("signed new-project command did not create Cargo.toml")
@@ -1160,7 +1161,7 @@ def _run_recipe_builds(supervisor, python: Path, host: str, reference: dict,
             elif index == 9:
                 result = _parse_command_result(stdout, "locked", label)
                 if (result.get("host") != host
-                        or result.get("sdk_manifest_sha256") != sdk["manifest_sha256"]
+                        or result.get("sdk_manifest_sha256") != sdk_manifest_sha256
                         or result.get("receipt_sha256") != receipt_pins[root_name]):
                     raise ValueError("new-project lock does not bind the installed SDK and receipt")
                 root_rows.append({"recipe_index": index, "command": commands[index],
@@ -1257,7 +1258,8 @@ def _install_and_run_recipe(bundle: Path, work: Path, output: Path, python: Path
                                    "process": row, "result": result})
 
     build_records = _run_recipe_builds(supervisor, python, host, reference, consumers,
-                                       commands, output)
+                                       commands, output, sdk_manifest_sha256=sdk["manifest_sha256"],
+                                       receipt_pins=receipt_pins)
     for consumer, name, env in zip(consumers, ("absolute-a", "absolute-b"), envs, strict=True):
         # _run_recipe_builds has already run indices 3-10; retain their command and
         # result records alongside the install/lock records.
