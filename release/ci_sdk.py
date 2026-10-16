@@ -47,6 +47,8 @@ VARIANTS = {
 }
 MAX_ARCHIVE_BYTES = 6 * 1024**3
 MAX_OUTPUT_BYTES = 32 * 1024**2 - 64 * 1024
+MAX_COLD_ROOT_DIAGNOSTIC_RAW_BYTES = 24 * 1024**2
+MAX_COLD_ROOT_DIAGNOSTIC_REPORT_BYTES = 2 * 1024**2
 MAX_LOG_BYTES = 16 * 1024**2
 MAX_RSS_BYTES = 4 * 1024**3
 MAX_WORK_BYTES = 12 * 1024**3
@@ -1310,6 +1312,141 @@ def _preserve_native_payload(source: Path, work: Path, variant: str) -> Path:
     return destination
 
 
+def _preserve_canonical_snapshot(artifacts: Path, rows: dict, work: Path,
+                                 variant: str, managed_bytes) -> dict:
+    """Keep first-root canonical bytes in managed work until the cold comparison."""
+    if not callable(managed_bytes):
+        raise ValueError("cold-root snapshot requires an aggregate managed-byte reader")
+    destination = work / "cold-root-first" / variant
+    if destination.exists() or destination.is_symlink():
+        raise ValueError("cold-root first snapshot destination is not fresh")
+    total = 0
+    for member, row in rows.items():
+        _safe_relative(member)
+        total += row["bytes"]
+    current_managed_bytes = managed_bytes()
+    if type(current_managed_bytes) is not int or current_managed_bytes < 0:
+        raise ValueError("aggregate managed-byte reader returned an invalid value")
+    if current_managed_bytes + total > MAX_WORK_BYTES:
+        raise ValueError("cold-root first snapshot would exceed the managed workspace ceiling")
+    destination.mkdir(parents=True)
+    snapshot = {}
+    for index, member in enumerate(sorted(rows)):
+        row = rows[member]
+        source = artifacts.joinpath(*_safe_relative(member).parts)
+        if source.is_symlink() or not source.is_file():
+            raise ValueError("cold-root first snapshot source is not a regular file: " + member)
+        target = destination / (f"member-{index:03d}.bin")
+        shutil.copyfile(source, target)
+        observed = {"bytes": target.stat().st_size, "sha256": sha256(target)}
+        if observed != row:
+            raise ValueError("cold-root first snapshot differs from canonical output: " + member)
+        snapshot[member] = {**observed, "path": target.relative_to(work).as_posix()}
+    return snapshot
+
+
+def _write_cold_root_diagnostics(work: Path, variant: str, first_layout: str,
+                                 second_layout: str, first_rows: dict, second_rows: dict,
+                                 first_snapshot: dict, second_artifacts: Path,
+                                 first_native: dict, second_native: dict) -> Path:
+    """Write bounded exact-byte evidence for a strict cold-root mismatch."""
+    root = work / "cold-root-diagnostics"
+    if root.exists() or root.is_symlink():
+        raise ValueError("cold-root diagnostics destination is not fresh")
+    raw_root = root / "raw"
+    raw_root.mkdir(parents=True)
+    report_path = root / "report.json"
+    used = 0
+    omitted = 0
+    members = []
+
+    def retain(member: str, expected: dict, source: Path | None, filename: str) -> dict:
+        nonlocal used, omitted
+        if expected is None:
+            return {"present": False, "retained": False,
+                    "omitted_reason": "member absent from this root"}
+        result = {"present": True, "bytes": expected["bytes"],
+                  "sha256": expected["sha256"], "retained": False}
+        if source is None or source.is_symlink() or not source.is_file():
+            result["omitted_reason"] = "verified source bytes unavailable"
+            omitted += expected["bytes"]
+            return result
+        if (source.stat().st_size != expected["bytes"] or sha256(source) != expected["sha256"]):
+            result["omitted_reason"] = "source bytes differ from canonical map"
+            omitted += expected["bytes"]
+            return result
+        if expected["bytes"] > MAX_COLD_ROOT_DIAGNOSTIC_RAW_BYTES - used:
+            result["omitted_reason"] = "aggregate raw evidence ceiling reached"
+            omitted += expected["bytes"]
+            return result
+        target = raw_root / filename
+        shutil.copyfile(source, target)
+        if target.stat().st_size != expected["bytes"] or sha256(target) != expected["sha256"]:
+            target.unlink(missing_ok=True)
+            result["omitted_reason"] = "copied bytes failed canonical verification"
+            omitted += expected["bytes"]
+            return result
+        used += expected["bytes"]
+        result.update({"retained": True, "path": target.relative_to(root).as_posix()})
+        return result
+
+    differing = sorted(member for member in set(first_rows) | set(second_rows)
+                       if first_rows.get(member) != second_rows.get(member))
+    for index, member in enumerate(differing):
+        first_row = first_rows.get(member)
+        second_row = second_rows.get(member)
+        first_source = None
+        if first_row is not None:
+            saved = first_snapshot.get(member)
+            if saved is not None:
+                first_source = work.joinpath(*_safe_relative(saved["path"]).parts)
+        second_source = (second_artifacts.joinpath(*_safe_relative(member).parts)
+                         if second_row is not None else None)
+        members.append({
+            "member": member,
+            "first": retain(member, first_row, first_source,
+                             f"member-{index:03d}-first.bin"),
+            "second": retain(member, second_row, second_source,
+                              f"member-{index:03d}-second.bin"),
+        })
+    report = {
+        "schema": "ami-rust-cold-root-diagnostics-v1",
+        "status": "COLD_ROOT_NATIVE_MISMATCH",
+        "variant": variant,
+        "first_layout": first_layout,
+        "second_layout": second_layout,
+        "first_canonical_artifacts": first_rows,
+        "second_canonical_artifacts": second_rows,
+        "first_native": first_native,
+        "second_native": second_native,
+        "differing_members": members,
+        "raw_retention_limit_bytes": MAX_COLD_ROOT_DIAGNOSTIC_RAW_BYTES,
+        "raw_retained_bytes": used,
+        "raw_omitted_bytes": omitted,
+        "host_artifact_retention_limit_bytes": 32 * 1024**2,
+    }
+    encoded = canonical_json(report)
+    if len(encoded) > MAX_COLD_ROOT_DIAGNOSTIC_REPORT_BYTES:
+        raise ValueError("cold-root diagnostic report exceeds its bounded receipt limit")
+    report_path.write_bytes(encoded)
+    return root
+
+
+def _assert_cold_roots_match(work: Path, variant: str, first_layout: str,
+                             second_layout: str, first: dict, second_rows: dict,
+                             second_artifacts: Path, second_native: dict) -> None:
+    """Keep strict comparison semantics and save evidence before raising."""
+    if (second_native["sha256"] == first["sha256"]
+            and second_native["bytes"] == first["bytes"]
+            and second_rows == first["artifacts"]):
+        return
+    _write_cold_root_diagnostics(
+        work, variant, first_layout, second_layout, first["artifacts"], second_rows,
+        first["snapshot"], second_artifacts,
+        {"bytes": first["bytes"], "sha256": first["sha256"]}, second_native)
+    raise ValueError("cold-root native outputs differ for " + variant)
+
+
 def _copy_metadata_archives(artifacts: Path, rows: dict, output: Path) -> list[dict]:
     """Retain the three raw archives needed for independent metadata review."""
     destination = output / "metadata"
@@ -1643,18 +1780,29 @@ def produce(args) -> dict:
             native_bytes = native_file.stat().st_size
             if layout["name"] == "sdk-layout-a":
                 preserved = _preserve_native_payload(native_file, args.work, variant)
+                snapshot = _preserve_canonical_snapshot(
+                    build_output / "artifacts", result["artifacts"], args.work, variant,
+                    supervisor.managed_bytes)
+                supervisor.check_limits("preserved first cold-root snapshot " + variant)
                 by_variant[variant] = {"path": preserved, "sha256": native_hash,
-                                       "bytes": native_bytes, "artifacts": result["artifacts"]}
+                                       "bytes": native_bytes, "artifacts": result["artifacts"],
+                                       "snapshot": snapshot}
             else:
                 first = by_variant[variant]
-                if (native_hash != first["sha256"] or native_bytes != first["bytes"]
-                        or result["artifacts"] != first["artifacts"]):
-                    raise ValueError("cold-root native outputs differ for " + variant)
+                _assert_cold_roots_match(
+                    args.work, variant, "sdk-layout-a", layout["name"], first,
+                    result["artifacts"], build_output / "artifacts",
+                    {"bytes": native_bytes, "sha256": native_hash})
                 payload = _copy_native_payload(first["path"], args.output, variant)
                 native_payloads.append({"variant": variant, **payload})
                 if reference_proposal and variant == "dependencies":
                     metadata_archives = _copy_metadata_archives(
                         build_output / "artifacts", result["artifacts"], args.output)
+                snapshot_root = args.work / "cold-root-first" / variant
+                if snapshot_root.exists():
+                    shutil.rmtree(snapshot_root)
+                if snapshot_root.exists() or snapshot_root.is_symlink():
+                    raise RuntimeError("matched cold-root first snapshot could not be retired")
             build_records.append({"layout": layout["name"], "variant": variant,
                                   "package": package, "feature_arguments": list(feature_args),
                                   "process": run_record, "build_receipt_sha256": result["receipt_sha256"],

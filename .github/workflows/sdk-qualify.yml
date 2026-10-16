@@ -135,10 +135,6 @@ jobs:
               if bootstrap.is_symlink() or not bootstrap.is_file() or bootstrap.stat().st_size > 65536:
                   raise SystemExit("Invalid pinned Python bootstrap receipt")
               (output / "python-bootstrap.json").write_bytes(bootstrap.read_bytes())
-          if work.exists():
-              shutil.rmtree(work)
-          if work.exists():
-              raise SystemExit("Managed SDK work tree was not retired")
           if python_root.exists():
               shutil.rmtree(python_root)
           if python_root.exists():
@@ -171,6 +167,145 @@ jobs:
                   raise ValueError("Candidate payload must be a regular file: " + str(path))
               return info
 
+          def safe_relative(value):
+              if not isinstance(value, str) or not value or "\\" in value or "\0" in value or ":" in value:
+                  raise ValueError("Diagnostic path is not a portable relative path")
+              path = PurePosixPath(value)
+              if path.is_absolute() or path.as_posix() != value or any(part in ("", ".", "..") for part in value.split("/")):
+                  raise ValueError("Unsafe diagnostic path")
+              return path
+
+          def validate_cold_root_diagnostics(source):
+              if source.is_symlink() or not source.is_dir():
+                  raise ValueError("Cold-root diagnostics root must be a real directory")
+              report_path = source / "report.json"
+              report = read_json(report_path)
+              if (report.get("schema") != "ami-rust-cold-root-diagnostics-v1"
+                      or report.get("status") != "COLD_ROOT_NATIVE_MISMATCH"
+                      or report.get("variant") not in {"minimal-noalloc", "minimal-alloc", "qualification", "dependencies", "sha256sum"}
+                      or report.get("first_layout") != "sdk-layout-a"
+                      or report.get("second_layout") != "sdk-layout-b"):
+                  raise ValueError("Unrecognized cold-root diagnostics report")
+
+              def canonical_map(value):
+                  if not isinstance(value, dict) or not value or len(value) > 128 or "AMIRUST" not in value:
+                      raise ValueError("Cold-root canonical map is malformed")
+                  for member, row in value.items():
+                      safe_relative(member)
+                      if (not isinstance(row, dict) or set(row) != {"bytes", "sha256"}
+                              or type(row["bytes"]) is not int or row["bytes"] < 0
+                              or not isinstance(row["sha256"], str)
+                              or len(row["sha256"]) != 64
+                              or any(character not in "0123456789abcdef" for character in row["sha256"])):
+                          raise ValueError("Cold-root canonical member row is malformed")
+                  return value
+
+              first_map = canonical_map(report.get("first_canonical_artifacts"))
+              second_map = canonical_map(report.get("second_canonical_artifacts"))
+              expected_members = sorted(member for member in set(first_map) | set(second_map)
+                                        if first_map.get(member) != second_map.get(member))
+              rows = report.get("differing_members")
+              if (not isinstance(rows, list) or [row.get("member") for row in rows if isinstance(row, dict)] != expected_members
+                      or len(rows) != len(expected_members)):
+                  raise ValueError("Cold-root differing-member inventory is incomplete")
+              raw_paths = set()
+              retained_bytes = 0
+              omitted_bytes = 0
+              for member_row in rows:
+                  member = member_row["member"]
+                  for side, canonical in (("first", first_map), ("second", second_map)):
+                      state = member_row.get(side)
+                      expected = canonical.get(member)
+                      if not isinstance(state, dict):
+                          raise ValueError("Cold-root member evidence is malformed")
+                      if expected is None:
+                          if (state.get("present") is not False or state.get("retained") is not False
+                                  or not isinstance(state.get("omitted_reason"), str)):
+                              raise ValueError("Absent cold-root member has invalid evidence state")
+                          continue
+                      if (state.get("present") is not True or state.get("bytes") != expected["bytes"]
+                              or state.get("sha256") != expected["sha256"]
+                              or type(state.get("retained")) is not bool):
+                          raise ValueError("Cold-root raw evidence differs from its canonical map")
+                      if state["retained"]:
+                          relative = safe_relative(state.get("path"))
+                          if relative.parts[0] != "raw" or relative.as_posix() in raw_paths:
+                              raise ValueError("Cold-root raw evidence path is invalid or duplicated")
+                          target = source.joinpath(*relative.parts)
+                          info = regular(target)
+                          if info.st_size != expected["bytes"] or sha256(target) != expected["sha256"]:
+                              raise ValueError("Retained cold-root bytes fail their canonical identity")
+                          raw_paths.add(relative.as_posix())
+                          retained_bytes += info.st_size
+                      else:
+                          if not isinstance(state.get("omitted_reason"), str) or not state["omitted_reason"]:
+                              raise ValueError("Omitted cold-root bytes lack a reason")
+                          omitted_bytes += expected["bytes"]
+              if (report.get("raw_retained_bytes") != retained_bytes
+                      or report.get("raw_omitted_bytes") != omitted_bytes
+                      or report.get("raw_retention_limit_bytes") != 24 * 1024 * 1024
+                      or retained_bytes > 24 * 1024 * 1024
+                      or report.get("host_artifact_retention_limit_bytes") != 32 * 1024 * 1024):
+                  raise ValueError("Cold-root evidence byte accounting is inconsistent")
+
+              observed = set()
+              for path in source.rglob("*"):
+                  info = path.lstat()
+                  if stat.S_ISDIR(info.st_mode):
+                      if path.relative_to(source).as_posix() != "raw":
+                          raise ValueError("Unexpected cold-root diagnostics directory")
+                      continue
+                  relative = path.relative_to(source).as_posix()
+                  if not stat.S_ISREG(info.st_mode) or relative not in {"report.json", *raw_paths}:
+                      raise ValueError("Unexpected or linked cold-root diagnostics file")
+                  observed.add(relative)
+              if observed != {"report.json", *raw_paths}:
+                  raise ValueError("Cold-root diagnostics inventory is incomplete")
+              return report, raw_paths
+
+          def retain_cold_root_diagnostics(source, output):
+              report, raw_paths = validate_cold_root_diagnostics(source)
+              destination = output / "cold-root-diagnostics"
+              if destination.exists() or destination.is_symlink():
+                  raise ValueError("Cold-root diagnostics destination is not fresh")
+              (destination / "raw").mkdir(parents=True)
+              base_bytes = sum(path.stat().st_size for path in output.rglob("*")
+                               if path.is_file() and not path.is_symlink())
+              source_report = source / "report.json"
+              report_value = report
+              report_size = source_report.stat().st_size
+              reserve = 64 * 1024
+              raw_budget = max(0, 32 * 1024 * 1024 - 4096 - base_bytes - report_size - reserve)
+              selected = set()
+              raw_used = 0
+              omitted_by_artifact_limit = 0
+              for member_row in report_value["differing_members"]:
+                  for side in ("first", "second"):
+                      state = member_row[side]
+                      if not state.get("retained"):
+                          continue
+                      size = state["bytes"]
+                      if size <= raw_budget - raw_used:
+                          selected.add(state["path"])
+                          raw_used += size
+                      else:
+                          state["retained"] = False
+                          state.pop("path", None)
+                          state["omitted_reason"] = "32 MiB host artifact retention ceiling"
+                          omitted_by_artifact_limit += size
+              report_value["raw_retained_bytes"] = raw_used
+              report_value["raw_omitted_bytes"] += omitted_by_artifact_limit
+              report_value["artifact_raw_retained_bytes"] = raw_used
+              report_value["artifact_raw_omitted_bytes"] = omitted_by_artifact_limit
+              for relative in sorted(selected):
+                  target = destination.joinpath(*safe_relative(relative).parts)
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  shutil.copyfile(source.joinpath(*safe_relative(relative).parts), target)
+              report_target = destination / "report.json"
+              report_target.write_text(json.dumps(report_value, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+              return {"cold-root-diagnostics/report.json"} | {
+                  "cold-root-diagnostics/" + relative for relative in selected}
+
           expected_host = os.environ["EXPECTED_HOST"]
           reference_proposal = os.environ["REFERENCE_PROPOSAL"] == "true"
           expected_status = ("PRODUCED_NATIVE_REFERENCE_PROPOSAL_NOT_FOR_AUTHENTICATION"
@@ -197,6 +332,8 @@ jobs:
           elif success:
               raise SystemExit("Successful SDK producer omitted the Cargo receipt")
 
+          diagnostic_names = set()
+
           payload_names = {
               "sdk.tar.xz", "cargo-component.tar.xz",
               "native/minimal-noalloc.AMIRUST", "native/minimal-alloc.AMIRUST",
@@ -222,8 +359,17 @@ jobs:
                   if metadata.is_symlink() or not metadata.is_dir() or any(metadata.iterdir()):
                       raise SystemExit("Unexpected partial metadata output tree")
                   metadata.rmdir()
+              diagnostics = work / "cold-root-diagnostics"
+              if diagnostics.exists() or diagnostics.is_symlink():
+                  diagnostic_names = retain_cold_root_diagnostics(diagnostics, output)
+
+          if work.exists():
+              shutil.rmtree(work)
+          if work.exists():
+              raise SystemExit("Managed SDK work tree was not retired")
 
           allowed = {"producer.json", "sdk-producer.json", "csdk-producer.json", "python-bootstrap.json", "cleanup.json"}
+          allowed |= diagnostic_names
           if success:
               allowed |= payload_names
               if (sdk.get("status") != expected_status
@@ -284,7 +430,9 @@ jobs:
               raise SystemExit("SDK metadata and candidate payloads exceed the 32 MiB retained ceiling")
 
           receipt = {"schema": "ami-rust-sdk-cleanup-v1",
-                     "status": "PASS" if success else "PRODUCER_FAILED_METADATA_ONLY",
+                     "status": ("PASS" if success else
+                                "PRODUCER_FAILED_WITH_COLD_ROOT_DIAGNOSTICS" if diagnostic_names else
+                                "PRODUCER_FAILED_METADATA_ONLY"),
                      "producer_outcome": os.environ["PRODUCER_RESULT"],
                      "python_bootstrap_outcome": os.environ["PYTHON_RESULT"],
                      "source_commit": os.environ["WORKFLOW_SOURCE_COMMIT"],

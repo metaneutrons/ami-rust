@@ -140,6 +140,118 @@ class HostedSdkProducerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "differs from its canonical output"):
             ci_sdk._copy_metadata_archives(artifacts, rows, changed_output)
 
+    def test_cold_root_match_stays_strict_and_retains_changed_rlib_bytes(self):
+        first_artifacts = self.work / "cold-first-artifacts"
+        second_artifacts = self.work / "cold-second-artifacts"
+        member = "target/release/deps/libsample-abc123.rlib"
+        first_rlib = b"first exact rlib contents"
+        second_rlib = b"second exact rlib contents"
+        for root, rlib in ((first_artifacts, first_rlib), (second_artifacts, second_rlib)):
+            (root / "target/release/deps").mkdir(parents=True)
+            (root / "AMIRUST").write_bytes(b"same native image")
+            (root / member).write_bytes(rlib)
+
+        def rows(root):
+            return {name: {"bytes": (root / name).stat().st_size,
+                           "sha256": ci_sdk.sha256(root / name)}
+                    for name in ("AMIRUST", member)}
+
+        first_rows = rows(first_artifacts)
+        snapshot = ci_sdk._preserve_canonical_snapshot(
+            first_artifacts, first_rows, self.work, "dependencies",
+            lambda: ci_sdk.MAX_WORK_BYTES - sum(row["bytes"] for row in first_rows.values()))
+        first = {"bytes": first_rows["AMIRUST"]["bytes"],
+                 "sha256": first_rows["AMIRUST"]["sha256"],
+                 "artifacts": first_rows, "snapshot": snapshot}
+        with self.assertRaisesRegex(ValueError, "cold-root native outputs differ for dependencies"):
+            ci_sdk._assert_cold_roots_match(
+                self.work, "dependencies", "sdk-layout-a", "sdk-layout-b", first,
+                rows(second_artifacts), second_artifacts,
+                {"bytes": first["bytes"], "sha256": first["sha256"]})
+
+        diagnostic_root = self.work / "cold-root-diagnostics"
+        report = ci_sdk.read_json(diagnostic_root / "report.json", 2 * 1024**2)
+        self.assertEqual(report["status"], "COLD_ROOT_NATIVE_MISMATCH")
+        self.assertEqual(report["first_canonical_artifacts"], first_rows)
+        self.assertEqual(report["second_canonical_artifacts"], rows(second_artifacts))
+        self.assertEqual([row["member"] for row in report["differing_members"]], [member])
+        mismatch = report["differing_members"][0]
+        self.assertEqual((diagnostic_root / mismatch["first"]["path"]).read_bytes(), first_rlib)
+        self.assertEqual((diagnostic_root / mismatch["second"]["path"]).read_bytes(), second_rlib)
+
+    def test_identical_cold_roots_pass_without_diagnostic_payload(self):
+        artifacts = self.work / "identical-cold-artifacts"
+        (artifacts / "target/release/deps").mkdir(parents=True)
+        (artifacts / "AMIRUST").write_bytes(b"same native image")
+        member = "target/release/deps/libsample-abc123.rlib"
+        (artifacts / member).write_bytes(b"same rlib")
+        rows = {name: {"bytes": (artifacts / name).stat().st_size,
+                       "sha256": ci_sdk.sha256(artifacts / name)}
+                for name in ("AMIRUST", member)}
+        snapshot = ci_sdk._preserve_canonical_snapshot(
+            artifacts, rows, self.work, "dependencies",
+            lambda: ci_sdk.MAX_WORK_BYTES - sum(row["bytes"] for row in rows.values()))
+        first = {"bytes": rows["AMIRUST"]["bytes"], "sha256": rows["AMIRUST"]["sha256"],
+                 "artifacts": rows, "snapshot": snapshot}
+        ci_sdk._assert_cold_roots_match(
+            self.work, "dependencies", "sdk-layout-a", "sdk-layout-b", first, rows,
+            artifacts, {"bytes": first["bytes"], "sha256": first["sha256"]})
+        self.assertFalse((self.work / "cold-root-diagnostics").exists())
+
+    def test_cold_root_raw_cap_preserves_maps_and_omission_reasons(self):
+        first_artifacts = self.work / "capped-first-artifacts"
+        second_artifacts = self.work / "capped-second-artifacts"
+        member = "target/release/deps/libsample-abc123.rlib"
+        for root, value in ((first_artifacts, b"first"), (second_artifacts, b"second")):
+            (root / "target/release/deps").mkdir(parents=True)
+            (root / "AMIRUST").write_bytes(b"same native")
+            (root / member).write_bytes(value)
+        rows = lambda root: {
+            name: {"bytes": (root / name).stat().st_size, "sha256": ci_sdk.sha256(root / name)}
+            for name in ("AMIRUST", member)}
+        first_rows = rows(first_artifacts)
+        snapshot = ci_sdk._preserve_canonical_snapshot(
+            first_artifacts, first_rows, self.work, "dependencies",
+            lambda: ci_sdk.MAX_WORK_BYTES - sum(row["bytes"] for row in first_rows.values()))
+        first = {"bytes": first_rows["AMIRUST"]["bytes"],
+                 "sha256": first_rows["AMIRUST"]["sha256"],
+                 "artifacts": first_rows, "snapshot": snapshot}
+        with patch.object(ci_sdk, "MAX_COLD_ROOT_DIAGNOSTIC_RAW_BYTES", 1):
+            with self.assertRaisesRegex(ValueError, "cold-root native outputs differ"):
+                ci_sdk._assert_cold_roots_match(
+                    self.work, "dependencies", "sdk-layout-a", "sdk-layout-b", first,
+                    rows(second_artifacts), second_artifacts,
+                    {"bytes": first["bytes"], "sha256": first["sha256"]})
+        report = ci_sdk.read_json(self.work / "cold-root-diagnostics/report.json")
+        self.assertEqual(report["first_canonical_artifacts"], first_rows)
+        self.assertEqual(report["raw_retained_bytes"], 0)
+        self.assertEqual(report["raw_omitted_bytes"], len(b"first") + len(b"second"))
+        for side in ("first", "second"):
+            self.assertFalse(report["differing_members"][0][side]["retained"])
+            self.assertIn("ceiling", report["differing_members"][0][side]["omitted_reason"])
+
+    def test_cold_root_snapshot_admission_uses_aggregate_managed_bytes(self):
+        artifacts = self.work / "aggregate-admission-artifacts"
+        artifacts.mkdir()
+        (artifacts / "AMIRUST").write_bytes(b"native")
+        rows = {"AMIRUST": {"bytes": 6, "sha256": ci_sdk.sha256(artifacts / "AMIRUST")}}
+        snapshot_bytes = rows["AMIRUST"]["bytes"]
+        self.assertLessEqual(ci_sdk.directory_bytes(self.work) + snapshot_bytes,
+                             ci_sdk.MAX_WORK_BYTES)
+        positive = ci_sdk._preserve_canonical_snapshot(
+            artifacts, rows, self.work, "fits",
+            lambda: ci_sdk.MAX_WORK_BYTES - snapshot_bytes)
+        self.assertIn("AMIRUST", positive)
+        self.assertTrue((self.work / "cold-root-first/fits").is_dir())
+        aggregate = ci_sdk.MAX_WORK_BYTES - snapshot_bytes + 1
+        with self.assertRaisesRegex(ValueError, "managed workspace ceiling"):
+            ci_sdk._preserve_canonical_snapshot(
+                artifacts, rows, self.work, "dependencies", lambda: aggregate)
+        self.assertFalse((self.work / "cold-root-first/dependencies").exists())
+        with self.assertRaisesRegex(ValueError, "aggregate managed-byte reader"):
+            ci_sdk._preserve_canonical_snapshot(
+                artifacts, rows, self.work, "dependencies", 100)
+
     def test_reading_normative_inputs_does_not_admit_the_source_volume_for_work(self):
         with patch.object(ci_sdk, "validate_resource_policy", side_effect=AssertionError("no disk admission while reading")):
             inputs, resources, host = ci_sdk.read_normative(

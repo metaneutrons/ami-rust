@@ -25,6 +25,10 @@ own pinned identities and preserved notices. The shared portable C-SDK producer
 passed locally on macOS; latest-source two-host derivation remains unqualified.
 The qualified boot image, ABI and guest budgets are unchanged.
 
+The [native reference follow-up](r1-native-reproducibility-20261016.md) records
+a concrete two-root dependency-output mismatch in the second protected proposal.
+That failure remains open; retained prerequisite success cannot qualify its SDK.
+
 The current production path uses real GitHub attestations and Cosign signatures.
 Its helper fixtures and public source CI establish control flow only. Actual
 protected SDK production, publisher verification and tamper probes, documented
