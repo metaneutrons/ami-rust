@@ -31,6 +31,7 @@ jobs:
             host/
             release/*.py
             release/ci-*.json
+            release/ci-cargo-producers/
             release/portable-csdk/spec.json
             release/native-reference.json
             release/bundle-assets/

@@ -829,6 +829,21 @@ def verify_frozen_cargo_report(path: Path, host: str, target: str) -> dict:
     return report
 
 
+def preflight_cargo_producers(resources_path: Path) -> None:
+    """Verify both pinned Cargo producer receipts before starting a Cargo build."""
+    tracked_output = subprocess.run(
+        ["/usr/bin/git", "-C", str(ROOT), "ls-files", "-z"],
+        check=True, capture_output=True, timeout=30).stdout
+    tracked = {item.decode("utf-8") for item in tracked_output.split(b"\0") if item}
+    inputs, resources, inputs_sha, resources_sha = prepare_sdk.verify_expected_inputs(
+        ROOT, tracked, resources_path)
+    for host in HOST_TARGETS:
+        relative = f"release/ci-cargo-producers/{host}.json"
+        prepare_sdk.tracked_regular(ROOT, tracked, relative)
+        prepare_sdk.canonical_producer(
+            ROOT / relative, host, inputs, resources, inputs_sha, resources_sha, ROOT, tracked)
+
+
 def _copy_tree(source: Path, destination: Path) -> None:
     if destination.exists() or destination.is_symlink():
         raise ValueError("component copy destination must be fresh")
@@ -1391,6 +1406,7 @@ def produce(args) -> dict:
             or args.output.resolve().is_relative_to(ROOT.resolve())):
         raise ValueError("work and output must be fresh roots outside the source checkout")
 
+    preflight_cargo_producers(args.resources)
     python_path, python_bootstrap = verify_python_bootstrap(args.python_bootstrap_root, host)
     env_root = args.work.resolve() / "sdk-task-env"
     env = {"HOME": str(env_root / "home"), "CARGO_HOME": str(env_root / "cargo-home"),
@@ -1431,6 +1447,10 @@ def produce(args) -> dict:
     if (local_cargo.get("status") != "PRODUCED_PREREQUISITE_ONLY_NOT_R1_QUALIFICATION"
             or local_cargo.get("host") != host or local_cargo.get("rust_target") != target):
         raise ValueError("pinned custom Cargo prerequisite did not complete for this host")
+    frozen_cargo = verify_frozen_cargo_report(
+        ROOT / "release/ci-cargo-producers" / (host + ".json"), host, target)
+    require_cargo_match(local_cargo.get("custom_cargo_artifact"),
+                        frozen_cargo.get("custom_cargo_artifact"))
 
     env_root.mkdir()
     for name in ("home", "cargo-home", "tmp"):
