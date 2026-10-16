@@ -126,6 +126,7 @@ jobs:
         shell: bash
         env:
           EXPECTED_WORKFLOW_COMMIT: ${{ github.sha }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
           PUBLISHER_SOURCE: ${{ inputs.publisher_source }}
           WORKFLOW_RUN_ID: ${{ github.run_id }}
           WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
@@ -197,6 +198,8 @@ jobs:
           test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "$PUBLISHER_SOURCE"
           test "$(git -C "$GITHUB_WORKSPACE" remote get-url origin | sed 's/\.git$//')" = https://github.com/metaneutrons/ami-rust
           test -z "$(git -C "$GITHUB_WORKSPACE" status --porcelain=v1 --untracked-files=all --ignore-submodules=none)"
+          git -C "$GITHUB_WORKSPACE" fetch --no-tags --depth=1 origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse --verify --quiet "refs/tags/$RELEASE_TAG^{commit}")" = "$PUBLISHER_SOURCE"
           python3 -I -B - <<'PYCODE'
           import hashlib
           import json
@@ -278,8 +281,6 @@ jobs:
           bundle = temporary / "ami-rust-public-bundle"
           python_root = temporary / "ami-rust-python-bootstrap"
           tag = os.environ["RELEASE_TAG"]
-          version = tag[1:]
-          archive_path = controls / ("ami-rust-" + version + "-release.tar.xz")
           inventory_sha = os.environ["TRANSPORT_INVENTORY_SHA256"]
           if not re.fullmatch(r"[0-9a-f]{64}", inventory_sha):
               raise SystemExit("external transport inventory SHA-256 is malformed")
@@ -292,6 +293,10 @@ jobs:
               spec.loader.exec_module(module)
               return module
 
+          replay_control = load(
+              "_ami_rust_public_replay_control", controls / "public_replay.py")
+          version = replay_control.release_core(tag)
+          archive_path = controls / ("ami-rust-" + version + "-release.tar.xz")
           ci_sdk = load("_ami_rust_public_replay_ci_sdk", root / "release" / "ci_sdk.py")
           ci_cargo = ci_sdk.ci_cargo
           transport = load("_ami_rust_public_replay_transport", controls / "public_transport.py")
