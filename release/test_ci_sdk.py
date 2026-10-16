@@ -102,9 +102,9 @@ class HostedSdkProducerTests(unittest.TestCase):
                              current["resource_policy_sha256"])
             self.assertNotEqual(expected["previous_inputs_sha256"],
                                 current["inputs_sha256"], "old report inputs must be stale")
-            self.assertNotEqual(expected["previous_host_supervisor_sha256"],
-                                current["host_supervisor_sha256"],
-                                "old report helper identity must be stale")
+            # The input digest proves staleness. A Cargo recipe change can
+            # leave the shared host supervisor unchanged; its old identity
+            # must still match the exact retained report and previous pin.
 
     def _pending_cargo_fixture(self):
         current = {
@@ -486,6 +486,15 @@ class HostedSdkProducerTests(unittest.TestCase):
 
     def test_pending_cargo_marker_binds_current_pins_and_stale_reports(self):
         marker, current = self._pending_cargo_fixture()
+        self._assert_pending_cargo_marker(marker, current)
+
+    def test_pending_cargo_marker_allows_unchanged_shared_supervisor(self):
+        marker, current = self._pending_cargo_fixture()
+        for host in ci_sdk.HOST_TARGETS:
+            supervisor = current["host_supervisor_sha256"]
+            marker["reports"][host]["previous_host_supervisor_sha256"] = supervisor
+            current["reports"][host]["previous_host_supervisor_sha256"] = supervisor
+            current["reports"][host]["previous_pinned_host_supervisor_sha256"] = supervisor
         self._assert_pending_cargo_marker(marker, current)
 
     def test_pending_cargo_marker_rejects_mismatched_bindings_and_nonstale_reports(self):
