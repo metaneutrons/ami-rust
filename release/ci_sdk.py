@@ -704,6 +704,8 @@ class Supervisor:
         stdout_path = log_dir / (label + ".stdout.log")
         stderr_path = log_dir / (label + ".stderr.log")
         start = time.monotonic()
+        print(json.dumps({"event": "sdk-command-start", "label": label,
+                          "unix": round(time.time(), 3)}), file=sys.stderr, flush=True)
         peak_rss = peak_workspace = peak_logs = 0
         reason = None
         with stdout_path.open("xb") as stdout, stderr_path.open("xb") as stderr:
@@ -768,6 +770,11 @@ class Supervisor:
         self.peak_workspace = max(self.peak_workspace, peak_workspace)
         self.peak_logs = max(self.peak_logs, peak_logs)
         self.commands.append(record)
+        print(json.dumps({"event": "sdk-command-end", "label": label,
+                          "elapsed_seconds": record["elapsed_seconds"],
+                          "exit_code": child.returncode, "stop_reason": reason,
+                          "rss_peak_observed_bytes": peak_rss}),
+              file=sys.stderr, flush=True)
         if reason or child.returncode:
             tail = stderr_path.read_bytes()[-2048:].decode("utf-8", "replace")
             raise RuntimeError(f"{label} failed: {reason or 'exit ' + str(child.returncode)}; {tail[-1000:]}")
