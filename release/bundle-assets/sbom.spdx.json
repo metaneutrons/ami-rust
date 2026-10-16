@@ -7,8 +7,8 @@
     ]
   },
   "dataLicense": "CC0-1.0",
-  "documentComment": "Unpublished SDK-candidate inventory; R1 is not accepted. Preserve the original 57 runtime/SDK component records and add 523 checksum-verified host-Cargo registry lock-closure packages plus 6 Cargo/native identity records. Lock membership does not assert compilation or linkage; per-package sourceInfo distinguishes those scopes. Cargo notices/preferred-source capsule SHA-256 da23b154fd15d595329de28cbf1db650bf8b1da57679ef270c09c9d7e84dc62f includes the complete lock-matched libgit2-sys crate and 3 MPL package sources. Source evidence resolves the misleading Cargo sys:0.21.0 field as the git2 wrapper version; actual final-binary linkage/redistribution acceptance remain separate gates. Whole mixed C-SDK licences are not inferred from selected runtime-member scope.",
-  "documentNamespace": "https://spdx.org/spdxdocs/ami-rust-host-closure-c1a2e697194070ca33a246a367e439a31aa10e5cae8f0c269ce7f175d0be2d9a",
+  "documentComment": "Unpublished SDK-candidate inventory; R1 is not accepted. Preserve the original 57 runtime/SDK component records and add 523 checksum-verified host-Cargo registry lock-closure packages plus 6 Cargo/native identity records. Lock membership does not assert compilation or linkage; per-package sourceInfo distinguishes those scopes. Cargo notices/preferred-source capsule SHA-256 a86b2e26191c7d59ed123d401de589850c5a7880de6bc09d81c6ab92c26ae6d1 includes the complete lock-matched libgit2-sys crate and 3 MPL package sources. Source evidence resolves the misleading Cargo sys:0.21.0 field as the git2 wrapper version; actual final-binary linkage/redistribution acceptance remain separate gates. Whole mixed C-SDK licences are not inferred from selected runtime-member scope.",
+  "documentNamespace": "https://spdx.org/spdxdocs/ami-rust-host-closure-277961381101cdc30d6fe0f65050d18e4986a4aed565fbac53bdf8935463368c",
   "hasExtractedLicensingInfos": [
     {
       "comment": "Exact pinned AROS-NX LICENSE text; included as evidence for AROS-derived aros-sys ABI material, without a legal clearance determination.",

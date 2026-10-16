@@ -45,7 +45,7 @@
     {
       "bytes": 5653,
       "path": "THIRD_PARTY_NOTICES.md",
-      "sha256": "e1f47837fe592dbeb38af5de595822b4ca16c757c19b857e9d66c35e7008e70a",
+      "sha256": "2efe77a1f845a30428f66225b13bc1c591d89ceb41e30fdf229f97802d3fb731",
       "source": "release/bundle-assets/THIRD_PARTY_NOTICES.md"
     },
     {
@@ -61,15 +61,15 @@
       "source": "release/bundle-assets/aros-source-inventory.json"
     },
     {
-      "bytes": 4176344,
+      "bytes": 4175724,
       "path": "cargo-notices-corresponding-source.tar.xz",
-      "sha256": "da23b154fd15d595329de28cbf1db650bf8b1da57679ef270c09c9d7e84dc62f",
+      "sha256": "a86b2e26191c7d59ed123d401de589850c5a7880de6bc09d81c6ab92c26ae6d1",
       "source": "release/cargo-notices/payload-v3/cargo-notices-corresponding-source-v3.tar.xz"
     },
     {
-      "bytes": 850792,
+      "bytes": 850807,
       "path": "cargo-source-inventory.json",
-      "sha256": "24d25539499b9b17c7aeebf6bdfd755bbfcbd48dcfdd925e484d995022a9f41c",
+      "sha256": "16b8003454e205e7fcd621a6373f26f60a15ef6a0fe65bb5f17e1925ee251fd4",
       "source": "release/cargo-notices/payload-v3/inventory.json"
     },
     {
@@ -603,7 +603,7 @@
     {
       "bytes": 1095112,
       "path": "sbom.spdx.json",
-      "sha256": "f478b3f1893b078c2b055114f212a57e1a7733c45de7d649c12478e27e067127",
+      "sha256": "aca18e0c61be3ae99c83ba122940b60ad4f1731d570beed2cd3ee4a55837bc72",
       "source": "release/bundle-assets/sbom.spdx.json"
     },
     {
