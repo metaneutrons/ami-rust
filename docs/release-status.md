@@ -1,69 +1,48 @@
-# Release qualification status — 2026-10-15
+# Release qualification status — 2026-10-16
 
-Public source publication is authorised. On 2026-10-15 the owner also authorised SDK publication conditional on all release acceptance criteria passing. No SDK archive, native executable release asset or GitHub Release has been published. This source repository is not yet an R1-qualified SDK distribution.
+R1 is not release-qualified. The owner authorised SDK publication only after
+R1-A1 through R1-A7 pass; public readback and two-host replay remain mandatory
+under R1-A8. No ami-rust SDK GitHub Release is published. The
+[revision 20 repository plan](m2-r1-plan.md) is the acceptance authority.
 
-## Completed candidate checks
+The inherited local R3 candidate passed its four clean consumer builds,
+new-project builds, installation/deinstallation and native runtime, memory and
+allocation-free diagnostic matrix on the pinned x86-64 ABI-v1 QEMU baseline.
+Those records retain their exact artifact identities and qualification-only
+signer. They establish no production publisher identity. Evidence transfers to
+new candidates only through verified unchanged artifact bytes and scope review.
 
-- macOS Apple Silicon and Linux x86-64 each replayed the five-variant SDK consumer recipe in two clean roots: 20 cold variant builds. All 104 canonical outputs per root match the previously qualified host result under the approved native-code/host-metadata comparison.
-- The corrected new-project recipe uses an independently verified, bounded relative SDK source snapshot. Its four clean builds produce all 15 canonical outputs byte-identically across both hosts. Failed earlier prototypes remain in the private qualification history.
-- Installation and deinstallation pass the delivered recipe on both hosts. All 22 installer fixtures pass on each qualified host; public source CI also passes all 22 on macOS and Linux. Interrupted installs, altered assets, unsafe archives, wrong trust, bad receipts and uninstall protections are covered.
-- Complete shared-prerequisite inventories remain unchanged after deinstallation: 12,549 files on macOS and 12,559 on Linux.
-- Native AROS smoke passes on the unchanged x86-64 ABI-v1 baseline: both installed-host builds return the expected digest and status 0; the new demo runs; a missing file reports failure and leaves the shell usable. Boot took 9 seconds and the native test script 2.7 seconds. This smoke does not make a fresh memory-measurement claim; the complete earlier memory/diagnostic matrix applies only to exact unchanged SDK/native artifacts.
-- Candidate licensing review passes: first-party MIT OR Apache-2.0, preserved AROS-derived terms, 83 original licence texts, a 57-package SPDX inventory, and a verified 341-file corresponding-source capsule. Binary candidate materials remain unpublished.
+The protected Cargo prerequisite builds passed on both standard hosted runners
+in [run 38860315967](https://github.com/metaneutrons/ami-rust/actions/runs/38860315967).
+The complete original and derived C-SDK prerequisites, corresponding source,
+patches and selected vendor archive are public repository inputs with their
+own pinned identities and preserved notices. The shared portable C-SDK producer
+passed locally on macOS; latest-source two-host derivation remains unqualified.
+The qualified boot image, ABI and guest budgets are unchanged.
 
-The final local candidate manifest SHA-256 is `a3da1702f6d5899818c72e6e42fdcbfefc0268f31deff181aba49797e6666d85`. Its SDK archive and SDK inventory are identical to the fully replayed 20-build candidate. Only the quickstart and project generator changed; their affected recipe was rerun in all four roots. Local signing used an explicitly qualification-only test publisher.
+The current production path uses real GitHub attestations and Cosign signatures.
+Its helper fixtures and public source CI establish control flow only. Actual
+protected SDK production, publisher verification and tamper probes, documented
+fresh-user preparation/build/uninstall/recheck on both hosts, final Cargo linkage
+and licence review, and independent R1 acceptance remain open. The
+[producer workflow](hosted-sdk-producer.md) cannot publish an SDK release.
 
-## R1-A6 remains open
+[Production quickstart](quickstart.md) includes explicit pinned Python/tool
+preparation, external source-policy selection, all six component inventories
+and post-uninstall reuse verification. Its new entry commands still require
+actual protected two-host execution. Missing or altered inputs require a fresh
+preparation state; no ambient Rust toolchain is replaced.
 
-A public repository and green installer fixture CI do not authenticate an SDK producer. R1 still requires the actual protected SDK build/packaging workflow, production publisher signatures/build attestations, and consumer verification with wrong issuer/identity, missing/altered assets and provenance-mismatch probes. The current offline installer deliberately accepts only qualification test manifests.
+The adopted [hosted resource policy](../release/ci-resources.json) requires
+6 GiB physical RAM, 24 GiB free disk, two jobs, 4 GiB aggregate observed RSS,
+12 GiB managed work and 16 MiB logs. Concrete campaigns keep 90-minute clocks
+with a review reserve. Historical failed clocks and earlier limits remain
+historical evidence. The retained CI artifact pool stays at 512 MiB; the whole
+seven-artifact candidate DAG must fit before either producer begins uploading.
 
-The complete C SDK and dependency vendor inputs currently lack an accepted immutable CI producer/provisioning path. Custom Cargo and its bootstrap inputs must also be provisioned under the protected producer contract. Existing pinned compiler/toolchain public inputs remain separate producer identities. Resolve these inputs, run the real protected candidate producer, qualify its authentic consumer path, then obtain independent R1-A1 through R1-A7 acceptance. All existing resource and runtime criteria remain in force.
-
-Conditional publication authorisation is now recorded; it does not close R1-A6 or replace independent R1-A1 through R1-A7 acceptance. Once those gates pass, release the exact accepted bytes and perform the public readback and two-host replay required by R1-A8. nxpk is outside this gate. This is cross-development for AROS, not native AROS-hosted rustc/Cargo, full std, or official rustup target distribution.
-
-## CI ownership and capacity
-
-The approved design uses this repository and standard GitHub-hosted runners.
-An additional private input repository was created during preparation and then
-deleted at the owner's explicit request. Its two deploy keys were revoked and
-their two environment secrets removed; all build inputs remain preserved locally.
-No self-hosted runner was registered or started.
-
-Build recipes, input pins, packaging data and redistributable dependency sources
-belong in this repository. Publishing the complete compiled C SDK still requires
-checking its full redistribution/source obligations; the existing review covers
-the selected release candidate, not every file of that prerequisite SDK.
-
-The manual `Hosted capacity survey` workflow measures actual RAM, free disk,
-architecture and Python identity on macOS ARM64 and Linux x86-64. It has read-only
-permissions, installs no SDK inputs and neither builds nor signs a release.
-Published runner specifications do not establish actual available free disk.
-The existing build preflight requires 16 GiB physical RAM and 24 GiB free disk.
-Any prospective revision must be explicit, based on measurements, and qualified
-before a hosted SDK build is accepted. Guest/baseline limits remain unchanged.
-
-## Operating limits
-
-The source snapshot/installation recipe requires a fresh WORK root disjoint from the bundle and installed SDK. Review found that a caller can currently choose a fresh destination inside the bundle; the qualified recipe avoids that destination. Installed SDK inventory validation rejects modifications. Same-user hostile concurrent mutation is outside the verified installation model. The generated demo preserves license files in its SDK source subtree; publishing an adapted application requires its own licensing decision.
-
-The [actual hosted capacity measurement](hosted-ci-preparation-20261015.md) now confirms that both runners pass the existing disk gate and fail the existing RAM gate. The resource proposal is not enabled or qualified; R1-A6 remains open.
-
-
-## Protected SDK follow-up — 2026-10-16
-
-The later hosted resource policy is adopted in `release/ci-resources.json`:
-6 GiB physical RAM and 24 GiB free disk. Earlier numeric gates and sealed
-campaign outcomes remain historical evidence. Both hosted Cargo prerequisite
-builds passed in [run 38860315967](https://github.com/metaneutrons/ami-rust/actions/runs/38860315967).
-
-The complete original and derived C-SDK prerequisites, complete corresponding
-source and selected vendor archive are now included as pinned repository inputs
-with preserved third-party terms, dated changes and source-availability notices.
-The shared C-SDK producer passed its complete local macOS component campaign;
-that result is not latest-source two-host protected SDK qualification.
-
-The [revision 19 release plan](m2-r1-plan.md) is authoritative for remaining
-gates. Protected SDK production, production signature/provenance verification,
-clean consumer replay, binary-linkage/licence acceptance and final independent
-review remain open. SDK release publication remains conditional on all gates;
-no SDK release is created by the qualification workflow.
+Source, inputs and packaging data use this repository and standard GitHub-hosted
+runners. The former private input repository was deleted at the owner's request;
+its deploy keys and environment secrets were removed. No self-hosted runner
+was registered. Protected AROS-NX and aros-tools checkouts remain unchanged.
+nxpk, native AROS-hosted rustc/Cargo, full std, other CPU/ABI combinations and
+physical hardware are outside this release's qualified scope.

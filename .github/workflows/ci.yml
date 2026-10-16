@@ -33,6 +33,7 @@ jobs:
             release/ci-*.json
             release/portable-csdk/spec.json
             release/native-reference.json
+            release/bundle-assets/QUICKSTART.md
       - name: Run isolated installer fixture tests
         run: |
           python3 --version
@@ -52,6 +53,7 @@ jobs:
           python3 -I -B release/test_prepare_sdk.py
           python3 -I -B release/test_ci_auth.py
           python3 -I -B release/test_ci_verify.py
+          python3 -I -B release/test_consumer_inputs.py
           python3 -I -B release/test_verify_publisher.py
           python3 -I -B release/test_install_publisher.py
 

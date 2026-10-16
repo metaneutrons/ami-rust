@@ -5,6 +5,7 @@ fabricate or claim GH attestation, Cosign, Fulcio, or publisher signatures.
 """
 from __future__ import annotations
 
+from contextlib import ExitStack
 import hashlib
 import importlib.util
 import io
@@ -16,6 +17,8 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest import mock
 import zipfile
 
 SCRIPT = Path(__file__).resolve().with_name("ci_verify.py")
@@ -47,6 +50,287 @@ class HostedConsumerVerifyTests(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def test_client_source_identity_uses_explicit_clean_publisher_checkout_without_ci(self):
+        source, workflow = "1" * 40, "1" * 40
+        with mock.patch.object(ci_verify, "_assert_source_clean") as clean, \
+                mock.patch.object(ci_verify.subprocess, "check_output", return_value=
+                                  "https://github.com/metaneutrons/ami-rust.git\n"), \
+                mock.patch.object(ci_verify.ci_auth, "context", side_effect=AssertionError("not CI")):
+            identity = ci_verify.consumer_source_identity(source, workflow)
+        self.assertEqual(identity, {"source_sha": source, "workflow_sha": workflow})
+        clean.assert_called_once_with(source)
+
+    def test_client_source_rejects_missing_commit_wrong_origin_and_dirty_checkout(self):
+        with mock.patch.object(ci_verify, "_assert_source_clean") as clean:
+            for invalid in (None, "main", "1" * 39, "../candidate"):
+                with self.assertRaisesRegex(ValueError, "exact trusted Git commits"):
+                    ci_verify.consumer_source_identity(invalid)
+            with self.assertRaisesRegex(ValueError, "must equal"):
+                ci_verify.consumer_source_identity("1" * 40, "2" * 40)
+            clean.assert_not_called()
+        with mock.patch.object(ci_verify, "_assert_source_clean"), \
+                mock.patch.object(ci_verify.subprocess, "check_output", return_value=
+                                  "https://github.com/untrusted/ami-rust.git\n"):
+            with self.assertRaisesRegex(ValueError, "designated publisher"):
+                ci_verify.consumer_source_identity("1" * 40)
+        with mock.patch.object(ci_verify, "_assert_source_clean", side_effect=ValueError("dirty source")):
+            with self.assertRaisesRegex(ValueError, "dirty source"):
+                ci_verify.consumer_source_identity("1" * 40)
+
+    def test_ci_policy_still_requires_real_protected_context(self):
+        with mock.patch.object(ci_verify.ci_auth, "context", side_effect=ValueError("protected context missing")):
+            with self.assertRaisesRegex(ValueError, "protected context missing"):
+                ci_verify._policy_from_source("1" * 40, {}, {}, self.work)
+
+    def test_common_policy_binds_explicit_source_workflow_and_pinned_tools(self):
+        (self.work / "trust").mkdir()
+        roots = {name: {"path": str(self.root / (name + "-root")), "sha256": "3" * 64}
+                 for name in ("gh", "cosign")}
+        material = {"schema": "ami-rust-publisher-inputs-v1", "materials": []}
+        pins = {name: {"binary_sha256": "4" * 64} for name in ("gh", "cosign")}
+        identity = {"source_sha": "1" * 40, "workflow_sha": "2" * 40}
+        with mock.patch.object(ci_verify, "_assert_source_clean") as clean, \
+                mock.patch.object(ci_verify.ci_auth, "input_manifest", return_value=material), \
+                mock.patch.object(ci_verify, "validate_tool_manifest", return_value=pins), \
+                mock.patch.object(ci_verify.ci_auth, "context", side_effect=AssertionError("not CI")):
+            path, policy = ci_verify._write_source_policy(identity, roots, self.work)
+            self.assertEqual(ci_verify._write_source_policy(identity, roots, self.work, reuse=True), (path, policy))
+            path.write_bytes(path.read_bytes().replace(b'"source_sha"', b'"tampered_x"'))
+            with self.assertRaisesRegex(ValueError, "must be fresh"):
+                ci_verify._write_source_policy(identity, roots, self.work, reuse=True)
+            path.write_bytes(ci_verify.canonical_json(policy))
+        self.assertEqual(clean.call_count, 3)
+        self.assertEqual(policy["source_sha"], identity["source_sha"])
+        self.assertEqual(policy["workflow_sha"], identity["workflow_sha"])
+        self.assertEqual(policy["inputs_manifest_sha256"], sha(ci_verify.ci_auth.encoded(material)))
+        self.assertEqual(policy["gh"]["sha256"], pins["gh"]["binary_sha256"])
+        self.assertEqual(json.loads(path.read_text()), policy)
+        with self.assertRaisesRegex(ValueError, "exact source and workflow commits"):
+            ci_verify._write_source_policy({"source_sha": "main"}, roots, self.work)
+
+    def _client_route(self, verified=True):
+        bundle = self._candidate(self.root / "client-bundle")
+        cargo = "cargo-macos-aarch64.tar.xz"
+        (bundle / cargo).write_bytes(b"cargo fixture")
+        with tarfile.open(bundle / "sdk.tar.xz", "w:xz"):
+            pass
+        release = json.loads((bundle / "release.json").read_text())
+        release["assets"].append({"path": cargo, "bytes": 13, "sha256": sha(b"cargo fixture")})
+        write_json(bundle / "release.json", release)
+        output = self.root / "client-output"
+        output.mkdir()
+        write_json(output / "tool-bootstrap.json", {})
+        bootstrap = self.root / "ami-rust-python-bootstrap"
+        bootstrap.mkdir()
+        python = bootstrap / "python"
+        python.write_bytes(b"pinned python fixture")
+        (self.work / "trust").mkdir()
+        policy_path = self.work / "trust/publisher-policy.json"
+        policy_path.write_bytes(b"external policy fixture")
+        source = "1" * 40
+        roots = {name: self.work / "component-staging" / name
+                 for name in ("rust", "cargo", "toolchain", "collector", "csdk", "vendor")}
+        profile = {"files": [{"path": "item", "bytes": 4, "sha256": sha(b"data")}], "symlinks": []}
+        info = {name: {"manifest": profile} for name in roots}
+        events = []
+
+        def verify(*args, **kwargs):
+            events.append("verify")
+            return {}, json.dumps({"status": "verified" if verified else "refused", "host": "macos-aarch64",
+                                   "qualification_only": False,
+                                   "release_manifest_sha256": sha((bundle / "release.json").read_bytes())}), ""
+
+        def extract(archive, destination, *args):
+            events.append("extract")
+            destination.mkdir(parents=True)
+            return {"root": destination, "manifest": {"source_identity": source},
+                    "manifest_sha256": "2" * 64}
+
+        def provision(*args, **kwargs):
+            events.append("provision")
+            for root in roots.values():
+                root.mkdir(parents=True)
+                (root / "item").write_bytes(b"data")
+            return {"component_roots": roots,
+                    "component_inventories": {name: ci_verify.ci_sdk.verify_component(root, profile, name)
+                                              for name, root in roots.items()}}
+
+        supervisor = SimpleNamespace(commands=[], checkout_bytes=0, check_limits=lambda label: None)
+        stack = ExitStack()
+        for obj, name, value in (
+            (ci_verify, "consumer_source_identity", {"source_sha": source, "workflow_sha": source}),
+            (ci_verify, "_managed_roots", None), (ci_verify, "host_identity", "macos-aarch64"),
+            (ci_verify.ci_sdk, "verify_python_bootstrap", (python, {})),
+            (ci_verify, "_verify_tool_receipt", {"roots": {}}),
+            (ci_verify, "_write_source_policy", (policy_path, {})),
+            (ci_verify.ci_sdk, "Supervisor", supervisor),
+            (ci_verify.ci_sdk, "read_normative", ({}, {}, {})),
+            (ci_verify, "_recheck_capacity", {}),
+            (ci_verify.ci_sdk, "validate_resource_policy", {}),
+            (ci_verify, "_validate_trusted_consumer_assets", None),
+            (ci_verify.ci_sdk, "_component_rows_from_sdk", info),
+            (ci_verify, "_assert_source_clean", None),
+        ):
+            stack.enter_context(mock.patch.object(obj, name, return_value=value))
+        stack.enter_context(mock.patch.object(ci_verify, "_run_supervised", side_effect=verify))
+        stack.enter_context(mock.patch.object(ci_verify.ci_sdk, "_extract_sdk_archive", side_effect=extract))
+        provider = stack.enter_context(mock.patch.object(ci_verify.consumer_inputs, "provision_inputs", side_effect=provision))
+        return stack, bundle, output, bootstrap, source, roots, events, provider
+
+    def test_preparation_refuses_bad_verification_before_sdk_extraction_or_provisioning(self):
+        stack, bundle, output, bootstrap, source, roots, events, provider = self._client_route(verified=False)
+        with stack:
+            with self.assertRaisesRegex(ValueError, "unexpected result"):
+                ci_verify.prepare_consumer_inputs(bundle, self.work, output, bootstrap, source,
+                                                 None, self.root / "selection.json")
+        self.assertEqual(events, ["verify"])
+        provider.assert_not_called()
+        self.assertFalse((self.work / "component-staging").exists())
+        self.assertFalse((self.root / "selection.json").exists())
+
+    def test_prepared_inputs_recheck_all_six_roots_without_replacement_or_receipt_change(self):
+        stack, bundle, output, bootstrap, source, roots, events, provider = self._client_route()
+        selection = self.root / "selection.json"
+        with stack:
+            result = ci_verify.prepare_consumer_inputs(bundle, self.work, output, bootstrap, source, None, selection)
+            self.assertEqual(result["status"], "PREPARED_VERIFIED_INPUTS_NOT_INSTALLED")
+            self.assertEqual(events, ["verify", "extract", "provision"])
+            before = (selection.read_bytes(), (output / "consumer-preparation.json").read_bytes())
+            checked = ci_verify.prepare_consumer_inputs(bundle, self.work, output, bootstrap, source,
+                                                        None, selection, check_only=True)
+            self.assertEqual(checked["status"], "VERIFIED_RETAINED_INPUTS")
+            self.assertEqual(set(checked["components"]), set(roots))
+            self.assertEqual(before, (selection.read_bytes(), (output / "consumer-preparation.json").read_bytes()))
+            self.assertEqual(provider.call_count, 1)
+            (roots["csdk"] / "item").write_bytes(b"bad!")
+            with self.assertRaises(ValueError):
+                ci_verify.prepare_consumer_inputs(bundle, self.work, output, bootstrap, source,
+                                                  None, selection, check_only=True)
+            self.assertEqual((roots["csdk"] / "item").read_bytes(), b"bad!")
+            self.assertEqual(provider.call_count, 1)
+
+    def test_preparation_rejects_selection_inside_the_candidate_before_verification(self):
+        stack, bundle, output, bootstrap, source, roots, events, provider = self._client_route()
+        with stack:
+            with self.assertRaisesRegex(ValueError, "outside source, bundle"):
+                ci_verify.prepare_consumer_inputs(bundle, self.work, output, bootstrap, source,
+                                                  None, bundle / "selection.json")
+        self.assertEqual(events, [])
+        provider.assert_not_called()
+
+    def test_preparation_rejects_selection_receipt_collision_before_verification(self):
+        stack, bundle, output, bootstrap, source, roots, events, provider = self._client_route()
+        with stack:
+            with self.assertRaisesRegex(ValueError, "outside source, bundle"):
+                ci_verify.prepare_consumer_inputs(bundle, self.work, output, bootstrap, source,
+                                                  None, output / "consumer-preparation.json")
+        self.assertEqual(events, [])
+        provider.assert_not_called()
+
+    def test_preparation_rejects_existing_receipt_before_provisioning(self):
+        stack, bundle, output, bootstrap, source, roots, events, provider = self._client_route()
+        receipt = output / "consumer-preparation.json"
+        receipt.write_bytes(b"prior receipt")
+        with stack:
+            with self.assertRaisesRegex(ValueError, "receipt must be fresh"):
+                ci_verify.prepare_consumer_inputs(bundle, self.work, output, bootstrap, source,
+                                                  None, self.root / "selection.json")
+        self.assertEqual(receipt.read_bytes(), b"prior receipt")
+        self.assertEqual(events, [])
+        provider.assert_not_called()
+
+    def test_consumer_roots_are_fresh_and_reject_an_external_parent_link(self):
+        first = ci_verify._create_consumer_roots(self.work)
+        self.assertEqual(first.resolve().parent.parent, self.work)
+        with self.assertRaises(FileExistsError):
+            ci_verify._create_consumer_roots(self.work)
+        work = self.root / "linked-work"
+        work.mkdir()
+        external = self.root / "unrelated-external"
+        external.mkdir()
+        marker = external / "marker"
+        marker.write_bytes(b"unrelated")
+        (work / "consumers").symlink_to(external, target_is_directory=True)
+        with self.assertRaises(FileExistsError):
+            ci_verify._create_consumer_roots(work)
+        self.assertEqual([path.name for path in external.iterdir()], ["marker"])
+        self.assertEqual(marker.read_bytes(), b"unrelated")
+
+    def test_retained_check_needs_only_bounded_scratch_but_keeps_ram_and_policy_limits(self):
+        resources = ci_verify.strict_json(ci_verify.ROOT / "release/ci-resources.json")
+        scratch = ci_verify.MAX_ARCHIVE_EXPANDED + ci_verify.ci_sdk.MAX_LOG_BYTES + ci_verify.MAX_OUTPUT_BYTES
+        with mock.patch.object(ci_verify.ci_sdk, "physical_memory_bytes", return_value=6 * 1024**3), \
+                mock.patch.object(ci_verify.shutil, "disk_usage", return_value=SimpleNamespace(free=scratch)):
+            result = ci_verify._recheck_capacity(resources, self.root)
+            self.assertEqual(result["scratch_required_bytes"], 560 * 1024**2)
+            self.assertFalse(result["cold_provisioning_admitted"])
+        with mock.patch.object(ci_verify.ci_sdk, "physical_memory_bytes", return_value=6 * 1024**3), \
+                mock.patch.object(ci_verify.shutil, "disk_usage", return_value=SimpleNamespace(free=scratch - 1)):
+            with self.assertRaisesRegex(ValueError, "insufficient"):
+                ci_verify._recheck_capacity(resources, self.root)
+        with mock.patch.object(ci_verify.ci_sdk, "physical_memory_bytes", return_value=6 * 1024**3 - 1), \
+                mock.patch.object(ci_verify.shutil, "disk_usage", return_value=SimpleNamespace(free=scratch)):
+            with self.assertRaisesRegex(ValueError, "insufficient"):
+                ci_verify._recheck_capacity(resources, self.root)
+        changed = json.loads(json.dumps(resources))
+        changed["build"]["seconds"] += 1
+        with self.assertRaisesRegex(ValueError, "ceilings differ"):
+            ci_verify._recheck_capacity(changed, self.root)
+
+    def test_local_bootstrap_does_not_write_ambient_github_output(self):
+        output = self.root / "tool-output"
+        output.mkdir()
+        bootstrap = self.root / "ami-rust-python-bootstrap"
+        bootstrap.mkdir()
+        python = bootstrap / "python"
+        python.write_bytes(b"python fixture")
+        export = self.root / "ambient-github-output"
+        export.write_bytes(b"unrelated file\n")
+        source = "1" * 40
+        pins = {name: {"url": "https://github.com/pinned/" + name + ".tar.gz",
+                       "bytes": 1, "sha256": sha(b"g"), "binary_bytes": 1,
+                       "binary_sha256": sha(b"g"), "version": "fixture"}
+                for name in ("gh", "cosign")}
+        def download(url, size, digest, destination, **kwargs):
+            destination.write_bytes(b"g")
+            return {"sha256": digest}
+        def extract(archive, host, pin, destination):
+            destination.write_bytes(b"g")
+            destination.chmod(0o700)
+            return {"sha256": sha(b"g")}
+        supervisor = SimpleNamespace(commands=[], checkout_bytes=0, managed_bytes=lambda: 0, check_limits=lambda label: None)
+        with ExitStack() as stack:
+            stack.enter_context(mock.patch.dict(ci_verify.os.environ, {"GITHUB_OUTPUT": str(export)}))
+            for obj, name, value in (
+                (ci_verify, "_managed_roots", None),
+                (ci_verify, "consumer_source_identity", {"source_sha": source, "workflow_sha": source}),
+                (ci_verify, "host_identity", "macos-aarch64"),
+                (ci_verify.ci_sdk, "verify_python_bootstrap", (python, {})),
+                (ci_verify, "validate_tool_manifest", pins),
+                (ci_verify, "_trust_paths", {}),
+                (ci_verify, "_tool_env", {}),
+                (ci_verify.ci_sdk, "Supervisor", supervisor),
+            ):
+                stack.enter_context(mock.patch.object(obj, name, return_value=value))
+            stack.enter_context(mock.patch.object(ci_verify.ci_cargo, "download_verified", side_effect=download))
+            stack.enter_context(mock.patch.object(ci_verify, "_write_archive_member", side_effect=extract))
+            stack.enter_context(mock.patch.object(ci_verify, "_version_text", side_effect=
+                                                  ("gh version 2.102.0", "v3.1.3")))
+            result = ci_verify.bootstrap_tools(self.work, output, bootstrap, source_commit=source)
+        self.assertEqual(result["status"], "PINNED_VERIFIER_TOOLS_READY")
+        self.assertEqual(export.read_bytes(), b"unrelated file\n")
+
+    def test_preparation_recipe_matches_delivered_commands_and_rejects_an_edit(self):
+        bundle = self.root / "recipe"
+        bundle.mkdir()
+        original = (ci_verify.ROOT / "release/bundle-assets/QUICKSTART.md").read_text()
+        path = bundle / "QUICKSTART.md"
+        path.write_text(original)
+        self.assertEqual(ci_verify._preparation_commands(bundle), ci_verify.PREPARATION_COMMANDS)
+        path.write_text(original.replace("check-inputs --bundle", "prepare-inputs --bundle"))
+        with self.assertRaisesRegex(ValueError, "preparation and recheck"):
+            ci_verify._preparation_commands(bundle)
 
     def test_tracked_tool_pins_route_to_both_supported_hosts(self):
         manifest = ci_verify.strict_json(ci_verify.ROOT / "release/ci-auth-tools.json")

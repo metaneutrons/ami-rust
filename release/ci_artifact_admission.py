@@ -1,4 +1,5 @@
 """Bound aggregate public CI metadata retention before a protected build."""
+import argparse
 import json
 import os
 from pathlib import Path
@@ -41,9 +42,17 @@ def admit(pages, ceiling, pending_bytes):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--sdk-candidate', action='store_true')
+    args = parser.parse_args()
     policy = json.loads((Path(__file__).parent/'ci-resources.json').read_text())
     ceiling = policy['retention']['CI_artifact_pool_bytes']
-    pending = 2*32*1024**2
+    # Admit the entire serialized DAG before either matrix producer uploads:
+    # 2 producer + 1 common candidate + 2 signed + 2 consumer artifacts.
+    pending = (7 if args.sdk_candidate else 2)*32*1024**2
+    if args.sdk_candidate and (os.environ.get('GITHUB_REF') != 'refs/heads/main'
+                              or os.environ.get('SOURCE_IS_PROTECTED') != 'true'):
+        raise ValueError('SDK candidate retention requires protected main')
     token = os.environ.get('GH_TOKEN')
     if not token or os.environ.get('GITHUB_REPOSITORY') != REPOSITORY:
         raise ValueError('repository-scoped Actions read token required')
@@ -64,6 +73,8 @@ def main():
         if len(page['artifacts']) < 100:
             break
     report = admit(pages, ceiling, pending)
+    report['SDK_candidate_upload_allowed'] = args.sdk_candidate
+    report['SDK_release_publication_authorized'] = False
     print(json.dumps(report, sort_keys=True))
 
 

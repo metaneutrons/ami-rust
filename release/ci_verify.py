@@ -22,6 +22,7 @@ import stat
 import subprocess
 import sys
 import tarfile
+import tempfile
 import time
 import urllib.parse
 import zipfile
@@ -48,6 +49,12 @@ VARIANTS = {
     "dependencies": ("ami-rust-dependencies", ()),
 }
 RECIPE_PREFIX = '"$PYTHON" -I -B '
+BOOTSTRAP_COMMAND = 'python3 -I -B "$SOURCE/release/ci_python.py" --prefix "$PYTHON_BOOTSTRAP" --inputs "$SOURCE/release/ci-python-inputs.json"'
+PREPARATION_PREFIX = '"$PREP_PYTHON" -I -B "$SOURCE/release/ci_verify.py" '
+PREPARATION_COMMANDS = tuple(
+    PREPARATION_PREFIX + command + ' --bundle "$BUNDLE" --work "$PREP" --output "$PREP_OUTPUT" --python-bootstrap-root "$PYTHON_BOOTSTRAP" --source-commit "$SOURCE_COMMIT" --workflow-commit "$WORKFLOW_COMMIT" --selection "$WORK/selection.json"'
+    for command in ("prepare-inputs", "check-inputs")
+)
 EXPECTED_RECIPE = (
     '"$PYTHON" -I -B "$BUNDLE/install_publisher.py" verify --bundle "$BUNDLE" --policy "$POLICY"',
     '"$PYTHON" -I -B "$BUNDLE/install_publisher.py" install --bundle "$BUNDLE" --policy "$POLICY" --prefix "$WORK/sdk-0.1.0" --receipt-pin "$WORK/receipt.sha256"',
@@ -77,6 +84,7 @@ def load_helper(name: str, relative: str):
 
 ci_sdk = load_helper("_ami_rust_ci_sdk_for_verify", "release/ci_sdk.py")
 ci_auth = load_helper("_ami_rust_ci_auth_for_verify", "release/ci_auth.py")
+consumer_inputs = load_helper("_ami_rust_consumer_inputs", "release/consumer_inputs.py")
 ci_cargo = ci_sdk.ci_cargo
 
 
@@ -316,6 +324,23 @@ def _assert_source_clean(expected_commit: str) -> None:
         raise ValueError("protected source checkout has tracked or untracked modifications")
 
 
+def consumer_source_identity(source_commit: str, workflow_commit: str | None = None) -> dict:
+    """Use the consumer's independently selected source, without simulating CI."""
+    workflow_commit = source_commit if workflow_commit is None else workflow_commit
+    if any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{40}", value)
+           for value in (source_commit, workflow_commit)):
+        raise ValueError("consumer source and workflow must be exact trusted Git commits")
+    if workflow_commit != source_commit:
+        raise ValueError("consumer workflow commit must equal the selected publisher source commit")
+    _assert_source_clean(source_commit)
+    origin = subprocess.check_output(
+        ["/usr/bin/git", "-C", str(ROOT), "remote", "get-url", "origin"],
+        stderr=subprocess.DEVNULL, text=True).strip().removesuffix(".git")
+    if origin not in ("https://github.com/" + ci_auth.REPO, "git@github.com:" + ci_auth.REPO):
+        raise ValueError("consumer source origin is not the designated publisher repository")
+    return {"source_sha": source_commit, "workflow_sha": workflow_commit}
+
+
 def _trust_paths(manifest: dict, work: Path) -> dict:
     trust_dir = work / "trust"
     trust_dir.mkdir(mode=0o700, exist_ok=True)
@@ -385,13 +410,15 @@ def _verify_tool_receipt(work: Path, output: Path, host: str, manifest: dict) ->
     return receipt
 
 
-def bootstrap_tools(work: Path, output: Path, python_root: Path, *, source_commit: str | None = None) -> dict:
+def bootstrap_tools(work: Path, output: Path, python_root: Path, *, source_commit: str | None = None,
+                    additional_input_bytes: int = 0) -> dict:
     """Fetch hash-pinned GH/Cosign tools and trust roots outside any candidate."""
     _managed_roots(work, output, python_root)
-    identity = ci_auth.context(ROOT)
-    _assert_source_clean(identity["source_sha"])
-    if source_commit is not None and source_commit != identity["source_sha"]:
-        raise ValueError("tool bootstrap source commit differs from the protected workflow identity")
+    if source_commit is None:
+        identity = ci_auth.context(ROOT)
+        _assert_source_clean(identity["source_sha"])
+    else:
+        identity = consumer_source_identity(source_commit)
     if any(output.iterdir()):
         raise ValueError("verifier tool bootstrap output directory must be empty")
     host = host_identity()
@@ -409,6 +436,9 @@ def bootstrap_tools(work: Path, output: Path, python_root: Path, *, source_commi
     roots = _trust_paths(manifest, work)
     env = _tool_env(work, python)
     supervisor = ci_sdk.Supervisor(work, output, python_root, env)
+    if type(additional_input_bytes) is not int or not 0 <= additional_input_bytes <= MAX_BUNDLE_BYTES:
+        raise ValueError("invalid external candidate byte charge")
+    supervisor.checkout_bytes += additional_input_bytes
     tool_rows = {}
     for name in ("cosign", "gh"):
         pin = pins[name]
@@ -464,7 +494,7 @@ def bootstrap_tools(work: Path, output: Path, python_root: Path, *, source_commi
     if ci_sdk.directory_bytes(output) > MAX_OUTPUT_BYTES:
         raise ValueError("tool bootstrap receipt exceeds the output ceiling")
     # The workflow can use these fixed, absolute paths without parsing logs.
-    github_output = os.environ.get("GITHUB_OUTPUT")
+    github_output = os.environ.get("GITHUB_OUTPUT") if source_commit is None else None
     if github_output:
         path = Path(github_output)
         if path.is_symlink() or not path.is_file():
@@ -478,9 +508,19 @@ def bootstrap_tools(work: Path, output: Path, python_root: Path, *, source_commi
 def _policy_from_source(source_commit: str, workflow_env: dict[str, str], roots: dict,
                         work: Path) -> tuple[Path, dict]:
     identity = ci_auth.context(ROOT)
-    _assert_source_clean(identity["source_sha"])
     if identity["source_sha"] != source_commit:
         raise ValueError("source commit changed while establishing external verifier policy")
+    return _write_source_policy(identity, roots, work)
+
+
+def _write_source_policy(identity: dict, roots: dict, work: Path, *, reuse: bool = False) -> tuple[Path, dict]:
+    """Common policy construction for protected CI and a clean trusted client source."""
+    if (not isinstance(identity, dict)
+            or any(not isinstance(identity.get(key), str)
+                   or not re.fullmatch(r"[0-9a-f]{40}", identity[key])
+                   for key in ("source_sha", "workflow_sha"))):
+        raise ValueError("external verifier policy needs exact source and workflow commits")
+    _assert_source_clean(identity["source_sha"])
     materials = ci_auth.input_manifest(ROOT)
     inputs_sha = hashlib.sha256(ci_auth.encoded(materials)).hexdigest()
     tools_manifest = strict_json(ROOT / "release/ci-auth-tools.json", 1024 * 1024)
@@ -498,11 +538,156 @@ def _policy_from_source(source_commit: str, workflow_env: dict[str, str], roots:
         "cosign_trusted_root": {"path": roots["cosign"]["path"], "sha256": roots["cosign"]["sha256"]},
     }
     policy_path = work / "trust/publisher-policy.json"
+    expected = canonical_json(policy)
     if policy_path.exists() or policy_path.is_symlink():
+        if (reuse and not policy_path.is_symlink() and policy_path.is_file()
+                and policy_path.stat().st_size == len(expected)
+                and policy_path.read_bytes() == expected):
+            return policy_path, policy
         raise ValueError("external publisher policy destination must be fresh")
-    policy_path.write_bytes(canonical_json(policy))
+    policy_path.write_bytes(expected)
     policy_path.chmod(0o600)
     return policy_path, policy
+
+
+def prepare_consumer_inputs(bundle_path: Path, work: Path, output: Path, python_root: Path,
+                            source_commit: str, workflow_commit: str | None,
+                            selection: Path, *, check_only: bool = False) -> dict:
+    """Prepare or recheck user-local prerequisites using the same CI input code.
+
+    The caller selects the publisher source outside the candidate. This entry
+    point neither signs nor simulates a protected GitHub workflow.
+    """
+    identity = consumer_source_identity(source_commit, workflow_commit)
+    if not selection.is_absolute() or not selection.parent.is_dir() or selection.is_symlink():
+        raise ValueError("selection requires an absolute, nonlinked path in an existing directory")
+    bundle = bundle_path.resolve(strict=True)
+    _, bundle_bytes = _candidate_inventory(bundle_path)
+    for managed in (work.resolve(), output.resolve(), python_root.resolve()):
+        if bundle == managed or bundle in managed.parents or managed in bundle.parents:
+            raise ValueError("candidate bundle must not overlap preparation roots")
+    forbidden = (ROOT.resolve(), bundle, python_root.resolve(), output.resolve(),
+                 (work / "component-staging").resolve(), (work / "verified-source-sdk").resolve(),
+                 (work / "tools").resolve(), (work / "trust").resolve(),
+                 (work / "task-env").resolve(), (work / "tool-downloads").resolve(),
+                 (work / "archive-extraction").resolve())
+    resolved_selection = selection.resolve()
+    if any(resolved_selection == root or root in resolved_selection.parents for root in forbidden):
+        raise ValueError("selection must be outside source, bundle and verified prerequisite/tool trees")
+    if not check_only and selection.exists():
+        raise ValueError("new consumer selection must be fresh")
+    receipt = output / "consumer-preparation.json"
+    if not check_only and (receipt.exists() or receipt.is_symlink()):
+        raise ValueError("consumer preparation receipt must be fresh")
+    _managed_roots(work, output, python_root)
+    host = host_identity()
+    inputs, resources, _ = ci_sdk.read_normative(
+        ROOT / "release/ci-sdk-inputs.json", ROOT / "release/ci-resources.json", host)
+    capacity = (_recheck_capacity(resources, work.parent) if check_only
+                else ci_sdk.validate_resource_policy(resources, work.parent))
+    python, python_bootstrap = ci_sdk.verify_python_bootstrap(python_root, host)
+    if not _tools_receipt(output).exists():
+        if check_only:
+            raise ValueError("verifier bootstrap receipt is missing; use a fresh preparation root")
+        bootstrap_tools(work, output, python_root, source_commit=identity["source_sha"],
+                        additional_input_bytes=bundle_bytes)
+    tool_manifest = strict_json(ROOT / "release/ci-auth-tools.json", 1024 * 1024)
+    tool_receipt = _verify_tool_receipt(work, output, host, tool_manifest)
+    if check_only and not (work / "trust/publisher-policy.json").is_file():
+        raise ValueError("publisher policy is missing; use a fresh preparation root")
+    policy_path, policy = _write_source_policy(identity, tool_receipt["roots"], work, reuse=True)
+    supervisor = ci_sdk.Supervisor(work, output, python_root, _tool_env(work, python))
+    # The downloaded bundle is outside managed work. Charge it as fixed input
+    # overhead as well as the source checkout; all extracted copies count below.
+    supervisor.checkout_bytes += bundle_bytes
+    label = "client-check-" + str(time.time_ns()) if check_only else "client-prepare"
+    _, stdout, _ = _run_supervised(
+        supervisor, python, ROOT / "release/install_publisher.py",
+        ["verify", "--bundle", str(bundle), "--policy", str(policy_path)],
+        cwd=work, label=label + "-verify", timeout=300)
+    verified = _parse_command_result(stdout, "verified", "consumer preparation verifier")
+    if verified.get("host") != host or verified.get("qualification_only") is not False:
+        raise ValueError("preparation verifier returned an incompatible host or trust route")
+    _validate_trusted_consumer_assets(bundle, verified, policy)
+    release = strict_json(bundle / "release.json", 1024 * 1024)
+    assets = {row["path"]: row for row in release["assets"]}
+    for name in ("sdk.tar.xz", f"cargo-{host}.tar.xz"):
+        if name not in assets:
+            raise ValueError("authenticated consumer prerequisite asset is missing: " + name)
+
+    def read_sdk(destination):
+        with tarfile.open(bundle / "sdk.tar.xz", mode="r:xz") as archive:
+            if sum(member.size for member in archive.getmembers()) > MAX_ARCHIVE_EXPANDED:
+                raise ValueError("authenticated source SDK exceeds the bounded scratch expansion")
+        sdk = ci_sdk._extract_sdk_archive(bundle / "sdk.tar.xz", destination,
+            assets["sdk.tar.xz"]["sha256"], assets["sdk.tar.xz"]["bytes"], 94)
+        if sdk["manifest"].get("source_identity") != identity["source_sha"]:
+            raise ValueError("SDK source differs from the externally selected publisher source")
+        return {**sdk, "component_info": ci_sdk._component_rows_from_sdk(sdk, host)}
+
+    if check_only:
+        # This is a recoverable extraction of the unchanged authenticated SDK.
+        # All user components and existing selections remain read-only.
+        with tempfile.TemporaryDirectory(prefix="consumer-input-check-", dir=work) as scratch:
+            sdk_info = read_sdk(Path(scratch) / "sdk")
+            roots = {name: work / "component-staging" / name
+                     for name in ("rust", "cargo", "toolchain", "collector", "csdk", "vendor")}
+            inventories = {name: ci_sdk.verify_component(root,
+                sdk_info["component_info"][name]["manifest"], name) for name, root in roots.items()}
+    else:
+        sdk_info = read_sdk(work / "verified-source-sdk")
+        prepared = consumer_inputs.provision_inputs(
+            bundle, work, supervisor, host, sdk_info, inputs,
+            sdk=ci_sdk, auth=ci_auth, extract_cargo=_extract_flat_cargo)
+        roots, inventories = prepared["component_roots"], prepared["component_inventories"]
+    expected_selection = {"python": str(python.resolve(strict=True)),
+                          "components": {name: str(path.resolve(strict=True)) for name, path in roots.items()}}
+    if check_only:
+        if not selection.is_file() or strict_json(selection, 1024 * 1024) != expected_selection:
+            raise ValueError("retained selection differs from the verified prerequisite roots")
+    supervisor.check_limits("complete consumer preparation" if not check_only else "retained prerequisite recheck")
+    _assert_source_clean(identity["source_sha"])
+    result = {"schema": "ami-rust-consumer-preparation-v1",
+              "status": "VERIFIED_RETAINED_INPUTS" if check_only else "PREPARED_VERIFIED_INPUTS_NOT_INSTALLED",
+              "host": host, "source_policy": identity, "policy_path": str(policy_path),
+              "policy_sha256": sha256(policy_path), "python": str(python),
+              "python_bootstrap": python_bootstrap, "selection_path": str(selection),
+              "component_roots": {name: str(path) for name, path in roots.items()},
+              "components": inventories, "sdk_manifest_sha256": sdk_info["manifest_sha256"],
+              "release_manifest_sha256": verified["release_manifest_sha256"],
+              "capacity": capacity, "commands": supervisor.commands,
+              "installed": False, "R1_accepted": False}
+    if not check_only:
+        receipt = output / "consumer-preparation.json"
+        if receipt.exists() or receipt.is_symlink():
+            raise ValueError("consumer preparation receipt must be fresh")
+        result["provisioning"] = {key: value for key, value in prepared.items()
+                                  if key not in {"component_roots", "component_inventories"}}
+        selection_raw = canonical_json(expected_selection)
+        result["selection_sha256"] = hashlib.sha256(selection_raw).hexdigest()
+        encoded = canonical_json(result)
+        if ci_sdk.directory_bytes(output) + len(encoded) > MAX_OUTPUT_BYTES:
+            raise ValueError("preparation receipt exceeds its output bound")
+        _write_selection(selection, python, roots)
+        with receipt.open("xb") as stream:
+            stream.write(encoded)
+    else:
+        result["selection_sha256"] = sha256(selection)
+    return result
+
+
+def _recheck_capacity(resources: dict, state_volume: Path) -> dict:
+    """A retained-input check is not another cold provisioning/build phase."""
+    ram_min, _ = ci_sdk.validate_resource_schema(resources)
+    ram = ci_sdk.physical_memory_bytes(host_identity())
+    # Existing bounds cover the temporary SDK copy plus all new logs/receipts.
+    scratch = MAX_ARCHIVE_EXPANDED + ci_sdk.MAX_LOG_BYTES + MAX_OUTPUT_BYTES
+    free = shutil.disk_usage(state_volume).free
+    if ram < ram_min or free < scratch:
+        raise ValueError("retained-input recheck has insufficient RAM or bounded scratch space")
+    return {"phase": "retained-input-check-only", "physical_ram_bytes": ram,
+            "ram_minimum_bytes": ram_min, "free_disk_bytes": free,
+            "scratch_required_bytes": scratch, "cold_provisioning_admitted": False}
 
 
 def _candidate_inventory(bundle: Path) -> tuple[list[tuple[str, Path]], int]:
@@ -743,8 +928,10 @@ def _write_selection(path: Path, python: Path, components: dict[str, Path]) -> d
 
 def _copy_components_to_consumers(staging: dict[str, Path], consumers: list[Path],
                                   component_info: dict, supervisor) -> list[dict[str, Path]]:
-    copied = []
-    for consumer in consumers:
+    # The first root uses the selection emitted by the documented preparation
+    # command. Only the second root needs an independent prerequisite copy.
+    copied = [staging]
+    for consumer in consumers[1:]:
         destination_root = consumer / "components"
         destination_root.mkdir(mode=0o700)
         rows = {}
@@ -759,7 +946,7 @@ def _copy_components_to_consumers(staging: dict[str, Path], consumers: list[Path
 
 
 def _run_recipe_line(supervisor, env: dict[str, str], cwd: Path, line: str, label: str) -> tuple[dict, str, str]:
-    if line not in EXPECTED_RECIPE:
+    if line not in (*EXPECTED_RECIPE, *PREPARATION_COMMANDS):
         raise ValueError("consumer command differs from the reviewed signed QUICKSTART recipe")
     command = "/bin/sh"
     # Run the authenticated command as written; only the explicit recipe variables differ per root.
@@ -789,6 +976,18 @@ def _recipe_commands(bundle: Path) -> tuple[list[str], str]:
     if tuple(commands) != EXPECTED_RECIPE:
         raise ValueError("signed QUICKSTART does not contain the exact reviewed 12-command recipe")
     return commands, hashlib.sha256(raw).hexdigest()
+
+
+def _preparation_commands(bundle: Path) -> tuple[str, str]:
+    text = (bundle / "QUICKSTART.md").read_text(encoding="utf-8")
+    blocks = re.findall(r"```sh\n(.*?)\n```", text, re.S)
+    lines = [line for block in blocks for line in block.splitlines()]
+    if lines.count(BOOTSTRAP_COMMAND) != 1:
+        raise ValueError("QUICKSTART does not contain the reviewed Python bootstrap command")
+    commands = tuple(line for line in lines if line.startswith(PREPARATION_PREFIX))
+    if commands != PREPARATION_COMMANDS:
+        raise ValueError("QUICKSTART does not contain the reviewed preparation and recheck commands")
+    return commands
 
 
 def _validate_trusted_consumer_assets(bundle: Path, verifier_result: dict, policy: dict,
@@ -982,20 +1181,39 @@ def _run_recipe_builds(supervisor, python: Path, host: str, reference: dict,
         for variant in VARIANTS]}
 
 
+def _create_consumer_roots(work: Path) -> Path:
+    # Require a genuinely fresh directory. mkdir must never follow an existing
+    # consumers symlink or accept an old installation/output tree.
+    root = work / "consumers"
+    root.mkdir(mode=0o700)
+    first = root / "absolute-a"
+    first.mkdir(mode=0o700)
+    return first
+
+
 def _install_and_run_recipe(bundle: Path, work: Path, output: Path, python: Path,
                             supervisor, host: str, sdk: dict, components: dict,
                             reference: dict, commands: list[str]) -> dict:
     consumers_root = work / "consumers"
-    consumers_root.mkdir(mode=0o700, exist_ok=True)
+    if (consumers_root.is_symlink() or not consumers_root.is_dir()
+            or consumers_root.resolve().parent != work.resolve()):
+        raise ValueError("consumer roots must remain inside managed work")
     marker = consumers_root / "unrelated-sibling-marker.txt"
-    marker.write_bytes(b"preserved-sibling-marker-v1\n")
+    with marker.open("xb") as stream:
+        stream.write(b"preserved-sibling-marker-v1\n")
     marker.chmod(0o600)
     consumers = [consumers_root / "absolute-a", consumers_root / "absolute-b"]
-    for consumer in consumers:
-        consumer.mkdir(mode=0o700)
+    if consumers[0].is_symlink() or consumers[0].resolve().parent != consumers_root.resolve():
+        raise ValueError("prepared consumer escapes managed work")
+    if set(path.name for path in consumers[0].iterdir()) != {"selection.json"}:
+        raise ValueError("prepared first consumer must contain only its verified selection")
+    consumers[1].mkdir(mode=0o700)
     component_copies = _copy_components_to_consumers(components, consumers, sdk["component_info"], supervisor)
-    selections = [_write_selection(root / "selection.json", python, rows)
-                  for root, rows in zip(consumers, component_copies, strict=True)]
+    expected_first = {"python": str(python.resolve(strict=True)),
+                      "components": {key: str(path.resolve(strict=True)) for key, path in components.items()}}
+    if strict_json(consumers[0] / "selection.json") != expected_first:
+        raise ValueError("first consumer selection differs from documented preparation")
+    _write_selection(consumers[1] / "selection.json", python, component_copies[1])
     envs = []
     receipt_pins = {}
     for consumer in consumers:
@@ -1064,9 +1282,12 @@ def _install_and_run_recipe(bundle: Path, work: Path, output: Path, python: Path
         other_prefix = other / "sdk-0.1.0"
         if name == "absolute-a" and (not other_prefix.is_dir() or other_prefix.is_symlink()):
             raise ValueError("uninstall of A removed the installed sibling B")
+        if name == "absolute-b" and (other_prefix.exists() or other_prefix.is_symlink()):
+            raise ValueError("uninstall of B recreated the already removed sibling A")
         uninstall_rows[name] = {"command": commands[11], "process": row, "result": result,
                                 "selected_prefix_absent": True, "sibling_prefix_preserved":
-                                    other_prefix.is_dir() if name == "absolute-a" else True,
+                                    True if name == "absolute-a" else None,
+                                "sibling_prefix_was_installed": name == "absolute-a",
                                 "project_preserved": True, "marker_preserved": True}
         command_rows[name].append({"recipe_index": 11, "command": commands[11],
                                    "process": row, "result": result})
@@ -1099,12 +1320,15 @@ def qualify(bundle_path: Path, work: Path, output: Path, python_root: Path) -> d
     identity = ci_auth.context(ROOT)
     python, python_bootstrap = ci_sdk.verify_python_bootstrap(python_root, host)
     _managed_roots(work, output, python_root)
+    candidate_original = bundle_path.absolute()
+    _, external_candidate_bytes = _candidate_inventory(candidate_original)
     manifest_path = ROOT / "release/ci-auth-tools.json"
     tool_manifest = strict_json(manifest_path, 1024 * 1024)
     tool_pins = validate_tool_manifest(tool_manifest, host)
     receipt_path = _tools_receipt(output)
     if not receipt_path.exists():
-        bootstrap_tools(work, output, python_root, source_commit=identity["source_sha"])
+        bootstrap_tools(work, output, python_root, source_commit=identity["source_sha"],
+                        additional_input_bytes=external_candidate_bytes)
     tool_receipt = _verify_tool_receipt(work, output, host, tool_manifest)
     if {path.name for path in output.iterdir()} != {"tool-bootstrap.json"}:
         raise ValueError("consumer output directory contains unexpected preexisting entries")
@@ -1113,6 +1337,7 @@ def qualify(bundle_path: Path, work: Path, output: Path, python_root: Path) -> d
     env = _tool_env(work, python)
     # Do not pass workflow credentials or ambient proxy settings into verifier/build subprocesses.
     supervisor = ci_sdk.Supervisor(work, output, python_root, env)
+    supervisor.checkout_bytes += external_candidate_bytes
     gh_text = _version_text(supervisor, work / "tools/gh", ["--version"], "recheck-gh-version")
     cosign_text = _version_text(supervisor, work / "tools/cosign", ["version"], "recheck-cosign-version")
     if "gh version 2.102.0" not in gh_text or not re.search(r"\bv?3\.1\.3\b", cosign_text):
@@ -1120,17 +1345,18 @@ def qualify(bundle_path: Path, work: Path, output: Path, python_root: Path) -> d
     if (sha256(work / "tools/gh") != tool_pins["gh"]["binary_sha256"]
             or sha256(work / "tools/cosign") != tool_pins["cosign"]["binary_sha256"]):
         raise ValueError("pinned verifier tool changed while checking its version")
-    candidate_original = bundle_path.absolute()
     if (candidate_original == work or candidate_original in work.parents
             or work in candidate_original.parents or candidate_original == output
             or candidate_original in output.parents or output in candidate_original.parents):
         raise ValueError("candidate bundle must not overlap managed work or output")
     bundle = work / "candidate"
     bundle_copy = _copy_candidate(candidate_original, bundle)
+    if bundle_copy["bytes"] != external_candidate_bytes:
+        raise ValueError("external candidate size changed after resource admission")
     commands, quickstart_sha = _recipe_commands(bundle)
 
     # Validate policy, capacity, and the native reference from the protected source.
-    reference_inputs, resources, host_rows, capacity = ci_sdk.load_normative(
+    reference_inputs, resources, host_rows = ci_sdk.read_normative(
         ROOT / "release/ci-sdk-inputs.json", ROOT / "release/ci-resources.json", host)
     capacity = ci_sdk.validate_resource_policy(resources, work.parent)
     reference = ci_sdk.validate_native_reference(
@@ -1165,54 +1391,34 @@ def qualify(bundle_path: Path, work: Path, output: Path, python_root: Path) -> d
         lambda candidate, policy_value, label: _expect_verify_rejection(
             supervisor, python, candidate, policy_value, label))
 
+    prepare_command, check_command = _preparation_commands(bundle)
+    first_consumer = _create_consumer_roots(work)
+    preparation_env = dict(supervisor.env)
+    preparation_env.update({"SOURCE": str(ROOT), "SOURCE_COMMIT": identity["source_sha"],
+                            "WORKFLOW_COMMIT": identity["workflow_sha"],
+                            "PREP_PYTHON": str(python), "PYTHON_BOOTSTRAP": str(python_root),
+                            "PREP": str(work), "PREP_OUTPUT": str(output),
+                            "BUNDLE": str(candidate_original), "WORK": str(first_consumer)})
+    prepare_row, prepare_stdout, _ = _run_recipe_line(
+        supervisor, preparation_env, first_consumer, prepare_command, "documented-prepare-inputs")
+    preparation = _parse_command_result(prepare_stdout, "PREPARED_VERIFIED_INPUTS_NOT_INSTALLED",
+                                        "documented consumer preparation")
+    if (preparation.get("source_policy") != {key: identity[key] for key in ("source_sha", "workflow_sha")}
+            or preparation.get("release_manifest_sha256") != sha256(bundle / "release.json")):
+        raise ValueError("documented preparation returned a different publisher source policy")
     sdk_root = work / "verified-source-sdk"
-    sdk_info_raw = ci_sdk._extract_sdk_archive(
-        bundle / "sdk.tar.xz", sdk_root, asset_rows["sdk.tar.xz"]["sha256"],
-        asset_rows["sdk.tar.xz"]["bytes"], 94)
-    sdk_info = {**sdk_info_raw, "component_info": ci_sdk._component_rows_from_sdk(sdk_info_raw, host)}
-    component_info = sdk_info["component_info"]
-    sdk_manifest = sdk_info["manifest"]
-    if sdk_manifest.get("source_identity") != identity["source_sha"]:
-        raise ValueError("candidate SDK source commit differs from the external protected source policy")
-    component_staging = work / "component-staging"
-    component_staging.mkdir(mode=0o700)
-    rust_root, rust_archives, rust_extracts = ci_sdk._install_rust(
-        host_rows, reference_inputs, work, work / "component-staging", supervisor)
-    version = supervisor.run_text([str(rust_root / "bin/rustc"), "-Vv"], cwd=work,
-                                  label="verify-consumer-rust-identity", timeout=30)
-    if ("commit-hash: " + reference_inputs["rust_commit"] not in version
-            or "LLVM version: " + reference_inputs["rust_llvm"] not in version
-            or "host: " + TARGETS[host] not in version):
-        raise ValueError("installed Rust prerequisite differs from the pinned release profile")
-    staging = {"rust": rust_root}
-    component_staging = work / "component-staging"
-    for name in ("toolchain", "collector", "csdk", "vendor"):
-        (component_staging / name).parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    toolchain, toolchain_pin, toolchain_extract = ci_sdk._extract_pinned_component(
-        host_rows["toolchain"], "toolchain", work, component_staging / "toolchain", supervisor)
-    collector, collector_pin, collector_extract = ci_sdk._extract_pinned_component(
-        host_rows["collector"], "collector", work, component_staging / "collector", supervisor,
-        component_info["collector"]["manifest"])
-    staging.update({"toolchain": toolchain, "collector": collector})
-    shared_inputs = reference_inputs["shared"]
-    shared_receipts = {}
-    for name in ("csdk", "vendor"):
-        pin = (ci_sdk.portable_csdk_prerequisite(reference_inputs)
-               if name == "csdk" else shared_inputs[name])
-        root, row = ci_sdk._extract_local_component(
-            pin, name, component_staging / name, supervisor)
-        staging[name] = root
-        shared_receipts[name] = row
-    cargo_manifest = component_info["cargo"]["manifest"]
-    ci_auth.cargo_matches((bundle / f"cargo-{host}.tar.xz").read_bytes(), cargo_manifest)
-    cargo_root = component_staging / "cargo"
-    cargo_inventory = _extract_flat_cargo(bundle / f"cargo-{host}.tar.xz", cargo_root, cargo_manifest)
-    staging["cargo"] = cargo_root
-    ordered_components = {name: staging[name] for name in
-                          ("rust", "cargo", "toolchain", "collector", "csdk", "vendor")}
-    component_inventories = {name: ci_sdk.verify_component(root, component_info[name]["manifest"], name)
-                             for name, root in ordered_components.items()}
-    supervisor.check_limits("all six verified consumer prerequisites")
+    manifest_path = sdk_root / "contract/sdk.json"
+    sdk_info = {"root": sdk_root, "manifest": ci_sdk.read_json(manifest_path, 2 * 1024**2),
+                "manifest_sha256": sha256(manifest_path)}
+    sdk_info["component_info"] = ci_sdk._component_rows_from_sdk(sdk_info, host)
+    if (sdk_info["manifest_sha256"] != preparation.get("sdk_manifest_sha256")
+            or sdk_info["manifest"].get("source_identity") != identity["source_sha"]):
+        raise ValueError("prepared SDK differs from the authenticated preparation receipt")
+    ordered_components = {name: work / "component-staging" / name
+                          for name in ("rust", "cargo", "toolchain", "collector", "csdk", "vendor")}
+    component_inventories = {name: ci_sdk.verify_component(
+        root, sdk_info["component_info"][name]["manifest"], name)
+        for name, root in ordered_components.items()}
 
     commands, quickstart_sha = _recipe_commands(bundle)
     consumer_report = _install_and_run_recipe(
@@ -1220,6 +1426,13 @@ def qualify(bundle_path: Path, work: Path, output: Path, python_root: Path) -> d
         reference, commands)
     if len(consumer_report["retained_native"]) != 5:
         raise ValueError("consumer output must retain exactly the five matched native variants")
+    check_row, check_stdout, _ = _run_recipe_line(
+        supervisor, preparation_env, first_consumer, check_command, "documented-check-inputs-after-uninstall")
+    recheck = _parse_command_result(check_stdout, "VERIFIED_RETAINED_INPUTS", "documented retained input check")
+    if (recheck.get("components") != component_inventories
+            or recheck.get("selection_sha256") != preparation.get("selection_sha256")
+            or recheck.get("policy_sha256") != preparation.get("policy_sha256")):
+        raise ValueError("post-uninstall preparation recheck differs from the original verified inputs")
     _assert_source_clean(identity["source_sha"])
     supervisor.check_limits("completed consumer qualification")
     result = {
@@ -1244,12 +1457,11 @@ def qualify(bundle_path: Path, work: Path, output: Path, python_root: Path) -> d
             "release_manifest_sha256": initial_verify["release_manifest_sha256"],
             "authentication": initial_verify["authentication"]},
         "provisioning": {"components": component_inventories,
-                         "rust_archives": rust_archives, "rust_installer": rust_extracts,
-                         "toolchain": {"pin": toolchain_pin, "extraction": toolchain_extract},
-                         "collector": {"pin": collector_pin, "extraction": collector_extract},
-                         "shared": shared_receipts,
-                         "cargo_archive_sha256": asset_rows[f"cargo-{host}.tar.xz"]["sha256"],
-                         "cargo_inventory": cargo_inventory},
+                         **preparation["provisioning"]},
+        "documented_preparation": {"command": prepare_command, "process": prepare_row,
+                                   "receipt_sha256": sha256(output / "consumer-preparation.json"),
+                                   "after_uninstall": {"command": check_command, "process": check_row,
+                                                       "result": recheck}},
         "consumer_recipe": {"quickstart_sha256": quickstart_sha,
                             "commands_per_root": list(commands),
                             "roots": consumer_report["commands"],
@@ -1325,12 +1537,19 @@ def _write_failure(output: Path, error: BaseException, stage: str) -> dict | Non
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    for command in ("bootstrap-tools", "qualify"):
+    for command in ("bootstrap-tools", "qualify", "prepare-inputs", "check-inputs"):
         child = commands.add_parser(command)
         child.add_argument("--work", type=Path, required=True)
         child.add_argument("--output", type=Path, required=True)
         child.add_argument("--python-bootstrap-root", type=Path, required=True)
-        if command == "qualify":
+        if command == "bootstrap-tools":
+            child.add_argument("--source-commit", help="exact publisher source commit selected outside the candidate")
+        if command in ("prepare-inputs", "check-inputs"):
+            child.add_argument("--source-commit", required=True,
+                               help="exact publisher source commit selected outside the candidate")
+            child.add_argument("--workflow-commit", help="trusted workflow commit; defaults to source commit")
+            child.add_argument("--selection", type=Path, required=True)
+        if command != "bootstrap-tools":
             child.add_argument("--bundle", type=Path, required=True)
     args = parser.parse_args(argv)
     stage = args.command
@@ -1339,9 +1558,14 @@ def main(argv=None) -> int:
         if not sys.flags.isolated or not sys.dont_write_bytecode:
             raise ValueError("run ci_verify.py under the pinned Python with -I -B")
         if args.command == "bootstrap-tools":
-            result = bootstrap_tools(args.work, args.output, args.python_bootstrap_root)
-        else:
+            result = bootstrap_tools(args.work, args.output, args.python_bootstrap_root,
+                                     source_commit=args.source_commit)
+        elif args.command == "qualify":
             result = qualify(args.bundle, args.work, args.output, args.python_bootstrap_root)
+        else:
+            result = prepare_consumer_inputs(args.bundle, args.work, args.output,
+                args.python_bootstrap_root, args.source_commit, args.workflow_commit,
+                args.selection, check_only=args.command == "check-inputs")
         print(json.dumps(result, sort_keys=True, separators=(",", ":")))
         return 0
     except BaseException as error:
