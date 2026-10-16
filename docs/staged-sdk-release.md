@@ -54,6 +54,48 @@ bytes before exposing a prerelease. Public byte verification and two-host
 consumer/guest replay under R1-A8 must succeed before promotion to supported
 stable/latest. A failing gate leaves the previous supported release unchanged.
 
-Automated release-please dispatch, real signing/attestation, prerelease exposure
-and promotion are not implemented by these helpers. Their isolated fixtures
-establish byte-management behavior only; they are not production release proof.
+## Protected complete-candidate producer
+
+The normal protected SDK workflow adds the complete-candidate job only after
+both independent consumers have succeeded. Reference-proposal runs skip it.
+The job uses the freshly authenticated Linux bundle containing the common SDK
+and both host-Cargo components; its signer profile does not restrict the
+consumer to Linux. The external source policy permits both qualified hosts.
+
+Before packing, `release/candidate_auth.py` re-verifies the inner publisher
+evidence under the exact source-selected policy, tools and roots. The existing
+deterministic staging helper then creates the payload and exact transport
+inventory. Real Cosign OIDC signatures cover the payload and inventory. Four
+individual GitHub provenance attestations cover payload, SBOM, inventory and
+complete checksums, preserving the verifier's one-subject-per-bundle policy.
+Each action bundle is copied immediately to its own path before another
+attestation invocation can reuse the action output location.
+
+The job verifies the actual cryptographic proofs against the source, workflow,
+run, environment, runner and complete input-material identities. Deliberately
+modified payload copies must fail both GitHub and Cosign verification; a
+missing asset must fail the complete inventory check. It retains the actual
+proofs, results and mutation recipe/hashes without replacing the original
+payload. The transient mutated copy is outside the retained candidate tree.
+
+The new artifact contains `candidate/` (exactly six release files) and
+`metadata/` (attestations, verification and cleanup receipts). Its prospective
+96 MiB retention ceiling accounts for the bounded 32 MiB transport, duplicated
+SBOM and proofs with headroom. One protected admission job, before either producer starts, reserves seven
+existing 32 MiB artifacts plus this 96 MiB artifact, 320 MiB in total, against
+the unchanged 512 MiB provider pool. Matrix jobs do not reserve the same DAG a
+second time after another producer has already uploaded. A reference proposal
+reserves only its two 32 MiB producer artifacts, because the remaining jobs are
+skipped and cannot upload. It remains ineligible for authentication. These are hosted retention requirements, not application
+memory limits. Host RAM/build settings and the guest profile are unchanged.
+Earlier source runs and their reservation records retain their original scope.
+
+Successful output is `OUTER_CRYPTO_VERIFIED_NOT_R1_ACCEPTED`. A cleanup receipt
+may report verification success only when the actual bounded report identifies
+this exact source/run. Failed partial candidates and outcomes remain available
+for diagnosis and must not be admitted as release-ready artifacts.
+
+Actual successful protected production is still required; isolated fixtures do
+not establish signing/provenance acceptance. Automated release-please dispatch,
+prerelease exposure and promotion remain separate work. No stage here publishes
+an SDK or replaces independent R1 acceptance and public replay.

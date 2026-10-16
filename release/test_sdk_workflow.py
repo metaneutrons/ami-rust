@@ -12,6 +12,9 @@ import unittest
 WORKFLOW = Path(__file__).resolve().parents[1] / ".github/workflows/sdk-qualify.yml"
 SOURCE = WORKFLOW.read_text()
 CLEANUP = textwrap.dedent(SOURCE.split("python3 -I -B - <<'PYCODE'\n", 1)[1].split("          PYCODE", 1)[0])
+OUTER = SOURCE.split("\n  release-candidate:\n", 1)[1].split("\n  assemble:\n", 1)[0]
+OUTER_CLEANUP = textwrap.dedent(OUTER.split("name: Retire release work and preserve bounded candidate evidence", 1)[1]
+                              .split("python3 -I -B - <<'PYCODE'\n", 1)[1].split("          PYCODE", 1)[0])
 
 
 class WorkflowProposalTests(unittest.TestCase):
@@ -84,6 +87,114 @@ class WorkflowProposalTests(unittest.TestCase):
         self.assertIn("  assemble:\n    if: ${{ !inputs.reference_proposal }}", SOURCE)
         self.assertIn("needs: assemble", SOURCE)
         self.assertIn("needs: authenticate", SOURCE)
+
+
+class WorkflowAdmissionTests(unittest.TestCase):
+    def test_reserves_complete_dag_once_before_both_producers(self):
+        admission = SOURCE.split("\n  admission:\n", 1)[1].split("\n  producer:\n", 1)[0]
+        producer = SOURCE.split("\n  producer:\n", 1)[1].split("\n  release-candidate:\n", 1)[0]
+        command = "release/ci_artifact_admission.py --sdk-candidate"
+        self.assertEqual(SOURCE.count(command), 1)
+        self.assertIn(command, admission)
+        self.assertIn("environment: release", admission)
+        self.assertIn("test \"$SOURCE_IS_PROTECTED\" = true", admission)
+        self.assertIn("needs: admission", producer)
+        self.assertIn("needs.admission.result == 'success'", producer)
+        self.assertNotIn("steps.admission", producer)
+
+    def test_bootstrap_uses_siblings_and_preserves_receipt_for_outer_verifier(self):
+        bootstrap = OUTER.split("name: Bootstrap pinned verifier tools and roots", 1)[1].split(
+            "      - name: Verify inner publisher", 1)[0]
+        self.assertIn('--output "$RUNNER_TEMP/ami-rust-release-bootstrap"', bootstrap)
+        self.assertNotIn('--output "$RUNNER_TEMP/ami-rust-release-output/metadata"', bootstrap)
+        self.assertIn('install -d -m 700 "$RUNNER_TEMP/ami-rust-release-output/metadata"', bootstrap)
+        self.assertIn('"$RUNNER_TEMP/ami-rust-release-bootstrap/tool-bootstrap.json"', bootstrap)
+        self.assertIn('"$RUNNER_TEMP/ami-rust-release-output/metadata/tool-bootstrap.json"', bootstrap)
+
+
+    def test_each_attestation_is_copied_before_the_action_can_reuse_its_path(self):
+        with tempfile.TemporaryDirectory(prefix="outer-attest-copy-") as directory:
+            root = Path(directory).resolve()
+            original = root / "reused-action-bundle.json"
+            for key, following in (("payload", "payload SBOM"), ("sbom", "transport inventory"),
+                                   ("transport", "complete checksums"), ("checksums", None)):
+                position = OUTER.index("id: attest-" + key + "\n")
+                preserve = OUTER.index("ami-rust-release-attestations/" + key + ".json", position)
+                if following:
+                    self.assertLess(preserve, OUTER.index("name: Attest " + following))
+                # Execute the actual workflow's copy commands using a reused
+                # action output path. Earlier proofs must remain unchanged.
+                block = OUTER[position:].split("        run: |\n", 1)[1].split("      - name:", 1)[0]
+                script = textwrap.dedent(block)
+                original.write_text(key)
+                subprocess.run(["/bin/bash", "-e", "-c", script], check=True,
+                               env={**os.environ, "RUNNER_TEMP":str(root), "BUNDLE_PATH":str(original)})
+            original.write_text("overwritten action output")
+            for key in ("payload", "sbom", "transport", "checksums"):
+                self.assertEqual((root / "ami-rust-release-attestations" / (key + ".json")).read_text(), key)
+
+
+class OuterWorkflowTests(unittest.TestCase):
+    def run_cleanup(self, *, receipt=True, wrong_source=False, outcome="success", oversized=False):
+        with tempfile.TemporaryDirectory(prefix="outer-cleanup-") as directory:
+            root = Path(directory).resolve()
+            for name in ('ami-rust-release-inner', 'ami-rust-release-work', 'ami-rust-release-bootstrap', 'ami-rust-release-attestations', 'ami-rust-python-bootstrap'):
+                (root / name).mkdir()
+            output = root / 'ami-rust-release-output'
+            metadata = output / 'metadata'
+            metadata.mkdir(parents=True)
+            candidate = output / 'candidate'
+            candidate.mkdir()
+            (candidate / 'fixture').write_bytes(b'unchanged fixture')
+            if oversized:
+                with (candidate / 'sparse').open('wb') as stream:
+                    stream.truncate(97 * 1024**2)
+            if receipt:
+                (metadata / 'outer-verification.json').write_text(json.dumps({
+                    'status':'OUTER_CRYPTO_VERIFIED_NOT_R1_ACCEPTED',
+                    'source_commit':('b' if wrong_source else 'a') * 40,
+                    'run_id':123, 'run_attempt':1}))
+            env = {**os.environ, 'RUNNER_TEMP':str(root), 'VERIFY_RESULT':outcome,
+                   'GITHUB_SHA':'a' * 40, 'GITHUB_RUN_ID':'123', 'GITHUB_RUN_ATTEMPT':'1'}
+            result = subprocess.run([sys.executable, '-I', '-B', '-c', OUTER_CLEANUP],
+                                    capture_output=True, text=True, env=env)
+            self.assertFalse((root / 'ami-rust-release-work').exists())
+            self.assertFalse((root / 'ami-rust-release-bootstrap').exists())
+            self.assertEqual((candidate / 'fixture').read_bytes(), b'unchanged fixture')
+            cleanup = metadata / 'cleanup.json'
+            return result, json.loads(cleanup.read_bytes()) if cleanup.exists() else None
+
+    def test_success_requires_real_bound_receipt_and_retires_work(self):
+        result, receipt = self.run_cleanup()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(receipt['verification_outcome'], 'success')
+        self.assertIs(receipt['SDK_published'], False)
+        self.assertEqual(receipt['remaining_work_bytes'], 0)
+
+    def test_success_without_receipt_or_with_other_source_fails(self):
+        for options in ({'receipt':False}, {'wrong_source':True}):
+            with self.subTest(options=options):
+                result, receipt = self.run_cleanup(**options)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIsNone(receipt)
+
+    def test_failed_verification_preserves_partial_candidate_without_success_claim(self):
+        result, receipt = self.run_cleanup(receipt=False, outcome='failure')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(receipt['verification_outcome'], 'failure')
+        self.assertIs(receipt['SDK_published'], False)
+
+    def test_actual_retained_output_bound_is_enforced(self):
+        result, receipt = self.run_cleanup(oversized=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('96 MiB output', result.stderr)
+        self.assertIsNone(receipt)
+
+    def test_outer_signer_depends_on_consumers_and_excludes_proposals(self):
+        self.assertIn('if: ${{ !inputs.reference_proposal }}', OUTER)
+        self.assertIn('needs: [consumer]', OUTER)
+        self.assertNotIn('release upload', OUTER)
+        self.assertNotIn('release edit', OUTER)
 
 
 if __name__ == "__main__":

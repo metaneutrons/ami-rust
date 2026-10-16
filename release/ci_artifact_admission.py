@@ -6,6 +6,17 @@ from pathlib import Path
 import urllib.request
 
 REPOSITORY = 'metaneutrons/ami-rust'
+MIB = 1024**2
+# The complete serialized normal workflow: seven existing 32 MiB artifacts
+# plus a 96 MiB outer candidate/provenance artifact. The latter admits a
+# 32 MiB archive, its exact SBOM copy and all signatures/proofs with headroom.
+SDK_ARTIFACT_CEILINGS = {
+    'producer-macos': 32 * MIB, 'producer-linux': 32 * MIB,
+    'unsigned-common': 32 * MIB,
+    'authenticated-macos': 32 * MIB, 'authenticated-linux': 32 * MIB,
+    'consumer-macos': 32 * MIB, 'consumer-linux': 32 * MIB,
+    'release-candidate-and-proofs': 96 * MIB,
+}
 
 
 def admit(pages, ceiling, pending_bytes):
@@ -44,12 +55,17 @@ def admit(pages, ceiling, pending_bytes):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sdk-candidate', action='store_true')
+    parser.add_argument('--reference-proposal', action='store_true',
+                        help='reserve only the two unaccepted host-reference artifacts')
     args = parser.parse_args()
+    if args.reference_proposal and not args.sdk_candidate:
+        parser.error('--reference-proposal requires --sdk-candidate')
     policy = json.loads((Path(__file__).parent/'ci-resources.json').read_text())
     ceiling = policy['retention']['CI_artifact_pool_bytes']
     # Admit the entire serialized DAG before either matrix producer uploads:
-    # 2 producer + 1 common candidate + 2 signed + 2 consumer artifacts.
-    pending = (7 if args.sdk_candidate else 2)*32*1024**2
+    selected = {key:value for key,value in SDK_ARTIFACT_CEILINGS.items()
+                if not args.reference_proposal or key.startswith('producer-')}
+    pending = sum(selected.values()) if args.sdk_candidate else 2 * 32 * MIB
     if args.sdk_candidate and (os.environ.get('GITHUB_REF') != 'refs/heads/main'
                               or os.environ.get('SOURCE_IS_PROTECTED') != 'true'):
         raise ValueError('SDK candidate retention requires protected main')
@@ -74,6 +90,9 @@ def main():
             break
     report = admit(pages, ceiling, pending)
     report['SDK_candidate_upload_allowed'] = args.sdk_candidate
+    if args.sdk_candidate:
+        report['workflow_artifact_ceilings_bytes'] = selected
+        report['reference_proposal'] = args.reference_proposal
     report['SDK_release_publication_authorized'] = False
     print(json.dumps(report, sort_keys=True))
 

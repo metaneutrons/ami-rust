@@ -17,7 +17,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  admission:
+    name: Admit complete workflow artifact retention
+    runs-on: ubuntu-24.04
+    environment: release
+    timeout-minutes: 5
+    steps:
+      - name: Require protected main and the designated repository
+        shell: bash
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+        run: |
+          test "$GITHUB_REPOSITORY" = metaneutrons/ami-rust
+          test "$GITHUB_REF" = refs/heads/main
+          test "$SOURCE_IS_PROTECTED" = true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Admit aggregate CI artifact retention once before either producer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+          REFERENCE_PROPOSAL: ${{ inputs.reference_proposal }}
+        shell: bash
+        run: |
+          proposal_args=()
+          if [ "$REFERENCE_PROPOSAL" = true ]; then
+            proposal_args+=(--reference-proposal)
+          fi
+          python3 -I -B release/ci_artifact_admission.py --sdk-candidate "${proposal_args[@]}"
+
   producer:
+    needs: admission
     name: SDK producer (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     environment: release
@@ -44,12 +75,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Admit aggregate CI artifact retention
-        id: admission
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
-        run: python3 -I -B release/ci_artifact_admission.py --sdk-candidate
       - name: Install the pinned standalone Python runtime
         id: python-runtime
         shell: bash
@@ -280,11 +305,236 @@ jobs:
           print(json.dumps(receipt, sort_keys=True))
           PYCODE
       - name: Upload bounded host candidate and receipts
-        if: always() && steps.admission.outcome == 'success' && steps.cleanup.outcome == 'success'
+        if: always() && needs.admission.result == 'success' && steps.cleanup.outcome == 'success'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sdk-candidate-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/ami-rust-sdk-output
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
+
+  release-candidate:
+    name: Authenticate complete release transport
+    if: ${{ !inputs.reference_proposal }}
+    needs: [consumer]
+    runs-on: ubuntu-24.04
+    environment: release
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned Python
+        run: python3 -I -B release/ci_python.py --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" --inputs release/ci-python-inputs.json
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sdk-authenticated-linux-x86_64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-release-inner
+      - name: Bootstrap pinned verifier tools and roots
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+          PUBLISHER_ENVIRONMENT: release
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_verify.py bootstrap-tools \
+            --work "$RUNNER_TEMP/ami-rust-release-work" \
+            --output "$RUNNER_TEMP/ami-rust-release-bootstrap" \
+            --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap"
+          install -d -m 700 "$RUNNER_TEMP/ami-rust-release-output/metadata"
+          install -m 600 "$RUNNER_TEMP/ami-rust-release-bootstrap/tool-bootstrap.json" \
+            "$RUNNER_TEMP/ami-rust-release-output/metadata/tool-bootstrap.json"
+      - name: Verify inner publisher evidence and prepare the exact transport
+        id: prepare
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+          PUBLISHER_ENVIRONMENT: release
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/candidate_auth.py prepare \
+            --bundle "$RUNNER_TEMP/ami-rust-release-inner" \
+            --candidate "$RUNNER_TEMP/ami-rust-release-output/candidate" \
+            --work "$RUNNER_TEMP/ami-rust-release-work" \
+            --metadata "$RUNNER_TEMP/ami-rust-release-output/metadata" \
+            --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap"
+      - name: Sign the payload and transport inventory
+        shell: bash
+        env:
+          PAYLOAD: ${{ steps.prepare.outputs.payload_name }}
+          TRANSPORT: ${{ steps.prepare.outputs.transport_name }}
+          PAYLOAD_SIGNATURE: ${{ steps.prepare.outputs.payload_signature_name }}
+          TRANSPORT_SIGNATURE: ${{ steps.prepare.outputs.transport_signature_name }}
+        run: |
+          set -euo pipefail
+          candidate="$RUNNER_TEMP/ami-rust-release-output/candidate"
+          "$RUNNER_TEMP/ami-rust-release-work/tools/cosign" sign-blob --yes \
+            --bundle "$candidate/$PAYLOAD_SIGNATURE" "$candidate/$PAYLOAD"
+          "$RUNNER_TEMP/ami-rust-release-work/tools/cosign" sign-blob --yes \
+            --bundle "$candidate/$TRANSPORT_SIGNATURE" "$candidate/$TRANSPORT"
+      - name: Finalize the complete checksum inventory
+        id: final
+        env:
+          TAG: ${{ steps.prepare.outputs.tag }}
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B - <<'PYCODE'
+          import hashlib, json, os, sys
+          from pathlib import Path
+          sys.path.insert(0, str(Path.cwd() / 'release'))
+          import stage_candidate
+          candidate = Path(os.environ['RUNNER_TEMP']) / 'ami-rust-release-output/candidate'
+          report = stage_candidate.finalize(candidate, os.environ['TAG'])
+          name = stage_candidate.asset_names(os.environ['TAG'])['checksums']
+          digest = hashlib.sha256((candidate / name).read_bytes()).hexdigest()
+          with Path(os.environ['GITHUB_OUTPUT']).open('a') as stream:
+              stream.write('checksums_sha256=' + digest + '\n')
+          (candidate.parent / 'metadata/outer-finalized.json').write_text(json.dumps(report, sort_keys=True, indent=2) + '\n')
+          PYCODE
+      - name: Attest transport payload
+        id: attest-payload
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.prepare.outputs.payload_name }}
+          subject-digest: sha256:${{ steps.prepare.outputs.payload_sha256 }}
+          predicate-type: https://slsa.dev/provenance/v1
+          predicate-path: ${{ runner.temp }}/ami-rust-release-output/metadata/outer-predicate.json
+      - name: Preserve transport payload attestation before the next invocation
+        env:
+          BUNDLE_PATH: ${{ steps.attest-payload.outputs.bundle-path }}
+        run: |
+          install -d -m 700 "$RUNNER_TEMP/ami-rust-release-attestations"
+          install -m 600 "$BUNDLE_PATH" "$RUNNER_TEMP/ami-rust-release-attestations/payload.json"
+      - name: Attest payload SBOM
+        id: attest-sbom
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.prepare.outputs.sbom_name }}
+          subject-digest: sha256:${{ steps.prepare.outputs.sbom_sha256 }}
+          predicate-type: https://slsa.dev/provenance/v1
+          predicate-path: ${{ runner.temp }}/ami-rust-release-output/metadata/outer-predicate.json
+      - name: Preserve payload SBOM attestation before the next invocation
+        env:
+          BUNDLE_PATH: ${{ steps.attest-sbom.outputs.bundle-path }}
+        run: |
+          install -d -m 700 "$RUNNER_TEMP/ami-rust-release-attestations"
+          install -m 600 "$BUNDLE_PATH" "$RUNNER_TEMP/ami-rust-release-attestations/sbom.json"
+      - name: Attest transport inventory
+        id: attest-transport
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.prepare.outputs.transport_name }}
+          subject-digest: sha256:${{ steps.prepare.outputs.transport_sha256 }}
+          predicate-type: https://slsa.dev/provenance/v1
+          predicate-path: ${{ runner.temp }}/ami-rust-release-output/metadata/outer-predicate.json
+      - name: Preserve transport inventory attestation before the next invocation
+        env:
+          BUNDLE_PATH: ${{ steps.attest-transport.outputs.bundle-path }}
+        run: |
+          install -d -m 700 "$RUNNER_TEMP/ami-rust-release-attestations"
+          install -m 600 "$BUNDLE_PATH" "$RUNNER_TEMP/ami-rust-release-attestations/transport.json"
+      - name: Attest complete checksums
+        id: attest-checksums
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.prepare.outputs.checksums_name }}
+          subject-digest: sha256:${{ steps.final.outputs.checksums_sha256 }}
+          predicate-type: https://slsa.dev/provenance/v1
+          predicate-path: ${{ runner.temp }}/ami-rust-release-output/metadata/outer-predicate.json
+      - name: Preserve checksums attestation
+        env:
+          BUNDLE_PATH: ${{ steps.attest-checksums.outputs.bundle-path }}
+        run: |
+          install -d -m 700 "$RUNNER_TEMP/ami-rust-release-attestations"
+          install -m 600 "$BUNDLE_PATH" "$RUNNER_TEMP/ami-rust-release-attestations/checksums.json"
+      - name: Verify actual signatures, provenance and refusal counterprobes
+        id: verify
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+          PUBLISHER_ENVIRONMENT: release
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+          PAYLOAD: ${{ steps.prepare.outputs.payload_name }}
+          SBOM: ${{ steps.prepare.outputs.sbom_name }}
+          TRANSPORT: ${{ steps.prepare.outputs.transport_name }}
+          CHECKSUMS: ${{ steps.prepare.outputs.checksums_name }}
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/candidate_auth.py verify \
+            --bundle "$RUNNER_TEMP/ami-rust-release-inner" \
+            --candidate "$RUNNER_TEMP/ami-rust-release-output/candidate" \
+            --work "$RUNNER_TEMP/ami-rust-release-work" \
+            --metadata "$RUNNER_TEMP/ami-rust-release-output/metadata" \
+            --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap" \
+            --gh "$PAYLOAD=$RUNNER_TEMP/ami-rust-release-attestations/payload.json" \
+            --gh "$SBOM=$RUNNER_TEMP/ami-rust-release-attestations/sbom.json" \
+            --gh "$TRANSPORT=$RUNNER_TEMP/ami-rust-release-attestations/transport.json" \
+            --gh "$CHECKSUMS=$RUNNER_TEMP/ami-rust-release-attestations/checksums.json"
+      - name: Retire release work and preserve bounded candidate evidence
+        id: cleanup
+        if: always()
+        env:
+          VERIFY_RESULT: ${{ steps.verify.outcome }}
+        run: |
+          python3 -I -B - <<'PYCODE'
+          import json, os, shutil, stat
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']).resolve(strict=True)
+          for name in ('ami-rust-release-inner', 'ami-rust-release-work', 'ami-rust-release-bootstrap', 'ami-rust-release-attestations', 'ami-rust-python-bootstrap'):
+              path = root / name
+              if path.is_symlink():
+                  raise SystemExit('linked release work root')
+              if path.is_dir():
+                  shutil.rmtree(path)
+              elif path.exists():
+                  raise SystemExit('unexpected non-directory release work root')
+              if path.exists():
+                  raise SystemExit('release work retirement failed')
+          output = root / 'ami-rust-release-output'
+          if output.is_symlink():
+              raise SystemExit('linked release output root')
+          output.mkdir(exist_ok=True)
+          metadata = output / 'metadata'
+          if metadata.is_symlink():
+              raise SystemExit('linked release metadata root')
+          metadata.mkdir(exist_ok=True)
+          if os.environ['VERIFY_RESULT'] == 'success':
+              proof = metadata / 'outer-verification.json'
+              if proof.is_symlink() or not proof.is_file() or proof.stat().st_size > 1024**2:
+                  raise SystemExit('successful release step omitted its bounded verification receipt')
+              verified = json.loads(proof.read_bytes())
+              if (verified.get('status') != 'OUTER_CRYPTO_VERIFIED_NOT_R1_ACCEPTED'
+                      or verified.get('source_commit') != os.environ['GITHUB_SHA']
+                      or type(verified.get('run_id')) is not int
+                      or verified['run_id'] != int(os.environ['GITHUB_RUN_ID'])
+                      or type(verified.get('run_attempt')) is not int
+                      or verified['run_attempt'] != int(os.environ['GITHUB_RUN_ATTEMPT'])):
+                  raise SystemExit('release verification receipt differs from actual source/run')
+          total = 0
+          for path in output.rglob('*'):
+              info = path.lstat()
+              if stat.S_ISDIR(info.st_mode):
+                  continue
+              if not stat.S_ISREG(info.st_mode):
+                  raise SystemExit('nonregular release output')
+              total += info.st_size
+          if total > 96 * 1024**2 - 4096:
+              raise SystemExit('release candidate and proofs exceed admitted 96 MiB output')
+          receipt = {'schema':'ami-rust-release-candidate-cleanup-v1', 'remaining_work_bytes':0,
+                     'source_sha':os.environ['GITHUB_SHA'], 'run_id':os.environ['GITHUB_RUN_ID'],
+                     'run_attempt':os.environ['GITHUB_RUN_ATTEMPT'], 'output_bytes_observed':total,
+                     'verification_outcome':os.environ['VERIFY_RESULT'], 'SDK_published':False}
+          (metadata / 'cleanup.json').write_text(json.dumps(receipt, sort_keys=True) + '\n')
+          print(json.dumps(receipt))
+          PYCODE
+      - name: Preserve candidate, real proofs and outcome
+        if: always() && steps.cleanup.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sdk-release-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-release-output
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
           compression-level: 9
