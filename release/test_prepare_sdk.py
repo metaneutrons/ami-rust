@@ -373,6 +373,8 @@ class PrepareSdkTests(unittest.TestCase):
 
     def _commit_source(self):
         subprocess.run(["git", "-C", str(self.source), "init", "-q"], check=True)
+        self._git("config", "user.name", "Fixture")
+        self._git("config", "user.email", "fixture@example.invalid")
         subprocess.run(["git", "-C", str(self.source), "remote", "add", "origin",
                         "https://github.com/metaneutrons/ami-rust.git"], check=True)
         subprocess.run(["git", "-C", str(self.source), "add", "-A"], check=True)
