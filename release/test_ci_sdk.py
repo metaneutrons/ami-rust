@@ -38,6 +38,57 @@ class HostedSdkProducerTests(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.temporary)
 
+    def test_reference_proposal_verifies_real_files_but_default_requires_accepted_map(self):
+        build = self.work / "reference-proposal"
+        artifacts = build / "artifacts"
+        artifacts.mkdir(parents=True)
+        (artifacts / "AMIRUST").write_bytes(b"fresh native fixture")
+        rows = {"AMIRUST": {"bytes": 20, "sha256": ci_sdk.sha256(artifacts / "AMIRUST")}}
+        host, _ = ci_sdk.host_identity()
+        (build / "build-receipt.json").write_bytes(ci_sdk.canonical_json({
+            "canonical_artifacts": rows, "host": host,
+            "cargo_frontend": {"sha256": "a" * 64}, "commands": []}))
+
+        class Limits:
+            def check_limits(self, label):
+                self.checked = label
+
+        limits = Limits()
+        result, native = ci_sdk._verify_native_receipt(build, None, limits, "proposal")
+        self.assertEqual(result["artifacts"], rows)
+        self.assertEqual(native, artifacts / "AMIRUST")
+        accepted = copy.deepcopy(rows)
+        accepted["AMIRUST"]["sha256"] = "b" * 64
+        with self.assertRaisesRegex(ValueError, "accepted host reference"):
+            ci_sdk._verify_native_receipt(build, accepted, limits, "production")
+        (artifacts / "AMIRUST").write_bytes(b"changed native file!")
+        with self.assertRaisesRegex(ValueError, "differs from its canonical receipt"):
+            ci_sdk._verify_native_receipt(build, None, limits, "corrupt proposal")
+
+    def test_raw_metadata_retention_preserves_exact_canonical_archives(self):
+        artifacts = self.work / "artifacts"
+        rows = {}
+        for crate in ci_sdk.METADATA_CRATES:
+            name = "target/release/deps/lib" + crate + "-abc123.rlib"
+            source = artifacts / name
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_bytes(b"!<arch>\n" + crate.encode())
+            rows[name] = {"bytes": source.stat().st_size, "sha256": ci_sdk.sha256(source)}
+        retained = ci_sdk._copy_metadata_archives(artifacts, rows, self.output)
+        self.assertEqual({row["crate"] for row in retained}, set(ci_sdk.METADATA_CRATES))
+        for row in retained:
+            self.assertEqual((self.output / row["path"]).read_bytes(),
+                             (artifacts / row["canonical_path"]).read_bytes())
+        missing_output = self.work / "missing-output"
+        missing_output.mkdir()
+        with self.assertRaisesRegex(ValueError, "exactly one raw metadata archive"):
+            ci_sdk._copy_metadata_archives(artifacts, {}, missing_output)
+        changed_output = self.work / "changed-output"
+        changed_output.mkdir()
+        (artifacts / next(iter(rows))).write_bytes(b"altered archive")
+        with self.assertRaisesRegex(ValueError, "differs from its canonical output"):
+            ci_sdk._copy_metadata_archives(artifacts, rows, changed_output)
+
     def test_reading_normative_inputs_does_not_admit_the_source_volume_for_work(self):
         with patch.object(ci_sdk, "validate_resource_policy", side_effect=AssertionError("no disk admission while reading")):
             inputs, resources, host = ci_sdk.read_normative(

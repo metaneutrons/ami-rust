@@ -52,6 +52,7 @@ MAX_RSS_BYTES = 4 * 1024**3
 MAX_WORK_BYTES = 12 * 1024**3
 MAX_COMMAND_SECONDS = 1200
 MAX_CHANNEL_MANIFEST_BYTES = 4 * 1024**2
+METADATA_CRATES = ("serde", "curve25519_dalek", "ed25519_dalek")
 DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 GIT_COMMIT = re.compile(r"[0-9a-f]{40}\Z")
 ARCHIVE_CHUNK = 1024 * 1024
@@ -1308,10 +1309,37 @@ def _preserve_native_payload(source: Path, work: Path, variant: str) -> Path:
     return destination
 
 
-def _validate_success_output(output: Path) -> int:
+def _copy_metadata_archives(artifacts: Path, rows: dict, output: Path) -> list[dict]:
+    """Retain the three raw archives needed for independent metadata review."""
+    destination = output / "metadata"
+    destination.mkdir()
+    result = []
+    for crate in METADATA_CRATES:
+        names = [name for name in rows
+                 if name.startswith("target/release/deps/")
+                 and re.fullmatch("lib" + crate + r"-[0-9a-f]+\.rlib", Path(name).name)]
+        if len(names) != 1:
+            raise ValueError("expected exactly one raw metadata archive for " + crate)
+        name = names[0]
+        source = artifacts.joinpath(*_safe_relative(name).parts)
+        target = destination / (crate + ".rlib")
+        if source.is_symlink() or not source.is_file():
+            raise ValueError("raw metadata archive must be a regular file")
+        shutil.copyfile(source, target)
+        row = {"bytes": target.stat().st_size, "sha256": sha256(target)}
+        if row != rows[name]:
+            raise ValueError("retained metadata archive differs from its canonical output")
+        result.append({"crate": crate, "path": target.relative_to(output).as_posix(),
+                       "canonical_path": name, **row})
+    return result
+
+
+def _validate_success_output(output: Path, reference_proposal: bool = False) -> int:
     allowed = {"producer.json", "sdk-producer.json", "csdk-producer.json", "sdk.tar.xz",
                "cargo-component.tar.xz"}
     allowed_native = {f"native/{name}.AMIRUST" for name in VARIANTS}
+    if reference_proposal:
+        allowed_native |= {f"metadata/{name}.rlib" for name in METADATA_CRATES}
     observed = set()
     for path in output.rglob("*"):
         if path.is_dir() and not path.is_symlink():
@@ -1336,12 +1364,13 @@ def _retire_successful_build(path: Path, work: Path) -> None:
         raise RuntimeError("successful native build output could not be retired")
 
 
-def _verify_native_receipt(build_output: Path, reference_rows: dict,
+def _verify_native_receipt(build_output: Path, reference_rows: dict | None,
                            supervisor: Supervisor, label: str) -> tuple[dict, Path]:
     receipt_path = build_output / "build-receipt.json"
     receipt = read_json(receipt_path, 4 * 1024**2)
     actual = receipt.get("canonical_artifacts")
-    if not isinstance(actual, dict) or actual != reference_rows or len(actual) != len(reference_rows):
+    if (not isinstance(actual, dict) or not actual or "AMIRUST" not in actual
+            or (reference_rows is not None and actual != reference_rows)):
         raise ValueError("native canonical outputs differ from the accepted host reference: " + label)
     artifacts = build_output / "artifacts"
     observed = {}
@@ -1385,6 +1414,9 @@ def _native_command(layout: dict, variant: str, package: str, feature_args: tupl
 
 
 def produce(args) -> dict:
+    reference_proposal = getattr(args, "reference_proposal", False)
+    if type(reference_proposal) is not bool:
+        raise ValueError("reference proposal selection must be a boolean")
     host, target = host_identity()
     linkage_audit_utility = resolve_linkage_audit_utility(host)
     host_csdk_tools = csdk_host_tools()
@@ -1554,6 +1586,7 @@ def produce(args) -> dict:
     source_payload = _copy_flat_sdk_archive(sdk_archive, args.output / "sdk.tar.xz")
     build_records = []
     native_payloads = []
+    metadata_archives = []
     by_variant = {}
     for layout in layouts:
         for variant, (package, feature_args) in VARIANTS.items():
@@ -1562,8 +1595,9 @@ def produce(args) -> dict:
             run_record = supervisor.run(command, cwd=args.work,
                                          label=f"build-{layout['name']}-{variant}",
                                          timeout=MAX_COMMAND_SECONDS)
+            expected_rows = _expected_native_rows(reference, host, variant)
             result, native_file = _verify_native_receipt(
-                build_output, _expected_native_rows(reference, host, variant), supervisor,
+                build_output, None if reference_proposal else expected_rows, supervisor,
                 layout["name"] + "/" + variant)
             native_hash = sha256(native_file)
             native_bytes = native_file.stat().st_size
@@ -1578,13 +1612,16 @@ def produce(args) -> dict:
                     raise ValueError("cold-root native outputs differ for " + variant)
                 payload = _copy_native_payload(first["path"], args.output, variant)
                 native_payloads.append({"variant": variant, **payload})
+                if reference_proposal and variant == "dependencies":
+                    metadata_archives = _copy_metadata_archives(
+                        build_output / "artifacts", result["artifacts"], args.output)
             build_records.append({"layout": layout["name"], "variant": variant,
                                   "package": package, "feature_arguments": list(feature_args),
                                   "process": run_record, "build_receipt_sha256": result["receipt_sha256"],
                                   "canonical_artifact_count": len(result["artifacts"]),
                                   "canonical_artifacts": result["artifacts"],
                                   "AMIRUST": {"bytes": native_bytes, "sha256": native_hash},
-                                  "reference_match": True})
+                                  "reference_match": result["artifacts"] == expected_rows})
             _retire_successful_build(build_output, args.work)
             supervisor.check_limits("retired successful " + layout["name"] + "/" + variant)
 
@@ -1611,9 +1648,13 @@ def produce(args) -> dict:
     cargo_report_sha = sha256(cargo_report_path)
     producer_record = {
         "schema": RECEIPT_SCHEMA,
-        "status": "PRODUCED_HOSTED_SDK_CANDIDATE_NOT_R1_ACCEPTED",
+        "status": ("PRODUCED_NATIVE_REFERENCE_PROPOSAL_NOT_FOR_AUTHENTICATION" if reference_proposal
+                   else "PRODUCED_HOSTED_SDK_CANDIDATE_NOT_R1_ACCEPTED"),
         "host": host, "rust_target": target,
-        "claim": "Two cold native build roots matched the accepted canonical host outputs; no AROS guest, R1 acceptance, publisher verification, or release authorization.",
+        "claim": ("Two cold native build roots match each other; proposed references require cross-host and guest qualification. No accepted native reference, authentication or release claim."
+                  if reference_proposal else
+                  "Two cold native build roots matched the accepted canonical host outputs; no AROS guest, R1 acceptance, publisher verification, or release authorization."),
+        "reference_proposal": reference_proposal,
         "source": {"commit": prepared["source_commit"],
                    "sdk_manifest_sha256": sdk_info["manifest_sha256"],
                    "sdk_archive": source_payload,
@@ -1652,6 +1693,7 @@ def produce(args) -> dict:
                              "variants": list(VARIANTS)},
         "native_builds": build_records,
         "native_payloads": native_payloads,
+        "metadata_archives": metadata_archives,
         "budgets": {"jobs": 2, "rss_bytes": MAX_RSS_BYTES,
                     "command_seconds": MAX_COMMAND_SECONDS,
                     "workspace_bytes": MAX_WORK_BYTES, "log_bytes": MAX_LOG_BYTES,
@@ -1662,14 +1704,14 @@ def produce(args) -> dict:
                   "rss_peak_observed_bytes": supervisor.peak_rss,
                   "log_peak_observed_bytes": supervisor.peak_logs,
                   "commands": supervisor.commands},
-        "output_payloads": [source_payload, cargo_archive, *native_payloads],
+        "output_payloads": [source_payload, cargo_archive, *native_payloads, *metadata_archives],
     }
     receipt_path = args.output / "sdk-producer.json"
     receipt_path.write_bytes(canonical_json(producer_record))
-    output_bytes = _validate_success_output(args.output)
+    output_bytes = _validate_success_output(args.output, reference_proposal)
     producer_record["output_bytes_observed"] = output_bytes
     receipt_path.write_bytes(canonical_json(producer_record))
-    output_bytes = _validate_success_output(args.output)
+    output_bytes = _validate_success_output(args.output, reference_proposal)
     if output_bytes > MAX_OUTPUT_BYTES:
         raise ValueError("SDK host output exceeds its retention limit")
     supervisor.check_limits("completed SDK producer")
@@ -1684,6 +1726,8 @@ def main(argv=None) -> int:
     parser.add_argument("--cargo-inputs", type=Path, required=True)
     parser.add_argument("--resources", type=Path, required=True)
     parser.add_argument("--python-bootstrap-root", type=Path, required=True)
+    parser.add_argument("--reference-proposal", action="store_true",
+                        help="produce unaccepted native reference evidence; never eligible for authentication")
     args = parser.parse_args(argv)
     try:
         produce(args)

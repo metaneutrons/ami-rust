@@ -43,6 +43,7 @@ jobs:
             LICENSE*
             qualification/hosted_capacity.py
             qualification/test_hosted_capacity.py
+            .github/workflows/sdk-qualify.yml
             .github/workflows/public-replay.yml
       - name: Run isolated installer fixture tests
         run: |
@@ -56,6 +57,7 @@ jobs:
           python3 -I -B release/test_ci_python.py
           python3 -I -B release/test_ci_artifact_admission.py
           python3 -I -B release/test_ci_sdk.py
+          python3 -I -B release/test_sdk_workflow.py
           python3 -I -B release/test_ci_csdk.py
           python3 -I -B release/test_csdk_recipes.py
           python3 -I -B release/test_csdk_nouveau.py

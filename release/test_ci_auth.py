@@ -78,6 +78,7 @@ class PublisherAssemblyTests(unittest.TestCase):
             p = self.root / host
             p.mkdir()
             self.payloads[host] = p
+            self.write(p, "sdk-producer.json", auth.encoded(self.sdk_producer_receipt(host)))
         self.refresh_sdk_archives()
         gold = {}
         native = b"qualified fixture utility"
@@ -102,6 +103,16 @@ class PublisherAssemblyTests(unittest.TestCase):
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(data)
         return p
+
+    def sdk_producer_receipt(self, host, *, status=auth.SDK_PRODUCER_RECEIPT_STATUS,
+                             reference_proposal=False, receipt_host=None, source_sha=None):
+        return {
+            "schema": auth.SDK_PRODUCER_RECEIPT_SCHEMA,
+            "status": status,
+            "host": receipt_host or host,
+            "reference_proposal": reference_proposal,
+            "source": {"commit": source_sha or self.identity["source_sha"]},
+        }
 
     def rows(self, files):
         return [{"path": n, "bytes": len(b), "sha256": auth.sha(b)} for n, b in sorted(files.items())]
@@ -284,6 +295,27 @@ class PublisherAssemblyTests(unittest.TestCase):
     def test_host_disagreement_refused_before_output(self):
         (self.payloads[auth.HOSTS[0]] / "sdk.tar.xz").write_bytes(b"different")
         with self.assertRaisesRegex(ValueError, "byte-identical"):
+            self.assemble()
+        self.assertFalse(self.output.exists())
+
+    def test_sdk_producer_receipts_reject_proposal_and_unbound_evidence_before_output(self):
+        host = auth.HOSTS[0]
+        receipt_path = self.payloads[host] / "sdk-producer.json"
+        invalid_receipts = (
+            self.sdk_producer_receipt(
+                host, status="PRODUCED_NATIVE_REFERENCE_PROPOSAL_NOT_FOR_AUTHENTICATION",
+                reference_proposal=True),
+            self.sdk_producer_receipt(host, reference_proposal=True),
+            self.sdk_producer_receipt(host, receipt_host=auth.HOSTS[1]),
+            self.sdk_producer_receipt(host, source_sha="c" * 40),
+        )
+        for receipt in invalid_receipts:
+            with self.subTest(receipt=receipt), self.assertRaisesRegex(ValueError, "SDK producer receipt"):
+                receipt_path.write_bytes(auth.encoded(receipt))
+                self.assemble()
+            self.assertFalse(self.output.exists())
+        receipt_path.unlink()
+        with self.assertRaisesRegex(ValueError, "SDK producer receipt"):
             self.assemble()
         self.assertFalse(self.output.exists())
 

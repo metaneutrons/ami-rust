@@ -43,3 +43,24 @@ Current status: the complete shared C-SDK producer passed locally on macOS with
 full process-tree measurement. Latest-source protected two-host production,
 authentication, independent clean consumers, final binary-linkage/licence review
 and R1 acceptance remain open. See the [portability record](r1-portability-follow-up-20261016.md).
+
+
+## Establishing changed native references
+
+Dispatch with the explicit boolean `reference_proposal=true` only when changed
+SDK sources require new native qualification. Both hosts still build all five
+variants in two clean roots, verify real files against their receipts and demand
+complete within-host byte equality. They retain the five executables and raw
+canonical hash maps under `PRODUCED_NATIVE_REFERENCE_PROPOSAL_NOT_FOR_AUTHENTICATION`.
+The three unmodified Serde/Curve25519/Ed25519 `.rlib` archives are also retained
+for the independent member/metadata comparison. The ordinary mode remains
+strict against accepted references.
+
+This proposal mode skips assembly and consequently signing and consumers. The
+assembler also rejects proposal receipts. It does not overwrite accepted hash
+maps or pass runtime acceptance. Independently compare the two host maps under
+the approved metadata contract, run the complete affected native matrix and new
+memory probes on the unchanged boot/ABI profile, then freeze reviewed new
+references and their source/evidence identities in a separate change. Only the
+normal protected production mode can subsequently produce an authenticated
+candidate against those accepted references. No SDK publication is performed.
