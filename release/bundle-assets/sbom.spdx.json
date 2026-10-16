@@ -8,7 +8,7 @@
   },
   "dataLicense": "CC0-1.0",
   "documentComment": "Unpublished SDK-candidate inventory; R1 is not accepted. Preserve the original 57 runtime/SDK component records and add 523 checksum-verified host-Cargo registry lock-closure packages plus 6 Cargo/native identity records. Lock membership does not assert compilation or linkage; per-package sourceInfo distinguishes those scopes. Cargo notices/preferred-source capsule SHA-256 da23b154fd15d595329de28cbf1db650bf8b1da57679ef270c09c9d7e84dc62f includes the complete lock-matched libgit2-sys crate and 3 MPL package sources. Source evidence resolves the misleading Cargo sys:0.21.0 field as the git2 wrapper version; actual final-binary linkage/redistribution acceptance remain separate gates. Whole mixed C-SDK licences are not inferred from selected runtime-member scope.",
-  "documentNamespace": "https://spdx.org/spdxdocs/ami-rust-host-closure-e458c00486458372663f062f160f4ab3b2f5531486f031da2d8fb0b5d891dd26",
+  "documentNamespace": "https://spdx.org/spdxdocs/ami-rust-host-closure-90eeab005330ee6ae4c8cd0f6033805c1c6bd28e509db340c428069c6244111a",
   "hasExtractedLicensingInfos": [
     {
       "comment": "Exact pinned AROS-NX LICENSE text; included as evidence for AROS-derived aros-sys ABI material, without a legal clearance determination.",
@@ -10062,7 +10062,8 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "MIT OR Apache-2.0",
       "name": "ami-rust",
-      "versionInfo": "0.1.0-rc.3-local"
+      "sourceInfo": "The authenticated companion release.json identifies the selected source via producer.source_sha and the SDK manifest bytes via sdk_manifest_sha256 (contract/sdk.json inside sdk.tar.xz); its assets entry binds sdk.tar.xz by SHA-256. Those values are supplied by the companion manifest. This static SBOM does not embed a source commit or assert native/linkage acceptance.",
+      "versionInfo": "0.1.0"
     },
     {
       "SPDXID": "SPDXRef-crate-ami-rust-dependencies",
