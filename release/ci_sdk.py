@@ -54,6 +54,10 @@ MAX_RSS_BYTES = 4 * 1024**3
 MAX_WORK_BYTES = 12 * 1024**3
 MAX_COMMAND_SECONDS = 1200
 MAX_CHANNEL_MANIFEST_BYTES = 4 * 1024**2
+CARGO_WORK_RETIRE_PATHS = (
+    "cargo-source", "vendor-upstream", "vendor-overlay", "provision-work",
+    "build-work", "bootstrap", "rust-components", "home", "cargo-home", "tmp",
+)
 METADATA_CRATES = ("serde", "curve25519_dalek", "ed25519_dalek")
 NATIVE_BUILD_BYPRODUCTS = ("AMIRUST.map", "AMIRUST.unstripped", "AMIRUST.stripped")
 DIGEST = re.compile(r"[0-9a-f]{64}\Z")
@@ -1509,6 +1513,120 @@ def _retire_successful_build(path: Path, work: Path) -> None:
         raise RuntimeError("successful native build output could not be retired")
 
 
+def _retire_cargo_worktrees(work: Path, output: Path, cargo_root: Path,
+                            cargo_manifest: dict, cargo_report_bytes: bytes,
+                            cargo_report_sha256: str,
+                            supervisor: Supervisor) -> tuple[dict, dict]:
+    if work.is_symlink() or not work.is_dir():
+        raise ValueError("Cargo work retirement root is not a managed directory")
+    work_root = work.resolve(strict=True)
+    expected_cargo_root = work_root / "component-staging" / "cargo"
+    if (cargo_root.is_symlink() or not cargo_root.is_dir()
+            or cargo_root.resolve(strict=True) != expected_cargo_root):
+        raise ValueError("verified Cargo component is outside its managed staging path")
+    if (not isinstance(cargo_report_bytes, bytes)
+            or not _is_digest(cargo_report_sha256)
+            or hashlib.sha256(cargo_report_bytes).hexdigest() != cargo_report_sha256):
+        raise ValueError("Cargo producer report snapshot is malformed")
+
+    report_path = output / "producer.json"
+
+    def verify_report_snapshot() -> None:
+        if (output.is_symlink() or report_path.is_symlink() or not report_path.is_file()
+                or report_path.read_bytes() != cargo_report_bytes
+                or sha256(report_path) != cargo_report_sha256):
+            raise ValueError("raw Cargo producer report changed during work retirement")
+
+    def verify_staged_component() -> tuple[dict, dict]:
+        inventory = verify_component(cargo_root, cargo_manifest, "cargo")
+        paths = {row["path"] for row in cargo_manifest["files"]}
+        if paths != {"bin/cargo", "producer.json"} or cargo_manifest["symlinks"]:
+            raise ValueError("staged Cargo component does not match the exact packaged profile")
+        binary = cargo_root / "bin" / "cargo"
+        producer_record = cargo_root / "producer.json"
+        identity = {
+            "work_path": "component-staging/cargo",
+            "binary_path": "component-staging/cargo/bin/cargo",
+            "binary_sha256": sha256(binary),
+            "producer_record_sha256": sha256(producer_record),
+            "manifest_inventory_sha256": inventory["inventory_sha256"],
+        }
+        return inventory, identity
+
+    verify_report_snapshot()
+    cargo_inventory, cargo_component = verify_staged_component()
+
+    # Resolve and validate every allowlisted root before deleting any of them.
+    retirement_plan = []
+    work_paths = []
+    for relative in CARGO_WORK_RETIRE_PATHS:
+        relative_path = _safe_relative(relative)
+        if len(relative_path.parts) != 1:
+            raise ValueError("Cargo work retirement root must be a direct managed child")
+        path = work_root.joinpath(*relative_path.parts)
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            retirement_plan.append((relative, path, False))
+            work_paths.append({"path": relative, "status": "absent"})
+            continue
+        if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
+            raise ValueError("Cargo work retirement root is linked or not a directory: " + relative)
+        resolved = path.resolve(strict=True)
+        if resolved == work_root or not resolved.is_relative_to(work_root):
+            raise ValueError("Cargo work retirement root escapes managed work: " + relative)
+        retirement_plan.append((relative, path, True))
+        work_paths.append({"path": relative, "status": "removed"})
+
+    supervisor.check_limits("before early Cargo work retirement")
+    managed_bytes_before = supervisor.managed_bytes()
+    log_bytes_before = supervisor.logs_bytes()
+    for relative, path, exists in retirement_plan:
+        if not exists:
+            continue
+        try:
+            info = path.lstat()
+        except FileNotFoundError as error:
+            raise RuntimeError("validated Cargo work root disappeared before removal: " + relative) from error
+        resolved = path.resolve(strict=True)
+        if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+                or resolved == work_root or not resolved.is_relative_to(work_root)):
+            raise ValueError("Cargo work retirement root changed after validation: " + relative)
+        try:
+            shutil.rmtree(path)
+        except OSError as error:
+            raise RuntimeError("Cargo work root could not be retired: " + relative) from error
+        if path.exists() or path.is_symlink():
+            raise RuntimeError("Cargo work root remains after retirement: " + relative)
+    for relative, path, _ in retirement_plan:
+        if path.exists() or path.is_symlink():
+            raise RuntimeError("Cargo work root remains after retirement: " + relative)
+
+    after_inventory, after_component = verify_staged_component()
+    if after_inventory != cargo_inventory or after_component != cargo_component:
+        raise ValueError("staged Cargo component changed during work retirement")
+    verify_report_snapshot()
+    supervisor.check_limits("after early Cargo work retirement")
+    summary = {
+        "schema": "ami-rust-cargo-work-retirement-v1",
+        "status": "RETIRED_AFTER_CARGO_COMPONENT_VERIFICATION",
+        "work_paths": work_paths,
+        "cargo_component": cargo_component,
+        "cargo_output_report": {
+            "root": "output", "path": "producer.json",
+            "bytes": len(cargo_report_bytes), "sha256": cargo_report_sha256,
+        },
+        "accounting": {
+            "managed_bytes_before": managed_bytes_before,
+            "managed_bytes_after": supervisor.managed_bytes(),
+            "log_bytes_before": log_bytes_before,
+            "log_bytes_after": supervisor.logs_bytes(),
+        },
+    }
+    summary["summary_sha256"] = hashlib.sha256(canonical_json(summary)).hexdigest()
+    return summary, cargo_inventory
+
+
 def _verify_native_receipt(build_output: Path, reference_rows: dict | None,
                            supervisor: Supervisor, label: str) -> tuple[dict, Path]:
     receipt_path = build_output / "build-receipt.json"
@@ -1597,7 +1715,9 @@ def _native_command(layout: dict, variant: str, package: str, feature_args: tupl
     return command, build_output
 
 
-def produce(args) -> dict:
+def produce(args, *, retirement_evidence: dict | None = None) -> dict:
+    if retirement_evidence is not None:
+        retirement_evidence.pop("cargo_work_retirement", None)
     reference_proposal = getattr(args, "reference_proposal", False)
     if type(reference_proposal) is not bool:
         raise ValueError("reference proposal selection must be a boolean")
@@ -1660,6 +1780,13 @@ def produce(args) -> dict:
         "python_bootstrap_root": args.python_bootstrap_root})())
     cargo_report_path = args.output / "producer.json"
     local_cargo = read_json(cargo_report_path)
+    cargo_report_bytes = cargo_report_path.read_bytes()
+    cargo_report_sha = hashlib.sha256(cargo_report_bytes).hexdigest()
+    report_snapshot = json.loads(
+        cargo_report_bytes.decode("utf-8"), object_pairs_hook=unique_json,
+        parse_constant=lambda token: (_ for _ in ()).throw(ValueError("invalid JSON constant")))
+    if report_snapshot != local_cargo:
+        raise ValueError("Cargo producer report changed while its raw snapshot was captured")
     if (local_cargo.get("status") != "PRODUCED_PREREQUISITE_ONLY_NOT_R1_QUALIFICATION"
             or local_cargo.get("host") != host or local_cargo.get("rust_target") != target):
         raise ValueError("pinned custom Cargo prerequisite did not complete for this host")
@@ -1713,6 +1840,17 @@ def produce(args) -> dict:
     source_tree_inventory = ci_cargo.tree_inventory(sdk_info["root"])
     component_info = _component_rows_from_sdk(sdk_info, host)
 
+    cargo_root, cargo_summary = _make_cargo_component(
+        args.work, args.output, component_info, host, target, cargo_inputs, resources, supervisor)
+    linkage_evidence = audit_cargo_linkage(
+        host, cargo_root / "bin" / "cargo", linkage_audit_utility, supervisor)
+    cargo_producer_record = read_json(cargo_root / "producer.json", 64 * 1024)
+    cargo_work_retirement, cargo_component_inventory = _retire_cargo_worktrees(
+        args.work, args.output, cargo_root, component_info["cargo"]["manifest"],
+        cargo_report_bytes, cargo_report_sha, supervisor)
+    if retirement_evidence is not None:
+        retirement_evidence["cargo_work_retirement"] = cargo_work_retirement
+
     rust_root, rust_archives, rust_extract_receipts = _install_rust(
         host_rows, inputs, args.work, components_root, supervisor)
     rust_version = supervisor.run_text([str(rust_root / "bin/rustc"), "-Vv"], cwd=args.work,
@@ -1749,14 +1887,8 @@ def produce(args) -> dict:
                        ("csdk", component_roots["csdk"]), ("vendor", component_roots["vendor"])):
         component_summaries[name] = verify_component(root, component_info[name]["manifest"], name)
 
-    cargo_root, cargo_summary = _make_cargo_component(
-        args.work, args.output, component_info, host, target, cargo_inputs, resources, supervisor)
-    linkage_evidence = audit_cargo_linkage(
-        host, cargo_root / "bin" / "cargo", linkage_audit_utility, supervisor)
-    cargo_producer_record = read_json(cargo_root / "producer.json", 64 * 1024)
     component_roots["cargo"] = cargo_root
-    component_summaries["cargo"] = verify_component(
-        cargo_root, component_info["cargo"]["manifest"], "cargo")
+    component_summaries["cargo"] = cargo_component_inventory
     component_roots = {name: component_roots[name] for name in
                        ("rust", "cargo", "toolchain", "collector", "csdk", "vendor")}
     layouts = _prepare_layout(args.work, host, sdk_info["root"], component_roots, python_path)
@@ -1841,7 +1973,6 @@ def produce(args) -> dict:
         if extra.exists():
             raise RuntimeError("verified input staging could not be retired")
 
-    cargo_report_sha = sha256(cargo_report_path)
     producer_record = {
         "schema": RECEIPT_SCHEMA,
         "status": ("PRODUCED_NATIVE_REFERENCE_PROPOSAL_NOT_FOR_AUTHENTICATION" if reference_proposal
@@ -1879,6 +2010,7 @@ def produce(args) -> dict:
         "cargo_component": {**cargo_summary, "archive": cargo_archive,
                              "producer_report_path": cargo_summary["host_receipt_path"],
                              "producer_record": cargo_producer_record},
+        "cargo_work_retirement": cargo_work_retirement,
         "linkage_evidence": linkage_evidence,
         "native_reference": {"schema": REFERENCE_SCHEMA,
                              "source_record_sha256": reference["basis"]["source_record_sha256"],
@@ -1925,8 +2057,9 @@ def main(argv=None) -> int:
     parser.add_argument("--reference-proposal", action="store_true",
                         help="produce unaccepted native reference evidence; never eligible for authentication")
     args = parser.parse_args(argv)
+    retirement_evidence = {}
     try:
-        produce(args)
+        produce(args, retirement_evidence=retirement_evidence)
     except BaseException as error:
         try:
             if args.output.is_absolute() and args.output.is_dir() and not args.output.is_symlink():
@@ -1946,6 +2079,9 @@ def main(argv=None) -> int:
                               "error_type": type(error).__name__,
                               "error": error_text.replace("\n", " ")[:2048],
                               "claim": "Failed hosted SDK candidate attempt; no guest, R1 acceptance or publication claim."}
+                record.pop("cargo_work_retirement", None)
+                if "cargo_work_retirement" in retirement_evidence:
+                    record["cargo_work_retirement"] = retirement_evidence["cargo_work_retirement"]
                 receipt_path.write_bytes(canonical_json(record))
         except BaseException as receipt_error:
             print(f"ci_sdk: unable to write bounded failure receipt: {type(receipt_error).__name__}", file=sys.stderr)

@@ -2,6 +2,7 @@
 """Synthetic, no-network fixtures for the hosted SDK producer safeguards."""
 from __future__ import annotations
 
+import ast
 import copy
 import hashlib
 import importlib.util
@@ -58,6 +59,45 @@ class HostedSdkProducerTests(unittest.TestCase):
             "status": "PASS", "canonical_artifacts": rows, "host": host,
             "cargo_frontend": {"sha256": "a" * 64}, "commands": []}))
         return build, artifacts, rows, byproduct_bytes
+
+    def _cargo_work_retirement_fixture(self):
+        for relative in ci_sdk.CARGO_WORK_RETIRE_PATHS:
+            root = self.work / relative
+            root.mkdir()
+            (root / "marker").write_bytes((relative + " fixture\n").encode())
+
+        cargo_root = self.work / "component-staging" / "cargo"
+        binary = cargo_root / "bin" / "cargo"
+        binary.parent.mkdir(parents=True)
+        binary.write_bytes(b"verified Cargo fixture\n")
+        binary.chmod(0o755)
+        (cargo_root / "producer.json").write_bytes(b'{"fixture":true}\n')
+        cargo_manifest = ci_sdk.component_inventory(cargo_root)
+
+        report_bytes = b'{"status":"fixture Cargo success"}\n'
+        (self.output / "producer.json").write_bytes(report_bytes)
+        retained = {
+            self.work / "rust-archives/input.tar.xz": b"pinned input archive",
+            self.work / "logs/cargo.stdout.log": b"retained Cargo log",
+            self.work / "records/build.json": b"retained build record",
+            self.work / "vendor-overlay-receipt.json": b"retained overlay receipt",
+            self.work / "prepared-sdk/extracted/Cargo.toml": b"new SDK source data",
+        }
+        for path, payload in retained.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(payload)
+
+        supervisor = ci_sdk.Supervisor(
+            self.work, self.output, self.python_root, {"PATH": "/usr/bin:/bin"})
+        return {
+            "cargo_root": cargo_root,
+            "cargo_manifest": cargo_manifest,
+            "binary_sha256": ci_sdk.sha256(binary),
+            "report_bytes": report_bytes,
+            "report_sha256": hashlib.sha256(report_bytes).hexdigest(),
+            "retained": retained,
+            "supervisor": supervisor,
+        }
 
     def _assert_pending_cargo_marker(self, marker, current):
         expected_keys = {
@@ -751,6 +791,210 @@ class HostedSdkProducerTests(unittest.TestCase):
             ci_sdk.require_cargo_match(altered, accepted)
         with self.assertRaises(ValueError):
             ci_sdk.require_cargo_match(dict(accepted, bytes=100), accepted)
+
+    def test_early_cargo_retirement_prunes_exact_roots_and_preserves_inputs(self):
+        fixture = self._cargo_work_retirement_fixture()
+        supervisor = fixture["supervisor"]
+        managed_before = supervisor.managed_bytes()
+        logs_before = supervisor.logs_bytes()
+        supervisor.peak_workspace = managed_before + 1
+        supervisor.peak_logs = logs_before + 1
+        supervisor.peak_rss = 123456
+        prior_commands = list(supervisor.commands)
+
+        retirement, cargo_inventory = ci_sdk._retire_cargo_worktrees(
+            self.work, self.output, fixture["cargo_root"], fixture["cargo_manifest"],
+            fixture["report_bytes"], fixture["report_sha256"], supervisor)
+
+        self.assertEqual(tuple(row["path"] for row in retirement["work_paths"]),
+                         ci_sdk.CARGO_WORK_RETIRE_PATHS)
+        self.assertTrue(all(row["status"] == "removed" for row in retirement["work_paths"]))
+        self.assertTrue(all(not (self.work / relative).exists()
+                            for relative in ci_sdk.CARGO_WORK_RETIRE_PATHS))
+        self.assertEqual(ci_sdk.sha256(fixture["cargo_root"] / "bin/cargo"),
+                         fixture["binary_sha256"])
+        self.assertEqual(cargo_inventory["inventory_sha256"],
+                         retirement["cargo_component"]["manifest_inventory_sha256"])
+        self.assertEqual((self.output / "producer.json").read_bytes(), fixture["report_bytes"])
+        self.assertEqual(ci_sdk.sha256(self.output / "producer.json"), fixture["report_sha256"])
+        for path, payload in fixture["retained"].items():
+            self.assertEqual(path.read_bytes(), payload, str(path.relative_to(self.temporary)))
+        self.assertLess(retirement["accounting"]["managed_bytes_after"],
+                        retirement["accounting"]["managed_bytes_before"])
+        self.assertEqual(supervisor.peak_workspace, managed_before + 1)
+        self.assertEqual(supervisor.peak_logs, logs_before + 1)
+        self.assertEqual(supervisor.peak_rss, 123456)
+        self.assertEqual(supervisor.commands, prior_commands)
+        digest_payload = {key: value for key, value in retirement.items()
+                          if key != "summary_sha256"}
+        self.assertEqual(retirement["summary_sha256"],
+                         hashlib.sha256(ci_sdk.canonical_json(digest_payload)).hexdigest())
+        for row in retirement["work_paths"]:
+            self.assertFalse(row["path"].startswith("/"))
+
+    def test_early_cargo_retirement_rejects_altered_staged_binary_before_deletion(self):
+        fixture = self._cargo_work_retirement_fixture()
+        binary = fixture["cargo_root"] / "bin/cargo"
+        binary.write_bytes(b"altered staged Cargo fixture\n")
+        with self.assertRaisesRegex(ValueError, "inventory mismatch"):
+            ci_sdk._retire_cargo_worktrees(
+                self.work, self.output, fixture["cargo_root"], fixture["cargo_manifest"],
+                fixture["report_bytes"], fixture["report_sha256"], fixture["supervisor"])
+        self.assertTrue(all((self.work / relative).is_dir()
+                            for relative in ci_sdk.CARGO_WORK_RETIRE_PATHS))
+
+    def test_early_cargo_retirement_preflights_all_roots_before_deletion(self):
+        fixture = self._cargo_work_retirement_fixture()
+        outside = self.temporary / "outside"
+        outside.mkdir()
+        marker = outside / "marker"
+        marker.write_bytes(b"outside sentinel")
+        last_root = self.work / ci_sdk.CARGO_WORK_RETIRE_PATHS[-1]
+        shutil.rmtree(last_root)
+        last_root.symlink_to(outside, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "linked or not a directory"):
+            ci_sdk._retire_cargo_worktrees(
+                self.work, self.output, fixture["cargo_root"], fixture["cargo_manifest"],
+                fixture["report_bytes"], fixture["report_sha256"], fixture["supervisor"])
+        self.assertTrue((self.work / ci_sdk.CARGO_WORK_RETIRE_PATHS[0]).is_dir())
+        self.assertEqual(marker.read_bytes(), b"outside sentinel")
+
+    def test_early_cargo_retirement_rejects_nondirectory_before_deletion(self):
+        fixture = self._cargo_work_retirement_fixture()
+        last_root = self.work / ci_sdk.CARGO_WORK_RETIRE_PATHS[-1]
+        shutil.rmtree(last_root)
+        last_root.write_bytes(b"not a directory")
+        with self.assertRaisesRegex(ValueError, "linked or not a directory"):
+            ci_sdk._retire_cargo_worktrees(
+                self.work, self.output, fixture["cargo_root"], fixture["cargo_manifest"],
+                fixture["report_bytes"], fixture["report_sha256"], fixture["supervisor"])
+        self.assertTrue((self.work / ci_sdk.CARGO_WORK_RETIRE_PATHS[0]).is_dir())
+
+    def test_early_cargo_retirement_rejects_escaping_allowlist_before_deletion(self):
+        fixture = self._cargo_work_retirement_fixture()
+        outside = self.temporary / "outside"
+        outside.mkdir()
+        marker = outside / "marker"
+        marker.write_bytes(b"outside sentinel")
+        with patch.object(ci_sdk, "CARGO_WORK_RETIRE_PATHS",
+                          ci_sdk.CARGO_WORK_RETIRE_PATHS + ("../outside",)):
+            with self.assertRaisesRegex(ValueError, "unsafe relative path"):
+                ci_sdk._retire_cargo_worktrees(
+                    self.work, self.output, fixture["cargo_root"], fixture["cargo_manifest"],
+                    fixture["report_bytes"], fixture["report_sha256"], fixture["supervisor"])
+        self.assertTrue((self.work / ci_sdk.CARGO_WORK_RETIRE_PATHS[0]).is_dir())
+        self.assertEqual(marker.read_bytes(), b"outside sentinel")
+
+    def test_early_cargo_retirement_cannot_claim_a_failed_removal(self):
+        fixture = self._cargo_work_retirement_fixture()
+        root = (self.work / ci_sdk.CARGO_WORK_RETIRE_PATHS[0]).resolve()
+        real_rmtree = shutil.rmtree
+
+        def leave_first_root(path, *args, **kwargs):
+            if Path(path) == root:
+                return
+            return real_rmtree(path, *args, **kwargs)
+
+        with patch.object(ci_sdk.shutil, "rmtree", side_effect=leave_first_root):
+            with self.assertRaisesRegex(RuntimeError, "remains after retirement"):
+                ci_sdk._retire_cargo_worktrees(
+                    self.work, self.output, fixture["cargo_root"], fixture["cargo_manifest"],
+                    fixture["report_bytes"], fixture["report_sha256"], fixture["supervisor"])
+        self.assertTrue(root.is_dir())
+        self.assertTrue(all((self.work / relative).exists()
+                            for relative in ci_sdk.CARGO_WORK_RETIRE_PATHS))
+
+    def test_produce_stages_and_retires_cargo_before_rust_and_csdk(self):
+        tree = ast.parse(SCRIPT.read_text(encoding="utf-8"))
+        produce = next(node for node in tree.body
+                       if isinstance(node, ast.FunctionDef) and node.name == "produce")
+        calls = {}
+        for node in ast.walk(produce):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                calls.setdefault(node.func.id, []).append(node.lineno)
+        ordered = ["_component_rows_from_sdk", "_make_cargo_component",
+                   "audit_cargo_linkage", "_retire_cargo_worktrees",
+                   "_install_rust", "produce_portable_csdk"]
+        self.assertTrue(all(name in calls for name in ordered))
+        line_numbers = [min(calls[name]) for name in ordered]
+        self.assertEqual(line_numbers, sorted(line_numbers))
+        evidence_assignments = []
+        for node in ast.walk(produce):
+            if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+                continue
+            target = node.targets[0]
+            if (isinstance(target, ast.Subscript)
+                    and isinstance(target.value, ast.Name)
+                    and target.value.id == "retirement_evidence"
+                    and isinstance(target.slice, ast.Constant)
+                    and target.slice.value == "cargo_work_retirement"):
+                evidence_assignments.append(node.lineno)
+        self.assertEqual(len(evidence_assignments), 1)
+        self.assertLess(min(calls["_retire_cargo_worktrees"]), evidence_assignments[0])
+        self.assertLess(evidence_assignments[0], min(calls["produce_portable_csdk"]))
+
+    def _main_argv(self):
+        return [
+            "--work", str((self.temporary / "main-work").resolve()),
+            "--output", str(self.output.resolve()),
+            "--inputs", str((self.temporary / "inputs.json").resolve()),
+            "--cargo-inputs", str((self.temporary / "cargo-inputs.json").resolve()),
+            "--resources", str((self.temporary / "resources.json").resolve()),
+            "--python-bootstrap-root", str((self.temporary / "python-bootstrap").resolve()),
+        ]
+
+    def test_main_failure_receipt_preserves_verified_cargo_retirement(self):
+        fixture = self._cargo_work_retirement_fixture()
+        retirement, _ = ci_sdk._retire_cargo_worktrees(
+            self.work, self.output, fixture["cargo_root"], fixture["cargo_manifest"],
+            fixture["report_bytes"], fixture["report_sha256"], fixture["supervisor"])
+
+        def fail_during_csdk(args, *, retirement_evidence):
+            retirement_evidence["cargo_work_retirement"] = retirement
+            raise RuntimeError("simulated portable C-SDK timeout")
+
+        with patch.object(ci_sdk, "produce", side_effect=fail_during_csdk):
+            self.assertEqual(ci_sdk.main(self._main_argv()), 1)
+
+        record = ci_sdk.read_json(self.output / "sdk-producer.json")
+        self.assertEqual(record["status"], "FAILED")
+        self.assertEqual(record["cargo_work_retirement"], retirement)
+        self.assertEqual(record["cargo_work_retirement"]["summary_sha256"],
+                         retirement["summary_sha256"])
+        self.assertEqual(record["claim"],
+                         "Failed hosted SDK candidate attempt; no guest, R1 acceptance or publication claim.")
+
+    def test_main_pre_retirement_failure_does_not_claim_retirement(self):
+        stale_record = {
+            "schema": ci_sdk.RECEIPT_SCHEMA, "status": "PRODUCED",
+            "cargo_work_retirement": {"status": "stale prior retirement"},
+        }
+        (self.output / "sdk-producer.json").write_bytes(ci_sdk.canonical_json(stale_record))
+
+        def fail_before_retirement(args, *, retirement_evidence):
+            raise RuntimeError("simulated pre-retirement failure")
+
+        with patch.object(ci_sdk, "produce", side_effect=fail_before_retirement):
+            self.assertEqual(ci_sdk.main(self._main_argv()), 1)
+
+        record = ci_sdk.read_json(self.output / "sdk-producer.json")
+        self.assertEqual(record["status"], "FAILED")
+        self.assertNotIn("cargo_work_retirement", record)
+
+    def test_main_success_receipt_is_unchanged_by_retirement_evidence_channel(self):
+        success_bytes = b'{"schema":"fixture","status":"SUCCESS"}\n'
+        observed_evidence = {}
+
+        def succeed(args, *, retirement_evidence):
+            observed_evidence.update(retirement_evidence)
+            (args.output / "sdk-producer.json").write_bytes(success_bytes)
+            return {"status": "SUCCESS"}
+
+        with patch.object(ci_sdk, "produce", side_effect=succeed):
+            self.assertEqual(ci_sdk.main(self._main_argv()), 0)
+
+        self.assertEqual(observed_evidence, {})
+        self.assertEqual((self.output / "sdk-producer.json").read_bytes(), success_bytes)
 
     def test_native_linkage_audit_selects_host_utility_and_records_bounded_evidence(self):
         class RecordingSupervisor:

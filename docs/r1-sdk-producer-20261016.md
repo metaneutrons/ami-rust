@@ -55,3 +55,42 @@ Cargo log sentinels and verifies their exact preservation. All 29 focused SDK
 fixtures pass; an independent source review found no further concrete blocker
 in the immediate producer interfaces. Native production still requires a fresh
 successful campaign.
+
+
+## Cargo scratch retirement before C-SDK derivation
+
+The later [paired Cargo qualification](https://github.com/metaneutrons/ami-rust/actions/runs/38946497526)
+passed in two independent build contexts on each host. The qualified macOS
+Cargo binary is 39,348,200 bytes, SHA-256
+`4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d`;
+the Linux Cargo identity remains `938bc3ee1f60b5f239d369a9f3b6bf1a6e004aecdb6ef65fb7fe901745b011db`.
+These later results supersede the unresolved macOS identity in the first
+attempt above, without changing its recorded failure.
+
+The [complete SDK proposal run 38954096259](https://github.com/metaneutrons/ami-rust/actions/runs/38954096259)
+at source `8e98f230483af5e4785e233c74a68099b97fe2ca` produced the Linux
+candidate successfully. Its independent readback verified the two-root maps,
+all 104 canonical outputs, the five retained native files and the reproduced
+SDK archive. This is host-local build evidence, without guest or release
+acceptance. The macOS producer reproduced its qualified Cargo, then failed
+while deriving the portable C-SDK: the aggregate command reached its 1,200-second
+ceiling (1,222.565 seconds including termination). Failure cleanup succeeded,
+and the retained macOS artifact contains metadata only. Signing and final
+consumer qualification did not run.
+
+The SDK supervisor recursively measures the whole managed work tree. Keeping
+completed Cargo source, vendor, bootstrap and build trees through hundreds of
+short header-generation commands adds repeated filesystem scans. The recorded
+elapsed times include this monitoring work; they do not isolate its exact
+share. A separate complete macOS C-SDK component run took 564.213 seconds,
+so the hosted timeout does not establish a compiler incompatibility.
+
+The correction stages and verifies the exact Cargo component before C-SDK
+derivation, then retires an explicit set of completed Cargo scratch trees.
+It retains the staged component, raw producer report, logs, records, downloaded
+input archives and overlay receipt. Retained bytes are rechecked; linked or
+out-of-scope cleanup roots are refused before deletion. Resource sampling,
+previously observed peaks and every resource ceiling remain in force. Pinned
+originals, compiler inputs, derived C-SDK identities and the qualified AROS
+baseline are unchanged. Fresh complete production on both hosts remains
+required before this correction supplies SDK qualification evidence.
