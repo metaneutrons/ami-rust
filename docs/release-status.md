@@ -78,3 +78,11 @@ its deploy keys and environment secrets were removed. No self-hosted runner
 was registered. Protected AROS-NX and aros-tools checkouts remain unchanged.
 nxpk, native AROS-hosted rustc/Cargo, full std, other CPU/ABI combinations and
 physical hardware are outside this release's qualified scope.
+
+The subsequent [paired Cargo qualification 38946497526](https://github.com/metaneutrons/ami-rust/actions/runs/38946497526)
+passed on both hosts. All four exact reports pass strict canonical checks; the
+two complete executables within each host match byte-for-byte and contain no
+private host/build-root markers. Independent readback supports the refreshed
+Cargo prerequisite identities. The earlier failures remain historical evidence.
+Complete fresh SDK builds, new native runtime/memory evidence and the final
+trust/consumer/release gates remain open.
