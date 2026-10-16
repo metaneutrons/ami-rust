@@ -11,6 +11,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 SCRIPT = Path(__file__).with_name("public_transport.py")
@@ -98,6 +99,20 @@ class PublicTransportTests(unittest.TestCase):
         self.assertEqual(second_record["archive"]["bytes"], record["archive"]["bytes"])
         self.assertEqual(second_record["archive"]["sha256"], record["archive"]["sha256"])
         self.assertEqual(second_archive.read_bytes(), self.archive.read_bytes())
+
+    def test_compressed_archive_boundary_matches_the_public_32_MiB_contract(self):
+        self.assertEqual(public_transport.MAX_ARCHIVE_BYTES, 32 * 1024**2)
+        record = self._pack()
+        size = record["archive"]["bytes"]
+        at_boundary = self.root / "boundary.tar.xz"
+        with patch.object(public_transport, "MAX_ARCHIVE_BYTES", size):
+            accepted = public_transport.pack_bundle(self.bundle, at_boundary)
+        self.assertEqual(accepted["archive"]["bytes"], size)
+        over_boundary = self.root / "too-large.tar.xz"
+        with patch.object(public_transport, "MAX_ARCHIVE_BYTES", size - 1):
+            with self.assertRaisesRegex(ValueError, "compressed bundle exceeds"):
+                public_transport.pack_bundle(self.bundle, over_boundary)
+        self.assertFalse(over_boundary.exists())
 
     def test_changed_archive_pin_is_rejected_before_readback(self):
         record = self._pack()

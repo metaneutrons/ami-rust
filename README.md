@@ -20,6 +20,8 @@ Source CI runs regression fixtures on both development hosts. The manual
 checks candidates on standard GitHub-hosted runners. Its output is qualification
 evidence until every release gate passes. Consumer asset distribution remains separate.
 The protected Cargo prerequisite workflow retains its separate producer identity.
+The [public release replay](docs/public-release-replay.md) checks retrieval and
+consumer use after an accepted candidate is published; it does not publish an SDK.
 The [production quickstart](docs/quickstart.md) documents explicit user-local
 preparation of pinned prerequisites, installation and offline builds, and a
 post-uninstall inventory check. This route still requires actual protected

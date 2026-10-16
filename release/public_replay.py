@@ -28,6 +28,12 @@ FAILURE_NAME = "public-replay-failure.json"
 RESULT_NAME = "public-replay.json"
 COMMIT_RE = re.compile(r"[0-9a-f]{40}\Z")
 DIGEST_RE = re.compile(r"[0-9a-f]{64}\Z")
+SEMVER_IDENTIFIER = r"(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
+RELEASE_TAG_RE = re.compile(
+    r"v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    r"(?:-(?:" + SEMVER_IDENTIFIER + r")(?:\." + SEMVER_IDENTIFIER + r")*)?"
+    r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?\Z"
+)
 APPROVED_REPOSITORY = "metaneutrons/ami-rust"
 REQUIRED_CONSUMER_ASSETS = (
     "sdk.tar.xz", "SHAUTIL", "install.py", "install_publisher.py",
@@ -140,7 +146,7 @@ def _empty_managed_roots(work: Path, output: Path) -> None:
 
 
 def _write_failure(output: Path, phase: str, error: Exception,
-                   source_commit: str, manifest_sha256: str,
+                   release_tag: str, source_commit: str, manifest_sha256: str,
                    supervisor: Any | None) -> None:
     """Keep a bounded, environment-free failure receipt when output is safe."""
     try:
@@ -157,6 +163,7 @@ def _write_failure(output: Path, phase: str, error: Exception,
             "schema": FAILURE_SCHEMA,
             "status": "FAIL_PUBLIC_CONSUMER_REPLAY_NOT_R1_ACCEPTANCE",
             "phase": phase,
+            "release_tag": release_tag,
             "source_commit": source_commit,
             "expected_release_manifest_sha256": manifest_sha256,
             "error_type": type(error).__name__,
@@ -209,7 +216,8 @@ def _write_success(output: Path, helpers: ModuleType, report: dict) -> None:
 
 
 def replay_public_candidate(*, source: Path, source_commit: str, bundle: Path,
-                            manifest_sha256: str, work: Path, output: Path,
+                            manifest_sha256: str, release_tag: str,
+                            work: Path, output: Path,
                             python_bootstrap_root: Path,
                             helpers: ModuleType | None = None) -> dict:
     """Verify and replay a safe-extracted public bundle using selected source helpers."""
@@ -217,8 +225,11 @@ def replay_public_candidate(*, source: Path, source_commit: str, bundle: Path,
     supervisor = None
     source_commit = str(source_commit)
     manifest_sha256 = str(manifest_sha256)
+    release_tag = str(release_tag)
     output_path = Path(output).absolute()
     try:
+        if RELEASE_TAG_RE.fullmatch(release_tag) is None:
+            raise ValueError("--release-tag must be a v-prefixed SemVer value")
         if not COMMIT_RE.fullmatch(source_commit):
             raise ValueError("--source-commit must be an exact lowercase 40-character Git commit")
         if not DIGEST_RE.fullmatch(manifest_sha256):
@@ -328,6 +339,9 @@ def replay_public_candidate(*, source: Path, source_commit: str, bundle: Path,
 
         # Read candidate metadata and documentation only after protected verify.
         candidate_manifest = trusted.strict_json(candidate / "release.json", 1024 * 1024)
+        if (not isinstance(candidate_manifest, dict)
+                or candidate_manifest.get("version") != release_tag[1:]):
+            raise ValueError("authenticated release manifest version differs from selected release tag")
         asset_rows = {row["path"]: row for row in candidate_manifest.get("assets", [])
                       if isinstance(row, dict) and isinstance(row.get("path"), str)}
         if (len(asset_rows) != len(candidate_manifest.get("assets", []))
@@ -414,6 +428,7 @@ def replay_public_candidate(*, source: Path, source_commit: str, bundle: Path,
         report = {
             "schema": RESULT_SCHEMA,
             "status": RESULT_STATUS,
+            "release_tag": release_tag,
             "host": host,
             "source_policy": {
                 "source_sha": identity["source_sha"],
@@ -491,7 +506,8 @@ def replay_public_candidate(*, source: Path, source_commit: str, bundle: Path,
         _write_success(output_path, trusted, report)
         return report
     except Exception as error:
-        _write_failure(output_path, phase, error, source_commit, manifest_sha256, supervisor)
+        _write_failure(output_path, phase, error, release_tag, source_commit,
+                       manifest_sha256, supervisor)
         raise
 
 
@@ -505,6 +521,8 @@ def _parser() -> argparse.ArgumentParser:
                         help="already downloaded and safe-extracted public release bundle")
     parser.add_argument("--manifest-sha256", required=True,
                         help="externally recorded release.json SHA-256")
+    parser.add_argument("--release-tag", required=True,
+                        help="externally selected v-prefixed semantic-version release tag")
     parser.add_argument("--work", type=Path, required=True,
                         help="fresh private work directory")
     parser.add_argument("--output", type=Path, required=True,
@@ -521,7 +539,8 @@ def main(argv: list[str] | None = None) -> int:
             raise ValueError("run public_replay.py under the pinned Python with -I -B")
         replay_public_candidate(
             source=args.source, source_commit=args.source_commit, bundle=args.bundle,
-            manifest_sha256=args.manifest_sha256, work=args.work, output=args.output,
+            manifest_sha256=args.manifest_sha256, release_tag=args.release_tag,
+            work=args.work, output=args.output,
             python_bootstrap_root=args.python_bootstrap_root,
         )
         return 0

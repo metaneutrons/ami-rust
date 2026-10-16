@@ -1,8 +1,10 @@
 """Offline orchestration fixtures for the public consumer replay driver."""
 from __future__ import annotations
 
+from contextlib import redirect_stderr
 import hashlib
 import importlib.util
+import io
 import json
 from pathlib import Path
 import shutil
@@ -88,11 +90,13 @@ class FakeSDK:
 class FakeTrustedHelpers:
     component_names = ("rust", "cargo", "toolchain", "collector", "csdk", "vendor")
 
-    def __init__(self, source, commit, bundle_digest, *, source_mismatch=False,
+    def __init__(self, source, commit, bundle_digest, *, candidate_version="0.1.0",
+                 source_mismatch=False,
                  preparation_mismatch=False, recheck_mismatch=False):
         self.ROOT = Path(source)
         self.commit = commit
         self.bundle_digest = bundle_digest
+        self.candidate_version = candidate_version
         self.source_mismatch = source_mismatch
         self.preparation_mismatch = preparation_mismatch
         self.recheck_mismatch = recheck_mismatch
@@ -142,11 +146,13 @@ class FakeTrustedHelpers:
         if path.name == "ci-auth-tools.json":
             return {"fake": "tool manifest"}
         if path.name == "release.json":
+            self.events.append(("manifest_parse", str(path)))
             rows = [{"path": name, "bytes": 1, "sha256": "a" * 64}
                     for name in ("sdk.tar.xz", "SHAUTIL", "cargo-macos-aarch64.tar.xz",
                                  "install.py", "install_publisher.py", "verify_publisher.py",
                                  "new_project.py", "QUICKSTART.md")]
-            return {"assets": rows, "qualification_only": False, "version": "0.1.0"}
+            return {"assets": rows, "qualification_only": False,
+                    "version": self.candidate_version}
         raise AssertionError("unexpected JSON input: " + str(path))
 
     def validate_tool_manifest(self, manifest, host):
@@ -194,7 +200,7 @@ class FakeTrustedHelpers:
         self.events.append(("protected_verify", str(script), tuple(argv)))
         verified = {
             "status": "verified", "host": "macos-aarch64", "qualification_only": False,
-            "release_manifest_sha256": self.bundle_digest, "version": "0.1.0",
+            "release_manifest_sha256": self.bundle_digest, "version": self.candidate_version,
             "authentication": {"verified": True, "repository": self.ci_auth.REPO},
         }
         row = {"label": label, "exit_code": 0, "stop_reason": None}
@@ -319,10 +325,11 @@ class PublicReplayTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def replay(self, helpers=None, *, digest=None):
+    def replay(self, helpers=None, *, digest=None, release_tag="v0.1.0"):
         return public_replay.replay_public_candidate(
             source=self.source, source_commit=self.commit, bundle=self.bundle,
-            manifest_sha256=digest or self.bundle_digest, work=self.work,
+            manifest_sha256=digest or self.bundle_digest, release_tag=release_tag,
+            work=self.work,
             output=self.output, python_bootstrap_root=self.python_root,
             helpers=helpers or self.helpers,
         )
@@ -367,7 +374,7 @@ class PublicReplayTests(unittest.TestCase):
         self.assertFalse(self.work.exists())
         self.assertFalse(self.output.exists())
 
-    def test_public_flow_uses_trusted_commands_and_existing_recipe_helper(self):
+    def test_matching_release_tag_runs_public_flow_and_is_recorded(self):
         report = self.replay()
         event_names = [event[0] for event in self.helpers.events]
         self.assertLess(event_names.index("source_identity"), event_names.index("bootstrap_tools"))
@@ -381,10 +388,53 @@ class PublicReplayTests(unittest.TestCase):
         install_call = next(event for event in self.helpers.events if event[0] == "install_and_run_recipe")
         self.assertEqual(install_call[1], tuple(self.helpers.EXPECTED_RECIPE))
         self.assertEqual(report["status"], public_replay.RESULT_STATUS)
+        self.assertEqual(report["release_tag"], "v0.1.0")
         self.assertEqual(report["candidate"]["release_manifest_sha256"], self.bundle_digest)
+        self.assertEqual(report["candidate"]["version"], "0.1.0")
         self.assertEqual(report["claims"]["r1_accepted"], False)
         self.assertEqual(report["claims"]["aros_guest_run"], False)
         self.assertTrue((self.output / public_replay.RESULT_NAME).is_file())
+
+    def test_authenticated_manifest_wrong_version_stops_before_preparation_or_recipe(self):
+        helpers = FakeTrustedHelpers(self.source, self.commit, self.bundle_digest,
+                                     candidate_version="0.1.1")
+        with self.assertRaisesRegex(ValueError, "authenticated release manifest version"):
+            self.replay(helpers, release_tag="v0.1.0")
+
+        event_names = [event[0] for event in helpers.events]
+        self.assertLess(event_names.index("protected_verify"), event_names.index("manifest_parse"))
+        self.assertTrue((self.output / public_replay.FAILURE_NAME).is_file())
+        failure = json.loads((self.output / public_replay.FAILURE_NAME).read_text())
+        self.assertEqual(failure["release_tag"], "v0.1.0")
+        self.assertFalse(any(name in event_names for name in (
+            "negative_probes", "preparation_commands", "recipe_line",
+            "install_and_run_recipe")))
+        self.assertFalse((self.output / public_replay.RESULT_NAME).exists())
+
+    def test_malformed_release_tag_is_rejected_before_source_or_bundle_access(self):
+        for release_tag in ("0.1.0", "v01.2.3", "v1.2.3-01"):
+            with self.subTest(release_tag=release_tag):
+                with self.assertRaisesRegex(ValueError, "v-prefixed SemVer"):
+                    self.replay(release_tag=release_tag)
+        self.assertEqual(self.helpers.events, [])
+        self.assertFalse(self.work.exists())
+        self.assertFalse(self.output.exists())
+
+    def test_cli_parses_required_release_tag(self):
+        parser = public_replay._parser()
+        required_args = [
+            "--source", str(self.source), "--source-commit", self.commit,
+            "--bundle", str(self.bundle), "--manifest-sha256", self.bundle_digest,
+            "--work", str(self.work),
+            "--output", str(self.output),
+            "--python-bootstrap-root", str(self.python_root),
+        ]
+        with redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as missing_tag:
+                parser.parse_args(required_args)
+        self.assertEqual(missing_tag.exception.code, 2)
+        args = parser.parse_args([*required_args, "--release-tag", "v0.1.0"])
+        self.assertEqual(args.release_tag, "v0.1.0")
 
     def test_preparation_identity_mismatch_stops_before_recipe_installation(self):
         helpers = FakeTrustedHelpers(self.source, self.commit, self.bundle_digest,
