@@ -34,3 +34,32 @@ to 32 MiB per host within the existing 512 MiB artifact pool. A matching result
 is explicitly diagnostic only. Any source/build-recipe fix still needs review,
 fresh two-host producer receipts, complete SDK qualification and the native
 runtime/memory matrix before R1 acceptance.
+
+## Retained comparison and correction
+
+[Diagnostic run 38933076655](https://github.com/metaneutrons/ami-rust/actions/runs/38933076655)
+preserved both original binaries on each host. Linux produced the same frozen
+Cargo bytes in both work roots. On macOS the two roots reproduced exactly the
+previous prerequisite and failed SDK identities listed above. All four raw
+producer reports passed the pinned input, helper and resource validation.
+
+The Apple linker generated twelve `N_OSO` debug-map entries containing absolute
+paths to the installed bootstrap Rust archives. These entries are outside the
+compiler's source-path remapping. An independent inspection found identical
+contents and sizes for all eighteen Mach-O sections; every symbol name, type,
+section, descriptor and value agreed after mapping only the twelve exact
+bootstrap prefixes for diagnostic comparison. The original full binaries remain
+unequal and are not accepted through this comparison. The [compiler documentation](https://doc.rust-lang.org/nightly/rustc/remap-source-paths.html#paths-generated-by-linkers)
+describes this separate linker limitation. The Darwin prerequisite build now
+passes `-C link-arg=-Wl,-oso_prefix,<bootstrap>/` so the linker generates relative
+`lib/rustlib/...` entries. Linux flags and the existing compiler remaps are
+unchanged. Finished binaries and Rust metadata are never rewritten.
+
+The macOS driver also failed its separate 256 MiB self-memory guard after both
+snapshots were retained. Its measured 296,517,632-byte peak covers the Python
+driver's lifetime, not compression alone. The driver now records that measurement
+as `driver_peak_rss_bytes` and uses the selected producer resource policy's
+`build.rss_bytes` limit, unchanged at 4 GiB. Both phases must report the same
+selected limit. The archive, byte-comparison, work-space and export checks remain
+in force. The historical workflow failure is retained; this source correction
+requires fresh protected builds before any reference replacement.

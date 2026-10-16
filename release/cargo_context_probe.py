@@ -39,7 +39,6 @@ WORK_LIMIT = 12 * 1024**3
 RECORD_LIMIT = 64 * 1024
 APPENDIX_RESERVE = 7 * 1024**2 + RECORD_LIMIT
 TEXT_LIMIT = 16 * 1024
-COMPRESSION_MEMORY_LIMIT = 256 * 1024**2
 SCHEMA = "ami-rust-cargo-context-probe-v1"
 
 
@@ -284,6 +283,14 @@ def _producer_report(phase: Path, returned) -> dict:
     return record
 
 
+def _producer_build_rss_limit(report: dict) -> int:
+    budgets = report.get("budgets")
+    rss_limit = budgets.get("rss_bytes") if isinstance(budgets, dict) else None
+    if type(rss_limit) is not int or rss_limit <= 0:
+        raise ValueError("producer report lacks a valid selected build RSS limit")
+    return rss_limit
+
+
 def _artifact(work: Path, report: dict) -> Path:
     artifact = report.get("custom_cargo_artifact")
     expected = work / "build-work/target/release/cargo"
@@ -390,6 +397,7 @@ def run_probe(args) -> int:
         write_json(output / "host-toolchain.json", toolchain)
         retained = tree_bytes(output)
         peak_bound = 0
+        driver_rss_limit = None
         archives = []
         for index, name in enumerate(WORK_NAMES):
             work = temporary / name
@@ -402,6 +410,10 @@ def run_probe(args) -> int:
                 report = _producer_report(phase, returned)
                 if report.get("status") != "PRODUCED_PREREQUISITE_ONLY_NOT_R1_QUALIFICATION":
                     raise ValueError("producer report is not a successful prerequisite result")
+                phase_rss_limit = _producer_build_rss_limit(report)
+                if driver_rss_limit is not None and phase_rss_limit != driver_rss_limit:
+                    raise ValueError("producer build RSS limit changed between phases")
+                driver_rss_limit = phase_rss_limit
                 binary = _artifact(work, report)
                 cargo_archive = _write_archive(phase / "cargo.tar.xz", [("cargo", binary)])
                 diagnostics = _write_archive(phase / "diagnostics.tar.xz", _diagnostic_files(work))
@@ -460,9 +472,10 @@ def run_probe(args) -> int:
                 return 1
 
         outcome["combined_work_peak_bound_bytes"] = peak_bound
-        outcome["compression_peak_rss_bytes"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (1 if sys.platform == "darwin" else 1024)
-        if outcome["compression_peak_rss_bytes"] > COMPRESSION_MEMORY_LIMIT:
-            raise ValueError("driver compression memory exceeded 256 MiB")
+        outcome["driver_peak_rss_bytes"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (1 if sys.platform == "darwin" else 1024)
+        outcome["driver_peak_rss_limit_bytes"] = driver_rss_limit
+        if outcome["driver_peak_rss_bytes"] > driver_rss_limit:
+            raise ValueError("driver peak RSS exceeded selected build.rss_bytes resource policy")
         equal = _archive_equal(archives[0], archives[1])
         outcome["status"] = ("MATCH_NOT_RELEASE_ACCEPTED" if equal else
                              "MISMATCH_RETAINED_NOT_RELEASE_ACCEPTED")

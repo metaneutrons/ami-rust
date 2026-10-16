@@ -24,7 +24,9 @@ class ProbeTests(unittest.TestCase):
         self.inputs = self.base / "inputs.json"
         self.resources = self.base / "resources.json"
         self.inputs.write_text("{}\n")
-        self.resources.write_text("{}\n")
+        policy_path = Path(probe.ci_cargo.__file__).resolve().parent / "ci-resources.json"
+        self.resource_policy = json.loads(policy_path.read_text())
+        self.resources.write_text(json.dumps(self.resource_policy, sort_keys=True) + "\n")
         self.calls = 0
 
     def argv(self):
@@ -66,6 +68,7 @@ class ProbeTests(unittest.TestCase):
                 raise RuntimeError("synthetic second-run failure")
             record = {"schema": probe.ci_cargo.PRODUCER_SCHEMA,
                       "status": "PRODUCED_PREREQUISITE_ONLY_NOT_R1_QUALIFICATION",
+                      "budgets": json.loads(args.resources.read_text())["build"],
                       "custom_cargo_artifact": {
                           "relative_path": "build-work/target/release/cargo",
                           "bytes": len(data), "sha256": "0" * 64 if bad_hash else digest},
@@ -74,15 +77,21 @@ class ProbeTests(unittest.TestCase):
             return record
         return produce
 
-    def run_with(self, producer):
+    def run_with(self, producer, peak_rss_bytes=64 * 1024**2):
+        raw_peak_rss = peak_rss_bytes if sys.platform == "darwin" else peak_rss_bytes // 1024
         with mock.patch.object(probe, "capture_host_toolchain", return_value={"schema": "test"}), \
-             mock.patch.object(probe.ci_cargo, "produce", side_effect=producer):
+             mock.patch.object(probe.ci_cargo, "produce", side_effect=producer), \
+             mock.patch.object(probe.resource, "getrusage", return_value=mock.Mock(ru_maxrss=raw_peak_rss)):
             return probe.main(self.argv())
 
     def test_equal_binaries_are_preserved_and_match_is_not_acceptance(self):
-        self.assertEqual(self.run_with(self.producer()), 0)
+        measured_peak = 296_517_632
+        self.assertEqual(self.run_with(self.producer(), peak_rss_bytes=measured_peak), 0)
         outcome = json.loads((self.output / "outcome.json").read_text())
         self.assertEqual(outcome["status"], "MATCH_NOT_RELEASE_ACCEPTED")
+        self.assertEqual(outcome["driver_peak_rss_bytes"], measured_peak)
+        self.assertEqual(outcome["driver_peak_rss_limit_bytes"],
+                         self.resource_policy["build"]["rss_bytes"])
         for phase in ("cargo", "sdk"):
             folder = self.output / phase
             self.assertTrue((folder / "producer.json").is_file())
@@ -94,6 +103,18 @@ class ProbeTests(unittest.TestCase):
                 self.assertEqual(archive.extractfile(member).read(), b"same-cargo")
         self.assertFalse((self.temporary / probe.WORK_NAMES[0]).exists())
         self.assertFalse((self.temporary / probe.WORK_NAMES[1]).exists())
+
+    def test_driver_peak_above_selected_policy_is_retained(self):
+        limit = self.resource_policy["build"]["rss_bytes"]
+        measured_peak = limit + 1024
+        self.assertEqual(self.run_with(self.producer(), peak_rss_bytes=measured_peak), 1)
+        outcome = json.loads((self.output / "outcome.json").read_text())
+        self.assertEqual(outcome["status"], "FAILED_EVIDENCE_RETAINED")
+        self.assertEqual(outcome["driver_peak_rss_bytes"], measured_peak)
+        self.assertEqual(outcome["driver_peak_rss_limit_bytes"], limit)
+        self.assertIn("driver peak RSS exceeded", outcome["error"])
+        self.assertTrue((self.output / "cargo/cargo.tar.xz").is_file())
+        self.assertTrue((self.output / "sdk/cargo.tar.xz").is_file())
 
     def test_different_binaries_are_retained_before_nonzero_rejection(self):
         self.assertEqual(self.run_with(self.producer((b"cargo-one", b"cargo-two"))), 1)

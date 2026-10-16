@@ -156,6 +156,15 @@ def main():
         config.write_text('[source.crates-io]\nreplace-with="vendored"\n[source.vendored]\ndirectory=' + json.dumps(str(vendor)) + '\n')
     else:
         assert not vendor.exists() and not config.exists(), "provision into a fresh explicit vendor"
+    rustflags = [
+        "--remap-path-prefix=" + str(source) + "=/cargo-source",
+        "--remap-path-prefix=" + str(work) + "=/cargo-build",
+        "--remap-path-prefix=" + str(vendor) + "=/cargo-vendor",
+    ]
+    if args.phase == "build" and platform.system() == "Darwin":
+        # ld records bootstrap archive paths in N_OSO debug-map symbols.
+        # Strip the bootstrap root while preserving relative lib/rustlib paths.
+        rustflags.append("-C link-arg=-Wl,-oso_prefix," + str(rust.parent) + "/")
     env = {"HOME": str(work / "home"), "PATH": str(rust) + ":/usr/bin:/bin:/usr/sbin:/sbin",
            "RUSTC": str(rust / "rustc"), "RUSTDOC": str(rust / "rustdoc"),
            "CARGO_HOME": str(cargo_home), "CARGO_TARGET_DIR": str(work / "target"),
@@ -165,7 +174,7 @@ def main():
            "CARGO_PROFILE_RELEASE_OPT_LEVEL": "2", "CARGO_PROFILE_RELEASE_CODEGEN_UNITS": "16",
            "CARGO_PROFILE_RELEASE_LTO": "false",
            "LC_ALL": "C", "TZ": "UTC", "SOURCE_DATE_EPOCH": "1791936000",
-           "RUSTFLAGS": "--remap-path-prefix=" + str(source) + "=/cargo-source --remap-path-prefix=" + str(work) + "=/cargo-build --remap-path-prefix=" + str(vendor) + "=/cargo-vendor"}
+           "RUSTFLAGS": " ".join(rustflags)}
     if args.phase == "provision":
         command = [str(rust / "cargo"), "vendor", "--locked", "--versioned-dirs", str(vendor)]
     else:

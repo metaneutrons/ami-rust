@@ -28,8 +28,16 @@ The subsequent complete [protected proposal 38922417085](https://github.com/meta
 failed. Linux completed all five variants in two fresh roots; macOS stopped
 before SDK compilation because its newly built Cargo differed from the frozen
 prerequisite receipt. The [Cargo context diagnostic](hosted-cargo-context-probe.md)
-preserves both actual binaries and build contexts for investigation. No new
-Cargo reference identity or native acceptance follows from that diagnostic.
+preserves both actual binaries and build contexts for investigation. In
+[run 38933076655](https://github.com/metaneutrons/ami-rust/actions/runs/38933076655),
+Linux reproduced its frozen bytes in both contexts. macOS reproduced the two
+previous identities: twelve linker-generated bootstrap debug-map paths differed
+with the work root. Its driver separately exceeded an unnecessary 256 MiB
+self-memory guard after preserving both binaries. That failed result is retained;
+the policy-derived driver guard and Darwin linker-path generation are corrected
+in source. Fresh protected builds must prove complete raw byte equality before
+selecting any new Cargo reference. No new Cargo reference identity or native
+acceptance follows from the diagnostic or this source edit.
 
 The complete original and derived C-SDK prerequisites, corresponding source,
 patches and selected vendor archive are public repository inputs with their
