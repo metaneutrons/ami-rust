@@ -27,3 +27,14 @@ request merely because they modify an upstream input in an owned checkout.
 
 These patches serve the independent ami-rust SDK release. nxpk remains outside
 the current scope.
+## Local working storage
+
+Owner decision, 2026-10-16: use actual free disk space with 32 GiB operating
+headroom after the estimated additional peak of a large operation. Ordinary
+source, documentation and licence copies have no per-file/subdirectory quota;
+local evidence and backups have no fixed cumulative archive quota. Use
+`qualification/hosted_capacity.py` at session start and before large operations;
+do not revive the historical reservation
+ledger. Preserve original evidence, failures and backup integrity. See
+`docs/local-storage-policy.md`. Hosted CI limits, bounded untrusted-input parsing
+and AROS runtime/ABI acceptance criteria remain separate and unchanged.

@@ -1,6 +1,6 @@
 {
   "adoption_is_not_qualification": true,
-  "authority": "Owner selected standard GitHub-hosted runners and authorised measuring/redefining resource requirements; active objective reach R1",
+  "authority": "Owner explicitly replaced petty local file/archive quotas with realistic free-space accounting on 2026-10-16; standard hosted runners and protected R1 qualification remain authorised",
   "basis": {
     "capacity_run": "https://github.com/metaneutrons/ami-rust/actions/runs/38807604508",
     "max_retained_observed_RSS_bytes": 2336669696,
@@ -19,18 +19,25 @@
     "review_reserve_seconds": 300,
     "seconds": 5400
   },
-  "effective_scope": "New protected hosted CI phases only; sealed previous campaigns unchanged",
+  "effective_scope": "New local preparation/evidence work uses free-space headroom; hosted build/runtime limits and sealed previous campaigns unchanged",
   "host_capacity": {
     "disk_free_minimum_bytes": 25769803776,
     "ram_minimum_bytes": 6442450944,
     "schema": "ami-rust-host-capacity-v1"
   },
+  "local_storage": {
+    "basis": "Two existing 12 GiB build workspaces plus 8 GiB recovery headroom; add the estimated peak of each large operation before admission",
+    "fixed_archive_quota_bytes": null,
+    "minimum_free_bytes": 34359738368,
+    "mode": "free-space-headroom",
+    "per_file_quotas": false,
+    "preserve_existing_evidence": true,
+    "schema": "ami-rust-local-storage-v2"
+  },
   "retention": {
     "CI_artifact_pool_bytes": 536870912,
-    "M0_retained_conservative_bytes": 2039882558,
-    "all_old_external_holdings_carried_forward": true,
-    "combined_M0_ami_rust_bytes": 6442450944,
-    "incremental_ami_rust_bytes": 4294967296
+    "all_old_external_holdings_preserved": true,
+    "local_archive_policy": "local_storage; former fixed local quotas are historical only"
   },
   "runtime_budgets": "All guest/heap/stack/native code-size/ABI/baseline/runtime limits remain exactly those in inputs/budgets.json",
   "schema": "ami-rust-hosted-resources-v1",
