@@ -1085,12 +1085,82 @@ def _build_receipt(path: Path, host: str, reference: dict | None, supervisor,
             "AMIRUST_path": str(artifact_root / "AMIRUST"), "reference_match": False}
 
 
+def _copy_consumer_metadata_archives(artifacts: Path, rows: dict, output: Path,
+                                     root_name: str) -> list[dict]:
+    """Retain each exact raw dependency archive from one verified consumer root."""
+    if root_name not in {"absolute-a", "absolute-b"}:
+        raise ValueError("metadata archive root is not one of the independent consumer roots")
+    metadata_root = output / "metadata"
+    if metadata_root.exists() or metadata_root.is_symlink():
+        if metadata_root.is_symlink() or not metadata_root.is_dir():
+            raise ValueError("metadata output root must be a regular directory")
+    else:
+        metadata_root.mkdir(mode=0o700)
+    destination = metadata_root / root_name
+    destination.mkdir(mode=0o700)
+    result = []
+    for crate in ci_sdk.METADATA_CRATES:
+        names = [name for name in rows
+                 if isinstance(name, str) and name.startswith("target/release/deps/")
+                 and re.fullmatch("lib" + re.escape(crate) + r"-[0-9a-f]+\.rlib",
+                                  PurePosixPath(name).name)]
+        if len(names) != 1:
+            raise ValueError("expected exactly one raw metadata archive for " + crate)
+        name = names[0]
+        relative = ci_sdk._safe_relative(name)
+        source = artifacts.joinpath(*relative.parts)
+        try:
+            source_info = source.lstat()
+        except OSError as error:
+            raise ValueError("raw metadata archive is missing: " + name) from error
+        canonical = rows[name]
+        if (not stat.S_ISREG(source_info.st_mode) or not isinstance(canonical, dict)
+                or type(canonical.get("bytes")) is not int or canonical["bytes"] < 0
+                or not re.fullmatch(r"[0-9a-f]{64}", str(canonical.get("sha256", "")))
+                or source_info.st_size != canonical["bytes"] or sha256(source) != canonical["sha256"]):
+            raise ValueError("raw metadata archive differs from its canonical output: " + name)
+        if ci_sdk.directory_bytes(output) + canonical["bytes"] > MAX_OUTPUT_BYTES:
+            raise ValueError("retained metadata archives exceed the existing 32 MiB output limit")
+        target = destination / (crate + ".rlib")
+        if target.exists() or target.is_symlink():
+            raise ValueError("metadata archive output already exists: " + root_name + "/" + crate)
+        shutil.copyfile(source, target)
+        target.chmod(0o600)
+        if (target.stat().st_size != canonical["bytes"]
+                or sha256(target) != canonical["sha256"]):
+            raise ValueError("retained metadata archive differs from its canonical output: " + name)
+        result.append({"crate": crate, "path": target.relative_to(output).as_posix(),
+                       "canonical_path": name, "bytes": target.stat().st_size,
+                       "sha256": sha256(target)})
+    return result
+
+
+def _same_file_bytes(first: Path, second: Path) -> bool:
+    if first.stat().st_size != second.stat().st_size:
+        return False
+    with first.open("rb") as first_stream, second.open("rb") as second_stream:
+        while True:
+            first_block = first_stream.read(64 * 1024)
+            second_block = second_stream.read(64 * 1024)
+            if first_block != second_block:
+                return False
+            if not first_block:
+                return True
+
+
 def _run_recipe_builds(supervisor, python: Path, host: str, reference: dict,
                        consumers: list[Path], commands: list[str], output: Path, *,
-                       sdk_manifest_sha256: str, receipt_pins: dict[str, str]) -> dict:
+                       sdk_manifest_sha256: str, source_sdk_identity: str,
+                       receipt_pins: dict[str, str]) -> dict:
+    if not re.fullmatch(r"[0-9a-f]{64}", sdk_manifest_sha256):
+        raise ValueError("consumer SDK manifest identity is malformed")
+    if not re.fullmatch(r"[0-9a-f]{40}", source_sdk_identity):
+        raise ValueError("consumer source SDK identity is malformed")
     names = ("sha256sum", "minimal-noalloc", "minimal-alloc", "qualification", "dependencies")
     output_native = output / "native"
     output_native.mkdir(mode=0o700)
+    retained_metadata = []
+    first_metadata = {}
     rows_by_root = {}
     first_native = {}
     for consumer_index, consumer in enumerate(consumers):
@@ -1116,6 +1186,11 @@ def _run_recipe_builds(supervisor, python: Path, host: str, reference: dict,
             expected = reference["hosts"][host][variant]
             verified = _build_receipt(build_path, host, expected, supervisor,
                                       root_name + "/" + variant)
+            if (verified.get("canonical_artifacts") != expected
+                    or verified.get("reference_match") is not True
+                    or not re.fullmatch(r"[0-9a-f]{64}", str(verified.get("receipt_sha256", "")))):
+                raise ValueError("consumer build receipt differs from its independently verified reference: " +
+                                 root_name + "/" + variant)
             if consumer_index == 0:
                 preserved = ci_sdk._preserve_native_payload(Path(verified["AMIRUST_path"]),
                                                               supervisor.work, variant)
@@ -1135,6 +1210,37 @@ def _run_recipe_builds(supervisor, python: Path, host: str, reference: dict,
                 destination.chmod(0o755)
                 if sha256(destination) != original["amirst_sha256"]:
                     raise ValueError("retained native payload differs after second-root comparison")
+            if variant == "dependencies":
+                copied = _copy_consumer_metadata_archives(
+                    build_path / "artifacts", verified["canonical_artifacts"], output, root_name)
+                canonical_map_sha256 = hashlib.sha256(
+                    canonical_json(verified["canonical_artifacts"])).hexdigest()
+                bound = []
+                for archive in copied:
+                    artifact = verified["canonical_artifacts"][archive["canonical_path"]]
+                    bound.append({**archive, "root": root_name, "host": host,
+                                  "source_sdk_identity": source_sdk_identity,
+                                  "sdk_manifest_sha256": sdk_manifest_sha256,
+                                  "build_receipt_sha256": verified["receipt_sha256"],
+                                  "canonical_artifacts_sha256": canonical_map_sha256,
+                                  "canonical_artifact": artifact,
+                                  "reference_match": True})
+                if consumer_index == 0:
+                    first_metadata = {row["crate"]: row for row in bound}
+                else:
+                    for row in bound:
+                        original = first_metadata.get(row["crate"])
+                        original_path = output / original["path"] if original else None
+                        retained_path = output / row["path"]
+                        if (original is None or row["bytes"] != original["bytes"]
+                                or row["sha256"] != original["sha256"]
+                                or row["canonical_path"] != original["canonical_path"]
+                                or row["canonical_artifact"] != original["canonical_artifact"]
+                                or not _same_file_bytes(original_path, retained_path)):
+                            raise ValueError("two clean consumer roots produced different metadata archive bytes: " +
+                                             row["crate"])
+                retained_metadata.extend(bound)
+                supervisor.check_limits("retained raw dependency archives " + root_name)
             root_rows.append({"recipe_index": index, "command": line,
                               "process": record, "build_receipt_sha256": verified["receipt_sha256"],
                               "canonical_artifacts": verified["canonical_artifacts"],
@@ -1176,7 +1282,13 @@ def _run_recipe_builds(supervisor, python: Path, host: str, reference: dict,
                 ci_sdk._retire_successful_build(build_path, supervisor.work)
                 supervisor.check_limits("retired new-project build")
         rows_by_root[root_name] = root_rows
-    return {"roots": rows_by_root, "retained_native": [
+    expected_metadata = {(root, crate) for root in ("absolute-a", "absolute-b")
+                         for crate in ci_sdk.METADATA_CRATES}
+    if ({(row["root"], row["crate"]) for row in retained_metadata} != expected_metadata
+            or len(retained_metadata) != len(expected_metadata)):
+        raise ValueError("consumer output must retain all six root-specific metadata archives")
+    return {"roots": rows_by_root, "retained_metadata": retained_metadata,
+            "retained_native": [
         {"path": "native/" + variant + ".AMIRUST", "bytes": (output_native / (variant + ".AMIRUST")).stat().st_size,
          "sha256": sha256(output_native / (variant + ".AMIRUST"))}
         for variant in VARIANTS]}
@@ -1259,6 +1371,7 @@ def _install_and_run_recipe(bundle: Path, work: Path, output: Path, python: Path
 
     build_records = _run_recipe_builds(supervisor, python, host, reference, consumers,
                                        commands, output, sdk_manifest_sha256=sdk["manifest_sha256"],
+                                       source_sdk_identity=sdk["manifest"].get("source_identity"),
                                        receipt_pins=receipt_pins)
     for consumer, name, env in zip(consumers, ("absolute-a", "absolute-b"), envs, strict=True):
         # _run_recipe_builds has already run indices 3-10; retain their command and
@@ -1309,6 +1422,7 @@ def _install_and_run_recipe(bundle: Path, work: Path, output: Path, python: Path
                        for component, path in rows.items()}
                 for name, rows in zip(("absolute-a", "absolute-b"), component_copies, strict=True)},
             "retained_native": build_records["retained_native"],
+            "retained_metadata": build_records["retained_metadata"],
             "unrelated_sibling_marker_sha256": sha256(marker)}
 
 
@@ -1428,6 +1542,8 @@ def qualify(bundle_path: Path, work: Path, output: Path, python_root: Path) -> d
         reference, commands)
     if len(consumer_report["retained_native"]) != 5:
         raise ValueError("consumer output must retain exactly the five matched native variants")
+    if len(consumer_report["retained_metadata"]) != 6:
+        raise ValueError("consumer output must retain all six root-specific metadata archives")
     check_row, check_stdout, _ = _run_recipe_line(
         supervisor, preparation_env, first_consumer, check_command, "documented-check-inputs-after-uninstall")
     recheck = _parse_command_result(check_stdout, "VERIFIED_RETAINED_INPUTS", "documented retained input check")
@@ -1473,6 +1589,7 @@ def qualify(bundle_path: Path, work: Path, output: Path, python_root: Path) -> d
                             "unrelated_sibling_marker_sha256":
                                 consumer_report["unrelated_sibling_marker_sha256"]},
         "retained_native": consumer_report["retained_native"],
+        "retained_metadata": consumer_report["retained_metadata"],
         "budgets": {"workspace_bytes": ci_sdk.MAX_WORK_BYTES,
                     "rss_bytes": ci_sdk.MAX_RSS_BYTES, "log_bytes": ci_sdk.MAX_LOG_BYTES,
                     "command_seconds": ci_sdk.MAX_COMMAND_SECONDS,

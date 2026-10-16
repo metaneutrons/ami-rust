@@ -75,9 +75,19 @@ class HostedConsumerVerifyTests(unittest.TestCase):
         build_names = ("utility-build", "minimal-noalloc-build", "minimal-alloc-build",
                        "qualification-build", "dependencies-build")
         payloads = {name: ("native-" + name).encode() for name in variant_order}
-        reference = {"hosts": {host: {name: {"AMIRUST": {"bytes": len(raw), "sha256": sha(raw)}}
-                                     for name, raw in payloads.items()}}}
-        sdk = {"manifest_sha256": sdk_digest, "manifest": {"version": "0.1.0"},
+        archive_payloads = {crate: ("raw-archive-" + crate).encode()
+                            for crate in ci_verify.ci_sdk.METADATA_CRATES}
+        archive_names = {crate: "target/release/deps/lib" + crate + "-" + sha(raw)[:16] + ".rlib"
+                         for crate, raw in archive_payloads.items()}
+        canonical_by_variant = {
+            name: {"AMIRUST": {"bytes": len(raw), "sha256": sha(raw)}}
+            for name, raw in payloads.items()}
+        canonical_by_variant["dependencies"].update({
+            archive_names[crate]: {"bytes": len(raw), "sha256": sha(raw)}
+            for crate, raw in archive_payloads.items()})
+        reference = {"hosts": {host: canonical_by_variant}}
+        sdk = {"manifest_sha256": sdk_digest,
+               "manifest": {"version": "0.1.0", "source_identity": "4" * 40},
                "component_info": {name: {"manifest": {"fixture": name}} for name in components}}
         supervisor = SimpleNamespace(work=self.work, env={}, check_limits=lambda label: None)
         self.recipe_calls = []
@@ -110,17 +120,28 @@ class HostedConsumerVerifyTests(unittest.TestCase):
                 result.update(status="uninstalled", version="0.1.0")
             else:
                 build_name = build_names[index - 3] if index < 8 else "hello-build"
-                raw = payloads[variant_order[index - 3]] if index < 8 else b"hello-native"
+                variant = variant_order[index - 3] if index < 8 else None
+                raw = payloads[variant] if variant is not None else b"hello-native"
                 target = consumer / build_name / "artifacts"
                 target.mkdir(parents=True)
                 (target / "AMIRUST").write_bytes(raw)
+                if variant == "dependencies":
+                    for crate, archive_raw in archive_payloads.items():
+                        if corrupt == "metadata-data" and consumer.name == "absolute-b" and crate == "serde":
+                            archive_raw = b"changed-second-root-serde"
+                        archive_path = target.joinpath(*Path(archive_names[crate]).parts)
+                        archive_path.parent.mkdir(parents=True, exist_ok=True)
+                        archive_path.write_bytes(archive_raw)
             return {"exit_code": 0}, json.dumps(result), ""
 
         def receipt(path, host, expected, supervisor, label):
             artifact = path / "artifacts/AMIRUST"
             raw = artifact.read_bytes()
+            canonical = expected or {"AMIRUST": {"bytes": len(raw), "sha256": sha(raw)}}
+            if corrupt == "second-receipt" and path.name == "dependencies-build" and path.parent.name == "absolute-b":
+                canonical = {**canonical, "AMIRUST": {"bytes": len(raw), "sha256": "f" * 64}}
             return {"receipt_sha256": "c" * 64, "AMIRUST_path": str(artifact),
-                    "canonical_artifacts": expected or {"AMIRUST": {"bytes": len(raw), "sha256": sha(raw)}}}
+                    "canonical_artifacts": canonical, "reference_match": expected is not None}
 
         with mock.patch.object(ci_verify, "_run_recipe_line", side_effect=execute), \
                 mock.patch.object(ci_verify, "_build_receipt", side_effect=receipt), \
@@ -136,6 +157,35 @@ class HostedConsumerVerifyTests(unittest.TestCase):
                                                  for i in range(12)})
         self.assertEqual(len(self.recipe_calls), 24)
         self.assertEqual(len(result["retained_native"]), 5)
+        self.assertEqual(len(result["retained_metadata"]), 6)
+        expected_paths = {f"metadata/{root}/{crate}.rlib"
+                          for root in ("absolute-a", "absolute-b")
+                          for crate in ci_verify.ci_sdk.METADATA_CRATES}
+        self.assertEqual({row["path"] for row in result["retained_metadata"]}, expected_paths)
+        self.assertEqual(len({(self.root / "output" / row["path"]).stat().st_ino
+                              for row in result["retained_metadata"]}), 6)
+        for root in ("absolute-a", "absolute-b"):
+            dependency = next(row for row in result["commands"][root]
+                              if row["recipe_index"] == 7)
+            canonical = dependency["canonical_artifacts"]
+            canonical_digest = sha(ci_verify.canonical_json(canonical))
+            for retained in (row for row in result["retained_metadata"] if row["root"] == root):
+                self.assertEqual(retained["build_receipt_sha256"],
+                                 dependency["build_receipt_sha256"])
+                self.assertEqual(retained["canonical_artifacts_sha256"], canonical_digest)
+                self.assertEqual(retained["canonical_artifact"],
+                                 canonical[retained["canonical_path"]])
+        for row in result["retained_metadata"]:
+            retained = self.root / "output" / row["path"]
+            self.assertEqual(retained.stat().st_size, row["bytes"])
+            self.assertEqual(sha(retained.read_bytes()), row["sha256"])
+            self.assertEqual(row["canonical_artifact"],
+                             {"bytes": row["bytes"], "sha256": row["sha256"]})
+            self.assertEqual(row["host"], "linux-x86_64")
+            self.assertEqual(row["source_sdk_identity"], "4" * 40)
+            self.assertEqual(row["sdk_manifest_sha256"], "d" * 64)
+            self.assertEqual(row["build_receipt_sha256"], "c" * 64)
+            self.assertTrue(row["reference_match"])
         for root, digest in (("absolute-a", "a" * 64), ("absolute-b", "b" * 64)):
             lock = next(row for row in result["commands"][root] if row["recipe_index"] == 9)
             self.assertEqual(lock["result"]["receipt_sha256"], digest)
@@ -150,6 +200,47 @@ class HostedConsumerVerifyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "does not bind the installed SDK and receipt"):
             self._exercise_complete_install_recipe(corrupt="receipt")
         self.assertNotIn(("absolute-a", 10), self.recipe_calls)
+
+    def test_complete_recipe_rejects_changed_second_root_metadata_archive(self):
+        with self.assertRaisesRegex(ValueError, "raw metadata archive differs from its canonical output:.*serde"):
+            self._exercise_complete_install_recipe(corrupt="metadata-data")
+
+    def test_complete_recipe_rejects_second_root_receipt_with_wrong_linked_input(self):
+        with self.assertRaisesRegex(ValueError, "independently verified reference.*absolute-b/dependencies"):
+            self._exercise_complete_install_recipe(corrupt="second-receipt")
+
+    def test_metadata_archive_retention_rejects_ambiguous_missing_and_changed_inputs(self):
+        for case, message in (("ambiguous", "exactly one"),
+                              ("missing", "is missing"),
+                              ("changed", "differs from its canonical output"),
+                              ("linked", "differs from its canonical output")):
+            with self.subTest(case=case):
+                artifacts = self.work / ("artifacts-" + case)
+                artifacts.mkdir()
+                rows = {}
+                for crate in ci_verify.ci_sdk.METADATA_CRATES:
+                    raw = ("archive-" + crate).encode()
+                    member = f"target/release/deps/lib{crate}-{sha(raw)[:16]}.rlib"
+                    rows[member] = {"bytes": len(raw), "sha256": sha(raw)}
+                    if not (case == "missing" and crate == "ed25519_dalek"):
+                        path = artifacts.joinpath(*Path(member).parts)
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        if case == "linked" and crate == "serde":
+                            target = path.with_name("serde-target.rlib")
+                            target.write_bytes(raw)
+                            path.symlink_to(target.name)
+                        else:
+                            path.write_bytes(b"changed" if case == "changed" and crate == "serde" else raw)
+                if case == "ambiguous":
+                    raw = b"second-serde-archive"
+                    member = f"target/release/deps/libserde-{sha(raw)[:16]}.rlib"
+                    rows[member] = {"bytes": len(raw), "sha256": sha(raw)}
+                    path = artifacts.joinpath(*Path(member).parts)
+                    path.write_bytes(raw)
+                output = self.root / ("output-" + case)
+                output.mkdir()
+                with self.assertRaisesRegex(ValueError, message):
+                    ci_verify._copy_consumer_metadata_archives(artifacts, rows, output, "absolute-a")
 
     def test_client_source_identity_uses_explicit_clean_publisher_checkout_without_ci(self):
         source, workflow = "1" * 40, "1" * 40

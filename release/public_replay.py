@@ -1041,6 +1041,8 @@ def replay_public_candidate(*, source: Path, source_commit: str,
             ordered_components, reference, commands)
         if len(consumer_report["retained_native"]) != 5:
             raise ValueError("consumer replay must retain all five native variants")
+        if len(consumer_report["retained_metadata"]) != 6:
+            raise ValueError("consumer replay must retain all six root-specific metadata archives")
 
         phase = "post-uninstall-input-recheck"
         check_row, check_stdout, _ = trusted._run_recipe_line(
@@ -1113,6 +1115,7 @@ def replay_public_candidate(*, source: Path, source_commit: str,
                     consumer_report["unrelated_sibling_marker_sha256"],
             },
             "retained_native": consumer_report["retained_native"],
+            "retained_metadata": consumer_report["retained_metadata"],
             "budgets": {"workspace_bytes": trusted.ci_sdk.MAX_WORK_BYTES,
                         "rss_bytes": trusted.ci_sdk.MAX_RSS_BYTES,
                         "log_bytes": trusted.ci_sdk.MAX_LOG_BYTES,
