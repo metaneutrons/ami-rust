@@ -64,6 +64,16 @@ The distributor remains responsible for APL section 3.2 source availability;
 repository policy retains source for at least 12 months after the latest
 distribution of each covered version, including if a hosting provider changes.
 
+The FreeType components of the separately provided C-SDK are based in part on
+the work of the FreeType Team. Portions are copyright © 1996–2026 The FreeType
+Project (<https://freetype.org>); all rights reserved. The applicable FreeType
+Project License (FTL) and original file-specific notices are preserved in the
+corresponding-source capsule, including
+`evidence/licence-texts/texts/vendors/by-sha256/5a5ee54c5001bbad1cdc1a57cc3dd4c42199b2da09d39c7ee41fab002d02967f.txt`.
+The FTL alternative covers the original FreeType engine and demo-package files
+without separate explicit terms; embedded BDF, PCF and zlib notices retain their
+own scope. AROS port additions retain their applicable source-tree terms.
+
 ## Host Cargo and other prerequisites
 
 The custom host Cargo component is a separately identified archive within the
@@ -77,7 +87,7 @@ locked host registry packages, complete source for the three selected MPL
 packages, recovered original licence texts, and the complete lock-matched
 libgit2-sys source including its libgit2 notices and linking-exception terms.
 Its SHA-256 is
-`da23b154fd15d595329de28cbf1db650bf8b1da57679ef270c09c9d7e84dc62f`.
+`a86b2e26191c7d59ed123d401de589850c5a7880de6bc09d81c6ab92c26ae6d1`.
 Extract it using standard tar/XZ tools. Package declarations, source inventory
 and per-component SBOM records retain their respective scopes. Actual packaged
 Cargo linkage is captured separately for final distribution review on each host;

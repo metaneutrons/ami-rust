@@ -64,6 +64,16 @@ The distributor remains responsible for APL section 3.2 source availability;
 repository policy retains source for at least 12 months after the latest
 distribution of each covered version, including if a hosting provider changes.
 
+The FreeType components of the separately provided C-SDK are based in part on
+the work of the FreeType Team. Portions are copyright © 1996–2026 The FreeType
+Project (<https://freetype.org>); all rights reserved. The applicable FreeType
+Project License (FTL) and original file-specific notices are preserved in the
+corresponding-source capsule, including
+`evidence/licence-texts/texts/vendors/by-sha256/5a5ee54c5001bbad1cdc1a57cc3dd4c42199b2da09d39c7ee41fab002d02967f.txt`.
+The FTL alternative covers the original FreeType engine and demo-package files
+without separate explicit terms; embedded BDF, PCF and zlib notices retain their
+own scope. AROS port additions retain their applicable source-tree terms.
+
 ## Host Cargo and other prerequisites
 
 The custom host Cargo component is a separately identified archive within the
