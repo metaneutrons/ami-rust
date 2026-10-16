@@ -601,9 +601,9 @@
       "source": "release/new_project.py"
     },
     {
-      "bytes": 1094544,
+      "bytes": 1094926,
       "path": "sbom.spdx.json",
-      "sha256": "36336e337ed5c01bb63bc9d8b18e3f7b920f01304d8891c9ce9de5c48876c0c7",
+      "sha256": "264f35a6d20bd0e537263d46b5a9ec63e679925605d4db9b91e8ef929349cc57",
       "source": "release/bundle-assets/sbom.spdx.json"
     },
     {
