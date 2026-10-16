@@ -35,3 +35,23 @@ asset checksum is updated without changing source/licence records.
 
 The 32 GiB local free-space policy applies to development storage only. It does
 not relax hosted-runner limits or AROS runtime, ABI, stack or heap criteria.
+
+
+## Installer log collision in the next attempt
+
+[Protected run 38890929579](https://github.com/metaneutrons/ami-rust/actions/runs/38890929579)
+at source `20e56ebe052b4dbb2c71c7cd9a7afe020f2448d2` reproduced both frozen
+Cargo binaries exactly and passed source-SDK packaging. Both hosts then stopped
+before SDK Rust installation: Cargo bootstrap and SDK installation used the
+same exclusive `install-rust-rustc.stdout.log` path in their shared work logs.
+Both cleanup receipts report zero remaining work/Python bytes. Assembly,
+signing and production consumers were skipped. No SDK/native qualification or
+publication follows from this failed attempt.
+
+SDK Rust installation now uses `sdk-install-rust-{component}` log labels;
+Cargo bootstrap labels and source identities are unchanged. The regression
+fixture runs all four SDK installers through the real supervisor with existing
+Cargo log sentinels and verifies their exact preservation. All 29 focused SDK
+fixtures pass; an independent source review found no further concrete blocker
+in the immediate producer interfaces. Native production still requires a fresh
+successful campaign.

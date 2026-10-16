@@ -281,6 +281,66 @@ class HostedSdkProducerTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             supervisor.check_limits("fixture")
 
+    def test_rust_installs_use_distinct_sdk_logs_and_preserve_cargo_logs(self):
+        names = ["rustc", "rust-std", "rust-src", "cargo"]
+        log_dir = self.work / "logs"
+        log_dir.mkdir()
+        cargo_logs = {}
+        for name in names:
+            for stream in ("stdout", "stderr"):
+                path = log_dir / f"install-rust-{name}.{stream}.log"
+                path.write_bytes(f"cargo-stage {name} {stream} sentinel\n".encode())
+                cargo_logs[path] = path.read_bytes()
+
+        def fake_download(url, byte_count, digest, destination):
+            destination.write_bytes(b"fixture archive")
+            return {"bytes": byte_count, "sha256": digest}
+
+        def fake_archive_member_root(archive, expected_root, *, current_managed, extraction):
+            extracted = extraction / expected_root
+            extracted.mkdir(parents=True)
+            installer = extracted / "install.sh"
+            name = archive.stem.removesuffix(".tar")
+            installer.write_text(
+                "#!/bin/sh\nprintf 'installed " + name + "\\n'\n"
+                "printf 'stderr " + name + "\\n' >&2\n",
+                encoding="utf-8")
+            installer.chmod(0o755)
+            return extracted, {"member_count": 1, "expanded_bytes": installer.stat().st_size}
+
+        rust_pin = {
+            "archives": [{"component": name, "bytes": 1,
+                          "sha256": hashlib.sha256(name.encode()).hexdigest(),
+                          "url": "https://fixture.invalid/" + name}
+                         for name in names],
+            "remove_installer_administrative_files": [],
+        }
+        components = self.work / "components"
+        components.mkdir()
+        supervisor = ci_sdk.Supervisor(self.work, self.output, self.python_root,
+                                       {"PATH": "/usr/bin:/bin"})
+        with (patch.object(ci_sdk, "host_identity",
+                           return_value=("linux-x86_64", ci_sdk.HOST_TARGETS["linux-x86_64"])),
+              patch.object(ci_sdk.ci_cargo, "download_verified", side_effect=fake_download),
+              patch.object(ci_sdk, "_archive_member_root", side_effect=fake_archive_member_root),
+              patch.object(ci_sdk, "_remove_exact_files", return_value=[])):
+            rust_root, materials, receipts = ci_sdk._install_rust(
+                {"rust": rust_pin}, {}, self.work, components, supervisor)
+
+        self.assertEqual(rust_root, components / "rust")
+        self.assertEqual([row["component"] for row in materials], names)
+        self.assertEqual([row["component"] for row in receipts[0]["components"]], names)
+        self.assertEqual([row["label"] for row in supervisor.commands],
+                         ["sdk-install-rust-" + name for name in names])
+        for name in names:
+            row = next(row for row in supervisor.commands if row["label"].endswith(name))
+            self.assertEqual(row["exit_code"], 0)
+            self.assertIn("installed " + name,
+                          (self.work / row["stdout_log"]).read_text())
+            self.assertIn("stderr " + name,
+                          (self.work / row["stderr_log"]).read_text())
+        self.assertEqual({path: path.read_bytes() for path in cargo_logs}, cargo_logs)
+
     def test_native_cargo_must_match_frozen_bytes_and_hash(self):
         accepted = {"bytes": 99, "sha256": hashlib.sha256(b"cargo").hexdigest()}
         ci_sdk.require_cargo_match(dict(accepted), dict(accepted))
