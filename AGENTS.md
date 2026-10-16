@@ -50,3 +50,11 @@ Keep full memory/ownership measurement, leak detection and safe cleanup. The
 512 MiB QEMU baseline remains a repeatable test profile. Historical evidence is
 immutable; changed native code requires new qualification. See
 `docs/memory-policy.md` for exact prospective acceptance and CI separation.
+
+Resource-policy clarification, 2026-10-16: historical specifications and sealed
+input JSON files can still contain old heap/code-size quotas. They do not
+override the current memory policy. Treat measured peak use and the supported
+machine profile as requirements; investigate growth instead of inventing new
+application ceilings. Keep checks proportional to the operation. Changing
+resource-policy bytes bound to producer receipts requires a new input identity,
+not editing old receipts or silently breaking a live qualification run.

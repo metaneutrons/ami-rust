@@ -1,13 +1,27 @@
-# ami-rust M2 and independent R1 plan — revision 22
+# ami-rust M2 and independent R1 plan — revision 23
 
-**Prospective memory amendment — revision 22:** Fabian directs realistic
-memory requirements. [Memory policy](memory-policy.md) supersedes inherited
-application heap/whole-owner and generic ELF size quotas for the next candidate.
-The immutable boot/ABI profile and historical results remain unchanged. Changed
-allocator/native sources require fresh native qualification; inherited R3
-hashes cannot establish acceptance of this candidate. Hosted CI resources remain
-separate. Earlier statements below retaining every runtime budget describe the
-prior candidate and are superseded only within this explicit amendment.
+**Current resource policy — revision 23:** [Memory policy](memory-policy.md)
+is authoritative for the current candidate. There is no fixed per-allocation,
+application-heap, whole-application or generic ELF-size quota. Available native
+memory, checked layouts/ownership and actual allocation failure govern use.
+Measure loader/startup, application and teardown memory; reject leaks,
+corruption and broken cleanup. Investigate unexpected growth against the
+measured workload and document the resulting machine requirement.
+
+The unchanged 512 MiB QEMU/ABI-v1 configuration is the qualification machine;
+128 KiB startup stack and at most 96 KiB measured stack use define the current
+supported stack profile. These values do not establish a universal AROS memory
+limit. Hosted build settings are operational requirements, based on observed
+build use, and may be adjusted prospectively when measurements justify it.
+Neither a historical feasibility quota nor an unused CI ceiling justifies
+rejecting an application. Changed native code still requires fresh qualification.
+
+Earlier M0/M1/R3 records and sealed input files retain their original numbers
+and outcomes. Their heap/code-size limits describe those experiments only.
+The `runtime_budgets` prose in the frozen `release/ci-resources.json` predates
+this decision; it does not reinstate those application quotas. Its bytes remain
+pinned to existing producer receipts until a newly identified producer input
+is prepared. No historical PASS, FAIL or clock is changed by this clarification.
 
 Status: the inherited third qualification campaign (retained development record: `r1-qualification-r3-20261015.md`) remains technically PASS. The installation/licensing follow-up (retained development record: `r1-installation-qualification-20261015.md`) closes the two-host installation/deinstallation recipe, project reproduction and candidate licence/source review. The public source repository is [metaneutrons/ami-rust](https://github.com/metaneutrons/ami-rust); its protected source CI passes. **R1-A6 remains OPEN: actual protected SDK producer provenance and its production consumer verification have not been qualified. R1 is not release-qualified. SDK publication is conditionally authorised after every release acceptance gate passes; no SDK has been published.** The approved comparison contract and all sealed campaign/runtime budgets remain unchanged. The prospective hosted CI resource amendment below applies to new CI phases.
 M0 has GO and M1 technical acceptance is recorded in
@@ -66,7 +80,7 @@ Base SHA-256: `8e0f9bc4a42bb0ca84187f9fb96bc1fea106ba9ee606cdb4945c8b50a9770d65`
   under [repository memory](../AGENTS.md). Preserve original pins, identify every
   derived component, and requalify the affected release criteria on both hosts.
   Never rewrite finished compiler metadata or native archives to remove paths.
-- The immutable baseline and inherited guest/runtime budgets remain unchanged. New hosted CI phases use the explicitly recorded prospective resource policy; old campaigns retain their original numeric gates.
+- The immutable boot/ABI baseline remains unchanged. Current application-memory acceptance follows [memory policy](memory-policy.md); old campaigns retain their original numeric gates. New hosted CI phases use the recorded runner profile.
   Final campaign evidence is separate from M1; the old closed M1 clock is never
   reused. The separate 2026-10-15 campaign uses one 5,400-second clock, including failed attempts. Its results do not change these acceptance criteria.
 - nxpk is out of scope. The owner’s conditional publication authorisation applies only after R1-A1 through R1-A7 pass; public readback and two-host replay remain mandatory under R1-A8.
@@ -219,7 +233,7 @@ The minimum delivery comprises target specification, startup/FFI bridge sources,
 - **R1-A4 — useful reference application:** Ship a native read-only SHA-256 file-checksum CLI using the released Rust allocation and DOS I/O wrappers, not only a diagnostic banner. It accepts multiple paths including spaces, reads files in bounded chunks, emits deterministic hashes and reports failures with nonzero status without modifying input files. On artifacts from both hosts, compare output with an independently generated golden manifest for empty, one-byte, binary and 1 MiB fixtures; exercise missing/unreadable files and injected read error/OOM. Record unchanged input hashes/attributes and continued shell usability. No download, package format, network stack or OS update is needed to demonstrate its usefulness.
 - **R1-A5 — documentation and maintenance:** Deliver and execute verbatim installation, clean build and utility-run instructions on both supported hosts. Provide a minimal new-project example, target API reference, unsafe-boundary/task-affinity notes, compiler/SDK compatibility table, panic/OOM semantics, troubleshooting and explicit exclusions (`std`, native compiler, other CPUs/OSes and unqualified hardware). Document host uninstall/restore without deleting unrelated SDKs. A named maintainer owns dependency/security intake and compiler/SDK upgrade qualification; changing qualified inputs requires compatibility evidence before updating the supported matrix, not a floating nightly or an invented support-duration promise.
 - **R1-A6 — independent release integrity:** The SDK/reference-executable artifact set uses hardened binary-release controls independently of M7: commit-pinned build actions, protected publication credentials, asset checksums, signatures, provenance attestations, dependency/SBOM inventory and license/redistribution review for shipped bridge/SDK/runtime/dependencies. A clean-room consumer verifies every declared asset from its recorded producer identity, installs the SDK without package-manager support and runs the utility. A modified archive/executable, missing declared asset or inconsistent manifest fails verification before acceptance. Publisher private keys and local absolute development paths are absent from distributed payloads; reviewer records actual verification identities/results rather than assuming trust from filenames.
-- **R1-A7 — independent acceptance and limits:** A reviewer other than the artifact author maps R1-A1 through R1-A6 and inherited M1/M2 criteria to durable final-candidate evidence, including artifact hashes, host/guest matrices, actual RAM/code-size measurements against frozen budgets and positive/counter-probes. Include a support statement in the unpublished candidate documentation confined to the qualified PC x86-64 QEMU profile; physical machines require additional evidence before being advertised. Unresolved `nxpk`, repository, GUI or OS-atomicity criteria are listed as outside this release and do not block R1; unresolved SDK ABI, runtime, reproducibility or provenance failures do block it. Mark R1-qualified only when all relevant evidence passes; leave other milestone issues open.
+- **R1-A7 — independent acceptance and limits:** A reviewer other than the artifact author maps R1-A1 through R1-A6 and inherited M1/M2 criteria to durable final-candidate evidence, including artifact hashes, host/guest matrices, actual RAM/code-size measurements under the current memory policy and positive/counter-probes. Historical experiment quotas do not reject otherwise valid applications. Include a support statement in the unpublished candidate documentation confined to the qualified PC x86-64 QEMU profile; physical machines require additional evidence before being advertised. Unresolved `nxpk`, repository, GUI or OS-atomicity criteria are listed as outside this release and do not block R1; unresolved SDK ABI, runtime, reproducibility or provenance failures do block it. Mark R1-qualified only when all relevant evidence passes; leave other milestone issues open.
 - **R1-A8 — separately authorised publication:** After explicit publication authorisation, publish the qualified SDK/reference assets and release notes under their own version without a `nxpk` prerequisite. Verify publicly retrieved payload bytes against R1-qualified hashes, signatures/attestations and complete asset manifest, then replay the documented consumer install/build/run from those retrieved assets on both hosts. Failed/incomplete publication must not be promoted as a supported release; preserve or restore the previously usable release channel. Record actual release URL and verification evidence as R1-published separately from R1-qualified. The owner’s conditional authorisation is recorded, but the still-open R1-A6 and R1-A7 gates prevent publication now.
 
 
@@ -241,8 +255,9 @@ There is no fixed cumulative local archive quota. Retain all original evidence,
 failed attempts, hashes and backups. Historic resource results and clocks are
 unchanged. This amendment supersedes only the local retained-storage part of
 the earlier decision below; hosted RAM/workspace/log/time/remote-artifact limits,
-consumer installation requirements, AROS ABI/boot baseline and guest budgets
-remain unchanged. No release gate is closed by this amendment.
+consumer installation requirements and AROS ABI/boot baseline remain unchanged.
+Application-memory acceptance follows [memory policy](memory-policy.md).
+No release gate is closed by this amendment.
 
 ## Prospective hosted resource decision — revision 16
 
@@ -276,9 +291,11 @@ refusal, malformed schemas and oversized RSS. The actual hosted builds still
 must pass the full R1 criteria; changing a host helper does not transfer native
 or reproducibility evidence without an exact output comparison.
 
-All AROS baseline/ABI, guest RAM, heap, stack, loader/startup, diagnostics, code
-size, native invocation and runtime criteria remain unchanged. nxpk is out of
-scope, and protected AROS-NX/aros-tools checkouts remain untouched.
+The AROS baseline/ABI, guest RAM, supported stack profile, loader/startup
+coverage, diagnostics and native invocation criteria remain unchanged. Current
+application heap and code-size acceptance follows [memory policy](memory-policy.md),
+which supersedes the earlier experimental quotas. nxpk is out of scope, and
+protected AROS-NX/aros-tools checkouts remain untouched.
 
 ## First protected hosted prerequisite result and portable runtime correction
 
