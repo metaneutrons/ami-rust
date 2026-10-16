@@ -990,7 +990,7 @@ def _install_rust(host_rows: dict, inputs: dict, work: Path, components: Path,
         if installer.is_symlink() or not installer.is_file() or not os.access(installer, os.X_OK):
             raise ValueError("Rust component installer is missing or nonexecutable: " + name)
         supervisor.run([str(installer), "--prefix=" + str(rust_root), "--disable-ldconfig"],
-                       cwd=extracted, label="install-rust-" + name, timeout=300)
+                       cwd=extracted, label="sdk-install-rust-" + name, timeout=300)
         materials.append(download)
         extractions.append({"component": name, "archive_member_count": receipt["member_count"],
                             "expanded_bytes": receipt["expanded_bytes"]})
