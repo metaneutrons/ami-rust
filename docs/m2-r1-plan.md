@@ -216,6 +216,9 @@ The minimum delivery comprises target specification, startup/FFI bridge sources,
 
 Measured hosted capacity, remaining prerequisite blockers and the original resource proposal are recorded in the hosted preparation record (retained development record: `r1-hosted-ci-preparation-20261015.md`). This record does not close R1-A6.
 
+The [public replay operator procedure](public-release-replay.md) describes the
+read-only R1-A8 host workflow. Guest execution and final acceptance remain separate.
+
 ## Local storage amendment — revision 21 (2026-10-16)
 
 Fabian explicitly replaces the small local file/directory quotas and fixed
