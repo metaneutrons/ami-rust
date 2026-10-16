@@ -2,6 +2,10 @@
 
 The workflow downloads a tagged public release and independently replays its consumer path on macOS ARM64 and Ubuntu x86-64. It does not publish an SDK, declare R1 acceptance, or run an AROS guest. A later primary stage must retrieve the native outputs from both host artifacts and test those bytes in the unchanged guest environment.
 
+The preceding [candidate and draft staging helpers](staged-sdk-release.md)
+manage the exact release file set and byte readback. They do not authorize
+publication or replace signature verification and independent acceptance.
+
 ## Establish the four external pins
 
 Before dispatch, record these values in the campaign evidence from sources independent of the downloaded bundle:
