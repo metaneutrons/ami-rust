@@ -31,9 +31,9 @@
       "source": "docs/maintenance.md"
     },
     {
-      "bytes": 7420,
+      "bytes": 10408,
       "path": "QUICKSTART.md",
-      "sha256": "d5f544875eb1f55fa6e6ea3e5364148c7e8ba5d6d726bb59b30f1138b0fb1e8a",
+      "sha256": "f133c8ef0b9143bcc3375f6929a118debd18c6dd32759976b295bbecc0857ad0",
       "source": "release/bundle-assets/QUICKSTART.md"
     },
     {

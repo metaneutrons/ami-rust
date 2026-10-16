@@ -38,6 +38,18 @@ class HostedSdkProducerTests(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.temporary)
 
+    def test_reading_normative_inputs_does_not_admit_the_source_volume_for_work(self):
+        with patch.object(ci_sdk, "validate_resource_policy", side_effect=AssertionError("no disk admission while reading")):
+            inputs, resources, host = ci_sdk.read_normative(
+                ROOT / "release/ci-sdk-inputs.json", ROOT / "release/ci-resources.json", "macos-aarch64")
+        self.assertEqual(inputs["schema"], "ami-rust-ci-sdk-inputs-v1")
+        self.assertEqual(ci_sdk.validate_resource_schema(resources), (6 * 1024**3, 24 * 1024**3))
+        self.assertIn("rust", host)
+        changed = copy.deepcopy(resources)
+        changed["build"]["workspace_bytes"] += 1
+        with self.assertRaisesRegex(ValueError, "ceilings differ"):
+            ci_sdk.validate_resource_schema(changed)
+
     def test_changed_normative_input_is_rejected(self):
         path = ROOT / "release/ci-sdk-inputs.json"
         inputs = ci_sdk.read_json(path)

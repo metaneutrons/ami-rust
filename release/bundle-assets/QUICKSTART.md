@@ -4,35 +4,71 @@ This recipe applies to the first PC x86-64 AROS ABI-v1 SDK candidate, version
 `0.1.0`. A protected CI candidate is not an accepted public release. Use a
 version as supported only after its R1 acceptance and public replay are recorded.
 
-Obtain the installer/verifier digests and an external publisher policy from an
-independently trusted source. Keep the policy, GH/Cosign verifier executables
-and trusted roots outside the downloaded candidate. The policy pins the exact
-`metaneutrons/ami-rust` source and `.github/workflows/sdk-qualify.yml` commit,
-protected `main` ref, Actions OIDC issuer, certificate identity, input-manifest
-digest, supported host profiles, verifier executables and trusted roots.
-The installer checks real GitHub attestations and Cosign bundles offline before
-installation. A bundled policy or disposable test signer cannot establish trust.
+Select the exact 40-character publisher source and workflow commits through the
+trusted public source/release channel, independently of this downloaded bundle.
+Use a clean checkout of `https://github.com/metaneutrons/ami-rust.git` at that
+source commit. Do not select these trust anchors only from `release.json`.
+For the first release the workflow commit equals the source commit. The source
+checkout includes the complete pinned C-SDK and vendor inputs. It remains a
+read-only prerequisite; the commands below do not modify global rustup or Cargo.
 
-Provision the six exact host prerequisites and the selected Python before these
-commands. A local `selection.json` declares `python`, `components` (rust, cargo,
-toolchain, collector, csdk, vendor), and the profile's Cargo/collector paths.
-It contains consumer-local paths; no development-machine paths are shipped.
-Provisioning is explicit and separate from offline build replay. The installer
-verifies all declared release assets, archive members, publisher signatures and provenance before
-extracting. Project-lock verification additionally checks the complete declared
-prerequisite inventories and interpreter identity.
-
-The following commands are the delivered recipe on both supported hosts. Use
-the pinned interpreter path as PYTHON; WORK is a fresh, private, user-owned
-directory outside any `.cargo/config` ancestry. Set the four paths explicitly
-in your shell (no global environment or rustup setting is changed):
+On macOS Apple Silicon or Linux x86-64, start with Git, a working Python 3.10+
+and an empty private STATE directory on a volume with at least 24 GiB free and
+6 GiB physical RAM. Linux uses glibc; the qualified hosted profile is Ubuntu
+24.04. macOS uses the qualified macOS 26 runner profile. Choose STATE outside
+source/bundle trees and any `.cargo/config` ancestry. Set these paths and the
+independently selected commit explicitly in your shell; these are local choices,
+not paths embedded by the publisher:
 
 ```sh
-PYTHON=/absolute/path/to/pinned/python
-BUNDLE=/absolute/path/to/verified-candidate
-POLICY=/absolute/path/to/independently-pinned-publisher-policy.json
-WORK=/absolute/path/to/fresh-private-working-directory
+SOURCE=/absolute/path/to/clean-publisher-source
+SOURCE_COMMIT=REPLACE_WITH_INDEPENDENTLY_TRUSTED_40_CHARACTER_COMMIT
+WORKFLOW_COMMIT="$SOURCE_COMMIT"
+BUNDLE=/absolute/path/to/downloaded-candidate
+STATE=/absolute/path/to/empty-private-state
+PYTHON_BOOTSTRAP="$STATE/ami-rust-python-bootstrap"
+PREP="$STATE/preparation"
+PREP_OUTPUT="$STATE/preparation-output"
+WORK="$STATE/project"
+mkdir -m 700 "$WORK"
 ```
+
+Run this preparation command from the trusted source instructions. It downloads
+and verifies the pinned standalone CPython 3.12.15 into a fresh local prefix:
+
+```sh
+python3 -I -B "$SOURCE/release/ci_python.py" --prefix "$PYTHON_BOOTSTRAP" --inputs "$SOURCE/release/ci-python-inputs.json"
+```
+
+Select that interpreter and prepare the remaining prerequisites. The same code
+is used by the independent CI consumer on both hosts:
+
+```sh
+PREP_PYTHON="$PYTHON_BOOTSTRAP/runtime/python/bin/python3.12"
+PYTHON="$PREP_PYTHON"
+"$PREP_PYTHON" -I -B "$SOURCE/release/ci_verify.py" prepare-inputs --bundle "$BUNDLE" --work "$PREP" --output "$PREP_OUTPUT" --python-bootstrap-root "$PYTHON_BOOTSTRAP" --source-commit "$SOURCE_COMMIT" --workflow-commit "$WORKFLOW_COMMIT" --selection "$WORK/selection.json"
+POLICY="$PREP/trust/publisher-policy.json"
+```
+
+Preparation obtains pinned GH/Cosign executables and trusted roots from the
+trusted source policy. It authenticates every release asset using real GitHub
+attestations and Cosign bundles before extracting bundled Cargo. It explicitly
+provisions Rust, Cargo, the native toolchain, collector, C-SDK and vendor tree,
+checks every declared file/symlink and writes `WORK/selection.json`. The policy
+pins the publisher, exact source/workflow commits, protected main ref, OIDC
+issuer, certificate identity, input manifest and verifier/root hashes. A bundled
+policy or disposable test signer cannot establish trust. Preparation does not
+install the SDK. It admits 24 GiB free space on the STATE volume after the
+Python bootstrap; a separate read-only source volume needs no build reserve.
+In CI the entire preparation invocation must finish within 20 minutes; each
+inner command retains that same ceiling. A slower attempt fails and must be
+repeated explicitly in a fresh STATE. RAM, workspace and log ceilings are not
+increased for preparation. Downloads happen here; the subsequent builds use locked offline
+inputs. Network, pin or inventory errors stop preparation and preserve previous
+installations. Use a fresh STATE for another attempt; do not bypass a mismatch.
+
+The following commands are the delivered recipe on both supported hosts. Use
+the variables established above; WORK is the fresh private project directory.
 
 The qualification driver supplies those paths explicitly and runs every command
 below without alteration. `receipt.sha256` is saved outside the installed prefix.
@@ -52,6 +88,22 @@ below without alteration. `receipt.sha256` is saved outside the installed prefix
 "$PYTHON" -I -B "$WORK/sdk-0.1.0/sdk/host/cli.py" build --sdk-lock "$WORK/hello.lock.json" --output-dir "$WORK/hello-build" -- build --manifest-path "$WORK/hello-aros/Cargo.toml" --package hello-aros --release --locked --offline
 "$PYTHON" -I -B "$BUNDLE/install_publisher.py" uninstall --prefix "$WORK/sdk-0.1.0" --receipt-sha256 "$(cat "$WORK/receipt.sha256")"
 ```
+
+After uninstall, recheck the retained prerequisites and selection without
+reinstalling or silently replacing anything. This command verifies the bundle
+again and checks all six complete inventories. Rechecking retained inputs is
+not a new cold build admission: it needs 6 GiB physical RAM and 560 MiB free
+scratch space on STATE (512 MiB bounded source-SDK expansion plus the existing
+16 MiB log and 32 MiB output bounds). It keeps the 4 GiB observed RSS, 12 GiB
+managed-work and 20-minute command ceilings:
+
+```sh
+"$PREP_PYTHON" -I -B "$SOURCE/release/ci_verify.py" check-inputs --bundle "$BUNDLE" --work "$PREP" --output "$PREP_OUTPUT" --python-bootstrap-root "$PYTHON_BOOTSTRAP" --source-commit "$SOURCE_COMMIT" --workflow-commit "$WORKFLOW_COMMIT" --selection "$WORK/selection.json"
+```
+
+Keep STATE while you need its projects or prerequisites. A missing/altered input
+requires explicit preparation in a fresh STATE. Do not remove another SDK,
+shared Rust installation or global rustup configuration to recover this state.
 
 The installation command saves the receipt pin outside the installation. SHAUTIL is the prebuilt native reference utility. Verify that the
 fresh utility build has the declared SHAUTIL digest before staging either file
@@ -93,8 +145,8 @@ It retains projects, shared prerequisites, sibling SDKs and rustup configuration
 The owner must exclude concurrent writes by the same user while verifying,
 building or uninstalling. This is not a hostile same-user sandbox.
 
-Missing or altered prerequisites: repeat explicit provisioning against the
-signed host profile. An ambient Cargo configuration: choose a private output
+Missing or altered prerequisites: prepare a fresh STATE against the
+authenticated host profile. An ambient Cargo configuration: choose a private output
 root outside its ancestry. Unsupported host/compiler/profile: stop; do not
 override the compatibility gate. Fabian Schmieder owns maintenance and upgrade
 qualification; no support duration or public security endpoint is promised.

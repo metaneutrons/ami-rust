@@ -207,7 +207,7 @@ def physical_memory_bytes(host: str) -> int:
     return os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE")
 
 
-def validate_resource_policy(resources: dict, disk_path: Path) -> dict:
+def validate_resource_schema(resources: dict) -> tuple[int, int]:
     capacity = resources.get("host_capacity")
     build = resources.get("build")
     if (resources.get("schema") != "ami-rust-hosted-resources-v1"
@@ -223,6 +223,11 @@ def validate_resource_policy(resources: dict, disk_path: Path) -> dict:
     if (type(ram_min) is not int or type(disk_min) is not int
             or ram_min < 6 * 1024**3 or disk_min < 24 * 1024**3):
         raise ValueError("host resource minima must be at least 6 GiB RAM and 24 GiB disk")
+    return ram_min, disk_min
+
+
+def validate_resource_policy(resources: dict, disk_path: Path) -> dict:
+    ram_min, disk_min = validate_resource_schema(resources)
     host, _ = host_identity()
     ram = physical_memory_bytes(host)
     free = shutil.disk_usage(disk_path).free
@@ -448,7 +453,7 @@ def download_channel_manifest(pin: dict, destination: Path, *,
         raise
 
 
-def load_normative(inputs_path: Path, resources_path: Path, host: str):
+def read_normative(inputs_path: Path, resources_path: Path, host: str):
     expected_inputs = ROOT / "release/ci-sdk-inputs.json"
     expected_resources = ROOT / "release/ci-resources.json"
     if inputs_path.resolve(strict=True) != expected_inputs.resolve(strict=True):
@@ -461,6 +466,12 @@ def load_normative(inputs_path: Path, resources_path: Path, host: str):
         raise ValueError("resource policy is not the normative tracked bytes")
     inputs, resources = read_json(expected_inputs), read_json(expected_resources)
     host_rows = validate_inputs(inputs, inputs, host)
+    validate_resource_schema(resources)
+    return inputs, resources, host_rows
+
+
+def load_normative(inputs_path: Path, resources_path: Path, host: str):
+    inputs, resources, host_rows = read_normative(inputs_path, resources_path, host)
     capacity = validate_resource_policy(resources, inputs_path.parent)
     return inputs, resources, host_rows, capacity
 

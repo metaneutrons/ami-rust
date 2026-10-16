@@ -1,4 +1,4 @@
-# ami-rust M2 and independent R1 plan — revision 19
+# ami-rust M2 and independent R1 plan — revision 20
 
 Status: the inherited third qualification campaign (retained development record: `r1-qualification-r3-20261015.md`) remains technically PASS. The installation/licensing follow-up (retained development record: `r1-installation-qualification-20261015.md`) closes the two-host installation/deinstallation recipe, project reproduction and candidate licence/source review. The public source repository is [metaneutrons/ami-rust](https://github.com/metaneutrons/ami-rust); its protected source CI passes. **R1-A6 remains OPEN: actual protected SDK producer provenance and its production consumer verification have not been qualified. R1 is not release-qualified. SDK publication is conditionally authorised after every release acceptance gate passes; no SDK has been published.** The approved comparison contract and all sealed campaign/runtime budgets remain unchanged. The prospective hosted CI resource amendment below applies to new CI phases.
 M0 has GO and M1 technical acceptance is recorded in
@@ -123,6 +123,43 @@ Linux production, actual protected SDK authentication and independent consumer
 replay remain required. The detailed scope and immutable evidence references are
 in the [portability follow-up](r1-portability-follow-up-20261016.md). No numeric
 release gate, old campaign result or baseline identity is changed by this edit.
+
+## Production consumer preparation follow-up (2026-10-16)
+
+R1-A5 remains open for the real production trust route. The inherited local
+candidate's 12-command installation recipe remains valid evidence within its
+scope, but CI-only prerequisite setup does not establish a usable fresh-user
+installation. Add an executable documented preparation path for pinned Python,
+GH/Cosign and trust roots, a locally generated external policy, all six verified
+component roots, and selection.json. Keep the existing 12 signed SDK commands.
+
+Use the exact publisher source/workflow commit selected through the trusted
+public source channel; require a clean matching source checkout. Do not derive
+that trust anchor solely from the unverified candidate, accept its bundled test
+policy, or simulate a protected GitHub environment on a user's computer.
+Share existing download/extraction/inventory and source-policy logic between
+consumer CI and the preparation entry point. This adds no resolver, automatic
+update service or second package manager. No installed upstream Rust toolchain
+or protected source checkout is modified.
+
+Acceptance additionally requires verbatim execution of the documented preparation
+and original SDK recipe on both supported hosts, positive verification before
+extracting bundled Cargo, rejection of wrong source/workflow policy and corrupted
+inputs before installation, complete six-component inventory checks, and an
+executable reuse check after uninstall. Missing/altered prerequisites require an
+explicit fresh preparation root; no silent replacement is permitted. Align the
+public quickstart and interpreter requirements with the authenticated production
+recipe. Existing resource limits, baseline and all R1 criteria remain unchanged.
+Cold preparation retains the 6 GiB RAM / 24 GiB free-space admission on its
+managed STATE volume. Reading source pins does not admit a different read-only
+source volume for builds. The post-uninstall check performs no provisioning or
+build; its temporary source-SDK extraction is capped at 512 MiB and requires
+560 MiB free scratch space including existing log/output ceilings. It preserves
+6 GiB physical RAM, 4 GiB observed RSS, 12 GiB managed work and 20-minute command
+limits. The complete preparation CLI is itself bounded to 20 minutes in hosted
+replay; this is stricter than only timing its individual child commands.
+The evidence review is retained as
+`qualification/r1-hosted/preparation/fresh-consumer-documentation-review.json`.
 
 ## Follow-up acceptance record (2026-10-15)
 

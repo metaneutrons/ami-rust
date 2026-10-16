@@ -20,6 +20,10 @@ Source CI runs regression fixtures on both development hosts. The manual
 checks candidates on standard GitHub-hosted runners. Its output is qualification
 evidence until every release gate passes. Consumer asset distribution remains separate.
 The protected Cargo prerequisite workflow retains its separate producer identity.
+The [production quickstart](docs/quickstart.md) documents explicit user-local
+preparation of pinned prerequisites, installation and offline builds, and a
+post-uninstall inventory check. This route still requires actual protected
+qualification before it can be advertised as a supported release.
 
 The pinned original and source-derived C-SDK prerequisites and corresponding
 source live in this repository. Read their conspicuous
