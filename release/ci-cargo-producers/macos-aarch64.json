@@ -10,22 +10,22 @@
   "capacity_preflight": {
     "output": {
       "disk_free_minimum_bytes": 25769803776,
-      "free_disk_bytes": 101279928320,
+      "free_disk_bytes": 102723330048,
       "physical_ram_bytes": 7516192768,
       "ram_minimum_bytes": 6442450944
     },
     "work": {
       "disk_free_minimum_bytes": 25769803776,
-      "free_disk_bytes": 101279928320,
+      "free_disk_bytes": 102723330048,
       "physical_ram_bytes": 7516192768,
       "ram_minimum_bytes": 6442450944
     }
   },
   "claim": "Pinned host Cargo prerequisite producer; no SDK, guest, or R1 qualification.",
   "custom_cargo_artifact": {
-    "bytes": 39348872,
+    "bytes": 39348888,
     "relative_path": "build-work/target/release/cargo",
-    "sha256": "41c55876551dd15a41f183b70bc481265de211c886fca9e6b77b4b10ca3e23e8",
+    "sha256": "7f15bb7b7c9fe143315cd23b5c32de5ebd5a0f1c8c6b75a1e51990bef6c5bfbc",
     "version": "cargo 1.99.0 (3efb1f477 2026-07-17)\nrelease: 1.99.0\ncommit-hash: 3efb1f477e99b42974b982d939fd100303cdf7db\ncommit-date: 2026-07-17\nhost: aarch64-apple-darwin\nlibgit2: 1.9.4 (sys:0.21.0 vendored)\nlibcurl: 8.7.1 (sys:0.4.90+curl-8.21.0 system ssl:(SecureTransport) LibreSSL/3.3.6)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Mac OS 26.6.2 [64-bit]"
   },
   "host": "macos-aarch64",
@@ -33,13 +33,13 @@
     "bootstrap_cargo_commit": "797e8a9bca276c1c9f9f738d2a20f484fa4eea9d",
     "bootstrap_inventory": {
       "entry_count": 153,
-      "inventory_sha256": "641af45061d36eb1d226a3b66f05e5d330bba3c2bdea0523fd2fbb33b6ea4cba",
+      "inventory_sha256": "eebee82e0cca34b5994cfb5d6394dc578db4c7c9c884f381dcd9e38506959ec9",
       "license_inventory": {
         "bytes": 16973742,
         "entry_count": 5,
         "inventory_sha256": "e9f07527ee916b90d47e916af772bfb92130a0ab41993c66e3a4272985c92b83"
       },
-      "regular_file_bytes": 455896317,
+      "regular_file_bytes": 455897237,
       "symlink_count": 0
     },
     "cargo_patch": {
@@ -87,23 +87,23 @@
       ],
       "upstream": "https://github.com/rust-lang/cargo.git"
     },
-    "inputs_sha256": "382d6d18ec78db23196f894ef144c8a95cea65cc5f2a8bbba8be98db76c32f9b",
+    "inputs_sha256": "3ba7ef5e924e0f643923f54f80d631b16411b89c55103a991a2f08eeae915e11",
     "installed_bootstrap_cargo_version": "cargo 1.98.1 (797e8a9bc 2026-08-05)\nrelease: 1.98.1\ncommit-hash: 797e8a9bca276c1c9f9f738d2a20f484fa4eea9d\ncommit-date: 2026-08-05\nhost: aarch64-apple-darwin\nlibgit2: 1.9.4 (sys:0.21.0 vendored)\nlibcurl: 8.7.1 (sys:0.4.90+curl-8.21.0 system ssl:(SecureTransport) LibreSSL/3.3.6)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Mac OS 26.6.2 [64-bit]",
     "installed_rustc_version": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: aarch64-apple-darwin\nrelease: 1.98.1\nLLVM version: 22.1.8",
     "openssl_overlay_patch_sha256": "67f92b277d2cb9508ca3d6d041ebf9feb0ddbf05e97a9419960f313344cd6de8",
     "openssl_overlay_recipe_sha256": "15fbc9da969b32968884c24bf47f2d8b61b8f7d46ac73947faade43569569077",
     "producer_helpers": {
       "actual_sha256": {
-        "build.py": "bc6df2632d19cb10306356ac2a3349355d5d6030c665d43beecb59cd61d2e3dc",
+        "build.py": "88839d90b25c8962929501b5c97886c7531b1775c467f510b772b532578684f6",
         "ci_cargo.py": "589a8abc9fc4b0537b4b9646d441413f4eb005288bbc3ea0220f5218ffc18da2",
         "prepare-overlay.py": "cb2834a2c22d5b70555759c685425a4e42f5df12e2ad8ff48b63afc5836795d3",
         "produce.py": "5379771762b9f45c261df8c1acd3dc1ee0cf85fae9cb86b36d409bf56da1b8cc"
       },
       "ci_input_pins": {
         "host_supervisor_path": "host/build.py",
-        "host_supervisor_sha256": "bc6df2632d19cb10306356ac2a3349355d5d6030c665d43beecb59cd61d2e3dc",
+        "host_supervisor_sha256": "88839d90b25c8962929501b5c97886c7531b1775c467f510b772b532578684f6",
         "overlay_helper_sha256": "cb2834a2c22d5b70555759c685425a4e42f5df12e2ad8ff48b63afc5836795d3",
-        "policy_extension": "Explicit hosted resource contract and fail-closed process-group cleanup; Cargo source, compiler, patch, build flags and target/runtime sources unchanged.",
+        "policy_extension": "Explicit hosted resource contract, process-group cleanup and compile-time host path remapping for SDK build scripts/proc macros; Cargo prerequisite source, compiler, patch and build flags unchanged.",
         "producer_path": "host/cargo-repro/produce.py",
         "producer_sha256": "5379771762b9f45c261df8c1acd3dc1ee0cf85fae9cb86b36d409bf56da1b8cc",
         "python_bootstrap_path": "release/ci_python.py",
@@ -127,7 +127,7 @@
       "archive_sha256": "ba32036ad8f4c434d97a1ee7feef8b7edc0fac16777639b97e39c74a108e4440",
       "capacity": {
         "disk_free_minimum_bytes": 25769803776,
-        "free_disk_bytes": 101376581632,
+        "free_disk_bytes": 102817914880,
         "physical_ram_bytes": 7516192768,
         "ram_minimum_bytes": 6442450944
       },
@@ -204,172 +204,172 @@
     "rust_release": "1.98.1"
   },
   "peaks": {
-    "checkout_initial_bytes": 272280242,
+    "checkout_initial_bytes": 5497625,
     "commands": [
       {
-        "elapsed_seconds": 1.855,
+        "elapsed_seconds": 1.601,
         "exit_code": 0,
         "label": "install-rust-rustc",
-        "managed_peak_observed_bytes": 966085233,
-        "rss_peak_observed_bytes": 7815168,
+        "managed_peak_observed_bytes": 699303318,
+        "rss_peak_observed_bytes": 7782400,
         "stderr_log": "logs/install-rust-rustc.stderr.log",
         "stdout_log": "logs/install-rust-rustc.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 2.971,
+        "elapsed_seconds": 2.809,
         "exit_code": 0,
         "label": "install-rust-rust-std",
-        "managed_peak_observed_bytes": 1289428805,
-        "rss_peak_observed_bytes": 4128768,
+        "managed_peak_observed_bytes": 1022647234,
+        "rss_peak_observed_bytes": 4718592,
         "stderr_log": "logs/install-rust-rust-std.stderr.log",
         "stdout_log": "logs/install-rust-rust-std.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 1.712,
+        "elapsed_seconds": 2.44,
         "exit_code": 0,
         "label": "install-rust-cargo",
-        "managed_peak_observed_bytes": 1363357692,
-        "rss_peak_observed_bytes": 7749632,
+        "managed_peak_observed_bytes": 1096576001,
+        "rss_peak_observed_bytes": 7766016,
         "stderr_log": "logs/install-rust-cargo.stderr.log",
         "stdout_log": "logs/install-rust-cargo.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 0.59,
+        "elapsed_seconds": 0.583,
         "exit_code": 0,
         "label": "rustc-version",
-        "managed_peak_observed_bytes": 1363357884,
-        "rss_peak_observed_bytes": 19595264,
+        "managed_peak_observed_bytes": 1096576193,
+        "rss_peak_observed_bytes": 17776640,
         "stderr_log": "logs/rustc-version.stderr.log",
         "stdout_log": "logs/rustc-version.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 0.23,
+        "elapsed_seconds": 0.255,
         "exit_code": 0,
         "label": "bootstrap-cargo-version",
-        "managed_peak_observed_bytes": 1363358219,
-        "rss_peak_observed_bytes": 311296,
+        "managed_peak_observed_bytes": 1096576528,
+        "rss_peak_observed_bytes": 475136,
         "stderr_log": "logs/bootstrap-cargo-version.stderr.log",
         "stdout_log": "logs/bootstrap-cargo-version.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 2.89,
+        "elapsed_seconds": 1.475,
         "exit_code": 0,
         "label": "git-init",
-        "managed_peak_observed_bytes": 1363384519,
-        "rss_peak_observed_bytes": 103186432,
+        "managed_peak_observed_bytes": 1096602828,
+        "rss_peak_observed_bytes": 104464384,
         "stderr_log": "logs/git-init.stderr.log",
         "stdout_log": "logs/git-init.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 0.242,
+        "elapsed_seconds": 0.217,
         "exit_code": 0,
         "label": "git-remote",
-        "managed_peak_observed_bytes": 1363384628,
-        "rss_peak_observed_bytes": 7569408,
+        "managed_peak_observed_bytes": 1096602937,
+        "rss_peak_observed_bytes": 7372800,
         "stderr_log": "logs/git-remote.stderr.log",
         "stdout_log": "logs/git-remote.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 1.546,
+        "elapsed_seconds": 1.475,
         "exit_code": 0,
         "label": "git-fetch",
-        "managed_peak_observed_bytes": 1368324696,
-        "rss_peak_observed_bytes": 36847616,
+        "managed_peak_observed_bytes": 1101543005,
+        "rss_peak_observed_bytes": 37486592,
         "stderr_log": "logs/git-fetch.stderr.log",
         "stdout_log": "logs/git-fetch.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 1.333,
+        "elapsed_seconds": 0.769,
         "exit_code": 0,
         "label": "git-checkout",
-        "managed_peak_observed_bytes": 1386647366,
-        "rss_peak_observed_bytes": 17989632,
+        "managed_peak_observed_bytes": 1119865675,
+        "rss_peak_observed_bytes": 19103744,
         "stderr_log": "logs/git-checkout.stderr.log",
         "stdout_log": "logs/git-checkout.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 0.772,
+        "elapsed_seconds": 0.598,
         "exit_code": 0,
         "label": "git-verify-head",
-        "managed_peak_observed_bytes": 1386647407,
-        "rss_peak_observed_bytes": 6258688,
+        "managed_peak_observed_bytes": 1119865716,
+        "rss_peak_observed_bytes": 7503872,
         "stderr_log": "logs/git-verify-head.stderr.log",
         "stdout_log": "logs/git-verify-head.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 0.755,
+        "elapsed_seconds": 0.552,
         "exit_code": 0,
         "label": "apply-cargo-patch",
-        "managed_peak_observed_bytes": 1386648398,
-        "rss_peak_observed_bytes": 1359872,
+        "managed_peak_observed_bytes": 1119866707,
+        "rss_peak_observed_bytes": 1441792,
         "stderr_log": "logs/apply-cargo-patch.stderr.log",
         "stdout_log": "logs/apply-cargo-patch.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 0.801,
+        "elapsed_seconds": 0.466,
         "exit_code": 0,
         "label": "git-verify-patch",
-        "managed_peak_observed_bytes": 1386648471,
-        "rss_peak_observed_bytes": 2031616,
+        "managed_peak_observed_bytes": 1119866780,
+        "rss_peak_observed_bytes": 7651328,
         "stderr_log": "logs/git-verify-patch.stderr.log",
         "stdout_log": "logs/git-verify-patch.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 35.335,
+        "elapsed_seconds": 41.572,
         "exit_code": 0,
         "label": "cargo-vendor",
-        "managed_peak_observed_bytes": 2555235578,
-        "rss_peak_observed_bytes": 404291584,
+        "managed_peak_observed_bytes": 2288456007,
+        "rss_peak_observed_bytes": 414760960,
         "stderr_log": "logs/cargo-vendor.stderr.log",
         "stdout_log": "logs/cargo-vendor.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 38.417,
+        "elapsed_seconds": 58.514,
         "exit_code": 0,
         "label": "cargo-vendor-overlay",
-        "managed_peak_observed_bytes": 3089891585,
-        "rss_peak_observed_bytes": 124518400,
+        "managed_peak_observed_bytes": 2823112022,
+        "rss_peak_observed_bytes": 120291328,
         "stderr_log": "logs/cargo-vendor-overlay.stderr.log",
         "stdout_log": "logs/cargo-vendor-overlay.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 692.509,
+        "elapsed_seconds": 861.408,
         "exit_code": 0,
         "label": "cargo-build",
-        "managed_peak_observed_bytes": 4099286573,
-        "rss_peak_observed_bytes": 2049802240,
+        "managed_peak_observed_bytes": 3832551203,
+        "rss_peak_observed_bytes": 2048507904,
         "stderr_log": "logs/cargo-build.stderr.log",
         "stdout_log": "logs/cargo-build.stdout.log",
         "stop_reason": null
       },
       {
-        "elapsed_seconds": 11.022,
+        "elapsed_seconds": 10.789,
         "exit_code": 0,
         "label": "built-cargo-version",
-        "managed_peak_observed_bytes": 4099286908,
-        "rss_peak_observed_bytes": 737280,
+        "managed_peak_observed_bytes": 3832551538,
+        "rss_peak_observed_bytes": 2064384,
         "stderr_log": "logs/built-cargo-version.stderr.log",
         "stdout_log": "logs/built-cargo-version.stdout.log",
         "stop_reason": null
       }
     ],
-    "elapsed_seconds": 861.882,
-    "rss_observed_bytes": 2049802240,
-    "work_plus_output_observed_bytes": 4099286908
+    "elapsed_seconds": 1061.08,
+    "rss_observed_bytes": 2048507904,
+    "work_plus_output_observed_bytes": 3832551538
   },
   "relative_files": [
     {
@@ -418,7 +418,7 @@
         "openssl-src-300.6.1+3.6.3/src/lib.rs"
       ],
       "claim": "offline prerequisite overlay provisioning, not SDK/R1 acceptance",
-      "elapsed_seconds": 32.038121750000016,
+      "elapsed_seconds": 52.643255374999995,
       "original_inventory_sha256": "914b77e4e668451d6d1efbbb131e6e2cd0fe71fc4707dc81fe2d2575b2601152",
       "original_vendor_recheck": "PASS",
       "overlay_pin_sha256": "15fbc9da969b32968884c24bf47f2d8b61b8f7d46ac73947faade43569569077",
@@ -438,7 +438,7 @@
       "regular_file_bytes": 528442318,
       "symlink_count": 0
     },
-    "overlay_receipt_sha256": "e7b93f481652faddcc825cc8ceda37e4410962137aae27e365af6cfaa4b39217",
+    "overlay_receipt_sha256": "12ac528a07b2a55b5849a237f3fd30181b357e4d858e9699bc8f651b6965d278",
     "upstream_inventory": {
       "entry_count": 30517,
       "inventory_sha256": "bd0dc6a80521f4ef26e3127d9e2b83ae0b57cfa5d5dde303f4256c1530c527ee",

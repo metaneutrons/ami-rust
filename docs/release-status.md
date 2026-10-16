@@ -17,17 +17,25 @@ Those records retain their exact artifact identities and qualification-only
 signer. They establish no production publisher identity. Evidence transfers to
 new candidates only through verified unchanged artifact bytes and scope review.
 
-The protected Cargo prerequisite builds passed on both standard hosted runners
-in [run 38860315967](https://github.com/metaneutrons/ami-rust/actions/runs/38860315967).
+The refreshed protected Cargo prerequisite builds passed on both standard hosted
+runners in [run 38914054466](https://github.com/metaneutrons/ami-rust/actions/runs/38914054466),
+using the reviewed host-path remapping supervisor. Both complete producer reports
+passed the strict input/resource/helper validation. The macOS Cargo binary has a
+new identity; the Linux binary retains its previous identity. This prerequisite
+success does not qualify an SDK or transfer historical native results.
+
 The complete original and derived C-SDK prerequisites, corresponding source,
 patches and selected vendor archive are public repository inputs with their
 own pinned identities and preserved notices. The shared portable C-SDK producer
 passed locally on macOS; latest-source two-host derivation remains unqualified.
-The qualified boot image, ABI and guest budgets are unchanged.
+The qualified boot image, ABI and guest profile are unchanged.
 
-The [native reference follow-up](r1-native-reproducibility-20261016.md) records
-a concrete two-root dependency-output mismatch in the second protected proposal.
-That failure remains open; retained prerequisite success cannot qualify its SDK.
+The [native reference follow-up](r1-native-reproducibility-20261016.md) preserves
+the failed second protected proposal and its two-root dependency-output mismatch.
+A local four-build investigation reproduced the path-dependent output and then
+obtained 35 byte-identical outputs with the source/build-recipe correction. The
+fix is merged. A new complete protected SDK proposal and native qualification
+are still required; the local diagnostic is not R1 acceptance.
 
 The current production path uses real GitHub attestations and Cosign signatures.
 Its helper fixtures and public source CI establish control flow only. Actual

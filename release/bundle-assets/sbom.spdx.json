@@ -8,7 +8,7 @@
   },
   "dataLicense": "CC0-1.0",
   "documentComment": "Unpublished SDK-candidate inventory; R1 is not accepted. Preserve the original 57 runtime/SDK component records and add 523 checksum-verified host-Cargo registry lock-closure packages plus 6 Cargo/native identity records. Lock membership does not assert compilation or linkage; per-package sourceInfo distinguishes those scopes. Cargo notices/preferred-source capsule SHA-256 da23b154fd15d595329de28cbf1db650bf8b1da57679ef270c09c9d7e84dc62f includes the complete lock-matched libgit2-sys crate and 3 MPL package sources. Source evidence resolves the misleading Cargo sys:0.21.0 field as the git2 wrapper version; actual final-binary linkage/redistribution acceptance remain separate gates. Whole mixed C-SDK licences are not inferred from selected runtime-member scope.",
-  "documentNamespace": "https://spdx.org/spdxdocs/ami-rust-host-closure-90eeab005330ee6ae4c8cd0f6033805c1c6bd28e509db340c428069c6244111a",
+  "documentNamespace": "https://spdx.org/spdxdocs/ami-rust-host-closure-c1a2e697194070ca33a246a367e439a31aa10e5cae8f0c269ce7f175d0be2d9a",
   "hasExtractedLicensingInfos": [
     {
       "comment": "Exact pinned AROS-NX LICENSE text; included as evidence for AROS-derived aros-sys ABI material, without a legal clearance determination.",
@@ -147,7 +147,7 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "MIT OR Apache-2.0",
       "name": "Cargo host executable (Linux x86_64)",
-      "sourceInfo": "Hosted Cargo prerequisite producer artifact for x86_64-unknown-linux-gnu. Exact size 48110632 bytes. Producer receipt release/ci-cargo-producers/linux-x86_64.json SHA-256 ff23ac7d16ea758b5067acae3af590d4051e25b1f4371b5028c6a968e8166ca6 records the artifact SHA, build budgets and Cargo --version output. Source commit 3efb1f477e99b42974b982d939fd100303cdf7db plus patch SHA-256 1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f. This is a host-tool artifact, not an ami-rust runtime package.",
+      "sourceInfo": "Hosted Cargo prerequisite producer artifact for x86_64-unknown-linux-gnu. Exact size 48110632 bytes. Producer receipt release/ci-cargo-producers/linux-x86_64.json SHA-256 9a771203242c7afb26cc3719efb27477a78935465ad2e4a62c598816f1a5daa9 records the artifact SHA, build budgets and Cargo --version output; canonical producer SHA-256 5f3226c43feac152b0b505178c8426769c429a3eacf09c3b6b6f91ad9f9796c6. Source commit 3efb1f477e99b42974b982d939fd100303cdf7db plus patch SHA-256 1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f. This is a host-tool artifact, not an ami-rust runtime package.",
       "versionInfo": "1.99.0 (commit 3efb1f477e99b42974b982d939fd100303cdf7db)"
     },
     {
@@ -155,7 +155,7 @@
       "checksums": [
         {
           "algorithm": "SHA256",
-          "checksumValue": "41c55876551dd15a41f183b70bc481265de211c886fca9e6b77b4b10ca3e23e8"
+          "checksumValue": "7f15bb7b7c9fe143315cd23b5c32de5ebd5a0f1c8c6b75a1e51990bef6c5bfbc"
         }
       ],
       "copyrightText": "NOASSERTION",
@@ -165,7 +165,7 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "MIT OR Apache-2.0",
       "name": "Cargo host executable (macOS aarch64)",
-      "sourceInfo": "Hosted Cargo prerequisite producer artifact for aarch64-apple-darwin. Exact size 39348872 bytes. Producer receipt release/ci-cargo-producers/macos-aarch64.json SHA-256 e57b8c1d1729aa5efba584906316125a26454e26de675b6e807a9398f530f13f records the artifact SHA, build budgets and Cargo --version output. Source commit 3efb1f477e99b42974b982d939fd100303cdf7db plus patch SHA-256 1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f. This is a host-tool artifact, not an ami-rust runtime package.",
+      "sourceInfo": "Hosted Cargo prerequisite producer artifact for aarch64-apple-darwin. Exact size 39348888 bytes. Producer receipt release/ci-cargo-producers/macos-aarch64.json SHA-256 024dd4c2276e6536876934617b50a4792fd7d0ce653a2430d23cc4f1b098ed85 records the artifact SHA, build budgets and Cargo --version output; canonical producer SHA-256 570b6f738636683f9ee74efc08f5db196c558933e0708344a6fe07ab536061d0. Source commit 3efb1f477e99b42974b982d939fd100303cdf7db plus patch SHA-256 1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f. This is a host-tool artifact, not an ami-rust runtime package.",
       "versionInfo": "1.99.0 (commit 3efb1f477e99b42974b982d939fd100303cdf7db)"
     },
     {
