@@ -7,6 +7,10 @@ SDK and a small installation, verification and linker boundary.
 The initial development hosts are macOS Apple Silicon and Linux x86-64. The
 supported target profile is the qualified x86-64 ABI-v1 environment; see
 [compatibility](docs/compatibility.md) and the [API scope](docs/api.md).
+Application allocations depend on available AROS memory, with overflow and
+ownership checks. The old feasibility heap quotas are being removed; the
+[prospective memory policy](docs/memory-policy.md) requires new native evidence
+before acceptance.
 Native AROS-hosted rustc/Cargo, full Rust std and official rustup target
 distribution are outside the current release scope.
 

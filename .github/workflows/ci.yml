@@ -29,6 +29,7 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             host/
+            native/sdk.h
             release/*.py
             release/ci-*.json
             release/ci-cargo-producers/
@@ -49,6 +50,8 @@ jobs:
           test -x /usr/bin/ssh-keygen
           python3 -I -B release/test_install.py
           python3 -I -B host/tests/test_host_capacity.py
+          python3 -I -B host/tests/test_allocation_layout.py
+          python3 -I -B host/tests/test_elf_audit.py
           python3 -I -B release/test_ci_cargo.py
           python3 -I -B release/test_ci_python.py
           python3 -I -B release/test_ci_artifact_admission.py

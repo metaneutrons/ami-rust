@@ -1,5 +1,13 @@
 # M1 API, lifetime and failure inventory
 
+The next candidate removes the historical 1 MiB per-allocation and 16 MiB
+heap quotas. Allocations use available native memory with checked sizes,
+accounting, alignment and ownership; OOM remains explicit. Reference-program
+code/file/whole-memory thresholds do not constrain arbitrary applications.
+The fixed startup stack and other stated API capacities remain unchanged.
+Fresh native qualification is pending for this changed allocator; see
+[memory policy](memory-policy.md).
+
 The source SDK is limited to the exact pinned native x86-64 ABI-v1 image. It
 provides no target std, foreign-task API, asynchronous callback, hardware or
 public release. R3 qualifies the pinned macOS and Linux host profiles and exact
@@ -37,8 +45,8 @@ layout solely as an independent test instrument; product allocation uses public
 Exec contracts. Stack instrumentation paints only proven unused lower stack
 space and restores its deliberately damaged canary/excess bytes.
 
-The native capacity control temporarily supplies a full backing-charge ledger
-to the actual SDK capacity branch, verifies refusal with unchanged native
+The native accounting control temporarily supplies an overflowing backing-charge
+ledger to the actual SDK overflow branch, verifies refusal with unchanged native
 acquisitions and restores it. It deliberately does not exhaust global OS memory.
 The task-owner control temporarily changes the stored owner for comparison only;
 it exercises the actual FindTask mismatch branch without creating a task or

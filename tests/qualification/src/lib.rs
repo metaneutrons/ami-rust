@@ -309,7 +309,7 @@ fn allocation_limits(context: &Context) -> bool {
     }
 
     for alignment in [1usize, 4096] {
-        // SAFETY: the maximum permitted payload is released with its original
+        // SAFETY: the reference-sized payload is released with its original
         // allocation parameters after checking every byte.
         let pointer = unsafe { sys::sdk_alloc(MAX_IO_SIZE, alignment).cast::<u8>() };
         if !allocation_aligned(pointer, alignment) {
@@ -416,7 +416,7 @@ fn allocation_limits(context: &Context) -> bool {
     // Unsupported layouts must fail without a native allocation or lost block.
     let before_refusals = context.statistics();
     let invalid_alignment = unsafe { sys::sdk_alloc(64, sys::MAX_ALLOCATION_ALIGNMENT * 2) };
-    let oversized = unsafe { sys::sdk_alloc(sys::MAX_ALLOCATION_BYTES + 1, 8) };
+    let oversized = unsafe { sys::sdk_alloc(isize::MAX as usize + 1, 8) };
     let overflow = unsafe { sys::sdk_alloc(usize::MAX, 4096) };
     let layout_overflow = Layout::from_size_align(usize::MAX, 4096).is_err();
     if !invalid_alignment.is_null()
@@ -428,7 +428,7 @@ fn allocation_limits(context: &Context) -> bool {
             unsafe { sys::sdk_dealloc(invalid_alignment, 64, sys::MAX_ALLOCATION_ALIGNMENT * 2) };
         }
         if !oversized.is_null() {
-            unsafe { sys::sdk_dealloc(oversized, sys::MAX_ALLOCATION_BYTES + 1, 8) };
+            unsafe { sys::sdk_dealloc(oversized, isize::MAX as usize + 1, 8) };
         }
         if !overflow.is_null() {
             unsafe { sys::sdk_dealloc(overflow, usize::MAX, 4096) };
@@ -448,6 +448,49 @@ struct AllocationSlot {
     size: usize,
     alignment: usize,
     stamp: usize,
+}
+
+// Separate from the inherited small-reference matrix: these simultaneous
+// payloads exceed the former per-allocation, heap and whole-owner quotas.
+fn large_allocations(context: &Context) -> bool {
+    let baseline = context.statistics();
+    let sizes = [32 * 1024 * 1024 + 17, 17 * 1024 * 1024 + 31];
+    let mut pointers = [ptr::null_mut::<u8>(); 2];
+    let mut passed = true;
+    for (slot, size) in sizes.into_iter().enumerate() {
+        // SAFETY: each successful raw allocation is released below with its
+        // original parameters, including on a later refusal.
+        pointers[slot] = unsafe { sys::sdk_alloc(size, 4096).cast::<u8>() };
+        if !allocation_aligned(pointers[slot], 4096) {
+            passed = false;
+            break;
+        }
+        // Touch every page and the final payload byte; neither a small backing
+        // allocation nor overlapping live blocks can satisfy this probe.
+        for index in (0..size).step_by(4096).chain(core::iter::once(size - 1)) {
+            unsafe {
+                pointers[slot]
+                    .add(index)
+                    .write((slot * 71 + index % 251) as u8)
+            };
+        }
+    }
+    if passed {
+        for (slot, size) in sizes.into_iter().enumerate() {
+            for index in (0..size).step_by(4096).chain(core::iter::once(size - 1)) {
+                if unsafe { pointers[slot].add(index).read() } != (slot * 71 + index % 251) as u8 {
+                    passed = false;
+                }
+            }
+        }
+        passed &= context.statistics().blocks == baseline.blocks + 2;
+    }
+    for (slot, size) in sizes.into_iter().enumerate() {
+        if !pointers[slot].is_null() {
+            unsafe { sys::sdk_dealloc(pointers[slot].cast(), size, 4096) };
+        }
+    }
+    passed && same_resources(baseline, context.statistics())
 }
 
 fn next_m0_state(state: &mut u32) -> u32 {
@@ -2039,6 +2082,13 @@ fn application(context: &Context) -> AppStatus {
                 fatal(context, 4)
             }
         }
+        Some("memory-large") => {
+            if large_allocations(context) {
+                success(context, b"qualification-large-allocations", 2)
+            } else {
+                fatal(context, 23)
+            }
+        }
         Some("churn") => {
             if allocator_workload(context) {
                 success(context, b"qualification-m0-churn", 1000)
@@ -2229,10 +2279,19 @@ fn application(context: &Context) -> AppStatus {
             if !prepare_live_resources(context) {
                 return fatal(context, 16);
             }
-            let layout = match Layout::from_size_align(sys::MAX_ALLOCATION_BYTES + 1, 8) {
+            let layout = match Layout::from_size_align(4096, 8) {
                 Ok(layout) => layout,
                 Err(_) => return fatal(context, 17),
             };
+            set_fault(FAULT_ALLOC);
+            // SAFETY: a valid Layout with a deterministic native OOM injection.
+            // This does not exhaust the guest or depend on a product quota.
+            let refused = unsafe { GlobalAlloc::alloc(&aros_alloc::ExecAllocator, layout) };
+            reset_fault();
+            if !refused.is_null() {
+                unsafe { GlobalAlloc::dealloc(&aros_alloc::ExecAllocator, refused, layout) };
+                return fatal(context, 17);
+            }
             alloc::alloc::handle_alloc_error(layout)
         }
         Some("callback-panic") => {

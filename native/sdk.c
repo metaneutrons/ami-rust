@@ -17,8 +17,6 @@
 #include "test-file-controls.h"
 #endif
 
-#define HEAP_CAP (16UL*1024*1024)
-#define PAYLOAD_CAP (1024UL*1024)
 #define KIND_FILE 1UL
 #define KIND_LIBRARY 2UL
 #define KIND_SIGNAL 3UL
@@ -100,23 +98,20 @@ const uint8_t *sdk_arg(uint64_t key,size_t i,size_t *length) {
  const uint8_t *p=(const uint8_t *)arguments[i];*length=0;while(p[*length])++*length;return p;
 }
 void *sdk_alloc(size_t size,size_t align) {
- if(!active || closing || owner!=FindTask(NULL) || ami_sdk_diagnostic_depth || !align || (align&(align-1)) || align>4096 || size>PAYLOAD_CAP){++stats.refusals;return NULL;}
- size_t effective=align<8?8:align;
- size_t payload=size?size:1;
- if(payload>SIZE_MAX-sizeof(struct Block)-(effective-1)){++stats.refusals;return NULL;}
- size_t total=sizeof(struct Block)+payload+effective-1;
- /* Public Exec request accounting plus the pinned qualification's conservative
-    physical backing bound; no private TLSF/header dereference in SDK code. */
- if(total>(HEAP_CAP-128)/2){++stats.refusals;return NULL;}
- size_t charge=2*total+128;
- if(stats.backing_charge>HEAP_CAP-charge){++stats.refusals;return NULL;}
+ AmiSdkAllocationLayout layout;size_t next_charge;
+ if(!active || closing || owner!=FindTask(NULL) || ami_sdk_diagnostic_depth ||
+    !ami_sdk_allocation_layout(size,align,sizeof(struct Block),&layout) ||
+    !ami_sdk_allocation_add_charge(stats.backing_charge,layout.charge,&next_charge)){++stats.refusals;return NULL;}
  if(test_hit(9)){++stats.refusals;return NULL;}
- struct Block *b=(struct Block *)AllocMem(total,MEMF_ANY);if(!b){++stats.refusals;return NULL;}
- uintptr_t start=(uintptr_t)b+sizeof(*b);
- b->user=(void *)((start+effective-1)&~(uintptr_t)(effective-1));
- b->size=size;b->align=align;b->total=total;b->charge=charge;b->prev=NULL;b->next=blocks;
+ struct Block *b=(struct Block *)AllocMem(layout.total,MEMF_ANY);if(!b){++stats.refusals;return NULL;}
+ uintptr_t user_address;
+ if(!ami_sdk_allocation_user_address((uintptr_t)b,&layout,&user_address)){
+  FreeMem(b,layout.total);++stats.refusals;return NULL;
+ }
+ b->user=(void *)user_address;
+ b->size=size;b->align=align;b->total=layout.total;b->charge=layout.charge;b->prev=NULL;b->next=blocks;
  if(blocks)blocks->prev=b;blocks=b;
- ++stats.blocks;stats.backing_charge+=charge;if(stats.backing_charge>stats.peak_charge)stats.peak_charge=stats.backing_charge;
+ ++stats.blocks;stats.backing_charge=next_charge;if(stats.backing_charge>stats.peak_charge)stats.peak_charge=stats.backing_charge;
  return b->user;
 }
 void sdk_dealloc(void *p,size_t size,size_t align) {
@@ -422,18 +417,18 @@ int main(int argc,char **argv) {
  int allocation_checkers_ok=release_once && duplicate_refused;
  sdk_diagnostic((const uint8_t *)"[m1-counter] allocation-checkers",32,allocation_checkers_ok);
  size_t before_charge=stats.backing_charge;uint64_t before_live=backend_live();
- stats.backing_charge=HEAP_CAP;void *capacity=sdk_alloc(64,4096);
- int capacity_ok=!capacity && stats.backing_charge==HEAP_CAP && backend_live()==before_live;
- if(capacity)sdk_dealloc(capacity,64,4096);
+ stats.backing_charge=SIZE_MAX;void *overflow_probe=sdk_alloc(64,4096);
+ int charge_overflow_ok=!overflow_probe && stats.backing_charge==SIZE_MAX && backend_live()==before_live;
+ if(overflow_probe)sdk_dealloc(overflow_probe,64,4096);
  stats.backing_charge=before_charge;
  struct Task *saved_owner=owner;owner=(struct Task *)((uintptr_t)owner^1);
  SdkError owner_error;uint64_t owner_out=0;unsigned owner_calls=0;
  int owner_ok=sdk_callback(context_key,counter_callback,&owner_calls,0,&owner_out,&owner_error)==-1 && owner_error.kind==4 && !owner_calls && sdk_context()==0;
  owner=saved_owner;
  sdk_diagnostic((const uint8_t *)"[m1-counter] arguments",22,argument_ok);
- sdk_diagnostic((const uint8_t *)"[m1-counter] capacity",21,capacity_ok);
+ sdk_diagnostic((const uint8_t *)"[m1-counter] charge-overflow",sizeof("[m1-counter] charge-overflow")-1,charge_overflow_ok);
  sdk_diagnostic((const uint8_t *)"[m1-counter] task-owner",23,owner_ok);
- if(!argument_ok || !capacity_ok || !owner_ok || !compatibility_ok || !allocation_checkers_ok){int closed=sdk_end();(void)closed;return 20;}
+ if(!argument_ok || !charge_overflow_ok || !owner_ok || !compatibility_ok || !allocation_checkers_ok){int closed=sdk_end();(void)closed;return 20;}
  if(argc>1 && !strcmp(argv[1],"calibrate") && ami_stack_calibrate()){int failed_cleanup=sdk_end();(void)failed_cleanup;return 20;}
  if(argc>1 && !strcmp(argv[1],"cleanup-secondary")){sdk_test_fault(5,1);secondary_on_diagnostic=1;}
 #endif

@@ -104,9 +104,9 @@
       "sha256": "2b672cfad8162acd93ee0b1234a42841905be29252161890a07efe292063bea7"
     },
     {
-      "bytes": 12315,
+      "bytes": 12136,
       "path": "crates/aros-sys/src/lib.rs",
-      "sha256": "ea21e85b141b487176b9e8d75167dcf149f237e7a6f8ad1dbca18c76bd0d8e30"
+      "sha256": "f9814d7eb83656ab4878877ab28d56062ebe3defa675e896717785bd24ef3337"
     },
     {
       "bytes": 199,
@@ -214,9 +214,9 @@
       "sha256": "6984a7aaa1fbd22ab01877ed4d8cbf88ba1c0dddf46bbc96ea53bedb46fe0176"
     },
     {
-      "bytes": 3947,
+      "bytes": 4312,
       "path": "host/elf_audit.py",
-      "sha256": "22fb5599c3902c32418ccce778004b808f343771230dd2ad0330c5ec82f8a40f"
+      "sha256": "fa2cafc555e382129f120ed60f6b99135526942245b5d1316f0195edc2bcb8f2"
     },
     {
       "bytes": 5369,
@@ -314,14 +314,14 @@
       "sha256": "01ac3478b1950affd3328d2508bef5a8f0ee3c3b483c1b4ab0508cabc5be0f71"
     },
     {
-      "bytes": 26003,
+      "bytes": 25753,
       "path": "native/sdk.c",
-      "sha256": "a85053d79cef55d6082f7730909f9daa80f197d5701bf429b65038403879bfcf"
+      "sha256": "66ee66b3888a998abf99026a6e16320c8af9840b0d37c2bd239e203c11ce189c"
     },
     {
-      "bytes": 2088,
+      "bytes": 4781,
       "path": "native/sdk.h",
-      "sha256": "5892bc89b5eb2f710d857c1b032d1434c85c4c1aea9e40fec9aaac036863c008"
+      "sha256": "5bfa5447c5d2f8d1a5abc9bd4ba2cb968d74ed5c9d7bdaf4ef2a523799e30799"
     },
     {
       "bytes": 2526,
@@ -449,9 +449,9 @@
       "sha256": "4ab633ce2b70c6df6018097cac550dfa660c8740ba1173500ed110fc67d104e1"
     },
     {
-      "bytes": 74603,
+      "bytes": 77137,
       "path": "tests/qualification/src/lib.rs",
-      "sha256": "8fe5b80272ce68f0b7ef1f2b72cef7a2864c9cd4643cea1458932716afd18dbb"
+      "sha256": "6228d77218ad1516e8eda06bdd9c5105a43c8975bb58e4bbcc5a8c378e3b9eaf"
     },
     {
       "bytes": 15414,
@@ -552,5 +552,12 @@
   "schema": "ami-rust-sdk-v1",
   "source_date_epoch": 1791936000,
   "source_identity": "82edf967fe4a84cde43680108873a44ce8c71b4f",
-  "version": "0.1.0-rc.3-local"
+  "version": "0.1.0-rc.3-local",
+  "runtime_memory_policy": {
+    "schema": "ami-rust-application-memory-policy-v1",
+    "allocation": "available native memory with checked representation, arithmetic and ownership; no fixed payload/heap quota",
+    "historical_budgets": "inputs/budgets.json retains sealed reference-campaign values, not general application quotas",
+    "qualification_status": "PENDING_FRESH_NATIVE_QUALIFICATION",
+    "reference_ELF_size_thresholds_are_product_constraints": false
+  }
 }

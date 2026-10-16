@@ -5,6 +5,71 @@
 #include <stddef.h>
 typedef struct { int32_t kind; int64_t native; } SdkError;
 typedef struct { size_t blocks, backing_charge, peak_charge, files, libraries, ports, signals, messages, refusals; } SdkStats;
+
+/* Shared checked layout arithmetic for the native allocator and host tests. */
+#define AMI_SDK_MIN_ALLOCATION_ALIGNMENT ((size_t)8)
+#define AMI_SDK_MAX_ALLOCATION_ALIGNMENT ((size_t)4096)
+typedef struct {
+ size_t payload, alignment, header_size, total, charge;
+} AmiSdkAllocationLayout;
+
+static inline int ami_sdk_allocation_alignment_valid(size_t alignment) {
+ return alignment && !(alignment & (alignment - 1)) &&
+        alignment <= AMI_SDK_MAX_ALLOCATION_ALIGNMENT;
+}
+
+static inline int ami_sdk_allocation_layout(size_t size,size_t alignment,
+                                             size_t header_size,
+                                             AmiSdkAllocationLayout *layout) {
+ if(!layout || !ami_sdk_allocation_alignment_valid(alignment))return 0;
+ size_t effective=alignment<AMI_SDK_MIN_ALLOCATION_ALIGNMENT?
+                   AMI_SDK_MIN_ALLOCATION_ALIGNMENT:alignment;
+ size_t payload=size?size:1;
+ size_t max_total=(size_t)PTRDIFF_MAX;
+ size_t alignment_padding=effective-1;
+ if(header_size>max_total || alignment_padding>max_total-header_size)return 0;
+ size_t overhead=header_size+alignment_padding;
+ if(payload>max_total-overhead)return 0;
+ size_t total=overhead+payload;
+ if(total>(SIZE_MAX-(size_t)128)/(size_t)2)return 0;
+ layout->payload=payload;
+ layout->alignment=effective;
+ layout->header_size=header_size;
+ layout->total=total;
+ layout->charge=(size_t)2*total+(size_t)128;
+ return 1;
+}
+
+static inline int ami_sdk_allocation_add_charge(size_t current,size_t charge,
+                                                 size_t *next) {
+ if(!next || charge>SIZE_MAX-current)return 0;
+ *next=current+charge;
+ return 1;
+}
+
+static inline int ami_sdk_allocation_user_address(uintptr_t base,
+                                                   const AmiSdkAllocationLayout *layout,
+                                                   uintptr_t *user_address) {
+ if(!layout || !user_address || layout->alignment<AMI_SDK_MIN_ALLOCATION_ALIGNMENT ||
+    !ami_sdk_allocation_alignment_valid(layout->alignment))return 0;
+ uintptr_t total=(uintptr_t)layout->total;
+ uintptr_t header=(uintptr_t)layout->header_size;
+ uintptr_t payload=(uintptr_t)layout->payload;
+ if((size_t)total!=layout->total || (size_t)header!=layout->header_size ||
+    (size_t)payload!=layout->payload || header>total ||
+    total>UINTPTR_MAX-base)return 0;
+ uintptr_t start=base+header;
+ uintptr_t mask=(uintptr_t)(layout->alignment-1);
+ uintptr_t padding=((uintptr_t)0-start)&mask;
+ if(padding>UINTPTR_MAX-start)return 0;
+ uintptr_t aligned=start+padding;
+ if(aligned<base)return 0;
+ uintptr_t offset=aligned-base;
+ if(offset>total || payload>total-offset)return 0;
+ *user_address=aligned;
+ return 1;
+}
+
 int sdk_begin(int argc, char **argv);
 int sdk_end(void);
 uint64_t sdk_context(void);
