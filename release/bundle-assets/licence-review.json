@@ -134,6 +134,7 @@
     ],
     "repository": "rust-lang/cargo"
   },
+  "current_review_scope": "Dependency licence inputs are unchanged from the existing review; the qualified R4 native profile includes changed first-party allocator/runtime code. Final candidate consumer output comparison and final binary/licence review remain required; no publication authorization.",
   "decision": {
     "date": "2026-10-15",
     "evidence_limits": [
@@ -1208,9 +1209,16 @@
     }
   ],
   "native_reference": {
-    "bytes": 928144,
-    "link_map_sha256": "dd91974fc708c8c12594f577ffcedb138a7d4d29fbef3237a083d7785f6c80d1",
-    "sha256": "b9521e15361e26b22db49c1e8953a1d29940313a5214507d023c2d953ad4acd4"
+    "bytes": 928208,
+    "link_map_sha256": "41d03eb88ac3b0e5edbdc6804283c5be49761777c1a05bea560c8aca26086618",
+    "qualification": {
+      "qualification_record_path": "release/candidate-r4/qualification.json",
+      "qualification_record_sha256": "c5e559f592c7300b502ebf976ecd5b65c9191a130dbc2f7b5c9ed68a7045982c",
+      "source_record_path": "release/candidate-r4/reference-artifacts.json",
+      "source_record_sha256": "8916ae5fd5d9403f1b0592555f0c26e474893a913a4fe925b66d8c4fd1aa2250",
+      "status": "QUALIFIED_R4_NATIVE_PROFILE_R1_PENDING"
+    },
+    "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162"
   },
   "openssl_checksum_provenance": {
     "cargo_lock_package": {

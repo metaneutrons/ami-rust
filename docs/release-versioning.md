@@ -1,11 +1,11 @@
 # First SDK release versioning
 
-The first SDK version is 0.1.0. Release Please manages the version, changelog,
+The initial SDK version is 0.1.0. Release Please manages the version, changelog,
 production tag and draft release. `release-please-config.json` selects the
-simple strategy and updates `Cargo.toml` workspace version together with
-`version.txt`. The empty manifest records that no release exists yet;
-`initial-version` selects 0.1.0 for the first release rather than declaring it
-already released.
+simple strategy and updates the `Cargo.toml` workspace version together with
+`version.txt`. For the first release, `initial-version` selects 0.1.0 when the
+manifest has no package version; that setting does not itself assert that a
+release exists. Later release state is recorded in `.release-please-manifest.json`.
 
 Use Release Please 17.11.2, source commit
 `05c6a4f71022304d4edad24ea90c1c16324503d5`, with Node 22 or newer.
@@ -34,5 +34,5 @@ signature/provenance verification precede making the unchanged assets visible
 as a prerelease. Public two-host consumer and guest replay under R1-A8 precede
 stable/latest promotion. Failed qualification leaves the draft unpublished.
 
-This file prepares the route; it records no release PR, production tag,
-publication, or R1 acceptance.
+This procedure defines the release route. The dated [release status](release-status.md)
+records the actual release and acceptance state for the selected source snapshot.

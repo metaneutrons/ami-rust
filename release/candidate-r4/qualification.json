@@ -1,0 +1,209 @@
+{
+  "schema": "ami-rust-qualified-native-profile-v1",
+  "status": "QUALIFIED_NATIVE_PROFILE_R1_PENDING",
+  "native_source_commit": "1d0fe4f10c8f264fd4b8fd50baccadd34869a802",
+  "protected_producer_run": "https://github.com/metaneutrons/ami-rust/actions/runs/38964667415",
+  "source_sdk_archive_sha256": "fec161ac9d80f3775ce413e45279cc708dfe0e14403879001ff2cdcd249c3e34",
+  "reference_artifacts_sha256": "8916ae5fd5d9403f1b0592555f0c26e474893a913a4fe925b66d8c4fd1aa2250",
+  "source_record_role": "Both complete host canonical maps from two clean roots, five variants and 104 outputs per host. Unmodified host-dependent metadata remains separately qualified; final four consumer samples remain required.",
+  "baseline": {
+    "target": "PC x86-64 AROS ABI-v1",
+    "machine": "pc-i440fx-11.1",
+    "cpu": "qemu64-v1",
+    "acceleration": "TCG single thread",
+    "cpu_count": 1,
+    "guest_ram_bytes": 536870912,
+    "network": false,
+    "startup_stack_bytes": 131072,
+    "maximum_supported_measured_stack_bytes": 98304,
+    "baseline_sha256": "9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1",
+    "qemu_version": "11.1.2",
+    "qemu_sha256": "a1b97665fb9f341a65acf9b0e7dc4c7235972aae61182545ed1aacf5ffca87fa",
+    "bios_sha256": "ae6f6aa973aaccc143f57aa960fb035fd9de4daee4ad0cd713322f8c259e7650",
+    "vga_bios_sha256": "e8fc9e55790dbe3cb31f019a3deb57206ba6c54f5e581adb2ab2677a9d391472"
+  },
+  "matrix": {
+    "full48_cases": 96,
+    "large_profile_cases": 28,
+    "large_repetitions_per_host": 10,
+    "simultaneous_large_payload_bytes": [
+      33554449,
+      17825823
+    ],
+    "alignment_bytes": 4096,
+    "production_cases": 31,
+    "total_matrix_cases": 155,
+    "separate_controls": [
+      "DERIVE_LINUX",
+      "malformed LoadSeg rejection with continued shell"
+    ],
+    "both_host_dependency_bodies_executed": true,
+    "five_native_candidate_bodies_byte_equal_across_hosts": true
+  },
+  "measurements": {
+    "linux_full48_peak_bound_bytes": 30678976,
+    "macos_full48_peak_bound_bytes": 30679456,
+    "linux_large_peak_bound_bytes": 79273408,
+    "macos_large_peak_bound_bytes": 79273792,
+    "production31_peak_bound_bytes": 27724720,
+    "maximum_stack_watermark_bytes": 38160,
+    "production31_stack_watermark_bytes": 6824,
+    "physical_method": "Complete initial TLSF physical inventory and stopped counter/topology observation across LoadSeg, startup, body, cleanup and UnLoadSeg, including calibrated transient allocation and conservative split-header allowance. Peaks are conservative whole-guest bounds, not exact application heap sizes or product quotas."
+  },
+  "diagnostics": {
+    "SDK_owner_task_allocator_entries": 0,
+    "full48_diagnostic_windows_each_host": 1090,
+    "large_profile_diagnostic_windows_each_host": 297,
+    "positive_detection_controls": [
+      "direct Exec allocation",
+      "malloc allocation",
+      "pre-existing pool allocation"
+    ],
+    "background_other_task_allocator_hits": 26,
+    "background_case_counts": {
+      "macos-full48 ABI6": 13,
+      "macos-full48 PORTS": 13
+    },
+    "background_cause": "Unresolved: captured records omit task names/call stacks/allocator PC. This uncertainty is retained.",
+    "acceptance_basis": "docs/w06-qualification.md explicitly distinguishes diagnostic owner and background activity. This accepts the measured SDK owner-task diagnostic criterion; no whole-OS or asynchronous backend allocation-free guarantee is claimed.",
+    "contract_sha256": "fb30363d60b993223d0424cf747866e664c72b732d24568801719b19f0a1938e",
+    "owner_retained_contract_path": "docs/w06-qualification.md",
+    "zero_allocation_scope": "Non-injected SDK-owner diagnostic paths. Declared positive detection controls intentionally allocate inside the real diagnostic window and are counted separately.",
+    "declared_positive_control_allocator_entries_by_phase": {
+      "linux-full48": 9,
+      "macos-full48": 9,
+      "linux-large": 9,
+      "macos-large": 9
+    }
+  },
+  "native_programs": {
+    "linux-x86_64": {
+      "dependencies": {
+        "bytes": 1501568,
+        "sha256": "e9282cb51537e141f22c3e7d22059e64292e79679865d63f9499a63ad0342bb9"
+      },
+      "minimal-alloc": {
+        "bytes": 885856,
+        "sha256": "5c4749ead23831c357af7826449b5cd29112760ae901240cf4d99bcf85bcff1e"
+      },
+      "minimal-noalloc": {
+        "bytes": 359616,
+        "sha256": "5a932c76d1f791c4ac4cd1dd267506bae3d25d4ea94209356f08a255f3af296e"
+      },
+      "qualification": {
+        "bytes": 1029880,
+        "sha256": "7299ddb4a2a243a4fdb51c6657aefc02675b5bf6953a38c8d3583fc7f0e06906"
+      },
+      "sha256sum": {
+        "bytes": 928208,
+        "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162"
+      }
+    },
+    "macos-aarch64": {
+      "dependencies": {
+        "bytes": 1501568,
+        "sha256": "e9282cb51537e141f22c3e7d22059e64292e79679865d63f9499a63ad0342bb9"
+      },
+      "minimal-alloc": {
+        "bytes": 885856,
+        "sha256": "5c4749ead23831c357af7826449b5cd29112760ae901240cf4d99bcf85bcff1e"
+      },
+      "minimal-noalloc": {
+        "bytes": 359616,
+        "sha256": "5a932c76d1f791c4ac4cd1dd267506bae3d25d4ea94209356f08a255f3af296e"
+      },
+      "qualification": {
+        "bytes": 1029880,
+        "sha256": "7299ddb4a2a243a4fdb51c6657aefc02675b5bf6953a38c8d3583fc7f0e06906"
+      },
+      "sha256sum": {
+        "bytes": 928208,
+        "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162"
+      }
+    }
+  },
+  "allocation_failure_coverage": "ALLOC, FAULT1, FAULT9 and OOM in both full48 runs cover request/layout overflow, failed realloc preservation and injected native OOM. Large profiles separately cover backing-charge controls and simultaneous page/tail-verified allocations.",
+  "evidence": {
+    "owner_retained_decision_sha256": "67320f686309fdaf75a10f2f48abd568d87f5af8c8d3cd3fd5ecc04537bfb5c0",
+    "owner_retained_closure_sha256": "a9d7b419930e2b851f18d5ccc77166573438c514aaf4a1bb05b5b790bf7d3c4f",
+    "clock_sha256": "0d13a1782dda3826bba9e9c786b22e1fa9c5bb51be1548ae32d1aeafa171e9e2",
+    "independent_reviews": [
+      {
+        "record": "proposal5-retry1-linux-full48-independent-review.json",
+        "sha256": "f6e287d99772bc748f0429b7a7ce2f8ffc3aa56a3cab495d5d39ed64abe970b7",
+        "result": "PASS_PHASE_REVIEW"
+      },
+      {
+        "record": "proposal5-retry1-macos-full48-independent-review.json",
+        "sha256": "8efe900f9975c2b73ffab3c0b8b95eeda1de7c5fcd2c6c3e69ad481c1c15f4bf",
+        "result": "PASS_PHASE_REVIEW"
+      },
+      {
+        "record": "proposal5-retry1-linux-full48-binding-supplement.json",
+        "sha256": "a3cc8503fbd630d35cb982a7f14d7318be6f58725e6f547c95936c84be677c32",
+        "result": "PASS_SOURCE_BINDING_AND_ASSERTION_SCOPE_SUPPLEMENT"
+      },
+      {
+        "record": "proposal5-retry1-large-independent-review.json",
+        "sha256": "f8c2faa0097759d71a825855de73ca07ec85e7515747588b236c4e96b300f497",
+        "result": "PASS_SUPPORTING_LARGE_PHASE_EVIDENCE"
+      },
+      {
+        "record": "proposal5-retry1-production-independent-review.json",
+        "sha256": "6075a9bd87778419f3495d5f9521befc396eac9a21eac299c1a16a93d3191868",
+        "result": "PASS_SCOPED_PRODUCTION31_MEASUREMENT_EVIDENCE"
+      }
+    ],
+    "review_method": "Separate automated agents reviewed actual raw traces, source/input identities and complete media/log readbacks; primary performed final scope/acceptance and visual shell review. No human-review claim.",
+    "review_tasks": [
+      {
+        "task": "/root/r4_retry1_actual_review",
+        "scope": "Linux and macOS full48 plus source/assertion supplement",
+        "native_or_harness_authorship": false
+      },
+      {
+        "task": "/root/r4_retry1_large_actual_review",
+        "scope": "Both large profiles",
+        "native_or_harness_authorship": false
+      },
+      {
+        "task": "/root/r4_retry1_production_actual_review",
+        "scope": "production31 and two separate controls",
+        "native_or_harness_authorship": false
+      }
+    ],
+    "durable_recovery": {
+      "receipt_sha256": "82e66b14ee927dd769470059bdfef85c262be4e9f86d8ac8eb2a64bbcc75060e",
+      "snapshot_head": "55a75fced07406424637f3ad4c1f1dc86c2c72a4",
+      "bundle_name": "ami-rust-r4-retry1-native-go-20261016.bundle",
+      "bundle_sha256": "e2271204050d76a487bc4d6615d05bd6705716272a1c5ed23d4c01d9c03e8416",
+      "strict_fsck": "PASS",
+      "tracked_blobs_fully_read_and_rehashed": 20041,
+      "same_volume_not_off_device": true
+    },
+    "availability": "Complete raw traces, original failed attempt and source/harness records are retained in the maintainer evidence repository and independently verified local bundle chain. This public record is their compact identity/decision index."
+  },
+  "budget": {
+    "campaign_limit_seconds": 5400,
+    "test_cutoff_seconds": 5100,
+    "review_reserve_seconds": 300,
+    "preflight_charge_seconds": 600,
+    "test_and_independent_review_completed_elapsed_seconds": 2575.8161323070526,
+    "recovery_completed_elapsed_seconds": 2604.070540189743,
+    "closed_elapsed_seconds": 2641.4402952194214,
+    "exception": false
+  },
+  "limits": [
+    "Qualification applies to the pinned PC x86-64 AROS ABI-v1 QEMU profile; physical hardware and other targets require separate evidence.",
+    "The 128 KiB startup stack and at most 96 KiB measured-stack requirement remain supported runtime contracts. No fixed application allocation/heap/ELF-size quota is inferred.",
+    "Owner-task diagnostics are allocation-free under the calibrated observer. The 26 other-task allocator hits in the macOS full48 run remain documented without causal attribution; whole-OS allocation freedom is not claimed.",
+    "These native reference inputs are not an authenticated release. Exact final source, four clean consumer builds/metadata comparison, installation/uninstallation, actual signatures/provenance, final licensing and independent R1 acceptance remain required."
+  ],
+  "native_profile_accepted": true,
+  "R1_A2_final_consumer_accepted": false,
+  "R1_accepted": false,
+  "publication_accepted": false,
+  "baseline_changed": false,
+  "protected_AROS_NX_and_aros_tools_changed": false,
+  "nxpk_in_scope": false
+}

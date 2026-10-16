@@ -1,14 +1,31 @@
-# Release qualification status — 2026-10-16
+# Release qualification status — 2026-10-17
 
-R1 is not release-qualified. The owner authorised SDK publication only after
-R1-A1 through R1-A7 pass; public readback and two-host replay remain mandatory
-under R1-A8. No ami-rust SDK GitHub Release is published. The
-[revision 23 repository plan](m2-r1-plan.md) is the acceptance authority.
+R1 remains open, and no ami-rust SDK GitHub Release has been published. The
+current native profile received technical GO on its exact inputs and supported
+profile in the [R4 qualification record](../release/candidate-r4/qualification.json)
+(SHA-256 `c5e559f592c7300b502ebf976ecd5b65c9191a130dbc2f7b5c9ed68a7045982c`).
+The native run completed all 155 cases, plus Linux-derived-output checks and
+malformed LoadSeg, in 2,641.44 seconds with no exceptions. The immutable
+boot image, ABI and guest profile are unchanged. The zero-allocation result
+applies to regular, non-injected SDK-owner diagnostics. Declared positive
+controls intentionally allocate nine times per full/large phase; their 36
+allocations are reported separately.
+
+The current-source protected two-host proposal passed in
+[run 38964667415](https://github.com/metaneutrons/ami-rust/actions/runs/38964667415)
+from source `1d0fe4f`: five ELF outputs matched byte-for-byte, and the 104
+canonical-output comparison passed on each host. The source and native-compiler
+pins are unchanged. This proposal and the native-profile GO do not establish a
+qualified SDK release. Final raw-metadata verification, exact-version SDK
+production authentication/readback, four final consumer builds, documented
+installation/recheck, final Cargo linkage, licence review, independent A7
+review, and A8 publication/readback/replay remain open. See the
+[revision 24 repository plan](m2-r1-plan.md) for acceptance status.
 
 The [prospective memory change](memory-policy.md) removes artificial application
-allocation/heap and generic ELF size quotas. Changed native code requires a new
-runtime/memory qualification; the following R3 evidence remains historical and
-cannot substitute for that rerun.
+allocation/heap and generic ELF size quotas. The current R4 native input has
+its own runtime/memory qualification; the following R3 evidence remains
+historical and cannot substitute for that result.
 
 The inherited local R3 candidate passed its four clean consumer builds,
 new-project builds, installation/deinstallation and native runtime, memory and
@@ -41,29 +58,38 @@ acceptance follows from the diagnostic or this source edit.
 
 The complete original and derived C-SDK prerequisites, corresponding source,
 patches and selected vendor archive are public repository inputs with their
-own pinned identities and preserved notices. The shared portable C-SDK producer
-passed locally on macOS; latest-source two-host derivation remains unqualified.
-The qualified boot image, ABI and guest profile are unchanged.
+own pinned identities and preserved notices. The current-source protected
+two-host proposal passed in [run 38964667415](https://github.com/metaneutrons/ami-rust/actions/runs/38964667415):
+five ELF outputs matched byte-for-byte, and the 104 canonical-output comparison
+passed on each host. Source and native-compiler pins and the qualified boot
+image, ABI and guest profile are unchanged. Exact-version production
+authentication and final consumer replay remain open.
 
 The [native reference follow-up](r1-native-reproducibility-20261016.md) preserves
 the failed second protected proposal and its two-root dependency-output mismatch.
 A local four-build investigation reproduced the path-dependent output and then
 obtained 35 byte-identical outputs with the source/build-recipe correction. The
-fix is merged. A new complete protected SDK proposal and native qualification
-are still required; the local diagnostic is not R1 acceptance.
+fix is merged. The subsequent protected two-host proposal and the current native
+profile now have passing evidence for their identified inputs; the retained
+failures remain historical. Final exact-version production and consumer/release
+gates remain open.
 
-The current production path uses real GitHub attestations and Cosign signatures.
-Its helper fixtures and public source CI establish control flow only. Actual
-protected SDK production, publisher verification and tamper probes, documented
-fresh-user preparation/build/uninstall/recheck on both hosts, final Cargo linkage
-and licence review, and independent R1 acceptance remain open. The
+The production path uses real GitHub attestations and Cosign signatures. Its
+helper fixtures and public source CI establish control flow only. The current
+protected proposal and native-profile qualification passed for their identified
+inputs, but final versioned SDK production/authentication, raw-metadata and
+publisher verification, tamper probes, the four final consumer builds,
+documented fresh-user preparation/build/uninstall/recheck on both hosts, final
+Cargo linkage and licence review, and independent R1-A7 acceptance remain open.
+R1-A8 publication and public replay also remain open. The
 [producer workflow](hosted-sdk-producer.md) cannot publish an SDK release.
 
 [Production quickstart](quickstart.md) includes explicit pinned Python/tool
 preparation, external source-policy selection, all six component inventories
-and post-uninstall reuse verification. Its new entry commands still require
-actual protected two-host execution. Missing or altered inputs require a fresh
-preparation state; no ambient Rust toolchain is replaced.
+and post-uninstall reuse verification. The exact-version authenticated
+preparation and full consumer recipe still require final two-host replay.
+Missing or altered inputs require a fresh preparation state; no ambient Rust
+toolchain is replaced.
 
 The adopted [hosted resource policy](../release/ci-resources.json) requires
 6 GiB physical RAM, 24 GiB free disk, two jobs, 4 GiB aggregate observed RSS,

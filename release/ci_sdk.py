@@ -264,7 +264,7 @@ def validate_inputs(inputs: dict, normative: dict, host: str) -> dict:
     native = inputs.get("native_reference")
     if (not isinstance(native, dict) or native.get("path") != "release/native-reference.json"
             or not _is_digest(native.get("sha256"))
-            or native.get("basis_source_record_sha256") != "64de65e5155238e72610485d1a81431bb53b1d5d81f7780807a1020217a86650"):
+            or native.get("basis_source_record_sha256") != "8916ae5fd5d9403f1b0592555f0c26e474893a913a4fe925b66d8c4fd1aa2250"):
         raise ValueError("native reference input pin is incomplete or unrecognized")
     rows = inputs["hosts"][host]
     if set(rows) != {"rust", "toolchain", "collector"}:
@@ -824,8 +824,8 @@ def validate_native_reference(reference: dict, inputs: dict, expected_sha: str) 
             raise ValueError(f"native reference must cover 104 outputs across its five variants: {host}")
     sha = reference["hosts"]["linux-x86_64"]["sha256sum"].get("AMIRUST")
     sha_mac = reference["hosts"]["macos-aarch64"]["sha256sum"].get("AMIRUST")
-    expected_sha_artifact = {"bytes": 928144,
-                             "sha256": "b9521e15361e26b22db49c1e8953a1d29940313a5214507d023c2d953ad4acd4"}
+    expected_sha_artifact = {"bytes": 928208,
+                             "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162"}
     if sha != expected_sha_artifact or sha_mac != expected_sha_artifact:
         raise ValueError("SHAUTIL reference artifact differs from the accepted native reference")
     return reference

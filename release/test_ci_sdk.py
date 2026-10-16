@@ -678,7 +678,25 @@ class HostedSdkProducerTests(unittest.TestCase):
         reference = ci_sdk.read_json(ROOT / "release/native-reference.json")
         valid = ci_sdk.validate_native_reference(reference, inputs,
                                                   inputs["native_reference"]["sha256"])
-        self.assertEqual(sum(len(rows) for rows in valid["hosts"]["linux-x86_64"].values()), 104)
+        source_record = ci_sdk.read_json(ROOT / "release/candidate-r4/reference-artifacts.json")
+        self.assertEqual(valid["basis"]["source_record_sha256"],
+                         "8916ae5fd5d9403f1b0592555f0c26e474893a913a4fe925b66d8c4fd1aa2250")
+        self.assertEqual(valid["basis"]["source_record_path"],
+                         "release/candidate-r4/reference-artifacts.json")
+        self.assertEqual(valid["basis"]["native_qualification_path"],
+                         "release/candidate-r4/qualification.json")
+        self.assertEqual(valid["basis"]["native_qualification_sha256"],
+                         "c5e559f592c7300b502ebf976ecd5b65c9191a130dbc2f7b5c9ed68a7045982c")
+        self.assertEqual(ci_sdk.sha256(ROOT / valid["basis"]["source_record_path"]),
+                         valid["basis"]["source_record_sha256"])
+        self.assertEqual(ci_sdk.sha256(ROOT / valid["basis"]["native_qualification_path"]),
+                         valid["basis"]["native_qualification_sha256"])
+        self.assertEqual(valid["hosts"], source_record)
+        expected_sha_util = {"bytes": 928208,
+                             "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162"}
+        for host in ("linux-x86_64", "macos-aarch64"):
+            self.assertEqual(valid["hosts"][host]["sha256sum"]["AMIRUST"], expected_sha_util)
+            self.assertEqual(sum(len(rows) for rows in valid["hosts"][host].values()), 104)
         with self.assertRaises(ValueError):
             ci_sdk.validate_native_reference(reference, inputs, "0" * 64)
 

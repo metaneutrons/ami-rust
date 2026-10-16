@@ -144,8 +144,8 @@
   "provisioning_contract": "Fresh owned roots only; exact full component inventories after dropping only the five explicitly listed path-dependent Rust installer administrative files. Compiler, standard libraries and rust-src bytes are unchanged. No metadata within .rlib/.rmeta is edited. C-SDK public input check-in requires source/licence closure.",
   "native_reference": {
     "path": "release/native-reference.json",
-    "sha256": "ce1a9213ba4e58f038ebe66b8979bd4751b268e9d8b4911b0ae784ee3bd3bf43",
-    "basis_source_record_sha256": "64de65e5155238e72610485d1a81431bb53b1d5d81f7780807a1020217a86650"
+    "sha256": "93894f48757802841e067fa31d6a1624a3d35a80060d2927670cecfc81c4544e",
+    "basis_source_record_sha256": "8916ae5fd5d9403f1b0592555f0c26e474893a913a4fe925b66d8c4fd1aa2250"
   },
   "portable_csdk": {
     "path": "release/portable-csdk/spec.json",

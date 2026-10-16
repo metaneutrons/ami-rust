@@ -54,9 +54,9 @@
       "sha256": "32094882708de7d1b2076e87e1be5e69c787251e2bfda93696de86ea18551109"
     },
     {
-      "bytes": 12624,
+      "bytes": 13026,
       "path": "THIRD_PARTY_NOTICES.md",
-      "sha256": "5ecd2bdf943fce1d41686af47434382d79e4e8e3a63e3a448e3b245fcc235096"
+      "sha256": "57b1462ab5258ba342fa75a52af52677513b6e4696f988948484cc03e511a86e"
     },
     {
       "bytes": 181,
@@ -478,7 +478,7 @@
       "path": "host/cargo-repro/tests/test_hash_rustc_version_probe.py",
       "sha256": "bd41608f0d87a4f87b2fce1bae1699ad4ac80130290472d21ba8d5e041ab673b"
     },
-    "runtime_and_compiler_sources": "unchanged from R3; candidate consumer outputs must be compared"
+    "runtime_and_compiler_sources": "The accepted R4 native profile qualifies the changed memory-policy allocator/runtime from source commit 1d0fe4f10c8f264fd4b8fd50baccadd34869a802 and source SDK archive SHA-256 fec161ac9d80f3775ce413e45279cc708dfe0e14403879001ff2cdcd249c3e34; compiler and Rust target input pins remain unchanged. Final candidate consumer outputs must be compared with the qualified native maps before R1 acceptance."
   },
   "profiles": {
     "linux-x86_64": {
@@ -557,7 +557,19 @@
     "schema": "ami-rust-application-memory-policy-v1",
     "allocation": "available native memory with checked representation, arithmetic and ownership; no fixed payload/heap quota",
     "historical_budgets": "inputs/budgets.json retains sealed reference-campaign values, not general application quotas",
-    "qualification_status": "PENDING_FRESH_NATIVE_QUALIFICATION",
-    "reference_ELF_size_thresholds_are_product_constraints": false
+    "qualification_status": "QUALIFIED_R4_NATIVE_PROFILE_R1_PENDING",
+    "reference_ELF_size_thresholds_are_product_constraints": false,
+    "evidence": {
+      "source_repository_record": {
+        "path": "release/candidate-r4/reference-artifacts.json",
+        "sha256": "8916ae5fd5d9403f1b0592555f0c26e474893a913a4fe925b66d8c4fd1aa2250"
+      },
+      "native_qualification_record": {
+        "path": "release/candidate-r4/qualification.json",
+        "sha256": "c5e559f592c7300b502ebf976ecd5b65c9191a130dbc2f7b5c9ed68a7045982c"
+      },
+      "native_source_commit": "1d0fe4f10c8f264fd4b8fd50baccadd34869a802",
+      "native_profile_source_sdk_archive_sha256": "fec161ac9d80f3775ce413e45279cc708dfe0e14403879001ff2cdcd249c3e34"
+    }
   }
 }

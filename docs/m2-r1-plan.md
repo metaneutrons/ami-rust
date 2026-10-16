@@ -1,4 +1,4 @@
-# ami-rust M2 and independent R1 plan — revision 23
+# ami-rust M2 and independent R1 plan — revision 24
 
 **Current resource policy — revision 23:** [Memory policy](memory-policy.md)
 is authoritative for the current candidate. There is no fixed per-allocation,
@@ -23,9 +23,43 @@ this decision; it does not reinstate those application quotas. Its bytes remain
 pinned to existing producer receipts until a newly identified producer input
 is prepared. No historical PASS, FAIL or clock is changed by this clarification.
 
-Status: the inherited third qualification campaign (retained development record: `r1-qualification-r3-20261015.md`) remains technically PASS. The installation/licensing follow-up (retained development record: `r1-installation-qualification-20261015.md`) closes the two-host installation/deinstallation recipe, project reproduction and candidate licence/source review. The public source repository is [metaneutrons/ami-rust](https://github.com/metaneutrons/ami-rust); its protected source CI passes. **R1-A6 remains OPEN: actual protected SDK producer provenance and its production consumer verification have not been qualified. R1 is not release-qualified. SDK publication is conditionally authorised after every release acceptance gate passes; no SDK has been published.** The approved comparison contract and all sealed campaign/runtime budgets remain unchanged. The prospective hosted CI resource amendment below applies to new CI phases.
-M0 has GO and M1 technical acceptance is recorded in
-the sealed M1 decision (retained development record: `../evidence/current-campaign/decision.md`).
+Status (inherited evidence): the inherited third qualification campaign (retained
+development record: `r1-qualification-r3-20261015.md`) remains technically PASS.
+The installation/licensing follow-up (retained development record:
+`r1-installation-qualification-20261015.md`) records its two-host
+installation/deinstallation recipe, project reproduction and candidate
+licence/source review. These are historical candidate results; they do not
+qualify changed native inputs or the final versioned release. The public source
+repository is [metaneutrons/ami-rust](https://github.com/metaneutrons/ami-rust);
+its protected source CI passes. M0 has GO and M1 technical acceptance is
+recorded in the sealed M1 decision (retained development record:
+`../evidence/current-campaign/decision.md`). The prospective hosted CI resource
+amendment below applies to new CI phases.
+
+## Current native profile and protected proposal status — revision 24 (2026-10-17)
+
+The current native profile received technical GO on its exact inputs and
+supported profile in the [public R4 qualification record](../release/candidate-r4/qualification.json)
+(SHA-256 `c5e559f592c7300b502ebf976ecd5b65c9191a130dbc2f7b5c9ed68a7045982c`).
+The native closure passed after 2,641.44 seconds with no exceptions: all 155
+cases, plus Linux-derived-output checks and malformed LoadSeg. The immutable
+boot image, ABI and guest profile remain unchanged. Regular, non-injected
+SDK-owner diagnostics allocated zero. Declared positive controls intentionally
+allocate nine times per full/large phase; their 36 allocations are accounted
+separately.
+
+The protected two-host proposal for source `1d0fe4f` passed in
+[run 38964667415](https://github.com/metaneutrons/ami-rust/actions/runs/38964667415):
+five ELF outputs were byte-identical, and 104 canonical outputs passed on each
+host. Source and native-compiler pins remain unchanged. This GO applies only to
+the current native profile and protected proposal. Final raw-metadata
+verification, exact-version SDK production authentication/readback, four final
+consumer builds, documented installation/uninstall/recheck, final Cargo
+linkage, licence review and independent R1-A7 review remain open. R1-A8
+publication/readback/two-host replay remains mandatory after A1-A7. R1 is not
+release-qualified, no SDK release has been published, and this status update
+does not change any acceptance criterion, resource policy, baseline identity or
+historical result.
 
 The [2026-10-16 portability follow-up](r1-portability-follow-up-20261016.md)
 records the expanded C-SDK patch scope, direct original-input readback and
@@ -146,11 +180,15 @@ versioned patches accompany those repository prerequisites. They do not add
 another asset to the signed SDK bundle or change its 32 MiB limit.
 
 The complete shared producer passed on macOS with full Python/descendant resource
-measurement and the full 825-member original-prefix counterproof. Latest-source
-Linux production, actual protected SDK authentication and independent consumer
-replay remain required. The detailed scope and immutable evidence references are
-in the [portability follow-up](r1-portability-follow-up-20261016.md). No numeric
-release gate, old campaign result or baseline identity is changed by this edit.
+measurement and the full 825-member original-prefix counterproof. The subsequent
+current-source protected two-host proposal passed in
+[run 38964667415](https://github.com/metaneutrons/ami-rust/actions/runs/38964667415):
+five ELF outputs were byte-identical, and 104 canonical outputs passed on each
+host. The [R4 qualification record](../release/candidate-r4/qualification.json)
+records the current native-profile GO. Exact-version SDK authentication and
+independent final consumer replay remain required. The detailed scope and
+immutable evidence references are in the [portability follow-up](r1-portability-follow-up-20261016.md).
+No numeric release gate, old campaign result or baseline identity is changed by this edit.
 
 ## Production consumer preparation follow-up (2026-10-16)
 
