@@ -23,13 +23,15 @@ until comparison with the second root. Aggregate admission includes checkout,
 output and pinned Python bytes before the snapshot is copied. Matching snapshots
 are retired after comparison.
 
-On a mismatch, both complete maps, the differing-member list and exact original
-bytes from both roots are retained before the same strict comparison fails.
+On a mismatch, both complete maps and the differing-member list are retained
+before the same strict comparison fails. Exact original bytes from each root
+are retained subject to both raw-evidence and total artifact capacity; every
+omission has an explicit per-member reason.
 Failure cleanup preserves validated diagnostics and removes partial release
 payloads before retiring scratch. The existing 32 MiB host artifact limit still
 applies; raw diagnostic bytes have 24 MiB available before receipt/output
-headroom, with explicit per-member omission reasons if the actual artifact
-cannot hold every byte. Missing bytes never become a successful comparison.
+headroom. Reaching either the 24 MiB raw-evidence bound or the remaining
+32 MiB artifact capacity produces an explicit omission record. Missing bytes never become a successful comparison.
 Linked or altered diagnostic files are rejected. This is hosted evidence
 retention, not an SDK application-memory limit.
 
