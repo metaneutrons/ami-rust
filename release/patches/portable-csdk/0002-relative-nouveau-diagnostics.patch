@@ -1,0 +1,12 @@
+--- a/workbench/hidds/nouveau/mmakefile.src
++++ b/workbench/hidds/nouveau/mmakefile.src
+@@ -111,7 +111,8 @@
+ 
+ USER_CPPFLAGS := -D__KERNEL__ -DCONFIG_NOUVEAU_DEBUG=5 -DCONFIG_NOUVEAU_DEBUG_DEFAULT=3 -DCONFIG_DRM_NOUVEAU_GSP_DEFAULT=1
+ NOWARN_FLAGS := $(NOWARN_UNINITIALIZED) $(NOWARN_STRICT_ALIASING) $(NOWARN_UNUSED_BUT_SET_VARIABLE) $(NOWARN_UNUSED_VARIABLE) $(NOWARN_UNUSED_FUNCTION) $(NOWARN_MISSING_BRACES)
+-USER_CFLAGS := $(NOWARN_FLAGS) $(CFLAGS_GNU11) -fno-strict-aliasing
++# Preserve diagnostic file/line information without embedding the host checkout.
++USER_CFLAGS := $(NOWARN_FLAGS) $(CFLAGS_GNU11) -fno-strict-aliasing -ffile-prefix-map="$(SRCDIR)"=.
+ 
+ NOUVEAU_DRM_C_SOURCES := \
+             $(AROS_DRM_CORE_SOURCES) \

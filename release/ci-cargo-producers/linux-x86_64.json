@@ -1,0 +1,454 @@
+{
+  "budgets": {
+    "jobs": 2,
+    "log_bytes": 16777216,
+    "rss_bytes": 4294967296,
+    "seconds": 1200,
+    "workspace_bytes": 12884901888
+  },
+  "build_profile": "release",
+  "capacity_preflight": {
+    "output": {
+      "disk_free_minimum_bytes": 25769803776,
+      "free_disk_bytes": 91808129024,
+      "physical_ram_bytes": 16765378560,
+      "ram_minimum_bytes": 6442450944
+    },
+    "work": {
+      "disk_free_minimum_bytes": 25769803776,
+      "free_disk_bytes": 91808129024,
+      "physical_ram_bytes": 16765378560,
+      "ram_minimum_bytes": 6442450944
+    }
+  },
+  "claim": "Pinned host Cargo prerequisite producer; no SDK, guest, or R1 qualification.",
+  "custom_cargo_artifact": {
+    "bytes": 48110632,
+    "relative_path": "build-work/target/release/cargo",
+    "sha256": "938bc3ee1f60b5f239d369a9f3b6bf1a6e004aecdb6ef65fb7fe901745b011db",
+    "version": "cargo 1.99.0 (3efb1f477 2026-07-17)\nrelease: 1.99.0\ncommit-hash: 3efb1f477e99b42974b982d939fd100303cdf7db\ncommit-date: 2026-07-17\nhost: x86_64-unknown-linux-gnu\nlibgit2: 1.9.4 (sys:0.21.0 vendored)\nlibcurl: 8.21.0-DEV (sys:0.4.90+curl-8.21.0 vendored ssl:OpenSSL/3.6.3)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Ubuntu 24.4.0 (noble) [64-bit]"
+  },
+  "host": "linux-x86_64",
+  "input_materials": {
+    "bootstrap_cargo_commit": "797e8a9bca276c1c9f9f738d2a20f484fa4eea9d",
+    "bootstrap_inventory": {
+      "entry_count": 153,
+      "inventory_sha256": "c92db406eaeaed3c07b46c46c058f8ba8a43ce9fb272e7f35d24d1fa729cc61e",
+      "license_inventory": {
+        "bytes": 16973742,
+        "entry_count": 5,
+        "inventory_sha256": "e9f07527ee916b90d47e916af772bfb92130a0ab41993c66e3a4272985c92b83"
+      },
+      "regular_file_bytes": 603588251,
+      "symlink_count": 0
+    },
+    "cargo_patch": {
+      "path": "host/cargo-repro/cargo-metadata.patch",
+      "sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f",
+      "targets": [
+        {
+          "patched_sha256": "b572e74e742cca08765540aa9f611b1877defc08d146cff52fcd9b0c039106db",
+          "path": "src/compiler/build_runner/compilation_files.rs",
+          "upstream_sha256": "275e1ff7e6512bbbb3b30a7f0ceb9c7d455745e6aafce0484cb73d8fe31e0e67"
+        },
+        {
+          "patched_sha256": "0db8ba62877729fdee23ee8ae26f11a7b79fdd8bf086845a53c5f097eb1eacc3",
+          "path": "src/workspace/features.rs",
+          "upstream_sha256": "2747b5598654963df7d9270b07fc7dbd80a700cf219b26db71b0d2291ea74638"
+        }
+      ]
+    },
+    "cargo_upstream": {
+      "cargo_lock_sha256": "b4ccfa53ccf8d7360c0359c1533d801759629f9cdd486d9a0a88e512717058d9",
+      "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+      "inventory": {
+        "entry_count": 3048,
+        "inventory_sha256": "01b6c1e02a4e24cb5bd48ce55f8da3a971480301304971f6fdce6275cc007a61",
+        "license_inventory": {
+          "bytes": 80831,
+          "entry_count": 31,
+          "inventory_sha256": "6c1b25909c9e7c10b63d5af22b5bdaf2aba89b89809909bd2434b15aefb0f21c"
+        },
+        "regular_file_bytes": 17904391,
+        "symlink_count": 121
+      },
+      "patch_sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f",
+      "patch_targets": [
+        {
+          "patched_sha256": "b572e74e742cca08765540aa9f611b1877defc08d146cff52fcd9b0c039106db",
+          "path": "src/compiler/build_runner/compilation_files.rs",
+          "upstream_sha256": "275e1ff7e6512bbbb3b30a7f0ceb9c7d455745e6aafce0484cb73d8fe31e0e67"
+        },
+        {
+          "patched_sha256": "0db8ba62877729fdee23ee8ae26f11a7b79fdd8bf086845a53c5f097eb1eacc3",
+          "path": "src/workspace/features.rs",
+          "upstream_sha256": "2747b5598654963df7d9270b07fc7dbd80a700cf219b26db71b0d2291ea74638"
+        }
+      ],
+      "upstream": "https://github.com/rust-lang/cargo.git"
+    },
+    "inputs_sha256": "382d6d18ec78db23196f894ef144c8a95cea65cc5f2a8bbba8be98db76c32f9b",
+    "installed_bootstrap_cargo_version": "cargo 1.98.1 (797e8a9bc 2026-08-05)\nrelease: 1.98.1\ncommit-hash: 797e8a9bca276c1c9f9f738d2a20f484fa4eea9d\ncommit-date: 2026-08-05\nhost: x86_64-unknown-linux-gnu\nlibgit2: 1.9.4 (sys:0.21.0 vendored)\nlibcurl: 8.21.0-DEV (sys:0.4.90+curl-8.21.0 vendored ssl:OpenSSL/3.6.3)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Ubuntu 24.4.0 (noble) [64-bit]",
+    "installed_rustc_version": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8",
+    "openssl_overlay_patch_sha256": "67f92b277d2cb9508ca3d6d041ebf9feb0ddbf05e97a9419960f313344cd6de8",
+    "openssl_overlay_recipe_sha256": "15fbc9da969b32968884c24bf47f2d8b61b8f7d46ac73947faade43569569077",
+    "producer_helpers": {
+      "actual_sha256": {
+        "build.py": "bc6df2632d19cb10306356ac2a3349355d5d6030c665d43beecb59cd61d2e3dc",
+        "ci_cargo.py": "589a8abc9fc4b0537b4b9646d441413f4eb005288bbc3ea0220f5218ffc18da2",
+        "prepare-overlay.py": "cb2834a2c22d5b70555759c685425a4e42f5df12e2ad8ff48b63afc5836795d3",
+        "produce.py": "5379771762b9f45c261df8c1acd3dc1ee0cf85fae9cb86b36d409bf56da1b8cc"
+      },
+      "ci_input_pins": {
+        "host_supervisor_path": "host/build.py",
+        "host_supervisor_sha256": "bc6df2632d19cb10306356ac2a3349355d5d6030c665d43beecb59cd61d2e3dc",
+        "overlay_helper_sha256": "cb2834a2c22d5b70555759c685425a4e42f5df12e2ad8ff48b63afc5836795d3",
+        "policy_extension": "Explicit hosted resource contract and fail-closed process-group cleanup; Cargo source, compiler, patch, build flags and target/runtime sources unchanged.",
+        "producer_path": "host/cargo-repro/produce.py",
+        "producer_sha256": "5379771762b9f45c261df8c1acd3dc1ee0cf85fae9cb86b36d409bf56da1b8cc",
+        "python_bootstrap_path": "release/ci_python.py",
+        "python_bootstrap_sha256": "b25514fbf2f11d5802dc37c2771ef68f15ece3dbd975f40838d0cd70e3cd1fb7"
+      },
+      "driver_sha256": "589a8abc9fc4b0537b4b9646d441413f4eb005288bbc3ea0220f5218ffc18da2"
+    },
+    "python": {
+      "executable_basename": "python3.12",
+      "pinned_sha256": "b61d8a15a8a302e6c45d2747ca40cee1568167031abf4cee948771f8314cea6c",
+      "sha256": "b61d8a15a8a302e6c45d2747ca40cee1568167031abf4cee948771f8314cea6c",
+      "version": "3.12.15"
+    },
+    "python_runtime": {
+      "archive": {
+        "bytes": 66983838,
+        "path": "archive.tar.gz",
+        "sha256": "5d546fc004fc2435fa142eb8f42ed8de5eb4725963dc22f7e6671014a80eb560",
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261013/cpython-3.12.15%2B20261013-x86_64-unknown-linux-gnu-install_only.tar.gz"
+      },
+      "archive_sha256": "5d546fc004fc2435fa142eb8f42ed8de5eb4725963dc22f7e6671014a80eb560",
+      "capacity": {
+        "disk_free_minimum_bytes": 25769803776,
+        "free_disk_bytes": 92107419648,
+        "physical_ram_bytes": 16765378560,
+        "ram_minimum_bytes": 6442450944
+      },
+      "claim": "Pinned CI Python runtime bootstrap only; not SDK or R1 qualification.",
+      "extraction": {
+        "component_root": "python",
+        "expanded_bytes": 222291869,
+        "member_count": 4534
+      },
+      "host": "linux-x86_64",
+      "inputs_sha256": "221d8a52b034c54d60e5f3ac6043d3155492f440051a77bd2dfe9b6a3eab5437",
+      "observed_managed_prefix_bytes": 289275707,
+      "relative_files": {
+        "archive": "archive.tar.gz",
+        "bootstrap_receipt": "bootstrap.json",
+        "runtime_executable": "runtime/python/bin/python3.12",
+        "runtime_root": "runtime"
+      },
+      "resources_sha256": "a76058df9b8f610def95b3e16f196264f1e3c3a6e4a7f7aa9e6872f7eb82be14",
+      "runtime": {
+        "bytes": 68023040,
+        "path": "runtime/python/bin/python3.12",
+        "sha256": "b61d8a15a8a302e6c45d2747ca40cee1568167031abf4cee948771f8314cea6c",
+        "version": "3.12.15"
+      },
+      "runtime_pin": {
+        "relative_path": "python/bin/python3.12",
+        "sha256": "b61d8a15a8a302e6c45d2747ca40cee1568167031abf4cee948771f8314cea6c"
+      },
+      "runtime_sha256": "b61d8a15a8a302e6c45d2747ca40cee1568167031abf4cee948771f8314cea6c",
+      "schema": "ami-rust-ci-python-bootstrap-v1",
+      "status": "READY_CI_RUNTIME_NOT_SDK_QUALIFICATION",
+      "target": "x86_64-unknown-linux-gnu",
+      "version": "3.12.15"
+    },
+    "resource_policy_sha256": "a76058df9b8f610def95b3e16f196264f1e3c3a6e4a7f7aa9e6872f7eb82be14",
+    "rust_archives": [
+      {
+        "archive_member_count": 69,
+        "bytes": 79727616,
+        "component": "rustc",
+        "expanded_bytes": 401200522,
+        "relative_file": "rust-archives/rustc.tar.xz",
+        "sha256": "e974f036b28565f37c0f3bd92ddefa809bee16c04f9dcf07b9ed96e05aaaf7c4",
+        "url": "https://static.rust-lang.org/dist/2026-09-03/rustc-1.98.1-x86_64-unknown-linux-gnu.tar.xz"
+      },
+      {
+        "archive_member_count": 81,
+        "bytes": 30715684,
+        "component": "rust-std",
+        "expanded_bytes": 161239901,
+        "relative_file": "rust-archives/rust-std.tar.xz",
+        "sha256": "fa3ff450172a16c026944030230c5069947af93c728d9179971d44e5e0cfb561",
+        "url": "https://static.rust-lang.org/dist/2026-09-03/rust-std-1.98.1-x86_64-unknown-linux-gnu.tar.xz"
+      },
+      {
+        "archive_member_count": 68,
+        "bytes": 11662108,
+        "component": "cargo",
+        "expanded_bytes": 41310981,
+        "relative_file": "rust-archives/cargo.tar.xz",
+        "sha256": "ea1de9f9e23107d97ee2b41a72c552f34064a593da503789218387aee59f3ba4",
+        "url": "https://static.rust-lang.org/dist/2026-09-03/cargo-1.98.1-x86_64-unknown-linux-gnu.tar.xz"
+      }
+    ],
+    "rust_channel_manifest": {
+      "bytes": 898637,
+      "sha256": "a7c8774a5fd8441c997d94c029776cbc5eb111e9d72ab5d256fa69866644347e",
+      "sidecar": "https://static.rust-lang.org/dist/channel-rust-1.98.1.toml.sha256",
+      "url": "https://static.rust-lang.org/dist/channel-rust-1.98.1.toml",
+      "verification": "Complete manifest read under 1 MiB; SHA-256 matches official sidecar. Official version entry is 1.98.1 (48a229cea, 2026-09-01); GitHub rust-lang/rust resolves the full commit SHA."
+    },
+    "rust_commit": "48a229ceaefd4985c50990b14116b6d856af0985",
+    "rust_release": "1.98.1"
+  },
+  "peaks": {
+    "checkout_initial_bytes": 5464262,
+    "commands": [
+      {
+        "elapsed_seconds": 0.503,
+        "exit_code": 0,
+        "label": "install-rust-rustc",
+        "managed_peak_observed_bytes": 1176878186,
+        "rss_peak_observed_bytes": 6041600,
+        "stderr_log": "logs/install-rust-rustc.stderr.log",
+        "stdout_log": "logs/install-rust-rustc.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.602,
+        "exit_code": 0,
+        "label": "install-rust-rust-std",
+        "managed_peak_observed_bytes": 1530057108,
+        "rss_peak_observed_bytes": 4063232,
+        "stderr_log": "logs/install-rust-rust-std.stderr.log",
+        "stdout_log": "logs/install-rust-rust-std.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.496,
+        "exit_code": 0,
+        "label": "install-rust-cargo",
+        "managed_peak_observed_bytes": 1624187208,
+        "rss_peak_observed_bytes": 4026368,
+        "stderr_log": "logs/install-rust-cargo.stderr.log",
+        "stdout_log": "logs/install-rust-cargo.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.166,
+        "exit_code": 0,
+        "label": "rustc-version",
+        "managed_peak_observed_bytes": 1624187404,
+        "rss_peak_observed_bytes": 17883136,
+        "stderr_log": "logs/rustc-version.stderr.log",
+        "stdout_log": "logs/rustc-version.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.167,
+        "exit_code": 0,
+        "label": "bootstrap-cargo-version",
+        "managed_peak_observed_bytes": 1624187739,
+        "rss_peak_observed_bytes": 13934592,
+        "stderr_log": "logs/bootstrap-cargo-version.stderr.log",
+        "stdout_log": "logs/bootstrap-cargo-version.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.172,
+        "exit_code": 0,
+        "label": "git-init",
+        "managed_peak_observed_bytes": 1624214955,
+        "rss_peak_observed_bytes": 0,
+        "stderr_log": "logs/git-init.stderr.log",
+        "stdout_log": "logs/git-init.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.167,
+        "exit_code": 0,
+        "label": "git-remote",
+        "managed_peak_observed_bytes": 1624215064,
+        "rss_peak_observed_bytes": 0,
+        "stderr_log": "logs/git-remote.stderr.log",
+        "stdout_log": "logs/git-remote.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 1.501,
+        "exit_code": 0,
+        "label": "git-fetch",
+        "managed_peak_observed_bytes": 1629155132,
+        "rss_peak_observed_bytes": 32624640,
+        "stderr_log": "logs/git-fetch.stderr.log",
+        "stdout_log": "logs/git-fetch.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.37,
+        "exit_code": 0,
+        "label": "git-checkout",
+        "managed_peak_observed_bytes": 1647477802,
+        "rss_peak_observed_bytes": 7905280,
+        "stderr_log": "logs/git-checkout.stderr.log",
+        "stdout_log": "logs/git-checkout.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.306,
+        "exit_code": 0,
+        "label": "git-verify-head",
+        "managed_peak_observed_bytes": 1647477843,
+        "rss_peak_observed_bytes": 0,
+        "stderr_log": "logs/git-verify-head.stderr.log",
+        "stdout_log": "logs/git-verify-head.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.333,
+        "exit_code": 0,
+        "label": "apply-cargo-patch",
+        "managed_peak_observed_bytes": 1647478830,
+        "rss_peak_observed_bytes": 4096,
+        "stderr_log": "logs/apply-cargo-patch.stderr.log",
+        "stdout_log": "logs/apply-cargo-patch.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.299,
+        "exit_code": 0,
+        "label": "git-verify-patch",
+        "managed_peak_observed_bytes": 1647478903,
+        "rss_peak_observed_bytes": 5656576,
+        "stderr_log": "logs/git-verify-patch.stderr.log",
+        "stdout_log": "logs/git-verify-patch.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 10.036,
+        "exit_code": 0,
+        "label": "cargo-vendor",
+        "managed_peak_observed_bytes": 2816067091,
+        "rss_peak_observed_bytes": 383574016,
+        "stderr_log": "logs/cargo-vendor.stderr.log",
+        "stdout_log": "logs/cargo-vendor.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 10.86,
+        "exit_code": 0,
+        "label": "cargo-vendor-overlay",
+        "managed_peak_observed_bytes": 3350723096,
+        "rss_peak_observed_bytes": 103419904,
+        "stderr_log": "logs/cargo-vendor-overlay.stderr.log",
+        "stdout_log": "logs/cargo-vendor-overlay.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 529.68,
+        "exit_code": 0,
+        "label": "cargo-build",
+        "managed_peak_observed_bytes": 4343562833,
+        "rss_peak_observed_bytes": 2460196864,
+        "stderr_log": "logs/cargo-build.stderr.log",
+        "stdout_log": "logs/cargo-build.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 2.262,
+        "exit_code": 0,
+        "label": "built-cargo-version",
+        "managed_peak_observed_bytes": 4343563168,
+        "rss_peak_observed_bytes": 15282176,
+        "stderr_log": "logs/built-cargo-version.stderr.log",
+        "stdout_log": "logs/built-cargo-version.stdout.log",
+        "stop_reason": null
+      }
+    ],
+    "elapsed_seconds": 590.195,
+    "rss_observed_bytes": 2460196864,
+    "work_plus_output_observed_bytes": 4343563168
+  },
+  "relative_files": [
+    {
+      "path": "cargo-source",
+      "role": "Cargo checkout"
+    },
+    {
+      "path": "bootstrap",
+      "role": "Rust bootstrap"
+    },
+    {
+      "path": "vendor-upstream",
+      "role": "Cargo vendor"
+    },
+    {
+      "path": "vendor-overlay",
+      "role": "patched vendor"
+    },
+    {
+      "path": "build-work/target/release/cargo",
+      "role": "built Cargo"
+    },
+    {
+      "path": "producer.json",
+      "role": "producer metadata"
+    }
+  ],
+  "rust_target": "x86_64-unknown-linux-gnu",
+  "schema": "ami-rust-hosted-custom-cargo-producer-v1",
+  "source_inventory": {
+    "entry_count": 3048,
+    "inventory_sha256": "01b6c1e02a4e24cb5bd48ce55f8da3a971480301304971f6fdce6275cc007a61",
+    "license_inventory": {
+      "bytes": 80831,
+      "entry_count": 31,
+      "inventory_sha256": "6c1b25909c9e7c10b63d5af22b5bdaf2aba89b89809909bd2434b15aefb0f21c"
+    },
+    "regular_file_bytes": 17904391,
+    "symlink_count": 121
+  },
+  "status": "PRODUCED_PREREQUISITE_ONLY_NOT_R1_QUALIFICATION",
+  "vendor": {
+    "overlay_identity": {
+      "changed_files": [
+        "openssl-src-300.6.1+3.6.3/.cargo-checksum.json",
+        "openssl-src-300.6.1+3.6.3/src/lib.rs"
+      ],
+      "claim": "offline prerequisite overlay provisioning, not SDK/R1 acceptance",
+      "elapsed_seconds": 8.455399707999987,
+      "original_inventory_sha256": "914b77e4e668451d6d1efbbb131e6e2cd0fe71fc4707dc81fe2d2575b2601152",
+      "original_vendor_recheck": "PASS",
+      "overlay_pin_sha256": "15fbc9da969b32968884c24bf47f2d8b61b8f7d46ac73947faade43569569077",
+      "patch_sha256": "67f92b277d2cb9508ca3d6d041ebf9feb0ddbf05e97a9419960f313344cd6de8",
+      "patch_stderr": "",
+      "patch_stdout": "patching file openssl-src-300.6.1+3.6.3/src/lib.rs\n",
+      "source_plus_output_bytes": 1056884012
+    },
+    "overlay_inventory": {
+      "entry_count": 30517,
+      "inventory_sha256": "3a7de0c7d07be413b9a07d8d939b447861428708ab54d8d6e48b19166421c3b5",
+      "license_inventory": {
+        "bytes": 5065839,
+        "entry_count": 965,
+        "inventory_sha256": "35b1a80b30a4e7841730f00e18f64c4b9912403c51059c97bcc6ea7c2e6797f6"
+      },
+      "regular_file_bytes": 528442318,
+      "symlink_count": 0
+    },
+    "overlay_receipt_sha256": "d73e2896f4e3b7bdc4934ad3b887d4a68231b115af6bcfee221842d19504bf11",
+    "upstream_inventory": {
+      "entry_count": 30517,
+      "inventory_sha256": "bd0dc6a80521f4ef26e3127d9e2b83ae0b57cfa5d5dde303f4256c1530c527ee",
+      "license_inventory": {
+        "bytes": 5065839,
+        "entry_count": 965,
+        "inventory_sha256": "35b1a80b30a4e7841730f00e18f64c4b9912403c51059c97bcc6ea7c2e6797f6"
+      },
+      "regular_file_bytes": 528441694,
+      "symlink_count": 0
+    }
+  }
+}

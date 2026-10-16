@@ -1,0 +1,1860 @@
+{
+  "archive": {
+    "bytes": 257760,
+    "sha256": "7d817b4370ea4fcd11f215c9d0aa9ea93b955f521e6bda65606c8b6c4d761e36"
+  },
+  "files": [
+    {
+      "bytes": 3019,
+      "path": "AROS-NX/LEGAL",
+      "sha256": "e4de7b47f775d91810f6f2a1c04fd9af8b722ab4328f67cd0616cce5901b3f39"
+    },
+    {
+      "bytes": 24679,
+      "path": "AROS-NX/LICENSE",
+      "sha256": "825705f4b1240cf5b88f44ac745dc9d9ebaa71ac087e53bbd69a1c3064ceb9c8"
+    },
+    {
+      "bytes": 1221,
+      "path": "AROS-NX/arch/x86_64-all/stdc/__stdc_mathinit.c",
+      "sha256": "0add3217dc24a1f1952bd179d7d54730c0d7cc06c18d609eb5a268435908ada8"
+    },
+    {
+      "bytes": 1094,
+      "path": "AROS-NX/arch/x86_64-all/stdc/longjmp.s",
+      "sha256": "c0d26cb4103aeaaf66d8356a28dab045541b11975817158ced6a674d09f63326"
+    },
+    {
+      "bytes": 1212,
+      "path": "AROS-NX/arch/x86_64-all/stdc/mmakefile.src",
+      "sha256": "2208363abbed81bc2112715aa18a699b9f171a7f3f16d55beb0cd4a738d491bd"
+    },
+    {
+      "bytes": 822,
+      "path": "AROS-NX/arch/x86_64-all/stdc/setjmp.s",
+      "sha256": "9810f908925d594c0093ca72b4d5591bfedab06e1db5dec794680905258cb93c"
+    },
+    {
+      "bytes": 9585,
+      "path": "AROS-NX/compiler/alib/alib_util.c",
+      "sha256": "2fb2133e824f050c77f39b70e9fd7930105e5881e87065d8f72b970fb8331c63"
+    },
+    {
+      "bytes": 1734,
+      "path": "AROS-NX/compiler/alib/callhook.c",
+      "sha256": "8d904910285517fbc6fe7c33e1ea9e961fe439312a43c676abb950076ee545fe"
+    },
+    {
+      "bytes": 8730,
+      "path": "AROS-NX/compiler/alib/getdatastreamfromformat.c",
+      "sha256": "f4f9966c858a8440f7b98c750bd315ab987899d84ea45baabcc960c8585c74e1"
+    },
+    {
+      "bytes": 3606,
+      "path": "AROS-NX/compiler/alib/mmakefile.src",
+      "sha256": "72d2838bfd597bdb12863bbf20a55eacb96a7c86536dad40fd35801bec154ff4"
+    },
+    {
+      "bytes": 2011,
+      "path": "AROS-NX/compiler/autoinit/__showerror.c",
+      "sha256": "006aaa6aba2072ac0c48ff2204b87dd032cbcb4b109093d43d23b24d0d1f84d7"
+    },
+    {
+      "bytes": 185,
+      "path": "AROS-NX/compiler/autoinit/__stdiowin.c",
+      "sha256": "424949fc3fb34e1194b97fb5447f5e4960f43d0d0a85a45f850b97d8ca666468"
+    },
+    {
+      "bytes": 6871,
+      "path": "AROS-NX/compiler/autoinit/commandline.c",
+      "sha256": "8fd7de63b176ea05bc7792c58b47f23f8e0583a373ade89918f1db6787217b06"
+    },
+    {
+      "bytes": 872,
+      "path": "AROS-NX/compiler/autoinit/commandname.c",
+      "sha256": "35cdadf2c0624b9a0b4d7a965bc7b2f27ca0543d5c34743c6ca7bb2c0eecdcbe"
+    },
+    {
+      "bytes": 1558,
+      "path": "AROS-NX/compiler/autoinit/fromwb.c",
+      "sha256": "289a75ab23242ef2a15bd57a5ed59e04db6d2fd7d44b7b3483451c28ca6d0295"
+    },
+    {
+      "bytes": 2390,
+      "path": "AROS-NX/compiler/autoinit/functions.c",
+      "sha256": "1896aa234aaac6b814dcbef8bcff69269dfaa79dde3268b9918d27b2e3ebe37d"
+    },
+    {
+      "bytes": 2877,
+      "path": "AROS-NX/compiler/autoinit/initexitsets.c",
+      "sha256": "2a81c83615fa0670ee21377ca86795fad0dfbeb93c149ece6e23be9506a7627d"
+    },
+    {
+      "bytes": 3329,
+      "path": "AROS-NX/compiler/autoinit/libraries.c",
+      "sha256": "b4f49520b94d0eb5672ddef432af3ebc219b94397b7c6a1a8b7490f93fa1cd94"
+    },
+    {
+      "bytes": 1521,
+      "path": "AROS-NX/compiler/autoinit/mmakefile.src",
+      "sha256": "33ac0a1f62f4c7053459858c1df104488d3f601dc63161537b4b35d8368b4c5d"
+    },
+    {
+      "bytes": 588,
+      "path": "AROS-NX/compiler/autoinit/programentries.c",
+      "sha256": "d53297ebf6275b737b7ad0edd76a65c5b3db9439d6a49a6f70fdfad355db182b"
+    },
+    {
+      "bytes": 468,
+      "path": "AROS-NX/compiler/autoinit/startupvars.c",
+      "sha256": "ab566a48ef3c131c52e92c4f44f581b4b506263e60d0a20ff89a2d8ddd0d98cd"
+    },
+    {
+      "bytes": 2700,
+      "path": "AROS-NX/compiler/autoinit/stdiowin.c",
+      "sha256": "015dc3ccf77e682ebed8ee7375950798e3a0456f5d1ffc7c110c07dd1b905615"
+    },
+    {
+      "bytes": 3906,
+      "path": "AROS-NX/compiler/crt/stdc/LEGAL",
+      "sha256": "9f721f7026bbf47c6a8df87acca91a5a110faa3dfae388de72e02513202450ae"
+    },
+    {
+      "bytes": 6222,
+      "path": "AROS-NX/compiler/crt/stdc/__stdc_startup.c",
+      "sha256": "47908f0ea9675099a517daca648100a396e16796c1f458fbdce0d170dc6eed03"
+    },
+    {
+      "bytes": 1119,
+      "path": "AROS-NX/compiler/crt/stdc/_exit.c",
+      "sha256": "9ac8d6cde214e1883c05f4a256d622c3f4d0b6fbce4cd7ea385adf8f0283aba4"
+    },
+    {
+      "bytes": 18391,
+      "path": "AROS-NX/compiler/crt/stdc/mmakefile.src",
+      "sha256": "1ab0fcffdaf3babe1d35f6d000f400568dca05ada11b0686ed3818f49e224bf5"
+    },
+    {
+      "bytes": 24929,
+      "path": "AROS-NX/compiler/crt/stdc/stdc.conf",
+      "sha256": "c760e0fb76169033bb9d819edfb73501b28877c95021832197f26b5f093e81aa"
+    },
+    {
+      "bytes": 1528,
+      "path": "AROS-NX/compiler/crt/stdc/stdc_startup.c",
+      "sha256": "666fbbd569d035348d38ed2d2591539a8d33be3feace3ea42b9a75d0829efe2e"
+    },
+    {
+      "bytes": 2654,
+      "path": "AROS-NX/compiler/include/aros/types/spinlock_s.h",
+      "sha256": "fa49e8a3b79c85138bcd7e04d2990947b43b972a0624eb4a17d9a2375d6d8880"
+    },
+    {
+      "bytes": 19207,
+      "path": "AROS-NX/compiler/include/dos/dos.h",
+      "sha256": "873fa3270b92c08074da99a9c70809aaf24e6eb2e9f23a54cc9cd96e0da16b24"
+    },
+    {
+      "bytes": 3087,
+      "path": "AROS-NX/compiler/include/exec/libraries.h",
+      "sha256": "a87d7e48bb7711782595c41c8fc008d05a35ccc6080db3a98a34a82fdb2dd509"
+    },
+    {
+      "bytes": 8113,
+      "path": "AROS-NX/compiler/include/exec/lists.h",
+      "sha256": "7ac3397d378a8ac02f5ae3ed6da09491907205c4a8d498d9cd2ebade1658c961"
+    },
+    {
+      "bytes": 2301,
+      "path": "AROS-NX/compiler/include/exec/nodes.h",
+      "sha256": "7d7fd0f26eeb04d9e77f3d496ec4a6a461092175f5c0e114e470f5ab0838f138"
+    },
+    {
+      "bytes": 1593,
+      "path": "AROS-NX/compiler/include/exec/ports.h",
+      "sha256": "c63594d7bf6978876569e7919e09897dab29ef1c0eaa73e646d7227646d0c9af"
+    },
+    {
+      "bytes": 1868,
+      "path": "AROS-NX/compiler/libinit/libinit.c",
+      "sha256": "1fae9f90dfef3262d9e498803973e5e1a8ea535063030e1dc7ce7e50f45a9874"
+    },
+    {
+      "bytes": 991,
+      "path": "AROS-NX/compiler/libinit/mmakefile.src",
+      "sha256": "557a3a5341fc9aac79974002a43c7211d35848b21af99b42c775b9c2b6329b12"
+    },
+    {
+      "bytes": 2680,
+      "path": "AROS-NX/compiler/startup/mmakefile.src",
+      "sha256": "ee0fee62523f510a5f7711eca089b2159132e60f5401a4e673fb3ff95fd02aa0"
+    },
+    {
+      "bytes": 4952,
+      "path": "AROS-NX/compiler/startup/startup.c",
+      "sha256": "2ba2a253adf6919a4398107182b8c0969e7ac022ee43ab0a2149a79b32c70424"
+    },
+    {
+      "bytes": 1074,
+      "path": "AROS-NX/rom/exec/exec_autoinit.c",
+      "sha256": "7a0c2aad9dfdd6b76a62396c68b28341f1634a167d73eab43b09b9419d7e1245"
+    },
+    {
+      "bytes": 4212,
+      "path": "AROS-NX/rom/exec/mmakefile.src",
+      "sha256": "5809868ffe9a11b2a1b1006e5e170433db411ec26a1880540dab4fa13edb29fc"
+    },
+    {
+      "bytes": 698,
+      "path": "AROS-NX/tools/genmodule/Makefile",
+      "sha256": "800ab0908528365082c42ca4e8feaa431d2ac43e668fb9620452c00bf3eb555a"
+    },
+    {
+      "bytes": 720,
+      "path": "AROS-NX/tools/genmodule/Makefile.deps",
+      "sha256": "1107a4ed21b886f2d04decfcaca9c4b3e510f0f0340cdb03aad10ba6b750c653"
+    },
+    {
+      "bytes": 7345,
+      "path": "AROS-NX/tools/genmodule/boopsisupport.c",
+      "sha256": "a144f40ec4a05807f7725e465d6612fdc5f78c8e89fd1c843091015ab5e4afe7"
+    },
+    {
+      "bytes": 255,
+      "path": "AROS-NX/tools/genmodule/boopsisupport.h",
+      "sha256": "f7e5d407d97f0ff9c8e978f0a494f1ac7c0b23bcd9a64d0bd42de4d0d5ef84e2"
+    },
+    {
+      "bytes": 85211,
+      "path": "AROS-NX/tools/genmodule/config.c",
+      "sha256": "4b300d3852ab7254b446a8ef618d27af0227a325a53b55d8f476e27cb523e9b7"
+    },
+    {
+      "bytes": 6625,
+      "path": "AROS-NX/tools/genmodule/config.h",
+      "sha256": "50f8f7036d16ef3fa7696ea3823afb8ed8b47fef10ff0f923a78212f6cfa22b8"
+    },
+    {
+      "bytes": 693,
+      "path": "AROS-NX/tools/genmodule/dtsupport.c",
+      "sha256": "4e3e60b71dbc0d2ef0de6dfb6e3b8a5af40755e3492d02aa5c7bc8498021aa03"
+    },
+    {
+      "bytes": 159,
+      "path": "AROS-NX/tools/genmodule/dtsupport.h",
+      "sha256": "23fb09415c107de656c4033dff5385e8e42f8049b0399875b762bd9dbb449d52"
+    },
+    {
+      "bytes": 2571,
+      "path": "AROS-NX/tools/genmodule/fileread.c",
+      "sha256": "94711b059a29fb68cf32456eccaeeb564de96867de97f25c355fefffb025619c"
+    },
+    {
+      "bytes": 481,
+      "path": "AROS-NX/tools/genmodule/fileread.h",
+      "sha256": "6cd5d5478a87aace246bab9da14cc9658d4b6beb303e13104e66905b9d231f2d"
+    },
+    {
+      "bytes": 16505,
+      "path": "AROS-NX/tools/genmodule/functionhead.c",
+      "sha256": "65a5f5da665c35431dae85beba4a63f74d041489d8c308ea30b07b91a3c5588a"
+    },
+    {
+      "bytes": 2274,
+      "path": "AROS-NX/tools/genmodule/functionhead.h",
+      "sha256": "bab57591b9ad9062b3bf4d39d5e8da66940e96432bd36929119266d269aa47bf"
+    },
+    {
+      "bytes": 2178,
+      "path": "AROS-NX/tools/genmodule/genmodule.c",
+      "sha256": "44d117ba9f4520926a4e453a7c671c7397c1461b4b425d035f5b9bb5b93460df"
+    },
+    {
+      "bytes": 1211,
+      "path": "AROS-NX/tools/genmodule/genmodule.h",
+      "sha256": "d253d6b36dd4e7ce3211d2824d456eeee4d8f8ba899a3a9a80b974fe3c370375"
+    },
+    {
+      "bytes": 6377,
+      "path": "AROS-NX/tools/genmodule/muisupport.c",
+      "sha256": "0a38d994d2b804064e8ebc0ffd229dd222de9f92297a982ee00a63eb2f7ae089"
+    },
+    {
+      "bytes": 232,
+      "path": "AROS-NX/tools/genmodule/muisupport.h",
+      "sha256": "1181e109c2e646ad6be298da0638852982f6f4e02c14139f5f2bcc6a371baa8f"
+    },
+    {
+      "bytes": 6026,
+      "path": "AROS-NX/tools/genmodule/oopsupport.c",
+      "sha256": "31437677f8490580653a64f2a0d3bc8051c3025b85323cbad3ce59cd7ced8751"
+    },
+    {
+      "bytes": 370,
+      "path": "AROS-NX/tools/genmodule/oopsupport.h",
+      "sha256": "376f78faf0df90886d0573887ce197cd69429ec92777d7c2cb4367717ccb13b4"
+    },
+    {
+      "bytes": 1665,
+      "path": "AROS-NX/tools/genmodule/stringlist.c",
+      "sha256": "0b002f21c280956a7b1857dcb979969b86eabef27bb89a94e7c63cf1c71a06ef"
+    },
+    {
+      "bytes": 531,
+      "path": "AROS-NX/tools/genmodule/stringlist.h",
+      "sha256": "c7d99acc872c786e755d8e2a89e96bb2f9a7407e1d373a465599a9a616c82a59"
+    },
+    {
+      "bytes": 1956,
+      "path": "AROS-NX/tools/genmodule/writeautoinit.c",
+      "sha256": "ef8ce4aca09714a8316a47f1d085dcfa4fa8c52e38e508ee1216f29e206dbd03"
+    },
+    {
+      "bytes": 1411,
+      "path": "AROS-NX/tools/genmodule/writeend.c",
+      "sha256": "d63d13f97a1392531855ddce6afedfbd4d0a92753ab545c16778ec78db186be5"
+    },
+    {
+      "bytes": 3617,
+      "path": "AROS-NX/tools/genmodule/writefd.c",
+      "sha256": "5d435fe2f207a8c07ce0d062219dc86329719a08cd0d21cb40d7f7fac516593b"
+    },
+    {
+      "bytes": 3841,
+      "path": "AROS-NX/tools/genmodule/writefunclist.c",
+      "sha256": "a4949637bdb215ed10ad6676fea36018172b4d405a0eefe529056f7d59431177"
+    },
+    {
+      "bytes": 1552,
+      "path": "AROS-NX/tools/genmodule/writegetlibbase.c",
+      "sha256": "7570f3dd7f0e72f8e000e3bf95daf9fd5f75809d7a5063e24755391f23e5ce24"
+    },
+    {
+      "bytes": 1319,
+      "path": "AROS-NX/tools/genmodule/writeincclib.c",
+      "sha256": "a3927f605aba2b287862a4a468d710b03a64c5737cfc0717a896cdab4abb3be0"
+    },
+    {
+      "bytes": 19412,
+      "path": "AROS-NX/tools/genmodule/writeincdefines.c",
+      "sha256": "c74c07f022f40deb5e6d8a7a034a9aa4d41e807b3fd648a5e2cb607406f14c6d"
+    },
+    {
+      "bytes": 23271,
+      "path": "AROS-NX/tools/genmodule/writeincinline.c",
+      "sha256": "80fcd1ad441f0649c7c3e51e2fc2564e42812ce242a80ae95d8fd89516393121"
+    },
+    {
+      "bytes": 8405,
+      "path": "AROS-NX/tools/genmodule/writeincinterfaces.c",
+      "sha256": "6dce87f6156090bb3f48edfae62d148901fcda40dda574279996bd43edaa725d"
+    },
+    {
+      "bytes": 6551,
+      "path": "AROS-NX/tools/genmodule/writeinclibdefs.c",
+      "sha256": "c774f02c2cc78358ae2251f651d6f8886378aa88c4b2714b9d00a6969957a94f"
+    },
+    {
+      "bytes": 5418,
+      "path": "AROS-NX/tools/genmodule/writeincproto.c",
+      "sha256": "db08b83013c0c2c58cd420f65f9c7f404b943b5ed3811a136685e3b2b79f745f"
+    },
+    {
+      "bytes": 4328,
+      "path": "AROS-NX/tools/genmodule/writelinkentries.c",
+      "sha256": "37dd373f1b63a10ef53d88ebf1f62da9653ebefe5c1e7ce0b162de7a2f63cf42"
+    },
+    {
+      "bytes": 4584,
+      "path": "AROS-NX/tools/genmodule/writemakefile.c",
+      "sha256": "2f614d455f41bd3d42b7cc6e5decda299ee0b52bd9cb6a0170cd4fb4878c19de"
+    },
+    {
+      "bytes": 2485,
+      "path": "AROS-NX/tools/genmodule/writeskel.c",
+      "sha256": "46b1f7ea5bfdfd873685932d0be24d303375d9026fd90b88c682ac9380240913"
+    },
+    {
+      "bytes": 63693,
+      "path": "AROS-NX/tools/genmodule/writestart.c",
+      "sha256": "d924905538026d4957c1a64857cb9ff81705249dcaeb8773ee9a0ffa595feb19"
+    },
+    {
+      "bytes": 9427,
+      "path": "AROS-NX/tools/genmodule/writestubs.c",
+      "sha256": "0e8a4940ecde1daab1947529ccec930dc18556ce1a6f1523a3fdfda660ae72c0"
+    },
+    {
+      "bytes": 3734,
+      "path": "AROS-NX/tools/genmodule/writethunk.c",
+      "sha256": "fd80d00e84c4da57e9f35993b4be29ea209a0a90ca567011cc4b1acb04dfcc17"
+    },
+    {
+      "bytes": 422,
+      "path": "AROS-NX/tools/genmodule/writeutils.c",
+      "sha256": "c80efa904aa844f1e8e5016948ce3cd0913182807b1a989eec6dc668d5291bdb"
+    },
+    {
+      "bytes": 3019,
+      "path": "LEGAL",
+      "sha256": "e4de7b47f775d91810f6f2a1c04fd9af8b722ab4328f67cd0616cce5901b3f39"
+    },
+    {
+      "bytes": 24679,
+      "path": "LICENSE",
+      "sha256": "825705f4b1240cf5b88f44ac745dc9d9ebaa71ac087e53bbd69a1c3064ceb9c8"
+    },
+    {
+      "bytes": 1501,
+      "path": "MODIFICATIONS.md",
+      "sha256": "0e96c0a97b682550fe6968c8be7816c2bd78024264287c26964705a0e02f9a95"
+    },
+    {
+      "bytes": 502,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/alib/alib_intern.h",
+      "sha256": "f5863710dca26b66bd021fe51d627d6b4cb0998fc755f3ba2068811aec49189d"
+    },
+    {
+      "bytes": 112,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/autoinit/autoinit_intern.h",
+      "sha256": "8973ad360a9d13ec92bb92678f20b89b9aeaf0ef93abebc4a3c454d6f6d04fa3"
+    },
+    {
+      "bytes": 1338,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/boost/include/LICENSE_1_0.txt",
+      "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566"
+    },
+    {
+      "bytes": 2637,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/crt/stdc/__stdc_intbase.h",
+      "sha256": "19e9e3553a02fa5df1efe64ac70d9e3c67a096cde140eb2664fb91bc335e87d1"
+    },
+    {
+      "bytes": 703,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/crt/stdc/__stdc_mathinit.c",
+      "sha256": "cafe6a350b2d6f4d0581e395901b6bbfeef006e636469be2d29f7508a1cc6c27"
+    },
+    {
+      "bytes": 229,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/crt/stdc/debug.h",
+      "sha256": "2cd19cf5d730e61f9e8e285f3ff53f99b64fa4e6e33e0beccf1afbc885052e4b"
+    },
+    {
+      "bytes": 1608,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/crt/stdc/include/libraries/stdc.h",
+      "sha256": "dbc40a82575e047184b1ba76e20b3e85b7cc48abcce678685ac7c7237093eb20"
+    },
+    {
+      "bytes": 3267,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/include/dos/bptr.h",
+      "sha256": "37f4f17c35336525792c2fd7af10a621d5be8762587fc0ff82b26d1f53fc9cfc"
+    },
+    {
+      "bytes": 893,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/include/exec/avl.h",
+      "sha256": "deb8ca193f67d7c82db26ef86d7228116bd8a0af3499dd78f9749325abf35e74"
+    },
+    {
+      "bytes": 582,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/include/exec/devices.h",
+      "sha256": "8cbd2a49bcaab032e2085b428c18f9227fbc642e18a883b99685d8a789fc3f8f"
+    },
+    {
+      "bytes": 4783,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/include/exec/interrupts.h",
+      "sha256": "2cb4c9fb867d8f8f7704f5a1c2cfdd8dbb750d8e069376aa8362457f9694e6ac"
+    },
+    {
+      "bytes": 1163,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/include/exec/io.h",
+      "sha256": "542783fdcc0bfb45205ee82014040714d960d15f535aa11159a949e22ab272a8"
+    },
+    {
+      "bytes": 3954,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/include/exec/memory.h",
+      "sha256": "764172a8e77de9c0d936c27a7fe35c6587f5e94ae6d83d655aed0bb61ddd4485"
+    },
+    {
+      "bytes": 1527,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/include/exec/pm.h",
+      "sha256": "881d175d9d796b81d4a1a7fd18119191a5d39b742771a8804e8f3dc12abaf080"
+    },
+    {
+      "bytes": 1450,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/include/exec/semaphores.h",
+      "sha256": "914e0eddeb97090733c770ee5e42d07961a3fdddc340220e7797e3231244e26d"
+    },
+    {
+      "bytes": 9690,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/include/exec/tasks.h",
+      "sha256": "2588db79acab58a43d1bb8c8c352d1264dd7a20366714849051126860a6078be"
+    },
+    {
+      "bytes": 8671,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/compiler/include/exec/types.h",
+      "sha256": "995fabba8992eadfabc6f6362bfaa9cdfe8edb7b51d538f2b0360172a4d5e3eb"
+    },
+    {
+      "bytes": 12003,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/rom/exec/exec.conf",
+      "sha256": "7d8b55499d760d61fd595ddf6f7eb0bc11a206f5aea36c90c494a381365a11da"
+    },
+    {
+      "bytes": 10320,
+      "path": "associated-headers/AROS-NX/e0d5e367d15cc7da4ebac8f9db17868756c79569/rom/exec/exec_intern.h",
+      "sha256": "824e6ea62197513d75d6e75e3265ca571efc95c774b2da4203c9bbea1ae2cc45"
+    },
+    {
+      "bytes": 659,
+      "path": "associated-headers/Developer/include/aros/arossupportbase.h",
+      "sha256": "f3c9a63cddbe621a70af3d83503e3286cc8d26034c479da7c9e479fb828c56a9"
+    },
+    {
+      "bytes": 21074,
+      "path": "associated-headers/Developer/include/aros/asmcall.h",
+      "sha256": "0b95793f6a30d0e9cca8bffe6baab7bb30fca05a5a991fb27cc664a4e56a9c0b"
+    },
+    {
+      "bytes": 748,
+      "path": "associated-headers/Developer/include/aros/autoinit.h",
+      "sha256": "898d824c28487d7d1bb8ea84ebabc6229a0c8375a78c6c049fa6782d13719c76"
+    },
+    {
+      "bytes": 800,
+      "path": "associated-headers/Developer/include/aros/config.h",
+      "sha256": "b7b039082c7f4dd4889e507cafce1d501a70c7e97ec59f81043ece79f062836c"
+    },
+    {
+      "bytes": 6585,
+      "path": "associated-headers/Developer/include/aros/cpu.h",
+      "sha256": "ebeb1e53781e4b9ecba783cb18ac02040a21b014f65e242d8c0890d7647d508d"
+    },
+    {
+      "bytes": 12052,
+      "path": "associated-headers/Developer/include/aros/debug.h",
+      "sha256": "4f6b598208cd687487de84e471a565cd6a0e991f37cff5a49848ac36e84534a1"
+    },
+    {
+      "bytes": 5949,
+      "path": "associated-headers/Developer/include/aros/features.h",
+      "sha256": "f3a5b8f7cce5b30a02c816ad7d0172add4f4ec744a06a687c91659bdc82c8323"
+    },
+    {
+      "bytes": 1058,
+      "path": "associated-headers/Developer/include/aros/genmodule.h",
+      "sha256": "7f9b03c6440777e9920096ada129d39aa70e68055fc80c3d93005d41068a8a13"
+    },
+    {
+      "bytes": 447,
+      "path": "associated-headers/Developer/include/aros/irqtypes.h",
+      "sha256": "c932588282157950bb1955f17e1c5be4ec268ba4099635c864b09c301f8eff3b"
+    },
+    {
+      "bytes": 47480,
+      "path": "associated-headers/Developer/include/aros/libcall.h",
+      "sha256": "c23e8d430fddb1d60826e785dc7e6bf63b84714feaef7bd6b6239993da26e2a7"
+    },
+    {
+      "bytes": 12956,
+      "path": "associated-headers/Developer/include/aros/macros.h",
+      "sha256": "f56f65464356faf9dd250a581b60b9620e618676165a507b6f09d3b13130a2e1"
+    },
+    {
+      "bytes": 1392,
+      "path": "associated-headers/Developer/include/aros/posixc/alloca.h",
+      "sha256": "5beeffb2df0b733c70395fd30557a8943f05f584c59a990f1c46382a8ad7afc8"
+    },
+    {
+      "bytes": 605,
+      "path": "associated-headers/Developer/include/aros/posixc/setjmp.h",
+      "sha256": "45dcf65e0d93a258653778409f60a2f915c17490e6544616eb8be04328dbc42a"
+    },
+    {
+      "bytes": 3589,
+      "path": "associated-headers/Developer/include/aros/posixc/stdlib.h",
+      "sha256": "698816af85712b6de4b5b6c4d55259f62ee2ca424010b70e7c7015de3ad259fb"
+    },
+    {
+      "bytes": 959,
+      "path": "associated-headers/Developer/include/aros/preprocessor/array/cast2iptr.hpp",
+      "sha256": "564c8eef8e7ae20e1dd52a3d3714e0f48f87025147c1575abcfc9d84825d66a2"
+    },
+    {
+      "bytes": 1305,
+      "path": "associated-headers/Developer/include/aros/preprocessor/variadic/cast2iptr.hpp",
+      "sha256": "debf6c81562963cd75ba8cb1db2ca1c208e2489af5d5145950bd5dd4038e8459"
+    },
+    {
+      "bytes": 154678,
+      "path": "associated-headers/Developer/include/aros/preprocessor/variadic/elem.hpp",
+      "sha256": "61f58e49ad19ed1bb11cdbf6e8a77cbe47ebe485668255c798c13c01c33f2c9a"
+    },
+    {
+      "bytes": 4633,
+      "path": "associated-headers/Developer/include/aros/preprocessor/variadic/size.hpp",
+      "sha256": "49235192e804ab0dc4206372d86e2c53352ec83b09f28e7a75dc351ebd5cba97"
+    },
+    {
+      "bytes": 1062,
+      "path": "associated-headers/Developer/include/aros/startup.h",
+      "sha256": "36f9fe38ad957b024fd63823f2020f7be2605b21eefc45fe1594b9f0395edc03"
+    },
+    {
+      "bytes": 5219,
+      "path": "associated-headers/Developer/include/aros/stdc/complex.h",
+      "sha256": "a187289679c05e0942ecb583d9204226fe16f398b5352283516acdae4cdff428"
+    },
+    {
+      "bytes": 1504,
+      "path": "associated-headers/Developer/include/aros/stdc/fenv.h",
+      "sha256": "63f77894e15e593cdfe9be31b2405615202ca0723e8de72e58ef6bb88153f3af"
+    },
+    {
+      "bytes": 6788,
+      "path": "associated-headers/Developer/include/aros/stdc/inttypes.h",
+      "sha256": "d57fb5d6430459e5f439ae2a5bb490369a263a6ba93b73b472c7331001ffe206"
+    },
+    {
+      "bytes": 2992,
+      "path": "associated-headers/Developer/include/aros/stdc/limits.h",
+      "sha256": "bfd74a53f85ab1636dcb4a5bc7b6962f2744a0ccb08cc77838d8455ae8292f93"
+    },
+    {
+      "bytes": 14637,
+      "path": "associated-headers/Developer/include/aros/stdc/math.h",
+      "sha256": "941ab417bd3190a462140796ce2880a33935045e081dfd9d908a1523994b9a8b"
+    },
+    {
+      "bytes": 1082,
+      "path": "associated-headers/Developer/include/aros/stdc/setjmp.h",
+      "sha256": "babdc08c3752288ecf95df705aaa81a1279cae5ac0335319fc3db8b88d57e927"
+    },
+    {
+      "bytes": 924,
+      "path": "associated-headers/Developer/include/aros/stdc/signal.h",
+      "sha256": "ecfa4b9d27974e3c10061d4db7beb240cfd2a993378cc9b932e99576179768b5"
+    },
+    {
+      "bytes": 1235,
+      "path": "associated-headers/Developer/include/aros/stdc/stdcnotimpl.h",
+      "sha256": "ecabe73cac11d3f82cdcb0feb4c4b9266f2ffa4932342725246dafc315cce929"
+    },
+    {
+      "bytes": 564,
+      "path": "associated-headers/Developer/include/aros/stdc/stddef.h",
+      "sha256": "e0ef2c8816ac10749d5593cf42f8313dbea3ed037d5db39b5e2e24fa48ec9e4b"
+    },
+    {
+      "bytes": 4096,
+      "path": "associated-headers/Developer/include/aros/stdc/stdint.h",
+      "sha256": "d5c0224d4fd5a002620bf8443406193e877b087c1810f4d1572e2f872bf409c3"
+    },
+    {
+      "bytes": 4414,
+      "path": "associated-headers/Developer/include/aros/stdc/stdlib.h",
+      "sha256": "415dfa56f8ac4a6d05ef28566c1a5cf1ad102bde3794855b10ca8ffa31e9b1a3"
+    },
+    {
+      "bytes": 1263,
+      "path": "associated-headers/Developer/include/aros/stdc/time.h",
+      "sha256": "f97573eb6045d4f9f46ae46fcd701cd413b78e6f7b33fd9a6463463e9f45b4aa"
+    },
+    {
+      "bytes": 823,
+      "path": "associated-headers/Developer/include/aros/stdc/uchar.h",
+      "sha256": "a51b7710a73009e01572a602569bd763602417b6a0e5cf8b5377842a1d90c339"
+    },
+    {
+      "bytes": 5546,
+      "path": "associated-headers/Developer/include/aros/stdc/wchar.h",
+      "sha256": "474b9825dbf4bf6cd465c073f6d7d0df9ae88c2c6b9064180a6719cddd6d0cd4"
+    },
+    {
+      "bytes": 4459,
+      "path": "associated-headers/Developer/include/aros/stdc/wctype.h",
+      "sha256": "4829db83d16c5471380294cace913f1df6c7df8f3e424b5c452689071313154f"
+    },
+    {
+      "bytes": 513,
+      "path": "associated-headers/Developer/include/aros/strmacro.h",
+      "sha256": "6c3c77f2130931301ff1d27ace516619fbb53d236e88ff32fb039f8bde39d393"
+    },
+    {
+      "bytes": 11835,
+      "path": "associated-headers/Developer/include/aros/symbolsets.h",
+      "sha256": "d7edceec556eb23438be974bf02208db093a246bf9f7e6ebfec16e6e3afaf5f7"
+    },
+    {
+      "bytes": 10314,
+      "path": "associated-headers/Developer/include/aros/system.h",
+      "sha256": "5f10a9a2269202e83e0871b941183e15a91094a3b406f749b6216d9ac86241c4"
+    },
+    {
+      "bytes": 276,
+      "path": "associated-headers/Developer/include/aros/types/__sighandler_t.h",
+      "sha256": "63b1a8dd003970ce2e017c8f964cffbf80401a70171ca62b67e43dd7bdf1b3f4"
+    },
+    {
+      "bytes": 272,
+      "path": "associated-headers/Developer/include/aros/types/clock_t.h",
+      "sha256": "9c9daec84bc3dc772e10eb83e3776a2f936ed9b677bdd357c949225f1c8d44c2"
+    },
+    {
+      "bytes": 479,
+      "path": "associated-headers/Developer/include/aros/types/file_t.h",
+      "sha256": "29c9e5da46bc64b77225595fea6fd5336e5507397f8cb7dde5b882dd6fdb23cf"
+    },
+    {
+      "bytes": 1915,
+      "path": "associated-headers/Developer/include/aros/types/int_t.h",
+      "sha256": "b681a6cc030ed3e14e9fa414e4382e917cc8af2c50513847008b45a98e0136e5"
+    },
+    {
+      "bytes": 287,
+      "path": "associated-headers/Developer/include/aros/types/intptr_t.h",
+      "sha256": "f3f298ea86921c91986d7efc91f6d6a6b5d0d7f7380adc6676430586d8b362b3"
+    },
+    {
+      "bytes": 1005,
+      "path": "associated-headers/Developer/include/aros/types/max_align_t.h",
+      "sha256": "5ee9e55b03648d64dabb09836522d50378446610e0c3134b9d1173dad0fd7698"
+    },
+    {
+      "bytes": 515,
+      "path": "associated-headers/Developer/include/aros/types/mbstate_t.h",
+      "sha256": "2a94c41578828e0fe2c5c32a980f239e717580fb295afea6096d0dd730822708"
+    },
+    {
+      "bytes": 294,
+      "path": "associated-headers/Developer/include/aros/types/null.h",
+      "sha256": "6b02e4b15ca7df160accaf2c29dc114b8daacec782f4d2c8af43529905367b59"
+    },
+    {
+      "bytes": 312,
+      "path": "associated-headers/Developer/include/aros/types/ptrdiff_t.h",
+      "sha256": "5a78fe3204ba2a9b2bea65d1df7c67cd9b379a4f61228db6e7854469d06861d5"
+    },
+    {
+      "bytes": 297,
+      "path": "associated-headers/Developer/include/aros/types/size_t.h",
+      "sha256": "c6dde9aca8ff7b5f7fdf982c7de941fda7b207c8d01fc565cf353b80e6a41be5"
+    },
+    {
+      "bytes": 2654,
+      "path": "associated-headers/Developer/include/aros/types/spinlock_s.h",
+      "sha256": "fa49e8a3b79c85138bcd7e04d2990947b43b972a0624eb4a17d9a2375d6d8880"
+    },
+    {
+      "bytes": 368,
+      "path": "associated-headers/Developer/include/aros/types/time_t.h",
+      "sha256": "21558c4230e0d1ee63cc93a97de7b3c1bd096b5599e532fca42f4845f1f23dee"
+    },
+    {
+      "bytes": 367,
+      "path": "associated-headers/Developer/include/aros/types/timespec_s.h",
+      "sha256": "2b008381d117f782c8ee29fa5c93a6bd78f0082d7b0a6cac1dd0c2c16d6d1dc7"
+    },
+    {
+      "bytes": 839,
+      "path": "associated-headers/Developer/include/aros/types/timeval_s.h",
+      "sha256": "3bcd6bd19488a8acf255b8e9f559fdaacf130aa9931fcb7218a92ff54a26a6ce"
+    },
+    {
+      "bytes": 292,
+      "path": "associated-headers/Developer/include/aros/types/uintptr_t.h",
+      "sha256": "7edad3cf2810ed09cdea26d8e61e527dc170e6545fda225740e3fad0644fa3d8"
+    },
+    {
+      "bytes": 1599,
+      "path": "associated-headers/Developer/include/aros/types/wchar_t.h",
+      "sha256": "2339b39447725ce0bccec0441e588c4209792e2f1371c2a4a81500cc876f9347"
+    },
+    {
+      "bytes": 298,
+      "path": "associated-headers/Developer/include/aros/types/wctrans_t.h",
+      "sha256": "51e3f0fdd5426d665837e4c6ddfab32e2fddd48901635433cf12e0015dab6783"
+    },
+    {
+      "bytes": 486,
+      "path": "associated-headers/Developer/include/aros/types/wctype_t.h",
+      "sha256": "1a62a83fb93e419111adb184f0e0c10c1ebb792526833eeb42881d156a527a6b"
+    },
+    {
+      "bytes": 434,
+      "path": "associated-headers/Developer/include/aros/types/wint_t.h",
+      "sha256": "2ef26452ae74a0a8b85e61e4745a2acea0abb9e008f755c62f976b73c5624ab1"
+    },
+    {
+      "bytes": 7357,
+      "path": "associated-headers/Developer/include/aros/x86_64/cpu.h",
+      "sha256": "0a1b24775111e63553146ab7114a05da5aad5536dbf94e5797f1faeee0f13023"
+    },
+    {
+      "bytes": 2139,
+      "path": "associated-headers/Developer/include/aros/x86_64/cpucontext.h",
+      "sha256": "c9df6ea2deaacf76c514633813b1a52f9dc00f8999cf52d3a5707a11cd5747e6"
+    },
+    {
+      "bytes": 6217,
+      "path": "associated-headers/Developer/include/aros/x86_64/fenv.h",
+      "sha256": "a4529e1bc528fad81000c535638706487c015398560327c8ba8e4066cd62ab1f"
+    },
+    {
+      "bytes": 4886,
+      "path": "associated-headers/Developer/include/aros/x86_64/genmodule.h",
+      "sha256": "ba073c341b9a0f5d12b2db80ad21f5e2241ec41cf689bb2dd7916405ef00248d"
+    },
+    {
+      "bytes": 9324,
+      "path": "associated-headers/Developer/include/boost/preprocessor/arithmetic/dec.hpp",
+      "sha256": "d4a0973c1058da68155167f44f5740c59f51a3ce1ba53337f45bd8c1121c7631"
+    },
+    {
+      "bytes": 9298,
+      "path": "associated-headers/Developer/include/boost/preprocessor/arithmetic/inc.hpp",
+      "sha256": "346fb6cdde60c4cf12e45fd7ab24ae47f636d0793d972b77f6c933ec7420ce92"
+    },
+    {
+      "bytes": 7987,
+      "path": "associated-headers/Developer/include/boost/preprocessor/arithmetic/limits/dec_256.hpp",
+      "sha256": "89279d5a0a69447028fcfff5a215fc700f58efaa7d21fa30c3f254dee545599b"
+    },
+    {
+      "bytes": 7961,
+      "path": "associated-headers/Developer/include/boost/preprocessor/arithmetic/limits/inc_256.hpp",
+      "sha256": "5bc4fa77ffc27a47e0514a5faa6e7f77beb5eb2572f6819e70445d5b4c13e795"
+    },
+    {
+      "bytes": 1600,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array.hpp",
+      "sha256": "a1d9d503d12f7d1f84fe6b4c042e5456bf78bd41f6ec75018d73dc9a4d47a4ae"
+    },
+    {
+      "bytes": 1158,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/data.hpp",
+      "sha256": "c9ba29785e03097acd1e9cffa28546484067cdb2e6e7c87b9c979fac8441ba5c"
+    },
+    {
+      "bytes": 2274,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/detail/get_data.hpp",
+      "sha256": "85308f98b45ccb92951a5df3521181f3099be9834497fea7da75b784da4d8e68"
+    },
+    {
+      "bytes": 1306,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/elem.hpp",
+      "sha256": "6bb8e1483c8e071ad03f6a09d71cddf88534984bc8391023da929d1fae3b4805"
+    },
+    {
+      "bytes": 2624,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/enum.hpp",
+      "sha256": "a48c81ef6885d441b327cbf9acea66272349e0952e2e1c96da6ad58cfd5f9231"
+    },
+    {
+      "bytes": 6744,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/insert.hpp",
+      "sha256": "e99ff1727f6053387d3298fc02133ce1e62cf70eed8b7182f0109dfb48eb55d0"
+    },
+    {
+      "bytes": 1732,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/pop_back.hpp",
+      "sha256": "bb9d17db98e0a088914177654d2810789c81429ea7eb5343e3a9b360f557477f"
+    },
+    {
+      "bytes": 1811,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/pop_front.hpp",
+      "sha256": "3912f5d2f45ca05044b8302fd82dd4f27cbd17c5b453e72fb3b9f93f9a089f90"
+    },
+    {
+      "bytes": 1729,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/push_back.hpp",
+      "sha256": "d8d482791fc6dfc1f3ca0320889672a122810aa5550d78552a32f2d881f70ec2"
+    },
+    {
+      "bytes": 1739,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/push_front.hpp",
+      "sha256": "8920c38f100ec06fa42c176b4cc50052855edda96ea585a5f33123d3e5b7307f"
+    },
+    {
+      "bytes": 5982,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/remove.hpp",
+      "sha256": "4a110e8a0a5067abfc4f18e0e542c8b235b66435fb6177b680ea9267dba4b6b9"
+    },
+    {
+      "bytes": 5574,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/replace.hpp",
+      "sha256": "62427b3fd2a801f37589e7395e78b5e6f47d2178558b4dc2c8ede8522dce11a4"
+    },
+    {
+      "bytes": 1378,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/reverse.hpp",
+      "sha256": "c9e08ca3cbe5bff53a773603cf45b4acbf310598edf011b1f4f2dc1b5e20eae7"
+    },
+    {
+      "bytes": 1158,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/size.hpp",
+      "sha256": "27d20a936e02ccbc683835309cbf0ac91ad0ce1b28b309f3dffda497fff2296b"
+    },
+    {
+      "bytes": 2069,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/to_list.hpp",
+      "sha256": "b2d339ab59fbb0a6659a7d327928594fb212c8325536f33dc4727da172989774"
+    },
+    {
+      "bytes": 2034,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/to_seq.hpp",
+      "sha256": "78d383ac7580cd0492d50d72032437eddfff8370af58370d4dbbb0098e194d10"
+    },
+    {
+      "bytes": 1355,
+      "path": "associated-headers/Developer/include/boost/preprocessor/array/to_tuple.hpp",
+      "sha256": "a029e9add55a704c9a4952d280cd5541686600892fe01fae418e24076864c749"
+    },
+    {
+      "bytes": 1018,
+      "path": "associated-headers/Developer/include/boost/preprocessor/cat.hpp",
+      "sha256": "9f232dca396d537f103fd26b7fc4e2026aeb43cb476d069688be697c11a084bf"
+    },
+    {
+      "bytes": 1006,
+      "path": "associated-headers/Developer/include/boost/preprocessor/comparison/equal.hpp",
+      "sha256": "69a6f3ebb82ffbe0301adfcd0dbed6c0bbc11ec60d8ac6306f08e0ddca34c28a"
+    },
+    {
+      "bytes": 64214,
+      "path": "associated-headers/Developer/include/boost/preprocessor/comparison/limits/not_equal_256.hpp",
+      "sha256": "de37c6c23f85d8708c208eeea87119dcca38231d66f78ea6ec401261b45fd9df"
+    },
+    {
+      "bytes": 66337,
+      "path": "associated-headers/Developer/include/boost/preprocessor/comparison/not_equal.hpp",
+      "sha256": "cd59b8194e07f1be2c10a00d6750cee4067d2e4abba9da976ea1ffc4936e450d"
+    },
+    {
+      "bytes": 4143,
+      "path": "associated-headers/Developer/include/boost/preprocessor/config/config.hpp",
+      "sha256": "05c8b9e1e0ebec00f1c396e6c01eabdf400f5c1daf6f76da5c312454f736e43a"
+    },
+    {
+      "bytes": 4611,
+      "path": "associated-headers/Developer/include/boost/preprocessor/config/limits.hpp",
+      "sha256": "1f4f0a187666383981262634194127fc7b02b5c54a5036142fb1ca1007fccbaf"
+    },
+    {
+      "bytes": 1745,
+      "path": "associated-headers/Developer/include/boost/preprocessor/control/deduce_d.hpp",
+      "sha256": "956b209a180f79a571a99779ebb5303cf6a4fd8747d5bd1a460dd6c4abf71153"
+    },
+    {
+      "bytes": 67677,
+      "path": "associated-headers/Developer/include/boost/preprocessor/control/detail/limits/while_256.hpp",
+      "sha256": "91901925e5b4301a9d54ca45a2b2af1c9133582011cdbdc6ced76e004cfb777b"
+    },
+    {
+      "bytes": 68504,
+      "path": "associated-headers/Developer/include/boost/preprocessor/control/detail/while.hpp",
+      "sha256": "a5c476b778512c4113021009b818d907442f1533242f5c5b21c195787ae7e158"
+    },
+    {
+      "bytes": 1224,
+      "path": "associated-headers/Developer/include/boost/preprocessor/control/expr_iif.hpp",
+      "sha256": "225dd9118c65de2e473e4cdec0aef9acc4b474216e683b4609bb1072dce32a10"
+    },
+    {
+      "bytes": 906,
+      "path": "associated-headers/Developer/include/boost/preprocessor/control/if.hpp",
+      "sha256": "ddb9af759ba3695b91dff747ce2fe18d768cdadf93ddd956884eff8333e4ee40"
+    },
+    {
+      "bytes": 1325,
+      "path": "associated-headers/Developer/include/boost/preprocessor/control/iif.hpp",
+      "sha256": "ccffe0f0bbc7ae9e4993a43d77fa0fd23b143d533148e462f1248e809208da04"
+    },
+    {
+      "bytes": 15777,
+      "path": "associated-headers/Developer/include/boost/preprocessor/control/limits/while_256.hpp",
+      "sha256": "4d9438c5414d1e11a058d6dffde90634c3b90001ebf9b8a41b2f973670e8f943"
+    },
+    {
+      "bytes": 20893,
+      "path": "associated-headers/Developer/include/boost/preprocessor/control/while.hpp",
+      "sha256": "903bae4faed121ebd231f0c7f18346660ac5816fcfba2e50b6e66cbe4abf75f2"
+    },
+    {
+      "bytes": 1574,
+      "path": "associated-headers/Developer/include/boost/preprocessor/debug/error.hpp",
+      "sha256": "3cee86e4c00fb6e8572acf2efcf121f1b02dec3c89c4ab59d41f584920c79885"
+    },
+    {
+      "bytes": 27240,
+      "path": "associated-headers/Developer/include/boost/preprocessor/detail/auto_rec.hpp",
+      "sha256": "b021b4b909cba82d33b282a7709c868706c0f7a423c2a561c4fe336448fea155"
+    },
+    {
+      "bytes": 2183,
+      "path": "associated-headers/Developer/include/boost/preprocessor/detail/check.hpp",
+      "sha256": "f44f116a02d55b4e31df2dedb35a1e4e22ba1f62923882c29cf7d7f26497b78b"
+    },
+    {
+      "bytes": 1241,
+      "path": "associated-headers/Developer/include/boost/preprocessor/detail/is_binary.hpp",
+      "sha256": "4461a173cb87b7b18002d0b5dc70a709452049b057fc7fb94fa8b941ee89c41a"
+    },
+    {
+      "bytes": 25817,
+      "path": "associated-headers/Developer/include/boost/preprocessor/detail/limits/auto_rec_256.hpp",
+      "sha256": "39c24888b7c821b721f3512e99f69dfe6a172774c0015fa518d626c3b76f34b4"
+    },
+    {
+      "bytes": 1728,
+      "path": "associated-headers/Developer/include/boost/preprocessor/facilities/detail/is_empty.hpp",
+      "sha256": "61fea803ffa804064d652c03f66ab57bc2eb2a388bf04c78ec20f1d5e75d3255"
+    },
+    {
+      "bytes": 567,
+      "path": "associated-headers/Developer/include/boost/preprocessor/facilities/empty.hpp",
+      "sha256": "0e086fd6efde0fabbf12715c72a80d9fa2916d14bed6a6e8631cc3a9efd7d648"
+    },
+    {
+      "bytes": 842,
+      "path": "associated-headers/Developer/include/boost/preprocessor/facilities/expand.hpp",
+      "sha256": "2c3dcec5afba1e28fd48da9066b828c386c0149c2a7cf5b27e38ea2c1040ec1e"
+    },
+    {
+      "bytes": 759,
+      "path": "associated-headers/Developer/include/boost/preprocessor/facilities/identity.hpp",
+      "sha256": "d23be5440b75e32ef9da08bd4cacb7016917a42bd4c30f61fa3d061fa1f645eb"
+    },
+    {
+      "bytes": 946,
+      "path": "associated-headers/Developer/include/boost/preprocessor/facilities/is_1.hpp",
+      "sha256": "c481a0e24bedd5902ef9729c3b32dcecb214975c940fc22402f4ccb6e8eb5ecf"
+    },
+    {
+      "bytes": 923,
+      "path": "associated-headers/Developer/include/boost/preprocessor/facilities/is_empty.hpp",
+      "sha256": "4c3757fcba1bb854d9f3b303b551e92220442e01f52d850e20014dc7f3d81035"
+    },
+    {
+      "bytes": 2503,
+      "path": "associated-headers/Developer/include/boost/preprocessor/facilities/is_empty_variadic.hpp",
+      "sha256": "5e03cd8c60dbbad96f8c88f6428c9e3947c8aa0cb6aefdf4dbec829d26cc1cfe"
+    },
+    {
+      "bytes": 1115,
+      "path": "associated-headers/Developer/include/boost/preprocessor/facilities/overload.hpp",
+      "sha256": "234ac6d38b2dc7ec1f900107e296de316b2a50e9c842dc5860259f45c2ce5f60"
+    },
+    {
+      "bytes": 730,
+      "path": "associated-headers/Developer/include/boost/preprocessor/if.hpp",
+      "sha256": "0e50196c6f8d1aec7063595f1502306de213db7cfe19c3d2f31188bb5ebc77a0"
+    },
+    {
+      "bytes": 2171,
+      "path": "associated-headers/Developer/include/boost/preprocessor/list/adt.hpp",
+      "sha256": "c8c9b63e1be1dd34032d07c726b9b8676d1556b20ff1e05f542aa63da6aa05fd"
+    },
+    {
+      "bytes": 63806,
+      "path": "associated-headers/Developer/include/boost/preprocessor/list/detail/fold_left.hpp",
+      "sha256": "879e1b60bc862491d2bbcb4cd88956a6a9d47df8c368e5105f159af4fabf61f7"
+    },
+    {
+      "bytes": 30350,
+      "path": "associated-headers/Developer/include/boost/preprocessor/list/detail/fold_right.hpp",
+      "sha256": "ab99e233a51ec48e1308fbcc16658931f743ad9a275b046eac1ffd54ba080098"
+    },
+    {
+      "bytes": 62865,
+      "path": "associated-headers/Developer/include/boost/preprocessor/list/detail/limits/fold_left_256.hpp",
+      "sha256": "defee8f62d9cac6d42e941e4d1c6dccbc9f273df07f85b06a59901f8a0cfb137"
+    },
+    {
+      "bytes": 29453,
+      "path": "associated-headers/Developer/include/boost/preprocessor/list/detail/limits/fold_right_256.hpp",
+      "sha256": "60e4aebf1c80bd7875eaeddc1bdbb892fbc3132ba5055c1fcc36553b13c1506a"
+    },
+    {
+      "bytes": 23780,
+      "path": "associated-headers/Developer/include/boost/preprocessor/list/fold_left.hpp",
+      "sha256": "658b559232f4468199238b0af84282baac7c66ae3af6731d2cf63bb52f9808dc"
+    },
+    {
+      "bytes": 3053,
+      "path": "associated-headers/Developer/include/boost/preprocessor/list/fold_right.hpp",
+      "sha256": "3966e3c186ed35ea881d85ce4f17489ca8fa8629b2441bd6f71edf3af9d8c7e9"
+    },
+    {
+      "bytes": 20405,
+      "path": "associated-headers/Developer/include/boost/preprocessor/list/limits/fold_left_256.hpp",
+      "sha256": "42412679e2e717a6b31e5084a672e9effbac72bf78dfdd2671755f53acba18a8"
+    },
+    {
+      "bytes": 3071,
+      "path": "associated-headers/Developer/include/boost/preprocessor/list/reverse.hpp",
+      "sha256": "cd4c1fcd40b8c4c524ed009b7b3c91525a879733777dbf80e22ddeac3cc547c3"
+    },
+    {
+      "bytes": 1415,
+      "path": "associated-headers/Developer/include/boost/preprocessor/logical/bitand.hpp",
+      "sha256": "fe547d1d47dd41d44e8a9f3eb964f0c91d6ee6da3b99f80ad784bffd0a61a6d2"
+    },
+    {
+      "bytes": 8849,
+      "path": "associated-headers/Developer/include/boost/preprocessor/logical/bool.hpp",
+      "sha256": "55b055b965602275dd8b3d66089de3e5e0c06f1ea30677c2c3ce797c993bf279"
+    },
+    {
+      "bytes": 1306,
+      "path": "associated-headers/Developer/include/boost/preprocessor/logical/compl.hpp",
+      "sha256": "5d12c8c00c74fef902f84cfcfb899dea2bac16ce7c2fd038de84ce1cdc3b6df4"
+    },
+    {
+      "bytes": 7808,
+      "path": "associated-headers/Developer/include/boost/preprocessor/logical/limits/bool_256.hpp",
+      "sha256": "d64ca968c4956678ef1c7a242f271d77ea9084b84b88efb3dabcb07ad6014008"
+    },
+    {
+      "bytes": 520,
+      "path": "associated-headers/Developer/include/boost/preprocessor/punctuation/comma.hpp",
+      "sha256": "76c39ab0338e79709faa68d8c5097317e93317ee8d9b71e27d3b4a4735f6d66f"
+    },
+    {
+      "bytes": 1012,
+      "path": "associated-headers/Developer/include/boost/preprocessor/punctuation/comma_if.hpp",
+      "sha256": "33e2573e29b20c6026f156ea2ace78c311724eb6df949c1ce21e94f28d26ea4c"
+    },
+    {
+      "bytes": 1899,
+      "path": "associated-headers/Developer/include/boost/preprocessor/punctuation/detail/is_begin_parens.hpp",
+      "sha256": "310514fccb7ad34582cc5f2e1254742ed7dc604bdfda3ac3e28865d5b6bf2300"
+    },
+    {
+      "bytes": 1510,
+      "path": "associated-headers/Developer/include/boost/preprocessor/punctuation/is_begin_parens.hpp",
+      "sha256": "0323a562253cc5e9507588b39d9914c36e3a017b9bcd7d74425e2bf5cfec52fd"
+    },
+    {
+      "bytes": 921,
+      "path": "associated-headers/Developer/include/boost/preprocessor/repetition/deduce_z.hpp",
+      "sha256": "31e3015353d51cc0fecc96819e3867b68080077a3a50f462cb9068440a66a608"
+    },
+    {
+      "bytes": 3042,
+      "path": "associated-headers/Developer/include/boost/preprocessor/repetition/enum.hpp",
+      "sha256": "e4f80200a9784526ee7c9f74972169840a73e0b36cd0098e606bddfac459f8e5"
+    },
+    {
+      "bytes": 59426,
+      "path": "associated-headers/Developer/include/boost/preprocessor/repetition/limits/repeat_256.hpp",
+      "sha256": "2256ae2b448566d37c413d50ccc533350611d2528aba94ca163b95bf74041422"
+    },
+    {
+      "bytes": 61556,
+      "path": "associated-headers/Developer/include/boost/preprocessor/repetition/repeat.hpp",
+      "sha256": "cf349ac292998025fcda341740ff1451707cf2031112c9a583b80e54ebeb9b36"
+    },
+    {
+      "bytes": 1338,
+      "path": "associated-headers/Developer/include/boost/preprocessor/tuple/detail/is_single_return.hpp",
+      "sha256": "90f66c4d1ffd0f241dafa9976bc4f1dbaa42180cf1239a4800d24847558ef009"
+    },
+    {
+      "bytes": 12803,
+      "path": "associated-headers/Developer/include/boost/preprocessor/tuple/eat.hpp",
+      "sha256": "06ecd3a226acda9afa15af2f90000178c9c3fc998adc54baf56d4a425efc5fc1"
+    },
+    {
+      "bytes": 2192,
+      "path": "associated-headers/Developer/include/boost/preprocessor/tuple/elem.hpp",
+      "sha256": "4a799588541b02c0b7c03006950d773c3b0756ff3142af0a0efe9ef85128c532"
+    },
+    {
+      "bytes": 1011,
+      "path": "associated-headers/Developer/include/boost/preprocessor/tuple/enum.hpp",
+      "sha256": "95a6871db72c42d5ba8d2f8bab2a2135b49a654e73f62b64ffac00aaa167e056"
+    },
+    {
+      "bytes": 22415,
+      "path": "associated-headers/Developer/include/boost/preprocessor/tuple/limits/reverse_64.hpp",
+      "sha256": "db5808ee31d7690ca08245c5bc73cc52c86804b9b54b396ce4c5c9171dc0007d"
+    },
+    {
+      "bytes": 27343,
+      "path": "associated-headers/Developer/include/boost/preprocessor/tuple/limits/to_list_64.hpp",
+      "sha256": "f398bb51b830aa581a8bfd7a39acdedb79288b012e5a2f2970085655ce5503e5"
+    },
+    {
+      "bytes": 22807,
+      "path": "associated-headers/Developer/include/boost/preprocessor/tuple/limits/to_seq_64.hpp",
+      "sha256": "d93caa4f3417d5d42d9bc16df363ac057418d0b4fb2b15322948a58d776042b8"
+    },
+    {
+      "bytes": 24310,
+      "path": "associated-headers/Developer/include/boost/preprocessor/tuple/rem.hpp",
+      "sha256": "035a61fd0140c8ac0e17a9f24c2a474952d11e1f187e35f0b61ebdf491068fb6"
+    },
+    {
+      "bytes": 24539,
+      "path": "associated-headers/Developer/include/boost/preprocessor/tuple/reverse.hpp",
+      "sha256": "3c45e68bebe8fdd6ef9619f9909a5297e1dcc1c0a076fbb7b255227f10243f8a"
+    },
+    {
+      "bytes": 1691,
+      "path": "associated-headers/Developer/include/boost/preprocessor/tuple/size.hpp",
+      "sha256": "63753c1ce2e743620525d1e7647350489448a9c555ca9eb8dbf612d2c05a3c0b"
+    },
+    {
+      "bytes": 2220,
+      "path": "associated-headers/Developer/include/boost/preprocessor/tuple/to_array.hpp",
+      "sha256": "be87b02bcc473a82e20a1cfceb1e94cf7a5faf07ea4ca5df19e8b70b785933b0"
+    },
+    {
+      "bytes": 29468,
+      "path": "associated-headers/Developer/include/boost/preprocessor/tuple/to_list.hpp",
+      "sha256": "5bf41bc812afa81f33ef7621583d6b53db30ca1ba842e662f758542df644947b"
+    },
+    {
+      "bytes": 24944,
+      "path": "associated-headers/Developer/include/boost/preprocessor/tuple/to_seq.hpp",
+      "sha256": "ebbfca11cb724b014a36e0ee70c36ef14a30c2fbe1edfbd1925a9efbe7fbadcd"
+    },
+    {
+      "bytes": 14686,
+      "path": "associated-headers/Developer/include/boost/preprocessor/variadic/elem.hpp",
+      "sha256": "bf8dcacd98d78b2c097583deec205db3322059204fb71230ab297c1639dd6499"
+    },
+    {
+      "bytes": 1418,
+      "path": "associated-headers/Developer/include/boost/preprocessor/variadic/has_opt.hpp",
+      "sha256": "78ef317f6cb9167dc3c47b6e2ef57cb6d2872be33e61cebd1767f6ce3163a498"
+    },
+    {
+      "bytes": 4110,
+      "path": "associated-headers/Developer/include/boost/preprocessor/variadic/size.hpp",
+      "sha256": "6efa634fd178422c97ca3ac1180807f063cee350ed755942fa14134f6861695d"
+    },
+    {
+      "bytes": 1990,
+      "path": "associated-headers/Developer/include/boost/preprocessor/variadic/to_array.hpp",
+      "sha256": "349557e035ab5079468dea5cd8b23201f084b832aa86375f0ce570be819de085"
+    },
+    {
+      "bytes": 20946,
+      "path": "associated-headers/Developer/include/clib/alib_protos.h",
+      "sha256": "8fa21ea7ef445bb6b474ddbb9f9048cd515a6488f96ae734bcd68eb0121a5ec0"
+    },
+    {
+      "bytes": 3742,
+      "path": "associated-headers/Developer/include/clib/arossupport_protos.h",
+      "sha256": "c640c16abf42421e48241fd03ba90fd9236ebf854a5b67dc7a70f682225b263f"
+    },
+    {
+      "bytes": 45111,
+      "path": "associated-headers/Developer/include/clib/dos_protos.h",
+      "sha256": "1cf95d0f81c188956ba8965d3c1c0bfb2532b2a8a2f3f78152a25015b6150ae7"
+    },
+    {
+      "bytes": 40355,
+      "path": "associated-headers/Developer/include/clib/exec_protos.h",
+      "sha256": "a6cb7d54acc82afb87ed2a611db5f330b147ce9cf9cd3d91a2a35ef9af4c9900"
+    },
+    {
+      "bytes": 49548,
+      "path": "associated-headers/Developer/include/clib/intuition_protos.h",
+      "sha256": "e472fe5492b579d80b04e4f15c1e31e62ea21af39bc7b4ae25ed8aae2b5fe86a"
+    },
+    {
+      "bytes": 1057,
+      "path": "associated-headers/Developer/include/clib/task_protos.h",
+      "sha256": "718ccaa63c24b1913fe8294bf9c751ffeb9597a8c86ffce35dbd3f56b6209c7e"
+    },
+    {
+      "bytes": 8687,
+      "path": "associated-headers/Developer/include/defines/task.h",
+      "sha256": "e6160e5a70f644e6d4c563a14c02946bab01d6e168d058f10887051c3458e2dc"
+    },
+    {
+      "bytes": 5770,
+      "path": "associated-headers/Developer/include/devices/inputevent.h",
+      "sha256": "e6abcabc6c65e943a2edaf80c2b753dd7f4a714f04bbbdefb03d6799a4ed4d12"
+    },
+    {
+      "bytes": 2103,
+      "path": "associated-headers/Developer/include/devices/keymap.h",
+      "sha256": "0b8b0ce95302511d940618fbe8ff050e0beec364789f84bea33d83c5a03de7ef"
+    },
+    {
+      "bytes": 826,
+      "path": "associated-headers/Developer/include/devices/timer.h",
+      "sha256": "a7a44b31a30f57d21e4e34c17b07a806bbc83993486128049bb08a39f7996148"
+    },
+    {
+      "bytes": 3267,
+      "path": "associated-headers/Developer/include/dos/bptr.h",
+      "sha256": "37f4f17c35336525792c2fd7af10a621d5be8762587fc0ff82b26d1f53fc9cfc"
+    },
+    {
+      "bytes": 2061,
+      "path": "associated-headers/Developer/include/dos/datetime.h",
+      "sha256": "e97701f71f986645556d5a318c8bd8331e350a10fa9647a9c8fb21fea9fbdbaf"
+    },
+    {
+      "bytes": 19207,
+      "path": "associated-headers/Developer/include/dos/dos.h",
+      "sha256": "873fa3270b92c08074da99a9c70809aaf24e6eb2e9f23a54cc9cd96e0da16b24"
+    },
+    {
+      "bytes": 4981,
+      "path": "associated-headers/Developer/include/dos/dosasl.h",
+      "sha256": "5bcd7c6e714eb4b72a0398892e8c387bd75b94db2ae86d2c2b5cd8064c0645b5"
+    },
+    {
+      "bytes": 23156,
+      "path": "associated-headers/Developer/include/dos/dosextens.h",
+      "sha256": "4b58c8a2f503293711350896c530c643bd2c950cf1026ea99f999451eb469a0e"
+    },
+    {
+      "bytes": 7719,
+      "path": "associated-headers/Developer/include/dos/dostags.h",
+      "sha256": "093f7eba13d87fc9d26210e182d97735fe7405e329dd24ba9839609e8eaf8af0"
+    },
+    {
+      "bytes": 3701,
+      "path": "associated-headers/Developer/include/dos/exall.h",
+      "sha256": "1b76088a36f2f6adea1771d5ce0b8cac8b544828ad2b19e8a0d76baaaa40d2e0"
+    },
+    {
+      "bytes": 4353,
+      "path": "associated-headers/Developer/include/dos/filehandler.h",
+      "sha256": "f392985187426c1398bdb0008690a75f673c0a6e6c1a04606386cb5842348ffd"
+    },
+    {
+      "bytes": 6419,
+      "path": "associated-headers/Developer/include/dos/filesystemids.h",
+      "sha256": "b877e3a379cb600f1743147e231e08e53f335b5fd3c8b1bf44ea896fe8c6efcf"
+    },
+    {
+      "bytes": 3635,
+      "path": "associated-headers/Developer/include/dos/notify.h",
+      "sha256": "2ff3660f7d7e2be9ac52760a0d16167ee674da4ec57e7769fcb3f848708299c0"
+    },
+    {
+      "bytes": 2921,
+      "path": "associated-headers/Developer/include/dos/rdargs.h",
+      "sha256": "de84edf34ccdd41971df223adcddf48dddcae4e6a8bb28ad63855bcbfb093609"
+    },
+    {
+      "bytes": 1461,
+      "path": "associated-headers/Developer/include/dos/record.h",
+      "sha256": "757dabf2547b8cbb88621c0aec3019794f5be62a91d3ec56bdaf33643d0066d9"
+    },
+    {
+      "bytes": 1237,
+      "path": "associated-headers/Developer/include/dos/stdio.h",
+      "sha256": "dbabe5fadedf9dd42cb0694ea90bd3bf07bea67867f56055ab037a7dd0b3ad18"
+    },
+    {
+      "bytes": 2750,
+      "path": "associated-headers/Developer/include/dos/var.h",
+      "sha256": "d618caba61f2de7db7190949f49dde25f16c620870b39a2e5a4fd2dd04dfea0c"
+    },
+    {
+      "bytes": 6781,
+      "path": "associated-headers/Developer/include/exec/alerts.h",
+      "sha256": "d094710db35dedc192b1162efa3b3a4edc8798ad94f438694a6e253b4adf4921"
+    },
+    {
+      "bytes": 893,
+      "path": "associated-headers/Developer/include/exec/avl.h",
+      "sha256": "deb8ca193f67d7c82db26ef86d7228116bd8a0af3499dd78f9749325abf35e74"
+    },
+    {
+      "bytes": 582,
+      "path": "associated-headers/Developer/include/exec/devices.h",
+      "sha256": "8cbd2a49bcaab032e2085b428c18f9227fbc642e18a883b99685d8a789fc3f8f"
+    },
+    {
+      "bytes": 8623,
+      "path": "associated-headers/Developer/include/exec/execbase.h",
+      "sha256": "b4339b5f7693332e0ebf2b775359fe6beb803a50c33b8dfe97848e97113e3d25"
+    },
+    {
+      "bytes": 4783,
+      "path": "associated-headers/Developer/include/exec/interrupts.h",
+      "sha256": "2cb4c9fb867d8f8f7704f5a1c2cfdd8dbb750d8e069376aa8362457f9694e6ac"
+    },
+    {
+      "bytes": 1163,
+      "path": "associated-headers/Developer/include/exec/io.h",
+      "sha256": "542783fdcc0bfb45205ee82014040714d960d15f535aa11159a949e22ab272a8"
+    },
+    {
+      "bytes": 3087,
+      "path": "associated-headers/Developer/include/exec/libraries.h",
+      "sha256": "a87d7e48bb7711782595c41c8fc008d05a35ccc6080db3a98a34a82fdb2dd509"
+    },
+    {
+      "bytes": 8113,
+      "path": "associated-headers/Developer/include/exec/lists.h",
+      "sha256": "7ac3397d378a8ac02f5ae3ed6da09491907205c4a8d498d9cd2ebade1658c961"
+    },
+    {
+      "bytes": 3954,
+      "path": "associated-headers/Developer/include/exec/memory.h",
+      "sha256": "764172a8e77de9c0d936c27a7fe35c6587f5e94ae6d83d655aed0bb61ddd4485"
+    },
+    {
+      "bytes": 2301,
+      "path": "associated-headers/Developer/include/exec/nodes.h",
+      "sha256": "7d7fd0f26eeb04d9e77f3d496ec4a6a461092175f5c0e114e470f5ab0838f138"
+    },
+    {
+      "bytes": 1527,
+      "path": "associated-headers/Developer/include/exec/pm.h",
+      "sha256": "881d175d9d796b81d4a1a7fd18119191a5d39b742771a8804e8f3dc12abaf080"
+    },
+    {
+      "bytes": 1593,
+      "path": "associated-headers/Developer/include/exec/ports.h",
+      "sha256": "c63594d7bf6978876569e7919e09897dab29ef1c0eaa73e646d7227646d0c9af"
+    },
+    {
+      "bytes": 470,
+      "path": "associated-headers/Developer/include/exec/rawfmt.h",
+      "sha256": "161c81d4cbe8d229fce27713ae99c3e57e4b23dee69f612f275d9b2b4f41e9f7"
+    },
+    {
+      "bytes": 1450,
+      "path": "associated-headers/Developer/include/exec/semaphores.h",
+      "sha256": "914e0eddeb97090733c770ee5e42d07961a3fdddc340220e7797e3231244e26d"
+    },
+    {
+      "bytes": 9690,
+      "path": "associated-headers/Developer/include/exec/tasks.h",
+      "sha256": "2588db79acab58a43d1bb8c8c352d1264dd7a20366714849051126860a6078be"
+    },
+    {
+      "bytes": 8671,
+      "path": "associated-headers/Developer/include/exec/types.h",
+      "sha256": "995fabba8992eadfabc6f6362bfaa9cdfe8edb7b51d538f2b0360172a4d5e3eb"
+    },
+    {
+      "bytes": 4308,
+      "path": "associated-headers/Developer/include/graphics/clip.h",
+      "sha256": "c75297ee26fd2d117362ddea88b34c41ed302fef0006ada0917e9be4b5a2a59a"
+    },
+    {
+      "bytes": 2015,
+      "path": "associated-headers/Developer/include/graphics/copper.h",
+      "sha256": "5b00a4c56b4cc269061cd818c3b54bd5484fe70d5ce7624d0d295856f830ad26"
+    },
+    {
+      "bytes": 3865,
+      "path": "associated-headers/Developer/include/graphics/displayinfo.h",
+      "sha256": "0fe12ef127c731845f664fd30c7770ee85cfe44cd44bbeb68941dfa55744de57"
+    },
+    {
+      "bytes": 3396,
+      "path": "associated-headers/Developer/include/graphics/gfx.h",
+      "sha256": "88e4bf3b7e8c396fbe2df449c53613b530983b2399f1207067394d6dfc450cc7"
+    },
+    {
+      "bytes": 802,
+      "path": "associated-headers/Developer/include/graphics/gfxnodes.h",
+      "sha256": "838a6c503f6c700d11a43b2fb7b08431b3ab7171c32d4019519bd3fbd7ab8aa0"
+    },
+    {
+      "bytes": 1542,
+      "path": "associated-headers/Developer/include/graphics/layers.h",
+      "sha256": "5953082ad12ed92f278d44f97c3929478cd476331595944c8e1d8f65a339ca78"
+    },
+    {
+      "bytes": 1169,
+      "path": "associated-headers/Developer/include/graphics/layersext.h",
+      "sha256": "811efc380f77a142d7a9835d097b84918a321eae21ce2ca96df142e26a5e018f"
+    },
+    {
+      "bytes": 13788,
+      "path": "associated-headers/Developer/include/graphics/modeid.h",
+      "sha256": "131aeb3ec069a3b599e36a239f4de97d42b2048bc568b1aaa35c2508bf86e8c9"
+    },
+    {
+      "bytes": 5943,
+      "path": "associated-headers/Developer/include/graphics/monitor.h",
+      "sha256": "12dac367c1df8b19522d88bb3f9c1da919b4123412b0b546de26d4e7bf021a3c"
+    },
+    {
+      "bytes": 2449,
+      "path": "associated-headers/Developer/include/graphics/rastport.h",
+      "sha256": "574bd21b2c4a4b75766e8a584d5d8621fee201750f0824e52f9d8e2ff3823865"
+    },
+    {
+      "bytes": 4128,
+      "path": "associated-headers/Developer/include/graphics/text.h",
+      "sha256": "31dabff0cd42ab1c02c8fe3ac19009d73a59bae7e41d118dbd6ba75b1c82f801"
+    },
+    {
+      "bytes": 9514,
+      "path": "associated-headers/Developer/include/graphics/view.h",
+      "sha256": "f52a5a371639822b006444b9c3ade71f8299a633303bdb1c28e0ec4f9d83b427"
+    },
+    {
+      "bytes": 3462,
+      "path": "associated-headers/Developer/include/hardware/custom.h",
+      "sha256": "c985b0ce762b82365ec51f981f80ef0df7c7ef7b97ee7d2e78b9056791850d83"
+    },
+    {
+      "bytes": 87543,
+      "path": "associated-headers/Developer/include/inline/dos.h",
+      "sha256": "2221e91fcc4a93731dbf24012e4ae01af6b7b765876129737d3e60c4c4c6c342"
+    },
+    {
+      "bytes": 75425,
+      "path": "associated-headers/Developer/include/inline/exec.h",
+      "sha256": "6f8143c86cd1c7a7a1e5790b6e6e491e47d7e6a806b238ff60263fa3091a3458"
+    },
+    {
+      "bytes": 96103,
+      "path": "associated-headers/Developer/include/inline/intuition.h",
+      "sha256": "4508f47f2608c8f46de270a4413d53a38b1b73d655b1bc06b3dc52a900b9b83b"
+    },
+    {
+      "bytes": 587,
+      "path": "associated-headers/Developer/include/intuition/classalign.h",
+      "sha256": "9a731d3a5e88ed465d3d3c23f3510ccaf0bd648b250ad6c775934e3879a036fc"
+    },
+    {
+      "bytes": 2841,
+      "path": "associated-headers/Developer/include/intuition/classes.h",
+      "sha256": "28cebf524fb7c3d227bb3c0f40f44ff45a5200b64a3f78815c91e0b7be4abefd"
+    },
+    {
+      "bytes": 2507,
+      "path": "associated-headers/Developer/include/intuition/classusr.h",
+      "sha256": "84f9fb9e2ecdbb53d6a0e99297d5c0c1a6617fd4361ddc95a1a15f3808d3f25e"
+    },
+    {
+      "bytes": 23361,
+      "path": "associated-headers/Developer/include/intuition/gadgetclass.h",
+      "sha256": "4e142bae03f5b8146493e140af3d75be5b17670ff6a8e266e8939f1405813a86"
+    },
+    {
+      "bytes": 6573,
+      "path": "associated-headers/Developer/include/intuition/imageclass.h",
+      "sha256": "97ffb2ffd606a45650e889ab9af90e3df503934d072e9533fcfed1a91a7c115b"
+    },
+    {
+      "bytes": 27902,
+      "path": "associated-headers/Developer/include/intuition/intuition.h",
+      "sha256": "ee14751fcbd873d2bb0d65237e432605a643401e78c633450564a6602833d16a"
+    },
+    {
+      "bytes": 1261,
+      "path": "associated-headers/Developer/include/intuition/intuitionbase.h",
+      "sha256": "669e1654351ce05c594bdaf2f017ece113c3bc47c132daace606980d92fed999"
+    },
+    {
+      "bytes": 4471,
+      "path": "associated-headers/Developer/include/intuition/menudecorclass.h",
+      "sha256": "c144a58abd679027a7f2464bc6fc04ce0c1f23940684dd9f2c6b586e0dc1591e"
+    },
+    {
+      "bytes": 8858,
+      "path": "associated-headers/Developer/include/intuition/preferences.h",
+      "sha256": "939a8e07b456b72c0828dfdb986a6bade809cac47d32e9126a080948cf24ac35"
+    },
+    {
+      "bytes": 4409,
+      "path": "associated-headers/Developer/include/intuition/scrdecorclass.h",
+      "sha256": "dfac2f6962750d4103cdf5f35fdcc65baaf71727463dc1a78eb0195fa8f9cd28"
+    },
+    {
+      "bytes": 11702,
+      "path": "associated-headers/Developer/include/intuition/screens.h",
+      "sha256": "30ea733e6311882c73b5f01fb2d56c75754ebf515abceb16c638a8ed1892dbc0"
+    },
+    {
+      "bytes": 5519,
+      "path": "associated-headers/Developer/include/intuition/windecorclass.h",
+      "sha256": "0ef29d27c652ccca645dbda52703da556e30acb76bf08f1ce586955ba129befc"
+    },
+    {
+      "bytes": 3850,
+      "path": "associated-headers/Developer/include/libraries/commodities.h",
+      "sha256": "d45a211201a4d885dcbf71fe956247488b8bd61dce06f88a7eab5fbb170b63ad"
+    },
+    {
+      "bytes": 8708,
+      "path": "associated-headers/Developer/include/libraries/gadtools.h",
+      "sha256": "edbc5235e7c1e04f4db2c65423125232d712af2bc9d207b2a14f01bb33970e34"
+    },
+    {
+      "bytes": 1608,
+      "path": "associated-headers/Developer/include/libraries/stdc.h",
+      "sha256": "dbc40a82575e047184b1ba76e20b3e85b7cc48abcce678685ac7c7237093eb20"
+    },
+    {
+      "bytes": 209,
+      "path": "associated-headers/Developer/include/proto/alib.h",
+      "sha256": "83b6db531f767e6b8c822f500203fa7de00716aab2b3da4116c6e6d606fd599e"
+    },
+    {
+      "bytes": 237,
+      "path": "associated-headers/Developer/include/proto/arossupport.h",
+      "sha256": "4811c3d6e0768725aab102c9ac850ac9468d7ae262a6e1365100b529d6e24a33"
+    },
+    {
+      "bytes": 1458,
+      "path": "associated-headers/Developer/include/proto/dos.h",
+      "sha256": "7dd2b210e2ddf05e62e299ce0187732cbcdca35b019460f8a72695afdbe8ec05"
+    },
+    {
+      "bytes": 1469,
+      "path": "associated-headers/Developer/include/proto/exec.h",
+      "sha256": "425ff251b3d90c597d4c5429e0112a62f786f8c01615257361ae924a33e56b8c"
+    },
+    {
+      "bytes": 1653,
+      "path": "associated-headers/Developer/include/proto/intuition.h",
+      "sha256": "db2229fd19f8279af7c6a466c4b9e8a275e4c6e8b439ffed43359f88800e17ba"
+    },
+    {
+      "bytes": 535,
+      "path": "associated-headers/Developer/include/proto/task.h",
+      "sha256": "6872f90686572d551fd9e234a0d3796e59c8d8aa7e06ebf124151ebafadb1df2"
+    },
+    {
+      "bytes": 3541,
+      "path": "associated-headers/Developer/include/resources/task.h",
+      "sha256": "f5a37c356aedd869a964c0d1f7820a8be7708b5177869328e81d628fd41a80d5"
+    },
+    {
+      "bytes": 3863,
+      "path": "associated-headers/Developer/include/rexx/storage.h",
+      "sha256": "a6ae172799dd7b52e8b312167c44ca2ab97b8feb7c7ae5f57b9935a16cc01c99"
+    },
+    {
+      "bytes": 2665,
+      "path": "associated-headers/Developer/include/utility/hooks.h",
+      "sha256": "07a686763e90f2ad3fc8f7190a58444aaa89da76f95c3cd4c773a5316a3ad614"
+    },
+    {
+      "bytes": 3825,
+      "path": "associated-headers/Developer/include/utility/tagitem.h",
+      "sha256": "3eff4f8e100c6653409d4c128b75c441537429e8abe873ca3685317204df7e25"
+    },
+    {
+      "bytes": 659,
+      "path": "associated-headers/Developer/include/workbench/startup.h",
+      "sha256": "7ce9985d7a58db14ef991bdae39ab6afd0960894e23adb795b87365af1917ead"
+    },
+    {
+      "bytes": 89983,
+      "path": "associated-headers/generated-build/genmodule/compiler/crt/stdc/compiler_stdc/include/clib/stdc_protos.h",
+      "sha256": "505bd22108ce75518d1db933832934e9cf1c12171bd4f01508a6045bb6e2babc"
+    },
+    {
+      "bytes": 765,
+      "path": "associated-headers/generated-build/genmodule/compiler/crt/stdc/compiler_stdc/include/proto/stdc.h",
+      "sha256": "96c86d9fdfe9f02b42710fb0aa2ba0049f91ef5fbca5a6877c2413b67db4ed63"
+    },
+    {
+      "bytes": 40355,
+      "path": "associated-headers/generated-build/genmodule/rom/exec/kernel_exec/include/clib/exec_protos.h",
+      "sha256": "a6cb7d54acc82afb87ed2a611db5f330b147ce9cf9cd3d91a2a35ef9af4c9900"
+    },
+    {
+      "bytes": 75425,
+      "path": "associated-headers/generated-build/genmodule/rom/exec/kernel_exec/include/inline/exec.h",
+      "sha256": "6f8143c86cd1c7a7a1e5790b6e6e491e47d7e6a806b238ff60263fa3091a3458"
+    },
+    {
+      "bytes": 1469,
+      "path": "associated-headers/generated-build/genmodule/rom/exec/kernel_exec/include/proto/exec.h",
+      "sha256": "425ff251b3d90c597d4c5429e0112a62f786f8c01615257361ae924a33e56b8c"
+    },
+    {
+      "bytes": 892,
+      "path": "generated/stdc__Exit_stub.c",
+      "sha256": "5773aa0bdef6a2e30ec2263d635584897dbf305f4bd7c6dce27091065ee69d88"
+    },
+    {
+      "bytes": 881,
+      "path": "generated/stdc___stdc_program_end_stub.c",
+      "sha256": "2cf1a3795d76229ded8d8dcd667d3d8f453ffa830e584facd870dcd34e2fde37"
+    },
+    {
+      "bytes": 889,
+      "path": "generated/stdc___stdc_program_startup_stub.c",
+      "sha256": "26a3d633addbd872914bc5a03382b3deae69001b9086d75183b7658b2eb2a642"
+    },
+    {
+      "bytes": 382,
+      "path": "generated/stdc_autoinit.c",
+      "sha256": "9538d9cf4044a9fcbd984bfac76f81c4a18bf5aa3b41456056d5d945fa4b8c20"
+    },
+    {
+      "bytes": 861,
+      "path": "generated/stdc_longjmp_stub.c",
+      "sha256": "9fb00c042b35ee5e8d36e77a2c60d776f7d28e1d49cc1b8e35cc0aa796886dbb"
+    },
+    {
+      "bytes": 859,
+      "path": "generated/stdc_setjmp_stub.c",
+      "sha256": "0c89cdbb35f8d5580c1604731bdca1cdc8927507102866bb95804be1afc909aa"
+    },
+    {
+      "bytes": 7955,
+      "path": "modifications.json",
+      "sha256": "5caacdbedf2c71f9f8836be1011b1c3c3a79b2cca2a131c7f623f1f24a39ffed"
+    }
+  ],
+  "full_archive_readback_verified": true,
+  "header_closure_sha256": "2087cb7c4d330387bf7cbd8fd4de4a62d48bafcff0bb5a343e6138383b6d4748",
+  "historical_generator_log_available": false,
+  "modifications": [
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "1cf95d0f81c188956ba8965d3c1c0bfb2532b2a8a2f3f78152a25015b6150ae7",
+      "original_sha256": "8cf47bbac7b0fd5a0eb9e0630e56706fae99f88e882994f11fee0061c813e571",
+      "path": "associated-headers/Developer/include/clib/dos_protos.h"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "a6cb7d54acc82afb87ed2a611db5f330b147ce9cf9cd3d91a2a35ef9af4c9900",
+      "original_sha256": "a7fad4716ef615921557d557664ae54e527eca3b0578896391607963ea8c9e41",
+      "path": "associated-headers/Developer/include/clib/exec_protos.h"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "e472fe5492b579d80b04e4f15c1e31e62ea21af39bc7b4ae25ed8aae2b5fe86a",
+      "original_sha256": "6c0d00908b77ad07348f17326c5a1e72a13889f87b8c14e27b54bb98e4e6cb15",
+      "path": "associated-headers/Developer/include/clib/intuition_protos.h"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "2221e91fcc4a93731dbf24012e4ae01af6b7b765876129737d3e60c4c4c6c342",
+      "original_sha256": "a14db3f2ce5bc8279aec22157601968b38e7741ddebfc400f597b107d019e625",
+      "path": "associated-headers/Developer/include/inline/dos.h"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "6f8143c86cd1c7a7a1e5790b6e6e491e47d7e6a806b238ff60263fa3091a3458",
+      "original_sha256": "82e9c12ce6379d7ef9a83f6096f8cd36753bc73aa83e40aaf79ee1a4a9b00f54",
+      "path": "associated-headers/Developer/include/inline/exec.h"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "4508f47f2608c8f46de270a4413d53a38b1b73d655b1bc06b3dc52a900b9b83b",
+      "original_sha256": "2d75216275c70edebf00ccb6f3d6057e47067675c595969e789931783afe2279",
+      "path": "associated-headers/Developer/include/inline/intuition.h"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "7dd2b210e2ddf05e62e299ce0187732cbcdca35b019460f8a72695afdbe8ec05",
+      "original_sha256": "af3872ff02ba4950896b8aa977a73841adbe2c712f16743d7932a799a8cb7385",
+      "path": "associated-headers/Developer/include/proto/dos.h"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "425ff251b3d90c597d4c5429e0112a62f786f8c01615257361ae924a33e56b8c",
+      "original_sha256": "dc2084a97060274802eea37c5425bc5fb557993b2e951b9ceb667ad8442739d3",
+      "path": "associated-headers/Developer/include/proto/exec.h"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "db2229fd19f8279af7c6a466c4b9e8a275e4c6e8b439ffed43359f88800e17ba",
+      "original_sha256": "a07079423995780372612df9eaa0fb23e001b3ab2b2e560dad464be717622dbe",
+      "path": "associated-headers/Developer/include/proto/intuition.h"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "505bd22108ce75518d1db933832934e9cf1c12171bd4f01508a6045bb6e2babc",
+      "original_sha256": "8c5f36bf08df0c2808a9b9e06ed815ad40cf23137a13c25a853d1fdaebb0708e",
+      "path": "associated-headers/generated-build/genmodule/compiler/crt/stdc/compiler_stdc/include/clib/stdc_protos.h"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "96c86d9fdfe9f02b42710fb0aa2ba0049f91ef5fbca5a6877c2413b67db4ed63",
+      "original_sha256": "6d8725942d14291c33f49ec565f2b23915d9d5cb3f4eae7865f1faab0d9b4f40",
+      "path": "associated-headers/generated-build/genmodule/compiler/crt/stdc/compiler_stdc/include/proto/stdc.h"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "a6cb7d54acc82afb87ed2a611db5f330b147ce9cf9cd3d91a2a35ef9af4c9900",
+      "original_sha256": "a7fad4716ef615921557d557664ae54e527eca3b0578896391607963ea8c9e41",
+      "path": "associated-headers/generated-build/genmodule/rom/exec/kernel_exec/include/clib/exec_protos.h"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "6f8143c86cd1c7a7a1e5790b6e6e491e47d7e6a806b238ff60263fa3091a3458",
+      "original_sha256": "82e9c12ce6379d7ef9a83f6096f8cd36753bc73aa83e40aaf79ee1a4a9b00f54",
+      "path": "associated-headers/generated-build/genmodule/rom/exec/kernel_exec/include/inline/exec.h"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "425ff251b3d90c597d4c5429e0112a62f786f8c01615257361ae924a33e56b8c",
+      "original_sha256": "dc2084a97060274802eea37c5425bc5fb557993b2e951b9ceb667ad8442739d3",
+      "path": "associated-headers/generated-build/genmodule/rom/exec/kernel_exec/include/proto/exec.h"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "5773aa0bdef6a2e30ec2263d635584897dbf305f4bd7c6dce27091065ee69d88",
+      "original_sha256": "2cb80e355c321e0f2c4969590f6aee73f51c8585f5ef717f50176a6e70b51803",
+      "path": "generated/stdc__Exit_stub.c"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "2cf1a3795d76229ded8d8dcd667d3d8f453ffa830e584facd870dcd34e2fde37",
+      "original_sha256": "5aa6ae25422722d7b67db7b11276d9f2a2b22504fbf7c86e22f86dab462297e7",
+      "path": "generated/stdc___stdc_program_end_stub.c"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "26a3d633addbd872914bc5a03382b3deae69001b9086d75183b7658b2eb2a642",
+      "original_sha256": "a09b2d100f79d21632d41c105315233a03cabdd6cee24aa1cd28d8dfb307f3e7",
+      "path": "generated/stdc___stdc_program_startup_stub.c"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "9538d9cf4044a9fcbd984bfac76f81c4a18bf5aa3b41456056d5d945fa4b8c20",
+      "original_sha256": "780ffd6a47042a7ccb501776a22e9d549789d629439a5a67e04e9693f2b649e5",
+      "path": "generated/stdc_autoinit.c"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "9fb00c042b35ee5e8d36e77a2c60d776f7d28e1d49cc1b8e35cc0aa796886dbb",
+      "original_sha256": "27f092562b0db7f9be42e337add394650e7806a116543a11536affb4fed14e97",
+      "path": "generated/stdc_longjmp_stub.c"
+    },
+    {
+      "change": "Replace private absolute source-root prefix only in generated comment; body byte-identical",
+      "date": "2026-10-15",
+      "delivered_sha256": "0c89cdbb35f8d5580c1604731bdca1cdc8927507102866bb95804be1afc909aa",
+      "original_sha256": "c1fe68065fb1e41ed0b433f8171c56659d172a3da5f7408f48afc4427901aae3",
+      "path": "generated/stdc_setjmp_stub.c"
+    }
+  ],
+  "schema": "ami-rust-aros-source-capsule-v1",
+  "upstream_commit": "e0d5e367d15cc7da4ebac8f9db17868756c79569"
+}

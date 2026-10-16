@@ -401,7 +401,7 @@ def _verify_signature(raw_manifest, signature, trust, bundle_root):
         raise Refusal("pinned ssh-keygen changed during verification")
 
 
-def _release_manifest(raw):
+def _release_manifest(raw, *, production=False):
     if len(raw) > MANIFEST_LIMIT:
         raise Refusal("oversized release manifest")
     manifest = _json(raw, "release manifest")
@@ -413,8 +413,9 @@ def _release_manifest(raw):
     version = manifest.get("version")
     if not isinstance(version, str) or not VERSION.fullmatch(version):
         raise Refusal("invalid release version")
-    if manifest.get("qualification_only") is not True:
-        raise Refusal("only qualification-only candidates are accepted by this installer")
+    qualification = manifest.get("qualification_only")
+    if qualification is not True and not (production and qualification is False):
+        raise Refusal("release qualification_only value is incompatible with this installer route")
     if manifest.get("sdk_archive") != "sdk.tar.xz":
         raise Refusal("release sdk_archive must be sdk.tar.xz")
     sdk_digest = _digest_text(manifest.get("sdk_manifest_sha256"), "SDK manifest")
@@ -862,9 +863,14 @@ class SigtermRequested(Exception):
 
 
 def _install(bundle, trust, prefix, receipt_pin=None):
+    """Install only the legacy offline-signature qualification candidate."""
+    return _install_verified(verify_bundle(bundle, trust), prefix, receipt_pin)
+
+
+def _install_verified(verified, prefix, receipt_pin=None):
+    """Publish an already-verified result using the shared atomic installer."""
     prefix = _install_target(prefix)
     pin = _pin_target(receipt_pin, prefix) if receipt_pin is not None else None
-    verified = verify_bundle(bundle, trust)
     bundle_root = verified["bundle"]
     if (prefix == bundle_root or prefix in bundle_root.parents
             or bundle_root in prefix.parents):
@@ -894,14 +900,18 @@ def _install(bundle, trust, prefix, receipt_pin=None):
         _write_tree_file(stage, "payload/release.json", verified["manifest_raw"], 0o644)
         _write_tree_file(stage, "payload/release.json.sig", verified["signature"], 0o644)
         inventory = _tree_inventory(stage)
+        production = verified.get("authentication") is not None
         receipt = {
-            "schema": "ami-rust-install-receipt-v1",
-            "publisher": verified["trust"]["publisher"],
+            "schema": "ami-rust-install-receipt-v2" if production else "ami-rust-install-receipt-v1",
+            "publisher": ("metaneutrons.ami-rust.github" if production
+                          else verified["trust"]["publisher"]),
             "release_manifest_sha256": verified["manifest_sha256"],
             "sdk_manifest_sha256": verified["manifest"]["sdk_manifest_sha256"],
             "version": verified["manifest"]["version"],
             "inventory": inventory,
         }
+        if production:
+            receipt["authentication"] = verified["authentication"]
         receipt_raw = (json.dumps(receipt, sort_keys=True, indent=2,
                                   ensure_ascii=True) + "\n").encode("ascii")
         _write_new(stage / "install-receipt.json", receipt_raw)
@@ -935,23 +945,83 @@ def _install(bundle, trust, prefix, receipt_pin=None):
     return {"status": "installed", "prefix": str(prefix),
             "receipt_sha256": receipt_digest,
             "receipt_pin": str(pin) if pin else None,
-            "publisher": verified["trust"]["publisher"],
+            "publisher": receipt["publisher"],
             "release_manifest_sha256": verified["manifest_sha256"],
             "version": verified["manifest"]["version"],
-            "qualification_only": True,
-            "provenance": "OpenSSH manifest signature verified; Cosign/GitHub Actions provenance not verified",
-            "claim": "candidate bytes verified; this does not establish R1 qualification"}
+            "qualification_only": verified["manifest"]["qualification_only"],
+            "provenance": ("GitHub Actions and Cosign publisher evidence verified under external policy"
+                           if production else
+                           "OpenSSH manifest signature verified; Cosign/GitHub Actions provenance not verified"),
+            "claim": ("publisher evidence and candidate bytes verified; this does not establish R1 qualification"
+                      if production else
+                      "candidate bytes verified; this does not establish R1 qualification")}
+
+
+def _validate_authentication(authentication, manifest_sha256):
+    if not isinstance(authentication, dict) or set(authentication) != {"report", "external_policy_sha256"}:
+        raise Refusal("invalid receipt authentication evidence")
+    _digest_text(authentication.get("external_policy_sha256"), "external publisher policy")
+    report = authentication.get("report")
+    fields = {"schema", "verified", "repository", "workflow", "workflowSha", "sourceSha",
+              "sourceRef", "manifestSha256", "workflowRuns", "attestedSubjects",
+              "manifestBoundAssets", "cosignSubjects", "publisherPolicyEvidence",
+              "verificationMode", "elapsedSeconds"}
+    if not isinstance(report, dict) or set(report) != fields:
+        raise Refusal("invalid publisher verification report fields")
+    if (report.get("schema") != "ami-rust-publisher-verification-v2"
+            or report.get("verified") is not True
+            or report.get("repository") != "metaneutrons/ami-rust"
+            or report.get("workflow") != ".github/workflows/sdk-qualify.yml"
+            or report.get("sourceRef") != "refs/heads/main"):
+        raise Refusal("publisher verification report identity mismatch")
+    for name in ("workflowSha", "sourceSha"):
+        value = report.get(name)
+        if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{40}", value):
+            raise Refusal(f"invalid publisher report {name}")
+    if report.get("manifestSha256") != manifest_sha256:
+        raise Refusal("publisher report does not bind the installed release manifest")
+    direct = ["SHAUTIL", "release.json", "sdk.tar.xz"]
+    if report.get("attestedSubjects") != direct or report.get("cosignSubjects") != direct:
+        raise Refusal("publisher report subject identity mismatch")
+    assets = report.get("manifestBoundAssets")
+    if (not isinstance(assets, list) or not assets
+            or any(not isinstance(item, str) for item in assets)
+            or assets != sorted(set(assets))):
+        raise Refusal("invalid publisher report manifest-bound asset list")
+    runs = report.get("workflowRuns")
+    if not isinstance(runs, list) or len(runs) != 1:
+        raise Refusal("publisher report must identify exactly one workflow run")
+    run = runs[0]
+    if (not isinstance(run, dict) or set(run) != {"runId", "runAttempt", "hostProfile"}
+            or type(run.get("runId")) is not int or run["runId"] <= 0
+            or type(run.get("runAttempt")) is not int or run["runAttempt"] <= 0
+            or run.get("hostProfile") not in HOSTS):
+        raise Refusal("invalid publisher report workflow run")
+    if (report.get("publisherPolicyEvidence") != (
+            "environment and runnerEnvironment are signed SLSA predicate claims verified under the exact pinned workflow SHA; "
+            "they are not independent Fulcio certificate fields")
+            or report.get("verificationMode") != "offline pinned GH bundle/custom root and Cosign bundle/trusted root"):
+        raise Refusal("publisher report verification description mismatch")
+    elapsed = report.get("elapsedSeconds")
+    if type(elapsed) not in (int, float) or elapsed < 0 or elapsed > 300:
+        raise Refusal("invalid publisher report elapsed time")
+    return report
 
 
 def _validate_receipt(raw):
     if len(raw) > RECEIPT_LIMIT:
         raise Refusal("oversized installation receipt")
     receipt = _json(raw, "installation receipt")
-    required = {"schema", "publisher", "release_manifest_sha256",
-                "sdk_manifest_sha256", "version", "inventory"}
-    if set(receipt) != required or receipt.get("schema") != "ami-rust-install-receipt-v1":
+    common = {"publisher", "release_manifest_sha256", "sdk_manifest_sha256", "version", "inventory"}
+    schema = receipt.get("schema")
+    required = common | ({"authentication"} if schema == "ami-rust-install-receipt-v2" else set()) | {"schema"}
+    if set(receipt) != required or schema not in ("ami-rust-install-receipt-v1", "ami-rust-install-receipt-v2"):
         raise Refusal("incompatible installation receipt")
-    if not isinstance(receipt.get("publisher"), str) or not PRINCIPAL.fullmatch(receipt["publisher"]):
+    if schema == "ami-rust-install-receipt-v2":
+        if receipt.get("publisher") != "metaneutrons.ami-rust.github":
+            raise Refusal("invalid production receipt publisher")
+        _validate_authentication(receipt.get("authentication"), receipt.get("release_manifest_sha256"))
+    elif not isinstance(receipt.get("publisher"), str) or not PRINCIPAL.fullmatch(receipt["publisher"]):
         raise Refusal("invalid receipt publisher")
     _digest_text(receipt.get("release_manifest_sha256"), "receipt release manifest")
     _digest_text(receipt.get("sdk_manifest_sha256"), "receipt SDK manifest")
@@ -1015,7 +1085,15 @@ def _installed(prefix, expected_receipt_sha=None):
                                   "installed release manifest")
     if _sha(manifest_raw) != receipt["release_manifest_sha256"]:
         raise Refusal("installed release manifest identity mismatch")
-    manifest, assets, sdk_files = _release_manifest(manifest_raw)
+    production_receipt = receipt["schema"] == "ami-rust-install-receipt-v2"
+    manifest, assets, sdk_files = _release_manifest(manifest_raw, production=production_receipt)
+    if production_receipt and manifest["qualification_only"] is not False:
+        raise Refusal("production receipt requires a non-qualification release manifest")
+    if not production_receipt and manifest["qualification_only"] is not True:
+        raise Refusal("legacy receipt requires a qualification-only release manifest")
+    if (production_receipt
+            and receipt["authentication"]["report"]["manifestBoundAssets"] != sorted(assets)):
+        raise Refusal("publisher report assets do not match the installed release manifest")
     if manifest["version"] != receipt["version"] or manifest["sdk_manifest_sha256"] != receipt["sdk_manifest_sha256"]:
         raise Refusal("receipt and release manifest metadata differ")
     expected = {"payload/release.json", "payload/release.json.sig"}

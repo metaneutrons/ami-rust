@@ -1,0 +1,87 @@
+{
+  "candidate": {
+    "archive": {
+      "bytes": 5619304,
+      "name": "csdk-component.tar.xz",
+      "path": "release/inputs/portable-csdk.tar.xz",
+      "sha256": "942417c7b82218f5704eba168922fc348dc0ce5c17a236139c3353775209b99b"
+    },
+    "profile": {
+      "bytes": 467692,
+      "path": "release/portable-csdk/profile.json",
+      "sha256": "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337"
+    }
+  },
+  "nouveau": {
+    "archive_path": "lib/libdrm_nouveau.a",
+    "derived_bytes": 5313718,
+    "derived_sha256": "98c9e2e6e2d4a9fb724d49cacc0a8a86ec627e4c04465b748f346acbd33aeb1d",
+    "historical_source_prefix": "/Volumes/Dev/Source/AROS-NX",
+    "objects": 825,
+    "original_bytes": 5319350,
+    "original_sha256": "6877c3113ba4f93df0cfb5bbf5bbd54894b908e58481c5c39ad5e026b0f57df9",
+    "path_changed_members": 209,
+    "symbols": 4515,
+    "unchanged_members": 616
+  },
+  "original": {
+    "archive": {
+      "bytes": 5621776,
+      "path": "release/inputs/csdk.tar.xz",
+      "sha256": "70cc3e45969c6e1eca7e4c5c2183429b88424f6c22c8ec6bb90e6cc70452ab87"
+    },
+    "profile": {
+      "bytes": 467698,
+      "path": "release/portable-csdk/original-profile.json",
+      "sha256": "79ac09e3b2237ea432bdc2a0e3b1cb0d91d36a37b6e53ce0d5c710a1cbd7b71e"
+    }
+  },
+  "patch_series": {
+    "bytes": 3087,
+    "path": "release/patches/portable-csdk/series.json",
+    "sha256": "2ba73be8a78d79b471f7fafde9a43c6310a1a58efd18818e9e3d97ed7206c607"
+  },
+  "required_counts": {
+    "changed_files": 532,
+    "public_headers": 530,
+    "regular_files": 2835
+  },
+  "schema": "ami-rust-portable-csdk-v1",
+  "source_capsule": {
+    "bytes": 103277840,
+    "path": "release/csdk-source/csdk-corresponding-source.tar.xz",
+    "sha256": "7e62e28fb025e31aacdd3b6a6d14cef7d76703eb59dbaca02f2e2b4de68c6914"
+  },
+  "source_manifest": {
+    "bytes": 11954128,
+    "path": "release/csdk-source/manifest.json",
+    "sha256": "4e616c8373ac1dc36e5a109953b13e971783abcff0358f24eb49d78f606ad689"
+  },
+  "status": "PINNED_CANDIDATE_TWO_HOST_QUALIFICATION_REQUIRED",
+  "toolchains": {
+    "linux-x86_64": {
+      "compiler": {
+        "bytes": 133336,
+        "path": "bin/clang-11",
+        "sha256": "4ef97fa469e5dd297364a16bec725d7993a3a543c8eb9a5bf65b0da9ba6a9133"
+      },
+      "profile": {
+        "bytes": 488625,
+        "path": "release/portable-csdk/toolchains/linux-x86_64.json",
+        "sha256": "a68f0d3d6b6d9e9678dca0af25b083d6b00f67fd4f806adcb6a2e16af1a19a6d"
+      }
+    },
+    "macos-aarch64": {
+      "compiler": {
+        "bytes": 178360,
+        "path": "bin/clang-11",
+        "sha256": "8f46414db967c5d407757f3c55ea8ee0f923c1739cc69b004d80e451ea4ea514"
+      },
+      "profile": {
+        "bytes": 477516,
+        "path": "release/portable-csdk/toolchains/macos-aarch64.json",
+        "sha256": "28237af9576e852451fcdf0470a904edb34a70232feb41d0c56be246313baadf"
+      }
+    }
+  }
+}
