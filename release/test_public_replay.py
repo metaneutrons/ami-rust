@@ -328,6 +328,25 @@ class FakeTrustedHelpers:
         output_native.mkdir(mode=0o700)
         for index in range(5):
             (output_native / ("variant-" + str(index) + ".AMIRUST")).write_bytes(b"x")
+        retained_metadata = []
+        for root_name in ("absolute-a", "absolute-b"):
+            metadata_root = Path(output) / "metadata" / root_name
+            metadata_root.mkdir(mode=0o700, parents=True)
+            for crate in ("serde", "curve25519_dalek", "ed25519_dalek"):
+                path = metadata_root / (crate + ".rlib")
+                raw = (root_name + ":" + crate).encode()
+                path.write_bytes(raw)
+                digest = hashlib.sha256(raw).hexdigest()
+                retained_metadata.append({
+                    "crate": crate, "path": path.relative_to(output).as_posix(),
+                    "canonical_path": "target/release/deps/lib" + crate + "-" + digest[:16] + ".rlib",
+                    "bytes": len(raw), "sha256": digest, "root": root_name,
+                    "host": "macos-aarch64", "source_sdk_identity": self.commit,
+                    "sdk_manifest_sha256": "d" * 64, "build_receipt_sha256": "e" * 64,
+                    "canonical_artifacts_sha256": "f" * 64,
+                    "canonical_artifact": {"bytes": len(raw), "sha256": digest},
+                    "reference_match": True,
+                })
         inventories = {name: self.ci_sdk.verify_component(components[name], {}, name)
                        for name in self.component_names}
         return {
@@ -338,6 +357,7 @@ class FakeTrustedHelpers:
                 "absolute-a": inventories, "absolute-b": inventories},
             "unrelated_sibling_marker_sha256": "9" * 64,
             "retained_native": native,
+            "retained_metadata": retained_metadata,
         }
 
     def _assert_source_clean(self, source_commit):
@@ -446,6 +466,13 @@ class PublicReplayTests(unittest.TestCase):
         self.assertEqual(report["candidate"]["version"], "0.1.0")
         self.assertEqual(report["claims"]["r1_accepted"], False)
         self.assertEqual(report["claims"]["aros_guest_run"], False)
+        self.assertEqual(len(report["retained_metadata"]), 6)
+        self.assertEqual({row["root"] for row in report["retained_metadata"]},
+                         {"absolute-a", "absolute-b"})
+        self.assertEqual({row["path"] for row in report["retained_metadata"]},
+                         {f"metadata/{root}/{crate}.rlib"
+                          for root in ("absolute-a", "absolute-b")
+                          for crate in ("serde", "curve25519_dalek", "ed25519_dalek")})
         self.assertTrue((self.output / public_replay.RESULT_NAME).is_file())
 
     def test_prerelease_tag_compares_authenticated_manifest_release_core(self):
