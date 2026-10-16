@@ -1,0 +1,20 @@
+{
+  "host_supervisor_sha256": "88839d90b25c8962929501b5c97886c7531b1775c467f510b772b532578684f6",
+  "inputs_sha256": "3ba7ef5e924e0f643923f54f80d631b16411b89c55103a991a2f08eeae915e11",
+  "reason": "Host compiler path remapping changes the pinned supervisor identity. The original raw reports remain historical; fresh protected Cargo prerequisite reports from both hosts are required before SDK production.",
+  "reports": {
+    "linux-x86_64": {
+      "previous_host_supervisor_sha256": "bc6df2632d19cb10306356ac2a3349355d5d6030c665d43beecb59cd61d2e3dc",
+      "previous_inputs_sha256": "382d6d18ec78db23196f894ef144c8a95cea65cc5f2a8bbba8be98db76c32f9b",
+      "sha256": "ff23ac7d16ea758b5067acae3af590d4051e25b1f4371b5028c6a968e8166ca6"
+    },
+    "macos-aarch64": {
+      "previous_host_supervisor_sha256": "bc6df2632d19cb10306356ac2a3349355d5d6030c665d43beecb59cd61d2e3dc",
+      "previous_inputs_sha256": "382d6d18ec78db23196f894ef144c8a95cea65cc5f2a8bbba8be98db76c32f9b",
+      "sha256": "e57b8c1d1729aa5efba584906316125a26454e26de675b6e807a9398f530f13f"
+    }
+  },
+  "resource_policy_sha256": "b9a5fbfff842847c30b5f56ea4e1d3a368f4bda30689f0407ed9d33610571646",
+  "schema": "ami-rust-cargo-prerequisite-pending-v1",
+  "status": "PENDING_PROTECTED_TWO_HOST_RUN"
+}

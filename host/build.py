@@ -183,10 +183,14 @@ def main():
     shutil.copyfile(collector, output / "bin/aros-collect")
     (output / "bin/aros-collect").chmod(0o755)
     (output / "bin/collect-aros").symlink_to("aros-collect")
-    config = '[source.crates-io]\nreplace-with="vendored"\n[source.vendored]\ndirectory=' + json.dumps(str(components["vendor"])) + '\n[build]\njobs=2\n'
-    (output / "cargo-home/config.toml").write_text(config)
     remaps = [(root, "/ami-rust"), (output, "/build"), (components["vendor"], "/vendor"), (components["rust"], "/rust-toolchain"), (Path(options["--manifest-path"]).parent, "/project")]
-    flags = ["-Copt-level=2", "-Cpanic=abort", "-Ccodegen-units=1", "-Cembed-bitcode=no", "-Clto=off"] + ["--remap-path-prefix=" + str(a) + "=" + b for a, b in remaps]
+    host_remap_flags = ["--remap-path-prefix=" + str(a) + "=" + b for a, b in remaps]
+    config = 'target-applies-to-host=false\n[source.crates-io]\nreplace-with="vendored"\n[source.vendored]\ndirectory=' + json.dumps(str(components["vendor"])) + '\n[build]\njobs=2\n'
+    # Host proc macros contribute identities to target metadata. Remap their
+    # paths as well, while retaining their default host panic/codegen options.
+    config += '[host.' + profile["rust_host"] + ']\nrustflags=' + json.dumps(host_remap_flags) + '\n'
+    (output / "cargo-home/config.toml").write_text(config)
+    flags = ["-Copt-level=2", "-Cpanic=abort", "-Ccodegen-units=1", "-Cembed-bitcode=no", "-Clto=off"] + host_remap_flags
     env = {"HOME": str(output / "home"), "PATH": str(cargo.parent) + ":" + str(rust) + ":" + str(toolchain / "bin") + ":/usr/bin:/bin", "CARGO": str(cargo), "CARGO_HOME": str(output / "cargo-home"), "RUSTC": str(rust / "rustc"), "RUSTDOC": str(rust / "rustdoc"), "CARGO_BUILD_JOBS": "2", "CARGO_INCREMENTAL": "0", "CARGO_NET_OFFLINE": "true", "CARGO_TARGET_DIR": str(work / "target"), "CARGO_ENCODED_RUSTFLAGS": "\x1f".join(flags), "TMPDIR": str(output / "tmp"), "LC_ALL": "C", "TZ": "UTC", "SOURCE_DATE_EPOCH": str(manifest["source_date_epoch"]), "RUSTC_WRAPPER": "", "RUSTC_WORKSPACE_WRAPPER": ""}
     begin = time.monotonic()
     records = []
@@ -237,7 +241,7 @@ def main():
     if testing:
         run(common+["-c", root / "tests/measurement/ami_test_bind_diagnostics.c", "-o", art / "bind.o"], "C-bind")
     run([toolchain / "bin/llvm-objcopy", "--redefine-sym", "__startup_entry=ami_sdk_startup_entry", sdk / "lib/startup.o", art / "startup.o"], "Startup")
-    command = [cargo, "-Zami-rust-reproducible-cross", "-Zbuild-std=core,alloc", "-Zbuild-std-features=compiler-builtins-mem", "-Zjson-target-spec", "build", "--manifest-path", options["--manifest-path"], "--package", package, "--target", root / "targets/x86_64-aros.json", "--release", "--locked", "--offline", "-j", "2", "--message-format=json-render-diagnostics", "-vv"]
+    command = [cargo, "-Zhost-config", "-Ztarget-applies-to-host", "-Zami-rust-reproducible-cross", "-Zbuild-std=core,alloc", "-Zbuild-std-features=compiler-builtins-mem", "-Zjson-target-spec", "build", "--manifest-path", options["--manifest-path"], "--package", package, "--target", root / "targets/x86_64-aros.json", "--release", "--locked", "--offline", "-j", "2", "--message-format=json-render-diagnostics", "-vv"]
     if "--no-default-features" in switches:
         command += ["--no-default-features"]
     if "--features" in options:

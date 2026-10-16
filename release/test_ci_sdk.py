@@ -20,6 +20,8 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "release/ci_sdk.py"
+PENDING_CARGO_PRODUCERS = ROOT / "release/ci-cargo-producers-pending.json"
+PENDING_CARGO_SCHEMA = "ami-rust-cargo-prerequisite-pending-v1"
 spec = importlib.util.spec_from_file_location("_test_ci_sdk", SCRIPT)
 ci_sdk = importlib.util.module_from_spec(spec)
 assert spec and spec.loader
@@ -56,6 +58,85 @@ class HostedSdkProducerTests(unittest.TestCase):
             "status": "PASS", "canonical_artifacts": rows, "host": host,
             "cargo_frontend": {"sha256": "a" * 64}, "commands": []}))
         return build, artifacts, rows, byproduct_bytes
+
+    def _assert_pending_cargo_marker(self, marker, current):
+        expected_keys = {
+            "schema", "status", "inputs_sha256", "resource_policy_sha256",
+            "host_supervisor_sha256", "reports", "reason",
+        }
+        self.assertIsInstance(marker, dict)
+        self.assertEqual(set(marker), expected_keys)
+        self.assertEqual(marker["schema"], PENDING_CARGO_SCHEMA)
+        self.assertEqual(marker["status"], "PENDING_PROTECTED_TWO_HOST_RUN")
+        self.assertIsInstance(marker["reason"], str)
+        self.assertTrue(marker["reason"].strip())
+        self.assertEqual(marker["inputs_sha256"], current["inputs_sha256"])
+        self.assertEqual(marker["resource_policy_sha256"], current["resource_policy_sha256"])
+        self.assertEqual(marker["host_supervisor_sha256"], current["host_supervisor_sha256"])
+        for name in ("inputs_sha256", "resource_policy_sha256", "host_supervisor_sha256"):
+            self.assertTrue(ci_sdk._is_digest(marker[name]), name)
+
+        self.assertIsInstance(marker["reports"], dict)
+        self.assertIsInstance(current["reports"], dict)
+        self.assertEqual(set(marker["reports"]), set(ci_sdk.HOST_TARGETS))
+        self.assertEqual(set(current["reports"]), set(ci_sdk.HOST_TARGETS))
+        for host in ci_sdk.HOST_TARGETS:
+            expected = marker["reports"][host]
+            observed = current["reports"][host]
+            self.assertIsInstance(expected, dict)
+            self.assertIsInstance(observed, dict)
+            self.assertEqual(set(expected), {
+                "sha256", "previous_inputs_sha256", "previous_host_supervisor_sha256",
+            })
+            self.assertEqual(expected["sha256"], observed["sha256"])
+            self.assertEqual(expected["previous_inputs_sha256"],
+                             observed["previous_inputs_sha256"])
+            self.assertEqual(expected["previous_host_supervisor_sha256"],
+                             observed["previous_host_supervisor_sha256"])
+            for name in ("sha256", "previous_inputs_sha256",
+                         "previous_host_supervisor_sha256"):
+                self.assertTrue(ci_sdk._is_digest(expected[name]), f"{host} {name}")
+            self.assertEqual(observed["previous_pinned_host_supervisor_sha256"],
+                             expected["previous_host_supervisor_sha256"])
+            self.assertEqual(observed["resource_policy_sha256"],
+                             current["resource_policy_sha256"])
+            self.assertNotEqual(expected["previous_inputs_sha256"],
+                                current["inputs_sha256"], "old report inputs must be stale")
+            self.assertNotEqual(expected["previous_host_supervisor_sha256"],
+                                current["host_supervisor_sha256"],
+                                "old report helper identity must be stale")
+
+    def _pending_cargo_fixture(self):
+        current = {
+            "inputs_sha256": hashlib.sha256(b"new inputs").hexdigest(),
+            "resource_policy_sha256": hashlib.sha256(b"current resources").hexdigest(),
+            "host_supervisor_sha256": hashlib.sha256(b"new helper").hexdigest(),
+            "reports": {},
+        }
+        reports = {}
+        for host in ci_sdk.HOST_TARGETS:
+            old_inputs = hashlib.sha256(("old inputs " + host).encode()).hexdigest()
+            old_helper = hashlib.sha256(("old helper " + host).encode()).hexdigest()
+            reports[host] = {
+                "sha256": hashlib.sha256(("raw report " + host).encode()).hexdigest(),
+                "previous_inputs_sha256": old_inputs,
+                "previous_host_supervisor_sha256": old_helper,
+            }
+            current["reports"][host] = {
+                **reports[host],
+                "previous_pinned_host_supervisor_sha256": old_helper,
+                "resource_policy_sha256": current["resource_policy_sha256"],
+            }
+        marker = {
+            "schema": PENDING_CARGO_SCHEMA,
+            "status": "PENDING_PROTECTED_TWO_HOST_RUN",
+            "inputs_sha256": current["inputs_sha256"],
+            "resource_policy_sha256": current["resource_policy_sha256"],
+            "host_supervisor_sha256": current["host_supervisor_sha256"],
+            "reports": reports,
+            "reason": "Updated helper pins require fresh protected two-host reports.",
+        }
+        return marker, current
 
     def test_reference_proposal_and_default_verify_canonical_files_and_byproducts(self):
         build, artifacts, rows, byproduct_bytes = self._native_build_fixture()
@@ -343,7 +424,105 @@ class HostedSdkProducerTests(unittest.TestCase):
                               row["sourceInfo"])
 
     def test_pinned_cargo_reports_pass_strict_preflight(self):
-        ci_sdk.preflight_cargo_producers(ROOT / "release/ci-resources.json")
+        marker_path = PENDING_CARGO_PRODUCERS
+        if not marker_path.exists() and not marker_path.is_symlink():
+            ci_sdk.preflight_cargo_producers(ROOT / "release/ci-resources.json")
+            return
+
+        self.assertFalse(marker_path.is_symlink(), "pending marker must be a regular file")
+        self.assertTrue(marker_path.is_file(), "pending marker must be a regular file")
+        self.assertLessEqual(marker_path.stat().st_size, 64 * 1024,
+                             "pending marker exceeds its bounded source fixture size")
+        marker = ci_sdk.read_json(marker_path, 64 * 1024)
+        current = self._current_pending_cargo_state()
+        self._assert_pending_cargo_marker(marker, current)
+
+        inputs, resources, tracked, inputs_sha, resources_sha = current["verified_inputs"]
+        self.assertIn("release/ci-cargo-producers-pending.json", tracked)
+        ci_sdk.prepare_sdk.tracked_regular(
+            ROOT, tracked, "release/ci-cargo-producers-pending.json")
+        for host in ci_sdk.HOST_TARGETS:
+            with self.subTest(host=host):
+                report_path = ROOT / "release/ci-cargo-producers" / (host + ".json")
+                with self.assertRaisesRegex(ValueError,
+                                            "input/resource policy digests do not match this checkout"):
+                    ci_sdk.prepare_sdk.canonical_producer(
+                        report_path, host, inputs, resources, inputs_sha, resources_sha, ROOT, tracked)
+
+        with self.assertRaisesRegex(ValueError,
+                                    "input/resource policy digests do not match this checkout"):
+            ci_sdk.preflight_cargo_producers(ROOT / "release/ci-resources.json")
+
+    def _current_pending_cargo_state(self):
+        resources_path = ROOT / "release/ci-resources.json"
+        listing = subprocess.run(["/usr/bin/git", "-C", str(ROOT), "ls-files", "-z"],
+                                 check=True, capture_output=True, timeout=30).stdout
+        tracked = {item.decode("utf-8") for item in listing.split(b"\0") if item}
+        inputs, resources, inputs_sha, resources_sha = ci_sdk.prepare_sdk.verify_expected_inputs(
+            ROOT, tracked, resources_path)
+        reports = {}
+        for host in ci_sdk.HOST_TARGETS:
+            relative = "release/ci-cargo-producers/" + host + ".json"
+            ci_sdk.prepare_sdk.tracked_regular(ROOT, tracked, relative)
+            path = ROOT / relative
+            report = ci_sdk.read_json(path)
+            material = report["input_materials"]
+            helpers = material["producer_helpers"]
+            reports[host] = {
+                "sha256": ci_sdk.sha256(path),
+                "previous_inputs_sha256": material["inputs_sha256"],
+                "previous_host_supervisor_sha256": helpers["actual_sha256"]["build.py"],
+                "previous_pinned_host_supervisor_sha256":
+                    helpers["ci_input_pins"]["host_supervisor_sha256"],
+                "resource_policy_sha256": material["resource_policy_sha256"],
+            }
+        return {
+            "inputs_sha256": inputs_sha,
+            "resource_policy_sha256": resources_sha,
+            "host_supervisor_sha256": inputs["producer_helpers"]["host_supervisor_sha256"],
+            "reports": reports,
+            "verified_inputs": (inputs, resources, tracked, inputs_sha, resources_sha),
+        }
+
+    def test_pending_cargo_marker_binds_current_pins_and_stale_reports(self):
+        marker, current = self._pending_cargo_fixture()
+        self._assert_pending_cargo_marker(marker, current)
+
+    def test_pending_cargo_marker_rejects_mismatched_bindings_and_nonstale_reports(self):
+        cases = (
+            ("input pin", lambda marker, current:
+             marker.update(inputs_sha256="0" * 64)),
+            ("resource pin", lambda marker, current:
+             marker.update(resource_policy_sha256="0" * 64)),
+            ("helper pin", lambda marker, current:
+             marker.update(host_supervisor_sha256="0" * 64)),
+            ("report hash", lambda marker, current:
+             marker["reports"][next(iter(ci_sdk.HOST_TARGETS))].update(sha256="0" * 64)),
+            ("missing host report", lambda marker, current:
+             marker["reports"].pop(next(iter(ci_sdk.HOST_TARGETS)))),
+            ("unexpected marker field", lambda marker, current:
+             marker.update(unexpected=True)),
+            ("old inputs", lambda marker, current:
+             marker["reports"][next(iter(ci_sdk.HOST_TARGETS))].update(
+                 previous_inputs_sha256=current["inputs_sha256"])),
+            ("old helper", lambda marker, current:
+             marker["reports"][next(iter(ci_sdk.HOST_TARGETS))].update(
+                 previous_host_supervisor_sha256=current["host_supervisor_sha256"])),
+            ("prior helper pin", lambda marker, current:
+             current["reports"][next(iter(ci_sdk.HOST_TARGETS))].update(
+                 previous_pinned_host_supervisor_sha256="0" * 64)),
+            ("prior resource policy", lambda marker, current:
+             current["reports"][next(iter(ci_sdk.HOST_TARGETS))].update(
+                 resource_policy_sha256="0" * 64)),
+            ("malformed schema", lambda marker, current:
+             marker.update(schema="ami-rust-cargo-prerequisite-pending-v0")),
+            ("empty reason", lambda marker, current: marker.update(reason="  ")),
+        )
+        for label, alter in cases:
+            marker, current = self._pending_cargo_fixture()
+            alter(marker, current)
+            with self.subTest(binding=label), self.assertRaises(AssertionError):
+                self._assert_pending_cargo_marker(marker, current)
 
     def test_pinned_cargo_reports_reject_stale_policy_digests(self):
         resources_path = ROOT / "release/ci-resources.json"

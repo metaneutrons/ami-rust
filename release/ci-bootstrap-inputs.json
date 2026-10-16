@@ -49,9 +49,9 @@
   },
   "producer_helpers": {
     "host_supervisor_path": "host/build.py",
-    "host_supervisor_sha256": "bc6df2632d19cb10306356ac2a3349355d5d6030c665d43beecb59cd61d2e3dc",
+    "host_supervisor_sha256": "88839d90b25c8962929501b5c97886c7531b1775c467f510b772b532578684f6",
     "overlay_helper_sha256": "cb2834a2c22d5b70555759c685425a4e42f5df12e2ad8ff48b63afc5836795d3",
-    "policy_extension": "Explicit hosted resource contract and fail-closed process-group cleanup; Cargo source, compiler, patch, build flags and target/runtime sources unchanged.",
+    "policy_extension": "Explicit hosted resource contract, process-group cleanup and compile-time host path remapping for SDK build scripts/proc macros; Cargo prerequisite source, compiler, patch and build flags unchanged.",
     "producer_path": "host/cargo-repro/produce.py",
     "producer_sha256": "5379771762b9f45c261df8c1acd3dc1ee0cf85fae9cb86b36d409bf56da1b8cc",
     "python_bootstrap_path": "release/ci_python.py",
