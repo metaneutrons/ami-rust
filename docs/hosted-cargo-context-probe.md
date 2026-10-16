@@ -63,3 +63,16 @@ as `driver_peak_rss_bytes` and uses the selected producer resource policy's
 selected limit. The archive, byte-comparison, work-space and export checks remain
 in force. The historical workflow failure is retained; this source correction
 requires fresh protected builds before any reference replacement.
+
+## Fresh paired result
+
+[Run 38946497526](https://github.com/metaneutrons/ami-rust/actions/runs/38946497526)
+completed successfully on both hosts after the correction. Independent readback
+confirmed complete raw same-host byte equality for both root contexts and no
+private host/build-root markers. macOS now produces 39,348,200-byte Cargo
+binaries with SHA-256
+`4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d`;
+Linux retains its previous raw executable bytes. Both report pairs pass strict
+canonical input/helper/resource validation. The [prerequisite refresh](cargo-prerequisite-refresh.md)
+records selected report identities. This closes the Cargo context blocker only;
+it does not qualify SDK, AROS runtime/memory or release output.
