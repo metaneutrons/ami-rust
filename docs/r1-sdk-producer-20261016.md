@@ -29,7 +29,9 @@ The producer now validates both frozen reports against the current tracked
 inputs, resource policy and helper identities before compiling Cargo. Source CI
 exercises the real two-host reports and a stale-policy counterexample. Fresh
 Cargo must match its selected host report before further SDK provisioning. The
-strict packager and component checks remain in place.
+strict packager and component checks remain in place. The distribution SBOM
+binds the current Cargo artifact and raw receipt for each host; its complete
+asset checksum is updated without changing source/licence records.
 
 The 32 GiB local free-space policy applies to development storage only. It does
 not relax hosted-runner limits or AROS runtime, ABI, stack or heap criteria.

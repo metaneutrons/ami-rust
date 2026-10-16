@@ -109,6 +109,25 @@ class HostedSdkProducerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ci_sdk.validate_inputs(altered, inputs, "macos-aarch64")
 
+    def test_distribution_sbom_identifies_the_selected_cargo_reports_and_artifacts(self):
+        sbom = ci_sdk.read_json(ROOT / "release/bundle-assets/sbom.spdx.json", 2 * 1024**2)
+        identifiers = {
+            "linux-x86_64": "SPDXRef-HostCargoArtifact-Linux-x86-64",
+            "macos-aarch64": "SPDXRef-HostCargoArtifact-macOS-aarch64",
+        }
+        for host, identifier in identifiers.items():
+            with self.subTest(host=host):
+                path = ROOT / "release/ci-cargo-producers" / (host + ".json")
+                artifact = ci_sdk.read_json(path)["custom_cargo_artifact"]
+                rows = [row for row in sbom["packages"] if row["SPDXID"] == identifier]
+                self.assertEqual(len(rows), 1)
+                row = rows[0]
+                self.assertEqual(row["checksums"], [
+                    {"algorithm": "SHA256", "checksumValue": artifact["sha256"]}])
+                self.assertIn(f"Exact size {artifact['bytes']} bytes.", row["sourceInfo"])
+                self.assertIn(f"{path.relative_to(ROOT)} SHA-256 {ci_sdk.sha256(path)} ",
+                              row["sourceInfo"])
+
     def test_pinned_cargo_reports_pass_strict_preflight(self):
         ci_sdk.preflight_cargo_producers(ROOT / "release/ci-resources.json")
 

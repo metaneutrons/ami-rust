@@ -597,7 +597,7 @@
     {
       "bytes": 1094544,
       "path": "sbom.spdx.json",
-      "sha256": "c01195a3ceec0fbd6f3dc455e54b0c29222e66ea620b4288054b86cc380f51f7",
+      "sha256": "36336e337ed5c01bb63bc9d8b18e3f7b920f01304d8891c9ce9de5c48876c0c7",
       "source": "release/bundle-assets/sbom.spdx.json"
     },
     {
