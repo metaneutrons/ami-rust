@@ -29,6 +29,11 @@ verify/install/build/uninstall them on both hosts. Counter-cases cover corrupted
 assets, identities and provenance. Actual successful runs, their source commits
 and evidence are required; tests of the helpers do not establish authentication.
 
+After both consumers pass, the [complete release candidate](staged-sdk-release.md)
+is packed, signed, attested and verified in a separate protected job. Its
+artifact contains the exact six public-file candidates and retained proofs.
+This remains an unpublished candidate and does not grant R1 acceptance.
+
 `release/ci-sdk-inputs.json`, `release/portable-csdk/spec.json` and
 `release/ci-resources.json` are normative inputs. The resource policy requires
 6 GiB physical RAM and 24 GiB free disk, two jobs, 4 GiB aggregate observed RSS,

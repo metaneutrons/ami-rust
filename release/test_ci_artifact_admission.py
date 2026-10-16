@@ -87,15 +87,16 @@ class MainAdmission(unittest.TestCase):
         page = {
             'total_count': 2,
             'artifacts': [
-                {'id': 1, 'size_in_bytes': 144 * MIB},
-                {'id': 2, 'size_in_bytes': 144 * MIB},
+                {'id': 1, 'size_in_bytes': 96 * MIB},
+                {'id': 2, 'size_in_bytes': 96 * MIB},
             ],
         }
         output, calls, response = self.run_main(['--sdk-candidate'], TEST_ENV, page)
 
         report = json.loads(output)
-        self.assertEqual(7 * 32 * MIB, 224 * MIB)
-        self.assertEqual(report['pending_workflow_metadata_ceiling_bytes'], 224 * MIB)
+        self.assertEqual(sum(ci_artifact_admission.SDK_ARTIFACT_CEILINGS.values()), 320 * MIB)
+        self.assertEqual(report['pending_workflow_metadata_ceiling_bytes'], 320 * MIB)
+        self.assertEqual(report['workflow_artifact_ceilings_bytes'], ci_artifact_admission.SDK_ARTIFACT_CEILINGS)
         self.assertEqual(report['existing_artifact_bytes'] + report['pending_workflow_metadata_ceiling_bytes'], POOL)
         self.assertTrue(report['SDK_candidate_upload_allowed'])
         self.assertFalse(report['SDK_release_publication_authorized'])
@@ -108,18 +109,19 @@ class MainAdmission(unittest.TestCase):
         self.assertEqual(response.read_limits, [2 * MIB + 1])
         self.assertNotIn(TEST_ENV['GH_TOKEN'], output)
 
-    def test_sdk_candidate_denied_when_224_mib_reservation_exceeds_pool(self):
-        existing = 300 * MIB
+    def test_sdk_candidate_denied_when_complete_candidate_reservation_exceeds_pool(self):
+        existing = 225 * MIB
         page = {
             'total_count': 3,
             'artifacts': [
-                {'id': 1, 'size_in_bytes': 100 * MIB},
-                {'id': 2, 'size_in_bytes': 100 * MIB},
-                {'id': 3, 'size_in_bytes': 100 * MIB},
+                {'id': 1, 'size_in_bytes': 75 * MIB},
+                {'id': 2, 'size_in_bytes': 75 * MIB},
+                {'id': 3, 'size_in_bytes': 75 * MIB},
             ],
         }
         self.assertLessEqual(existing + 2 * 32 * MIB, POOL)
-        self.assertGreater(existing + 7 * 32 * MIB, POOL)
+        self.assertLessEqual(existing + 7 * 32 * MIB, POOL)
+        self.assertGreater(existing + sum(ci_artifact_admission.SDK_ARTIFACT_CEILINGS.values()), POOL)
         output = io.StringIO()
         calls = []
 
@@ -151,6 +153,18 @@ class MainAdmission(unittest.TestCase):
                         ci_artifact_admission.main()
                 urlopen.assert_not_called()
                 self.assertEqual(output.getvalue(), '')
+
+    def test_proposal_reserves_only_its_two_producer_artifacts(self):
+        page = {'total_count':1, 'artifacts':[{'id':1,'size_in_bytes':448 * MIB}]}
+        output, _, _ = self.run_main(['--sdk-candidate','--reference-proposal'], TEST_ENV, page)
+        report = json.loads(output)
+        self.assertEqual(report['pending_workflow_metadata_ceiling_bytes'], 64 * MIB)
+        self.assertEqual(set(report['workflow_artifact_ceilings_bytes']), {'producer-macos','producer-linux'})
+        self.assertTrue(report['reference_proposal'])
+        self.assertFalse(report['SDK_release_publication_authorized'])
+        page['artifacts'][0]['size_in_bytes'] += 1
+        with self.assertRaisesRegex(ValueError, 'quota'):
+            self.run_main(['--sdk-candidate','--reference-proposal'], TEST_ENV, page)
 
     def test_legacy_default_reserves_64_mib_and_does_not_claim_candidate_authority(self):
         page = {'total_count': 0, 'artifacts': []}
