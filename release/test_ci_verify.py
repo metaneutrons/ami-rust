@@ -240,6 +240,23 @@ class HostedConsumerVerifyTests(unittest.TestCase):
         self.assertEqual(events, [])
         provider.assert_not_called()
 
+    def test_consumer_roots_are_fresh_and_reject_an_external_parent_link(self):
+        first = ci_verify._create_consumer_roots(self.work)
+        self.assertEqual(first.resolve().parent.parent, self.work)
+        with self.assertRaises(FileExistsError):
+            ci_verify._create_consumer_roots(self.work)
+        work = self.root / "linked-work"
+        work.mkdir()
+        external = self.root / "unrelated-external"
+        external.mkdir()
+        marker = external / "marker"
+        marker.write_bytes(b"unrelated")
+        (work / "consumers").symlink_to(external, target_is_directory=True)
+        with self.assertRaises(FileExistsError):
+            ci_verify._create_consumer_roots(work)
+        self.assertEqual([path.name for path in external.iterdir()], ["marker"])
+        self.assertEqual(marker.read_bytes(), b"unrelated")
+
     def test_retained_check_needs_only_bounded_scratch_but_keeps_ram_and_policy_limits(self):
         resources = ci_verify.strict_json(ci_verify.ROOT / "release/ci-resources.json")
         scratch = ci_verify.MAX_ARCHIVE_EXPANDED + ci_verify.ci_sdk.MAX_LOG_BYTES + ci_verify.MAX_OUTPUT_BYTES

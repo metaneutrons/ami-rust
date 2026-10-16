@@ -1181,15 +1181,30 @@ def _run_recipe_builds(supervisor, python: Path, host: str, reference: dict,
         for variant in VARIANTS]}
 
 
+def _create_consumer_roots(work: Path) -> Path:
+    # Require a genuinely fresh directory. mkdir must never follow an existing
+    # consumers symlink or accept an old installation/output tree.
+    root = work / "consumers"
+    root.mkdir(mode=0o700)
+    first = root / "absolute-a"
+    first.mkdir(mode=0o700)
+    return first
+
+
 def _install_and_run_recipe(bundle: Path, work: Path, output: Path, python: Path,
                             supervisor, host: str, sdk: dict, components: dict,
                             reference: dict, commands: list[str]) -> dict:
     consumers_root = work / "consumers"
-    consumers_root.mkdir(mode=0o700, exist_ok=True)
+    if (consumers_root.is_symlink() or not consumers_root.is_dir()
+            or consumers_root.resolve().parent != work.resolve()):
+        raise ValueError("consumer roots must remain inside managed work")
     marker = consumers_root / "unrelated-sibling-marker.txt"
-    marker.write_bytes(b"preserved-sibling-marker-v1\n")
+    with marker.open("xb") as stream:
+        stream.write(b"preserved-sibling-marker-v1\n")
     marker.chmod(0o600)
     consumers = [consumers_root / "absolute-a", consumers_root / "absolute-b"]
+    if consumers[0].is_symlink() or consumers[0].resolve().parent != consumers_root.resolve():
+        raise ValueError("prepared consumer escapes managed work")
     if set(path.name for path in consumers[0].iterdir()) != {"selection.json"}:
         raise ValueError("prepared first consumer must contain only its verified selection")
     consumers[1].mkdir(mode=0o700)
@@ -1267,9 +1282,12 @@ def _install_and_run_recipe(bundle: Path, work: Path, output: Path, python: Path
         other_prefix = other / "sdk-0.1.0"
         if name == "absolute-a" and (not other_prefix.is_dir() or other_prefix.is_symlink()):
             raise ValueError("uninstall of A removed the installed sibling B")
+        if name == "absolute-b" and (other_prefix.exists() or other_prefix.is_symlink()):
+            raise ValueError("uninstall of B recreated the already removed sibling A")
         uninstall_rows[name] = {"command": commands[11], "process": row, "result": result,
                                 "selected_prefix_absent": True, "sibling_prefix_preserved":
-                                    other_prefix.is_dir() if name == "absolute-a" else True,
+                                    True if name == "absolute-a" else None,
+                                "sibling_prefix_was_installed": name == "absolute-a",
                                 "project_preserved": True, "marker_preserved": True}
         command_rows[name].append({"recipe_index": 11, "command": commands[11],
                                    "process": row, "result": result})
@@ -1374,8 +1392,7 @@ def qualify(bundle_path: Path, work: Path, output: Path, python_root: Path) -> d
             supervisor, python, candidate, policy_value, label))
 
     prepare_command, check_command = _preparation_commands(bundle)
-    first_consumer = consumers_root / "absolute-a"
-    first_consumer.mkdir(mode=0o700, parents=True)
+    first_consumer = _create_consumer_roots(work)
     preparation_env = dict(supervisor.env)
     preparation_env.update({"SOURCE": str(ROOT), "SOURCE_COMMIT": identity["source_sha"],
                             "WORKFLOW_COMMIT": identity["workflow_sha"],
