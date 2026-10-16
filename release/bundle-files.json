@@ -43,9 +43,9 @@
       "source": "docs/api.md"
     },
     {
-      "bytes": 5653,
+      "bytes": 6364,
       "path": "THIRD_PARTY_NOTICES.md",
-      "sha256": "2efe77a1f845a30428f66225b13bc1c591d89ceb41e30fdf229f97802d3fb731",
+      "sha256": "69e6092ad6b777205c7a9794ed9acaa32c1de488a90b698aebfed53e67cf6bd2",
       "source": "release/bundle-assets/THIRD_PARTY_NOTICES.md"
     },
     {
