@@ -257,7 +257,7 @@ def _validate_tool_receipt(work: Path, metadata: Path, python_root: Path,
         raise CandidateAuthenticationError("pinned verifier tools differ from the exact bootstrap receipt")
     for name in ("gh", "cosign"):
         tool_path = work / "tools" / name
-        _safe_regular(tool_path, "pinned " + name + " executable", ci_verify._MAX_TOOL)
+        _safe_regular(tool_path, "pinned " + name + " executable", verifier._MAX_TOOL)
         if not os.access(tool_path, os.X_OK):
             raise CandidateAuthenticationError("pinned verifier executable is not executable: " + name)
     expected_roots = {
@@ -269,7 +269,7 @@ def _validate_tool_receipt(work: Path, metadata: Path, python_root: Path,
         raise CandidateAuthenticationError("pinned verifier roots differ from the exact bootstrap receipt")
     for name in ("gh", "cosign"):
         _safe_regular(work / "trust" / Path(pins["roots"][name]["path"]).name,
-                      "pinned " + name + " trust root", ci_verify._MAX_ROOT)
+                      "pinned " + name + " trust root", verifier._MAX_ROOT)
     expected_budgets = {"workspace_bytes": ci_verify.ci_sdk.MAX_WORK_BYTES,
                         "rss_bytes": ci_verify.ci_sdk.MAX_RSS_BYTES,
                         "log_bytes": ci_verify.ci_sdk.MAX_LOG_BYTES,

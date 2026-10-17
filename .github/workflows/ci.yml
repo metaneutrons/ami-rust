@@ -39,6 +39,7 @@ jobs:
             release/*.py
             release/ci-*.json
             release/ci-cargo-producers/
+            release/trust/
             release/portable-csdk/spec.json
             release/native-reference.json
             release/candidate-r4/
