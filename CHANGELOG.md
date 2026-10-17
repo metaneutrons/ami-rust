@@ -34,6 +34,7 @@
 * retain independent consumer archive evidence ([#35](https://github.com/metaneutrons/ami-rust/issues/35)) ([fedeee1](https://github.com/metaneutrons/ami-rust/commit/fedeee14f1fb687e2c8376601c9fc32244e63e59))
 * retire verified Cargo scratch before SDK derivation ([#36](https://github.com/metaneutrons/ami-rust/issues/36)) ([1d0fe4f](https://github.com/metaneutrons/ami-rust/commit/1d0fe4f10c8f264fd4b8fd50baccadd34869a802))
 * separate SDK installer logs from Cargo bootstrap ([#15](https://github.com/metaneutrons/ami-rust/issues/15)) ([b73f002](https://github.com/metaneutrons/ami-rust/commit/b73f00240fbb65b364f10363e0dd4ddb74e333bc))
+* use one exact GitHub attestation identity selector ([#47](https://github.com/metaneutrons/ami-rust/issues/47)) ([6736a4e](https://github.com/metaneutrons/ami-rust/commit/6736a4e265e71e1b4d327f93b36b207c9e589db5))
 * validate current Cargo producer pins before SDK work ([#13](https://github.com/metaneutrons/ami-rust/issues/13)) ([20e56eb](https://github.com/metaneutrons/ami-rust/commit/20e56ebe052b4dbb2c71c7cd9a7afe020f2448d2))
 * validate GitHub provenance before SDK builds ([#45](https://github.com/metaneutrons/ami-rust/issues/45)) ([493db1d](https://github.com/metaneutrons/ami-rust/commit/493db1df86a29bbd4fb0f11da13429a7e5887096))
 * verify static release inputs before SDK production ([#10](https://github.com/metaneutrons/ami-rust/issues/10)) ([0dbdc25](https://github.com/metaneutrons/ami-rust/commit/0dbdc2549cf1d3e166f0523e642c0b401b3f4a9f))
