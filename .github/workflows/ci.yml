@@ -28,6 +28,12 @@ jobs:
           persist-credentials: false
           sparse-checkout-cone-mode: false
           sparse-checkout: |
+            Cargo.toml
+            Cargo.lock
+            contract/
+            crates/
+            examples/
+            tests/
             host/
             native/sdk.h
             release/*.py
