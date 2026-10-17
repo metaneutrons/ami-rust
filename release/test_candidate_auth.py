@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synthetic adapter tests only; mocked verifier output is not crypto evidence."""
+"""Offline adapter and tool-receipt integration tests, not crypto qualification."""
 from __future__ import annotations
 
 import hashlib
@@ -10,6 +10,7 @@ import sys
 import tempfile
 import time
 import unittest
+from contextlib import ExitStack
 from unittest.mock import patch
 
 
@@ -32,7 +33,7 @@ HOST = "linux-x86_64"
 
 
 class OuterCandidateAuthAdapterTests(unittest.TestCase):
-    """These tests exercise policy parsing with synthetic CLI responses only."""
+    """Exercise receipt/policy integration offline with synthetic external boundaries."""
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="outer-candidate-auth-test-")
@@ -80,6 +81,198 @@ class OuterCandidateAuthAdapterTests(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def _make_tool_receipt_fixture(self):
+        """Build a small, hash-pinned fixture for the real outer/common verifier path."""
+        fixture = self.root / "tool-receipt-integration"
+        source_root = fixture / "source"
+        source_release = source_root / "release"
+        source_release.mkdir(parents=True)
+        source_trust = source_release / "trust"
+        source_trust.mkdir()
+        managed = fixture / "managed"
+        managed.mkdir(mode=0o700)
+        work = managed / "work"
+        metadata = managed / "metadata"
+        python_root = managed / "ami-rust-python-bootstrap"
+        for directory in (work, metadata, python_root):
+            directory.mkdir(mode=0o700)
+        tools = work / "tools"
+        trust = work / "trust"
+        tools.mkdir(mode=0o700)
+        trust.mkdir(mode=0o700)
+        python_bin = python_root / "bin" / "python"
+        python_bin.parent.mkdir(mode=0o700)
+        python_bin.write_bytes(b"fixture pinned Python boundary\n")
+        python_bin.chmod(0o700)
+
+        # Keep the actual reviewed manifest schema, versions, archive identities,
+        # and fixed root pins. Only the executable byte pins become tiny fixture
+        # bytes so the production hash and size checks remain cheap and real.
+        manifest = json.loads(SCRIPT.with_name("ci-auth-tools.json").read_text(encoding="utf-8"))
+        fixture_tool_bytes = {
+            "gh": b"synthetic gh executable bytes\n",
+            "cosign": b"synthetic cosign executable bytes\n",
+        }
+        for name, raw in fixture_tool_bytes.items():
+            manifest["hosts"][HOST][name]["binary_bytes"] = len(raw)
+            manifest["hosts"][HOST][name]["binary_sha256"] = hashlib.sha256(raw).hexdigest()
+            executable = tools / name
+            executable.write_bytes(raw)
+            executable.chmod(0o700)
+
+        original_repo = SCRIPT.parent.parent
+        for name, pin in manifest["roots"].items():
+            source = original_repo / pin["path"]
+            raw = source.read_bytes()
+            self.assertEqual(len(raw), pin["bytes"])
+            self.assertEqual(hashlib.sha256(raw).hexdigest(), pin["sha256"])
+            (source_trust / Path(pin["path"]).name).write_bytes(raw)
+            target = trust / Path(pin["path"]).name
+            target.write_bytes(raw)
+            target.chmod(0o600)
+
+        manifest_path = source_release / "ci-auth-tools.json"
+        manifest_path.write_bytes(candidate_auth._canonical_json(manifest))
+        pins = candidate_auth.ci_verify.validate_tool_manifest(manifest, HOST)
+        python_receipt = {"schema": "fixture-python-bootstrap-v1", "host": HOST}
+        identity = {"source_sha": SOURCE_SHA, "workflow_sha": WORKFLOW_SHA}
+        expected_tools = {
+            name: {
+                "path": str(tools / name),
+                "bytes": pin["binary_bytes"],
+                "sha256": pin["binary_sha256"],
+                "version": pin["version"],
+                "archive_sha256": pin["sha256"],
+                "archive_bytes": pin["bytes"],
+            }
+            for name, pin in ((name, pins[name]) for name in ("gh", "cosign"))
+        }
+        expected_roots = {
+            name: {
+                "path": str(trust / Path(pin["path"]).name),
+                "bytes": pin["bytes"],
+                "sha256": pin["sha256"],
+            }
+            for name, pin in pins["roots"].items()
+        }
+        receipt = {
+            "schema": candidate_auth.ci_verify.TOOL_RECEIPT_SCHEMA,
+            "status": "PINNED_VERIFIER_TOOLS_READY",
+            "host": HOST,
+            "source_commit": SOURCE_SHA,
+            "tools_manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+            "python_bootstrap": python_receipt,
+            "tools": expected_tools,
+            "roots": expected_roots,
+            "commands": [],
+            "budgets": {
+                "workspace_bytes": candidate_auth.ci_verify.ci_sdk.MAX_WORK_BYTES,
+                "rss_bytes": candidate_auth.ci_verify.ci_sdk.MAX_RSS_BYTES,
+                "log_bytes": candidate_auth.ci_verify.ci_sdk.MAX_LOG_BYTES,
+                "command_seconds": candidate_auth.ci_verify.ci_sdk.MAX_COMMAND_SECONDS,
+            },
+            "claim": (
+                "Hash-pinned verifier tools and roots are ready; no SDK candidate or "
+                "publisher evidence has been verified."
+            ),
+        }
+        (metadata / "tool-bootstrap.json").write_bytes(candidate_auth._canonical_json(receipt))
+        materials = [{"uri": "https://example.invalid/fixture-input",
+                      "digest": {"sha256": "f" * 64}}]
+        return {
+            "source_root": source_root,
+            "work": work,
+            "metadata": metadata,
+            "python_root": python_root,
+            "python_executable": python_bin,
+            "python_receipt": python_receipt,
+            "identity": identity,
+            "receipt": receipt,
+            "manifest": manifest,
+            "materials": materials,
+        }
+
+    @staticmethod
+    def _tool_validation_patches(validator, fixture):
+        """Patch only host/bootstrap/source-identity/input-manifest boundaries."""
+        namespace = validator.__globals__
+        common = namespace["ci_verify"]
+        stack = ExitStack()
+        stack.enter_context(patch.dict(namespace, {"ROOT": fixture["source_root"]}))
+        stack.enter_context(patch.object(common, "ROOT", fixture["source_root"]))
+        stack.enter_context(patch.object(common, "host_identity", return_value=HOST))
+        stack.enter_context(patch.object(
+            common.ci_sdk, "verify_python_bootstrap",
+            return_value=(fixture["python_executable"], fixture["python_receipt"])))
+        stack.enter_context(patch.object(common, "_source_commit", return_value=SOURCE_SHA))
+        stack.enter_context(patch.object(common, "_assert_source_clean", return_value=None))
+        stack.enter_context(patch.object(
+            namespace["ci_auth"], "input_manifest", return_value=fixture["materials"]))
+        common_check = stack.enter_context(patch.object(
+            common, "_verify_tool_receipt", wraps=common._verify_tool_receipt))
+        policy_builder = stack.enter_context(patch.object(
+            common, "_write_source_policy", wraps=common._write_source_policy))
+        return stack, common_check, policy_builder
+
+    def test_validate_tool_receipt_integrates_real_common_checks_and_policy_builder(self):
+        fixture = self._make_tool_receipt_fixture()
+        validator = candidate_auth._validate_tool_receipt
+        stack, common_check, policy_builder = self._tool_validation_patches(validator, fixture)
+        with stack:
+            receipt, policy, executable = validator(
+                fixture["work"], fixture["metadata"], fixture["python_root"], fixture["identity"])
+
+        self.assertEqual(receipt, fixture["receipt"])
+        self.assertEqual(executable, fixture["python_executable"])
+        common_check.assert_called_once()
+        policy_builder.assert_called_once_with(
+            fixture["identity"], fixture["receipt"]["roots"], fixture["work"], reuse=True)
+        policy_path = fixture["work"] / "trust" / "publisher-policy.json"
+        self.assertEqual(policy_path.read_bytes(), candidate_auth._canonical_json(policy))
+        self.assertEqual(policy["source_sha"], SOURCE_SHA)
+        self.assertEqual(policy["workflow_sha"], WORKFLOW_SHA)
+        self.assertEqual(policy["inputs_manifest_sha256"], hashlib.sha256(
+            candidate_auth.ci_auth.encoded(fixture["materials"])).hexdigest())
+        self.assertEqual(policy["gh"]["path"], str(fixture["work"] / "tools" / "gh"))
+        self.assertEqual(policy["cosign"]["path"], str(fixture["work"] / "tools" / "cosign"))
+        for policy_key, receipt_key in (("gh_trusted_roots", "gh"),
+                                        ("cosign_trusted_root", "cosign")):
+            self.assertEqual(policy[policy_key], {
+                key: fixture["receipt"]["roots"][receipt_key][key]
+                for key in ("path", "sha256")
+            })
+        for name in ("gh", "cosign"):
+            path = fixture["work"] / "tools" / name
+            self.assertEqual(path.stat().st_size, fixture["receipt"]["tools"][name]["bytes"])
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),
+                             fixture["receipt"]["tools"][name]["sha256"])
+        self.assertEqual(len(fixture["receipt"]["roots"]), 2)
+
+    def test_validate_tool_receipt_rejects_corrupt_tool_bytes_before_policy(self):
+        fixture = self._make_tool_receipt_fixture()
+        tool = fixture["work"] / "tools" / "gh"
+        tool.write_bytes(b"corrupted gh executable bytes\n")
+        validator = candidate_auth._validate_tool_receipt
+        stack, common_check, policy_builder = self._tool_validation_patches(validator, fixture)
+        with stack, self.assertRaisesRegex(ValueError, "installed verifier executable differs from its trusted pin: gh"):
+            validator(fixture["work"], fixture["metadata"], fixture["python_root"], fixture["identity"])
+        common_check.assert_called_once()
+        policy_builder.assert_not_called()
+        self.assertFalse((fixture["work"] / "trust" / "publisher-policy.json").exists())
+
+    def test_validate_tool_receipt_rejects_tampered_trust_root_before_policy(self):
+        fixture = self._make_tool_receipt_fixture()
+        root = fixture["work"] / "trust" / "github-trusted-root.jsonl"
+        raw = root.read_bytes()
+        root.write_bytes(bytes([raw[0] ^ 1]) + raw[1:])
+        validator = candidate_auth._validate_tool_receipt
+        stack, common_check, policy_builder = self._tool_validation_patches(validator, fixture)
+        with stack, self.assertRaisesRegex(ValueError, "external verifier root differs from its trusted pin: gh"):
+            validator(fixture["work"], fixture["metadata"], fixture["python_root"], fixture["identity"])
+        common_check.assert_called_once()
+        policy_builder.assert_not_called()
+        self.assertFalse((fixture["work"] / "trust" / "publisher-policy.json").exists())
 
     def _predicate(self):
         return {
