@@ -11,6 +11,24 @@ applies to regular, non-injected SDK-owner diagnostics. Declared positive
 controls intentionally allocate nine times per full/large phase; their 36
 allocations are reported separately.
 
+The latest normal SDK attempt from source `182f7eae` failed in
+[run 38992120851](https://github.com/metaneutrons/ami-rust/actions/runs/38992120851).
+Linux completed production and its source-bound artifact readback passed.
+macOS stopped during C-SDK derivation after 1,206.794 seconds at the unchanged
+1,200-second command limit. Assembly, authentication, consumers and complete
+transport authentication were skipped; no final native campaign started.
+The preceding [run 38989581905](https://github.com/metaneutrons/ami-rust/actions/runs/38989581905)
+failed artifact-storage admission before either SDK producer started. Both
+failures and their clocks are retained.
+
+[PR 43](https://github.com/metaneutrons/ami-rust/pull/43) combines workspace and
+log accounting into one complete inventory per root and sample. It preserves
+all resource limits, process monitoring and C-SDK proof commands. The exact
+merged source passed [two-host source CI 38995796330](https://github.com/metaneutrons/ami-rust/actions/runs/38995796330).
+Local inventory measurements do not establish hosted C-SDK completion. Fresh
+versioned SDK production, authentication, four consumer builds, final native
+qualification and independent R1-A1 through R1-A7 acceptance remain required.
+
 The normal 0.1.0 SDK campaign from source `570ff730` failed in
 [run 38981262735](https://github.com/metaneutrons/ami-rust/actions/runs/38981262735).
 Both host producers and the common unsigned assembly succeeded; the five native
@@ -24,7 +42,7 @@ successful provider ingestion: fresh protected authentication and all remaining
 consumer, native and release gates are still required. This failed campaign is
 retained and does not qualify R1.
 
-The current-source protected two-host proposal passed in
+The earlier protected two-host proposal passed in
 [run 38964667415](https://github.com/metaneutrons/ami-rust/actions/runs/38964667415)
 from source `1d0fe4f`: five ELF outputs matched byte-for-byte, and the 104
 canonical-output comparison passed on each host. The source and native-compiler
@@ -71,7 +89,7 @@ acceptance follows from the diagnostic or this source edit.
 
 The complete original and derived C-SDK prerequisites, corresponding source,
 patches and selected vendor archive are public repository inputs with their
-own pinned identities and preserved notices. The current-source protected
+own pinned identities and preserved notices. The earlier protected
 two-host proposal passed in [run 38964667415](https://github.com/metaneutrons/ami-rust/actions/runs/38964667415):
 five ELF outputs matched byte-for-byte, and the 104 canonical-output comparison
 passed on each host. Source and native-compiler pins and the qualified boot
