@@ -1,7 +1,7 @@
 # Release qualification status — 2026-10-17
 
 R1 remains open, and no ami-rust SDK GitHub Release has been published. The
-current native profile received technical GO on its exact inputs and supported
+retained R4 native profile received technical GO on its exact inputs and supported
 profile in the [R4 qualification record](../release/candidate-r4/qualification.json)
 (SHA-256 `c5e559f592c7300b502ebf976ecd5b65c9191a130dbc2f7b5c9ed68a7045982c`).
 The native run completed all 155 cases, plus Linux-derived-output checks and
@@ -11,7 +11,44 @@ applies to regular, non-injected SDK-owner diagnostics. Declared positive
 controls intentionally allocate nine times per full/large phase; their 36
 allocations are reported separately.
 
-The latest normal SDK attempt from source `659a7994` failed in
+The latest normal SDK attempt from source `11fbd082` failed in
+[run 39007289203](https://github.com/metaneutrons/ami-rust/actions/runs/39007289203).
+Both host producers, common unsigned assembly and both signing/provenance jobs
+succeeded. The admission fixture also completed real GitHub attestation
+ingestion; its retained bundle identifies this source and workflow run. Strict
+producer readbacks passed on both hosts: all five native programs and the
+source SDK archive matched byte-for-byte. The macOS C-SDK command completed in
+650.609 seconds under the unchanged 1,200-second limit.
+
+Both independent consumers then rejected the verifier command before their
+installation/build qualification began: pinned GitHub CLI 2.102.0 forbids
+combining `--cert-identity` with `--signer-workflow`. The inner SDK verifier and
+later outer-candidate verifier both used that invalid combination. The
+correction retains the exact certificate identity and issuer, repository,
+source and workflow digests, source ref, runner restrictions, and decoded
+predicate/publisher-policy checks; it removes the redundant workflow selector.
+An offline check with pinned GitHub CLI 2.102.0 accepted the retained signed SDK
+subject and rejected an incorrect certificate identity, workflow digest, source
+digest and a one-byte subject change. These diagnostic probes complement the
+source regression tests; they do not qualify the corrected release candidate.
+An independent diagnostic on the macOS review host also passed the full
+corrected verifier against both retained host-producer bundles: GitHub
+provenance and Cosign signatures verified for all three subjects in each
+bundle. The unchanged production `verify` CLI accepted both bundles. Incorrect
+source/workflow digests and a modified payload were rejected. These checks
+authenticate the old run's retained artifacts; the corrected source still
+requires fresh protected qualification, including execution on both hosts.
+
+Successful signing jobs do not establish independent signature verification.
+The failed consumer receipts, both producer ZIPs, common unsigned bundle, both
+authenticated bundles and job logs are retained. Complete transport
+authentication was skipped. The campaign closed as FAIL within its budget; no
+final native clock was sealed, no native matrix ran, and no SDK was published.
+The final four-consumer raw-metadata comparison, complete independent crypto,
+final native qualification, licence reconciliation and A1–A7 acceptance remain
+open for the corrected source.
+
+The preceding normal SDK attempt from source `659a7994` failed in
 [run 38998542871](https://github.com/metaneutrons/ami-rust/actions/runs/38998542871).
 Both host producers and common unsigned assembly succeeded. Strict producer
 readbacks passed on both hosts; all five native programs and the source SDK
@@ -20,17 +57,15 @@ seconds under the unchanged 1,200-second limit, resolving the preceding
 bootstrap blocker. These producer ZIPs contain no raw metadata archives and
 cannot establish the final four-consumer comparison.
 
-Both authentication jobs then failed at the first real GitHub attestation:
-`buildDefinition.internalParameters.github not found`. The pinned action's
-custom-predicate path does not supply its normal GitHub context automatically.
-The correction supplies the four validated GitHub claims alongside the
-unchanged publisher policy and requires both objects during verification. A
-normal-mode provider-ingestion fixture now precedes expensive SDK production;
-it is explicitly a non-SDK subject and does not qualify distribution. Source
-fixtures cannot establish that GitHub accepts the correction. The complete
-fresh authentication, consumer, native and independent acceptance gates remain
-open. This failed clock and every raw producer/unsigned assembly artifact are
-retained; no final native campaign or SDK publication started.
+Both authentication jobs in that attempt failed at the first real GitHub
+attestation: `buildDefinition.internalParameters.github not found`. The pinned
+action's custom-predicate path does not supply its normal GitHub context
+automatically. The correction supplies the four validated GitHub claims
+alongside the unchanged publisher policy and requires both objects during
+verification. A normal-mode non-SDK ingestion fixture now precedes expensive SDK
+production. The next run above establishes actual ingestion and signing-job
+completion for its exact source; source fixtures alone did not. The failed
+clock and every raw producer/unsigned assembly artifact remain retained.
 
 The preceding normal SDK attempt from source `182f7eae` failed in
 [run 38992120851](https://github.com/metaneutrons/ami-rust/actions/runs/38992120851).
@@ -46,7 +81,7 @@ failures and their clocks are retained.
 log accounting into one complete inventory per root and sample. It preserves
 all resource limits, process monitoring and C-SDK proof commands. The exact
 merged source passed [two-host source CI 38995796330](https://github.com/metaneutrons/ami-rust/actions/runs/38995796330).
-The latest normal attempt above establishes hosted C-SDK completion for its
+The later normal attempts above establish hosted C-SDK completion for their
 identified inputs; the local inventory benchmark alone did not. Fresh
 versioned SDK production, authentication, four consumer builds, final native
 qualification and independent R1-A1 through R1-A7 acceptance remain required.
@@ -149,7 +184,7 @@ The adopted [hosted resource policy](../release/ci-resources.json) requires
 12 GiB managed work and 16 MiB logs. Concrete campaigns keep 90-minute clocks
 with a review reserve. Historical failed clocks and earlier limits remain
 historical evidence. The retained CI artifact pool stays at 512 MiB; the whole
-seven-artifact candidate DAG must fit before either producer begins uploading.
+complete candidate DAG must fit before either producer begins uploading.
 
 Source, inputs and packaging data use this repository and standard GitHub-hosted
 runners. The former private input repository was deleted at the owner's request;

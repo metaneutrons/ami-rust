@@ -238,6 +238,16 @@ class OuterCandidateAuthAdapterTests(unittest.TestCase):
         for row in commands:
             argv = row["argv"]
             self.assertIn("--deny-self-hosted-runners", argv)
+            exclusive_identity_flags = {
+                "--cert-identity", "--cert-identity-regex", "--signer-repo",
+                "--signer-workflow",
+            }
+            self.assertEqual([arg for arg in argv if arg in exclusive_identity_flags],
+                             ["--cert-identity"])
+            self.assertEqual(argv[argv.index("--cert-identity") + 1],
+                             self.policy["cert_identity"])
+            self.assertEqual(argv[argv.index("--cert-oidc-issuer") + 1],
+                             self.policy["oidc_issuer"])
             self.assertEqual(argv[argv.index("--source-digest") + 1], SOURCE_SHA)
             self.assertEqual(argv[argv.index("--signer-digest") + 1], WORKFLOW_SHA)
 

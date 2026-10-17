@@ -174,10 +174,15 @@ class PublisherVerificationAdapterTests(unittest.TestCase):
             self.assertIn("--deny-self-hosted-runners", command)
             self.assertIn("--custom-trusted-root", command)
             self.assertIn(str(self.gh_roots.resolve()), command)
+            exclusive_identity_flags = {
+                "--cert-identity", "--cert-identity-regex", "--signer-repo",
+                "--signer-workflow",
+            }
+            self.assertEqual([arg for arg in command if arg in exclusive_identity_flags],
+                             ["--cert-identity"])
             for option, value in (
                 ("--cert-identity", self.policy["cert_identity"]),
                 ("--cert-oidc-issuer", "https://token.actions.githubusercontent.com"),
-                ("--signer-workflow", "metaneutrons/ami-rust/.github/workflows/sdk-qualify.yml"),
                 ("--signer-digest", WORKFLOW_SHA),
                 ("--source-digest", SOURCE_SHA),
                 ("--source-ref", "refs/heads/main"),

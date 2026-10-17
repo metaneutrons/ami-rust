@@ -120,6 +120,18 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _gh_certificate_identity_args(policy: dict) -> list[str]:
+    """Return the single GH identity selector supported alongside digest pins.
+
+    GH CLI treats --cert-identity and --signer-workflow as mutually exclusive.
+    The certificate identity is the stronger exact selector here; workflow and
+    source commits remain independently pinned with --signer-digest and
+    --source-digest.
+    """
+    return ["--cert-identity", policy["cert_identity"],
+            "--cert-oidc-issuer", policy["oidc_issuer"]]
+
+
 def _sha_file(path: Path, limit: int, label: str) -> str:
     digest = hashlib.sha256()
     total = 0
@@ -683,13 +695,11 @@ def verify(bundle: Path, manifest: dict, policy: dict) -> dict:
                 command = [policy["gh"]["path"], "attestation", "verify", str(file_path),
                            "--repo", REPOSITORY, "--bundle", str(gh_bundle),
                            "--custom-trusted-root", policy["gh_trusted_roots"]["path"],
-                           "--signer-workflow", f"{REPOSITORY}/{WORKFLOW}",
                            "--signer-digest", policy["workflow_sha"],
                            "--source-digest", policy["source_sha"], "--source-ref", SOURCE_REF,
                            "--deny-self-hosted-runners",
                            "--predicate-type", PREDICATE_TYPE,
-                           "--cert-identity", policy["cert_identity"],
-                           "--cert-oidc-issuer", policy["oidc_issuer"], "--format=json"]
+                           *_gh_certificate_identity_args(policy), "--format=json"]
                 output = _run_command(command, deadline=deadline, env=env)
                 statement = _statement_result(output, "gh attestation verify JSON")
                 _check_predicate(statement, policy=policy, run=runs[host], host=host,
