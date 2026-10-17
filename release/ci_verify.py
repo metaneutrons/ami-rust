@@ -17,6 +17,7 @@ import os
 from pathlib import Path, PurePosixPath
 import platform
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -48,6 +49,9 @@ VARIANTS = {
     "qualification": ("ami-rust-qualification", ()),
     "dependencies": ("ami-rust-dependencies", ()),
 }
+RECIPE_VARIANT_ORDER = ("sha256sum", "minimal-noalloc", "minimal-alloc",
+                        "qualification", "dependencies")
+FAILURE_RECEIPT_RESERVE_BYTES = 16 * 1024
 RECIPE_PREFIX = '"$PYTHON" -I -B '
 BOOTSTRAP_COMMAND = 'python3 -I -B "$SOURCE/release/ci_python.py" --prefix "$PYTHON_BOOTSTRAP" --inputs "$SOURCE/release/ci-python-inputs.json"'
 PREPARATION_PREFIX = '"$PREP_PYTHON" -I -B "$SOURCE/release/ci_verify.py" '
@@ -60,7 +64,7 @@ EXPECTED_RECIPE = (
     '"$PYTHON" -I -B "$BUNDLE/install_publisher.py" install --bundle "$BUNDLE" --policy "$POLICY" --prefix "$WORK/sdk-0.1.0" --receipt-pin "$WORK/receipt.sha256"',
     '"$PYTHON" -I -B "$BUNDLE/install_publisher.py" lock --prefix "$WORK/sdk-0.1.0" --selection "$WORK/selection.json" --project "$WORK/sdk-0.1.0/sdk" --output "$WORK/utility.lock.json"',
     '"$PYTHON" -I -B "$WORK/sdk-0.1.0/sdk/host/cli.py" build --sdk-lock "$WORK/utility.lock.json" --output-dir "$WORK/utility-build" -- build --manifest-path "$WORK/sdk-0.1.0/sdk/Cargo.toml" --package ami-rust-sha256sum --release --locked --offline',
-    '"$PYTHON" -I -B "$WORK/sdk-0.1.0/sdk/host/cli.py" build --sdk-lock "$WORK/utility.lock.json" --output-dir "$WORK/minimal-noalloc-build" -- build --manifest-path "$WORK/sdk-0.1.0/sdk/Cargo.toml" --package ami-rust-minimal --release --locked --offline',
+    '"$PYTHON" -I -B "$WORK/sdk-0.1.0/sdk/host/cli.py" build --sdk-lock "$WORK/utility.lock.json" --output-dir "$WORK/minimal-noalloc-build" -- build --manifest-path "$WORK/sdk-0.1.0/sdk/Cargo.toml" --package ami-rust-minimal --release --locked --offline --no-default-features',
     '"$PYTHON" -I -B "$WORK/sdk-0.1.0/sdk/host/cli.py" build --sdk-lock "$WORK/utility.lock.json" --output-dir "$WORK/minimal-alloc-build" -- build --manifest-path "$WORK/sdk-0.1.0/sdk/Cargo.toml" --package ami-rust-minimal --release --locked --offline --features alloc',
     '"$PYTHON" -I -B "$WORK/sdk-0.1.0/sdk/host/cli.py" build --sdk-lock "$WORK/utility.lock.json" --output-dir "$WORK/qualification-build" -- build --manifest-path "$WORK/sdk-0.1.0/sdk/Cargo.toml" --package ami-rust-qualification --release --locked --offline',
     '"$PYTHON" -I -B "$WORK/sdk-0.1.0/sdk/host/cli.py" build --sdk-lock "$WORK/utility.lock.json" --output-dir "$WORK/dependencies-build" -- build --manifest-path "$WORK/sdk-0.1.0/sdk/Cargo.toml" --package ami-rust-dependencies --release --locked --offline',
@@ -967,6 +971,61 @@ def _run_recipe_line(supervisor, env: dict[str, str], cwd: Path, line: str, labe
     return record, stdout, stderr
 
 
+def _cargo_build_selection(line: str) -> tuple[str, tuple[str, ...]]:
+    """Return the selected package and feature switches from one signed build line."""
+    try:
+        tokens = shlex.split(line)
+        separator = tokens.index("--")
+        cargo = tokens[separator + 1:]
+    except (ValueError, TypeError) as error:
+        raise ValueError("signed Cargo build command has no Cargo argument boundary") from error
+    if not cargo or cargo[0] != "build":
+        raise ValueError("signed consumer Cargo command is not a build")
+    package_positions = [index for index, token in enumerate(cargo) if token == "--package"]
+    if len(package_positions) != 1 or package_positions[0] + 1 >= len(cargo):
+        raise ValueError("signed consumer Cargo build must select exactly one package")
+    package = cargo[package_positions[0] + 1]
+    feature_args = []
+    index = 0
+    while index < len(cargo):
+        token = cargo[index]
+        if token == "--no-default-features" or token == "--all-features":
+            feature_args.append(token)
+            index += 1
+        elif token == "--features":
+            if index + 1 >= len(cargo):
+                raise ValueError("signed consumer Cargo build has an empty --features value")
+            feature_args.extend((token, cargo[index + 1]))
+            index += 2
+        elif token.startswith("--features="):
+            value = token.partition("=")[2]
+            if not value:
+                raise ValueError("signed consumer Cargo build has an empty --features value")
+            feature_args.extend(("--features", value))
+            index += 1
+        else:
+            index += 1
+    return package, tuple(feature_args)
+
+
+def _validate_recipe_build_contract(commands: list[str] | tuple[str, ...]) -> None:
+    """Keep the signed five-build recipe aligned with the SDK producer contract."""
+    if VARIANTS != ci_sdk.VARIANTS:
+        raise ValueError("consumer variant declarations differ from the SDK producer")
+    if len(commands) != len(EXPECTED_RECIPE):
+        raise ValueError("consumer recipe has an unexpected command count")
+    observed = {
+        variant: _cargo_build_selection(commands[index + 3])
+        for index, variant in enumerate(RECIPE_VARIANT_ORDER)
+    }
+    expected = {variant: ci_sdk.VARIANTS[variant] for variant in RECIPE_VARIANT_ORDER}
+    if observed != expected:
+        mismatched = [variant for variant in RECIPE_VARIANT_ORDER
+                      if observed[variant] != expected[variant]]
+        raise ValueError("documented Cargo package/features differ from SDK producer variants: "
+                         + ", ".join(mismatched))
+
+
 def _recipe_commands(bundle: Path) -> tuple[list[str], str]:
     path = bundle / "QUICKSTART.md"
     raw = path.read_bytes()
@@ -977,6 +1036,7 @@ def _recipe_commands(bundle: Path) -> tuple[list[str], str]:
     commands = [line for block in blocks for line in block.splitlines() if line.startswith(RECIPE_PREFIX)]
     if tuple(commands) != EXPECTED_RECIPE:
         raise ValueError("signed QUICKSTART does not contain the exact reviewed 12-command recipe")
+    _validate_recipe_build_contract(commands)
     return commands, hashlib.sha256(raw).hexdigest()
 
 
@@ -1059,13 +1119,118 @@ def _parse_command_result(stdout: str, expected_status: str, label: str) -> dict
     return value
 
 
+def _native_canonical_map_diff(expected: dict, actual: dict) -> dict:
+    expected_names = set(expected)
+    actual_names = set(actual)
+    common = expected_names & actual_names
+    return {"missing_from_actual": sorted(expected_names - actual_names),
+            "unexpected_in_actual": sorted(actual_names - expected_names),
+            "changed_rows": sorted(name for name in common
+                                    if expected[name] != actual[name])}
+
+
+def _write_native_canonical_mismatch(output: Path, receipt_path: Path, receipt: dict,
+                                     expected: dict, actual: dict, host: str,
+                                     failure_binding: dict, supervisor) -> Path:
+    if output.is_symlink() or not output.is_dir():
+        raise ValueError("native mismatch diagnostic output is not a regular directory")
+    required_hashes = {"source_identity": 40, "sdk_manifest_sha256": 64,
+                       "candidate_release_manifest_sha256": 64}
+    for name, width in required_hashes.items():
+        if not re.fullmatch(r"[0-9a-f]{" + str(width) + r"}",
+                            str(failure_binding.get(name, ""))):
+            raise ValueError("native mismatch diagnostic has an invalid " + name)
+    variant = failure_binding.get("variant")
+    consumer_root = failure_binding.get("consumer_root")
+    recipe_index = failure_binding.get("recipe_index")
+    command = failure_binding.get("signed_command")
+    process = failure_binding.get("process")
+    if (host not in HOSTS or variant not in VARIANTS
+            or consumer_root not in {"absolute-a", "absolute-b"}
+            or type(recipe_index) is not int or recipe_index != RECIPE_VARIANT_ORDER.index(variant) + 3
+            or not isinstance(command, str) or not command.startswith(RECIPE_PREFIX)
+            or not isinstance(process, dict)):
+        raise ValueError("native mismatch diagnostic binding is incomplete or inconsistent")
+    try:
+        receipt_relative = receipt_path.resolve(strict=True).relative_to(
+            supervisor.work.resolve(strict=True)).as_posix()
+    except (OSError, ValueError) as error:
+        raise ValueError("native mismatch receipt is outside the managed consumer work root") from error
+    receipt_bytes = receipt_path.stat().st_size
+    if receipt_path.is_symlink() or receipt_bytes > 4 * 1024**2:
+        raise ValueError("native mismatch build receipt is unsafe or exceeds its read limit")
+
+    document = {
+        "schema": "ami-rust-native-canonical-mismatch-v1",
+        "status": "FAILED_NATIVE_CANONICAL_REFERENCE_MISMATCH",
+        "binding": {
+            "host": host,
+            "source_identity": failure_binding["source_identity"],
+            "sdk_manifest_sha256": failure_binding["sdk_manifest_sha256"],
+            "candidate_release_manifest_sha256":
+                failure_binding["candidate_release_manifest_sha256"],
+            "consumer_root": consumer_root,
+            "variant": variant,
+            "recipe_index": recipe_index,
+            "signed_command": command,
+            "signed_command_sha256": hashlib.sha256(command.encode("utf-8")).hexdigest(),
+            "executed_shell_argv": ["/bin/sh", "-c", "set -eu\n" + command],
+            "process": process,
+        },
+        "build_receipt": {"path_under_managed_work": receipt_relative,
+                          "bytes": receipt_bytes,
+                          "sha256": sha256(receipt_path),
+                          "receipt": receipt},
+        "expected_canonical_artifacts": expected,
+        "actual_canonical_artifacts": actual,
+        "canonical_map_sha256": {
+            "expected": hashlib.sha256(canonical_json(expected)).hexdigest(),
+            "actual": hashlib.sha256(canonical_json(actual)).hexdigest(),
+        },
+        "diff": _native_canonical_map_diff(expected, actual),
+        "claims": {"publisher_release_acceptance": False,
+                   "r1_accepted": False, "signed": False, "published": False},
+    }
+    raw = canonical_json(document)
+    diagnostic_path = output / "native-canonical-mismatch.json"
+    if diagnostic_path.exists() or diagnostic_path.is_symlink():
+        raise ValueError("native mismatch diagnostic output already exists")
+    current_output_bytes = ci_sdk.directory_bytes(output)
+    if (len(raw) + current_output_bytes + FAILURE_RECEIPT_RESERVE_BYTES
+            > MAX_OUTPUT_BYTES):
+        raise ValueError("native mismatch diagnostic exceeds the remaining 32 MiB output limit")
+    try:
+        with diagnostic_path.open("xb") as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        diagnostic_path.chmod(0o600)
+        if (ci_sdk.directory_bytes(output) + FAILURE_RECEIPT_RESERVE_BYTES
+                > MAX_OUTPUT_BYTES):
+            diagnostic_path.unlink()
+            raise ValueError("native mismatch diagnostic leaves no space for the bounded failure receipt")
+    except BaseException:
+        if diagnostic_path.exists() and not diagnostic_path.is_symlink():
+            diagnostic_path.unlink()
+        raise
+    return diagnostic_path
+
+
 def _build_receipt(path: Path, host: str, reference: dict | None, supervisor,
-                   label: str) -> dict:
+                   label: str, *, output: Path | None = None,
+                   failure_binding: dict | None = None) -> dict:
     receipt_path = path / "build-receipt.json"
     receipt = ci_sdk.read_json(receipt_path, 4 * 1024**2)
     if receipt.get("host") != host or not isinstance(receipt.get("canonical_artifacts"), dict):
         raise ValueError("consumer build receipt is malformed or from another host: " + label)
     if reference is not None:
+        actual = receipt["canonical_artifacts"]
+        if actual != reference:
+            if output is not None and failure_binding is not None:
+                _write_native_canonical_mismatch(
+                    output, receipt_path, receipt, reference, actual, host,
+                    failure_binding, supervisor)
+            raise ValueError("native canonical outputs differ from the accepted host reference: " + label)
         summary, artifact = ci_sdk._verify_native_receipt(path, reference, supervisor, label)
         return {**summary, "canonical_artifacts": reference,
                 "AMIRUST_path": str(artifact), "reference_match": True}
@@ -1153,12 +1318,13 @@ def _same_file_bytes(first: Path, second: Path) -> bool:
 def _run_recipe_builds(supervisor, python: Path, host: str, reference: dict,
                        consumers: list[Path], commands: list[str], output: Path, *,
                        sdk_manifest_sha256: str, source_sdk_identity: str,
+                       candidate_release_manifest_sha256: str,
                        receipt_pins: dict[str, str]) -> dict:
     if not re.fullmatch(r"[0-9a-f]{64}", sdk_manifest_sha256):
         raise ValueError("consumer SDK manifest identity is malformed")
     if not re.fullmatch(r"[0-9a-f]{40}", source_sdk_identity):
         raise ValueError("consumer source SDK identity is malformed")
-    names = ("sha256sum", "minimal-noalloc", "minimal-alloc", "qualification", "dependencies")
+    names = RECIPE_VARIANT_ORDER
     output_native = output / "native"
     output_native.mkdir(mode=0o700)
     retained_metadata = []
@@ -1186,8 +1352,19 @@ def _run_recipe_builds(supervisor, python: Path, host: str, reference: dict,
             variant = names[index - 3]
             build_path = consumer / build_name
             expected = reference["hosts"][host][variant]
+            failure_binding = {
+                "source_identity": source_sdk_identity,
+                "sdk_manifest_sha256": sdk_manifest_sha256,
+                "candidate_release_manifest_sha256": candidate_release_manifest_sha256,
+                "variant": variant,
+                "consumer_root": root_name,
+                "recipe_index": index,
+                "signed_command": line,
+                "process": record,
+            }
             verified = _build_receipt(build_path, host, expected, supervisor,
-                                      root_name + "/" + variant)
+                                      root_name + "/" + variant, output=output,
+                                      failure_binding=failure_binding)
             if (verified.get("canonical_artifacts") != expected
                     or verified.get("reference_match") is not True
                     or not re.fullmatch(r"[0-9a-f]{64}", str(verified.get("receipt_sha256", "")))):
@@ -1374,6 +1551,7 @@ def _install_and_run_recipe(bundle: Path, work: Path, output: Path, python: Path
     build_records = _run_recipe_builds(supervisor, python, host, reference, consumers,
                                        commands, output, sdk_manifest_sha256=sdk["manifest_sha256"],
                                        source_sdk_identity=sdk["manifest"].get("source_identity"),
+                                       candidate_release_manifest_sha256=sha256(bundle / "release.json"),
                                        receipt_pins=receipt_pins)
     for consumer, name, env in zip(consumers, ("absolute-a", "absolute-b"), envs, strict=True):
         # _run_recipe_builds has already run indices 3-10; retain their command and
@@ -1674,8 +1852,22 @@ def _write_failure(output: Path, error: BaseException, stage: str) -> dict | Non
              "claims": {"publisher_release_acceptance": False, "r1_accepted": False,
                         "signed": False, "published": False},
              "preserved_work": True}
+    raw = canonical_json(value)
     try:
-        path.write_bytes(canonical_json(value))
+        current_output_bytes = ci_sdk.directory_bytes(output)
+    except (OSError, RuntimeError) as accounting_error:
+        print("consumer failure receipt not written: output size could not be safely checked: "
+              + str(accounting_error)[:500], file=sys.stderr)
+        return None
+    if current_output_bytes + len(raw) > MAX_OUTPUT_BYTES:
+        print("consumer failure receipt not written: it would exceed the 32 MiB output limit",
+              file=sys.stderr)
+        return None
+    try:
+        with path.open("xb") as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
         path.chmod(0o600)
         return value
     except OSError:

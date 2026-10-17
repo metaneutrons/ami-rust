@@ -379,9 +379,9 @@
       "sha256": "86821efabe15c8efc2b1602b47ea030bd67a6b847dc1a4773835e81ad97e7b89"
     },
     {
-      "bytes": 759,
+      "bytes": 764,
       "path": "tests/compile-fail/Cargo.toml",
-      "sha256": "d6282e3ea85d542265b639ad9ea17b60778d9f80aaa955ddc810f79f5e99511c"
+      "sha256": "44be7868d5ddabe67b21a872737f5e10515442a4266af84b6514d2c018902a6a"
     },
     {
       "bytes": 454,

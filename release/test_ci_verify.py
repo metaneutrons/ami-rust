@@ -162,7 +162,8 @@ class HostedConsumerVerifyTests(unittest.TestCase):
                         archive_path.write_bytes(archive_raw)
             return {"exit_code": 0}, json.dumps(result), ""
 
-        def receipt(path, host, expected, supervisor, label):
+        def receipt(path, host, expected, supervisor, label, *, output=None,
+                    failure_binding=None):
             artifact = path / "artifacts/AMIRUST"
             raw = artifact.read_bytes()
             canonical = expected or {"AMIRUST": {"bytes": len(raw), "sha256": sha(raw)}}
@@ -713,6 +714,183 @@ class HostedConsumerVerifyTests(unittest.TestCase):
         (bundle / "QUICKSTART.md").write_text(text.replace("--offline", "--locked", 1))
         with self.assertRaisesRegex(ValueError, "exact reviewed 12-command"):
             ci_verify._recipe_commands(bundle)
+
+    def test_shipped_quickstarts_match_all_producer_package_and_feature_selections(self):
+        docs = ci_verify.ROOT / "docs/quickstart.md"
+        signed_asset = ci_verify.ROOT / "release/bundle-assets/QUICKSTART.md"
+        docs_raw = docs.read_bytes()
+        self.assertEqual(docs_raw, signed_asset.read_bytes())
+        for name, raw in (("docs", docs_raw), ("signed-asset", signed_asset.read_bytes())):
+            bundle = self.root / name
+            bundle.mkdir()
+            (bundle / "QUICKSTART.md").write_bytes(raw)
+            commands, digest = ci_verify._recipe_commands(bundle)
+            self.assertEqual(tuple(commands), ci_verify.EXPECTED_RECIPE)
+            self.assertEqual(digest, sha(raw))
+            ci_verify._validate_recipe_build_contract(commands)
+
+    def test_recipe_feature_contract_rejects_noalloc_default_feature_drift(self):
+        commands = list(ci_verify.EXPECTED_RECIPE)
+        commands[4] = commands[4].replace(" --no-default-features", "")
+        with self.assertRaisesRegex(ValueError, "minimal-noalloc"):
+            ci_verify._validate_recipe_build_contract(commands)
+
+    def test_recipe_feature_contract_rejects_package_and_alloc_feature_drift(self):
+        package_changed = list(ci_verify.EXPECTED_RECIPE)
+        package_changed[6] = package_changed[6].replace(
+            "--package ami-rust-qualification", "--package ami-rust-dependencies")
+        with self.assertRaisesRegex(ValueError, "qualification"):
+            ci_verify._validate_recipe_build_contract(package_changed)
+
+        alloc_changed = list(ci_verify.EXPECTED_RECIPE)
+        alloc_changed[5] = alloc_changed[5].replace("--features alloc", "--features other")
+        with self.assertRaisesRegex(ValueError, "minimal-alloc"):
+            ci_verify._validate_recipe_build_contract(alloc_changed)
+
+    def test_native_reference_mismatch_retains_bound_receipt_maps_and_diff(self):
+        host = "linux-x86_64"
+        build = self.work / "consumers/absolute-a/minimal-noalloc-build"
+        build.mkdir(parents=True)
+        output = self.root / "failure-output"
+        output.mkdir()
+        expected = {
+            "AMIRUST": {"bytes": 10, "sha256": "a" * 64},
+            "target/release/deps/libexpected-1.rlib": {"bytes": 20, "sha256": "b" * 64},
+        }
+        actual = {
+            "AMIRUST": {"bytes": 11, "sha256": "c" * 64},
+            "target/release/deps/libactual-2.rlib": {"bytes": 21, "sha256": "d" * 64},
+        }
+        receipt_path = build / "build-receipt.json"
+        write_json(receipt_path, {"status": "PASS", "host": host,
+                                  "sdk_manifest_sha256": "e" * 64,
+                                  "forwarded_cargo_arguments": ["--no-default-features"],
+                                  "canonical_artifacts": actual, "commands": []})
+        supervisor = SimpleNamespace(work=self.work, check_limits=lambda _label: None)
+        process = {"label": "consumer-absolute-a-minimal-noalloc-build",
+                   "exit_code": 0, "stop_reason": None, "stdout_log": "logs/build.out"}
+        binding = {
+            "source_identity": "1" * 40,
+            "sdk_manifest_sha256": "e" * 64,
+            "candidate_release_manifest_sha256": "f" * 64,
+            "variant": "minimal-noalloc", "consumer_root": "absolute-a",
+            "recipe_index": 4, "signed_command": ci_verify.EXPECTED_RECIPE[4],
+            "process": process,
+        }
+        with self.assertRaisesRegex(ValueError, "native canonical outputs differ"):
+            ci_verify._build_receipt(build, host, expected, supervisor,
+                                     "absolute-a/minimal-noalloc", output=output,
+                                     failure_binding=binding)
+
+        diagnostic_path = output / "native-canonical-mismatch.json"
+        diagnostic = json.loads(diagnostic_path.read_text())
+        self.assertEqual(diagnostic["status"], "FAILED_NATIVE_CANONICAL_REFERENCE_MISMATCH")
+        self.assertEqual(diagnostic["binding"]["host"], host)
+        self.assertEqual(diagnostic["binding"]["source_identity"], "1" * 40)
+        self.assertEqual(diagnostic["binding"]["sdk_manifest_sha256"], "e" * 64)
+        self.assertEqual(diagnostic["binding"]["variant"], "minimal-noalloc")
+        self.assertEqual(diagnostic["binding"]["signed_command"], ci_verify.EXPECTED_RECIPE[4])
+        self.assertEqual(diagnostic["binding"]["process"], process)
+        self.assertEqual(diagnostic["build_receipt"]["sha256"], sha(receipt_path.read_bytes()))
+        self.assertEqual(diagnostic["build_receipt"]["receipt"]["canonical_artifacts"], actual)
+        self.assertEqual(diagnostic["expected_canonical_artifacts"], expected)
+        self.assertEqual(diagnostic["actual_canonical_artifacts"], actual)
+        self.assertEqual(diagnostic["diff"], {
+            "missing_from_actual": ["target/release/deps/libexpected-1.rlib"],
+            "unexpected_in_actual": ["target/release/deps/libactual-2.rlib"],
+            "changed_rows": ["AMIRUST"],
+        })
+        self.assertFalse(diagnostic["claims"]["r1_accepted"])
+        self.assertLessEqual(ci_verify.ci_sdk.directory_bytes(output)
+                             + ci_verify.FAILURE_RECEIPT_RESERVE_BYTES,
+                             ci_verify.MAX_OUTPUT_BYTES)
+        self.assertEqual(stat.S_IMODE(diagnostic_path.stat().st_mode), 0o600)
+
+    def test_native_mismatch_diagnostic_refuses_existing_link_and_output_overflow(self):
+        output = self.root / "bounded-output"
+        output.mkdir()
+        external = self.root / "external-diagnostic-target"
+        external.write_bytes(b"keep this file")
+        diagnostic_path = output / "native-canonical-mismatch.json"
+        diagnostic_path.symlink_to(external)
+        receipt_path = self.work / "build-receipt.json"
+        write_json(receipt_path, {"status": "PASS", "host": "linux-x86_64"})
+        supervisor = SimpleNamespace(work=self.work)
+        binding = {
+            "source_identity": "1" * 40, "sdk_manifest_sha256": "e" * 64,
+            "candidate_release_manifest_sha256": "f" * 64,
+            "variant": "minimal-noalloc", "consumer_root": "absolute-a",
+            "recipe_index": 4, "signed_command": ci_verify.EXPECTED_RECIPE[4],
+            "process": {"label": "fixture"},
+        }
+        with self.assertRaisesRegex(ValueError, "already exists"):
+            ci_verify._write_native_canonical_mismatch(
+                output, receipt_path, {"status": "PASS"}, {"AMIRUST": {}}, {},
+                "linux-x86_64", binding, supervisor)
+        self.assertEqual(external.read_bytes(), b"keep this file")
+        diagnostic_path.unlink()
+
+        with mock.patch.object(ci_verify, "MAX_OUTPUT_BYTES", 2048), \
+                mock.patch.object(ci_verify, "FAILURE_RECEIPT_RESERVE_BYTES", 128):
+            with self.assertRaisesRegex(ValueError, "remaining 32 MiB output limit"):
+                ci_verify._write_native_canonical_mismatch(
+                    output, receipt_path, {"status": "PASS"},
+                    {"x" * 4096: {"bytes": 1, "sha256": "a" * 64}}, {},
+                    "linux-x86_64", binding, supervisor)
+        self.assertFalse(diagnostic_path.exists())
+
+    def test_failure_receipt_fits_exact_remaining_output_budget(self):
+        output = self.root / "failure-receipt-output"
+        output.mkdir()
+        prior = output / "retained-evidence.bin"
+        prior.write_bytes(b"preserve this evidence")
+        error = ValueError("synthetic consumer failure")
+        expected = {
+            "schema": ci_verify.RESULT_SCHEMA, "status": "FAILED",
+            "failed_stage": "fixture-stage", "error_type": "ValueError",
+            "error": "synthetic consumer failure",
+            "claims": {"publisher_release_acceptance": False, "r1_accepted": False,
+                       "signed": False, "published": False},
+            "preserved_work": True,
+        }
+        raw = ci_verify.canonical_json(expected)
+        with mock.patch.object(ci_verify, "MAX_OUTPUT_BYTES",
+                               len(prior.read_bytes()) + len(raw)):
+            result = ci_verify._write_failure(output, error, "fixture-stage")
+        receipt = output / "consumer-qualification.json"
+        self.assertEqual(result, expected)
+        self.assertEqual(receipt.read_bytes(), raw)
+        self.assertEqual(prior.read_bytes(), b"preserve this evidence")
+        self.assertEqual(ci_verify.ci_sdk.directory_bytes(output),
+                         len(prior.read_bytes()) + len(raw))
+        self.assertEqual(stat.S_IMODE(receipt.stat().st_mode), 0o600)
+
+    def test_failure_receipt_refuses_one_byte_output_overflow_without_deleting_evidence(self):
+        output = self.root / "failure-receipt-overflow"
+        output.mkdir()
+        prior = output / "retained-evidence.bin"
+        prior_bytes = b"preserve this evidence"
+        prior.write_bytes(prior_bytes)
+        error = ValueError("synthetic consumer failure")
+        expected = {
+            "schema": ci_verify.RESULT_SCHEMA, "status": "FAILED",
+            "failed_stage": "fixture-stage", "error_type": "ValueError",
+            "error": "synthetic consumer failure",
+            "claims": {"publisher_release_acceptance": False, "r1_accepted": False,
+                       "signed": False, "published": False},
+            "preserved_work": True,
+        }
+        raw = ci_verify.canonical_json(expected)
+        stderr = io.StringIO()
+        with mock.patch.object(ci_verify, "MAX_OUTPUT_BYTES",
+                               len(prior_bytes) + len(raw) - 1), \
+                mock.patch("sys.stderr", stderr):
+            result = ci_verify._write_failure(output, error, "fixture-stage")
+        self.assertIsNone(result)
+        self.assertIn("would exceed the 32 MiB output limit", stderr.getvalue())
+        self.assertEqual(prior.read_bytes(), prior_bytes)
+        self.assertFalse((output / "consumer-qualification.json").exists())
+        self.assertEqual(ci_verify.ci_sdk.directory_bytes(output), len(prior_bytes))
 
     def test_positive_verifier_report_binds_exact_protected_consumer_assets(self):
         wanted = {"install.py", "install_publisher.py", "verify_publisher.py",
