@@ -2,7 +2,6 @@
 
 ## 0.1.0 (2026-10-17)
 
-
 ### Features
 
 * add experimental AROS x86-64 Rust SDK sources ([5478079](https://github.com/metaneutrons/ami-rust/commit/5478079da0a8c3074940cdc2a6f22f9442747863))
@@ -11,7 +10,6 @@
 * collect unaccepted native reference proposals ([#17](https://github.com/metaneutrons/ami-rust/issues/17)) ([42459cc](https://github.com/metaneutrons/ami-rust/commit/42459cc60d95ef4d22701dcaf51d7ec69f64f0a8))
 * stage exact SDK release assets with draft readback ([#20](https://github.com/metaneutrons/ami-rust/issues/20)) ([75a8e40](https://github.com/metaneutrons/ami-rust/commit/75a8e407d5e03a27368566a5fd7f0abec4e3b68a))
 * verify public SDK retrieval and consumer replay ([#14](https://github.com/metaneutrons/ami-rust/issues/14)) ([7136125](https://github.com/metaneutrons/ami-rust/commit/7136125a335f5c4934b874b87d464698911c7602))
-
 
 ### Bug Fixes
 
@@ -39,4 +37,5 @@
 * use one exact GitHub attestation identity selector ([#47](https://github.com/metaneutrons/ami-rust/issues/47)) ([6736a4e](https://github.com/metaneutrons/ami-rust/commit/6736a4e265e71e1b4d327f93b36b207c9e589db5))
 * validate current Cargo producer pins before SDK work ([#13](https://github.com/metaneutrons/ami-rust/issues/13)) ([20e56eb](https://github.com/metaneutrons/ami-rust/commit/20e56ebe052b4dbb2c71c7cd9a7afe020f2448d2))
 * validate GitHub provenance before SDK builds ([#45](https://github.com/metaneutrons/ami-rust/issues/45)) ([493db1d](https://github.com/metaneutrons/ami-rust/commit/493db1df86a29bbd4fb0f11da13429a7e5887096))
+* validate outer transport tool and root limits ([#53](https://github.com/metaneutrons/ami-rust/issues/53)) ([ef25a38](https://github.com/metaneutrons/ami-rust/commit/ef25a38919764e456854bdfce080f9c702413901))
 * verify static release inputs before SDK production ([#10](https://github.com/metaneutrons/ami-rust/issues/10)) ([0dbdc25](https://github.com/metaneutrons/ami-rust/commit/0dbdc2549cf1d3e166f0523e642c0b401b3f4a9f))
