@@ -7,6 +7,8 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 import tempfile
 import unittest
 
@@ -242,6 +244,40 @@ class CompileContractProbeTests(unittest.TestCase):
         return probes.qualify_compile_contract(
             supervisor=self.supervisor, python=self.python_path, bundle=self.bundle,
             consumer=self.consumer, host=self.host, sdk=self.sdk, components=self.components)
+
+    def test_standalone_compile_fail_manifest_has_explicit_license_and_loads_in_cargo(self):
+        cargo = shutil.which("cargo")
+        if cargo is None:
+            self.skipTest("Cargo is required to check the real standalone fixture manifest")
+        source_root = Path(__file__).resolve().parents[1]
+        manifest = source_root / "tests/compile-fail/Cargo.toml"
+        self.assertIn('license = "MIT OR Apache-2.0"', manifest.read_text())
+        fixture_raw = manifest.read_bytes()
+        sdk_contract = json.loads((source_root / "contract/sdk.json").read_text())
+        fixture_rows = [row for row in sdk_contract["files"]
+                        if row.get("path") == "tests/compile-fail/Cargo.toml"]
+        self.assertEqual(len(fixture_rows), 1)
+        self.assertEqual(fixture_rows[0]["bytes"], len(fixture_raw))
+        self.assertEqual(fixture_rows[0]["sha256"], sha(fixture_raw))
+        outer = json.loads((source_root / "release/bundle-files.json").read_text())
+        self.assertEqual(len(outer["files"]), 102)
+        quickstart_rows = [row for row in outer["files"] if row.get("path") == "QUICKSTART.md"]
+        quickstart = (source_root / "release/bundle-assets/QUICKSTART.md").read_bytes()
+        self.assertEqual(len(quickstart_rows), 1)
+        self.assertEqual(quickstart_rows[0]["bytes"], len(quickstart))
+        self.assertEqual(quickstart_rows[0]["sha256"], sha(quickstart))
+        self.assertEqual(quickstart, (source_root / "docs/quickstart.md").read_bytes())
+        env = dict(os.environ)
+        env.update({"CARGO_NET_OFFLINE": "true", "CARGO_TERM_COLOR": "never"})
+        result = subprocess.run(
+            [cargo, "metadata", "--no-deps", "--format-version", "1", "--locked",
+             "--manifest-path", str(manifest)], cwd=source_root, env=env,
+            text=True, capture_output=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        metadata = json.loads(result.stdout)
+        package = next(item for item in metadata["packages"]
+                       if item["name"] == "m1-compile-fail-fixtures")
+        self.assertEqual(package["license"], "MIT OR Apache-2.0")
 
     def test_valid_eight_case_pass_binds_flags_and_restores_environment(self):
         environment = self.supervisor.env
