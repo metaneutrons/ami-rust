@@ -423,10 +423,12 @@ class PublisherAssemblyTests(unittest.TestCase):
             statement = {"predicateType": verifier.PREDICATE_TYPE,
                          "subject": [{"name": "release.json", "digest": {"sha256": "c" * 64}}],
                          "predicate": predicate}
+            self.assertEqual(set(predicate["buildDefinition"]["internalParameters"]), {"publisherPolicy"})
+            self.assertEqual(set(predicate["runDetails"]["metadata"]), {"invocationId"})
             verifier._check_predicate(statement, policy=policy, run=self.identity, host=host,
                                       subject_paths=["release.json"],
                                       manifest={"release.json": (1, "c" * 64)}, input_materials=[])
-            statement["predicate"]["runDetails"]["metadata"]["publisherPolicy"]["sourceSha"] = "d" * 40
+            statement["predicate"]["buildDefinition"]["internalParameters"]["publisherPolicy"]["sourceSha"] = "d" * 40
             with self.assertRaises(verifier.PublisherVerificationError):
                 verifier._check_predicate(statement, policy=policy, run=self.identity, host=host,
                                           subject_paths=["release.json"],

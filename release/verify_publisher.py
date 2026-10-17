@@ -589,15 +589,18 @@ def _check_predicate(statement, *, policy, run, host, subject_paths, manifest,
     if (not isinstance(dependencies, list) or len(dependencies) != len(expected_deps)
             or set(map(_canonical, dependencies)) != set(map(_canonical, expected_deps))):
         _fail("SLSA resolved dependencies do not match the pinned repository source and input manifest")
+    internal = definition.get("internalParameters")
+    if not isinstance(internal, dict) or set(internal) != {"publisherPolicy"}:
+        _fail("SLSA internalParameters must contain only publisherPolicy")
     if not isinstance(run_details, dict):
         _fail("invalid SLSA runDetails")
     metadata = run_details.get("metadata")
-    if not isinstance(metadata, dict):
-        _fail("SLSA run metadata is missing")
+    if not isinstance(metadata, dict) or set(metadata) != {"invocationId"}:
+        _fail("SLSA run metadata must contain only the standard invocationId field")
     invocation = f"https://github.com/{REPOSITORY}/actions/runs/{run['run_id']}/attempts/{run['run_attempt']}"
     if metadata.get("invocationId") != invocation:
         _fail("SLSA invocationId does not match authentication metadata")
-    publisher = metadata.get("publisherPolicy")
+    publisher = internal["publisherPolicy"]
     expected_publisher = {
         "environment": "release", "runnerEnvironment": "github-hosted",
         "repository": REPOSITORY, "workflow": WORKFLOW,

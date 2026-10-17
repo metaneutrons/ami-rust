@@ -123,22 +123,22 @@ class PublicCandidateTests(unittest.TestCase):
                      "digest": {"gitCommit": source}},
                     *materials,
                 ],
+                "internalParameters": {"publisherPolicy": {
+                    "environment": "release",
+                    "runnerEnvironment": "github-hosted",
+                    "repository": verifier.REPOSITORY,
+                    "workflow": verifier.WORKFLOW,
+                    "workflowSha": workflow,
+                    "sourceSha": source,
+                    "sourceRef": verifier.SOURCE_REF,
+                    "inputsManifestSha256": self.policy["inputs_manifest_sha256"],
+                    "hostProfile": host,
+                }},
             },
             "runDetails": {
                 "builder": {"id": f"https://github.com/{verifier.REPOSITORY}/{verifier.WORKFLOW}@{verifier.SOURCE_REF}"},
                 "metadata": {
                     "invocationId": f"https://github.com/{verifier.REPOSITORY}/actions/runs/{selected_run}/attempts/{selected_attempt}",
-                    "publisherPolicy": {
-                        "environment": "release",
-                        "runnerEnvironment": "github-hosted",
-                        "repository": verifier.REPOSITORY,
-                        "workflow": verifier.WORKFLOW,
-                        "workflowSha": workflow,
-                        "sourceSha": source,
-                        "sourceRef": verifier.SOURCE_REF,
-                        "inputsManifestSha256": self.policy["inputs_manifest_sha256"],
-                        "hostProfile": host,
-                    },
                 },
             },
         }
@@ -457,11 +457,11 @@ class PublicCandidateTests(unittest.TestCase):
     def test_wrong_source_material_host_and_combined_subject_proofs_are_ignored(self):
         payload = self.names["payload"]
         cases = {
-            "source": lambda predicate: predicate["runDetails"]["metadata"]["publisherPolicy"].update(
+            "source": lambda predicate: predicate["buildDefinition"]["internalParameters"]["publisherPolicy"].update(
                 {"sourceSha": "4" * 40}),
             "material": lambda predicate: predicate["buildDefinition"]["resolvedDependencies"].append(
                 {"uri": "https://example.invalid/other.tar.xz", "digest": {"sha256": "f" * 64}}),
-            "host": lambda predicate: predicate["runDetails"]["metadata"]["publisherPolicy"].update(
+            "host": lambda predicate: predicate["buildDefinition"]["internalParameters"]["publisherPolicy"].update(
                 {"hostProfile": "macos-aarch64"}),
             "combined": lambda predicate: predicate["runDetails"].update({"untrustedExtra": True}),
         }

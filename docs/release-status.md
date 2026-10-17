@@ -11,6 +11,19 @@ applies to regular, non-injected SDK-owner diagnostics. Declared positive
 controls intentionally allocate nine times per full/large phase; their 36
 allocations are reported separately.
 
+The normal 0.1.0 SDK campaign from source `570ff730` failed in
+[run 38981262735](https://github.com/metaneutrons/ami-rust/actions/runs/38981262735).
+Both host producers and the common unsigned assembly succeeded; the five native
+payloads and source SDK archive matched between hosts. Both authentication jobs
+then failed at GitHub's first attestation ingestion because `publisherPolicy`
+was placed in the standard SLSA run-metadata object. Consumers and complete
+transport authentication were skipped. The source correction places the same
+signed policy in `buildDefinition.internalParameters` and retains every exact
+policy check. Local tests and the upstream protobuf parser do not establish
+successful provider ingestion: fresh protected authentication and all remaining
+consumer, native and release gates are still required. This failed campaign is
+retained and does not qualify R1.
+
 The current-source protected two-host proposal passed in
 [run 38964667415](https://github.com/metaneutrons/ami-rust/actions/runs/38964667415)
 from source `1d0fe4f`: five ELF outputs matched byte-for-byte, and the 104

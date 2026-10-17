@@ -91,18 +91,18 @@ class OuterCandidateAuthAdapterTests(unittest.TestCase):
                 "resolvedDependencies": [
                     {"uri": f"git+https://github.com/{verifier.REPOSITORY}@{verifier.SOURCE_REF}",
                      "digest": {"gitCommit": SOURCE_SHA}}, *self.materials],
+                "internalParameters": {"publisherPolicy": {
+                    "environment": "release", "runnerEnvironment": "github-hosted",
+                    "repository": verifier.REPOSITORY, "workflow": verifier.WORKFLOW,
+                    "workflowSha": WORKFLOW_SHA, "sourceSha": SOURCE_SHA,
+                    "sourceRef": verifier.SOURCE_REF,
+                    "inputsManifestSha256": INPUTS_SHA, "hostProfile": HOST,
+                }},
             },
             "runDetails": {
                 "builder": {"id": f"https://github.com/{verifier.REPOSITORY}/{verifier.WORKFLOW}@{verifier.SOURCE_REF}"},
                 "metadata": {
                     "invocationId": f"https://github.com/{verifier.REPOSITORY}/actions/runs/{RUN_ID}/attempts/{RUN_ATTEMPT}",
-                    "publisherPolicy": {
-                        "environment": "release", "runnerEnvironment": "github-hosted",
-                        "repository": verifier.REPOSITORY, "workflow": verifier.WORKFLOW,
-                        "workflowSha": WORKFLOW_SHA, "sourceSha": SOURCE_SHA,
-                        "sourceRef": verifier.SOURCE_REF, "inputsManifestSha256": INPUTS_SHA,
-                        "hostProfile": HOST,
-                    },
                 },
             },
         }
@@ -242,7 +242,7 @@ class OuterCandidateAuthAdapterTests(unittest.TestCase):
 
     def test_wrong_signed_source_claim_is_rejected_after_command_success(self):
         wrong = json.loads(json.dumps(self.expected_predicate))
-        wrong["runDetails"]["metadata"]["publisherPolicy"]["sourceSha"] = "4" * 40
+        wrong["buildDefinition"]["internalParameters"]["publisherPolicy"]["sourceSha"] = "4" * 40
         subject = sorted(self.subjects)[0]
         self._write_statement(subject, predicate=wrong)
         with self.assertRaisesRegex(verifier.PublisherVerificationError, "publisherPolicy"):
