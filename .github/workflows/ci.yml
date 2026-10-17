@@ -61,6 +61,7 @@ jobs:
           python3 -I -B release/test_ci_python.py
           python3 -I -B release/test_ci_artifact_admission.py
           python3 -I -B release/test_ci_sdk.py
+          python3 -I -B release/test_sdk_storage_accounting.py
           python3 -I -B release/test_sdk_workflow.py
           python3 -I -B release/test_ci_csdk.py
           python3 -I -B release/test_csdk_recipes.py

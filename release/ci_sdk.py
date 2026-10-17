@@ -195,18 +195,67 @@ def _is_digest(value) -> bool:
     return isinstance(value, str) and DIGEST.fullmatch(value) is not None
 
 
+def directory_accounting(root: Path) -> tuple[int, int]:
+    """Return regular-file bytes and regular ``*.log`` bytes in one no-follow walk."""
+    if not hasattr(os, "O_DIRECTORY") or not hasattr(os, "O_NOFOLLOW"):
+        raise RuntimeError("safe directory accounting requires O_DIRECTORY and O_NOFOLLOW")
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+    try:
+        root_fd = os.open(root, flags)
+    except FileNotFoundError:
+        return 0, 0
+
+    try:
+        root_entries = os.scandir(root_fd)
+    except BaseException:
+        os.close(root_fd)
+        raise
+
+    total = logs = 0
+    stack = [(root_fd, root_entries)]
+    try:
+        while stack:
+            directory_fd, entries = stack[-1]
+            try:
+                entry = next(entries)
+            except StopIteration:
+                stack.pop()
+                try:
+                    entries.close()
+                finally:
+                    os.close(directory_fd)
+                continue
+            try:
+                info = entry.stat(follow_symlinks=False)
+            except FileNotFoundError:
+                continue
+            if stat.S_ISREG(info.st_mode):
+                total += info.st_size
+                if entry.name.endswith(".log"):
+                    logs += info.st_size
+            elif stat.S_ISDIR(info.st_mode):
+                try:
+                    child_fd = os.open(entry.name, flags, dir_fd=directory_fd)
+                except FileNotFoundError:
+                    continue
+                try:
+                    child_entries = os.scandir(child_fd)
+                except BaseException:
+                    os.close(child_fd)
+                    raise
+                stack.append((child_fd, child_entries))
+    finally:
+        while stack:
+            directory_fd, entries = stack.pop()
+            try:
+                entries.close()
+            finally:
+                os.close(directory_fd)
+    return total, logs
+
+
 def directory_bytes(root: Path) -> int:
-    total = 0
-    if not root.exists():
-        return 0
-    for path in root.rglob("*"):
-        try:
-            info = path.lstat()
-        except FileNotFoundError:
-            continue
-        if stat.S_ISREG(info.st_mode):
-            total += info.st_size
-    return total
+    return directory_accounting(root)[0]
 
 
 def physical_memory_bytes(host: str) -> int:
@@ -581,22 +630,20 @@ class Supervisor:
         self._seen_groups: set[int] = set()
 
     def managed_bytes(self) -> int:
-        return (self.checkout_bytes + directory_bytes(self.work) + directory_bytes(self.output)
-                + directory_bytes(self.python_root))
+        return self.accounting_sample()[0]
 
     def logs_bytes(self) -> int:
-        total = 0
+        return self.accounting_sample()[1]
+
+    def accounting_sample(self) -> tuple[int, int]:
+        """Sample managed and log bytes together without changing root overlap semantics."""
+        workspace = self.checkout_bytes
+        logs = 0
         for root in (self.work, self.output, self.python_root):
-            if not root.exists():
-                continue
-            for path in root.rglob("*.log"):
-                try:
-                    info = path.lstat()
-                except FileNotFoundError:
-                    continue
-                if stat.S_ISREG(info.st_mode):
-                    total += info.st_size
-        return total
+            root_bytes, root_logs = directory_accounting(root)
+            workspace += root_bytes
+            logs += root_logs
+        return workspace, logs
 
     def _sample_scope(self, pid: int, rows: list[tuple[int, int, int, int]]) -> list[tuple[int, int, int, int]]:
         """Remember visible descendants and groups, including reparented members."""
@@ -701,7 +748,8 @@ class Supervisor:
             raise RuntimeError("process observer failed while stopping the managed group tree") from observer_error
 
     def run(self, command: list[str], *, cwd: Path, label: str, timeout: int = MAX_COMMAND_SECONDS) -> dict:
-        if self.managed_bytes() > self.limits["workspace_bytes"]:
+        workspace, _ = self.accounting_sample()
+        if workspace > self.limits["workspace_bytes"]:
             raise RuntimeError("managed workspace ceiling exceeded before " + label)
         log_dir = self.work / "logs"
         log_dir.mkdir(exist_ok=True)
@@ -729,8 +777,7 @@ class Supervisor:
                     now = time.monotonic()
                     if now - start > min(timeout, self.limits["seconds"]):
                         reason = "time ceiling"
-                    workspace = self.managed_bytes()
-                    logs = self.logs_bytes()
+                    workspace, logs = self.accounting_sample()
                     peak_workspace, peak_logs = max(peak_workspace, workspace), max(peak_logs, logs)
                     if rss > self.limits["rss_bytes"]:
                         reason = "aggregate descendant RSS ceiling"
@@ -759,8 +806,9 @@ class Supervisor:
                 except BaseException as error:
                     self._kill_tree(child, self.rows_reader)
                     reason = reason or ("process-tree cleanup failure: " + type(error).__name__)
-        peak_workspace = max(peak_workspace, self.managed_bytes())
-        peak_logs = max(peak_logs, self.logs_bytes())
+        workspace, logs = self.accounting_sample()
+        peak_workspace = max(peak_workspace, workspace)
+        peak_logs = max(peak_logs, logs)
         peak_rss = max(peak_rss, 0)
         elapsed = time.monotonic() - start
         record = {"label": label, "exit_code": child.returncode, "stop_reason": reason,
@@ -789,7 +837,7 @@ class Supervisor:
         return (self.work / row["stdout_log"]).read_text(errors="replace")
 
     def check_limits(self, label: str) -> None:
-        workspace, logs = self.managed_bytes(), self.logs_bytes()
+        workspace, logs = self.accounting_sample()
         self.peak_workspace, self.peak_logs = max(self.peak_workspace, workspace), max(self.peak_logs, logs)
         if workspace > self.limits["workspace_bytes"]:
             raise RuntimeError("managed workspace ceiling exceeded during " + label)
