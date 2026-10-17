@@ -91,7 +91,8 @@ class OuterCandidateAuthAdapterTests(unittest.TestCase):
                 "resolvedDependencies": [
                     {"uri": f"git+https://github.com/{verifier.REPOSITORY}@{verifier.SOURCE_REF}",
                      "digest": {"gitCommit": SOURCE_SHA}}, *self.materials],
-                "internalParameters": {"publisherPolicy": {
+                "internalParameters": {"github": dict(verifier.GITHUB_BUILD_PARAMETERS),
+                    "publisherPolicy": {
                     "environment": "release", "runnerEnvironment": "github-hosted",
                     "repository": verifier.REPOSITORY, "workflow": verifier.WORKFLOW,
                     "workflowSha": WORKFLOW_SHA, "sourceSha": SOURCE_SHA,

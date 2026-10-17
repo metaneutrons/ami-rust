@@ -123,7 +123,8 @@ class PublicCandidateTests(unittest.TestCase):
                      "digest": {"gitCommit": source}},
                     *materials,
                 ],
-                "internalParameters": {"publisherPolicy": {
+                "internalParameters": {"github": dict(verifier.GITHUB_BUILD_PARAMETERS),
+                    "publisherPolicy": {
                     "environment": "release",
                     "runnerEnvironment": "github-hosted",
                     "repository": verifier.REPOSITORY,

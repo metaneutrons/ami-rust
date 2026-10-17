@@ -148,7 +148,8 @@ class PublisherVerificationAdapterTests(unittest.TestCase):
                          "digest": {"gitCommit": SOURCE_SHA}},
                         *self.input_materials,
                     ],
-                    "internalParameters": {"publisherPolicy": {
+                    "internalParameters": {"github": dict(verifier.GITHUB_BUILD_PARAMETERS),
+                        "publisherPolicy": {
                         "environment": "release", "runnerEnvironment": "github-hosted",
                         "repository": "metaneutrons/ami-rust",
                         "workflow": ".github/workflows/sdk-qualify.yml",
@@ -217,7 +218,7 @@ class PublisherVerificationAdapterTests(unittest.TestCase):
         self.assertEqual(sum(call[1:3] == ["attestation", "verify"] for call in calls), 3)
         self.assertEqual(sum(call[1] == "verify-blob" for call in calls), 3)
 
-    def test_requires_publisher_policy_in_internal_parameters_and_standard_run_metadata(self):
+    def test_requires_exact_github_and_publisher_parameters_and_standard_run_metadata(self):
         statement = json.loads(self._gh_output(["gh", "attestation", "verify", "sdk.tar.xz"]))[0][
             "verificationResult"]["statement"]
         checks = []
@@ -234,6 +235,27 @@ class PublisherVerificationAdapterTests(unittest.TestCase):
         extra_internal = copy.deepcopy(statement)
         extra_internal["predicate"]["buildDefinition"]["internalParameters"]["extra"] = True
         checks.append((extra_internal, "internalParameters"))
+
+        missing_github = copy.deepcopy(statement)
+        del missing_github["predicate"]["buildDefinition"]["internalParameters"]["github"]
+        checks.append((missing_github, "internalParameters"))
+
+        github_extra = copy.deepcopy(statement)
+        github_extra["predicate"]["buildDefinition"]["internalParameters"]["github"]["unexpected"] = "x"
+        checks.append((github_extra, "GitHub build parameters"))
+
+        for field, expected in verifier.GITHUB_BUILD_PARAMETERS.items():
+            missing_field = copy.deepcopy(statement)
+            del missing_field["predicate"]["buildDefinition"]["internalParameters"]["github"][field]
+            checks.append((missing_field, "GitHub build parameters"))
+
+            altered_field = copy.deepcopy(statement)
+            altered_field["predicate"]["buildDefinition"]["internalParameters"]["github"][field] = expected + "-changed"
+            checks.append((altered_field, "GitHub build parameters"))
+
+            wrong_type = copy.deepcopy(statement)
+            wrong_type["predicate"]["buildDefinition"]["internalParameters"]["github"][field] = 1
+            checks.append((wrong_type, "GitHub build parameters"))
 
         extra_metadata = copy.deepcopy(statement)
         extra_metadata["predicate"]["runDetails"]["metadata"]["publisherPolicy"] = {}

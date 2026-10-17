@@ -11,7 +11,28 @@ applies to regular, non-injected SDK-owner diagnostics. Declared positive
 controls intentionally allocate nine times per full/large phase; their 36
 allocations are reported separately.
 
-The latest normal SDK attempt from source `182f7eae` failed in
+The latest normal SDK attempt from source `659a7994` failed in
+[run 38998542871](https://github.com/metaneutrons/ami-rust/actions/runs/38998542871).
+Both host producers and common unsigned assembly succeeded. Strict producer
+readbacks passed on both hosts; all five native programs and the source SDK
+archive matched byte-for-byte. The macOS C-SDK command completed in 583.936
+seconds under the unchanged 1,200-second limit, resolving the preceding
+bootstrap blocker. These producer ZIPs contain no raw metadata archives and
+cannot establish the final four-consumer comparison.
+
+Both authentication jobs then failed at the first real GitHub attestation:
+`buildDefinition.internalParameters.github not found`. The pinned action's
+custom-predicate path does not supply its normal GitHub context automatically.
+The correction supplies the four validated GitHub claims alongside the
+unchanged publisher policy and requires both objects during verification. A
+normal-mode provider-ingestion fixture now precedes expensive SDK production;
+it is explicitly a non-SDK subject and does not qualify distribution. Source
+fixtures cannot establish that GitHub accepts the correction. The complete
+fresh authentication, consumer, native and independent acceptance gates remain
+open. This failed clock and every raw producer/unsigned assembly artifact are
+retained; no final native campaign or SDK publication started.
+
+The preceding normal SDK attempt from source `182f7eae` failed in
 [run 38992120851](https://github.com/metaneutrons/ami-rust/actions/runs/38992120851).
 Linux completed production and its source-bound artifact readback passed.
 macOS stopped during C-SDK derivation after 1,206.794 seconds at the unchanged
@@ -25,7 +46,8 @@ failures and their clocks are retained.
 log accounting into one complete inventory per root and sample. It preserves
 all resource limits, process monitoring and C-SDK proof commands. The exact
 merged source passed [two-host source CI 38995796330](https://github.com/metaneutrons/ami-rust/actions/runs/38995796330).
-Local inventory measurements do not establish hosted C-SDK completion. Fresh
+The latest normal attempt above establishes hosted C-SDK completion for its
+identified inputs; the local inventory benchmark alone did not. Fresh
 versioned SDK production, authentication, four consumer builds, final native
 qualification and independent R1-A1 through R1-A7 acceptance remain required.
 

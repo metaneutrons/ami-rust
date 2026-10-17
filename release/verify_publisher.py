@@ -34,6 +34,12 @@ SOURCE_REF = "refs/heads/main"
 OIDC_ISSUER = "https://token.actions.githubusercontent.com"
 PREDICATE_TYPE = "https://slsa.dev/provenance/v1"
 BUILD_TYPE = "https://actions.github.io/buildtypes/workflow/v1"
+GITHUB_BUILD_PARAMETERS = {
+    "event_name": "workflow_dispatch",
+    "repository_id": "1421182484",
+    "repository_owner_id": "436979",
+    "runner_environment": "github-hosted",
+}
 HOSTS = {"macos-aarch64", "linux-x86_64"}
 DIRECT_SUBJECTS = {"release.json", "sdk.tar.xz", "SHAUTIL"}
 INPUTS_MANIFEST = ".auth/inputs.json"
@@ -590,8 +596,13 @@ def _check_predicate(statement, *, policy, run, host, subject_paths, manifest,
             or set(map(_canonical, dependencies)) != set(map(_canonical, expected_deps))):
         _fail("SLSA resolved dependencies do not match the pinned repository source and input manifest")
     internal = definition.get("internalParameters")
-    if not isinstance(internal, dict) or set(internal) != {"publisherPolicy"}:
-        _fail("SLSA internalParameters must contain only publisherPolicy")
+    if not isinstance(internal, dict) or set(internal) != {"github", "publisherPolicy"}:
+        _fail("SLSA internalParameters must contain exactly github and publisherPolicy")
+    github = internal["github"]
+    if (not isinstance(github, dict) or set(github) != set(GITHUB_BUILD_PARAMETERS)
+            or any(type(value) is not str for value in github.values())
+            or github != GITHUB_BUILD_PARAMETERS):
+        _fail("SLSA GitHub build parameters do not match the protected workflow identity")
     if not isinstance(run_details, dict):
         _fail("invalid SLSA runDetails")
     metadata = run_details.get("metadata")

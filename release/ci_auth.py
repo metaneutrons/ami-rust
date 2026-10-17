@@ -7,6 +7,7 @@ workflow signs its outputs; the independent consumer verifies real bundles.
 from __future__ import annotations
 
 import argparse
+import base64
 import copy
 import hashlib
 import importlib.util
@@ -36,6 +37,16 @@ PORTABLE_CSDK_CANDIDATE_ARCHIVE_NAME = "csdk-component.tar.xz"
 PORTABLE_CSDK_COUNTS = {"changed_files": 532, "public_headers": 530, "regular_files": 2835}
 SDK_PRODUCER_RECEIPT_SCHEMA = "ami-rust-hosted-sdk-producer-v1"
 SDK_PRODUCER_RECEIPT_STATUS = "PRODUCED_HOSTED_SDK_CANDIDATE_NOT_R1_ACCEPTED"
+GITHUB_INTERNAL_PARAMETERS = {
+    "event_name": "workflow_dispatch",
+    "repository_id": "1421182484",
+    "repository_owner_id": "436979",
+    "runner_environment": "github-hosted",
+}
+PREFLIGHT_SUBJECT = b"ami-rust GitHub provenance ingestion preflight; not an SDK candidate\n"
+IN_TOTO_STATEMENT_V1 = "https://in-toto.io/Statement/v1"
+IN_TOTO_JSON = "application/vnd.in-toto+json"
+SLSA_PREDICATE_TYPE = "https://slsa.dev/provenance/v1"
 
 
 def sha(raw):
@@ -101,7 +112,10 @@ def below(root, name):
 def context(source):
     expected = {"GITHUB_ACTIONS": "true", "GITHUB_REPOSITORY": REPO,
                 "GITHUB_REF": "refs/heads/main", "SOURCE_IS_PROTECTED": "true",
-                "PUBLISHER_ENVIRONMENT": "release", "RUNNER_ENVIRONMENT": "github-hosted"}
+                "PUBLISHER_ENVIRONMENT": "release", "RUNNER_ENVIRONMENT": "github-hosted",
+                "GITHUB_EVENT_NAME": GITHUB_INTERNAL_PARAMETERS["event_name"],
+                "GITHUB_REPOSITORY_ID": GITHUB_INTERNAL_PARAMETERS["repository_id"],
+                "GITHUB_REPOSITORY_OWNER_ID": GITHUB_INTERNAL_PARAMETERS["repository_owner_id"]}
     if any(os.environ.get(k) != v for k, v in expected.items()):
         raise ValueError("publisher requires the designated protected hosted release workflow")
     head = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
@@ -114,6 +128,18 @@ def context(source):
     if run <= 0 or attempt <= 0:
         raise ValueError("invalid publisher run identity")
     return {"source_sha": head, "workflow_sha": head, "run_id": run, "run_attempt": attempt}
+
+
+def github_internal_parameters():
+    actual = {
+        "event_name": os.environ.get("GITHUB_EVENT_NAME"),
+        "repository_id": os.environ.get("GITHUB_REPOSITORY_ID"),
+        "repository_owner_id": os.environ.get("GITHUB_REPOSITORY_OWNER_ID"),
+        "runner_environment": os.environ.get("RUNNER_ENVIRONMENT"),
+    }
+    if actual != GITHUB_INTERNAL_PARAMETERS:
+        raise ValueError("GitHub provenance parameters differ from the protected repository workflow")
+    return actual
 
 
 def _portable_pin(pin, label, path_key="path"):
@@ -552,14 +578,7 @@ def assemble(source, payloads, output):
     return _assemble(source, payloads, output, check_sdk_producer_receipts=True)
 
 
-def predicate(bundle, host):
-    if host not in HOSTS:
-        raise ValueError("invalid predicate host profile")
-    bundle = Path(bundle)
-    release = parsed(read(bundle / "release.json"))
-    producer = release["producer"]
-    inputs_raw = read(bundle / ".auth/inputs.json")
-    materials = parsed(inputs_raw)["materials"]
+def _predicate_for(producer, inputs_raw, materials, host):
     publisher_policy = {
         "environment": "release", "runnerEnvironment": "github-hosted",
         "repository": REPO, "workflow": WORKFLOW, "workflowSha": producer["workflow_sha"],
@@ -569,11 +588,139 @@ def predicate(bundle, host):
     return {"buildDefinition": {"buildType": "https://actions.github.io/buildtypes/workflow/v1",
                 "externalParameters": {"workflow": {"repository": f"https://github.com/{REPO}",
                                                      "path": WORKFLOW, "ref": "refs/heads/main"}},
-                "internalParameters": {"publisherPolicy": publisher_policy},
+                "internalParameters": {"github": dict(GITHUB_INTERNAL_PARAMETERS),
+                                        "publisherPolicy": publisher_policy},
                 "resolvedDependencies": [{"uri": f"git+https://github.com/{REPO}@refs/heads/main",
                                           "digest": {"gitCommit": producer["source_sha"]}}, *materials]},
             "runDetails": {"builder": {"id": f"https://github.com/{REPO}/{WORKFLOW}@refs/heads/main"},
                 "metadata": {"invocationId": f"https://github.com/{REPO}/actions/runs/{producer['run_id']}/attempts/{producer['run_attempt']}"}}}
+
+
+def predicate(bundle, host, source=None):
+    if host not in HOSTS:
+        raise ValueError("invalid predicate host profile")
+    bundle = Path(bundle)
+    release = parsed(read(bundle / "release.json"))
+    producer = release["producer"]
+    if source is not None:
+        identity = context(source)
+        if any(producer.get(key) != value for key, value in identity.items()):
+            raise ValueError("authentication predicate source/run differs from protected workflow context")
+    inputs_raw = read(bundle / ".auth/inputs.json")
+    materials = parsed(inputs_raw)["materials"]
+    return _predicate_for(producer, inputs_raw, materials, host)
+
+
+def _fresh_external_file(path, source, raw):
+    path = Path(path)
+    if not path.is_absolute() or path.exists() or path.is_symlink() or not path.parent.is_dir():
+        raise ValueError("preflight output must be a fresh absolute file")
+    resolved = path.resolve(strict=False)
+    source = Path(source).resolve(strict=True)
+    if resolved == source or source in resolved.parents:
+        raise ValueError("preflight output must be outside the source checkout")
+    with path.open("xb") as stream:
+        stream.write(raw)
+
+
+def preflight(source, subject_path, predicate_path):
+    """Create a tiny, explicitly non-SDK subject for real action ingestion."""
+    source = Path(source).resolve(strict=True)
+    identity = context(source)
+    github_internal_parameters()
+    subject_path = Path(subject_path)
+    predicate_path = Path(predicate_path)
+    if subject_path.resolve(strict=False) == predicate_path.resolve(strict=False):
+        raise ValueError("preflight subject and predicate paths must differ")
+    input_raw = encoded({"schema": "ami-rust-publisher-inputs-v1", "materials": []})
+    probe = _predicate_for(identity, input_raw, [], "admission-ingestion-probe")
+    predicate_raw = encoded(probe)
+    _fresh_external_file(subject_path, source, PREFLIGHT_SUBJECT)
+    try:
+        _fresh_external_file(predicate_path, source, predicate_raw)
+    except Exception:
+        subject_path.unlink(missing_ok=True)
+        raise
+    result = {"status": "PREFLIGHT_READY_NOT_SDK_AUTHENTICATION",
+              "subject_sha256": sha(PREFLIGHT_SUBJECT),
+              "predicate_sha256": sha(predicate_raw),
+              "source_sha": identity["source_sha"], "workflow_sha": identity["workflow_sha"],
+              "run_id": identity["run_id"], "run_attempt": identity["run_attempt"]}
+    output = os.environ.get("GITHUB_OUTPUT")
+    if output:
+        with Path(output).open("a", encoding="utf-8") as stream:
+            stream.write(f"subject_sha256={result['subject_sha256']}\n")
+            stream.write(f"predicate_sha256={result['predicate_sha256']}\n")
+    return result
+
+
+def _preflight_statement(bundle_raw):
+    try:
+        bundle = parsed(bundle_raw)
+    except (UnicodeError, ValueError) as error:
+        raise ValueError("actions/attest output bundle is invalid JSON") from error
+    envelope = bundle.get("dsseEnvelope") if isinstance(bundle, dict) else None
+    if not isinstance(envelope, dict) or envelope.get("payloadType") != IN_TOTO_JSON:
+        raise ValueError("actions/attest bundle has no in-toto DSSE envelope")
+    signatures = envelope.get("signatures")
+    if not isinstance(signatures, list) or not signatures or any(not isinstance(row, dict) for row in signatures):
+        raise ValueError("actions/attest bundle has no structurally valid DSSE signature rows")
+    encoded_payload = envelope.get("payload")
+    if not isinstance(encoded_payload, str) or len(encoded_payload) > 96 * 1024:
+        raise ValueError("actions/attest bundle has a missing or oversized DSSE payload")
+    try:
+        payload = base64.b64decode(encoded_payload, validate=True)
+    except (ValueError, base64.binascii.Error) as error:
+        raise ValueError("actions/attest bundle DSSE payload is not valid base64") from error
+    if len(payload) > 64 * 1024:
+        raise ValueError("actions/attest bundle DSSE statement exceeds its size limit")
+    try:
+        statement = parsed(payload)
+    except (UnicodeError, ValueError) as error:
+        raise ValueError("actions/attest DSSE statement JSON is invalid") from error
+    if not isinstance(statement, dict):
+        raise ValueError("actions/attest bundle DSSE payload is not an in-toto statement")
+    return statement
+
+
+def verify_preflight(source, subject_path, predicate_path, bundle_path, attestation_id, attestation_url,
+                     expected_subject_sha256, expected_predicate_sha256):
+    identity = context(source)
+    subject_raw = read(subject_path, 4096)
+    predicate_raw = read(predicate_path, 256 * 1024)
+    bundle_raw = read(bundle_path, 128 * 1024)
+    if subject_raw != PREFLIGHT_SUBJECT or sha(subject_raw) != expected_subject_sha256:
+        raise ValueError("admission provenance subject differs from the generated non-SDK fixture")
+    expected_predicate = encoded(_predicate_for(
+        identity, encoded({"schema": "ami-rust-publisher-inputs-v1", "materials": []}),
+        [], "admission-ingestion-probe"))
+    if (sha(predicate_raw) != expected_predicate_sha256
+            or predicate_raw != expected_predicate):
+        raise ValueError("admission provenance predicate differs from its generated digest")
+    statement = _preflight_statement(bundle_raw)
+    expected_statement = {
+        "_type": IN_TOTO_STATEMENT_V1,
+        "subject": [{"name": "ami-rust-github-provenance-probe.txt",
+                     "digest": {"sha256": expected_subject_sha256}}],
+        "predicateType": SLSA_PREDICATE_TYPE,
+        "predicate": parsed(expected_predicate),
+    }
+    if statement != expected_statement:
+        raise ValueError("actions/attest DSSE statement differs from the exact admission probe subject, predicate, or run")
+    if (not isinstance(attestation_id, str) or not re.fullmatch(r"[1-9][0-9]{0,19}", attestation_id)
+            or attestation_url != f"https://github.com/{REPO}/attestations/{attestation_id}"):
+        raise ValueError("actions/attest did not return a valid persisted attestation identity")
+    github = github_internal_parameters()
+    bundle_base64 = base64.b64encode(bundle_raw).decode("ascii")
+    return {"status": "PREFLIGHT_ATTESTATION_INGESTED_NOT_SDK_AUTHENTICATION",
+            "repository": REPO, "github": github,
+            "subject_sha256": sha(subject_raw), "predicate_sha256": sha(predicate_raw),
+            "bundle_sha256": sha(bundle_raw), "bundle_bytes": len(bundle_raw),
+            "bundle_base64_chunks": [bundle_base64[i:i + 4096]
+                                     for i in range(0, len(bundle_base64), 4096)],
+            "attestation_id": attestation_id, "attestation_url": attestation_url,
+            "source_sha": identity["source_sha"], "workflow_sha": identity["workflow_sha"],
+            "run_id": identity["run_id"], "run_attempt": identity["run_attempt"]}
 
 
 def audit(source, bundle, work):
@@ -685,11 +832,25 @@ def main():
     pred = subs.add_parser("predicate")
     pred.add_argument("--bundle", type=Path, required=True)
     pred.add_argument("--host", choices=HOSTS, required=True)
+    pred.add_argument("--source", type=Path, required=True)
     pred.add_argument("--output", type=Path, required=True)
     inspect = subs.add_parser("audit")
     inspect.add_argument("--source", type=Path, required=True)
     inspect.add_argument("--bundle", type=Path, required=True)
     inspect.add_argument("--work", type=Path, required=True)
+    probe = subs.add_parser("preflight")
+    probe.add_argument("--source", type=Path, required=True)
+    probe.add_argument("--subject", type=Path, required=True)
+    probe.add_argument("--predicate", type=Path, required=True)
+    verify_probe = subs.add_parser("verify-preflight")
+    verify_probe.add_argument("--source", type=Path, required=True)
+    verify_probe.add_argument("--subject", type=Path, required=True)
+    verify_probe.add_argument("--predicate", type=Path, required=True)
+    verify_probe.add_argument("--bundle", type=Path, required=True)
+    verify_probe.add_argument("--attestation-id", required=True)
+    verify_probe.add_argument("--attestation-url", required=True)
+    verify_probe.add_argument("--expected-subject-sha256", required=True)
+    verify_probe.add_argument("--expected-predicate-sha256", required=True)
     final = subs.add_parser("finalize")
     final.add_argument("--bundle", type=Path, required=True)
     final.add_argument("--host", choices=HOSTS, required=True)
@@ -699,7 +860,7 @@ def main():
     if args.command == "prepare":
         result = assemble(args.source, {"macos-aarch64": args.macos, "linux-x86_64": args.linux}, args.output)
     elif args.command == "predicate":
-        value = predicate(args.bundle, args.host)
+        value = predicate(args.bundle, args.host, args.source)
         with args.output.open("xb") as stream:
             stream.write(encoded(value))
         result = {"predicate_sha256": sha(encoded(value))}
@@ -709,6 +870,12 @@ def main():
             with Path(os.environ["GITHUB_OUTPUT"]).open("a") as stream:
                 for name, key in (("release.json", "manifest"), ("sdk.tar.xz", "sdk"), ("SHAUTIL", "utility")):
                     stream.write(f"{key}={result['subjects'][name]}\n")
+    elif args.command == "preflight":
+        result = preflight(args.source, args.subject, args.predicate)
+    elif args.command == "verify-preflight":
+        result = verify_preflight(args.source, args.subject, args.predicate, args.bundle,
+                                  args.attestation_id, args.attestation_url,
+                                  args.expected_subject_sha256, args.expected_predicate_sha256)
     else:
         result = finalize(args.bundle, args.host, mapping(args.gh), mapping(args.cosign))
     print(json.dumps(result, indent=2, sort_keys=True))
