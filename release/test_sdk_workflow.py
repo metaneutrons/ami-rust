@@ -155,6 +155,47 @@ class WorkflowProposalTests(unittest.TestCase):
 
 
 class WorkflowAdmissionTests(unittest.TestCase):
+    @staticmethod
+    def assert_admission_probe_contract(source):
+        admission = source.split("\n  admission:\n", 1)[1].split("\n  producer:\n", 1)[0]
+        producer = source.split("\n  producer:\n", 1)[1].split("\n  release-candidate:\n", 1)[0]
+        required = (
+            "    permissions:\n      contents: read\n      actions: read\n      id-token: write\n      attestations: write",
+            "release/ci_artifact_admission.py --sdk-candidate",
+            "release/ci_auth.py preflight",
+            "release/ci_auth.py verify-preflight",
+            "uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2",
+            "subject-name: ami-rust-github-provenance-probe.txt",
+            "predicate-type: https://slsa.dev/provenance/v1",
+            "outputs.bundle-path",
+            "outputs.attestation-id",
+            "outputs.attestation-url",
+            "outputs.subject_sha256",
+            "outputs.predicate_sha256",
+            "needs: admission",
+        )
+        for item in required:
+            if item == "needs: admission":
+                if item not in producer:
+                    raise AssertionError("producer jobs must depend on admission")
+            elif item not in admission:
+                raise AssertionError("admission provenance gate is missing " + item)
+        probe_steps = admission.split("\n      - name: ")
+        names = [step.split("\n", 1)[0] for step in probe_steps]
+        for name in ("Prepare non-SDK provenance ingestion probe",
+                     "Ingest non-SDK provenance probe before producer jobs",
+                     "Require persisted admission provenance proof"):
+            matching = [step for step in probe_steps if step.startswith(name + "\n")]
+            if len(matching) != 1 or "if: ${{ !inputs.reference_proposal }}" not in matching[0]:
+                raise AssertionError("probe step must be normal-run-only: " + name)
+        if not (admission.index("release/ci_artifact_admission.py --sdk-candidate")
+                < admission.index("release/ci_auth.py preflight")
+                < admission.index("uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6")
+                < admission.index("release/ci_auth.py verify-preflight")):
+            raise AssertionError("probe must follow retention admission and verify provider persistence")
+        if "actions/upload-artifact" in admission:
+            raise AssertionError("admission probe must not add an Actions artifact upload")
+
     def test_reserves_complete_dag_once_before_both_producers(self):
         admission = SOURCE.split("\n  admission:\n", 1)[1].split("\n  producer:\n", 1)[0]
         producer = SOURCE.split("\n  producer:\n", 1)[1].split("\n  release-candidate:\n", 1)[0]
@@ -166,6 +207,18 @@ class WorkflowAdmissionTests(unittest.TestCase):
         self.assertIn("needs: admission", producer)
         self.assertIn("needs.admission.result == 'success'", producer)
         self.assertNotIn("steps.admission", producer)
+
+    def test_normal_runs_require_real_non_sdk_attestation_before_producers(self):
+        self.assert_admission_probe_contract(SOURCE)
+
+    def test_admission_counterprobes_reject_missing_or_bypassed_persistence_gate(self):
+        missing_verify = SOURCE.replace("release/ci_auth.py verify-preflight", "removed verify invocation")
+        with self.assertRaisesRegex(AssertionError, "verify-preflight"):
+            self.assert_admission_probe_contract(missing_verify)
+        bypass = SOURCE.replace("if: ${{ !inputs.reference_proposal }}\n        uses: actions/attest@",
+                                "if: ${{ always() }}\n        uses: actions/attest@", 1)
+        with self.assertRaisesRegex(AssertionError, "normal-run-only"):
+            self.assert_admission_probe_contract(bypass)
 
     def test_bootstrap_uses_siblings_and_preserves_receipt_for_outer_verifier(self):
         bootstrap = OUTER.split("name: Bootstrap pinned verifier tools and roots", 1)[1].split(

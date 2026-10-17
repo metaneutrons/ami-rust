@@ -22,6 +22,11 @@ jobs:
     runs-on: ubuntu-24.04
     environment: release
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
     steps:
       - name: Require protected main and the designated repository
         shell: bash
@@ -46,6 +51,50 @@ jobs:
             proposal_args+=(--reference-proposal)
           fi
           python3 -I -B release/ci_artifact_admission.py --sdk-candidate "${proposal_args[@]}"
+      - name: Prepare non-SDK provenance ingestion probe
+        id: provenance-probe
+        if: ${{ !inputs.reference_proposal }}
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+          PUBLISHER_ENVIRONMENT: release
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        shell: bash
+        run: |
+          python3 -I -B release/ci_auth.py preflight \
+            --source "$GITHUB_WORKSPACE" \
+            --subject "$RUNNER_TEMP/ami-rust-github-provenance-probe.txt" \
+            --predicate "$RUNNER_TEMP/ami-rust-github-provenance-probe.json"
+      - name: Ingest non-SDK provenance probe before producer jobs
+        id: attest-provenance-probe
+        if: ${{ !inputs.reference_proposal }}
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ami-rust-github-provenance-probe.txt
+          subject-digest: sha256:${{ steps.provenance-probe.outputs.subject_sha256 }}
+          predicate-type: https://slsa.dev/provenance/v1
+          predicate-path: ${{ runner.temp }}/ami-rust-github-provenance-probe.json
+      - name: Require persisted admission provenance proof
+        if: ${{ !inputs.reference_proposal }}
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+          PUBLISHER_ENVIRONMENT: release
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+          BUNDLE_PATH: ${{ steps.attest-provenance-probe.outputs.bundle-path }}
+          ATTESTATION_ID: ${{ steps.attest-provenance-probe.outputs.attestation-id }}
+          ATTESTATION_URL: ${{ steps.attest-provenance-probe.outputs.attestation-url }}
+          EXPECTED_SUBJECT_SHA256: ${{ steps.provenance-probe.outputs.subject_sha256 }}
+          EXPECTED_PREDICATE_SHA256: ${{ steps.provenance-probe.outputs.predicate_sha256 }}
+        shell: bash
+        run: |
+          python3 -I -B release/ci_auth.py verify-preflight \
+            --source "$GITHUB_WORKSPACE" \
+            --subject "$RUNNER_TEMP/ami-rust-github-provenance-probe.txt" \
+            --predicate "$RUNNER_TEMP/ami-rust-github-provenance-probe.json" \
+            --bundle "$BUNDLE_PATH" \
+            --attestation-id "$ATTESTATION_ID" \
+            --attestation-url "$ATTESTATION_URL" \
+            --expected-subject-sha256 "$EXPECTED_SUBJECT_SHA256" \
+            --expected-predicate-sha256 "$EXPECTED_PREDICATE_SHA256"
 
   producer:
     needs: admission
@@ -799,6 +848,7 @@ jobs:
             --work "$RUNNER_TEMP/ami-rust-signer-audit"
           "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_auth.py predicate \
             --bundle "$RUNNER_TEMP/ami-rust-auth-candidate" --host '${{ matrix.profile }}' \
+            --source "$GITHUB_WORKSPACE" \
             --output "$RUNNER_TEMP/ami-rust-predicate.json"
       - name: Attest release manifest
         id: attest-manifest

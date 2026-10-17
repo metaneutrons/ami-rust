@@ -1,4 +1,5 @@
 """Publisher assembly fixtures; synthetic bundles are never crypto evidence."""
+import base64
 import copy
 import importlib.util
 import io
@@ -418,12 +419,21 @@ class PublisherAssemblyTests(unittest.TestCase):
         self.assemble()
         policy = {**{k: self.identity[k] for k in ("source_sha", "workflow_sha")},
                   "inputs_manifest_sha256": auth.sha(auth.encoded(self.inputs))}
+        github_env = {"GITHUB_EVENT_NAME": "workflow_dispatch",
+                      "GITHUB_REPOSITORY_ID": "1421182484",
+                      "GITHUB_REPOSITORY_OWNER_ID": "436979",
+                      "RUNNER_ENVIRONMENT": "github-hosted"}
         for host in auth.HOSTS:
-            predicate = auth.predicate(self.output, host)
+            with patch.dict(os.environ, github_env, clear=False), \
+                    patch.object(auth, "context", return_value=self.identity):
+                predicate = auth.predicate(self.output, host, self.source)
             statement = {"predicateType": verifier.PREDICATE_TYPE,
                          "subject": [{"name": "release.json", "digest": {"sha256": "c" * 64}}],
                          "predicate": predicate}
-            self.assertEqual(set(predicate["buildDefinition"]["internalParameters"]), {"publisherPolicy"})
+            self.assertEqual(set(predicate["buildDefinition"]["internalParameters"]),
+                             {"github", "publisherPolicy"})
+            self.assertEqual(predicate["buildDefinition"]["internalParameters"]["github"],
+                             auth.GITHUB_INTERNAL_PARAMETERS)
             self.assertEqual(set(predicate["runDetails"]["metadata"]), {"invocationId"})
             verifier._check_predicate(statement, policy=policy, run=self.identity, host=host,
                                       subject_paths=["release.json"],
@@ -451,6 +461,123 @@ class PublisherAssemblyTests(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True), self.assertRaises(ValueError):
             auth.context(self.source)
 
+    def test_context_binds_workflow_dispatch_and_immutable_repository_ids(self):
+        env = {"GITHUB_ACTIONS": "true", "GITHUB_REPOSITORY": auth.REPO,
+               "GITHUB_REF": "refs/heads/main", "SOURCE_IS_PROTECTED": "true",
+               "PUBLISHER_ENVIRONMENT": "release", "RUNNER_ENVIRONMENT": "github-hosted",
+               "GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_REPOSITORY_ID": "1421182484",
+               "GITHUB_REPOSITORY_OWNER_ID": "436979", "GITHUB_SHA": "a" * 40,
+               "GITHUB_WORKFLOW_SHA": "a" * 40,
+               "GITHUB_WORKFLOW_REF": f"{auth.REPO}/{auth.WORKFLOW}@refs/heads/main",
+               "GITHUB_RUN_ID": "123", "GITHUB_RUN_ATTEMPT": "1"}
+        with patch.dict(os.environ, env, clear=True), \
+                patch.object(subprocess, "check_output", return_value="a" * 40 + "\n"):
+            self.assertEqual(auth.context(self.source), {"source_sha": "a" * 40,
+                             "workflow_sha": "a" * 40, "run_id": 123, "run_attempt": 1})
+        for name, wrong in (("GITHUB_EVENT_NAME", "push"),
+                            ("GITHUB_REPOSITORY_ID", "1"),
+                            ("GITHUB_REPOSITORY_OWNER_ID", "2")):
+            with self.subTest(field=name), patch.dict(os.environ, {**env, name: wrong}, clear=True), \
+                    patch.object(subprocess, "check_output", return_value="a" * 40 + "\n"), \
+                    self.assertRaisesRegex(ValueError, "designated protected hosted"):
+                auth.context(self.source)
+
+    def test_non_sdk_preflight_binds_source_run_and_retains_provider_proof(self):
+        subject = self.root / "probe.txt"
+        predicate_path = self.root / "probe.json"
+        output = self.root / "github-output"
+        output.touch()
+        bundle = self.root / "bundle.json"
+        env = {"GITHUB_ACTIONS": "true", "GITHUB_REPOSITORY": auth.REPO,
+               "GITHUB_REF": "refs/heads/main", "SOURCE_IS_PROTECTED": "true",
+               "PUBLISHER_ENVIRONMENT": "release", "RUNNER_ENVIRONMENT": "github-hosted",
+               "GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_REPOSITORY_ID": "1421182484",
+               "GITHUB_REPOSITORY_OWNER_ID": "436979", "GITHUB_SHA": "a" * 40,
+               "GITHUB_WORKFLOW_SHA": "a" * 40,
+               "GITHUB_WORKFLOW_REF": f"{auth.REPO}/{auth.WORKFLOW}@refs/heads/main",
+               "GITHUB_RUN_ID": "123", "GITHUB_RUN_ATTEMPT": "1",
+               "GITHUB_OUTPUT": str(output)}
+        with patch.dict(os.environ, env, clear=True), \
+                patch.object(subprocess, "check_output", return_value="a" * 40 + "\n"):
+            prepared = auth.preflight(self.source, subject, predicate_path)
+            predicate = auth.parsed(predicate_path.read_bytes())
+            self.assertEqual(predicate["buildDefinition"]["internalParameters"]["github"],
+                             auth.GITHUB_INTERNAL_PARAMETERS)
+            self.assertIn("not an SDK candidate", subject.read_text())
+            recorded = output.read_text()
+            self.assertIn("subject_sha256=" + prepared["subject_sha256"], recorded)
+            self.assertIn("predicate_sha256=" + prepared["predicate_sha256"], recorded)
+
+            statement = {
+                "_type": auth.IN_TOTO_STATEMENT_V1,
+                "subject": [{"name": "ami-rust-github-provenance-probe.txt",
+                             "digest": {"sha256": prepared["subject_sha256"]}}],
+                "predicateType": auth.SLSA_PREDICATE_TYPE,
+                "predicate": predicate,
+            }
+
+            def synthetic_bundle(value):
+                payload = auth.encoded(value)
+                # Deliberately fake DSSE signature bytes: this tests content binding only.
+                envelope = {"payloadType": auth.IN_TOTO_JSON,
+                            "payload": base64.b64encode(payload).decode("ascii"),
+                            "signatures": [{"sig": "synthetic-not-cryptographic", "keyid": "fixture"}]}
+                return auth.encoded({"dsseEnvelope": envelope})
+
+            bundle_raw = synthetic_bundle(statement)
+            bundle.write_bytes(bundle_raw)
+            result = auth.verify_preflight(
+                self.source, subject, predicate_path, bundle, "123",
+                "https://github.com/metaneutrons/ami-rust/attestations/123",
+                prepared["subject_sha256"], prepared["predicate_sha256"])
+            self.assertEqual(result["status"], "PREFLIGHT_ATTESTATION_INGESTED_NOT_SDK_AUTHENTICATION")
+            self.assertEqual(result["bundle_sha256"], auth.sha(bundle_raw))
+            self.assertEqual(base64.b64decode("".join(result["bundle_base64_chunks"])), bundle_raw)
+
+            wrong_subject = copy.deepcopy(statement)
+            wrong_subject["subject"][0]["name"] = "other.txt"
+            wrong_digest = copy.deepcopy(statement)
+            wrong_digest["subject"][0]["digest"]["sha256"] = "f" * 64
+            wrong_type = copy.deepcopy(statement)
+            wrong_type["predicateType"] = "https://example.invalid/predicate"
+            wrong_predicate = copy.deepcopy(statement)
+            wrong_predicate["predicate"]["buildDefinition"]["internalParameters"]["publisherPolicy"]["sourceSha"] = "f" * 40
+            wrong_run = copy.deepcopy(statement)
+            wrong_run["predicate"]["runDetails"]["metadata"]["invocationId"] = \
+                "https://github.com/metaneutrons/ami-rust/actions/runs/124/attempts/1"
+            malformed_base64 = {"dsseEnvelope": {"payloadType": auth.IN_TOTO_JSON,
+                                                  "payload": "%%%", "signatures": [{"sig": "x"}]}}
+            malformed_json = {"dsseEnvelope": {"payloadType": auth.IN_TOTO_JSON,
+                                                "payload": base64.b64encode(b"{").decode("ascii"),
+                                                "signatures": [{"sig": "x"}]}}
+            bad_bundles = (
+                ("wrong subject", synthetic_bundle(wrong_subject), "statement differs"),
+                ("wrong digest", synthetic_bundle(wrong_digest), "statement differs"),
+                ("wrong predicate type", synthetic_bundle(wrong_type), "statement differs"),
+                ("wrong predicate", synthetic_bundle(wrong_predicate), "statement differs"),
+                ("wrong run", synthetic_bundle(wrong_run), "statement differs"),
+                ("malformed base64", auth.encoded(malformed_base64), "valid base64"),
+                ("malformed JSON", auth.encoded(malformed_json), "JSON"),
+                ("missing DSSE envelope", b'{"public_attestation_bundle":true}\n', "no in-toto DSSE envelope"),
+            )
+            for label, bad_raw, error in bad_bundles:
+                with self.subTest(bundle=label):
+                    bundle.write_bytes(bad_raw)
+                    with self.assertRaisesRegex(ValueError, error):
+                        auth.verify_preflight(
+                            self.source, subject, predicate_path, bundle, "123",
+                            "https://github.com/metaneutrons/ami-rust/attestations/123",
+                            prepared["subject_sha256"], prepared["predicate_sha256"])
+            bundle.write_bytes(bundle_raw)
+            with self.assertRaisesRegex(ValueError, "persisted attestation identity"):
+                auth.verify_preflight(self.source, subject, predicate_path, bundle, "0",
+                    "https://github.com/metaneutrons/ami-rust/attestations/0",
+                    prepared["subject_sha256"], prepared["predicate_sha256"])
+            with self.assertRaisesRegex(ValueError, "predicate differs"):
+                auth.verify_preflight(self.source, subject, predicate_path, bundle, "123",
+                    "https://github.com/metaneutrons/ami-rust/attestations/123",
+                    prepared["subject_sha256"], "f" * 64)
+
     def test_producer_path_grammar_matches_installer_boundary(self):
         for name in ("bad\nname", "é.txt", "a" * 241, "a" * 121, "CON.txt", "LPT1", "a.", "a b"):
             with self.subTest(name=name), self.assertRaises(ValueError):
@@ -463,6 +590,8 @@ class PublisherAssemblyTests(unittest.TestCase):
         env = {"GITHUB_ACTIONS": "true", "GITHUB_REPOSITORY": auth.REPO,
                "GITHUB_REF": "refs/heads/main", "SOURCE_IS_PROTECTED": "true",
                "PUBLISHER_ENVIRONMENT": "release", "RUNNER_ENVIRONMENT": "github-hosted",
+               "GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_REPOSITORY_ID": "1421182484",
+               "GITHUB_REPOSITORY_OWNER_ID": "436979",
                "GITHUB_SHA": "a" * 40, "GITHUB_WORKFLOW_SHA": "b" * 40,
                "GITHUB_WORKFLOW_REF": f"{auth.REPO}/{auth.WORKFLOW}@refs/heads/main"}
         with patch.dict(os.environ, env, clear=True), \
