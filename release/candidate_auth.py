@@ -537,12 +537,10 @@ def _gh_command(path: Path, bundle: Path, policy: dict[str, Any]) -> list[str]:
     return [policy["gh"]["path"], "attestation", "verify", str(path),
             "--repo", verifier.REPOSITORY, "--bundle", str(bundle),
             "--custom-trusted-root", policy["gh_trusted_roots"]["path"],
-            "--signer-workflow", f"{verifier.REPOSITORY}/{verifier.WORKFLOW}",
             "--signer-digest", policy["workflow_sha"],
             "--source-digest", policy["source_sha"], "--source-ref", verifier.SOURCE_REF,
             "--deny-self-hosted-runners", "--predicate-type", verifier.PREDICATE_TYPE,
-            "--cert-identity", policy["cert_identity"],
-            "--cert-oidc-issuer", policy["oidc_issuer"], "--format=json"]
+            *verifier._gh_certificate_identity_args(policy), "--format=json"]
 
 
 def _cosign_command(path: Path, bundle: Path, policy: dict[str, Any]) -> list[str]:
