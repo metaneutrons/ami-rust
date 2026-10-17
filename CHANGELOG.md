@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 (2026-10-16)
+## 0.1.0 (2026-10-17)
 
 
 ### Features
@@ -21,6 +21,7 @@
 * bind SDK packaging to the qualified R4 native profile ([#39](https://github.com/metaneutrons/ami-rust/issues/39)) ([84ed4a7](https://github.com/metaneutrons/ami-rust/commit/84ed4a7b2a88373229784616c0036c1ba9e2b8c0))
 * **ci:** pin the hosted Python runtime independently of runner images ([#6](https://github.com/metaneutrons/ami-rust/issues/6)) ([ea0cf65](https://github.com/metaneutrons/ami-rust/commit/ea0cf65e46d56b6e7b8154e0ce1369a7b33b1d2b))
 * correct Cargo notice capsule inventory self-reference ([#28](https://github.com/metaneutrons/ami-rust/issues/28)) ([1094b27](https://github.com/metaneutrons/ami-rust/commit/1094b27b00f2a7d6100aec79bb26a37b2037d381))
+* emit schema-compatible SLSA publisher provenance ([#41](https://github.com/metaneutrons/ami-rust/issues/41)) ([b76848b](https://github.com/metaneutrons/ami-rust/commit/b76848b33209711bce0a91cd2c246cff981e435e))
 * make production consumer preparation reproducible ([#9](https://github.com/metaneutrons/ami-rust/issues/9)) ([f65e49e](https://github.com/metaneutrons/ami-rust/commit/f65e49ea896ac34411415c151983c122bc55b776))
 * pass SDK context to consumer project builds ([#12](https://github.com/metaneutrons/ami-rust/issues/12)) ([3d0c33a](https://github.com/metaneutrons/ami-rust/commit/3d0c33a698d00a5399991fc78f25ef7d997edfdb))
 * preserve exact source and notice bytes in Git ([085f89e](https://github.com/metaneutrons/ami-rust/commit/085f89e329eeb00e1b9b1c5a988c364268f31cf1))
