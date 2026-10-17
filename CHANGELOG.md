@@ -17,6 +17,7 @@
 
 * account for native build intermediates ([#18](https://github.com/metaneutrons/ami-rust/issues/18)) ([916b8d8](https://github.com/metaneutrons/ami-rust/commit/916b8d86b459741d989aa711d90a237e443025e0))
 * align SBOM identity with the production SDK version ([#21](https://github.com/metaneutrons/ami-rust/issues/21)) ([1c51bdc](https://github.com/metaneutrons/ami-rust/commit/1c51bdcd2e53015f92649b4e921b81fae9e4e626))
+* avoid duplicate SDK workspace inventory scans ([#43](https://github.com/metaneutrons/ami-rust/issues/43)) ([11e58e0](https://github.com/metaneutrons/ami-rust/commit/11e58e0a8677ddef80cdbef2687ba35e0c6d5289))
 * bind public releases to their source tags ([#19](https://github.com/metaneutrons/ami-rust/issues/19)) ([aceebfb](https://github.com/metaneutrons/ami-rust/commit/aceebfbe61463817a51ad9bae39db50f29e9615b))
 * bind SDK packaging to the qualified R4 native profile ([#39](https://github.com/metaneutrons/ami-rust/issues/39)) ([84ed4a7](https://github.com/metaneutrons/ami-rust/commit/84ed4a7b2a88373229784616c0036c1ba9e2b8c0))
 * **ci:** pin the hosted Python runtime independently of runner images ([#6](https://github.com/metaneutrons/ami-rust/issues/6)) ([ea0cf65](https://github.com/metaneutrons/ami-rust/commit/ea0cf65e46d56b6e7b8154e0ce1369a7b33b1d2b))
