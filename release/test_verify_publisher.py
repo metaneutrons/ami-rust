@@ -3,6 +3,7 @@
 These tests mock gh/cosign outputs. They are not real signature or provenance
 qualification and must never be reported as such.
 """
+import copy
 import hashlib
 import json
 import tempfile
@@ -147,10 +148,7 @@ class PublisherVerificationAdapterTests(unittest.TestCase):
                          "digest": {"gitCommit": SOURCE_SHA}},
                         *self.input_materials,
                     ],
-                },
-                "runDetails": {"metadata": {
-                    "invocationId": f"https://github.com/metaneutrons/ami-rust/actions/runs/{RUN_ID}/attempts/{ATTEMPT}",
-                    "publisherPolicy": {
+                    "internalParameters": {"publisherPolicy": {
                         "environment": "release", "runnerEnvironment": "github-hosted",
                         "repository": "metaneutrons/ami-rust",
                         "workflow": ".github/workflows/sdk-qualify.yml",
@@ -158,7 +156,10 @@ class PublisherVerificationAdapterTests(unittest.TestCase):
                         "sourceRef": "refs/heads/main",
                         "inputsManifestSha256": self.inputs_sha,
                         "hostProfile": HOST,
-                    },
+                    }},
+                },
+                "runDetails": {"metadata": {
+                    "invocationId": f"https://github.com/metaneutrons/ami-rust/actions/runs/{RUN_ID}/attempts/{ATTEMPT}",
                 }},
             },
         }
@@ -215,6 +216,44 @@ class PublisherVerificationAdapterTests(unittest.TestCase):
         self.assertEqual(set(result["manifestBoundAssets"]), set(self.asset_bytes))
         self.assertEqual(sum(call[1:3] == ["attestation", "verify"] for call in calls), 3)
         self.assertEqual(sum(call[1] == "verify-blob" for call in calls), 3)
+
+    def test_requires_publisher_policy_in_internal_parameters_and_standard_run_metadata(self):
+        statement = json.loads(self._gh_output(["gh", "attestation", "verify", "sdk.tar.xz"]))[0][
+            "verificationResult"]["statement"]
+        checks = []
+
+        old_location = copy.deepcopy(statement)
+        policy = old_location["predicate"]["buildDefinition"]["internalParameters"].pop("publisherPolicy")
+        old_location["predicate"]["runDetails"]["metadata"]["publisherPolicy"] = policy
+        checks.append((old_location, "internalParameters"))
+
+        missing = copy.deepcopy(statement)
+        del missing["predicate"]["buildDefinition"]["internalParameters"]
+        checks.append((missing, "internalParameters"))
+
+        extra_internal = copy.deepcopy(statement)
+        extra_internal["predicate"]["buildDefinition"]["internalParameters"]["extra"] = True
+        checks.append((extra_internal, "internalParameters"))
+
+        extra_metadata = copy.deepcopy(statement)
+        extra_metadata["predicate"]["runDetails"]["metadata"]["publisherPolicy"] = {}
+        checks.append((extra_metadata, "run metadata"))
+
+        modified_policy = copy.deepcopy(statement)
+        modified_policy["predicate"]["buildDefinition"]["internalParameters"]["publisherPolicy"]["sourceSha"] = "4" * 40
+        checks.append((modified_policy, "publisherPolicy"))
+
+        for bad_statement, message in checks:
+            with self.subTest(message=message, predicate=bad_statement["predicate"]):
+                with self.assertRaisesRegex(verifier.PublisherVerificationError, message):
+                    verifier._check_predicate(
+                        bad_statement,
+                        policy={"source_sha": SOURCE_SHA, "workflow_sha": WORKFLOW_SHA,
+                                "inputs_manifest_sha256": self.inputs_sha},
+                        run={"run_id": RUN_ID, "run_attempt": ATTEMPT}, host=HOST,
+                        subject_paths=["sdk.tar.xz"],
+                        manifest={"sdk.tar.xz": (1, self._subject_digest("sdk.tar.xz"))},
+                        input_materials=self.input_materials)
 
     def test_rejects_old_private_input_commit_policy(self):
         self.policy["schema"] = "ami-rust-publisher-trust-v1"

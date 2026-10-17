@@ -607,9 +607,9 @@
       "source": "release/bundle-assets/sbom.spdx.json"
     },
     {
-      "bytes": 33808,
+      "bytes": 34086,
       "path": "verify_publisher.py",
-      "sha256": "355dca4371688ca7b92696f4635921bd4e117f04a79c47753247f7939720e463",
+      "sha256": "8f1aeb824f42dc36a8b1c12267f03dbcb2a09107673ce63586306d5c65766c15",
       "source": "release/verify_publisher.py"
     }
   ],

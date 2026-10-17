@@ -560,17 +560,20 @@ def predicate(bundle, host):
     producer = release["producer"]
     inputs_raw = read(bundle / ".auth/inputs.json")
     materials = parsed(inputs_raw)["materials"]
+    publisher_policy = {
+        "environment": "release", "runnerEnvironment": "github-hosted",
+        "repository": REPO, "workflow": WORKFLOW, "workflowSha": producer["workflow_sha"],
+        "sourceSha": producer["source_sha"], "sourceRef": "refs/heads/main",
+        "inputsManifestSha256": sha(inputs_raw), "hostProfile": host,
+    }
     return {"buildDefinition": {"buildType": "https://actions.github.io/buildtypes/workflow/v1",
                 "externalParameters": {"workflow": {"repository": f"https://github.com/{REPO}",
                                                      "path": WORKFLOW, "ref": "refs/heads/main"}},
+                "internalParameters": {"publisherPolicy": publisher_policy},
                 "resolvedDependencies": [{"uri": f"git+https://github.com/{REPO}@refs/heads/main",
                                           "digest": {"gitCommit": producer["source_sha"]}}, *materials]},
             "runDetails": {"builder": {"id": f"https://github.com/{REPO}/{WORKFLOW}@refs/heads/main"},
-                "metadata": {"invocationId": f"https://github.com/{REPO}/actions/runs/{producer['run_id']}/attempts/{producer['run_attempt']}",
-                    "publisherPolicy": {"environment": "release", "runnerEnvironment": "github-hosted",
-                        "repository": REPO, "workflow": WORKFLOW, "workflowSha": producer["workflow_sha"],
-                        "sourceSha": producer["source_sha"], "sourceRef": "refs/heads/main",
-                        "inputsManifestSha256": sha(inputs_raw), "hostProfile": host}}}}
+                "metadata": {"invocationId": f"https://github.com/{REPO}/actions/runs/{producer['run_id']}/attempts/{producer['run_attempt']}"}}}
 
 
 def audit(source, bundle, work):
