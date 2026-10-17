@@ -128,6 +128,10 @@ class HostedConsumerVerifyTests(unittest.TestCase):
                 (consumer / "receipt.sha256").write_text(receipt + "\n")
                 result.update(status="installed", version="0.1.0", qualification_only=False,
                               release_manifest_sha256=sha((bundle / "release.json").read_bytes()))
+                if corrupt == "missing-install-host":
+                    result.pop("host")
+                elif corrupt == "wrong-install-host":
+                    result["host"] = "macos-aarch64"
             elif index in (2, 9):
                 result["status"] = "locked"
                 if index == 9 and corrupt == "receipt":
@@ -234,6 +238,22 @@ class HostedConsumerVerifyTests(unittest.TestCase):
             lock = next(row for row in result["commands"][root] if row["recipe_index"] == 9)
             self.assertEqual(lock["result"]["receipt_sha256"], digest)
             self.assertTrue(result["uninstall"][root]["selected_prefix_absent"])
+
+    def test_complete_recipe_rejects_install_result_for_another_host(self):
+        with self.assertRaisesRegex(ValueError,
+                                   "production installation result differs from the authenticated candidate"):
+            self._exercise_complete_install_recipe(corrupt="wrong-install-host")
+        self.assertIn(("absolute-a", 1), self.recipe_calls)
+        self.assertNotIn(("absolute-a", 2), self.recipe_calls)
+        self.assertFalse(any(index >= 3 for _root, index in self.recipe_calls))
+
+    def test_complete_recipe_rejects_install_result_without_host(self):
+        with self.assertRaisesRegex(ValueError,
+                                   "production installation result differs from the authenticated candidate"):
+            self._exercise_complete_install_recipe(corrupt="missing-install-host")
+        self.assertIn(("absolute-a", 1), self.recipe_calls)
+        self.assertNotIn(("absolute-a", 2), self.recipe_calls)
+        self.assertFalse(any(index >= 3 for _root, index in self.recipe_calls))
 
     def test_complete_recipe_rejects_new_project_from_different_sdk(self):
         with self.assertRaisesRegex(ValueError, "unexpected package"):

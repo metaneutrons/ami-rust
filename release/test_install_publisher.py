@@ -12,6 +12,8 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from types import SimpleNamespace
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve(strict=True).parents[1]
@@ -168,6 +170,7 @@ class ProductionInstallerAdapterTests(unittest.TestCase):
             self.assertEqual(verify.call_count, 1)
             result = installer._install_verified(verified, str(self.prefix), str(self.pin))
         self.assertEqual(result["status"], "installed")
+        self.assertEqual(result["host"], verified["host"])
         self.assertIs(result["qualification_only"], False)
         self.assertEqual(self.pin.read_text().strip(), result["receipt_sha256"])
         receipt = json.loads((self.prefix / "install-receipt.json").read_text())
@@ -181,6 +184,25 @@ class ProductionInstallerAdapterTests(unittest.TestCase):
         removed = installer._uninstall(self.prefix, result["receipt_sha256"])
         self.assertEqual(removed["status"], "uninstalled")
         self.assertFalse(self.prefix.exists())
+
+    def test_production_install_cli_returns_the_verified_host(self):
+        report = self._report()
+        stdout = io.StringIO()
+        isolated_sys = SimpleNamespace(
+            flags=SimpleNamespace(isolated=True), dont_write_bytecode=True)
+        with patch.object(production.publisher_verifier, "verify", return_value=report), \
+                patch.object(production, "sys", isolated_sys), \
+                redirect_stdout(stdout):
+            exit_code = production.main([
+                "install", "--bundle", str(self.bundle), "--policy", str(self.policy_path),
+                "--prefix", str(self.prefix), "--receipt-pin", str(self.pin),
+            ])
+        self.assertEqual(exit_code, 0)
+        result = json.loads(stdout.getvalue())
+        self.assertEqual(result["status"], "installed")
+        self.assertEqual(result["host"], installer._host_key())
+        self.assertIs(result["qualification_only"], False)
+        self.assertEqual(result["receipt_sha256"], self.pin.read_text().strip())
 
     def test_modified_asset_is_rejected_after_synthetic_verifier(self):
         report = self._report()

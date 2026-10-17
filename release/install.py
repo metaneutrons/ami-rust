@@ -945,6 +945,7 @@ def _install_verified(verified, prefix, receipt_pin=None):
     return {"status": "installed", "prefix": str(prefix),
             "receipt_sha256": receipt_digest,
             "receipt_pin": str(pin) if pin else None,
+            "host": verified["host"],
             "publisher": receipt["publisher"],
             "release_manifest_sha256": verified["manifest_sha256"],
             "version": verified["manifest"]["version"],
