@@ -73,9 +73,9 @@
       "source": "release/cargo-notices/payload-v3/inventory.json"
     },
     {
-      "bytes": 63491,
+      "bytes": 63529,
       "path": "install.py",
-      "sha256": "57d91945bf447a2337e1db4f0fdc8abea20eba3ad8ad7d18fb64d7793823d913",
+      "sha256": "0e77fa70bcaa69d08de3102e18c102a063b276c654242e676dd20fab6d74e984",
       "source": "release/install.py"
     },
     {

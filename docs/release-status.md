@@ -11,7 +11,33 @@ applies to regular, non-injected SDK-owner diagnostics. Declared positive
 controls intentionally allocate nine times per full/large phase; their 36
 allocations are reported separately.
 
-The latest normal SDK attempt from source `11fbd082` failed in
+The latest normal SDK attempt from source `99a8cacf` failed in
+[run 39020862095](https://github.com/metaneutrons/ami-rust/actions/runs/39020862095).
+Both host producers, common unsigned assembly and both authentication jobs
+succeeded. Strict producer readbacks passed on both hosts: all five native
+programs and the source SDK archive matched byte-for-byte. Both independent
+consumers passed publisher verification and prerequisite preparation, then
+rejected the installation result because its JSON omitted the host platform
+required by the coordinator. Complete transport authentication was skipped.
+
+The correction returns the host already selected by verification. The exact
+consumer platform check, authenticated manifest checks and receipt checks
+remain unchanged. Focused tests cover the actual installer CLI response and
+rejection of missing or incorrect host fields before lock/build acceptance.
+A diagnostic on the macOS review host also completed real publisher
+verification, installation and deinstallation with the corrected caller against
+the unchanged authenticated package from this failed run. That diagnostic is
+not qualification of a newly produced source candidate.
+
+The campaign closed as FAIL within its original budget. All seven raw artifact
+ZIPs are preserved; interrupted local downloads were retained separately before
+successful recovery. No final native clock was sealed, no AROS matrix started,
+and no SDK was published. Fresh protected SDK production, four independent
+consumer builds and raw-metadata comparison, complete transport authentication,
+final native qualification, final licence binding and independent A1-A7
+acceptance remain required for the corrected source.
+
+The preceding normal SDK attempt from source `11fbd082` failed in
 [run 39007289203](https://github.com/metaneutrons/ami-rust/actions/runs/39007289203).
 Both host producers, common unsigned assembly and both signing/provenance jobs
 succeeded. The admission fixture also completed real GitHub attestation
