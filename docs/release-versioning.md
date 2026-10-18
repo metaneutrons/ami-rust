@@ -36,3 +36,21 @@ stable/latest promotion. Failed qualification leaves the draft unpublished.
 
 This procedure defines the release route. The dated [release status](release-status.md)
 records the actual release and acceptance state for the selected source snapshot.
+
+## Approved initial-version replacement exception — 2026-10-18
+
+Fabian explicitly authorised the corrected release to retain `0.1.0` and
+requested removal of the failed public candidate. The old release and tag have
+been removed. See the [decision record](release-version-exception-20261018.md).
+
+For this one-time replacement, freeze the exact corrected commit merged through
+protected source CI and qualify that source under all existing R1 criteria.
+The earlier release PR and its source are historical; do not let Release Please
+select them again. Keep workspace, lockfile and package versions at `0.1.0`.
+A repository-scoped App operation may explicitly create the replacement
+`v0.1.0` tag and draft at the newly qualified commit, after checking that both
+are absent and that the exact source has passed A1–A7. This exception replaces
+only the normal release-PR selection/version step. It does not replace source
+CI, qualification, draft byte readback, signatures/provenance, public replay or
+the stable-promotion gates. Do not run normal version-bumping automation as
+part of this replacement.

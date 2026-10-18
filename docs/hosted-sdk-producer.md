@@ -25,7 +25,9 @@ The producer builds all five native variants in two clean roots on each host,
 then checks exact canonical native/library outputs under the approved host
 metadata comparison. The subsequent jobs assemble bounded payloads, create
 GitHub provenance and Cosign signatures for the three subjects, and independently
-verify/install/build/uninstall them on both hosts. Counter-cases cover corrupted
+verify/install/build/uninstall the same Linux-publisher authenticated bundle
+on both hosts, selecting the actual consumer host's Cargo and prerequisites.
+Publisher and consumer host identities are checked independently. Counter-cases cover corrupted
 assets, identities and provenance. Actual successful runs, their source commits
 and evidence are required; tests of the helpers do not establish authentication.
 
