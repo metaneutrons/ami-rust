@@ -918,36 +918,113 @@ class HostedConsumerVerifyTests(unittest.TestCase):
             target = bundle / name
             target.write_bytes(source_payloads[name])
             asset_rows.append({"path": name, "bytes": pin["bytes"], "sha256": pin["sha256"]})
-        manifest = {"version": "0.1.0", "assets": asset_rows}
-        write_json(bundle / "release.json", manifest)
-        manifest_sha = ci_verify.sha256(bundle / "release.json")
-        policy = {"workflow_sha": "b" * 40, "source_sha": "a" * 40}
+        policy = {"repository": "metaneutrons/ami-rust",
+                  "workflow": ".github/workflows/sdk-qualify.yml",
+                  "workflow_sha": "b" * 40, "source_sha": "a" * 40}
+        producer = {"kind": "protected-github-actions", "repository": policy["repository"],
+                    "workflow": policy["workflow"], "source_sha": policy["source_sha"],
+                    "workflow_sha": policy["workflow_sha"], "run_id": 39089771746,
+                    "run_attempt": 1,
+                    "acceptance": "R1 acceptance and publication are separate gates"}
+        manifest = {"schema": "ami-rust-release-v1", "version": "0.1.0",
+                    "qualification_only": False, "assets": asset_rows,
+                    "producer": producer}
         subjects = sorted(("release.json", "sdk.tar.xz", "SHAUTIL"))
         auth = {"schema": "ami-rust-publisher-verification-v2", "verified": True,
-                "repository": "metaneutrons/ami-rust", "workflow": ".github/workflows/sdk-qualify.yml",
+                "repository": policy["repository"], "workflow": policy["workflow"],
                 "workflowSha": policy["workflow_sha"], "sourceSha": policy["source_sha"],
-                "sourceRef": "refs/heads/main", "manifestSha256": manifest_sha,
-                "attestedSubjects": subjects, "cosignSubjects": subjects,
+                "sourceRef": "refs/heads/main", "attestedSubjects": subjects,
+                "cosignSubjects": subjects,
                 "manifestBoundAssets": sorted(wanted | set(subjects)),
-                "workflowRuns": [{"hostProfile": "linux-x86_64"}]}
-        result = {"status": "verified", "release_manifest_sha256": manifest_sha,
-                  "version": "0.1.0", "host": "linux-x86_64", "authentication": auth}
-        ci_verify._validate_trusted_consumer_assets(bundle, result, policy, trusted_source)
-        for host in ci_verify.HOSTS:
-            result["host"] = host
-            auth["workflowRuns"] = [{"hostProfile": host}]
-            ci_verify._validate_trusted_consumer_assets(bundle, result, policy, trusted_source)
-            other = next(h for h in ci_verify.HOSTS if h != host)
-            auth["workflowRuns"] = [{"hostProfile": other}]
-            with self.assertRaisesRegex(ValueError, "authentication report differs"):
-                ci_verify._validate_trusted_consumer_assets(bundle, result, policy, trusted_source)
-        auth["workflowRuns"] = [{"hostProfile": host} for host in ci_verify.HOSTS]
-        with self.assertRaisesRegex(ValueError, "authentication report differs"):
-            ci_verify._validate_trusted_consumer_assets(bundle, result, policy, trusted_source)
-        auth["workflowRuns"] = [{"hostProfile": result["host"]}]
+                "workflowRuns": [{"runId": producer["run_id"],
+                                  "runAttempt": producer["run_attempt"],
+                                  "hostProfile": "linux-x86_64"}]}
+        result = {"status": "verified", "version": "0.1.0", "host": "linux-x86_64",
+                  "authentication": auth}
+
+        def bind_manifest():
+            write_json(bundle / "release.json", manifest)
+            manifest_sha = ci_verify.sha256(bundle / "release.json")
+            result["release_manifest_sha256"] = manifest_sha
+            auth["manifestSha256"] = manifest_sha
+
+        def verify(expected_workflow_runs=None):
+            ci_verify._validate_trusted_consumer_assets(
+                bundle, result, policy, trusted_source,
+                expected_workflow_runs=expected_workflow_runs)
+
+        bind_manifest()
+        verify()
+        # Publisher and consumer are separate identities. A Linux publisher
+        # run remains valid for a macOS consumer because its exact run tuple is
+        # bound by both the signed release producer and verifier report.
+        result["host"] = "macos-aarch64"
+        verify()
+        publisher_run = auth["workflowRuns"][0]
+        verify(expected_workflow_runs=[publisher_run])
+        for expected in (
+                [{"runId": 1, "runAttempt": 1, "hostProfile": "linux-x86_64"}],
+                [{"runId": producer["run_id"], "runAttempt": 2,
+                  "hostProfile": "linux-x86_64"}],
+                [{"runId": producer["run_id"], "runAttempt": 1,
+                  "hostProfile": "macos-aarch64"}],
+                [{"runId": True, "runAttempt": 1, "hostProfile": "linux-x86_64"}],
+                [{"runId": producer["run_id"], "runAttempt": 1,
+                  "hostProfile": "unknown-host"}],
+        ):
+            with self.subTest(expected_workflow_runs=expected):
+                with self.assertRaisesRegex(ValueError, "authentication report differs"):
+                    verify(expected_workflow_runs=expected)
+
+        # Authentication must match the publisher run embedded in the
+        # authenticated candidate, independent of consumer host.
+        original_auth_row = auth["workflowRuns"][0]
+        for row in (
+                {"runId": producer["run_id"] + 1, "runAttempt": 1,
+                 "hostProfile": "linux-x86_64"},
+                {"runId": producer["run_id"], "runAttempt": 2,
+                 "hostProfile": "linux-x86_64"},
+                {"runId": producer["run_id"], "runAttempt": 1,
+                 "hostProfile": "unknown-host"},
+                {"runId": producer["run_id"], "runAttempt": 1,
+                 "hostProfile": "linux-x86_64", "extra": True},
+        ):
+            with self.subTest(authenticated_workflow_run=row):
+                auth["workflowRuns"] = [row]
+                with self.assertRaisesRegex(ValueError, "authentication report differs"):
+                    verify()
+        auth["workflowRuns"] = [original_auth_row]
+
+        # Reject any noncanonical or mismatched protected producer identity;
+        # refresh manifest digests so each probe reaches this identity check.
+        base_producer = dict(producer)
+        changes = (
+            {"kind": "local-unpublished-candidate"},
+            {"repository": "attacker/repo"},
+            {"workflow": ".github/workflows/other.yml"},
+            {"source_sha": "c" * 40},
+            {"workflow_sha": "d" * 40},
+            {"run_id": producer["run_id"] + 1},
+            {"run_attempt": 2},
+            {"run_id": True},
+            {"extra": "not canonical"},
+        )
+        for change in changes:
+            with self.subTest(producer_change=change):
+                producer.clear()
+                producer.update(base_producer)
+                producer.update(change)
+                bind_manifest()
+                with self.assertRaisesRegex(ValueError, "authentication report differs"):
+                    verify()
+        producer.clear()
+        producer.update(base_producer)
+        bind_manifest()
+        result["host"] = "linux-x86_64"
+        verify()
         (bundle / "new_project.py").write_bytes(b"changed after authentication")
         with self.assertRaisesRegex(ValueError, "differs from protected source pin"):
-            ci_verify._validate_trusted_consumer_assets(bundle, result, policy, trusted_source)
+            verify()
 
     def test_cargo_extractor_verifies_exact_profile_and_archive_metadata(self):
         files = {"bin/cargo": b"cargo-binary", "producer.json": b'{"schema":"fixture"}\n'}

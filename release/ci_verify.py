@@ -1053,7 +1053,8 @@ def _preparation_commands(bundle: Path) -> tuple[str, str]:
 
 
 def _validate_trusted_consumer_assets(bundle: Path, verifier_result: dict, policy: dict,
-                                      trusted_source: Path = ROOT) -> None:
+                                      trusted_source: Path = ROOT,
+                                      expected_workflow_runs: list[dict] | None = None) -> None:
     """Bind executed docs/helpers to the protected source's static asset map."""
     static = strict_json(trusted_source / "release/bundle-files.json", 2 * 1024**2)
     if static.get("schema") != "ami-rust-bundle-files-v1" or not isinstance(static.get("files"), list):
@@ -1070,6 +1071,37 @@ def _validate_trusted_consumer_assets(bundle: Path, verifier_result: dict, polic
     authentication = verifier_result.get("authentication")
     direct_subjects = sorted(("release.json", "sdk.tar.xz", "SHAUTIL"))
     workflow_runs = authentication.get("workflowRuns") if isinstance(authentication, dict) else None
+    producer = release.get("producer") if isinstance(release, dict) else None
+    producer_keys = {"kind", "repository", "workflow", "source_sha", "workflow_sha",
+                     "run_id", "run_attempt", "acceptance"}
+    producer_matches_policy = (
+        type(producer) is dict and set(producer) == producer_keys
+        and producer.get("kind") == "protected-github-actions"
+        and producer.get("repository") == ci_auth.REPO == policy.get("repository")
+        and producer.get("workflow") == ci_auth.WORKFLOW == policy.get("workflow")
+        and producer.get("source_sha") == policy.get("source_sha")
+        and producer.get("workflow_sha") == policy.get("workflow_sha")
+        and type(producer.get("run_id")) is int and producer["run_id"] > 0
+        and type(producer.get("run_attempt")) is int and producer["run_attempt"] > 0
+        and producer.get("acceptance") == "R1 acceptance and publication are separate gates")
+
+    def valid_workflow_rows(rows):
+        if not isinstance(rows, list) or len(rows) != 1:
+            return False
+        row = rows[0]
+        return (type(row) is dict and set(row) == {"runId", "runAttempt", "hostProfile"}
+                and type(row.get("runId")) is int and row["runId"] > 0
+                and type(row.get("runAttempt")) is int and row["runAttempt"] > 0
+                and row.get("hostProfile") in HOSTS)
+
+    workflow_runs_match = (
+        producer_matches_policy and valid_workflow_rows(workflow_runs)
+        and workflow_runs[0]["runId"] == producer["run_id"]
+        and workflow_runs[0]["runAttempt"] == producer["run_attempt"])
+    if expected_workflow_runs is not None:
+        workflow_runs_match = (workflow_runs_match
+                               and valid_workflow_rows(expected_workflow_runs)
+                               and workflow_runs == expected_workflow_runs)
     if (not isinstance(authentication, dict)
             or authentication.get("schema") != "ami-rust-publisher-verification-v2"
             or authentication.get("verified") is not True
@@ -1087,9 +1119,7 @@ def _validate_trusted_consumer_assets(bundle: Path, verifier_result: dict, polic
                set(authentication.get("manifestBoundAssets", []))
             or not isinstance(workflow_runs, list)
             or verifier_result.get("host") not in HOSTS
-            or len(workflow_runs) != 1
-            or not isinstance(workflow_runs[0], dict)
-            or workflow_runs[0].get("hostProfile") != verifier_result["host"]):
+            or not workflow_runs_match):
         raise ValueError("protected verifier authentication report differs from external source policy")
     for name in ("install.py", "install_publisher.py", "verify_publisher.py", "new_project.py", "QUICKSTART.md"):
         pin = rows.get(name)

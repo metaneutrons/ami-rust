@@ -252,6 +252,63 @@ class WorkflowAdmissionTests(unittest.TestCase):
                 self.assertEqual((root / "ami-rust-release-attestations" / (key + ".json")).read_text(), key)
 
 
+class ConsumerInputSelectionTests(unittest.TestCase):
+    @staticmethod
+    def assert_shared_linux_candidate(source):
+        authenticate = source.split("\n  authenticate:\n", 1)[1].split("\n  consumer:\n", 1)[0]
+        consumer = source.split("\n  consumer:\n", 1)[1]
+        release_candidate = source.split("\n  release-candidate:\n", 1)[1].split("\n  assemble:\n", 1)[0]
+        linux_candidate = "sdk-authenticated-linux-x86_64-${{ github.run_id }}-${{ github.run_attempt }}"
+        matrix_candidate = "sdk-authenticated-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}"
+
+        # Both authentication jobs stay available as producer evidence, while
+        # both consumer hosts and the outer publisher use the same Linux-built
+        # authenticated release candidate.
+        if "profile: macos-aarch64" not in authenticate or "profile: linux-x86_64" not in authenticate:
+            raise AssertionError("both authenticated producer profiles must remain")
+        if authenticate.count("name: " + matrix_candidate) != 1:
+            raise AssertionError("authenticated producer artifacts must remain host-specific")
+        if "profile: macos-aarch64" not in consumer or "profile: linux-x86_64" not in consumer:
+            raise AssertionError("both consumer hosts must remain in the matrix")
+        if consumer.count("name: " + linux_candidate) != 1 or matrix_candidate in consumer:
+            raise AssertionError("each consumer must download the shared Linux candidate")
+        if consumer.count("name: sdk-consumer-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}") != 1:
+            raise AssertionError("consumer output artifact labels must remain host-specific")
+        if release_candidate.count("name: " + linux_candidate) != 1:
+            raise AssertionError("release candidate must use the same Linux authenticated artifact")
+
+    def test_both_consumers_and_release_candidate_share_linux_authenticated_input(self):
+        self.assert_shared_linux_candidate(SOURCE)
+
+    def test_wrong_consumer_or_release_candidate_selection_is_rejected(self):
+        consumer_prefix, after_consumer = SOURCE.split("\n  consumer:\n", 1)
+        consumer = after_consumer
+        linux_candidate = "sdk-authenticated-linux-x86_64-${{ github.run_id }}-${{ github.run_attempt }}"
+        matrix_candidate = "sdk-authenticated-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}"
+        wrong_consumer = consumer_prefix + "\n  consumer:\n" + consumer.replace(linux_candidate, matrix_candidate, 1)
+        with self.assertRaisesRegex(AssertionError, "shared Linux candidate"):
+            self.assert_shared_linux_candidate(wrong_consumer)
+
+        outer_prefix, after_release_candidate = SOURCE.split("\n  release-candidate:\n", 1)
+        release_candidate, outer_suffix = after_release_candidate.split("\n  assemble:\n", 1)
+        wrong_outer = outer_prefix + "\n  release-candidate:\n" + release_candidate.replace(
+            linux_candidate, matrix_candidate, 1) + "\n  assemble:\n" + outer_suffix
+        with self.assertRaisesRegex(AssertionError, "same Linux authenticated artifact"):
+            self.assert_shared_linux_candidate(wrong_outer)
+
+    def test_host_specific_producer_and_consumer_artifacts_are_preserved(self):
+        broken = SOURCE.replace(
+            "name: sdk-authenticated-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}",
+            "name: sdk-authenticated-linux-x86_64-${{ github.run_id }}-${{ github.run_attempt }}", 1)
+        with self.assertRaisesRegex(AssertionError, "producer artifacts must remain host-specific"):
+            self.assert_shared_linux_candidate(broken)
+        broken = SOURCE.replace(
+            "name: sdk-consumer-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}",
+            "name: sdk-consumer-linux-x86_64-${{ github.run_id }}-${{ github.run_attempt }}", 1)
+        with self.assertRaisesRegex(AssertionError, "consumer output artifact labels must remain host-specific"):
+            self.assert_shared_linux_candidate(broken)
+
+
 class OuterWorkflowTests(unittest.TestCase):
     def run_cleanup(self, *, receipt=True, wrong_source=False, outcome="success", oversized=False):
         with tempfile.TemporaryDirectory(prefix="outer-cleanup-") as directory:

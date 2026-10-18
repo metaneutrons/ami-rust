@@ -1,4 +1,54 @@
-# ami-rust M2 and independent R1 plan — revision 24
+# ami-rust M2 and independent R1 plan — revision 25
+
+## Current release disposition — revision 25 (2026-10-18)
+
+R1 remains open. The former `v0.1.0` prerelease at publisher source
+`e3d0adbd25aee4ad61a0506f7a451e69955cecba` passed its 32 prepublication
+M1/M2/R1-A1–A7 checks but failed R1-A8. It must not be promoted to stable/latest.
+At Fabian's explicit request, its public release, assets and tag were deleted
+on 2026-10-18. Keep the already retained local historical evidence; no public
+archive release is required. The failed bytes must not become the stable release.
+The earlier prepublication PASS results describe that candidate; they do not
+establish a successful public installation or qualify a corrected release.
+
+The public replay exposed two defects: GitHub CLI user-state files were
+mistaken for downloaded proof files, and consumer validation required the
+publisher's host to equal the installation host. The latter also affects the
+verbatim documented preparation command in the frozen publisher source.
+A fixed replay wrapper cannot repair that frozen command while claiming an
+unchanged documented flow. See [release status](release-status.md).
+
+Fabian explicitly authorised a one-time `0.1.0` version-reuse exception on
+2026-10-18. Correct the source and qualify a fresh source-bound `0.1.0`
+candidate; pin its exact commit, tag and input identities after protected
+merge/source CI. The proposed `0.1.1` version migration is withdrawn. The old
+public candidate has been removed; the corrected release will receive its own
+source, checksums and provenance. Retained local records identify the earlier
+failed bytes. This exception
+authorises version reuse only: no failing result, signature, provenance claim
+or acceptance criterion is waived. See the [exception record](release-version-exception-20261018.md).
+Keep all existing acceptance criteria. Bind publisher run ID,
+attempt, repository, workflow and source to the authenticated release producer;
+validate publisher and consumer host profiles independently. Do not rewrite
+compiler metadata, authentication claims, old receipts or frozen source.
+
+Before exposure, both supported consumer hosts must install/build/uninstall
+from the same authenticated publisher bundle selected for distribution. A pair
+of per-host producer-matched bundles does not establish this universal-package
+requirement. Keep the four clean consumer roots and existing negative,
+metadata, runtime, memory, licence, authenticity and public replay checks.
+Requalify all source-bound release criteria for the corrected candidate;
+historical evidence remains context and byte oracles only.
+
+The AROS ABI-v1 boot baseline, target SDK scope and realistic memory policy
+remain unchanged. AROS-NX, aros-tools and nxpk remain outside this work.
+Existing 90-minute campaign budgets, fresh-clock rules and local free-space
+policy remain in force. This is a release repair; it does not add SDK features
+or introduce another general application memory ceiling.
+
+The [revision 24 plan](m2-r1-plan-rev24.md) is retained verbatim. Dated status
+sections below are historical where this disposition supersedes them.
+
 
 **Current resource policy — revision 23:** [Memory policy](memory-policy.md)
 is authoritative for the current candidate. There is no fixed per-allocation,

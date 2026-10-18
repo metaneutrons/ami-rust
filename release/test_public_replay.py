@@ -139,6 +139,7 @@ class FakeSDK:
 
 
 class FakeTrustedHelpers:
+    HOSTS = ("macos-aarch64", "linux-x86_64")
     component_names = ("rust", "cargo", "toolchain", "collector", "csdk", "vendor")
 
     def __init__(self, source, commit, bundle_digest, *, candidate_version="0.1.0",
@@ -174,6 +175,7 @@ class FakeTrustedHelpers:
         self.policy = {"inputs_manifest_sha256": "4" * 64}
         self.policy_sha = "5" * 64
         self.MAX_BUNDLE_BYTES = 32 * 1024**2
+        self.expected_workflow_runs = None
 
     @staticmethod
     def canonical_json(value):
@@ -273,9 +275,11 @@ class FakeTrustedHelpers:
             raise ValueError("unexpected fake command status: " + label)
         return value
 
-    def _validate_trusted_consumer_assets(self, bundle, verified, policy, *, trusted_source):
+    def _validate_trusted_consumer_assets(self, bundle, verified, policy, *, trusted_source,
+                                          expected_workflow_runs=None):
         if Path(trusted_source) != self.ROOT:
             raise AssertionError("trusted consumer assets must come from the selected source checkout")
+        self.expected_workflow_runs = expected_workflow_runs
         self.events.append(("validate_trusted_assets", str(trusted_source)))
 
     def run_negative_probes(self, bundle, policy_path, work, install_prefix, callback):
@@ -383,6 +387,69 @@ class FakeTrustedHelpers:
 
     def _assert_source_clean(self, source_commit):
         self.events.append(("assert_source_clean", source_commit))
+
+
+class OuterPublisherWorkflowBindingTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="public-replay-outer-workflow-binding-")
+        self.output = Path(self.temp.name).resolve() / "output"
+        self.output.mkdir(mode=0o700)
+        self.source = "a" * 40
+        self.row = {"runId": 12345, "runAttempt": 1, "hostProfile": "linux-x86_64"}
+        self.receipt = {
+            "status": "PUBLIC_CANDIDATE_AUTHENTICATED_AND_UNPACKED_NOT_INSTALLED_NOT_R1_ACCEPTED",
+            "authenticated": True, "unpacked": True, "installed": False, "r1_accepted": False,
+            "source_commit": self.source, "workflow_commit": self.source,
+            "inner_verification": {"verified": True, "manifest_sha256": "b" * 64,
+                                   "source_sha": self.source, "workflow_sha": self.source,
+                                   "workflow_runs": [self.row]},
+        }
+        self.path = self.output / public_replay.OUTER_RECEIPT_NAME
+        self.write_receipt()
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def write_receipt(self):
+        raw = public_replay._canonical_json(self.receipt)
+        self.path.write_bytes(raw)
+        self.summary = {"status": self.receipt["status"], "authenticated": True,
+                        "unpacked": True, "receipt_path": public_replay.OUTER_RECEIPT_NAME,
+                        "receipt_sha256": hashlib.sha256(raw).hexdigest()}
+
+    def runs(self):
+        return public_replay._publisher_workflow_runs_from_outer_receipt(
+            self.output, self.summary, self.source, ("macos-aarch64", "linux-x86_64"))
+
+    def test_retained_receipt_supplies_hash_bound_linux_publisher_run(self):
+        self.assertEqual(self.runs(), [self.row])
+
+    def test_outer_receipt_hash_and_source_context_are_required(self):
+        self.path.write_bytes(self.path.read_bytes() + b" ")
+        with self.assertRaisesRegex(ValueError, "differs from its verified digest"):
+            self.runs()
+        self.write_receipt()
+        self.receipt["inner_verification"]["workflow_sha"] = "f" * 40
+        self.write_receipt()
+        with self.assertRaisesRegex(ValueError, "does not bind the selected publisher source"):
+            self.runs()
+
+    def test_non_singleton_or_malformed_publisher_run_is_rejected(self):
+        self.receipt["inner_verification"]["workflow_runs"] = [self.row, self.row]
+        self.write_receipt()
+        with self.assertRaisesRegex(ValueError, "exactly one workflow run"):
+            self.runs()
+        malformed = ([{"runId": True, "runAttempt": 1, "hostProfile": "linux-x86_64"}],
+                     [{"runId": 12345, "runAttempt": 0, "hostProfile": "linux-x86_64"}],
+                     [{"runId": 12345, "runAttempt": 1, "hostProfile": "unknown-host"}],
+                     [{"runId": 12345, "runAttempt": 1,
+                       "hostProfile": "linux-x86_64", "extra": True}])
+        for rows in malformed:
+            with self.subTest(rows=rows):
+                self.receipt["inner_verification"]["workflow_runs"] = rows
+                self.write_receipt()
+                with self.assertRaisesRegex(ValueError, "workflow run identity is malformed"):
+                    self.runs()
 
 
 class PublicReplayTests(unittest.TestCase):
@@ -688,6 +755,113 @@ class PublicReplayTests(unittest.TestCase):
         self.assertEqual(marker.read_text(), "imported\n")
 
 
+class PublicGitHubProofDownloadIsolationTests(unittest.TestCase):
+    """Exercise pinned-GH output placement with a local fake CLI, never the network."""
+
+    NAMES = {
+        "payload": "ami-rust-0.1.0-release.tar.xz",
+        "sbom": "ami-rust-0.1.0-release.tar.xz.spdx.json",
+        "transport": "ami-rust-0.1.0-transport.json",
+        "checksums": "SHA256SUMS",
+        "payload_signature": "ami-rust-0.1.0-release.tar.xz.sigstore.json",
+        "transport_signature": "ami-rust-0.1.0-transport.json.sigstore.json",
+    }
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="public-gh-proof-output-")
+        self.root = Path(self.temp.name).resolve()
+        self.candidate = self.root / "candidate"
+        self.candidate.mkdir(mode=0o700)
+        for index, name in enumerate(self.NAMES.values()):
+            (self.candidate / name).write_bytes(("asset-fixture-" + str(index)).encode())
+        self.work = self.root / "work"
+        self.work.mkdir(mode=0o700)
+        self.bin = self.root / "bin"
+        self.bin.mkdir(mode=0o700)
+        self.observations = self.root / "invocations.jsonl"
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def make_fake_gh(self, mode="normal"):
+        executable = self.bin / "gh"
+        script = f'''#!{sys.executable}
+import hashlib, json, os, pathlib, sys
+mode = {mode!r}
+asset = pathlib.Path(sys.argv[3])
+home = pathlib.Path(os.environ["HOME"])
+config = pathlib.Path(os.environ["GH_CONFIG_DIR"])
+cache = pathlib.Path(os.environ["XDG_CACHE_HOME"])
+cwd = pathlib.Path.cwd()
+(home / ".local" / "share" / "gh").mkdir(parents=True)
+(home / ".local" / "share" / "gh" / "runtime-state").write_text("fixture\\n")
+(config / "hosts.yml").write_text("github.com:\\n")
+(cache / "gh").mkdir()
+(cache / "gh" / "entry").write_text("fixture\\n")
+observation = {{"cwd": str(cwd), "home": str(home), "config": str(config),
+               "cache": str(cache), "token_present": bool(os.environ.get("GH_TOKEN"))}}
+with open({str(self.observations)!r}, "a", encoding="utf-8") as stream:
+    stream.write(json.dumps(observation, sort_keys=True) + "\\n")
+digest = hashlib.sha256(asset.read_bytes()).hexdigest()
+name = "sha256:" + digest + ".jsonl"
+if mode == "wrong-digest":
+    name = "sha256:" + ("0" * 64) + ".jsonl"
+raw = (json.dumps({{"fixture": True}}) + "\\n").encode()
+target = cwd / name
+if mode == "symlink":
+    source = home / "proof.jsonl"
+    source.write_bytes(raw)
+    target.symlink_to(source)
+else:
+    target.write_bytes(raw)
+if mode == "extra-output":
+    (cwd / "extra.bin").write_bytes(b"unexpected")
+'''
+        executable.write_text(script, encoding="utf-8")
+        executable.chmod(0o700)
+        return executable
+
+    def run_download(self, mode="normal"):
+        executable = self.make_fake_gh(mode)
+        stage_candidate = types.SimpleNamespace(asset_names=lambda _tag: self.NAMES)
+        return public_replay._download_public_gh_proofs(
+            self.candidate, "v0.1.0", executable, self.work, stage_candidate,
+            "fictional-retrieval-token")
+
+    def test_realistic_cli_side_files_stay_outside_exact_download_directory(self):
+        result = self.run_download()
+        self.assertEqual(set(result), {self.NAMES[key] for key in
+                                      ("payload", "sbom", "transport", "checksums")})
+        self.assertEqual(len(self.observations.read_text().splitlines()), 4)
+        for line in self.observations.read_text().splitlines():
+            row = json.loads(line)
+            cwd = Path(row["cwd"])
+            for key in ("home", "config", "cache"):
+                runtime_path = Path(row[key])
+                self.assertFalse(runtime_path.is_relative_to(cwd))
+                self.assertTrue(runtime_path.is_dir())
+            self.assertTrue(row["token_present"])
+            self.assertEqual(len(list(cwd.iterdir())), 1)
+            output = next(cwd.iterdir())
+            self.assertRegex(output.name, r"^sha256:[0-9a-f]{64}\.jsonl$")
+            self.assertTrue(output.is_file())
+        self.assertNotIn(b"fictional-retrieval-token",
+                         b"".join(path.read_bytes() for path in self.work.rglob("*")
+                                  if path.is_file() and not path.is_symlink()))
+
+    def test_unexpected_second_download_output_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "exactly one JSONL file"):
+            self.run_download("extra-output")
+
+    def test_wrong_subject_digest_filename_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "unexpected name or size"):
+            self.run_download("wrong-digest")
+
+    def test_symlinked_subject_proof_output_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "unexpected name or size"):
+            self.run_download("symlink")
+
+
 class PinnedToolArchiveBudgetTests(unittest.TestCase):
     """Use the actual tracked manifest validator shape without downloading tools."""
 
@@ -890,6 +1064,14 @@ class PublicReplayOuterIntegrationTests(unittest.TestCase):
             "destination": str(destination),
             "run_id": 123,
             "run_attempt": 1,
+            "inner_verification": {
+                "verified": True,
+                "manifest_sha256": "d" * 64,
+                "source_sha": source_commit,
+                "workflow_sha": source_commit,
+                "workflow_runs": [{"runId": 123, "runAttempt": 1,
+                                   "hostProfile": "linux-x86_64"}],
+            },
             "receipt_path": str(evidence / "receipt.json"),
         }
         (evidence / "receipt.json").write_bytes(public_replay._canonical_json(receipt))
@@ -921,6 +1103,8 @@ class PublicReplayOuterIntegrationTests(unittest.TestCase):
             "GITHUB_TOKEN": "ambient-token",
         }, clear=False):
             report = self.replay()
+            self.assertNotIn("GH_TOKEN", os.environ)
+            self.assertNotIn("GITHUB_TOKEN", os.environ)
 
         self.assertEqual(len(self.auth_calls), 1)
         call = self.auth_calls[0]
@@ -933,8 +1117,6 @@ class PublicReplayOuterIntegrationTests(unittest.TestCase):
         self.assertTrue(call["work"].is_relative_to(self.work))
         self.assertEqual(call["destination"].parent, self.work.parent)
         self.assertNotEqual(call["destination"], self.work)
-        self.assertNotIn("GH_TOKEN", os.environ)
-        self.assertNotIn("GITHUB_TOKEN", os.environ)
 
         event_names = [event[0] for event in self.helpers.events]
         self.assertLess(event_names.index("outer_crypto_complete"), event_names.index("safe_unpack"))
@@ -943,6 +1125,12 @@ class PublicReplayOuterIntegrationTests(unittest.TestCase):
         self.assertTrue(report["claims"]["public_transport_verified_by_harness"])
         self.assertEqual(report["source_policy"]["source_sha"], self.commit)
         self.assertEqual(report["source_policy"]["workflow_sha"], self.commit)
+        self.assertEqual(report["host"], "macos-aarch64")
+        self.assertEqual(self.helpers.expected_workflow_runs,
+                         [{"runId": 123, "runAttempt": 1, "hostProfile": "linux-x86_64"}])
+        retained_outer = json.loads((self.output / public_replay.OUTER_RECEIPT_NAME).read_text())
+        self.assertEqual(retained_outer["inner_verification"]["workflow_runs"],
+                         [{"runId": 123, "runAttempt": 1, "hostProfile": "linux-x86_64"}])
         self.assertNotEqual(self.controls_commit, self.commit)
         self.assertEqual(report["workflow_control_sources"]["workflow_source_commit"],
                          self.controls_commit)

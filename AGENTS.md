@@ -58,3 +58,13 @@ machine profile as requirements; investigate growth instead of inventing new
 application ceilings. Keep checks proportional to the operation. Changing
 resource-policy bytes bound to producer receipts requires a new input identity,
 not editing old receipts or silently breaking a live qualification run.
+
+## Initial release version exception
+
+Owner decision, 2026-10-18: the corrected initial SDK may still release as
+`0.1.0` despite the failed public prerelease. The proposed `0.1.1` migration
+is withdrawn. Fabian subsequently requested deleting the old public candidate
+and tag; this was completed and the original tag protection restored. No public
+archive release is required. Keep already retained local historical evidence;
+bind the corrected candidate to fresh source, checksums and provenance. All R1
+criteria remain required. See `docs/release-version-exception-20261018.md`.

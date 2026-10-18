@@ -33,6 +33,9 @@ release assets before consumer replay on both hosts; it does not publish an SDK
 or declare R1 acceptance. The [versioning and staging procedure](docs/release-versioning.md)
 requires A1–A7 qualification of the exact merged release-PR commit before
 production tag/draft creation, followed by public replay before stable promotion.
+The owner-approved [initial-version replacement exception](docs/release-version-exception-20261018.md)
+keeps the corrected candidate at `0.1.0`; its exact source and qualification
+record distinguish it from the removed failed prerelease.
 The [production quickstart](docs/quickstart.md) documents explicit user-local
 preparation of pinned prerequisites, installation, offline builds and new-project
 generation from a verified SDK source snapshot. Projects retain that snapshot
