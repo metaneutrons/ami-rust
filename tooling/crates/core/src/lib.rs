@@ -4,7 +4,10 @@
 mod error;
 pub use error::{Refusal, Result};
 
+pub mod compression;
 pub mod digest;
+pub mod elf;
 pub mod files;
 pub mod frontend;
 pub mod json;
+pub mod records;

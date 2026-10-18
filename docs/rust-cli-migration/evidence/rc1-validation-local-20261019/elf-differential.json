@@ -1,0 +1,70 @@
+{
+  "schema": "ami-rust-rc1-elf-differential-v1",
+  "scope": "Full report equivalence for four retained RC0 native outputs; not full RC1 acceptance",
+  "status": "PASS",
+  "source_sha256": {
+    "tooling/crates/core/src/elf.rs": "a7f068fd2b28357abf2bc488a3b655078283dcb399671b96cdfe3d12bf567fb5",
+    "host/elf_audit.py": "fa2cafc555e382129f120ed60f6b99135526942245b5d1316f0195edc2bcb8f2",
+    "tooling/Cargo.lock": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d"
+  },
+  "binary_sha256": "9f4d7935e2dfccd4a73c5137793eeac84979472c0f2bec5da11c05a6963b1f98",
+  "reports": [
+    {
+      "host": "linux",
+      "root": "a",
+      "input_sha256": "f43ba62f560fbca46f11486a95c433cabba83a24ba52bd8ed130cfa025524acd",
+      "input_bytes": 342136,
+      "full_report_equal": true,
+      "rust_report_sha256": "2edd272afaaed278eac5a48b571946e27486c07e2bdc4ce93be29e5800d999b4"
+    },
+    {
+      "host": "linux",
+      "root": "b",
+      "input_sha256": "f43ba62f560fbca46f11486a95c433cabba83a24ba52bd8ed130cfa025524acd",
+      "input_bytes": 342136,
+      "full_report_equal": true,
+      "rust_report_sha256": "d251c80c1101c04176271c9aa0d83285d22df1655eec16ea4d6891ec3a0444c5"
+    },
+    {
+      "host": "macos",
+      "root": "a",
+      "input_sha256": "f43ba62f560fbca46f11486a95c433cabba83a24ba52bd8ed130cfa025524acd",
+      "input_bytes": 342136,
+      "full_report_equal": true,
+      "rust_report_sha256": "d7558c6bbc0c1022bf53a29f5af6b38894309a9c64daec110538323ea05b3475"
+    },
+    {
+      "host": "macos",
+      "root": "b",
+      "input_sha256": "f43ba62f560fbca46f11486a95c433cabba83a24ba52bd8ed130cfa025524acd",
+      "input_bytes": 342136,
+      "full_report_equal": true,
+      "rust_report_sha256": "b7351b6de8ddcd4d11b3100e20ece87512551ac970daf5f20290b49258c71d16"
+    }
+  ],
+  "controls": {
+    "wrong-magic": {
+      "rust_exit": 2,
+      "no_success_report": true,
+      "historical_accepts": false,
+      "intentional_gabi_stricter": false
+    },
+    "overlap": {
+      "rust_exit": 2,
+      "no_success_report": true,
+      "historical_accepts": true,
+      "intentional_gabi_stricter": true
+    }
+  },
+  "original_inputs_unchanged": true,
+  "source_commit": "f95f09e7f80e5d6d36a8f5ed9f122cb29bd536b5",
+  "historical_source": "host/elf_audit.py at ba9727c467eadab850757ee9334bd1bda5c8b10e",
+  "historical_source_sha256": "fa2cafc555e382129f120ed60f6b99135526942245b5d1316f0195edc2bcb8f2",
+  "previous_failed_attempt": {
+    "name": "rc1-elf-differential-20261019-a1",
+    "status": "FAIL",
+    "four_valid_full_reports_equal": true,
+    "wrong_magic_refused": true,
+    "failure": "A non-NULL section header zero aliased text but was excluded from overlap preflight. The corrected auditor now refuses it; failure retained."
+  }
+}

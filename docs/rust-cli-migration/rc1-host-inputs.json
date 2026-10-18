@@ -36,5 +36,5 @@
     "tooling/crates/cli/Cargo.toml": "d9a5cc73251d16ec109361a18feb17f0afa967c06048ab24ccdbab1fdc7ab634",
     "tooling/rust-toolchain.toml": "72da9f9e503464ba7393560f6f51a69fb06be72633d52ae7725fa0ba59dfda22"
   },
-  "qualification": "Local macOS foundation: 22 tests, formatting and Clippy pass; exact evidence in evidence/rc1-foundation-local-20261019/result.json. Both-host CI and complete RC1 acceptance remain outstanding."
+  "qualification": "First foundation: 22 tests per supported host passed in hosted run 39175934341; exact evidence in evidence/rc1-foundation-hosted-39175934341.json. Complete RC1 acceptance remains outstanding."
 }

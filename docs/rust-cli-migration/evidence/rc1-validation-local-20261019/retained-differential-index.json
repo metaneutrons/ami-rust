@@ -1,0 +1,142 @@
+{
+  "rc1-elf-differential-20261019-a1/Cargo.lock": {
+    "bytes": 6811,
+    "sha256": "0ee580fb418601d236b78b876f5b996821e641408aba671c029789bb6da76fb2"
+  },
+  "rc1-elf-differential-20261019-a1/Cargo.toml": {
+    "bytes": 266,
+    "sha256": "3788dc70867a94728ebd5ae159ee62b8f2e3e7bd32a40ec11ab22a26decd585c"
+  },
+  "rc1-elf-differential-20261019-a1/attempt.json": {
+    "bytes": 452,
+    "sha256": "127404edd1ed5cb1e1de94522ca9a85e2a29999e5ecec6f76199a0c93eec24b5"
+  },
+  "rc1-elf-differential-20261019-a1/build.stderr.log": {
+    "bytes": 627,
+    "sha256": "99edd4e7c3f901f8c250c5714c64b904989c566ea0e039eddea560206f783b1a"
+  },
+  "rc1-elf-differential-20261019-a1/build.stdout.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-elf-differential-20261019-a1/linux-root b with spaces.python.json": {
+    "bytes": 633664,
+    "sha256": "36931144f9fb38768798e307bf51d1603fc82bd5ea7c2d66687b90ccb12e6803"
+  },
+  "rc1-elf-differential-20261019-a1/linux-root b with spaces.rust.json": {
+    "bytes": 633663,
+    "sha256": "d251c80c1101c04176271c9aa0d83285d22df1655eec16ea4d6891ec3a0444c5"
+  },
+  "rc1-elf-differential-20261019-a1/linux-root-a.python.json": {
+    "bytes": 633652,
+    "sha256": "a83d85d18814e10939d21ea4367fdf79cd907e4c3753d1f310f18fb9adac9076"
+  },
+  "rc1-elf-differential-20261019-a1/linux-root-a.rust.json": {
+    "bytes": 633651,
+    "sha256": "2edd272afaaed278eac5a48b571946e27486c07e2bdc4ce93be29e5800d999b4"
+  },
+  "rc1-elf-differential-20261019-a1/macos-root b with spaces.python.json": {
+    "bytes": 633664,
+    "sha256": "0989c3fa3549e7be0d51050ccc1f9668754730999688b1bf1d8be6a6d15f54ea"
+  },
+  "rc1-elf-differential-20261019-a1/macos-root b with spaces.rust.json": {
+    "bytes": 633663,
+    "sha256": "b7351b6de8ddcd4d11b3100e20ece87512551ac970daf5f20290b49258c71d16"
+  },
+  "rc1-elf-differential-20261019-a1/macos-root-a.python.json": {
+    "bytes": 633652,
+    "sha256": "345e174d8904e7373457bbfdbf6efc4aa3ab7c7cb7215dec4c200be64526375f"
+  },
+  "rc1-elf-differential-20261019-a1/macos-root-a.rust.json": {
+    "bytes": 633651,
+    "sha256": "d7558c6bbc0c1022bf53a29f5af6b38894309a9c64daec110538323ea05b3475"
+  },
+  "rc1-elf-differential-20261019-a1/overlap-diagnosis.json": {
+    "bytes": 633630,
+    "sha256": "b4a3a3e22523e9a1c925305c681981f0fa4db77dffda8f0bb430da9d30905cef"
+  },
+  "rc1-elf-differential-20261019-a1/overlap.elf": {
+    "bytes": 342136,
+    "sha256": "15cb5c8aa4e49fef8c4b20b97497dcb9f3a5286bd8b2b910df841ce3ae240495"
+  },
+  "rc1-elf-differential-20261019-a1/overlap.rust.json": {
+    "bytes": 633630,
+    "sha256": "b4a3a3e22523e9a1c925305c681981f0fa4db77dffda8f0bb430da9d30905cef"
+  },
+  "rc1-elf-differential-20261019-a1/src/main.rs": {
+    "bytes": 543,
+    "sha256": "5837b3871930f926ade9568b3bdeef9c8c7dfab00521592b87b1f744c15c6e71"
+  },
+  "rc1-elf-differential-20261019-a1/wrong-magic.elf": {
+    "bytes": 342136,
+    "sha256": "599216dc42f614b442f1993b71a7f4b6ec0f78aa64a61658fdde1c4f1678ba9d"
+  },
+  "rc1-elf-differential-20261019-a2/Cargo.lock": {
+    "bytes": 6811,
+    "sha256": "0ee580fb418601d236b78b876f5b996821e641408aba671c029789bb6da76fb2"
+  },
+  "rc1-elf-differential-20261019-a2/Cargo.toml": {
+    "bytes": 266,
+    "sha256": "3788dc70867a94728ebd5ae159ee62b8f2e3e7bd32a40ec11ab22a26decd585c"
+  },
+  "rc1-elf-differential-20261019-a2/build.log": {
+    "bytes": 343,
+    "sha256": "6701d3e81e4ce54028988cb1fef7adb9e3fc3d038ad1cbce9307d86cb519028c"
+  },
+  "rc1-elf-differential-20261019-a2/linux-a.python.json": {
+    "bytes": 633652,
+    "sha256": "a83d85d18814e10939d21ea4367fdf79cd907e4c3753d1f310f18fb9adac9076"
+  },
+  "rc1-elf-differential-20261019-a2/linux-a.rust.json": {
+    "bytes": 633651,
+    "sha256": "2edd272afaaed278eac5a48b571946e27486c07e2bdc4ce93be29e5800d999b4"
+  },
+  "rc1-elf-differential-20261019-a2/linux-b.python.json": {
+    "bytes": 633664,
+    "sha256": "36931144f9fb38768798e307bf51d1603fc82bd5ea7c2d66687b90ccb12e6803"
+  },
+  "rc1-elf-differential-20261019-a2/linux-b.rust.json": {
+    "bytes": 633663,
+    "sha256": "d251c80c1101c04176271c9aa0d83285d22df1655eec16ea4d6891ec3a0444c5"
+  },
+  "rc1-elf-differential-20261019-a2/macos-a.python.json": {
+    "bytes": 633652,
+    "sha256": "345e174d8904e7373457bbfdbf6efc4aa3ab7c7cb7215dec4c200be64526375f"
+  },
+  "rc1-elf-differential-20261019-a2/macos-a.rust.json": {
+    "bytes": 633651,
+    "sha256": "d7558c6bbc0c1022bf53a29f5af6b38894309a9c64daec110538323ea05b3475"
+  },
+  "rc1-elf-differential-20261019-a2/macos-b.python.json": {
+    "bytes": 633664,
+    "sha256": "0989c3fa3549e7be0d51050ccc1f9668754730999688b1bf1d8be6a6d15f54ea"
+  },
+  "rc1-elf-differential-20261019-a2/macos-b.rust.json": {
+    "bytes": 633663,
+    "sha256": "b7351b6de8ddcd4d11b3100e20ece87512551ac970daf5f20290b49258c71d16"
+  },
+  "rc1-elf-differential-20261019-a2/overlap.elf": {
+    "bytes": 342136,
+    "sha256": "15cb5c8aa4e49fef8c4b20b97497dcb9f3a5286bd8b2b910df841ce3ae240495"
+  },
+  "rc1-elf-differential-20261019-a2/overlap.stderr.log": {
+    "bytes": 33,
+    "sha256": "0c0145db984abc600f98afd23983d1c0b52a428e5d95836dccea1270f720dc79"
+  },
+  "rc1-elf-differential-20261019-a2/result.json": {
+    "bytes": 2172,
+    "sha256": "046317a92ca87f3e6ceda65fc5b16dcbb7b84e126275e3adcc7f0e98ce1e05b7"
+  },
+  "rc1-elf-differential-20261019-a2/src/main.rs": {
+    "bytes": 543,
+    "sha256": "5837b3871930f926ade9568b3bdeef9c8c7dfab00521592b87b1f744c15c6e71"
+  },
+  "rc1-elf-differential-20261019-a2/wrong-magic.elf": {
+    "bytes": 342136,
+    "sha256": "599216dc42f614b442f1993b71a7f4b6ec0f78aa64a61658fdde1c4f1678ba9d"
+  },
+  "rc1-elf-differential-20261019-a2/wrong-magic.stderr.log": {
+    "bytes": 30,
+    "sha256": "b2ee9dd941f6180109f4b6ce8eb2bc75b2d5c0b9d720e262534d14cc3b42caee"
+  }
+}
