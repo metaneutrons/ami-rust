@@ -1,51 +1,165 @@
-# ami-rust
+<p align="center">
+  <img src="assets/ami-rust-hero.svg" alt="ami-rust — Rust for AROS. Cross-compile on macOS and Linux; run native on AROS x86-64." width="100%">
+</p>
 
-ami-rust is a source SDK and a small Rust interface for native PC x86-64 AROS
-ABI-v1. Cross-development uses a pinned Rust toolchain, a narrowly patched Cargo
-and small installation, verification and linker helpers. Prerequisites are
-provisioned explicitly without replacing global rustup or Cargo installations.
+<p align="center">
+  <a href="https://github.com/metaneutrons/ami-rust/actions/workflows/ci.yml"><img src="https://github.com/metaneutrons/ami-rust/actions/workflows/ci.yml/badge.svg?branch=main" alt="Source CI"></a>
+  <a href="https://github.com/metaneutrons/ami-rust/actions/workflows/sdk-qualify.yml"><img src="https://github.com/metaneutrons/ami-rust/actions/workflows/sdk-qualify.yml/badge.svg?branch=main" alt="SDK qualification workflow"></a>
+  <a href="https://github.com/metaneutrons/ami-rust/releases/latest"><img src="https://img.shields.io/github/v/release/metaneutrons/ami-rust?color=ff825e&amp;style=flat-square" alt="Latest SDK release"></a>
+  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-7c8cf8?style=flat-square" alt="License: MIT OR Apache-2.0"></a>
+  <a href="docs/compatibility.md"><img src="https://img.shields.io/badge/target-AROS%20x86--64%20ABI--v1-ff825e?style=flat-square" alt="Target: AROS x86-64 ABI-v1"></a>
+  <a href="docs/api.md"><img src="https://img.shields.io/badge/Rust-no__std%20%2B%20alloc-91b8d6?style=flat-square" alt="Rust: no_std plus alloc"></a>
+</p>
 
-The initial development hosts are macOS Apple Silicon and Linux x86-64. The
-documented target profile is native PC x86-64 AROS ABI-v1 under the qualified
-QEMU boot profile; physical hardware and other CPU/ABI combinations are outside
-this scope. See [compatibility](docs/compatibility.md) and the [API scope](docs/api.md).
-Application allocations use public Exec allocation with checked sizes,
-alignment, accounting and ownership. The [memory policy](docs/memory-policy.md)
-defines this behavior and its qualification requirements; the SDK does not
-impose the historical feasibility allocation or heap quotas. Native
-AROS-hosted rustc/Cargo, full Rust std and official rustup target distribution
-are outside this SDK's scope.
+<p align="center">
+  <strong>Build native AROS applications in Rust.</strong><br>
+  A source SDK, a task-aware API, and a pinned cross-development toolchain.
+</p>
 
-The [authoritative release plan](docs/m2-r1-plan.md) defines the acceptance gates.
-The [dated release status](docs/release-status.md) records the current
-acceptance state; consult it before using any version as supported. A protected
-CI artifact alone does not establish an accepted release; public consumer and
-guest replay must also pass.
+<p align="center">
+  <a href="docs/quickstart.md">Get started</a> ·
+  <a href="docs/api.md">API guide</a> ·
+  <a href="docs/compatibility.md">Compatibility</a> ·
+  <a href="https://github.com/metaneutrons/ami-rust/releases">Releases</a> ·
+  <a href="docs/release-status.md">Release status</a>
+</p>
 
-Source CI runs regression fixtures on both development hosts. The manual
-[protected SDK producer](docs/hosted-sdk-producer.md) builds, authenticates and
-checks candidates on standard GitHub-hosted runners; its output is qualification
-evidence for the selected source and input identities. The dated release status
-records the acceptance state.
-The protected Cargo prerequisite workflow retains its separate producer identity.
-The [public release replay](docs/public-release-replay.md) authenticates all six
-release assets before consumer replay on both hosts; it does not publish an SDK
-or declare R1 acceptance. The [versioning and staging procedure](docs/release-versioning.md)
-requires A1–A7 qualification of the exact merged release-PR commit before
-production tag/draft creation, followed by public replay before stable promotion.
-The owner-approved [initial-version replacement exception](docs/release-version-exception-20261018.md)
-keeps the corrected candidate at `0.1.0`; its exact source and qualification
-record distinguish it from the removed failed prerelease.
-The [production quickstart](docs/quickstart.md) documents explicit user-local
-preparation of pinned prerequisites, installation, offline builds and new-project
-generation from a verified SDK source snapshot. Projects retain that snapshot
-after SDK uninstall; a separate recheck verifies the retained prerequisites.
-Support for a particular version depends on the R1 acceptance and public replay
-recorded in the dated release status.
+---
 
-The pinned original and source-derived C-SDK prerequisites and corresponding
-source live in this repository. Read their conspicuous
+> **0.1.0 is available.** The first SDK release passed independent macOS/Linux
+> installation and build replay, plus the complete AROS runtime and memory matrix.
+> [Install the SDK](docs/quickstart.md) · [Read the qualification evidence](docs/release-status.md).
+> Runtime support is confined to the documented PC x86-64 ABI-v1 QEMU profile.
+
+## Modern Rust, native AROS
+
+ami-rust cross-compiles Rust applications on **macOS Apple Silicon** and
+**Linux x86-64** for **native PC x86-64 AROS ABI-v1**. Applications use AROS
+Exec and DOS services through a small Rust facade, with ownership and task
+lifetimes checked at the API boundary.
+
+<table>
+<tr>
+<td width="33%" valign="top">
+<h3>Native foundations</h3>
+<p><code>no_std</code>, optional <code>alloc</code>, native executables, DOS file I/O,
+libraries, signals, and local message ports.</p>
+</td>
+<td width="33%" valign="top">
+<h3>Explicit toolchains</h3>
+<p>Pinned compiler and SDK inputs, project locks, offline builds after preparation,
+and separate host tools for macOS and Linux.</p>
+</td>
+<td width="33%" valign="top">
+<h3>Verifiable delivery</h3>
+<p>GitHub attestations, Cosign signatures, complete asset inventories, licence
+records, and independent consumer replay.</p>
+</td>
+</tr>
+</table>
+
+## A small beginning
+
+The generated project starts with this application:
+
+```rust
+#![no_std]
+use amiga_os::{AppStatus, Context};
+
+fn application(ctx: &Context) -> AppStatus {
+    ctx.diagnostic(b"ami-rust hello", 1);
+    AppStatus::Success
+}
+
+amiga_os::entry!(application);
+```
+
+`amiga-os` is the public facade. `amiga-sys` exposes the unsafe ABI boundary;
+`amiga-alloc` provides the native allocator. See the [API guide](docs/api.md)
+for file I/O, borrowed output streams, library lifetimes, signals, messages,
+and synchronous callbacks.
+
+## Get started
+
+Follow the [installation and first-project guide](docs/quickstart.md).
+It documents the end-to-end procedure:
+
+1. Select the release and its independently trusted publisher source.
+2. Prepare and verify the pinned host prerequisites in a private local directory.
+3. Authenticate and install the SDK, then generate and lock a project.
+4. Build offline and run the native executable under the documented AROS profile.
+
+Preparation leaves global Rust and Cargo installations intact. SDK versions can
+be installed side by side; uninstall keeps projects and shared prerequisites.
+The SDK contains source and helpers; the Rust compiler, C SDK, native toolchain,
+and vendor inputs are provisioned explicitly by the preparation recipe.
+
+GitHub Releases is the current installation channel. [APT and Homebrew are
+planned next, followed by AUR and rustup integration](docs/distribution-channels-plan.md).
+
+**Host requirements:** macOS 26 on Apple Silicon, or Ubuntu 24.04 on x86-64
+with glibc; an existing Python 3.10+ to bootstrap the pinned interpreter;
+6 GiB physical RAM and 24 GiB free space for preparation. These are the initially
+qualified host profiles. The [compatibility guide](docs/compatibility.md)
+records the exact inputs and target configuration.
+
+## Try something useful
+
+The SDK includes a native, read-only **SHA-256 checksum utility**. Build it with
+the quickstart, then run it in AROS Shell:
+
+```text
+SHAUTIL "fixture with spaces.bin"
+Echo $RC
+Echo "shell remains usable"
+```
+
+The utility accepts multiple files, handles paths containing spaces, and reports
+failures with a nonzero status. Its [example guide](examples/sha256sum/README.md)
+explains file limits and error behavior. The [minimal example](examples/minimal)
+shows the runtime with and without allocation.
+
+## Support at a glance
+
+| Area | Initial SDK scope |
+| --- | --- |
+| Development hosts | macOS Apple Silicon; Linux x86-64 |
+| Target | Native PC x86-64 AROS ABI-v1 |
+| Rust libraries | `core`, `alloc`, and the documented SDK facade |
+| Native services | Files, stdout/stderr, libraries, signals, local ports/messages, synchronous callbacks |
+| Qualification environment | Pinned QEMU image, one CPU, 512 MiB RAM |
+| Separate future work | Full `std`, threads, networking, native AROS-hosted rustc/Cargo, other CPU/ABI profiles and physical hardware |
+
+This is a cross-development SDK. Official `rustup target add` distribution and
+arbitrary crate compatibility are outside the initial release scope. Application
+memory uses public Exec allocation and checked layouts; the qualification
+machine's 512 MiB RAM is a test profile. See the [memory policy](docs/memory-policy.md).
+
+## Documentation
+
+| Start here | Go deeper |
+| --- | --- |
+| [Installation and first project](docs/quickstart.md) | [API and lifetime contracts](docs/api.md) |
+| [Supported hosts and target](docs/compatibility.md) | [Memory and allocation](docs/memory-policy.md) |
+| [Current release status](docs/release-status.md) | [Protected SDK production](docs/hosted-sdk-producer.md) |
+| [Release verification](docs/public-release-replay.md) | [Authoritative release plan](docs/m2-r1-plan.md) |
+| [Distribution roadmap: APT, Homebrew, AUR, rustup](docs/distribution-channels-plan.md) | [Compatibility and limits](docs/compatibility.md) |
+
+## Contributing
+
+[Open an issue](https://github.com/metaneutrons/ami-rust/issues) for a reproducible
+bug or a scoped proposal. Include the host profile, SDK/source identity, build
+command, and relevant diagnostics. Keep changes focused and retain the pinned
+inputs when reproducing a release issue.
+
+## Licence and source availability
+
+First-party ami-rust code and artwork are **MIT OR Apache-2.0**.
+See [LICENSE.md](LICENSE.md), [LICENSE-MIT](LICENSE-MIT), and
+[LICENSE-APACHE](LICENSE-APACHE).
+
+Third-party components retain their own terms. The original and source-derived
+C-SDK inputs and corresponding source are included in this repository; read the
 [source-availability notice](release/portable-csdk/SOURCE-AVAILABILITY.md),
-[dated changes](release/portable-csdk/CHANGES.md) and original licence terms.
-First-party ami-rust code is MIT OR Apache-2.0; third-party code retains its own
-terms. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+[recorded changes](release/portable-csdk/CHANGES.md), and
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

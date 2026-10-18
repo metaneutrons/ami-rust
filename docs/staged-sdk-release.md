@@ -1,10 +1,11 @@
 # SDK release staging
 
-R1 remains unqualified. These helpers prepare and check bytes; they do not
-authorize publication, authenticate a candidate, create a production tag, or
-promote a release. No SDK has been published by these helpers. The protected
-producer, final native qualification, actual signature verification and
-independent R1-A1 through R1-A7 acceptance are still required before publication.
+These helpers prepare and check bytes. A successful helper result alone does
+not authorise publication or establish cryptographic verification, independent
+acceptance or a supported release. The [release status](release-status.md) and
+[public evidence](evidence/r1-0.1.0.json) record the selected release's actual
+producer, native, authentication, acceptance and publication outcomes. Those
+outcomes are separate from the helper contracts described here.
 
 `release/stage_candidate.py` accepts an already authenticated and accepted
 candidate directory from its caller. It checks the release version against the
@@ -95,7 +96,9 @@ may report verification success only when the actual bounded report identifies
 this exact source/run. Failed partial candidates and outcomes remain available
 for diagnosis and must not be admitted as release-ready artifacts.
 
-Actual successful protected production is still required; isolated fixtures do
-not establish signing/provenance acceptance. Automated release-please dispatch,
-prerelease exposure and promotion remain separate work. No stage here publishes
-an SDK or replaces independent R1 acceptance and public replay.
+Release acceptance requires actual protected production and cryptographic
+verification; isolated fixtures are supporting checks. Tag/draft creation,
+prerelease exposure and stable promotion are separate operations. The staging
+helpers do not replace independent R1 acceptance or public replay. Consult the
+current release status for completed operations and the version-exception record
+for the narrowly authorised first-release version disposition.

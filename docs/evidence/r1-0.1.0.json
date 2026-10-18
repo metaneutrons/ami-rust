@@ -1,0 +1,506 @@
+{
+  "schema": "ami-rust-public-r1-release-evidence-v1",
+  "status": "R1_PUBLISHED_GO",
+  "version": "0.1.0",
+  "tag": "v0.1.0",
+  "source_commit": "b4ebb9cce5decd01616b75acf451d0eba9995ee3",
+  "source_tree": "c5d9eed6b057ddadd17356801f8b3897e3e430dc",
+  "release_id": 416548451,
+  "release_url": "https://github.com/metaneutrons/ami-rust/releases/tag/v0.1.0",
+  "R1_qualified": true,
+  "R1_published": true,
+  "overall_R1_complete": true,
+  "qualification_acceptance_sha256": "1efa7553577d685bfa4726ea45e8f8cb78e45052495454e16fccaf35f029bcdb",
+  "independent_qualification_review_sha256": "d724d9d071633ad63010bb677f4049f341ae9119c6ced60bf115eeb993070d83",
+  "qualification_binding": {
+    "sdk": {
+      "run_id": 39121017959,
+      "run_attempt": 1,
+      "workflow_sha": "b4ebb9cce5decd01616b75acf451d0eba9995ee3",
+      "publisher_inputs_manifest_sha256": "00203acd0e657b73f13f2d45d139759df23e952b0ad1388f348d809fd01e70e5",
+      "readback_set_sha256": "e6d06637a2975be362eb9171a94bcf31cfd1261e1c2886e9007790b6168f55b5"
+    },
+    "native": {
+      "campaign_id": "replacement-b4ebb9c-stdio",
+      "clock_sha256": "6321c2edc9bddf504424b34c7c2a49b9a1a8f30d2dd160f254141e148b742648"
+    }
+  },
+  "criteria": [
+    {
+      "id": "M1A1",
+      "requirement": "Pinned C/Rust ABI layout, scalar, pointer/BPTR, startup and Exec/DOS/callback contracts agree; malformed ABI/ELF controls refuse safely.",
+      "status": "PASS"
+    },
+    {
+      "id": "M1A2",
+      "requirement": "Allocator alignment/zeroing/realloc/OOM/overflow and deterministic churn preserve original-block/resource invariants; no blanket historical allocation or heap quota.",
+      "status": "PASS"
+    },
+    {
+      "id": "M1A3",
+      "requirement": "Failure, panic/OOM, consumed-handle close, failed acquisition, callback teardown and forgotten-resource cleanup return declared statuses without C unwind/OS halt and leave the shell usable.",
+      "status": "PASS"
+    },
+    {
+      "id": "M1A4",
+      "requirement": "Pinned standalone no_std/alloc serialization and signature examples build with exact locks/features and pass golden JSON plus valid/invalid signature vectors on AROS.",
+      "status": "PASS"
+    },
+    {
+      "id": "M1A5",
+      "requirement": "Every bounded safe API and ownership/task/lifetime rule has positive and refusal evidence, including file/library/signal/port/message/callback cleanup and compile-fail ownership/transfer escapes.",
+      "status": "PASS"
+    },
+    {
+      "id": "M1A6",
+      "requirement": "Complete calibrated memory/stack/diagnostic measurement covers loader/startup/body/teardown, native allocations, counter-controls and actual resource peaks on the final candidate.",
+      "status": "PASS"
+    },
+    {
+      "id": "M1A7",
+      "requirement": "API/build/use/error/unsafe/lifetime documentation matches the delivered candidate and is executed verbatim on its supported host; unsupported configurations are explicit.",
+      "status": "PASS"
+    },
+    {
+      "id": "M1A8",
+      "requirement": "Two independent clean offline macOS builds reproduce canonical final candidate artifacts; an independent reviewer maps every M1-A/T requirement to durable final-input evidence.",
+      "status": "PASS"
+    },
+    {
+      "id": "M1T01",
+      "requirement": "Complete candidate/input receipt matches all actual sources, target/schema, ordered native link tools, SDK and media before build",
+      "status": "PASS"
+    },
+    {
+      "id": "M1T02",
+      "requirement": "No-alloc and alloc SDK recipes plus core/dependency fixtures build in two clean absolute macOS directories with locked offline sources; all canonical native SDK/fixture outputs match byte-for-byte within this host",
+      "status": "PASS"
+    },
+    {
+      "id": "M1T03",
+      "requirement": "C/Rust size/alignment/offset/scalar/BPTR probes agree for every exposed used type/field; startup and native status 0 on ten launches; native control remains usable",
+      "status": "PASS"
+    },
+    {
+      "id": "M1T04",
+      "requirement": "All 52 size/alignment combinations (sizes 1/7/64/4096; alignment every power of two 1..4096), largest 1 MiB payload at alignment 1 and 4096, and zero-sized/zeroed behavior satisfy patterns and original-pointer free accounting",
+      "status": "PASS"
+    },
+    {
+      "id": "M1T05",
+      "requirement": "M0 seed `0x41524f53`, 1000 operations and 32 slots; same operation counts and collection probes, realloc growth/shrink/preserved prefix and balanced backing records",
+      "status": "PASS"
+    },
+    {
+      "id": "M1T06",
+      "requirement": "Ordinary owner diagnostics make zero allocation entries across open/error/panic/OOM/cleanup; all logger/trampoline paths inspected; long diagnostics truncate within the 256-byte buffer",
+      "status": "PASS"
+    },
+    {
+      "id": "M1T07",
+      "requirement": "Ten repetitions of exact B08 file fixtures/space path; bounded read-exact/write-all handle short successful transfers; explicit and dropped closes occur once; native Close-error path consumes ownership and reports error",
+      "status": "PASS"
+    },
+    {
+      "id": "M1T08",
+      "requirement": "Optional library open/close ledger, four-slot limit and mandatory DOS teardown reconcile; every finite acquisition failure leaves zero resource delta after cleanup",
+      "status": "PASS"
+    },
+    {
+      "id": "M1T09",
+      "requirement": "Ten owner-task signal and private-port put/get/reply/drain round trips; message identity/data retained; borrowed/owned signal release is distinguished, including port-owned bits",
+      "status": "PASS"
+    },
+    {
+      "id": "M1T10",
+      "requirement": "Ten synchronous C callback round trips return sentinel `0x41524f5352555354`; context valid only during call, owner check enforced, normal/fatal paths prevent subsequent invocation",
+      "status": "PASS"
+    },
+    {
+      "id": "M1T11",
+      "requirement": "Normal return, fallible error, panic and global OOM while tracked allocations/files/libraries/ports/messages are live; fatal outcomes native 20, balanced resource/backing records and fresh native status 0 afterward; include deliberately forgotten SDK resources and panic in synchronous callback",
+      "status": "PASS"
+    },
+    {
+      "id": "M1T12",
+      "requirement": "Locked standalone JSON/Ed25519 workload exactly as M0 through final SDK artifacts, correct golden bytes and 50 valid/invalid pairs",
+      "status": "PASS"
+    },
+    {
+      "id": "M1T13",
+      "requirement": "Every native success/failure case meets section 4 caps with all loadable sections, loader/startup/stack/body/teardown and direct OS allocations accounted for; atomic reference and complete event/case coverage reconcile",
+      "status": "PASS"
+    },
+    {
+      "id": "M1T14",
+      "requirement": "Safe examples compile/run; independent reviewer executes exact delivered macOS instructions offline, audits every unsafe boundary and maps all final candidate results to M1-A1..A8",
+      "status": "PASS"
+    },
+    {
+      "id": "M2A1",
+      "requirement": "- **M2-A1 \u2014 two-host replay:** Clean macOS Apple Silicon and Linux x86-64 build the same example with committed dependency locks and recorded target-nightly/SDK identities; run each artifact through M1. No manual exports or global active SDK are required. Explain differing hashes; claim byte reproducibility only if measured.",
+      "status": "PASS"
+    },
+    {
+      "id": "M2A2",
+      "requirement": "- **M2-A2 \u2014 selection integrity:** Missing locks/components, altered SDK manifests, compiler/schema mismatch and incompatible linkers fail before build acceptance. No silent download/selection or host-toolchain change. Document explicit provisioning, offline replay and actionable diagnostics.",
+      "status": "PASS"
+    },
+    {
+      "id": "M2A3",
+      "requirement": "- **M2-A3 \u2014 separation:** Host commands retain their compiler contract; targets use separately pinned nightly/`rust-src`. CI identifies both and checks locks. Forwarding, exit status and artifact discovery have positive/counter-probes on both hosts.",
+      "status": "PASS"
+    },
+    {
+      "id": "R1A1",
+      "requirement": "- **R1-A1 \u2014 frozen release contract:** The release manifest identifies an immutable candidate/version, source and dependency commits/hashes, dated target nightly and `rust-src`, JSON/schema/LLVM, SDK/compiler/linker/collector inputs, compatible ami-rust host integration version and upstream Cargo/rustup identities, and every delivered asset. Freeze the exact x86-64 CPU features, native image/boot profile, minimum AROS/library versions, host versions and supported API subset. The supported runtime matrix contains the measured M0/M1 profile; unsupported target/ABI/compiler/SDK combinations fail selection with documented status rather than silently building. No requirement references a future `nxpk` asset.",
+      "status": "PASS"
+    },
+    {
+      "id": "R1A2",
+      "requirement": "- **R1-A2 \u2014 reproducible consumer builds:** Using the exact delivered quickstart/recipe, an independent reviewer performs two clean builds in different absolute directories on each of macOS Apple Silicon and Linux x86-64. Source/dependency inputs are locked, and no ambient global SDK, manual exports or cached compiled objects are needed. All four builds produce byte-identical canonical native reference executables, every native bridge/runtime object, and every non-`lib.rmeta` member (including symbol indices and `.rmeta-link`) of each library generated by the SDK release recipe. Complete `.rlib` files and `lib.rmeta` bytes must additionally match between the two clean directories on each host. Cross-host `lib.rmeta` is qualified separately, with unchanged raw archive/member hashes, strict identification and review of the host-proc-macro dependency differences, successful downstream consumption, and actual Serde `Serialize`/`Deserialize` derive expansion and positive/negative round-trip probes on both host builds. Every unexpected metadata difference or changed native/index member fails qualification. No metadata is edited, stripped, normalised or assigned a fabricated compiler identity; separately provisioned compiler/SDK prerequisites retain their own verified producer hashes; timestamps/paths are controlled by the recipe, not removed ad hoc after a mismatch. Host binaries are compared only within their own host profile. Signatures/attestations are separately verified and excluded from deterministic payload comparison. An altered SDK/lockfile or wrong target compiler fails the build gate; provisioning failures leave a usable prior host setup. Offline replay succeeds after explicit verified provisioning, without contacts to `nxpk` infrastructure.",
+      "status": "PASS"
+    },
+    {
+      "id": "R1A3",
+      "requirement": "- **R1-A3 \u2014 final-artifact runtime qualification:** Build and run the M1 ABI/allocator/failure/lifetime suite through the released runner against the exact SDK candidate. Inspect delivered ELF headers, entry bridge, loadable sections and relocation types, and load/run the utility built on each host in the pinned native QEMU image. Each completes ten consecutive invocations with expected output/status. Deliberately unsupported relocation or malformed ELF fixtures are rejected by loader/compatibility qualification rather than counted as runnable artifacts; the shell remains usable. Re-exercise over-alignment, forced OOM, panic and failed library-open cleanup on final inputs. Run and document the mandatory standalone SDK dependency probes from M1-A4 on the final inputs; these do not select package protocols or imply arbitrary crate compatibility.",
+      "status": "PASS"
+    },
+    {
+      "id": "R1A4",
+      "requirement": "- **R1-A4 \u2014 useful reference application:** Ship a native read-only SHA-256 file-checksum CLI using the released Rust allocation and DOS I/O wrappers, not only a diagnostic banner. It accepts multiple paths including spaces, reads files in bounded chunks, emits deterministic hashes and reports failures with nonzero status without modifying input files. On artifacts from both hosts, compare output with an independently generated golden manifest for empty, one-byte, binary and 1 MiB fixtures; exercise missing/unreadable files and injected read error/OOM. Record unchanged input hashes/attributes and continued shell usability. No download, package format, network stack or OS update is needed to demonstrate its usefulness.",
+      "status": "PASS"
+    },
+    {
+      "id": "R1A5",
+      "requirement": "- **R1-A5 \u2014 documentation and maintenance:** Deliver and execute verbatim installation, clean build and utility-run instructions on both supported hosts. Provide a minimal new-project example, target API reference, unsafe-boundary/task-affinity notes, compiler/SDK compatibility table, panic/OOM semantics, troubleshooting and explicit exclusions (`std`, native compiler, other CPUs/OSes and unqualified hardware). Document host uninstall/restore without deleting unrelated SDKs. A named maintainer owns dependency/security intake and compiler/SDK upgrade qualification; changing qualified inputs requires compatibility evidence before updating the supported matrix, not a floating nightly or an invented support-duration promise.",
+      "status": "PASS"
+    },
+    {
+      "id": "R1A6",
+      "requirement": "- **R1-A6 \u2014 independent release integrity:** The SDK/reference-executable artifact set uses hardened binary-release controls independently of M7: commit-pinned build actions, protected publication credentials, asset checksums, signatures, provenance attestations, dependency/SBOM inventory and license/redistribution review for shipped bridge/SDK/runtime/dependencies. A clean-room consumer verifies every declared asset from its recorded producer identity, installs the SDK without package-manager support and runs the utility. A modified archive/executable, missing declared asset or inconsistent manifest fails verification before acceptance. Publisher private keys and local absolute development paths are absent from distributed payloads; reviewer records actual verification identities/results rather than assuming trust from filenames.",
+      "status": "PASS"
+    },
+    {
+      "id": "R1A7",
+      "requirement": "- **R1-A7 \u2014 independent acceptance and limits:** A reviewer other than the artifact author maps R1-A1 through R1-A6 and inherited M1/M2 criteria to durable final-candidate evidence, including artifact hashes, host/guest matrices, actual RAM/code-size measurements under the current memory policy and positive/counter-probes. Historical experiment quotas do not reject otherwise valid applications. Include a support statement in the unpublished candidate documentation confined to the qualified PC x86-64 QEMU profile; physical machines require additional evidence before being advertised. Unresolved `nxpk`, repository, GUI or OS-atomicity criteria are listed as outside this release and do not block R1; unresolved SDK ABI, runtime, reproducibility or provenance failures do block it. Mark R1-qualified only when all relevant evidence passes; leave other milestone issues open.",
+      "status": "PASS"
+    }
+  ],
+  "assets": [
+    {
+      "path": "SHA256SUMS",
+      "bytes": 518,
+      "sha256": "fe1d1e1568f884427f9ae1155ad0cc49601b3cb9f2e93ec5dffc422f8f73f4f7"
+    },
+    {
+      "path": "ami-rust-0.1.0-release.tar.xz",
+      "bytes": 25902508,
+      "sha256": "f4a8cbc562d3c43c573a5a34ddfa99d74928ded94c47df45f4182fde71567d5c"
+    },
+    {
+      "path": "ami-rust-0.1.0-release.tar.xz.sigstore.json",
+      "bytes": 10630,
+      "sha256": "464933640a0c35c581942c6dfa0b87bb4e51ac1ca9a9a3530913dd57faa5890d"
+    },
+    {
+      "path": "ami-rust-0.1.0-release.tar.xz.spdx.json",
+      "bytes": 1095112,
+      "sha256": "37dc5bd7cea9b5ea738a07c50e3865f2cf03fe81312173fc2f99bcce4271b30f"
+    },
+    {
+      "path": "ami-rust-0.1.0-transport.json",
+      "bytes": 19136,
+      "sha256": "9a93ad5fd1ffc5abcb1abfc059ec14abf6936cf907ea1616e6bf0a814e7cbaa0"
+    },
+    {
+      "path": "ami-rust-0.1.0-transport.json.sigstore.json",
+      "bytes": 10583,
+      "sha256": "ae3781a9ede1f7a0eea0ee9922aff5c356d2dfd0a98cac6a33822b05141dacb3"
+    }
+  ],
+  "sdk_producer": {
+    "run_id": 39121017959,
+    "run_attempt": 1,
+    "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39121017959",
+    "result": "9/9 jobs successful; two producer hosts and four clean consumer build roots; same authenticated distribution on both consumer hosts"
+  },
+  "public_consumer_replay": {
+    "run_id": 39143613042,
+    "run_attempt": 1,
+    "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39143613042",
+    "result": "PASS on macos-aarch64 and linux-x86_64",
+    "independent_host_review_sha256": "3c719f158642e32c4f0025333b0b6404ad712753021c039718b6ee12780d92c6",
+    "campaign_closure_sha256": "0d74133aa6ecc2a4e5b329bf54a611b70dc4022263b09ac602b090860ca0ac31"
+  },
+  "anonymous_prerelease_readback": {
+    "result": "six exact asset bytes; four GitHub attestation checks and two Cosign checks passed",
+    "receipt_sha256": "68b4a88388b837022722114beff32ff7a6002c51cbb00ca3324b35142687b27c"
+  },
+  "public_native_replay": {
+    "status": "PASS_INDEPENDENT_NATIVE_REVIEW_AND_A8_ACCEPTANCE",
+    "campaign_id": "public-replacement-b4ebb9c-39143613042-a1",
+    "clock_sha256": "b3678c2bd1a5fd388d9ed1ba2dca5293485b6e1758cee68e90b0a5dd43134bd0",
+    "launch_sha256": "b8ac0f9c3216843759b454d13b215a29ea8442a16614b7d3b8dae05886410bc1",
+    "scope": {
+      "linux_full48": 48,
+      "macos_full48": 48,
+      "linux_large": 14,
+      "macos_large": 14,
+      "production31": 31,
+      "additional_checks": [
+        "Linux Serde derive",
+        "malformed LoadSeg and usable shell"
+      ]
+    },
+    "independent_prelaunch_review_sha256": "bf779b05f128a01fb023407cf94c3593edb16230442baa53fe41484c4b4794b1",
+    "executor_exit_code": 0,
+    "all_nine_phase_commands_exit_zero": true,
+    "primary_runtime_readback_sha256": "a6f3c0c1f769cff143e68f273802221520600d47beee10b020ea929f2f4eed9f",
+    "independent_native_review_sha256": "b6d6b2713abd13988a43a7afc1ee8a5a4f8df5de1a22f240e5569cf3ee5b56b3",
+    "campaign_closure_sha256": "cf2a9a0e9335323bdb481afda8688e844eb3ec5d49ad094c59652b30a6b942e5",
+    "elapsed_execution_seconds_including_preflight": 1335.008568,
+    "elapsed_closed_campaign_seconds_including_preflight": 2188.6910920143127,
+    "budget_exception": false,
+    "phases": [
+      {
+        "background_entries_separately_attributed": true,
+        "background_task_entries_while_logger_active": 26,
+        "baseline_after_sha256": "9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1",
+        "case_validation_sha256": "3e38877debafe5aeee62c14d14bef6544eb3caf41020fa56433c672cfac05db7",
+        "cases": 48,
+        "command_clock_launch_match_exit0": true,
+        "command_receipt_sha256": "fb172f8ba1cc87789ada3b5651914b62415137dcf0a599fad19719a2221778b3",
+        "declared_positive_diagnostic_controls": {
+          "direct": 3,
+          "malloc": 3,
+          "pool": 3
+        },
+        "diagnostic_owner_allocations": 0,
+        "diagnostic_windows_closed": 1090,
+        "diagnostic_windows_opened": 1090,
+        "disk_archive_compressed_sha256": "fc9a8a3f16b6d5246d35428386917aa358f76f2cf6f08b8fe984e3c8be4eb7b9",
+        "disk_archive_full_readback": true,
+        "disk_archive_raw_bytes": 536870912,
+        "disk_archive_raw_sha256": "081ff71283d0e1bc898c109feac6a0743fdf29acce2eef7696f06dd19e771d75",
+        "gdb_and_rsp_full_readbacks": true,
+        "gdb_records": 373144,
+        "gdb_watch_sha256": "2340799ddc097729ee0f9febbbac97dd3bb46cbc8cf8157021e778336954731f",
+        "historical_32MiB_observations_exceeded": 0,
+        "id": "linux-full48",
+        "max_stack_used_bytes": 38160,
+        "max_whole_guest_bytes": 30679136,
+        "nonzero_resource_ledger_rows": 0,
+        "qemu_and_gdb_stderr_bytes": 0,
+        "qmp_complete_full_readback_byte_identical": true,
+        "qmp_records": 1492052,
+        "resource_validation_sha256": "ac33521dc27e3f099c5ec00e7bfdf887732e7e730494b644146ed6b03a841ff3",
+        "result_sha256": "857024439f8d0205e1456a641581df5b8be244a8ea2d63c2a05cf1219668a846",
+        "result_status": "measurement_completed_unqualified"
+      },
+      {
+        "background_entries_separately_attributed": true,
+        "background_task_entries_while_logger_active": 0,
+        "baseline_after_sha256": "9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1",
+        "case_validation_sha256": "0dce2e1bf4b43e64531a1bc5c7e352adfcf3e52c722cc1281b6694fc7ba0039e",
+        "cases": 48,
+        "command_clock_launch_match_exit0": true,
+        "command_receipt_sha256": "4e82f3cab48c3c8cd747d68761b73d8e6b05e470906b69bc986c2d142eb94bba",
+        "declared_positive_diagnostic_controls": {
+          "direct": 3,
+          "malloc": 3,
+          "pool": 3
+        },
+        "diagnostic_owner_allocations": 0,
+        "diagnostic_windows_closed": 1090,
+        "diagnostic_windows_opened": 1090,
+        "disk_archive_compressed_sha256": "fc9a8a3f16b6d5246d35428386917aa358f76f2cf6f08b8fe984e3c8be4eb7b9",
+        "disk_archive_full_readback": true,
+        "disk_archive_raw_bytes": 536870912,
+        "disk_archive_raw_sha256": "081ff71283d0e1bc898c109feac6a0743fdf29acce2eef7696f06dd19e771d75",
+        "gdb_and_rsp_full_readbacks": true,
+        "gdb_records": 373468,
+        "gdb_watch_sha256": "cf80008fb1ca3bee9672297970ea75c0dec3f19bc06f3bb3b65955ba98db39db",
+        "historical_32MiB_observations_exceeded": 0,
+        "id": "macos-full48",
+        "max_stack_used_bytes": 38160,
+        "max_whole_guest_bytes": 30679008,
+        "nonzero_resource_ledger_rows": 0,
+        "qemu_and_gdb_stderr_bytes": 0,
+        "qmp_complete_full_readback_byte_identical": true,
+        "qmp_records": 1493516,
+        "resource_validation_sha256": "ac33521dc27e3f099c5ec00e7bfdf887732e7e730494b644146ed6b03a841ff3",
+        "result_sha256": "55c818573afa194e146eb270cd4c4e51aa33fd6d61f55371aa49f6c8adc89af7",
+        "result_status": "measurement_completed_unqualified"
+      },
+      {
+        "background_entries_separately_attributed": true,
+        "background_task_entries_while_logger_active": 13,
+        "baseline_after_sha256": "9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1",
+        "case_validation_sha256": "e5aca83ff7b322d6ad07965d477f93e38b63b6ed2bc7088319f621a39b880a23",
+        "cases": 14,
+        "command_clock_launch_match_exit0": true,
+        "command_receipt_sha256": "9c55abbb51521b3ac29c25e432eec06e103728c1f165bac37bbff9719906cd46",
+        "declared_positive_diagnostic_controls": {
+          "direct": 3,
+          "malloc": 3,
+          "pool": 3
+        },
+        "diagnostic_owner_allocations": 0,
+        "diagnostic_windows_closed": 297,
+        "diagnostic_windows_opened": 297,
+        "disk_archive_compressed_sha256": "fea990d98e536824f31e8ca4b62f00d8fc9023a7a8a4bca4cf2fc13e34b185b2",
+        "disk_archive_full_readback": true,
+        "disk_archive_raw_bytes": 536870912,
+        "disk_archive_raw_sha256": "dca8a250cc2fe56adb79b7a2dea6eebdf16bd233f3280364525e3a4672677413",
+        "gdb_and_rsp_full_readbacks": true,
+        "gdb_records": 106132,
+        "gdb_watch_sha256": "457610fcc0c0efe73caee500ff300834fdd20c57a5e8d9ebebacf1bf3118b55b",
+        "historical_32MiB_observations_exceeded": 10,
+        "id": "linux-large",
+        "max_stack_used_bytes": 38160,
+        "max_whole_guest_bytes": 79273424,
+        "nonzero_resource_ledger_rows": 0,
+        "qemu_and_gdb_stderr_bytes": 0,
+        "qmp_complete_full_readback_byte_identical": true,
+        "qmp_records": 424224,
+        "resource_validation_sha256": "a950622d74e7ed0f7c0dcb782b2ad9375880dd76c9b6fbe370cadc4cec4b5922",
+        "result_sha256": "0212df7d9d9f83b2065020dcca7414a1744d263bda45a71fa7befeb5cd7d5e64",
+        "result_status": "measurement_completed_unqualified"
+      },
+      {
+        "background_entries_separately_attributed": true,
+        "background_task_entries_while_logger_active": 0,
+        "baseline_after_sha256": "9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1",
+        "case_validation_sha256": "0b120a70ce6ef64c7e06880cee47fb6454db854f6aacdf6dba038e71fe3cbe13",
+        "cases": 14,
+        "command_clock_launch_match_exit0": true,
+        "command_receipt_sha256": "dbfb1b67ea708b8aa57772d697b8b9ad3e867da4971063906f387bcc13c2e017",
+        "declared_positive_diagnostic_controls": {
+          "direct": 3,
+          "malloc": 3,
+          "pool": 3
+        },
+        "diagnostic_owner_allocations": 0,
+        "diagnostic_windows_closed": 297,
+        "diagnostic_windows_opened": 297,
+        "disk_archive_compressed_sha256": "fea990d98e536824f31e8ca4b62f00d8fc9023a7a8a4bca4cf2fc13e34b185b2",
+        "disk_archive_full_readback": true,
+        "disk_archive_raw_bytes": 536870912,
+        "disk_archive_raw_sha256": "dca8a250cc2fe56adb79b7a2dea6eebdf16bd233f3280364525e3a4672677413",
+        "gdb_and_rsp_full_readbacks": true,
+        "gdb_records": 106090,
+        "gdb_watch_sha256": "e83411de67ff4698ebb08cb6967d1853a42a094133143458f07bb53bc4f07a70",
+        "historical_32MiB_observations_exceeded": 10,
+        "id": "macos-large",
+        "max_stack_used_bytes": 38160,
+        "max_whole_guest_bytes": 79273520,
+        "nonzero_resource_ledger_rows": 0,
+        "qemu_and_gdb_stderr_bytes": 0,
+        "qmp_complete_full_readback_byte_identical": true,
+        "qmp_records": 424140,
+        "resource_validation_sha256": "a950622d74e7ed0f7c0dcb782b2ad9375880dd76c9b6fbe370cadc4cec4b5922",
+        "result_sha256": "3770af9b8cabe7dd6f1941a66d4cd2c1edc6030fc3d087f51ec20f10fd869fea",
+        "result_status": "measurement_completed_unqualified"
+      }
+    ],
+    "production31": {
+      "RunCommand_memory_stages_2_to_5": true,
+      "acceptance_claim": false,
+      "all_cases_below_512MiB": true,
+      "background_task_entries_while_logger_active": 0,
+      "baseline_after_sha256": "9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1",
+      "case_count": 31,
+      "control_rc": 0,
+      "diagnostic_owner_allocations": 0,
+      "diagnostic_windows_closed": 17,
+      "diagnostic_windows_opened": 17,
+      "fixture_helper_calls": 75,
+      "gdb_full_readback": true,
+      "gdb_records": 357084,
+      "golden_and_error_bytes_exact": true,
+      "helper_rc": 0,
+      "input_metadata_and_contents_preserved": true,
+      "max_painted_stack_watermark_bytes": 6824,
+      "max_whole_guest_bytes": 27724688,
+      "os_vectors_modified": false,
+      "production_bytes_modified": false,
+      "production_rebuilt_or_instrumented": false,
+      "qmp_full_readback_byte_identical": true,
+      "qmp_records": 1170072,
+      "rsp_full_readback": true,
+      "stack_releases_and_canaries": true,
+      "startup_body_cleanup_breakpoints": true,
+      "status": "PASS_MEASUREMENT",
+      "status_snapshots": 2,
+      "stderr_bytes": 0
+    },
+    "additional_results": {
+      "linux_derive": {
+        "artifact_bytes": 1501568,
+        "artifact_sha256": "e9282cb51537e141f22c3e7d22059e64292e79679865d63f9499a63ad0342bb9",
+        "command": "m1tests:r2derive",
+        "no_guest_fault": true,
+        "note": "The \u201cJSON135 Ed25519 50-pairs Serde-derive 100\u201d marker was not read as 100 derive iterations.",
+        "qemu_alive_after_case": true,
+        "status": "PASS"
+      },
+      "malformed_loadseg": {
+        "fixture": "BADHDR",
+        "nonzero_ioerr": true,
+        "not_executed": true,
+        "rejected": true,
+        "shell_continued": true
+      }
+    }
+  },
+  "host_profiles": [
+    "macOS 26 Apple Silicon",
+    "Ubuntu 24.04 x86-64 glibc"
+  ],
+  "target_profile": {
+    "target": "PC x86-64 AROS ABI-v1",
+    "ISO_sha256": "9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1",
+    "QEMU": "11.1.2",
+    "machine": "pc-i440fx-11.1",
+    "cpu": "qemu64-v1",
+    "acceleration": "single-thread TCG",
+    "cpus": 1,
+    "RAM_bytes": 536870912,
+    "network": false,
+    "startup_stack_bytes": 131072,
+    "maximum_measured_stack_bytes": 98304
+  },
+  "limits": [
+    "Cross-development SDK; no AROS-hosted compiler/Cargo or full std",
+    "No additional CPU/ABI, other Amiga OS, physical hardware, general crate, networking or GUI claim",
+    "APT and Homebrew are planned follow-ups; AUR and rustup follow later"
+  ],
+  "evidence_note": "Public derived summary of retained, hash-bound qualification records. All 32 prepublication criteria and all three public replay criteria passed independent review. The exact six qualified files were promoted to stable/latest and verified by final anonymous downloads. Background-task allocation entries are distinct from SDK diagnostic-owner allocations; declared positive controls are accounted separately.",
+  "public_replay_acceptance": {
+    "status": "R1_PUBLIC_REPLAY_PASS",
+    "receipt_sha256": "2a9c45a6d661877646b59a1600e4b3a869580545273081d90f865b1f280ac3ce",
+    "independent_review_sha256": "74a3acb8893e13e8d7dafe3dc0f4daecad844ea0b0d7c6a3091e9d0daa1bfc6d",
+    "criteria": [
+      "PUBLIC_ASSET_READBACK",
+      "TWO_HOST_CONSUMER_REPLAY",
+      "TWO_HOST_NATIVE_REPLAY"
+    ],
+    "all_passed": true
+  },
+  "stable_publication": {
+    "status": "PASS_STABLE_PROMOTION_AND_ANONYMOUS_SIX_ASSET_READBACK",
+    "release_id": 416548451,
+    "draft": false,
+    "prerelease": false,
+    "latest": true,
+    "promotion_receipt_sha256": "afe712971ad9fdf7bedfd42c0e5a515c0f24955206c0acaaaf0389267228b55c",
+    "anonymous_readback_sha256": "5ecc3857c058236564db7fdadd29858f626c93faac140a4c694b4ba591022f8d",
+    "campaign_closure_sha256": "50b3a6afb8e94cb0d127626b2737432217c7b026724fb4b4e4ebe5e43b0556be",
+    "anonymous_identity_reads": 2,
+    "anonymous_asset_downloads": 6,
+    "all_six_asset_bytes_match": true,
+    "promotion_token_revoked": true,
+    "budget_exception": false
+  }
+}
