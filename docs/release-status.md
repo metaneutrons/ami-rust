@@ -1,16 +1,16 @@
 # Release qualification status — 2026-10-18
 
-**R1 remains open. The `0.1.0` prerelease failed R1-A8 and must not be promoted
+**R1 remains open. The former `0.1.0` prerelease failed R1-A8 and must not be promoted
 to stable/latest.** A corrected source-bound `0.1.0` candidate is required under the owner-approved
 one-time version-reuse exception.
 
 The immutable publisher source is
 `e3d0adbd25aee4ad61a0506f7a451e69955cecba`, tree
-`29957f13f2618accc31b4483e13914b5ed38867e`. The existing
-[prerelease](https://github.com/metaneutrons/ami-rust/releases/tag/v0.1.0)
-currently contains the original six assets. Preserve its original source/tag
-association, asset bytes and evidence in a verified historical archive before
-any replacement.
+`29957f13f2618accc31b4483e13914b5ed38867e`. At Fabian's explicit request,
+the old public release (ID `416229826`), its six assets and tag `v0.1.0`
+were deleted on 2026-10-18. API readback confirmed the release and tag absent;
+the original release-tag protection was restored after the exact-tag exception.
+Already retained local evidence remains historical; no public archive is required.
 
 | Evidence | Actual result and limit |
 | --- | --- |
@@ -40,9 +40,8 @@ new candidate or its public replay.
 
 Fabian explicitly authorised reusing `0.1.0` on 2026-10-18; the proposed
 `0.1.1` migration is withdrawn. The corrected candidate retains `0.1.0`, with
-fresh source/input identities, signatures and complete qualification. Archive
-and verify the original candidate before replacing its public association, and
-publish the old/new source and checksum mapping. The exception does not waive
+fresh source/input identities, signatures and complete qualification. The old
+public candidate has been removed as requested. The exception does not waive
 any R1 test or authorise promoting the failed bytes. See the
 [version exception](release-version-exception-20261018.md). No corrected SDK
 qualification or publication is claimed here.

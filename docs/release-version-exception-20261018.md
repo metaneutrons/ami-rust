@@ -25,19 +25,22 @@ prepublication passes do not establish R1 completion.
 2. Qualify the corrected source and inputs afresh. Both supported hosts must
    consume the same authenticated distribution bundle. Retain all installation,
    native runtime, memory, licensing, negative and authentication criteria.
-3. Before replacing a public tag association or asset, preserve and verify the
-   earlier source/tag mapping, release metadata, all six original assets and
-   checksums under an unambiguous historical archive identity. Retain original
-   provenance as historical evidence; do not relabel it as the corrected build.
+3. Fabian subsequently explicitly requested deleting the old candidate instead
+   of creating a public historical archive. On 2026-10-18, release ID
+   `416229826`, its six assets and the old `v0.1.0` tag were deleted. API
+   readback confirmed both release and tag absent. The immutable-tag rule was
+   restored to its original state after excluding only this exact tag for its
+   deletion. Existing local evidence and original source/checksum records remain
+   historical; no additional public archive release is required.
 4. Stage the newly generated `0.1.0` candidate with fresh signatures and
    provenance bound to its actual source/run/attempt. Verify downloaded bytes.
    Record the old/new identity mapping in release notes and qualification data.
 5. Complete the public two-host consumer replay and the required native replay
    before stable/latest promotion. Verify the final anonymous public downloads.
 
-The final corrected commit and checksums are pending; this record does not
-claim that the archive transition, corrected qualification or publication has
-already happened. This exception does not establish a general permission to
+The final corrected commit and checksums are pending. Removal of the old
+public candidate is complete; corrected qualification and publication remain
+open. This exception does not establish a general permission to
 replace future released versions, relax any acceptance test, reuse acceptance
 for changed inputs or waive campaign budgets.
 

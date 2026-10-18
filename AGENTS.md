@@ -63,7 +63,8 @@ not editing old receipts or silently breaking a live qualification run.
 
 Owner decision, 2026-10-18: the corrected initial SDK may still release as
 `0.1.0` despite the failed public prerelease. The proposed `0.1.1` migration
-is withdrawn. Preserve and verify the old source/tag mapping, assets and
-evidence under an unambiguous historical identity before replacement; bind
-the corrected candidate to fresh source, checksums and provenance. All R1
+is withdrawn. Fabian subsequently requested deleting the old public candidate
+and tag; this was completed and the original tag protection restored. No public
+archive release is required. Keep already retained local historical evidence;
+bind the corrected candidate to fresh source, checksums and provenance. All R1
 criteria remain required. See `docs/release-version-exception-20261018.md`.

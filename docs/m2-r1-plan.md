@@ -2,12 +2,12 @@
 
 ## Current release disposition — revision 25 (2026-10-18)
 
-R1 remains open. The `v0.1.0` prerelease at publisher source
+R1 remains open. The former `v0.1.0` prerelease at publisher source
 `e3d0adbd25aee4ad61a0506f7a451e69955cecba` passed its 32 prepublication
 M1/M2/R1-A1–A7 checks but failed R1-A8. It must not be promoted to stable/latest.
-Preserve its original source/tag association, asset bytes, receipts, clocks and
-failed evidence in an explicitly identified historical archive. The existing
-failed bytes must not become the stable release.
+At Fabian's explicit request, its public release, assets and tag were deleted
+on 2026-10-18. Keep the already retained local historical evidence; no public
+archive release is required. The failed bytes must not become the stable release.
 The earlier prepublication PASS results describe that candidate; they do not
 establish a successful public installation or qualify a corrected release.
 
@@ -21,10 +21,10 @@ unchanged documented flow. See [release status](release-status.md).
 Fabian explicitly authorised a one-time `0.1.0` version-reuse exception on
 2026-10-18. Correct the source and qualify a fresh source-bound `0.1.0`
 candidate; pin its exact commit, tag and input identities after protected
-merge/source CI. The proposed `0.1.1` version migration is withdrawn. Before
-replacing the public version/tag association or assets, preserve and verify the
-previous candidate under an unambiguous historical identity. Publish the
-old/new source and checksum mapping with the corrected release. This exception
+merge/source CI. The proposed `0.1.1` version migration is withdrawn. The old
+public candidate has been removed; the corrected release will receive its own
+source, checksums and provenance. Retained local records identify the earlier
+failed bytes. This exception
 authorises version reuse only: no failing result, signature, provenance claim
 or acceptance criterion is waived. See the [exception record](release-version-exception-20261018.md).
 Keep all existing acceptance criteria. Bind publisher run ID,
