@@ -458,6 +458,7 @@ def _download_public_gh_proofs(candidate: Path, tag: str, gh_path: Path,
     names = stage_candidate.asset_names(tag)
     subjects = {names[key] for key in ("payload", "sbom", "transport", "checksums")}
     download_root = _new_private_directory(work / "gh-downloads", "GH download")
+    runtime_root = _new_private_directory(work / "gh-private-runtime", "GH private runtime")
     snapshot_root = _new_private_directory(work / "gh-proof-snapshots", "GH proof snapshot")
     output: dict[str, list[Path]] = {}
     gh_token = retrieval_token
@@ -471,11 +472,17 @@ def _download_public_gh_proofs(candidate: Path, tag: str, gh_path: Path,
             subject_digest = sha256(asset)
             subject_dir = _new_private_directory(
                 download_root / ("subject-" + str(index)), "GH subject download")
-            config_dir = _new_private_directory(subject_dir / "gh-config", "GH config")
+            home_dir = _new_private_directory(
+                runtime_root / ("home-" + str(index)), "GH private home")
+            config_dir = _new_private_directory(
+                runtime_root / ("config-" + str(index)), "GH private config")
+            cache_dir = _new_private_directory(
+                runtime_root / ("cache-" + str(index)), "GH private cache")
             env = {
                 "PATH": str(gh_path.parent) + ":/usr/bin:/bin:/usr/sbin:/sbin",
-                "HOME": str(subject_dir),
+                "HOME": str(home_dir),
                 "GH_CONFIG_DIR": str(config_dir),
+                "XDG_CACHE_HOME": str(cache_dir),
                 "GH_TOKEN": gh_token,
                 "GH_PROMPT_DISABLED": "1",
                 "NO_COLOR": "1",
@@ -499,10 +506,9 @@ def _download_public_gh_proofs(candidate: Path, tag: str, gh_path: Path,
             if process.returncode != 0:
                 raise ValueError("pinned GH rejected public attestation proof retrieval")
             entries = list(subject_dir.iterdir())
-            files = [entry for entry in entries if entry.name not in {"gh-config"}]
-            if len(files) != 1:
+            if len(entries) != 1:
                 raise ValueError("GH attestation download did not produce exactly one JSONL file")
-            jsonl = files[0]
+            jsonl = entries[0]
             if (jsonl.is_symlink() or not stat.S_ISREG(jsonl.lstat().st_mode)
                     or re.fullmatch(r"sha256[:-]" + re.escape(subject_digest) + r"\.jsonl",
                                     jsonl.name) is None

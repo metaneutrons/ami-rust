@@ -688,6 +688,113 @@ class PublicReplayTests(unittest.TestCase):
         self.assertEqual(marker.read_text(), "imported\n")
 
 
+class PublicGitHubProofDownloadIsolationTests(unittest.TestCase):
+    """Exercise pinned-GH output placement with a local fake CLI, never the network."""
+
+    NAMES = {
+        "payload": "ami-rust-0.1.0-release.tar.xz",
+        "sbom": "ami-rust-0.1.0-release.tar.xz.spdx.json",
+        "transport": "ami-rust-0.1.0-transport.json",
+        "checksums": "SHA256SUMS",
+        "payload_signature": "ami-rust-0.1.0-release.tar.xz.sigstore.json",
+        "transport_signature": "ami-rust-0.1.0-transport.json.sigstore.json",
+    }
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="public-gh-proof-output-")
+        self.root = Path(self.temp.name).resolve()
+        self.candidate = self.root / "candidate"
+        self.candidate.mkdir(mode=0o700)
+        for index, name in enumerate(self.NAMES.values()):
+            (self.candidate / name).write_bytes(("asset-fixture-" + str(index)).encode())
+        self.work = self.root / "work"
+        self.work.mkdir(mode=0o700)
+        self.bin = self.root / "bin"
+        self.bin.mkdir(mode=0o700)
+        self.observations = self.root / "invocations.jsonl"
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def make_fake_gh(self, mode="normal"):
+        executable = self.bin / "gh"
+        script = f'''#!{sys.executable}
+import hashlib, json, os, pathlib, sys
+mode = {mode!r}
+asset = pathlib.Path(sys.argv[3])
+home = pathlib.Path(os.environ["HOME"])
+config = pathlib.Path(os.environ["GH_CONFIG_DIR"])
+cache = pathlib.Path(os.environ["XDG_CACHE_HOME"])
+cwd = pathlib.Path.cwd()
+(home / ".local" / "share" / "gh").mkdir(parents=True)
+(home / ".local" / "share" / "gh" / "runtime-state").write_text("fixture\\n")
+(config / "hosts.yml").write_text("github.com:\\n")
+(cache / "gh").mkdir()
+(cache / "gh" / "entry").write_text("fixture\\n")
+observation = {{"cwd": str(cwd), "home": str(home), "config": str(config),
+               "cache": str(cache), "token_present": bool(os.environ.get("GH_TOKEN"))}}
+with open({str(self.observations)!r}, "a", encoding="utf-8") as stream:
+    stream.write(json.dumps(observation, sort_keys=True) + "\\n")
+digest = hashlib.sha256(asset.read_bytes()).hexdigest()
+name = "sha256:" + digest + ".jsonl"
+if mode == "wrong-digest":
+    name = "sha256:" + ("0" * 64) + ".jsonl"
+raw = (json.dumps({{"fixture": True}}) + "\\n").encode()
+target = cwd / name
+if mode == "symlink":
+    source = home / "proof.jsonl"
+    source.write_bytes(raw)
+    target.symlink_to(source)
+else:
+    target.write_bytes(raw)
+if mode == "extra-output":
+    (cwd / "extra.bin").write_bytes(b"unexpected")
+'''
+        executable.write_text(script, encoding="utf-8")
+        executable.chmod(0o700)
+        return executable
+
+    def run_download(self, mode="normal"):
+        executable = self.make_fake_gh(mode)
+        stage_candidate = types.SimpleNamespace(asset_names=lambda _tag: self.NAMES)
+        return public_replay._download_public_gh_proofs(
+            self.candidate, "v0.1.0", executable, self.work, stage_candidate,
+            "fictional-retrieval-token")
+
+    def test_realistic_cli_side_files_stay_outside_exact_download_directory(self):
+        result = self.run_download()
+        self.assertEqual(set(result), {self.NAMES[key] for key in
+                                      ("payload", "sbom", "transport", "checksums")})
+        self.assertEqual(len(self.observations.read_text().splitlines()), 4)
+        for line in self.observations.read_text().splitlines():
+            row = json.loads(line)
+            cwd = Path(row["cwd"])
+            for key in ("home", "config", "cache"):
+                runtime_path = Path(row[key])
+                self.assertFalse(runtime_path.is_relative_to(cwd))
+                self.assertTrue(runtime_path.is_dir())
+            self.assertTrue(row["token_present"])
+            self.assertEqual(len(list(cwd.iterdir())), 1)
+            output = next(cwd.iterdir())
+            self.assertRegex(output.name, r"^sha256:[0-9a-f]{64}\.jsonl$")
+            self.assertTrue(output.is_file())
+        self.assertNotIn(b"fictional-retrieval-token",
+                         b"".join(path.read_bytes() for path in self.work.rglob("*")
+                                  if path.is_file() and not path.is_symlink()))
+
+    def test_unexpected_second_download_output_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "exactly one JSONL file"):
+            self.run_download("extra-output")
+
+    def test_wrong_subject_digest_filename_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "unexpected name or size"):
+            self.run_download("wrong-digest")
+
+    def test_symlinked_subject_proof_output_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "unexpected name or size"):
+            self.run_download("symlink")
+
+
 class PinnedToolArchiveBudgetTests(unittest.TestCase):
     """Use the actual tracked manifest validator shape without downloading tools."""
 
