@@ -43,7 +43,7 @@ struct Section {
     entry_size: u64,
 }
 
-#[derive(Clone, Debug, Debug)]
+#[derive(Clone, Debug)]
 struct RawName<'a>(&'a [u8]);
 
 impl RawName<'_> {
