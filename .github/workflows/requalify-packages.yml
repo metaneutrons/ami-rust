@@ -73,6 +73,7 @@ jobs:
     permissions:
       contents: read
       attestations: read
+      actions: read
     outputs:
       commit: ${{ steps.identity.outputs.commit }}
       tree: ${{ steps.identity.outputs.tree }}
