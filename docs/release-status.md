@@ -4,13 +4,28 @@
 to stable/latest.** A corrected source-bound `0.1.0` candidate is required under the owner-approved
 one-time version-reuse exception.
 
-The immutable publisher source is
+The retired candidate's immutable publisher source was
 `e3d0adbd25aee4ad61a0506f7a451e69955cecba`, tree
 `29957f13f2618accc31b4483e13914b5ed38867e`. At Fabian's explicit request,
 the old public release (ID `416229826`), its six assets and tag `v0.1.0`
 were deleted on 2026-10-18. API readback confirmed the release and tag absent;
 the original release-tag protection was restored after the exact-tag exception.
 Already retained local evidence remains historical; no public archive is required.
+
+The corrected candidate source is
+`b4ebb9cce5decd01616b75acf451d0eba9995ee3`, tree
+`c5d9eed6b057ddadd17356801f8b3897e3e430dc`, merged through
+[PR 58](https://github.com/metaneutrons/ami-rust/pull/58).
+Its protected SDK [run 39121017959](https://github.com/metaneutrons/ami-rust/actions/runs/39121017959)
+completed with all nine jobs successful, including both independent consumers
+using the same Linux-authenticated distribution and their own host tools.
+Local artifact recovery remains incomplete: both producer ZIP downloads timed
+out, and the sealed local qualification campaign closed without acceptance.
+Strict local readback, cross-host comparison, independent cryptographic checks,
+a fresh complete native matrix, public installation/replay and stable promotion
+remain open. A successful workflow is not R1 acceptance.
+
+The following records describe the retired candidate and its failed public replay:
 
 | Evidence | Actual result and limit |
 | --- | --- |
@@ -33,8 +48,9 @@ the old signed source's documented preparation command pass unchanged.
 The repair isolates CLI home/configuration/cache state from proof output and
 binds the exact publisher run/attempt to the authenticated release producer.
 Publisher and consumer host profiles are validated separately. The corrected
-source must receive a new version-bound qualification, including both supported
-hosts consuming the same authenticated distribution bundle. Existing acceptance
+source requires complete version-bound qualification. Its protected workflow has
+now exercised both supported hosts consuming the same authenticated distribution
+bundle; the remaining independent and native gates are still open. Existing acceptance
 criteria remain in force; old prepublication results do not substitute for the
 new candidate or its public replay.
 
@@ -43,8 +59,8 @@ Fabian explicitly authorised reusing `0.1.0` on 2026-10-18; the proposed
 fresh source/input identities, signatures and complete qualification. The old
 public candidate has been removed as requested. The exception does not waive
 any R1 test or authorise promoting the failed bytes. See the
-[version exception](release-version-exception-20261018.md). No corrected SDK
-qualification or publication is claimed here.
+[version exception](release-version-exception-20261018.md). No complete corrected SDK
+qualification, R1 acceptance or publication is claimed here.
 
 The target remains native PC x86-64 AROS ABI-v1, with macOS Apple Silicon and
 Linux x86-64 development hosts. The qualified 512 MiB QEMU profile remains
