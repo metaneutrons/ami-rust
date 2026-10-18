@@ -146,7 +146,7 @@ jobs:
           if ! git cat-file -e "$CLI_BASE^{commit}"; then
             git fetch --no-tags --filter=blob:none --depth=1 origin "$CLI_BASE"
           fi
-          if git diff --quiet "$CLI_BASE" "$GITHUB_SHA" -- tools/ .github/workflows/ci.yml release/ci-bootstrap-inputs.json; then
+          if git diff --quiet "$CLI_BASE" "$GITHUB_SHA" -- tools/ tooling/ docs/rust-cli-migration/contracts-v1.json .github/workflows/ci.yml release/ci-bootstrap-inputs.json; then
             printf 'affected=false\n' >> "$GITHUB_OUTPUT"
           else
             cli_diff_status=$?
@@ -169,13 +169,15 @@ jobs:
           - os: macos-26
             triple: aarch64-apple-darwin
     steps:
-      - name: Check out isolated Rust migration probes
+      - name: Check out isolated Rust migration and host inputs
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             tools/
+            tooling/
+            docs/rust-cli-migration/contracts-v1.json
             release/ci-bootstrap-inputs.json
       - name: Install the existing hash-pinned host Rust inputs
         env:
@@ -199,6 +201,12 @@ jobs:
               --manifest-path "tools/$cli_probe/Cargo.toml" \
               --target-dir "$RUNNER_TEMP/ami-rust-rc0-$cli_probe"
           done
+          # Filesystem no-follow behavior and real Cargo plugin dispatch require
+          # both supported hosts; this is not native SDK/runtime qualification.
+          "$cli_rust/cargo" fetch --locked --manifest-path tooling/Cargo.toml
+          "$cli_rust/cargo" test --workspace --locked --offline \
+            --manifest-path tooling/Cargo.toml \
+            --target-dir "$RUNNER_TEMP/ami-rust-host-core"
 
   ci-success:
     name: CI Success

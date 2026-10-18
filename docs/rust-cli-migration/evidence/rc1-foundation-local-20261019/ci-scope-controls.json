@@ -1,0 +1,68 @@
+{
+  "schema": "ami-rust-host-scope-controls-v1",
+  "scope": "Actual path selection extracted from candidate CI workflow; isolated Git positive/counter fixtures",
+  "selected_paths": [
+    "tools/",
+    "tooling/",
+    "docs/rust-cli-migration/contracts-v1.json",
+    ".github/workflows/ci.yml",
+    "release/ci-bootstrap-inputs.json"
+  ],
+  "cases": [
+    {
+      "path": "docs/guide.md",
+      "affected": false,
+      "expected": false,
+      "exit_code": 0
+    },
+    {
+      "path": "tooling-not/notes.md",
+      "affected": false,
+      "expected": false,
+      "exit_code": 0
+    },
+    {
+      "path": "tooling/Cargo.toml",
+      "affected": true,
+      "expected": true,
+      "exit_code": 1
+    },
+    {
+      "path": "tooling/Cargo.lock",
+      "affected": true,
+      "expected": true,
+      "exit_code": 1
+    },
+    {
+      "path": "tooling/crates/core/src/json.rs",
+      "affected": true,
+      "expected": true,
+      "exit_code": 1
+    },
+    {
+      "path": "tools/host-contract-deps/src/lib.rs",
+      "affected": true,
+      "expected": true,
+      "exit_code": 1
+    },
+    {
+      "path": "docs/rust-cli-migration/contracts-v1.json",
+      "affected": true,
+      "expected": true,
+      "exit_code": 1
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "affected": true,
+      "expected": true,
+      "exit_code": 1
+    },
+    {
+      "path": "release/ci-bootstrap-inputs.json",
+      "affected": true,
+      "expected": true,
+      "exit_code": 1
+    }
+  ],
+  "status": "PASS"
+}
