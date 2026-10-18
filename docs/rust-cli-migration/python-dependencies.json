@@ -1,0 +1,2086 @@
+{
+  "schema": "ami-rust-python-dependency-inventory-v1",
+  "survey": {
+    "checkout": "d7ac89004a8f805e6f1e3efaf9242fed976803ab",
+    "date": "2026-10-18",
+    "tracked_python_paths": 104,
+    "test_paths": 51,
+    "primary_milestone_counts": {
+      "RC1": 26,
+      "RC4": 78
+    },
+    "directory_counts": {
+      "host": 14,
+      "packaging": 29,
+      "qualification": 2,
+      "release": 59
+    },
+    "test_counts_by_directory": {
+      "packaging": 14,
+      "release": 31,
+      "host": 5,
+      "qualification": 1
+    },
+    "qualification_status": "inventory only; no RC0 criterion or qualification claim has passed"
+  },
+  "path_inventory": [
+    {
+      "path": "host/build.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "host/build.py",
+        "line": 144,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "host/cargo-repro/prepare-overlay.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python producer tool",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "host/cargo-repro/prepare-overlay.py",
+        "line": 50,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "host/cargo-repro/produce.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python producer tool",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "host/cargo-repro/produce.py",
+        "line": 79,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "host/cli.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "host/cli.py",
+        "line": 416,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "host/compact_sections.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "host/compact_sections.py",
+        "line": 10,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "host/contracts.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "host/contracts.py",
+        "line": 17,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "host/elf_audit.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "host/elf_audit.py",
+        "line": 4,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "host/freeze_development.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "host/freeze_development.py",
+        "line": 32,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "host/probe_standard_cargo.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "host/probe_standard_cargo.py",
+        "line": 24,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "host/test_cli.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "host/test_cli.py",
+        "line": 200,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "host/test_contracts.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "host/test_contracts.py",
+        "line": 191,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "host/tests/test_allocation_layout.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "host/tests/test_allocation_layout.py",
+        "line": 15,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "host/tests/test_elf_audit.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "host/tests/test_elf_audit.py",
+        "line": 91,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "host/tests/test_host_capacity.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "host/tests/test_host_capacity.py",
+        "line": 18,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/auth.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "packaging/auth.py",
+        "line": 106,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "packaging/build.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "packaging/build.py",
+        "line": 741,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "packaging/candidate.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "packaging/candidate.py",
+        "line": 410,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "packaging/cli.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "packaging/cli.py",
+        "line": 191,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "packaging/control.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "packaging/control.py",
+        "line": 48,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "packaging/fetch.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "packaging/fetch.py",
+        "line": 407,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "packaging/lifecycle.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "packaging/lifecycle.py",
+        "line": 944,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "packaging/measure.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust qualification, measurement, or consumer-replay task with process-tree and measurement controls",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "packaging/measure.py",
+        "line": 22,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "packaging/metadata.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "packaging/metadata.py",
+        "line": 41,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "packaging/public_consumer.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust qualification, measurement, or consumer-replay task with process-tree and measurement controls",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "packaging/public_consumer.py",
+        "line": 119,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "packaging/publish_tap.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "packaging/publish_tap.py",
+        "line": 706,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "packaging/qualify.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust qualification, measurement, or consumer-replay task with process-tree and measurement controls",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "packaging/qualify.py",
+        "line": 159,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "packaging/stage.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "packaging/stage.py",
+        "line": 20,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "packaging/test_auth.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "packaging/test_auth.py",
+        "line": 112,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/test_build.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "packaging/test_build.py",
+        "line": 107,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/test_candidate.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "packaging/test_candidate.py",
+        "line": 83,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/test_cli.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "packaging/test_cli.py",
+        "line": 122,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/test_control.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "packaging/test_control.py",
+        "line": 217,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/test_fetch.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "packaging/test_fetch.py",
+        "line": 170,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/test_lifecycle.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "packaging/test_lifecycle.py",
+        "line": 245,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/test_measure.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "packaging/test_measure.py",
+        "line": 70,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/test_metadata.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "packaging/test_metadata.py",
+        "line": 177,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/test_public_consumer.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "packaging/test_public_consumer.py",
+        "line": 111,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/test_publish_tap.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "packaging/test_publish_tap.py",
+        "line": 255,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/test_qualify.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "packaging/test_qualify.py",
+        "line": 95,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/test_stage.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "packaging/test_stage.py",
+        "line": 109,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/test_verify_apt.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "packaging/test_verify_apt.py",
+        "line": 178,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "packaging/verify_apt.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "packaging/verify_apt.py",
+        "line": 24,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "packaging/worker.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "packaging/worker.py",
+        "line": 12,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "qualification/hosted_capacity.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust qualification, measurement, or consumer-replay task with process-tree and measurement controls",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "qualification/hosted_capacity.py",
+        "line": 17,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "qualification/test_hosted_capacity.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "qualification/test_hosted_capacity.py",
+        "line": 36,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/candidate_auth.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/candidate_auth.py",
+        "line": 41,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "release/cargo_context_probe.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "release/cargo_context_probe.py",
+        "line": 496,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "release/ci_artifact_admission.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "release/ci_artifact_admission.py",
+        "line": 55,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "release/ci_auth.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/ci_auth.py",
+        "line": 824,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "release/ci_cargo.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/ci_cargo.py",
+        "line": 910,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "release/ci_csdk.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/ci_csdk.py",
+        "line": 26,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "release/ci_python.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/ci_python.py",
+        "line": 384,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "release/ci_sdk.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/ci_sdk.py",
+        "line": 2097,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "release/ci_verify.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/ci_verify.py",
+        "line": 1907,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "release/consumer_inputs.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/consumer_inputs.py",
+        "line": 12,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "release/contract_probes.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/contract_probes.py",
+        "line": 36,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "release/csdk_archive.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python producer tool",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "release/csdk_archive.py",
+        "line": 12,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "release/csdk_metadata.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python producer tool",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "release/csdk_metadata.py",
+        "line": 41,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "release/csdk_nouveau.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python producer tool",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "release/csdk_nouveau.py",
+        "line": 839,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "release/csdk_producer.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python producer tool",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "release/csdk_producer.py",
+        "line": 336,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "release/csdk_recipes.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python producer tool",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "release/csdk_recipes.py",
+        "line": 26,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "release/finalize_cargo_probe.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "release/finalize_cargo_probe.py",
+        "line": 21,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "release/install.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/install.py",
+        "line": 1269,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "release/install_publisher.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/install_publisher.py",
+        "line": 146,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "release/new_project.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/new_project.py",
+        "line": 83,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "release/prepare_sdk.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/prepare_sdk.py",
+        "line": 858,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "release/public_candidate.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/public_candidate.py",
+        "line": 37,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "release/public_replay.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/public_replay.py",
+        "line": 1270,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "release/public_transport.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/public_transport.py",
+        "line": 37,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "release/selection_probes.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/selection_probes.py",
+        "line": 24,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "release/stage_candidate.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5",
+        "RC4"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/stage_candidate.py",
+        "line": 31,
+        "kind": "first_top_level_behavior"
+      }
+    },
+    {
+      "path": "release/stage_draft.py",
+      "role": "maintainer_or_release_implementation",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust xtask or reviewed established non-Python release/packaging task",
+      "removal_condition": "Remove after Rust task behavior, positive/counter fixtures, and the applicable real protected workflow pass.",
+      "source_anchor": {
+        "path": "release/stage_draft.py",
+        "line": 183,
+        "kind": "entrypoint"
+      }
+    },
+    {
+      "path": "release/test_candidate_auth.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_candidate_auth.py",
+        "line": 218,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_cargo_context_probe.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_cargo_context_probe.py",
+        "line": 87,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_cargo_notice_inventory.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_cargo_notice_inventory.py",
+        "line": 72,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_ci_artifact_admission.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_ci_artifact_admission.py",
+        "line": 45,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_ci_auth.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_ci_auth.py",
+        "line": 194,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_ci_cargo.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_ci_cargo.py",
+        "line": 59,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_ci_csdk.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_ci_csdk.py",
+        "line": 59,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_ci_python.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_ci_python.py",
+        "line": 182,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_ci_sdk.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_ci_sdk.py",
+        "line": 181,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_ci_verify.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_ci_verify.py",
+        "line": 185,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_consumer_inputs.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_consumer_inputs.py",
+        "line": 172,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_contract_probes.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_contract_probes.py",
+        "line": 248,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_csdk_archive.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_csdk_archive.py",
+        "line": 75,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_csdk_metadata.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_csdk_metadata.py",
+        "line": 163,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_csdk_nouveau.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_csdk_nouveau.py",
+        "line": 135,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_csdk_producer.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_csdk_producer.py",
+        "line": 34,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_csdk_recipes.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_csdk_recipes.py",
+        "line": 65,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_finalize_cargo_probe.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_finalize_cargo_probe.py",
+        "line": 38,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_install.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_install.py",
+        "line": 324,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_install_publisher.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_install_publisher.py",
+        "line": 166,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_prepare_sdk.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_prepare_sdk.py",
+        "line": 36,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_public_candidate.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_public_candidate.py",
+        "line": 310,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_public_replay.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_public_replay.py",
+        "line": 424,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_public_replay_workflow.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_public_replay_workflow.py",
+        "line": 72,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_public_transport.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_public_transport.py",
+        "line": 82,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_sdk_storage_accounting.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_sdk_storage_accounting.py",
+        "line": 76,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_sdk_workflow.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_sdk_workflow.py",
+        "line": 115,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_selection_probes.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_selection_probes.py",
+        "line": 201,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_stage_candidate.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_stage_candidate.py",
+        "line": 85,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_stage_draft.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_stage_draft.py",
+        "line": 86,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/test_verify_publisher.py",
+      "role": "test_or_fixture",
+      "primary_milestone": "RC4",
+      "milestones": [
+        "RC4",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust integration test, test fixture, or behavior-equivalent validation task",
+      "removal_condition": "Remove after the behavior and failure coverage is implemented in Rust and the relevant CI/protected workflow passes.",
+      "source_anchor": {
+        "path": "release/test_verify_publisher.py",
+        "line": 31,
+        "kind": "test_case"
+      }
+    },
+    {
+      "path": "release/verify_publisher.py",
+      "role": "public_consumer_implementation",
+      "primary_milestone": "RC1",
+      "milestones": [
+        "RC1",
+        "RC5"
+      ],
+      "closure_milestone": "RC5",
+      "replacement": "Rust host core/CLI or Rust consumer support module",
+      "removal_condition": "Remove from the public execution and import closure after RC1 parity fixtures pass on both supported hosts; if shared by maintainer workflows, remove that residual use under RC4.",
+      "source_anchor": {
+        "path": "release/verify_publisher.py",
+        "line": 24,
+        "kind": "first_top_level_behavior"
+      }
+    }
+  ],
+  "dependency_edges": [
+    {
+      "from": "packaging/cli.py",
+      "to": "packaging/worker.py",
+      "evidence": [
+        "packaging/cli.py:136-172",
+        "packaging/cli.py:216-242"
+      ],
+      "purpose": "prepare copies the package into retained state, fetches the pinned source and bootstraps Python; then invokes the retained worker."
+    },
+    {
+      "from": "packaging/worker.py",
+      "to": "release/public_replay.py",
+      "evidence": [
+        "packaging/worker.py:20-38"
+      ],
+      "purpose": "loads the pinned public replay helpers and public candidate verifier."
+    },
+    {
+      "from": "packaging/worker.py",
+      "to": "release/ci_verify.py",
+      "evidence": [
+        "packaging/worker.py:25-33",
+        "packaging/worker.py:56-68"
+      ],
+      "purpose": "uses the selected trusted helper closure for authenticated inputs, then runs consumer input preparation."
+    },
+    {
+      "from": "release/public_replay.py",
+      "to": "release/ci_verify.py, release/ci_sdk.py, release/ci_auth.py, release/consumer_inputs.py, release/ci_cargo.py, release/prepare_sdk.py",
+      "evidence": [
+        "release/public_replay.py:104-128"
+      ],
+      "purpose": "loads trusted helper code bound to the selected clean source checkout; helper imports remain active dependencies even where one subcommand does not call every function."
+    },
+    {
+      "from": "release/ci_verify.py",
+      "to": "release/ci_sdk.py, release/ci_auth.py, release/consumer_inputs.py, release/contract_probes.py, release/selection_probes.py",
+      "evidence": [
+        "release/ci_verify.py:89-94",
+        "release/ci_verify.py:559-648"
+      ],
+      "purpose": "consumer preparation and retained-input recheck share source/authentication/prerequisite code; compile/selection probes are imported by the module and remain internal RC4 duties."
+    },
+    {
+      "from": "host/cli.py",
+      "to": "host/build.py",
+      "evidence": [
+        "host/cli.py:399-413"
+      ],
+      "purpose": "verifies the project lock, then launches the selected interpreter and pinned driver; child signal status is mapped."
+    },
+    {
+      "from": "host/build.py",
+      "to": "host/compact_sections.py, host/elf_audit.py",
+      "evidence": [
+        "host/build.py:267-275"
+      ],
+      "purpose": "performs post-Cargo link, strip, section compaction and ELF audit through separate Python processes."
+    },
+    {
+      "from": "release/install_publisher.py",
+      "to": "release/install.py, release/verify_publisher.py",
+      "evidence": [
+        "release/install_publisher.py:20-26",
+        "release/install_publisher.py:53-130",
+        "release/install_publisher.py:170-195"
+      ],
+      "purpose": "production install wrapper adds external GH/Cosign publisher-policy verification to shared archive/install/receipt logic."
+    },
+    {
+      "from": "release/new_project.py",
+      "to": "release/install.py",
+      "evidence": [
+        "release/new_project.py:83-90",
+        "release/new_project.py:104-166"
+      ],
+      "purpose": "uses the installed receipt and SDK inventory to copy a new starter project and bind it to the chosen SDK."
+    },
+    {
+      "from": "release/ci_sdk.py",
+      "to": "release/ci_cargo.py, release/prepare_sdk.py",
+      "evidence": [
+        "release/ci_sdk.py:69-80"
+      ],
+      "purpose": "shared consumer and producer helpers load the pinned Cargo and SDK preparation implementations."
+    }
+  ],
+  "public_python_runtime": {
+    "package": {
+      "python": "CPython 3.12.15",
+      "source_manifest": "release/ci-python-inputs.json",
+      "manifest_sha256": "221d8a52b034c54d60e5f3ac6043d3155492f440051a77bd2dfe9b6a3eab5437",
+      "host_runtime_sha256": {
+        "linux-x86_64": "b61d8a15a8a302e6c45d2747ca40cee1568167031abf4cee948771f8314cea6c",
+        "macos-aarch64": "aed8ed802d0387d6831dead5885840e4e2ff3a7984dd7297e9a5f4466e9cda1d"
+      },
+      "evidence": [
+        "packaging/cli.py:136-170",
+        "packaging/worker.py:20-34",
+        "release/ci-python-inputs.json:14-55"
+      ]
+    },
+    "package_manager_runtime": {
+      "apt": "Python runtime is an active package dependency in generated Debian metadata; inspect packaging/control.py and the package lifecycle.",
+      "homebrew": "Formula depends on python@3.14 and rewrites the launcher shebang.",
+      "evidence": [
+        "packaging/control.py:277-299",
+        "packaging/metadata.py:257-270",
+        "packaging/test_metadata.py:231-237"
+      ]
+    },
+    "declared_dependency_style": "Tracked first-party scripts use Python standard-library imports; no requirements.txt/pyproject dependency lock was found for these scripts. External executables are separately pinned or host tools. This statement does not qualify transitive runtime behavior."
+  },
+  "trust_roots_and_verifier_bootstrap": [
+    {
+      "route": "production public candidate and installer",
+      "evidence": [
+        "release/ci-auth-tools.json:1-55",
+        "release/ci_verify.py:522-555",
+        "release/verify_publisher.py:222-255",
+        "release/verify_publisher.py:363-410"
+      ],
+      "observed": "External policy binds exact repository, workflow, workflow/source commits, ref, OIDC issuer/certificate identity and input-manifest hash; it names SHA-pinned gh/cosign binaries plus SHA-pinned GitHub and Sigstore trust roots outside the bundle. The manifest-bound asset and signed GH attestation/Cosign evidence is checked before extraction/publication."
+    },
+    {
+      "route": "legacy offline installer",
+      "evidence": [
+        "release/install.py:311-367",
+        "release/install.py:370-398"
+      ],
+      "observed": "ami-rust-offline-trust-v1 is supplied outside the bundle and pins the publisher principal, OpenSSH public-key bytes and ssh-keygen executable bytes; this verifies a signed manifest only and expressly does not verify GH/Cosign provenance."
+    },
+    {
+      "route": "trusted source checkout",
+      "evidence": [
+        "packaging/pins.json:1-24",
+        "packaging/cli.py:149-170",
+        "release/public_replay.py:274-310"
+      ],
+      "observed": "The package pins publisher source commit and manifest/transport identities; selected source must be checked out at the exact expected commit and clean before its helper files are loaded."
+    }
+  ],
+  "cargo_producer_closure": {
+    "host_compiler_candidate": {
+      "release": "1.98.1",
+      "rustc_commit": "48a229ceaefd4985c50990b14116b6d856af0985",
+      "llvm": "22.1.8",
+      "evidence": [
+        "release/ci-bootstrap-inputs.json:76-132",
+        "release/ci-cargo-producers/linux-x86_64.json:91-92",
+        "release/ci-cargo-producers/macos-aarch64.json:91-92"
+      ]
+    },
+    "bootstrap": {
+      "release": "Rust 1.98.1 rustc, rust-std and Cargo are exact HTTPS URL, size and SHA-256 pins for aarch64-apple-darwin and x86_64-unknown-linux-gnu; channel-rust-1.98.1.toml is SHA-pinned to its official .sha256 sidecar.",
+      "evidence": [
+        "release/ci-bootstrap-inputs.json:76-132",
+        "release/ci_cargo.py:85-120"
+      ]
+    },
+    "upstream_cargo": {
+      "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+      "lock_registry_packages": 523,
+      "workspace_packages": 27,
+      "cargo_lock_sha256": "b4ccfa53ccf8d7360c0359c1533d801759629f9cdd486d9a0a88e512717058d9",
+      "patch_sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f",
+      "evidence": [
+        "release/ci-bootstrap-inputs.json:1-29",
+        "release/ci-cargo-producers/linux-x86_64.json:61-88",
+        "host/cargo-repro/produce.py:127-137",
+        "host/cargo-repro/produce.py:154-183"
+      ]
+    },
+    "producer_command_observation": "Pinned bootstrap Cargo vendors the locked Cargo source in provision mode, then builds the upstream Cargo binary with the pinned Rust 1.98.1 toolchain and offline vendoring; current driver and overlay helpers are Python and are RC4 replacements.",
+    "target_compiler_is_separate": {
+      "release": "nightly-2026-09-18",
+      "commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
+      "llvm": "23.1.1",
+      "evidence": [
+        "docs/compatibility.md:13-16"
+      ]
+    },
+    "vendor_archive_observation": {
+      "archive": "release/inputs/vendor.tar.xz",
+      "sha256": "84fb6e3e1710f13e85450cce1db541c3967520f996a3f17efbd5a7a8345b1c7e",
+      "members": 3924,
+      "python_files": [
+        "vendor/libc-0.2.189/etc/libc-util.py"
+      ],
+      "build_rs_files": 12,
+      "build_rs_contain_python_token": false,
+      "build_rs_with_process_spawn_calls": [
+        "vendor/libc-0.2.189/build.rs",
+        "vendor/libc/build.rs",
+        "vendor/object-0.39.1/build.rs",
+        "vendor/proc-macro2/build.rs",
+        "vendor/quote/build.rs",
+        "vendor/serde/build.rs",
+        "vendor/serde_core/build.rs"
+      ],
+      "qualification": "Static source inspection only; presence of the unused Python utility file does not establish execution. The future Rust host CLI's own dependency closure and Cargo.lock do not yet exist."
+    }
+  },
+  "csdk_producer_closure": {
+    "source_capsule": {
+      "archive": "release/csdk-source/csdk-corresponding-source.tar.xz",
+      "bytes": 103277840,
+      "sha256": "7e62e28fb025e31aacdd3b6a6d14cef7d76703eb59dbaca02f2e2b4de68c6914",
+      "members": 33043,
+      "python_files_total": 71,
+      "python_files_by_source": {
+        "AROS-NX": 38,
+        "aros-tools": 33
+      },
+      "identity_source": "release/portable-csdk/spec.json:49-60 and release/csdk-source/manifest.json:1-16"
+    },
+    "bounded_current_derivation": {
+      "outputs": "Preserves 2,835 regular files and changes exactly 530 public headers, libdrm_nouveau.a and aom.pc.",
+      "generator": "The selected public-header generator is the classic tools/genmodule C host tool; the recipe parser accepts the five-output writeincludes form and verifies exact C source inputs and flags.",
+      "nouveau": "Replays the frozen compilation database for exactly 825 Nouveau C objects, then archives them with pinned llvm-ar/llvm-ranlib; the full AROS Ninja build is not invoked.",
+      "aom": "Runs CMake script mode over pinned libaom metadata, plus Perl/Git through the selected CMake script and pkg-config for relocation checks.",
+      "evidence": [
+        "release/csdk_producer.py:224-241",
+        "release/csdk_producer.py:265-309",
+        "release/csdk_recipes.py:265-345",
+        "release/csdk_metadata.py:284-365",
+        "release/csdk_metadata.py:472-509"
+      ]
+    },
+    "full_upstream_build_constraints": {
+      "evidence": [
+        "release/csdk-source/manifest.json:1-16",
+        "release/portable-csdk/spec.json:44-60",
+        "release/csdk_recipes.py:265-345",
+        "recipes/build.ninja:285467-286169",
+        "recipes/build.ninja:322539",
+        "recipes/build.ninja:322548"
+      ],
+      "observed_python_edges_in_archive": [
+        "AROS-NX/rom/dos/genstrings.py",
+        "AROS-NX/arch/all-pc/udis86/scripts/ud_itab.py",
+        "AROS-NX/workbench/system/AboutAROS/scripts/acknowledgements2header.py",
+        "AROS-NX/scripts/symbols/audit-symbols.py",
+        "Mesa generator commands in the full Ninja file"
+      ],
+      "finding": "The captured full Ninja file contains real Python generator/audit invocations. The bounded portable C-SDK producer parses and executes only its selected classic genmodule, Nouveau C compile records and AOM metadata recipe; it does not run Ninja over all captured edges. Any future source build that follows the full upstream graph is blocked from RC5 until those active Python generators are replaced, excluded by a reviewed bounded closure, or supplied as authenticated non-Python outputs with source obligations retained.",
+      "explicit_python_command_records": 69,
+      "explicit_python_command_count_method": "Static count of recipes/build.ninja COMMAND records that set RUN_PYTHON or PYTHON_EXECUTABLE, or directly invoke a Python script; source archive only."
+    }
+  },
+  "current_test_and_workflow_evidence": {
+    "tracked_test_scripts": 51,
+    "ci_workflow": ".github/workflows/ci.yml",
+    "evidence": [
+      ".github/workflows/ci.yml:58-95",
+      ".github/workflows/ci.yml:110-118",
+      ".github/workflows/cargo-qualify.yml:55-81",
+      ".github/workflows/packages.yml:91-192",
+      ".github/workflows/public-replay.yml:254-281",
+      ".github/workflows/sdk-qualify.yml:131-144",
+      ".github/workflows/sdk-qualify.yml:531-556",
+      ".github/workflows/sdk-qualify.yml:987-995"
+    ],
+    "executed_during_this_inventory": false,
+    "qualification_status": "tests not run; archive and path inventories are static inspection only"
+  },
+  "decisions_required_before_implementation": [
+    "Freeze the public command capability list across ami-rust and cargo-ami; record lifecycle-only commands, package manager options, exact exits, and how production versus offline legacy trust is exposed.",
+    "Reuse Rust 1.98.1 as the candidate host compiler, but commit its host-specific tool selection and the reviewed host-CLI Cargo.lock before implementation builds. No host CLI dependency was selected by this inventory.",
+    "Keep target nightly-2026-09-18, rust-src, and patched Cargo inputs separate and unchanged until a separately identified change is qualified.",
+    "Freeze each state, lock, receipt schema and compatibility rule; reject unknown future schemas before mutation and preserve legacy state/receipts as evidence.",
+    "RC0-A3 still needs a two-host Cargo-to-final-ELF design experiment; RC0-A4 still needs an observed descendant/no-Python harness and negative controls. Neither was attempted here.",
+    "The current full upstream AROS Ninja archive contains active Python generator recipes outside the bounded C-SDK derivation. Decide whether those recipes are in RC5's supported source-build closure; if yes, identify replacements before claiming closure."
+  ]
+}
