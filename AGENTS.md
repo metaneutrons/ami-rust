@@ -1,5 +1,16 @@
 # Repository working memory
 
+## Rust host tooling and Python retirement
+
+Owner decision, 2026-10-18: plan the public ami-rust CLI migration to Rust and
+closer Cargo integration. Remove Python from all consumer paths first; Python
+may remain temporarily in internal tests/release scripts only. The medium-term
+goal is complete retirement from active project tooling, including tests,
+qualification, component production and releases. Preserve historical releases,
+source obligations and evidence. The authoritative proposal and acceptance
+criteria are in `docs/rust-cli-cargo-migration-plan.md`. This is planning only;
+implementation is not yet authorised.
+
 ## Portability patches
 
 Owner decision, 2026-10-16: small, maintained patches are permitted when needed

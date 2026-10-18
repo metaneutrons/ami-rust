@@ -21,6 +21,12 @@ defaults. A missing prerequisite fails explicitly; builds do not provision it.
 The qualified custom Cargo is an explicit frontend and may not fall back to
 another Cargo from an ambient rustup toolchain.
 
+The proposed [Rust CLI and Cargo migration](rust-cli-cargo-migration-plan.md)
+defines a Python-free consumer release and then complete retirement of Python
+from the active build, test, qualification and release paths. Python in internal
+tooling is transitional, not the medium-term destination. This planning decision
+does not authorise implementation or alter the accepted 0.1.0 prerequisites.
+
 Before changing a pin, retain the old profile and evidence, resolve provenance
 and license differences, repeat affected positive/error/memory/reproducibility
 tests, and obtain independent acceptance. A new version number or a passing

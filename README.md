@@ -163,6 +163,11 @@ machine's 512 MiB RAM is a test profile. See the [memory policy](docs/memory-pol
 
 ## Contributing
 
+The [Rust CLI and Cargo migration plan](docs/rust-cli-cargo-migration-plan.md)
+proposes a Python-free public SDK first, followed by complete retirement of
+Python from active tests, qualification and release production. It is planning
+only; the released 0.1.0 tooling and its documented prerequisites are unchanged.
+
 [Open an issue](https://github.com/metaneutrons/ami-rust/issues) for a reproducible
 bug or a scoped proposal. Include the host profile, SDK/source identity, build
 command, and relevant diagnostics. Keep changes focused and retain the pinned
