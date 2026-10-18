@@ -2061,7 +2061,8 @@
       ],
       "finding": "The captured full Ninja file contains real Python generator/audit invocations. The bounded portable C-SDK producer parses and executes only its selected classic genmodule, Nouveau C compile records and AOM metadata recipe; it does not run Ninja over all captured edges. Static recount finds 72 Python COMMAND records; the prior count of 69 omitted three direct scripts/kickstart/localise-symbols.py edges at lines 322126, 322141 and 322156. Any future source build that follows the full upstream graph is blocked from RC5 until those active Python generators are replaced, excluded by a reviewed bounded closure, or supplied as authenticated non-Python outputs with source obligations retained.",
       "explicit_python_command_records": 72,
-      "explicit_python_command_count_method": "Static count of recipes/build.ninja COMMAND records: 9 set RUN_PYTHON, 54 set PYTHON_EXECUTABLE, and 9 directly invoke a Python script, with no overlap; source archive only."
+      "explicit_python_command_count_method": "Static count of recipes/build.ninja COMMAND records: 9 set RUN_PYTHON, 54 set PYTHON_EXECUTABLE, and 9 directly invoke a Python script, with no overlap; source archive only.",
+      "supported_scope_decision": "RC5 supports the existing bounded portable C-SDK derivation only. The full upstream Ninja graph and its 72 Python command records are inert corresponding-source/recipe data, excluded from active execution. Any selected interpreter-dependent edge in the bounded path remains RC4 replacement work and requires actual two-host RC5 qualification. Full Ninja execution is outside the supported producer; adding it requires a separately reviewed executable closure."
     }
   },
   "current_test_and_workflow_evidence": {
@@ -2080,7 +2081,15 @@
     "executed_during_this_inventory": false,
     "qualification_status": "tests not run; archive and path inventories are static inspection only"
   },
-  "decisions_required_before_implementation": [
+  "decisions_required_before_implementation": [],
+  "current_reconciliation": {
+    "date": "2026-10-19",
+    "acceptance_record": "rc0-acceptance.md",
+    "source_commit": "8777a4166ef5e988f7c21f3f10d8d2602fb4a9b1",
+    "csdk_scope": "RC5 supports the existing bounded portable C-SDK derivation only. The full upstream Ninja graph and its 72 Python command records are inert corresponding-source/recipe data, excluded from active execution. Any selected interpreter-dependent edge in the bounded path remains RC4 replacement work and requires actual two-host RC5 qualification. Full Ninja execution is outside the supported producer; adding it requires a separately reviewed executable closure.",
+    "scope_of_original_survey": "104 paths at the recorded survey base; inline and later Python orchestration remains assigned to RC4/RC5 by producer-executable-closure.md"
+  },
+  "historical_decisions_at_survey": [
     "Freeze the public command capability list across ami-rust and cargo-ami; record lifecycle-only commands, package manager options, exact exits, and how production versus offline legacy trust is exposed.",
     "Reuse Rust 1.98.1 as the candidate host compiler, but commit its host-specific tool selection and the reviewed host-CLI Cargo.lock before implementation builds. No host CLI dependency was selected by this inventory.",
     "Keep target nightly-2026-09-18, rust-src, and patched Cargo inputs separate and unchanged until a separately identified change is qualified.",

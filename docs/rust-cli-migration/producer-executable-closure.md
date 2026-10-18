@@ -185,3 +185,9 @@ Helper source hashes that explain indirect rustc calls:
 | vendor/rustc_version/src/lib.rs | 6d0dbf7bd12ba7121e6767841a0cee23b8282cc4d7c4b778a1e33129abdd7d72 |
 | vendor/version_check/src/lib.rs | 01bb86088ba281d511ae002aa939bb30b747f47ace5ea13a46de554a3117806e |
 | vendor/cpufeatures/Cargo.toml | 25160ea4dfa195721d352d42827b882a41f18f4c55fff58e5c3878ecae84ca44 |
+
+## Accepted executable boundary
+
+RC5 supports the existing bounded portable C-SDK derivation only. The full upstream Ninja graph and its 72 Python command records are inert corresponding-source/recipe data, excluded from active execution. Any selected interpreter-dependent edge in the bounded path remains RC4 replacement work and requires actual two-host RC5 qualification. Full Ninja execution is outside the supported producer; adding it requires a separately reviewed executable closure.
+
+The corrected native Ubuntu query in [run 39173711603](https://github.com/metaneutrons/ami-rust/actions/runs/39173711603) passes with 341 selected package identities and 36 custom-build scripts, exactly matching the reviewed native/source identity sets. [Durable graph and result](evidence/native-source-39173711603/result.json) close the source-query task in item 1 above. Actual Cargo/C-SDK producer execution remains RC4/RC5 work.

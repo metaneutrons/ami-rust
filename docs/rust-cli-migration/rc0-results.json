@@ -196,5 +196,7 @@
     "independent_exec_auditing_qualified": false,
     "source": "tools/no-python-probe",
     "details": "no-python-harness.md"
-  }
+  },
+  "record_scope": "Historical first local feasibility slice; original PARTIAL status and remaining list describe that slice only. Current criterion reconciliation is rc0-acceptance.md; original measured identities remain unchanged.",
+  "superseded_by": "rc0-acceptance.md"
 }

@@ -1,6 +1,6 @@
 {
   "schema": "ami-rust-cargo-source-review-index-v1",
-  "scope": "Exact523 registry archives+27workspace inputs; both target graph queries were executed on macOS. Linux host graph awaits native query. No producer runtime trace.",
+  "scope": "Historical source-review snapshot: exactly 523 registry archives and 27 workspace inputs; both target graph queries below were executed on macOS. The later native Linux query is reconciled in current_reconciliation; no producer runtime trace is claimed.",
   "publication_transform": "Machine-local source review root replaced by logical placeholder; originals retained. Trailing row whitespace removed from published text views; raw originals/digests unchanged.",
   "files": {
     "source-identity.json": {
@@ -33,5 +33,11 @@
       "published_sha256": "bc6156c8b436327db1cce29dc5e8be5a87acafb95192a95f4bc67dc78799b3c7",
       "bytes": 43071
     }
+  },
+  "current_reconciliation": {
+    "native_query": "https://github.com/metaneutrons/ami-rust/actions/runs/39173711603",
+    "status": "PASS_NATIVE_LINUX_SOURCE_GRAPH_ONLY",
+    "result": "../native-source-39173711603/result.json",
+    "scope": "The original index and static outputs describe their earlier snapshot; the accepted native query now matches 341 package identities and 36 selected build scripts. Actual producer execution remains RC4/RC5."
   }
 }

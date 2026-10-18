@@ -1,8 +1,10 @@
 # RC0-A1/A2 consumer contract and dependency survey
 
-Snapshot: checkout d7ac89004a8f805e6f1e3efaf9242fed976803ab, 2026-10-18.
+Historical survey snapshot: checkout d7ac89004a8f805e6f1e3efaf9242fed976803ab, 2026-10-18.
 
-This records observed implementation contracts and open RC0 decisions. It is not a qualification result. RC0-A3 (two-host Cargo-to-final-ELF design) and RC0-A4 (process-tree/no-Python harness) were not run; no build or tests were run for this inventory. The companion [python-dependencies.json](python-dependencies.json) maps all 104 tracked Python paths to an RC1 or RC4 replacement milestone, an RC5 closure milestone, source anchor, and removal condition.
+Current reconciliation: [RC0 acceptance](rc0-acceptance.md). The following survey and its open-question list describe the historical snapshot; subsequent contract, dependency and hosted evidence resolve those questions.
+
+This records observed implementation contracts and then-open RC0 decisions. It is not a qualification result. RC0-A3 (two-host Cargo-to-final-ELF design) and RC0-A4 (process-tree/no-Python harness) were not run; no build or tests were run for this inventory. The companion [python-dependencies.json](python-dependencies.json) maps all 104 tracked Python paths to an RC1 or RC4 replacement milestone, an RC5 closure milestone, source anchor, and removal condition.
 
 ## Observed commands and exits
 
@@ -111,7 +113,7 @@ Open RC0 decisions:
 3. Define schema/unknown-field compatibility, version negotiation, upgrade/rollback and readable historical state/receipts.
 4. Decide host Rust 1.98.1 and commit its host-specific selection plus reviewed CLI Cargo.lock; select no dependencies by inference. Preserve target nightly and current Cargo/C-SDK pins.
 5. Run RC0-A3 and RC0-A4 before implementation claims: two-host Cargo-to-final-ELF design; process-tree detector with direct/transitive Python positive and negative controls.
-6. Decide whether full upstream Ninja is in the supported RC5 build closure; if it is, replace its active generators.
+6. Resolved: RC5 supports the existing bounded portable C-SDK derivation only. The full upstream Ninja graph and its 72 Python command records are inert corresponding-source/recipe data, excluded from active execution. Any selected interpreter-dependent edge in the bounded path remains RC4 replacement work and requires actual two-host RC5 qualification. Full Ninja execution is outside the supported producer; adding it requires a separately reviewed executable closure.
 
 ## Verification
 
