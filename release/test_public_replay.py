@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import types
 import unittest
@@ -23,6 +24,17 @@ assert SPEC is not None and SPEC.loader is not None
 public_replay = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(public_replay)
 WORKFLOW = SCRIPT.parents[1] / ".github" / "workflows" / "public-replay.yml"
+
+
+def _load_actual_ci_verify():
+    path = SCRIPT.with_name("ci_verify.py")
+    spec = importlib.util.spec_from_file_location("r1_public_replay_actual_ci_verify", path)
+    if spec is None or spec.loader is None:
+        raise AssertionError("actual pinned ci_verify.py could not be loaded")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def _public_candidate_download_workflow_tree() -> ast.Module:
@@ -147,9 +159,17 @@ class FakeTrustedHelpers:
         self.EXPECTED_CHECK = "trusted check command supplied by signed QUICKSTART"
         self.EXPECTED_RECIPE = [f"signed recipe line {index}" for index in range(12)]
         self.tool_bytes = {"gh": b"pinned-gh", "cosign": b"pinned-cosign"}
-        self.tool_pins = {name: {"bytes": 1,
-                                 "binary_sha256": hashlib.sha256(data).hexdigest()}
-                          for name, data in self.tool_bytes.items()}
+        self.tool_pins = {
+            "host": "macos-aarch64",
+            **{name: {"bytes": 1, "binary_sha256": hashlib.sha256(data).hexdigest()}
+               for name, data in self.tool_bytes.items()},
+            "roots": {
+                "gh": {"path": "release/trust/github-trusted-root.jsonl",
+                       "bytes": 1, "sha256": "a" * 64},
+                "cosign": {"path": "release/trust/sigstore-trusted-root.json",
+                            "bytes": 1, "sha256": "b" * 64},
+            },
+        }
         self.preparation = None
         self.policy = {"inputs_manifest_sha256": "4" * 64}
         self.policy_sha = "5" * 64
@@ -666,6 +686,47 @@ class PublicReplayTests(unittest.TestCase):
         module = public_replay._load_selected_trusted_helpers(source, revision)
         self.assertEqual(Path(module.ROOT), source)
         self.assertEqual(marker.read_text(), "imported\n")
+
+
+class PinnedToolArchiveBudgetTests(unittest.TestCase):
+    """Use the actual tracked manifest validator shape without downloading tools."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.actual_ci_verify = _load_actual_ci_verify()
+        cls.tool_manifest = json.loads(SCRIPT.with_name("ci-auth-tools.json").read_text())
+
+    def test_real_validator_rows_are_summed_without_host_or_trust_roots(self):
+        for host in ("linux-x86_64", "macos-aarch64"):
+            with self.subTest(host=host):
+                tool_pins = self.actual_ci_verify.validate_tool_manifest(
+                    self.tool_manifest, host)
+                self.assertEqual(set(tool_pins), {"host", "gh", "cosign", "roots"})
+                self.assertIsInstance(tool_pins["host"], str)
+                self.assertEqual(set(tool_pins["roots"]), {"gh", "cosign"})
+                # This is the former outer-mode expression; the actual validator
+                # shape proves why it raised the reported TypeError.
+                with self.assertRaisesRegex(TypeError, "string indices must be integers"):
+                    sum(row["bytes"] for row in tool_pins.values())
+                expected = (self.tool_manifest["hosts"][host]["gh"]["bytes"]
+                            + self.tool_manifest["hosts"][host]["cosign"]["bytes"])
+                self.assertEqual(public_replay._pinned_tool_archive_bytes(tool_pins), expected)
+
+    def test_malformed_or_missing_tool_archive_pin_is_rejected(self):
+        valid = self.actual_ci_verify.validate_tool_manifest(
+            self.tool_manifest, "linux-x86_64")
+        for name, bad_row in (("missing-gh", None),
+                              ("string-cosign", "not-a-tool-row"),
+                              ("boolean-size", {"bytes": True}),
+                              ("zero-size", {"bytes": 0})):
+            with self.subTest(counterprobe=name):
+                changed = dict(valid)
+                if name == "missing-gh":
+                    changed.pop("gh")
+                else:
+                    changed["cosign"] = bad_row
+                with self.assertRaises(ValueError):
+                    public_replay._pinned_tool_archive_bytes(changed)
 
 
 class PublicReplayOuterIntegrationTests(unittest.TestCase):

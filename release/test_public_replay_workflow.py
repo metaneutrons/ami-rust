@@ -9,6 +9,7 @@ import importlib.machinery
 import io
 import json
 import os
+import subprocess
 from pathlib import Path
 import tempfile
 import types
@@ -226,6 +227,62 @@ class PublicReplayWorkflowTests(unittest.TestCase):
             self.assertEqual(receipt["status"], "DOWNLOADED_SIX_PUBLIC_ASSETS_NOT_AUTHENTICATED")
             self.assertFalse(receipt["claims"]["assets_authenticated"])
             self.assertEqual(set(receipt["assets"]), set(names.values()))
+
+    def test_bootstrap_step_creates_private_root_and_failure_cleanup_retains_evidence(self):
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        step = workflow.split("      - name: Install pinned Python from selected publisher source", 1)[1]
+        shell = step.split("        run: |\n", 1)[1].split("\n      - name:", 1)[0]
+        shell = "\n".join(line[10:] for line in shell.splitlines())
+        reserve = next(block for block in self.blocks
+                       if '"public replay ownership marker must be fresh"' in block)
+        cleanup = next(block for block in self.blocks
+                       if '"retained run receipt destination is not fresh"' in block)
+        with tempfile.TemporaryDirectory(prefix="public-replay-cleanup-test-") as directory:
+            root = Path(directory).resolve(strict=True)
+            workspace = root / "source"
+            (workspace / "release").mkdir(parents=True)
+            # Exercise the exact workflow shell under an initially permissive
+            # umask. This local producer stands in for the downloaded runtime.
+            (workspace / "release/ci_python.py").write_text(
+                "import pathlib,sys\n"
+                "pathlib.Path(sys.argv[sys.argv.index('--prefix')+1]).mkdir()\n"
+            )
+            runtime = root / "runtime"
+            runtime.mkdir()
+            env = dict(os.environ, RUNNER_TEMP=str(runtime), GITHUB_WORKSPACE=str(workspace),
+                       GITHUB_RUN_ID="123", GITHUB_RUN_ATTEMPT="1")
+            with mock.patch.dict(os.environ, env, clear=True):
+                exec(compile(reserve, "public-replay.yml:reserve", "exec"), {})
+            result = subprocess.run(["/bin/bash", "-c", "umask 022\n" + shell],
+                                    cwd=workspace, env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            bootstrap = runtime / "ami-rust-python-bootstrap"
+            self.assertEqual(bootstrap.stat().st_mode & 0o777, 0o700)
+            controls = workspace / ".git/ami-rust-public-controls"
+            controls.mkdir(parents=True)
+            (controls / "control-source.json").write_text("{}\n")
+            cleanup_env = dict(env, EXPECTED_HOST="linux-x86_64", RELEASE_TAG="v0.1.0",
+                               PUBLISHER_SOURCE="a" * 40, RELEASE_MANIFEST_SHA256="b" * 64,
+                               TRANSPORT_INVENTORY_SHA256="c" * 64,
+                               WORKFLOW_SOURCE_COMMIT="a" * 40, WORKFLOW_RUN_ID="123",
+                               WORKFLOW_RUN_ATTEMPT="1", SOURCE_RESULT="success",
+                               PYTHON_RESULT="success", TRANSPORT_RESULT="success", REPLAY_RESULT="failure")
+            # Keep the ownership restriction: an unexpected public root must
+            # fail before removal, then the valid private root must clean up.
+            bootstrap.chmod(0o755)
+            with mock.patch.dict(os.environ, cleanup_env, clear=True):
+                with self.assertRaisesRegex(SystemExit, "not an owned real directory"):
+                    exec(compile(cleanup, "public-replay.yml:cleanup-counterprobe", "exec"), {})
+            self.assertTrue(bootstrap.exists())
+            bootstrap.chmod(0o700)
+            with mock.patch.dict(os.environ, cleanup_env, clear=True):
+                exec(compile(cleanup, "public-replay.yml:cleanup", "exec"), {})
+            self.assertFalse(bootstrap.exists())
+            retained = runtime / "ami-rust-public-output"
+            receipt = json.loads((retained / "run.json").read_text())
+            self.assertEqual(receipt["replay_outcome"], "failure")
+            self.assertFalse(receipt["claims"]["R1_accepted"])
+            self.assertTrue((retained / "control-source.json").is_file())
 
     def test_production_replay_invocation_requires_candidate_assets_and_external_pins(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")
