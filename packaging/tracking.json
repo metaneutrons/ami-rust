@@ -1,0 +1,17 @@
+{
+  "epic": "https://github.com/metaneutrons/ami-rust/issues/60",
+  "milestones": [
+    {
+      "delivery": "d0",
+      "url": "https://github.com/metaneutrons/ami-rust/issues/61"
+    },
+    {
+      "delivery": "apt",
+      "url": "https://github.com/metaneutrons/ami-rust/issues/62"
+    },
+    {
+      "delivery": "brew",
+      "url": "https://github.com/metaneutrons/ami-rust/issues/63"
+    }
+  ]
+}

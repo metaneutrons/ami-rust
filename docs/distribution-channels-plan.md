@@ -1,7 +1,8 @@
-# Distribution channels — revision 2
+# Distribution channels — revision 3
 
-Owner decision: 2026-10-18. Status: planning only; implementation is not authorised
-by this document. Requirements authority: this file in `metaneutrons/ami-rust`.
+Owner decision: 2026-10-18. D0 and D1 APT/Homebrew implementation and qualification
+are now authorised, including a packaging delivery for SDK 0.1.0. D2 AUR and D3
+rustup remain deferred. Requirements authority: this file in `metaneutrons/ami-rust`.
 The external master plan is a derived summary.
 
 ## Outcome and sequence
@@ -43,10 +44,10 @@ daemon, custom package manager or independent SDK build pipeline. Source
 patches needed for portability remain small, versioned and requalified under
 the repository portability policy. Finished Rust metadata is never rewritten.
 
-No tap, APT archive/domain, signing key, AUR package or rustup distribution
-service is created during this planning task. Existing owner infrastructure
-must be surveyed before implementation; reuse it rather than create a parallel
-archive or tap. AROS-NX and aros-tools remain unchanged; nxpk is out of scope.
+Use the existing owner tap and shared APT archive. The surveyed destinations
+are `metaneutrons/homebrew-tap` and `metaneutrons/apt-archive`, domain
+`metaneutrons.cc`, public base `https://deb.metaneutrons.cc`. No new tap, archive,
+signing key, AUR package or rustup distribution service is required. AROS-NX and aros-tools remain unchanged; nxpk is out of scope.
 
 ## D0 — Shared package and lifecycle contract
 
@@ -223,10 +224,16 @@ and documented limits. Preserve failures. A channel that fails stays unavailable
 or retains its prior working version; it does not silently acquire a broader
 credential or bypass a release gate.
 
-Before implementation, reconcile existing initiative/milestone issues and add
-tracking only when authorised; this planning task creates no GitHub objects.
-Future issues own execution status and link these criterion IDs. This document
-owns requirements, not a duplicate live CI status table.
+The [distribution initiative](https://github.com/metaneutrons/ami-rust/issues/60)
+and its linked D0/D1 milestone issues own execution status and evidence. This
+document owns requirements, not a duplicate live CI status table.
+
+The [package contract](distribution-package-contract.md) records the selected
+layout, version identities, explicit consumer commands and qualification scope.
+The immutable SDK release `v0.1.0` is preserved; the new packaging release is
+`v0.1.0+packaging.1`, with Debian version `0.1.0-1` and Homebrew revision 1.
+Packaging publication keeps the SDK release as `latest`; all new channel
+artifacts have their own protected-source provenance and acceptance.
 
 ## Sources checked on 2026-10-18
 

@@ -1,0 +1,218 @@
+name: Package delivery qualification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ami-rust-protected-builds
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Protected source and channel access
+    runs-on: ubuntu-24.04
+    environment: release
+    timeout-minutes: 10
+    steps:
+      - name: Require the protected publisher
+        env:
+          PROTECTED: ${{ github.ref_protected }}
+          BREW_ID: ${{ vars.HOMEBREW_APP_CLIENT_ID }}
+          BREW_KEY: ${{ secrets.HOMEBREW_APP_PRIVATE_KEY }}
+          ARCHIVE_ID: ${{ vars.ARCHIVE_DISPATCH_CLIENT_ID }}
+          ARCHIVE_KEY: ${{ secrets.ARCHIVE_DISPATCH_PRIVATE_KEY }}
+        run: |
+          test "$GITHUB_REPOSITORY" = metaneutrons/ami-rust
+          test "$GITHUB_REF" = refs/heads/main
+          test "$PROTECTED" = true
+          test -n "$BREW_ID" && test -n "$BREW_KEY"
+          test -n "$ARCHIVE_ID" && test -n "$ARCHIVE_KEY"
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        id: tap
+        with:
+          client-id: ${{ vars.HOMEBREW_APP_CLIENT_ID }}
+          private-key: ${{ secrets.HOMEBREW_APP_PRIVATE_KEY }}
+          owner: metaneutrons
+          repositories: homebrew-tap
+          permission-contents: write
+          permission-pull-requests: write
+          permission-checks: read
+          permission-statuses: read
+          permission-administration: read
+      - name: Verify the tap scope and required protection
+        env:
+          GH_TOKEN: ${{ steps.tap.outputs.token }}
+        run: |
+          gh api installation/repositories --jq '[.total_count, [.repositories[].full_name]] == [1, ["metaneutrons/homebrew-tap"]]' | grep -qx true
+          gh api repos/metaneutrons/homebrew-tap/branches/main/protection --jq '.required_status_checks | .strict and (.contexts | index("Formula qualification") != null)' | grep -qx true
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        id: archive
+        with:
+          client-id: ${{ vars.ARCHIVE_DISPATCH_CLIENT_ID }}
+          private-key: ${{ secrets.ARCHIVE_DISPATCH_PRIVATE_KEY }}
+          owner: metaneutrons
+          repositories: apt-archive
+          permission-actions: write
+          permission-contents: read
+      - name: Verify archive scope and dispatch target
+        env:
+          GH_TOKEN: ${{ steps.archive.outputs.token }}
+        run: |
+          gh api installation/repositories --jq '[.total_count, [.repositories[].full_name]] == [1, ["metaneutrons/apt-archive"]]' | grep -qx true
+          gh api repos/metaneutrons/apt-archive/actions/workflows/publish.yml --jq .state | grep -qx active
+
+  package:
+    name: Build, authenticate and stage package bytes
+    needs: preflight
+    runs-on: ubuntu-24.04
+    environment: release
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    outputs:
+      tree: ${{ steps.identity.outputs.tree }}
+      epoch: ${{ steps.identity.outputs.epoch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Record packaging source identity
+        id: identity
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          echo "tree=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
+          echo "epoch=$(git show -s --format=%ct HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Obtain pinned verifier executables
+        run: python3 -I -B packaging/auth.py bootstrap --tools "$RUNNER_TEMP/package-tools"
+      - name: Fetch immutable original SDK inputs and package them
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EPOCH: ${{ steps.identity.outputs.epoch }}
+        run: |
+          python3 -I -B packaging/fetch.py --gh "$RUNNER_TEMP/package-tools/gh" --output "$RUNNER_TEMP/package-inputs"
+          python3 -I -B packaging/build.py --assets "$RUNNER_TEMP/package-inputs/assets" --proofs "$RUNNER_TEMP/package-inputs/proofs" --proof-index "$RUNNER_TEMP/package-inputs/proofs.json" --output "$RUNNER_TEMP/package-candidate" --epoch "$EPOCH"
+          python3 -I -B packaging/metadata.py --output "$RUNNER_TEMP/package-candidate" --epoch "$EPOCH"
+      - name: Sign payloads and formula through the protected workflow identity
+        run: |
+          python3 -I -B - <<'PY'
+          import json, os, pathlib, subprocess
+          root = pathlib.Path(os.environ['RUNNER_TEMP'])
+          pins = json.loads(pathlib.Path('packaging/pins.json').read_text())
+          names = [f"ami-rust-{pins['sdk_version']}-packaging.{pins['packaging_revision']}.tar.xz", f"ami-rust_{pins['package_version']}_amd64.deb", 'ami-rust.rb']
+          for name in names:
+              path = root / 'package-candidate' / name
+              subprocess.run([str(root / 'package-tools/cosign'), 'sign-blob', '--yes', '--bundle', str(path) + '.sigstore.json', str(path)], check=True, timeout=180)
+          PY
+      - name: Seal the complete asset set
+        env:
+          TREE: ${{ steps.identity.outputs.tree }}
+          EPOCH: ${{ steps.identity.outputs.epoch }}
+        run: |
+          python3 -I -B packaging/candidate.py seal --pins packaging/pins.json --directory "$RUNNER_TEMP/package-candidate" --source-commit "$GITHUB_SHA" --source-tree "$TREE" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --epoch "$EPOCH"
+      - name: Attest every sealed release file
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+        with:
+          subject-path: ${{ runner.temp }}/package-candidate/*
+      - name: Verify provenance, signatures and corrupted counter-probes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -I -B packaging/auth.py verify --directory "$RUNNER_TEMP/package-candidate" --tools "$RUNNER_TEMP/package-tools" --source-commit "$GITHUB_SHA"
+      - name: Stage privately, then verify the public prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -I -B packaging/stage.py --directory "$RUNNER_TEMP/package-candidate" --pins packaging/pins.json --gh "$RUNNER_TEMP/package-tools/gh" --receipt "$RUNNER_TEMP/package-stage.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: package-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/package-candidate/
+            ${{ runner.temp }}/package-stage.json
+          if-no-files-found: error
+          retention-days: 30
+
+  qualify:
+    name: Package lifecycle (${{ matrix.profile }})
+    needs: package
+    runs-on: ${{ matrix.os }}
+    environment: release
+    timeout-minutes: 95
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            profile: linux-x86_64
+          - os: macos-26
+            profile: macos-aarch64
+    permissions:
+      contents: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Obtain the same sealed public candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TREE: ${{ needs.package.outputs.tree }}
+          EPOCH: ${{ needs.package.outputs.epoch }}
+        run: |
+          python3 -I -B packaging/auth.py bootstrap --tools "$RUNNER_TEMP/package-tools"
+          tag=$(python3 -c 'import json; print(json.load(open("packaging/pins.json"))["packaging_tag"])')
+          "$RUNNER_TEMP/package-tools/gh" release download "$tag" --repo metaneutrons/ami-rust --dir "$RUNNER_TEMP/package-candidate"
+          python3 -I -B packaging/candidate.py verify --pins packaging/pins.json --directory "$RUNNER_TEMP/package-candidate" --source-commit "$GITHUB_SHA" --source-tree "$TREE" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --epoch "$EPOCH"
+          python3 -I -B packaging/auth.py verify --directory "$RUNNER_TEMP/package-candidate" --tools "$RUNNER_TEMP/package-tools" --source-commit "$GITHUB_SHA"
+      - name: Install, prepare, build and qualify the complete lifecycle
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          python3 -I -B - <<'PY'
+          import hashlib, json, os, pathlib, shutil
+          root = pathlib.Path(os.environ['RUNNER_TEMP'])
+          candidate = root / 'package-candidate'
+          destination = root / 'package-lifecycle-inputs'
+          destination.mkdir(mode=0o700)
+          build = json.loads((candidate / 'packaging-report.json').read_text())
+          metadata = json.loads((candidate / 'metadata-report.json').read_text())
+          names = set(build['outputs']) | set(metadata['generated_files']) | {'packaging-report.json', 'metadata-report.json'}
+          for name in sorted(names):
+              source = candidate / name
+              target = destination / name
+              shutil.copyfile(source, target)
+              if hashlib.sha256(source.read_bytes()).digest() != hashlib.sha256(target.read_bytes()).digest():
+                  raise SystemExit('Lifecycle input copy differs from authenticated candidate')
+          PY
+          python3 -I -B packaging/lifecycle.py --packages-dir "$RUNNER_TEMP/package-lifecycle-inputs" --root "$RUNNER_TEMP/package-lifecycle"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: package-lifecycle-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/package-lifecycle/evidence/
+            ${{ runner.temp }}/package-lifecycle/qualification/evidence-*/
+            ${{ runner.temp }}/package-lifecycle/qualification/persistent.json
+          if-no-files-found: error
+          retention-days: 30
+
+  qualification:
+    name: Package qualification
+    if: always()
+    needs: [preflight, package, qualify]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require all package qualification gates
+        env:
+          PREFLIGHT: ${{ needs.preflight.result }}
+          PACKAGE: ${{ needs.package.result }}
+          QUALIFY: ${{ needs.qualify.result }}
+        run: |
+          test "$PREFLIGHT" = success
+          test "$PACKAGE" = success
+          test "$QUALIFY" = success
