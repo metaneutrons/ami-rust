@@ -10,6 +10,7 @@ import hashlib
 import io
 import json
 from pathlib import Path, PurePosixPath
+import stat
 import subprocess
 
 BASE = "https://deb.metaneutrons.cc"
@@ -17,6 +18,65 @@ KEY = "metaneutrons-archive-keyring.pgp"
 KEY_SHA256 = "e663577e0e5769a6b1a83f1cd44751dfc60bd0820ae0724df5cb6a60fb3a2b74"
 PRIMARY = "1B7B79417383648BBFBE282E01AB8296EF0FCD76"
 SIGNER = "A0C21782FC507CCBD666F3ED242072FEC8BE54A4"
+MAX_INRELEASE_BYTES = 2 * 1024**2
+
+
+def run_logged(command, root, label, timeout):
+    """Run a verifier and retain its diagnostics, including on rejection."""
+    try:
+        result = subprocess.run(command, capture_output=True, text=True,
+                                check=False, timeout=timeout)
+    except subprocess.TimeoutExpired as error:
+        stdout = error.stdout or ""
+        stderr = error.stderr or ""
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode("utf-8", errors="replace")
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode("utf-8", errors="replace")
+        (root / f"{label}.stdout.log").write_text(stdout, encoding="utf-8")
+        (root / f"{label}.stderr.log").write_text(stderr, encoding="utf-8")
+        raise ValueError(f"{label} timed out") from error
+    (root / f"{label}.stdout.log").write_text(result.stdout or "", encoding="utf-8")
+    (root / f"{label}.stderr.log").write_text(result.stderr or "", encoding="utf-8")
+    if result.returncode != 0:
+        raise ValueError(f"{label} failed with exit code {result.returncode}")
+    return result
+
+
+def authenticated_plaintext(inrelease, key, home, diagnostics_root):
+    """Authenticate exact archive fingerprints, then extract bounded cleartext."""
+    inrelease = Path(inrelease)
+    key = Path(key)
+    home = Path(home)
+    diagnostics_root = Path(diagnostics_root)
+    command = ["gpgv", "--homedir", str(home), "--keyring", str(key), "--status-fd", "1",
+               str(inrelease)]
+    result = run_logged(command, diagnostics_root, "gpgv", timeout=60)
+    signatures = [line.split() for line in result.stdout.splitlines()
+                  if line.startswith("[GNUPG:] VALIDSIG ")]
+    signature = one(signatures, "archive signature")
+    if signature[2] != SIGNER or signature[-1] != PRIMARY:
+        raise ValueError("archive signature uses an unexpected primary or signing subkey")
+
+    release_file = diagnostics_root / "Release"
+    if release_file.exists() or release_file.is_symlink():
+        raise ValueError("authenticated InRelease plaintext destination already exists")
+    decrypt = ["gpg", "--batch", "--no-tty", "--no-default-keyring", "--keyring", str(key),
+               "--homedir", str(home), "--no-auto-key-retrieve", "--output", str(release_file),
+               "--decrypt", str(inrelease)]
+    run_logged(decrypt, diagnostics_root, "gpg", timeout=60)
+    try:
+        info = release_file.lstat()
+    except OSError as error:
+        raise ValueError("GPG did not create the authenticated InRelease plaintext") from error
+    if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size <= 0
+            or info.st_size > MAX_INRELEASE_BYTES):
+        raise ValueError("GPG plaintext is linked, empty, non-regular or exceeds its bound")
+    with release_file.open("rb") as stream:
+        raw = stream.read(MAX_INRELEASE_BYTES + 1)
+    if len(raw) != info.st_size or len(raw) > MAX_INRELEASE_BYTES:
+        raise ValueError("GPG plaintext changed or exceeds its bound")
+    return raw
 
 
 def fetch(relative, target, limit):
@@ -66,18 +126,11 @@ def verify(packages, root):
     raw = fetch(KEY, key, 65536)
     check_hash(raw, 609, KEY_SHA256, "sha256")
     inrelease = root / "InRelease"
-    fetch("dists/rolling/InRelease", inrelease, 2 * 1024**2)
+    fetch("dists/rolling/InRelease", inrelease, MAX_INRELEASE_BYTES)
     home = root / "gnupg"
     home.mkdir(mode=0o700)
-    release_file = root / "Release"
-    command = ["gpgv", "--homedir", str(home), "--keyring", str(key), "--status-fd", "1",
-               "--output", str(release_file), str(inrelease)]
-    result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=60)
-    signatures = [line.split() for line in result.stdout.splitlines() if line.startswith("[GNUPG:] VALIDSIG ")]
-    signature = one(signatures, "archive signature")
-    if signature[2] != SIGNER or signature[-1] != PRIMARY:
-        raise ValueError("archive signature uses an unexpected primary or signing subkey")
-    release = one(paragraphs(release_file.read_text()), "Release paragraph")
+    release_raw = authenticated_plaintext(inrelease, key, home, root)
+    release = one(paragraphs(release_raw.decode("utf-8")), "Release paragraph")
     now = datetime.now(timezone.utc)
     if not (parsedate_to_datetime(release["Date"]) <= now < parsedate_to_datetime(release["Valid-Until"])):
         raise ValueError("signed archive metadata is not currently valid")
@@ -120,6 +173,8 @@ def verify(packages, root):
     report = {"status": "PASS_PUBLIC_APT_SIGNATURE_BY_HASH_AND_PAYLOAD", "base_url": BASE,
               "primary_fingerprint": PRIMARY, "signing_subkey": SIGNER,
               "index_algorithm": algorithm, "index_path": relative, "package": package,
+              "verification_logs": {"gpgv_stdout": "gpgv.stdout.log", "gpgv_stderr": "gpgv.stderr.log",
+                                    "gpg_stdout": "gpg.stdout.log", "gpg_stderr": "gpg.stderr.log"},
               "corruption_counter_probe": "PASS", "real_client_installation": "SEPARATE_GATE"}
     (root / "result.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report))
