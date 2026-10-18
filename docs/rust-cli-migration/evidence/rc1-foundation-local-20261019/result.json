@@ -1,0 +1,51 @@
+{
+  "schema": "ami-rust-rc1-host-foundation-local-v1",
+  "source_commit": "2a9394f3d740758add2cdd289cbcd399ca7d8520",
+  "scope": "Verbatim developer README commands on local macOS; no full RC1 or no-Python consumer acceptance",
+  "reused_compilation_cache_from": "rc1-host-foundation-local-20261019-a3/target",
+  "returncode": 0,
+  "seconds": 2.601,
+  "files": {
+    "commands.sh": "db2c53903d2f2c9d925e5a0bb470d8e627ba7b9c79c820d7a5db5fb90aaea8a1",
+    "stdout.log": "8a83e7c2784b49172df51e003641d57839333cc69d26eb2a936b90ff82167cc8",
+    "stderr.log": "ec8e304380fd341b153d51699a1219c49f58b6cd6225427c22cb3efa675b5430"
+  },
+  "status": "PASS",
+  "test_result": {
+    "core_passed": 21,
+    "frontend_integration_passed": 1,
+    "failed": 0,
+    "format": "PASS",
+    "clippy_warnings_denied": "PASS",
+    "real_cargo_plugin_version_and_refusal_parity": "PASS"
+  },
+  "host_rust_verbose": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: aarch64-apple-darwin\nrelease: 1.98.1\nLLVM version: 22.1.8\n",
+  "source_hashes": {
+    "tooling/crates/cli/src/main.rs": "50552bf5691718f6c5f1fdb9d36d4fac11823bc4fda0ab69e278cb2770ad1e9d",
+    "tooling/crates/cli/tests/frontends.rs": "e295a8d4c042994f92629db39429ba07dfecec0b79d61a9d5de6d9a927278bc0",
+    "tooling/crates/core/src/digest.rs": "37a274cf539531f18fe4a08e0b599fbcaa9ab1f1762a8b665b39a8daf0361898",
+    "tooling/crates/core/src/error.rs": "54c606fab3b71f70c1fbfc27e41cd69e0c342efebcd435cf8d4530aab37c4b5f",
+    "tooling/crates/core/src/files.rs": "9320b67cb7948811f082122b88626aa31d2a09a2d1fc878e6ff50f85afe346bf",
+    "tooling/crates/core/src/frontend.rs": "59c8d6b20ea96d17dc22f8cf6875e224206053cbd5dc4332b864254bc5b372cb",
+    "tooling/crates/core/src/json.rs": "fa98d69049d72176b46369de60541467b5774550fd18e6686fb1341475441ffe",
+    "tooling/crates/core/src/lib.rs": "0346125a6d5f309f7de76d59546051ae6fe1e7460ccadfda6669b6997d2b57bc"
+  },
+  "prior_attempts": [
+    {
+      "attempt": "a1",
+      "status": "FAIL",
+      "reason": "sha2 0.11.1 digest array has no LowerHex implementation; corrected explicit hex encoder; removed unused import."
+    },
+    {
+      "attempt": "a2",
+      "status": "FAIL",
+      "reason": "APFS refuses non-UTF-8 filenames; test now exercises exact-byte success where supported or refusal without selecting a lossy-decoded decoy."
+    },
+    {
+      "attempt": "a3",
+      "status": "PASS",
+      "reason": "Initial 21 tests and verbatim README pass; a4 additionally binds limits to the normative contract and tests real Cargo refusal propagation."
+    }
+  ],
+  "qualification_limit": "Local macOS foundation only; native hosted Linux/macOS tests and the complete RC1 consumer/lifecycle/build matrix remain outstanding."
+}
