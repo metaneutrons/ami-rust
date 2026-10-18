@@ -120,12 +120,18 @@ class FakeRunner:
         self.profile = profile
         self.fail_label = fail_label
         self.installed = installed
+        self.brew_versions = ([installed] if installed is not None and profile != "ubuntu-24.04-x86_64"
+                              else [])
+        self.brew_linked_keg = installed if self.brew_versions else None
+        self.brew_info_formulae: list[dict] | None = None
         self.calls: list[tuple[str, list[str], float]] = []
         self.tap_root = root / "fake-homebrew-tap"
         self.tap_created = False
         self.tap_removed = False
         self.tap_name: str | None = None
         self.final_formula_seen_during_upgrade: bytes | None = None
+        self.brew_versions_after_upgrade: tuple[str, ...] | None = None
+        self.brew_linked_keg_after_upgrade: str | None = None
 
     def run(self, label, argv, *, timeout, cwd=None):
         argv = [str(item) for item in argv]
@@ -149,18 +155,31 @@ class FakeRunner:
             return lifecycle.CommandResult(0)
         if label == "brew-tap-repository":
             return lifecycle.CommandResult(0, str(self.tap_root).encode() + b"\n")
-        if argv[:2] == ["dpkg-query", "-W"] or argv[:3] == ["brew", "list", "--versions"]:
+        if argv[:2] == ["dpkg-query", "-W"]:
             if self.installed is None:
                 return lifecycle.CommandResult(1)
-            if self.profile == "ubuntu-24.04-x86_64":
-                return lifecycle.CommandResult(0, f"installed\t{self.installed}\n".encode())
-            return lifecycle.CommandResult(0, f"ami-rust {self.installed}\n".encode())
+            return lifecycle.CommandResult(0, f"installed\t{self.installed}\n".encode())
+        if argv[:3] == ["brew", "list", "--versions"]:
+            if not self.brew_versions:
+                return lifecycle.CommandResult(1)
+            versions = " ".join(self.brew_versions)
+            return lifecycle.CommandResult(0, f"ami-rust {versions}\n".encode())
+        if argv[:3] == ["brew", "info", "--json=v2"]:
+            formula = argv[3]
+            formulae = self.brew_info_formulae
+            if formulae is None:
+                formulae = [{"name": "ami-rust", "full_name": formula,
+                             "linked_keg": self.brew_linked_keg,
+                             "installed": [{"version": version} for version in self.brew_versions]}]
+            return lifecycle.CommandResult(0, json.dumps({"formulae": formulae, "casks": []}).encode())
         if label.startswith("install-") or label == "reinstall-final":
             if self.profile == "ubuntu-24.04-x86_64":
                 filename = Path(argv[-1]).name
                 self.installed = filename.removeprefix("ami-rust_").removesuffix("_amd64.deb")
             else:
                 self.installed = self._formula_version()
+                self.brew_versions = [self.installed]
+                self.brew_linked_keg = self.installed
             return lifecycle.CommandResult(0)
         if label == "upgrade-to-final":
             if self.profile == "ubuntu-24.04-x86_64":
@@ -168,9 +187,17 @@ class FakeRunner:
                 self.installed = filename.removeprefix("ami-rust_").removesuffix("_amd64.deb")
             else:
                 self.installed = self._formula_version()
+                if self.installed not in self.brew_versions:
+                    self.brew_versions.append(self.installed)
+                self.brew_linked_keg = self.installed
+                self.brew_versions_after_upgrade = tuple(self.brew_versions)
+                self.brew_linked_keg_after_upgrade = self.brew_linked_keg
             return lifecycle.CommandResult(0)
         if label.startswith("uninstall-") or label == "cleanup-owned-package":
             self.installed = None
+            if self.profile != "ubuntu-24.04-x86_64":
+                self.brew_versions.clear()
+                self.brew_linked_keg = None
             return lifecycle.CommandResult(0)
         if label == "brew-untap-owned":
             self.tap_removed = True
@@ -325,7 +352,8 @@ class LifecycleTests(unittest.TestCase):
         upgrade = next(argv for label, argv, _timeout in runner.calls if label == "upgrade-to-final")
         self.assertEqual(upgrade[:2], ["brew", "upgrade"])
         uninstall = next(argv for label, argv, _timeout in runner.calls if label == "uninstall-current")
-        self.assertEqual(uninstall, ["brew", "uninstall", "local/ami-rust-lifecycle-test123/ami-rust"])
+        self.assertEqual(uninstall, ["brew", "uninstall", "--force",
+                                     "local/ami-rust-lifecycle-test123/ami-rust"])
         self.assertEqual(result["upgrade_fixture"]["revision"], 0)
         self.assertEqual(result["upgrade_fixture"]["version"], "0.1.0")
         self.assertIn("https://github.com/metaneutrons/ami-rust/releases/download/",
@@ -334,7 +362,95 @@ class LifecycleTests(unittest.TestCase):
         self.assertIsNone(runner.installed)
         self.assertTrue(result["temporary_tap_removed"])
         self.assertEqual(runner.final_formula_seen_during_upgrade, (self.packages / "ami-rust.rb").read_bytes())
+        self.assertEqual(runner.brew_versions_after_upgrade, ("0.1.0", "0.1.0_2"))
+        self.assertEqual(runner.brew_linked_keg_after_upgrade, "0.1.0_2")
+        self.assertEqual(runner.brew_versions, [])
         self.assertEqual(lifecycle.file_inventory(self.packages), result["package_output_inventory"])
+
+    def test_homebrew_active_final_keg_is_verified_and_all_owned_versions_are_removed(self) -> None:
+        runner = FakeRunner(self.root, "macos-26-arm64")
+        runner.brew_versions = ["0.1.0_2", "0.1.0"]
+        runner.brew_linked_keg = "0.1.0_2"
+        campaign_root = self.root / "campaign-brew-retained-kegs"
+        checker = lifecycle.Lifecycle(self.packages, campaign_root, runner=runner,
+                                      host_profile="macos-26-arm64")
+        checker._prepare_root()
+        checker.profile = "macos-26-arm64"
+        checker.tap_name = "local/ami-rust-lifecycle-test123"
+        checker.owned_brew_versions = {"0.1.0", "0.1.0_2"}
+
+        checker._assert_installed_version("upgrade-to-final-verify", "0.1.0-2")
+        checker._brew_remove("cleanup-owned-package")
+
+        uninstall = next(argv for label, argv, _timeout in runner.calls
+                         if label == "cleanup-owned-package")
+        self.assertEqual(uninstall, ["brew", "uninstall", "--force",
+                                     "local/ami-rust-lifecycle-test123/ami-rust"])
+        self.assertEqual(runner.brew_versions, [])
+        self.assertIsNone(runner.brew_linked_keg)
+        self.assertEqual(checker.owned_brew_versions, set())
+
+    def test_homebrew_accepts_automatic_pruning_of_an_owned_older_keg(self) -> None:
+        runner = FakeRunner(self.root, "macos-26-arm64")
+        runner.brew_versions = ["0.1.0_2"]
+        runner.brew_linked_keg = "0.1.0_2"
+        campaign_root = self.root / "campaign-brew-pruned-keg"
+        checker = lifecycle.Lifecycle(self.packages, campaign_root, runner=runner,
+                                      host_profile="macos-26-arm64")
+        checker._prepare_root()
+        checker.profile = "macos-26-arm64"
+        checker.tap_name = "local/ami-rust-lifecycle-test123"
+        checker.owned_brew_versions = {"0.1.0", "0.1.0_2"}
+
+        checker._assert_installed_version("upgrade-to-final-verify", "0.1.0-2")
+        checker._brew_remove("cleanup-owned-package")
+
+        uninstall = next(argv for label, argv, _timeout in runner.calls
+                         if label == "cleanup-owned-package")
+        self.assertEqual(uninstall, ["brew", "uninstall", "--force",
+                                     "local/ami-rust-lifecycle-test123/ami-rust"])
+        self.assertEqual(runner.brew_versions, [])
+
+    def test_homebrew_refuses_foreign_or_ambiguous_keg_inventory(self) -> None:
+        runner = FakeRunner(self.root, "macos-26-arm64")
+        runner.brew_versions = ["0.1.0_2", "0.1.0", "9.9.9"]
+        runner.brew_linked_keg = "0.1.0_2"
+        campaign_root = self.root / "campaign-brew-foreign-keg"
+        checker = lifecycle.Lifecycle(self.packages, campaign_root, runner=runner,
+                                      host_profile="macos-26-arm64")
+        checker._prepare_root()
+        checker.profile = "macos-26-arm64"
+        checker.tap_name = "local/ami-rust-lifecycle-test123"
+        checker.owned_brew_versions = {"0.1.0", "0.1.0_2"}
+
+        with self.assertRaisesRegex(lifecycle.LifecycleError, "keg inventory"):
+            checker._assert_installed_version("upgrade-to-final-verify", "0.1.0-2")
+        with self.assertRaisesRegex(lifecycle.LifecycleError, "not owned by this campaign"):
+            checker._brew_remove("cleanup-owned-package")
+        self.assertFalse(any(argv[:2] == ["brew", "uninstall"] for _label, argv, _timeout in runner.calls))
+
+        runner.brew_versions = ["0.1.0_2", "0.1.0"]
+        runner.brew_info_formulae = [
+            {"name": "ami-rust", "full_name": "local/ami-rust-lifecycle-test123/ami-rust",
+             "linked_keg": "0.1.0_2", "installed": [{"version": version} for version in runner.brew_versions]},
+            {"name": "ami-rust", "full_name": "homebrew/core/ami-rust",
+             "linked_keg": "0.1.0_2", "installed": [{"version": version} for version in runner.brew_versions]},
+        ]
+        with self.assertRaisesRegex(lifecycle.LifecycleError, "absent or ambiguous"):
+            checker._assert_installed_version("upgrade-to-final-verify-ambiguous", "0.1.0-2")
+        self.assertFalse(any(argv[:2] == ["brew", "uninstall"] for _label, argv, _timeout in runner.calls))
+
+    def test_homebrew_preflight_refuses_multiple_preexisting_kegs_without_adopting_them(self) -> None:
+        runner = FakeRunner(self.root, "macos-26-arm64")
+        runner.brew_versions = ["0.1.0_2", "0.1.0"]
+        runner.brew_linked_keg = "0.1.0_2"
+        campaign_root = self.root / "campaign-brew-collision"
+        with mock.patch.object(lifecycle.os, "getuid", return_value=self.root.stat().st_uid):
+            with self.assertRaisesRegex(lifecycle.LifecycleError, "already installed by Homebrew"):
+                lifecycle.Lifecycle(self.packages, campaign_root, runner=runner,
+                                    host_profile="macos-26-arm64").run()
+        self.assertEqual(runner.brew_versions, ["0.1.0_2", "0.1.0"])
+        self.assertFalse(any(argv[:2] == ["brew", "uninstall"] for _label, argv, _timeout in runner.calls))
 
     def test_failure_propagates_and_cleans_only_owned_package_while_evidence_survives(self) -> None:
         runner = FakeRunner(self.root, "ubuntu-24.04-x86_64", fail_label="qualify-replay-retained")

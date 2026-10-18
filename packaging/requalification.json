@@ -1,0 +1,12 @@
+{
+  "schema": "ami-rust-package-requalification-v1",
+  "candidate": {
+    "commit": "a65b6d22bce94e30d5f89627dc176ff01117ebef",
+    "tree": "2db2669e54bf121274ac2f231fa21ad16c75fe80",
+    "epoch": 1792352194,
+    "run_id": 39159711172,
+    "attempt": 1,
+    "candidate_sha256": "9052d51fe4689f5842ecee6e03624ecd6e6eb9363e1b47be231ceed4f3f5e247"
+  },
+  "reason": "Preserve sealed revision-2 bytes; qualify corrected Homebrew active-keg detection and the complete public APT upgrade/cleanup controller."
+}

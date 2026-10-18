@@ -26,6 +26,9 @@ PACKAGE_DIR = Path(__file__).resolve().parent
 QUALIFY = PACKAGE_DIR / "qualify.py"
 README = PACKAGE_DIR / "README.md"
 SDK_VERSION_RE = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\Z")
+HOMEBREW_VERSION_RE = re.compile(
+    r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:_(?:[1-9][0-9]*))?\Z"
+)
 SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
 EXECUTION_CUTOFF_SECONDS = 85 * 60
 CAMPAIGN_LIMIT_SECONDS = 90 * 60
@@ -57,6 +60,12 @@ class PackageSet:
     deb: Path
     formula: Path
     files: dict[str, dict[str, object]]
+
+
+@dataclass(frozen=True)
+class BrewInstallation:
+    versions: tuple[str, ...]
+    linked_keg: str | None = None
 
 
 def _json_object(raw: bytes, label: str) -> dict:
@@ -520,6 +529,7 @@ class Lifecycle:
         self.started: float | None = None
         self.profile: str | None = None
         self.owned_package = False
+        self.owned_brew_versions: set[str] = set()
         self.owned_tap = False
         self.tap_name: str | None = None
         self.tap_repository: Path | None = None
@@ -628,17 +638,50 @@ class Lifecycle:
             if self.tap_name in taps.stdout.decode("utf-8", "replace").splitlines():
                 raise LifecycleError("generated temporary tap name already exists; refusing collision")
 
-    def _brew_installed(self, label: str) -> str | None:
+    def _brew_installed(self, label: str, *, inspect_linked_keg: bool = False) -> BrewInstallation | None:
         result = self._command(label, ["brew", "list", "--versions", "ami-rust"], allowed=(0, 1))
         if result.returncode == 1:
+            if result.stdout.strip():
+                raise LifecycleError("Homebrew reports no ami-rust package but returned version data")
             return None
-        line = result.stdout.decode("utf-8", "strict").strip()
-        if not line:
+        lines = result.stdout.decode("utf-8", "strict").splitlines()
+        if len(lines) != 1:
             raise LifecycleError("Homebrew reports ami-rust installed without a version")
-        fields = line.split()
-        if len(fields) != 2 or fields[0] != "ami-rust":
+        fields = lines[0].split()
+        if len(fields) < 2 or fields[0] != "ami-rust":
             raise LifecycleError("Homebrew installed-package query returned an unexpected identity")
-        return fields[1]
+        versions = tuple(fields[1:])
+        if (len(set(versions)) != len(versions)
+                or any(HOMEBREW_VERSION_RE.fullmatch(version) is None for version in versions)):
+            raise LifecycleError("Homebrew installed-package query returned duplicate or unsafe versions")
+        if not inspect_linked_keg:
+            return BrewInstallation(versions)
+
+        formula = self._brew_formula_reference()
+        info_result = self._command(label + "-info", ["brew", "info", "--json=v2", formula])
+        info = _json_object(info_result.stdout, label + " Homebrew formula info")
+        formulae = info.get("formulae")
+        if type(formulae) is not list or len(formulae) != 1 or type(formulae[0]) is not dict:
+            raise LifecycleError("Homebrew formula info is absent or ambiguous")
+        record = formulae[0]
+        if record.get("name") != "ami-rust" or record.get("full_name") != formula:
+            raise LifecycleError("Homebrew formula info resolved to an unrelated identity")
+        installed = record.get("installed")
+        if type(installed) is not list or not installed:
+            raise LifecycleError("Homebrew formula info omitted its installed keg inventory")
+        info_versions = []
+        for row in installed:
+            if type(row) is not dict or type(row.get("version")) is not str:
+                raise LifecycleError("Homebrew formula info has a malformed installed keg")
+            info_versions.append(row["version"])
+        if (len(set(info_versions)) != len(info_versions)
+                or set(info_versions) != set(versions)):
+            raise LifecycleError("Homebrew formula info disagrees with the installed keg inventory")
+        linked_keg = record.get("linked_keg")
+        if (linked_keg is not None and type(linked_keg) is not str
+                or linked_keg is not None and linked_keg not in versions):
+            raise LifecycleError("Homebrew linked keg does not match its installed inventory")
+        return BrewInstallation(versions, linked_keg)
 
     def _apt_installed(self, label: str) -> tuple[str, str] | None:
         result = self._command(label, ["dpkg-query", "-W", "-f=${db:Status-Status}\t${Version}\n", "ami-rust"], allowed=(0, 1))
@@ -655,10 +698,16 @@ class Lifecycle:
             if installed != ("installed", expected):
                 raise LifecycleError(f"dpkg package state is {installed!r}; expected installed {expected}")
         else:
-            installed = self._brew_installed(label)
+            installed = self._brew_installed(label, inspect_linked_keg=True)
             brew_version = expected.replace("-", "_")
-            if installed != brew_version:
-                raise LifecycleError(f"Homebrew package version is {installed!r}; expected {brew_version}")
+            if installed is None or installed.linked_keg != brew_version:
+                active = None if installed is None else installed.linked_keg
+                raise LifecycleError(f"Homebrew active keg is {active!r}; expected {brew_version}")
+            if not installed.versions or not set(installed.versions) <= self.owned_brew_versions:
+                raise LifecycleError(
+                    f"Homebrew keg inventory is {sorted(installed.versions)!r}; "
+                    f"expected a nonempty subset of campaign-owned {sorted(self.owned_brew_versions)!r}"
+                )
 
     def _apt_install(self, label: str, package_file: Path, version: str) -> None:
         self.owned_package = True
@@ -701,15 +750,20 @@ class Lifecycle:
 
     def _brew_install(self, label: str, version: str) -> None:
         self.owned_package = True
+        self.owned_brew_versions.add(version.replace("-", "_"))
         self._command(label, ["brew", "install", self._brew_formula_reference()])
         self._assert_installed_version(label + "-verify", version)
 
     def _brew_remove(self, label: str) -> None:
-        if self._brew_installed(label + "-query") is not None:
-            self._command(label, ["brew", "uninstall", self._brew_formula_reference()])
+        installed = self._brew_installed(label + "-query", inspect_linked_keg=True)
+        if installed is not None:
+            if not self.owned_brew_versions or not set(installed.versions) <= self.owned_brew_versions:
+                raise LifecycleError("Homebrew contains versions not owned by this campaign; refusing removal")
+            self._command(label, ["brew", "uninstall", "--force", self._brew_formula_reference()])
         if self._brew_installed(label + "-verify-removed") is not None:
             raise LifecycleError("Homebrew still reports ami-rust after package removal")
         self.owned_package = False
+        self.owned_brew_versions.clear()
 
     def _qualify(self, mode: str, label: str, executable: Path, phase: str | None = None) -> None:
         if self.package is None:
@@ -806,6 +860,9 @@ class Lifecycle:
             if _read_regular(formula_path, "restored final tap formula", 1024 * 1024) != final_raw:
                 raise LifecycleError("temporary tap was not restored to the exact final formula")
             self.owned_package = True
+            self.owned_brew_versions.add(
+                self.package.pins["sdk_version"] + "_" + str(self.package.pins["packaging_revision"])
+            )
             self._command("upgrade-to-final", ["brew", "upgrade", self._brew_formula_reference()])
             self._assert_installed_version("upgrade-to-final-verify", self.package.pins["sdk_version"]
                                            + "-" + str(self.package.pins["packaging_revision"]))

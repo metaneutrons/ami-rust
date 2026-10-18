@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       producer_run_id:
-        description: Successful Package delivery qualification run ID
+        description: Successful package qualification or sealed-candidate requalification run ID
         required: true
         type: string
 
@@ -30,6 +30,8 @@ jobs:
       tree: ${{ steps.producer.outputs.tree }}
       epoch: ${{ steps.producer.outputs.epoch }}
       attempt: ${{ steps.producer.outputs.attempt }}
+      candidate_run_id: ${{ steps.producer.outputs.run_id }}
+      candidate_sha256: ${{ steps.producer.outputs.candidate_sha256 }}
     steps:
       - name: Require protected main
         env:
@@ -51,14 +53,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           COMMIT: ${{ steps.producer.outputs.commit }}
+          CANDIDATE_SHA256: ${{ steps.producer.outputs.candidate_sha256 }}
           TREE: ${{ steps.producer.outputs.tree }}
           EPOCH: ${{ steps.producer.outputs.epoch }}
           ATTEMPT: ${{ steps.producer.outputs.attempt }}
-          PRODUCER_RUN: ${{ inputs.producer_run_id }}
+          PRODUCER_RUN: ${{ steps.producer.outputs.run_id }}
         run: |
           python3 -I -B packaging/auth.py bootstrap --tools "$RUNNER_TEMP/package-tools"
           tag=$(python3 -c 'import json; print(json.load(open("packaging/pins.json"))["packaging_tag"])')
           "$RUNNER_TEMP/package-tools/gh" release download "$tag" --repo metaneutrons/ami-rust --dir "$RUNNER_TEMP/package-candidate"
+          python3 -I -B - <<'PY'
+          import hashlib, os, pathlib
+          wanted = os.environ.get('CANDIDATE_SHA256')
+          path = pathlib.Path(os.environ['RUNNER_TEMP']) / 'package-candidate/candidate.json'
+          if wanted and hashlib.sha256(path.read_bytes()).hexdigest() != wanted:
+              raise SystemExit('Published candidate differs from qualified sealed inventory')
+          PY
           python3 -I -B packaging/candidate.py verify --pins packaging/pins.json --directory "$RUNNER_TEMP/package-candidate" --source-commit "$COMMIT" --source-tree "$TREE" --run-id "$PRODUCER_RUN" --run-attempt "$ATTEMPT" --epoch "$EPOCH"
           python3 -I -B packaging/auth.py verify --directory "$RUNNER_TEMP/package-candidate" --tools "$RUNNER_TEMP/package-tools" --source-commit "$COMMIT"
           ruby -c "$RUNNER_TEMP/package-candidate/ami-rust.rb"
@@ -201,14 +211,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           COMMIT: ${{ needs.deliver.outputs.commit }}
+          CANDIDATE_SHA256: ${{ needs.deliver.outputs.candidate_sha256 }}
           TREE: ${{ needs.deliver.outputs.tree }}
           EPOCH: ${{ needs.deliver.outputs.epoch }}
           ATTEMPT: ${{ needs.deliver.outputs.attempt }}
-          PRODUCER_RUN: ${{ inputs.producer_run_id }}
+          PRODUCER_RUN: ${{ needs.deliver.outputs.candidate_run_id }}
         run: |
           python3 -I -B packaging/auth.py bootstrap --tools "$RUNNER_TEMP/package-tools"
           tag=$(python3 -c 'import json; print(json.load(open("packaging/pins.json"))["packaging_tag"])')
           "$RUNNER_TEMP/package-tools/gh" release download "$tag" --repo metaneutrons/ami-rust --dir "$RUNNER_TEMP/package-candidate"
+          python3 -I -B - <<'PY'
+          import hashlib, os, pathlib
+          wanted = os.environ.get('CANDIDATE_SHA256')
+          path = pathlib.Path(os.environ['RUNNER_TEMP']) / 'package-candidate/candidate.json'
+          if wanted and hashlib.sha256(path.read_bytes()).hexdigest() != wanted:
+              raise SystemExit('Published candidate differs from qualified sealed inventory')
+          PY
           python3 -I -B packaging/candidate.py verify --pins packaging/pins.json --directory "$RUNNER_TEMP/package-candidate" --source-commit "$COMMIT" --source-tree "$TREE" --run-id "$PRODUCER_RUN" --run-attempt "$ATTEMPT" --epoch "$EPOCH"
           python3 -I -B packaging/auth.py verify --directory "$RUNNER_TEMP/package-candidate" --tools "$RUNNER_TEMP/package-tools" --source-commit "$COMMIT"
       - name: Execute the actual published channel instructions and build

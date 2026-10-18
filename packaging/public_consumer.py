@@ -15,8 +15,105 @@ import shutil
 import subprocess
 import sys
 import time
+from types import SimpleNamespace
 
 HERE = Path(__file__).resolve().parent
+VERSION_RE = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\Z")
+SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
+
+
+def load_pins() -> dict:
+    value = json.loads((HERE / "pins.json").read_text(encoding="utf-8"))
+    if type(value) is not dict:
+        raise ValueError("packaging pins are not a JSON object")
+    version, revision = value.get("sdk_version"), value.get("packaging_revision")
+    if (type(version) is not str or VERSION_RE.fullmatch(version) is None
+            or type(revision) is not int or revision < 1
+            or value.get("package_version") != f"{version}-{revision}"):
+        raise ValueError("packaging pins do not identify a stable package version")
+    return value
+
+
+def _candidate_deb(packages_dir: Path, pins: dict) -> Path:
+    """Bind the downgrade fixture source to the exact sealed candidate DEB."""
+    filename = f"ami-rust_{pins['package_version']}_amd64.deb"
+    deb = packages_dir / filename
+    info = deb.lstat()
+    if not deb.is_file() or deb.is_symlink() or info.st_nlink != 1:
+        raise ValueError("authenticated candidate Debian package is not a regular file")
+    candidate_path = packages_dir / "candidate.json"
+    candidate_info = candidate_path.lstat()
+    if not candidate_path.is_file() or candidate_path.is_symlink() or candidate_info.st_size > 2 * 1024**2:
+        raise ValueError("authenticated candidate inventory is not a bounded regular file")
+    candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
+    if type(candidate) is not dict or candidate.get("schema") != "ami-rust-package-candidate-v1":
+        raise ValueError("authenticated candidate inventory has an unsupported schema")
+    original = candidate.get("original_sdk")
+    if type(original) is not dict or original.get("version") != pins["sdk_version"]:
+        raise ValueError("authenticated candidate SDK identity differs from packaging pins")
+    rows = [row for row in candidate.get("assets", [])
+            if type(row) is dict and row.get("path") == filename]
+    digest = hashlib.sha256(deb.read_bytes()).hexdigest()
+    if (len(rows) != 1 or set(rows[0]) != {"path", "bytes", "sha256"}
+            or type(rows[0]["bytes"]) is not int or rows[0]["bytes"] != info.st_size
+            or type(rows[0]["sha256"]) is not str or SHA256_RE.fullmatch(rows[0]["sha256"]) is None
+            or rows[0]["sha256"] != digest):
+        raise ValueError("candidate Debian package differs from its authenticated inventory")
+    return deb
+
+
+def make_apt_upgrade_fixture(packages_dir: Path, root: Path, pins: dict) -> dict:
+    """Make the lower revision with the producer lifecycle's verified helper."""
+    deb = _candidate_deb(packages_dir, pins)
+    spec = importlib.util.spec_from_file_location("ami_rust_public_lifecycle", HERE / "lifecycle.py")
+    if spec is None or spec.loader is None:
+        raise ValueError("cannot load the package lifecycle fixture builder")
+    lifecycle = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = lifecycle
+    spec.loader.exec_module(lifecycle)
+    fixture = lifecycle.make_debian_upgrade_fixture(
+        SimpleNamespace(pins=pins, deb=deb), root / "upgrade-fixture"
+    )
+    return fixture
+
+
+def _require_apt_version(run, expected: str, label: str) -> None:
+    output = run(label, ["dpkg-query", "-W", "-f=${db:Status-Status}\\t${Version}\\n", "ami-rust"])
+    try:
+        lines = output.decode("utf-8", "strict").splitlines()
+    except UnicodeDecodeError as error:
+        raise ValueError("dpkg package query returned non-UTF-8 output") from error
+    if len(lines) != 1:
+        raise ValueError("dpkg package query returned an unexpected number of records")
+    fields = lines[0].split("\t")
+    if len(fields) != 2 or fields[0] != "installed" or fields[1] != expected:
+        raise ValueError(f"dpkg package state is {lines[0]!r}; expected installed {expected}")
+
+
+def upgrade_public_apt(packages_dir: Path, root: Path, pins: dict, executable: Path, run) -> dict:
+    """Upgrade the installed lower revision through the signed public APT source."""
+    fixture = make_apt_upgrade_fixture(packages_dir, root, pins)
+    lower_version = fixture.get("version")
+    if type(lower_version) is not str or fixture.get("revision") != pins["packaging_revision"] - 1:
+        raise ValueError("lower-revision Debian fixture does not match pinned packaging revision")
+    run("install-lower-revision-fixture", ["sudo", "apt-get", "install", "--yes",
+        "--allow-downgrades", fixture["path"]])
+    _require_apt_version(run, lower_version, "verify-lower-revision")
+    run("upgrade-from-public-archive", ["sudo", "apt-get", "install", "--yes",
+        "--only-upgrade", f"ami-rust={pins['package_version']}"])
+    _require_apt_version(run, pins["package_version"], "verify-public-archive-upgrade")
+    run("verify-upgraded-public-package", [executable, "verify-package"])
+    run("replay-public-apt-upgrade", [sys.executable, "-I", "-B", HERE / "qualify.py", "replay",
+        "--root", root / "consumer", "--executable", executable, "--phase", "public-apt-upgrade"])
+    return fixture
+
+
+def instruction_blocks(channel: str, document: Path) -> list[str]:
+    snippets = re.findall(r"```sh\n(.*?)\n```", document.read_text(encoding="utf-8"), re.S)
+    expected = 2 if channel == "apt" else 1
+    if len(snippets) != expected:
+        raise ValueError(f"{channel} instructions must have exactly {expected} executable blocks")
+    return snippets
 
 
 def main():
@@ -42,7 +139,9 @@ def main():
         remaining = started + 5100 - time.time()
         if remaining <= 0:
             raise TimeoutError("public client execution cutoff reached")
-        with (root / (label + ".stdout.log")).open("x") as out, (root / (label + ".stderr.log")).open("x") as err:
+        stdout_path = root / (label + ".stdout.log")
+        stderr_path = root / (label + ".stderr.log")
+        with stdout_path.open("x") as out, stderr_path.open("x") as err:
             command_started = time.time()
             process = subprocess.Popen([str(value) for value in argv], stdout=out, stderr=err,
                                        env=consumer_environment if environment is None else environment,
@@ -57,6 +156,7 @@ def main():
                      "elapsed_seconds": time.time() - command_started})
         if code:
             raise RuntimeError(label + " failed; see retained command logs")
+        return stdout_path.read_bytes()
 
     (root / "clock.json").write_text(json.dumps({"start_unix": started,
         "execution_cutoff_seconds": 5100, "campaign_limit_seconds": 5400,
@@ -79,9 +179,7 @@ def main():
                 raise ValueError("public Homebrew formula differs from attested release bytes")
             (root / "published-formula.rb").write_bytes(actual)
         document = HERE / ("INSTALL-APT.md" if args.channel == "apt" else "INSTALL-HOMEBREW.md")
-        snippets = re.findall(r"```sh\n(.*?)\n```", document.read_text(), re.S)
-        if len(snippets) != 1:
-            raise ValueError("public channel instructions must have exactly one executable block")
+        snippets = instruction_blocks(args.channel, document)
         script = root / "verbatim-installation.sh"
         script.write_text(snippets[0] + "\n")
         run("verbatim-public-install", ["/bin/bash", "-e", "-o", "pipefail", script])
@@ -90,6 +188,10 @@ def main():
             raise ValueError("channel installation did not provide ami-rust")
         run("consumer", [sys.executable, "-I", "-B", HERE / "qualify.py", "exercise",
             "--root", root / "consumer", "--executable", executable, "--readme", HERE / "README.md"])
+        pins = load_pins()
+        if args.channel == "apt":
+            fixture = upgrade_public_apt(args.packages_dir, root, pins, executable, run)
+            (root / "apt-upgrade-fixture.json").write_text(json.dumps(fixture, indent=2) + "\n")
         removal = (["sudo", "apt-get", "remove", "--yes", "ami-rust"] if args.channel == "apt"
                    else ["brew", "uninstall", "ami-rust"])
         run("remove-public-package", removal)
@@ -118,6 +220,11 @@ def main():
         measurements["volume"] = sampler.stop()
         if measurements["volume"]["sampling_error"] or not measurements["volume"]["sample_count"]:
             raise ValueError("public client disk-space observations are incomplete")
+        if args.channel == "apt":
+            cleanup_script = root / "verbatim-apt-cleanup.sh"
+            cleanup_script.write_text(snippets[1] + "\n")
+            run("verbatim-public-apt-archive-cleanup",
+                ["/bin/bash", "-e", "-o", "pipefail", cleanup_script])
         measurements["status"] = "PASS_RESOURCE_OBSERVATIONS"
         if time.time() - started > 5400:
             raise TimeoutError("public client campaign exceeded its closure window")

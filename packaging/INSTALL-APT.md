@@ -23,3 +23,12 @@ No compiler build or prerequisite download runs as root during installation.
 The trust-anchor checksum deliberately fails on an unreviewed key rotation.
 Removing the package with `sudo apt-get remove ami-rust` keeps prepared user
 states and projects. Their retained launcher continues to build locked projects.
+
+To stop receiving packages from this archive, remove its source and dedicated
+keyring separately after removing the package. Prepared states remain usable:
+
+```sh
+sudo rm -f /etc/apt/sources.list.d/metaneutrons.sources
+sudo rm -f /usr/share/keyrings/metaneutrons-archive-keyring.pgp
+sudo apt-get update
+```
