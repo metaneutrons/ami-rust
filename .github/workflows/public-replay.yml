@@ -259,6 +259,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          umask 077
           python3 -I -B release/ci_python.py \
             --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" \
             --inputs release/ci-python-inputs.json

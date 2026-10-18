@@ -87,6 +87,20 @@ def release_core(release_tag: str) -> str:
     return release_tag[1:].split("-", 1)[0].split("+", 1)[0]
 
 
+def _pinned_tool_archive_bytes(tool_pins: dict[str, Any]) -> int:
+    """Return the combined archive size for the validated GH and Cosign pins."""
+    if not isinstance(tool_pins, dict):
+        raise ValueError("pinned verifier tool rows are malformed")
+    total = 0
+    for name in ("gh", "cosign"):
+        row = tool_pins.get(name)
+        if (not isinstance(row, dict) or type(row.get("bytes")) is not int
+                or row["bytes"] <= 0):
+            raise ValueError("pinned verifier archive size is malformed: " + name)
+        total += row["bytes"]
+    return total
+
+
 def _load_trusted_helpers(source: Path, controls_root: Path | None = None) -> ModuleType:
     """Load trusted replay code, optionally from the frozen workflow controls."""
     script_root = source if controls_root is None else controls_root
@@ -885,7 +899,7 @@ def replay_public_candidate(*, source: Path, source_commit: str,
         external_input_bytes = (external_candidate_bytes if outer_mode
                                 else external_bundle_bytes)
         if outer_mode:
-            tool_archive_bytes = sum(row["bytes"] for row in tool_pins.values())
+            tool_archive_bytes = _pinned_tool_archive_bytes(tool_pins)
             trusted_root_bytes = sum(row["bytes"] for row in tool_manifest["roots"].values())
             preflight_bytes = (trusted.ci_sdk.directory_bytes(source_path)
                                + trusted.ci_sdk.directory_bytes(python_root)
