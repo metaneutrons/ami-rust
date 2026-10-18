@@ -5,14 +5,14 @@
 //! Malformed-input handling is stricter than the Python reference for gABI-
 //! forbidden multiple symbol tables and overlapping file-backed sections;
 //! these checks do not change valid-object reports. Refusal reports for
-//! unresolved strong symbols name only the first symbol to bound diagnostics.
+//! malformed strong-symbol tables use fixed-size, first-error diagnostics.
 
 use crate::{Refusal, Result};
 use serde_json::{Value, json};
-use std::ops::Range;
 use std::{
-    borrow::Cow,
     collections::{BTreeMap, HashMap, HashSet},
+    hash::{Hash, Hasher},
+    ops::Range,
     rc::Rc,
 };
 
@@ -43,9 +43,55 @@ struct Section {
     entry_size: u64,
 }
 
+#[derive(Clone, Debug, Debug)]
+struct RawName<'a>(&'a [u8]);
+
+impl RawName<'_> {
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    fn lossy_chars(&self) -> impl Iterator<Item = char> + '_ {
+        self.0.utf8_chunks().flat_map(|chunk| {
+            let replacement_count = if chunk.invalid().is_empty() { 0 } else { 1 };
+            chunk
+                .valid()
+                .chars()
+                .chain(std::iter::once('\u{fffd}').take(replacement_count))
+        })
+    }
+
+    fn equals_str(&self, value: &str) -> bool {
+        self.lossy_chars().eq(value.chars())
+    }
+
+    fn lossy_string(&self) -> String {
+        String::from_utf8_lossy(self.0).into_owned()
+    }
+}
+
+impl PartialEq for RawName<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.lossy_chars().eq(other.lossy_chars())
+    }
+}
+
+impl Eq for RawName<'_> {}
+
+impl Hash for RawName<'_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let mut length = 0_usize;
+        for character in self.lossy_chars() {
+            character.hash(state);
+            length += 1;
+        }
+        length.hash(state);
+    }
+}
+
 #[derive(Clone, Debug)]
 struct Symbol<'a> {
-    name: Rc<Cow<'a, str>>,
+    name: Rc<RawName<'a>>,
     info: u8,
     other: u8,
     section: u16,
@@ -54,13 +100,9 @@ struct Symbol<'a> {
 }
 
 impl Symbol<'_> {
-    fn name(&self) -> &str {
-        self.name.as_ref().as_ref()
-    }
-
     fn report(&self) -> Value {
         json!({
-            "name": self.name(),
+            "name": self.name.lossy_string(),
             "info": self.info,
             "other": self.other,
             "section": self.section,
@@ -155,7 +197,7 @@ pub fn audit(bytes: &[u8], variant: &str, path: &str) -> Result<Value> {
             bytes.len(),
             "bad section data range",
         )?;
-        if index != 0 && section.kind != SHT_NULL && section.size != 0 {
+        if section.kind != SHT_NULL && section.size != 0 {
             file_ranges.push((range, index));
         }
     }
@@ -184,7 +226,7 @@ pub fn audit(bytes: &[u8], variant: &str, path: &str) -> Result<Value> {
         let _ = section_data(bytes, section)?;
     }
     let mut section_name_cache = HashMap::new();
-    let section_names: Vec<Rc<Cow<'_, str>>> = sections
+    let section_names: Vec<Rc<RawName<'_>>> = sections
         .iter()
         .map(|section| cached_name(names, section.name_offset, &mut section_name_cache))
         .collect::<Result<_>>()?;
@@ -246,20 +288,17 @@ pub fn audit(bytes: &[u8], variant: &str, path: &str) -> Result<Value> {
                 value,
                 size,
             };
-            if symbol.section == 0 && symbol.info >> 4 == 1 && !symbol.name().is_empty() {
+            if symbol.section == 0 && symbol.info >> 4 == 1 && !symbol.name.is_empty() {
                 // Stop at the first unresolved strong symbol to keep refusal
                 // diagnostics bounded even for a large malformed symbol table.
                 return Err(Refusal::new("unresolved strong symbol"));
             }
             if symbol.section != 0
                 && symbol.info >> 4 == 1
-                && !symbol.name().is_empty()
+                && !symbol.name.is_empty()
                 && !strong_definitions.insert(symbol.name.clone())
             {
-                return Err(Refusal::new(format!(
-                    "duplicate strong definition: {}",
-                    symbol.name()
-                )));
+                return Err(Refusal::new("duplicate strong definition"));
             }
             symbols.push(symbol);
         }
@@ -270,7 +309,7 @@ pub fn audit(bytes: &[u8], variant: &str, path: &str) -> Result<Value> {
         .iter()
         .flatten()
         .flat_map(|symbols| symbols.iter())
-        .filter(|symbol| symbol.name() == STARTUP_SYMBOL)
+        .filter(|symbol| symbol.name.equals_str(STARTUP_SYMBOL))
         .collect();
     if entries.len() != 1
         || usize::from(entries[0].section) != first_allocated_index
@@ -344,13 +383,13 @@ pub fn audit(bytes: &[u8], variant: &str, path: &str) -> Result<Value> {
                 .get(target_index)
                 .ok_or_else(|| Refusal::new("invalid relocation target section"))?;
             relocations.push(json!({
-                "target_section": target_name.as_ref().as_ref(),
+                "target_section": target_name.lossy_string(),
                 "offset": destination,
                 "type": relocation_type,
                 "addend": addend,
                 "symbol_section": symbol.section,
                 "symbol_value": symbol.value,
-                "symbol_name": symbol.name(),
+                "symbol_name": symbol.name.lossy_string(),
             }));
             let key = relocation_type.to_string();
             let count = relocation_types.entry(key).or_default();
@@ -376,7 +415,7 @@ pub fn audit(bytes: &[u8], variant: &str, path: &str) -> Result<Value> {
         }
         allocated_sections.push(json!({
             "index": index,
-            "name": section_names[index].as_ref().as_ref(),
+            "name": section_names[index].lossy_string(),
             "type": section.kind,
             "flags": section.flags,
             "size": section.size,
@@ -520,39 +559,34 @@ fn section_data<'a>(bytes: &'a [u8], section: &Section) -> Result<&'a [u8]> {
 fn cached_name<'a>(
     strings: &'a [u8],
     offset: u32,
-    cache: &mut HashMap<u32, Rc<Cow<'a, str>>>,
-) -> Result<Rc<Cow<'a, str>>> {
+    cache: &mut HashMap<u32, Rc<RawName<'a>>>,
+) -> Result<Rc<RawName<'a>>> {
     if let Some(name) = cache.get(&offset) {
         return Ok(Rc::clone(name));
     }
     let string_offset = usize::try_from(offset)
         .map_err(|_| Refusal::new("string offset does not fit host address space"))?;
-    // Repeated references to one offset share storage. Distinct offsets that
-    // point into overlapping suffixes may still repeat scans; input/work
-    // budgets remain the host caller's responsibility.
-    let name = Rc::new(string_at_lossy(strings, string_offset));
+    // Names retain raw borrowed bytes even when invalid UTF-8. Repeated
+    // references to one offset share the RawName allocation. Distinct offsets
+    // into overlapping suffixes may still repeat scans; host input/work
+    // budgets remain the caller's responsibility.
+    let bytes = strings.get(string_offset..).unwrap_or(&[]);
+    let name = Rc::new(RawName(
+        bytes.split(|byte| *byte == 0).next().unwrap_or(&[]),
+    ));
     cache.insert(offset, Rc::clone(&name));
     Ok(name)
 }
 
-fn string_at_lossy(strings: &[u8], offset: usize) -> Cow<'_, str> {
-    let Some(suffix) = strings.get(offset..) else {
-        // The Python reference uses slicing, which yields an empty string when
-        // a malformed string offset lies beyond the table.
-        return Cow::Borrowed("");
-    };
-    let end = suffix
-        .iter()
-        .position(|byte| *byte == 0)
-        .unwrap_or(suffix.len());
-    String::from_utf8_lossy(&suffix[..end])
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{audit, cached_name};
+    use super::{RawName, audit, cached_name};
     use serde_json::Value;
-    use std::{borrow::Cow, collections::HashMap, rc::Rc};
+    use std::{
+        collections::{HashMap, hash_map::DefaultHasher},
+        hash::{Hash, Hasher},
+        rc::Rc,
+    };
 
     struct Fixture {
         bytes: Vec<u8>,
@@ -768,19 +802,38 @@ mod tests {
         let section_name = cached_name(&strings, 1, &mut section_cache).unwrap();
         let repeated_section_name = cached_name(&strings, 1, &mut section_cache).unwrap();
         assert!(Rc::ptr_eq(&section_name, &repeated_section_name));
-        assert!(matches!(section_name.as_ref(), Cow::Borrowed(_)));
+        assert_eq!(section_name.0.as_ptr(), strings[1..].as_ptr());
 
         let mut symbol_cache = HashMap::new();
         let symbol_name = cached_name(&strings, 1, &mut symbol_cache).unwrap();
         let repeated_symbol_name = cached_name(&strings, 1, &mut symbol_cache).unwrap();
         assert!(Rc::ptr_eq(&symbol_name, &repeated_symbol_name));
-        assert!(matches!(symbol_name.as_ref(), Cow::Borrowed(_)));
 
         let lossy_name = cached_name(&strings, lossy_offset, &mut symbol_cache).unwrap();
         let repeated_lossy_name = cached_name(&strings, lossy_offset, &mut symbol_cache).unwrap();
         assert!(Rc::ptr_eq(&lossy_name, &repeated_lossy_name));
-        assert!(matches!(lossy_name.as_ref(), Cow::Owned(_)));
-        assert_eq!(lossy_name.as_ref().as_ref(), "bad\u{fffd}name");
+        assert_eq!(lossy_name.lossy_string(), "bad\u{fffd}name");
+        assert_eq!(
+            lossy_name.0.as_ptr(),
+            strings[lossy_offset as usize..].as_ptr()
+        );
+
+        let invalid_bytes = vec![0xff; 4096];
+        let mut invalid_cache = HashMap::new();
+        for offset in 0..1024_usize {
+            let offset_u32 = u32::try_from(offset).expect("small fixture offset fits u32");
+            let name = cached_name(&invalid_bytes, offset_u32, &mut invalid_cache).unwrap();
+            assert_eq!(name.0.as_ptr(), invalid_bytes[offset..].as_ptr());
+        }
+
+        let first_invalid = RawName(b"bad\xff");
+        let second_invalid = RawName(b"bad\xfe");
+        assert_eq!(first_invalid, second_invalid);
+        let mut first_hash = DefaultHasher::new();
+        first_invalid.hash(&mut first_hash);
+        let mut second_hash = DefaultHasher::new();
+        second_invalid.hash(&mut second_hash);
+        assert_eq!(first_hash.finish(), second_hash.finish());
 
         let mut lossy_report_fixture = fixture(128, 1024, 62, None, false);
         lossy_report_fixture.bytes[lossy_report_fixture.section_names_offset + 1] = 0xff;
@@ -832,6 +885,18 @@ mod tests {
         overlap.bytes[rela_offset_field..rela_offset_field + 8]
             .copy_from_slice(&64_u64.to_le_bytes());
         let error = audit(&overlap.bytes, "core", "fixture.o").expect_err("overlap must refuse");
+        assert_eq!(error.to_string(), "overlapping file-backed sections");
+    }
+
+    #[test]
+    fn refuses_overlapping_nonnull_section_at_index_zero() {
+        let mut overlap = fixture(128, 1024, 62, None, false);
+        let null_header = overlap.section_headers_offset;
+        overlap.bytes[null_header + 4..null_header + 8].copy_from_slice(&1_u32.to_le_bytes());
+        overlap.bytes[null_header + 24..null_header + 32].copy_from_slice(&64_u64.to_le_bytes());
+        overlap.bytes[null_header + 32..null_header + 40].copy_from_slice(&1_u64.to_le_bytes());
+        let error = audit(&overlap.bytes, "core", "fixture.o")
+            .expect_err("non-NULL section zero overlap must refuse");
         assert_eq!(error.to_string(), "overlapping file-backed sections");
     }
 
