@@ -5,7 +5,9 @@
 R1 remains open. The `v0.1.0` prerelease at publisher source
 `e3d0adbd25aee4ad61a0506f7a451e69955cecba` passed its 32 prepublication
 M1/M2/R1-A1–A7 checks but failed R1-A8. It must not be promoted to stable/latest.
-Preserve its tag, assets, original receipts, clocks and failed evidence unchanged.
+Preserve its original source/tag association, asset bytes, receipts, clocks and
+failed evidence in an explicitly identified historical archive. The existing
+failed bytes must not become the stable release.
 The earlier prepublication PASS results describe that candidate; they do not
 establish a successful public installation or qualify a corrected release.
 
@@ -16,9 +18,16 @@ verbatim documented preparation command in the frozen publisher source.
 A fixed replay wrapper cannot repair that frozen command while claiming an
 unchanged documented flow. See [release status](release-status.md).
 
-Correct the source and qualify a fresh source-bound patch candidate (planned
-`0.1.1`, with its exact version, commit, tag and inputs pinned after protected
-merge/source CI). Keep all existing acceptance criteria. Bind publisher run ID,
+Fabian explicitly authorised a one-time `0.1.0` version-reuse exception on
+2026-10-18. Correct the source and qualify a fresh source-bound `0.1.0`
+candidate; pin its exact commit, tag and input identities after protected
+merge/source CI. The proposed `0.1.1` version migration is withdrawn. Before
+replacing the public version/tag association or assets, preserve and verify the
+previous candidate under an unambiguous historical identity. Publish the
+old/new source and checksum mapping with the corrected release. This exception
+authorises version reuse only: no failing result, signature, provenance claim
+or acceptance criterion is waived. See the [exception record](release-version-exception-20261018.md).
+Keep all existing acceptance criteria. Bind publisher run ID,
 attempt, repository, workflow and source to the authenticated release producer;
 validate publisher and consumer host profiles independently. Do not rewrite
 compiler metadata, authentication claims, old receipts or frozen source.

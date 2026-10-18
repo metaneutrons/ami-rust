@@ -1,13 +1,16 @@
 # Release qualification status — 2026-10-18
 
 **R1 remains open. The `0.1.0` prerelease failed R1-A8 and must not be promoted
-to stable/latest.** A corrected source-bound patch candidate is required.
+to stable/latest.** A corrected source-bound `0.1.0` candidate is required under the owner-approved
+one-time version-reuse exception.
 
 The immutable publisher source is
 `e3d0adbd25aee4ad61a0506f7a451e69955cecba`, tree
 `29957f13f2618accc31b4483e13914b5ed38867e`. The existing
 [prerelease](https://github.com/metaneutrons/ami-rust/releases/tag/v0.1.0)
-retains its original tag, six assets and evidence.
+currently contains the original six assets. Preserve its original source/tag
+association, asset bytes and evidence in a verified historical archive before
+any replacement.
 
 | Evidence | Actual result and limit |
 | --- | --- |
@@ -35,9 +38,14 @@ hosts consuming the same authenticated distribution bundle. Existing acceptance
 criteria remain in force; old prepublication results do not substitute for the
 new candidate or its public replay.
 
-The planned replacement is the next patch release, `0.1.1`; its final source,
-version and input identities will be pinned after protected merge and source
-CI. No corrected SDK qualification or publication is claimed here.
+Fabian explicitly authorised reusing `0.1.0` on 2026-10-18; the proposed
+`0.1.1` migration is withdrawn. The corrected candidate retains `0.1.0`, with
+fresh source/input identities, signatures and complete qualification. Archive
+and verify the original candidate before replacing its public association, and
+publish the old/new source and checksum mapping. The exception does not waive
+any R1 test or authorise promoting the failed bytes. See the
+[version exception](release-version-exception-20261018.md). No corrected SDK
+qualification or publication is claimed here.
 
 The target remains native PC x86-64 AROS ABI-v1, with macOS Apple Silicon and
 Linux x86-64 development hosts. The qualified 512 MiB QEMU profile remains
