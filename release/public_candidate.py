@@ -511,11 +511,12 @@ def verify_and_unpack(candidate: Path, tag: str, source_commit: str,
             raise PublicCandidateVerificationError("inner release manifest does not match the public transport inventory") from error
         if manifest_source != source_commit:
             raise PublicCandidateVerificationError("inner release manifest source differs from the external source pin")
+        outer_sbom = final_files[names["sbom"]]
         inner_sbom = verifier._read_regular(
-            inner_root / stage_candidate._INNER_SBOM_NAME, verifier._MAX_AUTH_JSON,
+            inner_root / stage_candidate._INNER_SBOM_NAME, len(outer_sbom),
             "unpacked inner SBOM",
         )
-        if inner_sbom != final_files[names["sbom"]]:
+        if inner_sbom != outer_sbom:
             raise PublicCandidateVerificationError("outer SBOM differs from the authenticated inner bundle SBOM")
         expected_predicate = ci_auth.predicate(inner_root, HOST)
         for subject in sorted(expected_subjects):

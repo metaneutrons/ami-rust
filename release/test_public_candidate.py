@@ -144,13 +144,15 @@ class PublicCandidateTests(unittest.TestCase):
             },
         }
 
-    def _build_candidate(self, *, candidate_name="candidate", producer=None, version=None):
+    def _build_candidate(self, *, candidate_name="candidate", producer=None, version=None,
+                         sbom=None):
         inner = self.root / (candidate_name + "-inner")
         inner.mkdir()
         (inner / ".auth").mkdir()
         (inner / ".auth/inputs.json").write_bytes(self.inputs_raw)
         (inner / ".auth/authentication.json").write_bytes(b'{"fixture_only":true}\n')
-        sbom = b'{"spdxVersion":"SPDX-2.3","packages":[]}\n'
+        if sbom is None:
+            sbom = b'{"spdxVersion":"SPDX-2.3","packages":[]}\n'
         sdk = b"synthetic SDK archive\x00\xff"
         (inner / "sbom.spdx.json").write_bytes(sbom)
         (inner / "sdk.tar.xz").write_bytes(sdk)
@@ -352,6 +354,59 @@ class PublicCandidateTests(unittest.TestCase):
         self.assertTrue(destination.is_dir())
         self.assertTrue(Path(receipt["receipt_path"]).is_file())
         self.assertTrue((Path(receipt["evidence_directory"]) / "gh").is_dir())
+
+    def test_large_authenticated_sbom_uses_verified_outer_asset_bound(self):
+        sbom_path = Path(__file__).with_name("bundle-assets") / "sbom.spdx.json"
+        sbom = sbom_path.read_bytes()
+        self.assertGreater(len(sbom), verifier._MAX_AUTH_JSON)
+        self.assertLessEqual(len(sbom), transport.MAX_TOTAL_BYTES)
+
+        candidate, inner, names = self._build_candidate(
+            candidate_name="large-sbom", sbom=sbom
+        )
+        proofs = self._make_gh_bundles(
+            candidate, names, self.good_predicate, directory="large-sbom-gh"
+        )
+        receipt = self._verify(
+            candidate=candidate, inner=inner, proofs=proofs,
+            destination_name="large-sbom-unpacked",
+        )
+        self.assertTrue(receipt["authenticated"])
+        self.assertTrue(receipt["unpacked"])
+        self.assertEqual(
+            (self.root / "large-sbom-unpacked" / "sbom.spdx.json").read_bytes(), sbom
+        )
+
+        real_unpack = transport.unpack_bundle
+        for case, changed, exception_type, message in (
+            ("oversized-inner-sbom", sbom + b"x", verifier.PublisherVerificationError,
+             "unpacked inner SBOM must be a bounded regular file"),
+            ("different-inner-sbom", bytes([sbom[0] ^ 1]) + sbom[1:],
+             public_candidate.PublicCandidateVerificationError,
+             "outer SBOM differs from the authenticated inner bundle SBOM"),
+        ):
+            with self.subTest(case=case):
+                bad_candidate, bad_inner, bad_names = self._build_candidate(
+                    candidate_name=case, sbom=sbom
+                )
+                bad_proofs = self._make_gh_bundles(
+                    bad_candidate, bad_names, self.good_predicate,
+                    directory=case + "-gh",
+                )
+
+                def unpack_then_change(payload, record, destination):
+                    result = real_unpack(payload, record, destination)
+                    (destination / "sbom.spdx.json").write_bytes(changed)
+                    return result
+
+                with patch.object(transport, "unpack_bundle", side_effect=unpack_then_change):
+                    with self.assertRaisesRegex(
+                        exception_type, message
+                    ):
+                        self._verify(
+                            candidate=bad_candidate, inner=bad_inner, proofs=bad_proofs,
+                            destination_name=case + "-unpacked",
+                        )
 
     def test_hash_pinned_policy_resources_under_forbidden_roots_fail_before_verification(self):
         fields = ("gh", "cosign", "gh_trusted_roots", "cosign_trusted_root")
