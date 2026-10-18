@@ -231,7 +231,7 @@ document owns requirements, not a duplicate live CI status table.
 The [package contract](distribution-package-contract.md) records the selected
 layout, version identities, explicit consumer commands and qualification scope.
 The immutable SDK release `v0.1.0` is preserved; the new packaging release is
-`v0.1.0+packaging.1`, with Debian version `0.1.0-1` and Homebrew revision 1.
+`v0.1.0+packaging.2`, with Debian version `0.1.0-2` and Homebrew revision 2.
 Packaging publication keeps the SDK release as `latest`; all new channel
 artifacts have their own protected-source provenance and acceptance.
 

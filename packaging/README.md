@@ -1,6 +1,6 @@
 # ami-rust package installation
 
-This package delivers SDK 0.1.0, packaging revision 1, for native PC x86-64
+This package delivers SDK 0.1.0, packaging revision 2, for native PC x86-64
 AROS ABI-v1. The supported development hosts are Ubuntu 24.04 x86-64 and macOS
 26 on Apple Silicon. APT and Homebrew availability is recorded in the
 repository's distribution status; building this package is not publication.

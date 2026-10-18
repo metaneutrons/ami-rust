@@ -29,6 +29,11 @@ def main():
     root.mkdir(mode=0o700)
     started = time.time()
     rows = []
+    measurement_spec = importlib.util.spec_from_file_location("ami_rust_public_measure", HERE / "measure.py")
+    measurement = importlib.util.module_from_spec(measurement_spec)
+    measurement_spec.loader.exec_module(measurement)
+    sampler = measurement.DiskSampler(root).start()
+    measurements = {"schema": measurement.SCHEMA, "status": "INCOMPLETE"}
     consumer_environment = {key: value for key, value in os.environ.items()
         if key in {"HOME", "PATH", "TMPDIR", "LANG", "LC_ALL", "USER", "LOGNAME"}
         or (key.startswith("HOMEBREW_") and not any(word in key for word in ("TOKEN", "SECRET", "KEY")))}
@@ -104,6 +109,16 @@ def main():
             raise ValueError("documented retained-state recipe changed the native output")
         run("retained-project-after-removal", [sys.executable, "-I", "-B", HERE / "qualify.py", "replay",
             "--root", root / "consumer", "--executable", retained, "--phase", "public-removal"])
+        persistent = json.loads((root / "consumer/persistent.json").read_text())
+        state = Path(persistent["state"])
+        measurements.update(measurement.capture(state, Path(persistent["project"]),
+            root / "consumer/user-home/hello-aros-rebuild"))
+        measurements["original_receipts"] = measurement.copy_original_receipts(
+            state, root / "original-sdk-receipts")
+        measurements["volume"] = sampler.stop()
+        if measurements["volume"]["sampling_error"] or not measurements["volume"]["sample_count"]:
+            raise ValueError("public client disk-space observations are incomplete")
+        measurements["status"] = "PASS_RESOURCE_OBSERVATIONS"
         if time.time() - started > 5400:
             raise TimeoutError("public client campaign exceeded its closure window")
         status = "PASS_PUBLIC_CHANNEL_CONSUMER"
@@ -111,6 +126,8 @@ def main():
         failure = str(error)
         raise
     finally:
+        measurements.setdefault("volume", sampler.stop())
+        (root / "resource-measurements.json").write_text(json.dumps(measurements, indent=2) + "\n")
         (root / "result.json").write_text(json.dumps({"status": status, "channel": args.channel,
             "commands": rows, "elapsed_seconds": time.time() - started, "error": failure,
             "budget_exception": False}, indent=2) + "\n")

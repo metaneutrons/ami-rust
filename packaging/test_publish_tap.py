@@ -37,7 +37,7 @@ class FakeGitHub:
         self.head_sha = "c" * 40
         self.tree_sha = "e" * 40
         self.merge_sha = "d" * 40
-        self.branch_name = "fix/ami-rust-0.1.0-packaging-1"
+        self.branch_name = publish_tap._branch_name(publish_tap._load_pins())
         self.main_files = {"README.md": readme}
         self.branch_files: dict[str, bytes] = {}
         self.branch_exists = False
@@ -49,6 +49,9 @@ class FakeGitHub:
         self.changed_head = changed_head
         self.merge_calls = 0
         self.tree_entries: list[dict[str, object]] = []
+        self.commit_message: str | None = None
+        self.pull_request_title: str | None = None
+        self.merge_title: str | None = None
 
     def _pull(self, *, head_sha: str | None = None) -> dict[str, object]:
         sha_value = head_sha or self.head_sha
@@ -120,6 +123,7 @@ class FakeGitHub:
             return {"sha": self.tree_sha}
         if route == base_prefix + "commits" and method == "POST":
             self.branch_exists = True
+            self.commit_message = data["message"]
             return {"sha": self.head_sha}
         if route == base_prefix + "refs" and method == "POST":
             self.branch_exists = True
@@ -132,7 +136,7 @@ class FakeGitHub:
             return {
                 "sha": self.head_sha,
                 "parents": [{"sha": self.main_sha}],
-                "commit": {"message": publish_tap._commit_message(),
+                "commit": {"message": publish_tap._commit_message(publish_tap._load_pins()),
                            "author": identity, "committer": identity},
             }
         compare_prefix = f"repos/{publish_tap.TAP_REPOSITORY}/compare/"
@@ -147,6 +151,7 @@ class FakeGitHub:
         if route == pull_prefix and method == "GET":
             return [] if self.pr is None else [self.pr]
         if route == pull_prefix and method == "POST":
+            self.pull_request_title = data["title"]
             self.pr = self._pull()
             return self.pr
         if route == pull_prefix + "/17" and method == "GET":
@@ -162,6 +167,7 @@ class FakeGitHub:
                                     "conclusion": conclusion}]}
         if route == pull_prefix + "/17/merge" and method == "PUT":
             self.merge_calls += 1
+            self.merge_title = data["commit_title"]
             if self.pr is None or data["sha"] != self.head_sha:
                 return {"merged": False}
             self.pr = self._pull()
@@ -214,9 +220,9 @@ class TapPublicationTests(unittest.TestCase):
         )
         (self.tap_source / "scripts/generate-readme.sh").write_text(generator, encoding="utf-8")
         self.readme = b"# Tap\nami-rust.rb\nexisting.rb\n"
-        self.api = FakeGitHub(self.formula, b"# Tap\nexisting.rb\n")
         self.old_source = publish_tap.SOURCE
         publish_tap.SOURCE = self.source
+        self.api = FakeGitHub(self.formula, b"# Tap\nexisting.rb\n")
         self.token = mock.patch.dict(os.environ, {"GH_TOKEN": "fake-installation-token"})
         self.token.start()
 
@@ -258,6 +264,29 @@ class TapPublicationTests(unittest.TestCase):
         self.assertEqual([row["path"] for row in fake.tree_entries],
                          ["Formula/ami-rust.rb", "README.md"])
         self.assertEqual(json.loads(receipt.read_text()), record)
+
+    def test_revision_two_drives_branch_commit_pr_and_merge_titles(self) -> None:
+        pins_path = self.source / "packaging/pins.json"
+        pins = json.loads(pins_path.read_text(encoding="utf-8"))
+        pins["packaging_revision"] = 2
+        pins["package_version"] = "0.1.0-2"
+        pins_path.write_text(json.dumps(pins), encoding="utf-8")
+
+        fake = FakeGitHub(self.formula, b"# Tap\nexisting.rb\n")
+        expected_message = "feat: distribute ami-rust 0.1.0 packaging 2"
+        self.assertEqual(fake.branch_name, "fix/ami-rust-0.1.0-packaging-2")
+        fake, opened, record = self.open_pr(fake, receipt_name="open-revision-two.json")
+        self.assertEqual(fake.commit_message, expected_message)
+        self.assertEqual(fake.pull_request_title, expected_message)
+
+        output = self.root / "merged-revision-two.json"
+        with mock.patch.object(publish_tap, "api", side_effect=fake):
+            merged = publish_tap.merge_publication(
+                self.candidate / "ami-rust.rb", opened, output
+            )
+        self.assertEqual(fake.merge_title, expected_message)
+        self.assertEqual(merged["status"], "MERGED")
+        self.assertEqual(record["branch"], "fix/ami-rust-0.1.0-packaging-2")
 
     def test_open_recovery_reuses_only_exact_branch_and_pull_request(self) -> None:
         fake, _first_receipt, _record = self.open_pr()

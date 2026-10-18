@@ -1,6 +1,6 @@
 # Homebrew installation — macOS 26 Apple Silicon
 
-These are the delivery commands for SDK 0.1.0, packaging revision 1.
+These are the delivery commands for SDK 0.1.0, packaging revision 2.
 Channel availability is recorded separately in the distribution status.
 
 ```sh
