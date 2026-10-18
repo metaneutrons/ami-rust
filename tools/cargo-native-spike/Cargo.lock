@@ -5,4 +5,3 @@ version = 4
 [[package]]
 name = "ami-rust-cargo-native-spike"
 version = "0.0.0"
-

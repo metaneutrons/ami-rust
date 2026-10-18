@@ -169,7 +169,9 @@
           }
         ]
       }
-    ]
+    ],
+    "prototype_source_commit": "9e1f3338a93810d266f234cc534fedfc5b3a20c8",
+    "subsequent_document_only_difference": "Final EOF whitespace normalisation in the standalone manifest/lock follows the tested commit; no Rust source, dependency or target recipe changes."
   },
   "host_fixture_ci_scope": "Rust unit fixtures only; not two-host native linking, full no-Python execution or AROS acceptance",
   "remaining": [
