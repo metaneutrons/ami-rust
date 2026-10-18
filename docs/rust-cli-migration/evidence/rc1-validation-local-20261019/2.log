@@ -1,0 +1,72 @@
+   Compiling ami-rust-core v0.2.0-dev (/Volumes/Dev/Source/Amiga/ami-rust/release/public-replay-proof-output-fix-20261018/tooling/crates/core)
+   Compiling ami-rust-cli v0.2.0-dev (/Volumes/Dev/Source/Amiga/ami-rust/release/public-replay-proof-output-fix-20261018/tooling/crates/cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.62s
+     Running unittests src/main.rs (/Volumes/Dev/Source/Amiga/ami-rust/evidence/rc1-record-validation-local-20261019-a1/target/debug/deps/ami_rust-d642a047f5d88d1c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/frontends.rs (/Volumes/Dev/Source/Amiga/ami-rust/evidence/rc1-record-validation-local-20261019-a1/target/debug/deps/frontends-435b8da90e3f7825)
+
+running 1 test
+test real_frontend_copies_and_cargo_plugin_have_identical_version_and_refusals ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+     Running unittests src/lib.rs (/Volumes/Dev/Source/Amiga/ami-rust/evidence/rc1-record-validation-local-20261019-a1/target/debug/deps/ami_rust_core-ab8895ad3b17839f)
+
+running 44 tests
+test digest::tests::validates_only_lowercase_sha256_hex ... ok
+test elf::tests::refuses_overlapping_nonnull_section_at_index_zero ... ok
+test elf::tests::refuses_overlapping_rela_and_data_sections ... ok
+test elf::tests::refuses_out_of_bounds_nobits_section_name_table ... ok
+test elf::tests::refuses_wrong_abi_and_machine ... ok
+test compression::tests::xz_enforces_compressed_decoded_and_dictionary_limits ... ok
+test elf::tests::refuses_unsupported_and_out_of_bounds_relocations ... ok
+test elf::tests::refuses_malformed_symbol_and_rela_table_metadata ... ok
+test elf::tests::refuses_duplicate_and_unresolved_strong_symbols ... ok
+test compression::tests::writer_short_writes_are_completed_and_sink_failures_propagate ... ok
+test compression::tests::xz_rejects_every_suffix_truncation_and_bad_block_crc ... ok
+test elf::tests::refuses_section_table_and_section_data_out_of_bounds ... ok
+test compression::tests::gzip_accepts_one_member_at_exact_caps_and_refuses_excess_caps ... ok
+test compression::tests::gzip_rejects_trailing_junk_concatenation_truncation_and_bad_crc ... ok
+test files::tests::bounded_reader_checks_streamed_bytes_after_a_zero_length_observation ... ok
+test elf::tests::requires_startup_in_first_executable_section_at_zero ... ok
+test files::tests::opener_rejects_parent_traversal_and_nul_components ... ok
+test digest::tests::hashes_bytes_and_streams_binary_file_contents ... ok
+test elf::tests::reports_native_object_and_reference_measurements ... ok
+test files::tests::rejects_nonportable_inventory_paths ... ok
+test frontend::tests::both_names_share_parser_and_exact_separator_rules ... ok
+test json::tests::ignores_container_like_text_inside_strings ... ok
+test json::tests::preserves_serde_json_integer_and_finite_float_semantics ... ok
+test json::tests::rejects_bom_invalid_utf8_trailing_values_and_nonfinite_numbers ... ok
+test json::tests::rejects_malformed_json_and_typed_value_mismatch ... ok
+test records::tests::current_host_check_is_explicit_and_refuses_the_other_profile ... ok
+test json::tests::rejects_duplicate_keys_at_each_object_depth ... ok
+test records::tests::parses_closed_records_without_accessing_or_trusting_claimed_paths ... ok
+test json::tests::accepts_exact_container_depth_and_refuses_one_more ... ok
+test files::tests::reads_binary_regular_file_at_exact_limit_and_from_relative_path ... ok
+test records::tests::unknown_or_missing_schema_refuses_before_interpreting_fields ... ok
+test records::tests::selection_requires_exact_separate_normalized_absolute_roots ... ok
+test frontend::tests::capability_ledger_matches_normative_contract_and_refuses_pending_work ... ok
+test json::tests::profiles_match_the_frozen_format_contract ... ok
+test files::tests::refuses_fifo_without_blocking ... ok
+test files::tests::rejects_a_file_one_byte_over_the_limit ... ok
+test records::tests::refuses_extra_missing_wrong_typed_and_inconsistent_state_fields ... ok
+test files::tests::temporary_inputs_are_cleaned_up ... ok
+test files::tests::reads_a_non_utf8_filename_without_lossy_conversion ... ok
+test files::tests::rejects_final_and_ancestor_symlinks ... ok
+test elf::tests::refuses_many_aliased_large_symbol_tables_before_symbol_parsing ... ok
+test elf::tests::caches_repeated_long_names_and_preserves_lossy_utf8_reporting ... ok
+test elf::tests::accepts_objects_above_reference_thresholds_including_large_bss ... ok
+test json::tests::enforces_every_frozen_profile_byte_limit_including_exact_boundary ... ok
+
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+
+   Doc-tests ami_rust_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

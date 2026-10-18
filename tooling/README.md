@@ -69,3 +69,32 @@ The final open is nonblocking to reject FIFOs without waiting for a writer.
 These primitives do not yet establish installation ownership, secure mutation,
 archive extraction or a snapshot against concurrent writes to the same inode.
 Their input-format limits impose no AROS application memory or code-size cap.
+
+## Validation slice
+
+The core also parses the closed state-v2 and selection-v2 metadata shapes.
+These are untrusted claims: callers must still verify the actual host, roots,
+ownership, receipts and inventories. Lexical path checks do not establish
+filesystem identity or make a state ready. No legacy executable driver runs.
+
+Strict gzip/XZ decoding checks compressed, decoded and XZ decoder-memory limits
+supplied by the input profile. It refuses corruption, truncation, concatenated
+streams and every suffix (including otherwise-valid XZ padding). A failing
+operation may have written bytes to its sink; use unpublished staging and discard
+it on any error. This module does not yet extract TAR files or install packages.
+
+The in-memory ELF auditor returns the historical complete report, including
+relocations, symbols, section hashes and measurements. Reference-size thresholds
+remain observations, not AROS application limits. It refuses multiple symbol
+tables and overlapping file-backed sections before decoding symbol names. Names
+borrow the input rather than copying potentially overlapping string suffixes.
+Malformed-input diagnostics have fixed size. Untrusted public integration must
+supply input, work and report-output resource supervision: borrowed names avoid
+storage amplification but do not eliminate repeated suffix scans or large reports.
+
+[Local validation and full native-report comparison](../docs/rust-cli-migration/evidence/rc1-validation-local-20261019/result.json)
+cover this slice only. Four retained native outputs yield full reports equal to
+the frozen Python oracle; a deliberately malformed overlapping-section fixture
+is rejected more strictly under the ELF gABI. Original and failed evidence is
+retained. Neither these fixtures nor foundation CI accepts RC1-A1–A4; the public
+commands remain pending until their complete lifecycle is implemented.

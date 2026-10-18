@@ -1,0 +1,43 @@
+{
+  "schema": "ami-rust-rc1-foundation-hosted-v1",
+  "scope": "First host foundation only; not complete RC1 or consumer Python-free acceptance",
+  "candidate_commit": "1cf396ed7da7ad65cb3f1f3c412e11caf7c1ea1d",
+  "base_commit": "c1e07b4aee31bcd8ec891e3eef3d396308bb4941",
+  "merge_commit": "ba9727c467eadab850757ee9334bd1bda5c8b10e",
+  "pr": "https://github.com/metaneutrons/ami-rust/pull/81",
+  "run": "https://github.com/metaneutrons/ami-rust/actions/runs/39175934341",
+  "status": "PASS",
+  "host_results": {
+    "linux": {
+      "job": 117818504129,
+      "foundation_tests_passed": 22,
+      "failed": 0,
+      "prototype_api_tests": [
+        3,
+        3,
+        13
+      ],
+      "raw_log_sha256": "41bc9bd592d4ee632509de2d13cfae9e9116da7090c5a224e756d23522998ae6",
+      "real_cargo_plugin_version_refusal_tests": "PASS"
+    },
+    "macos": {
+      "job": 117818504056,
+      "foundation_tests_passed": 22,
+      "failed": 0,
+      "prototype_api_tests": [
+        3,
+        3,
+        13
+      ],
+      "raw_log_sha256": "e5e5c65b230d0dfee90bb4c9306d1bdaa70f82393932b2c2885be3b736130c01",
+      "real_cargo_plugin_version_refusal_tests": "PASS"
+    }
+  },
+  "input_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+  "unchanged_boundaries": [
+    "AROS target workspace/native inputs",
+    "qualified ABI-v1 baseline",
+    "immutable release assets",
+    "protected AROS-NX and aros-tools checkouts"
+  ]
+}

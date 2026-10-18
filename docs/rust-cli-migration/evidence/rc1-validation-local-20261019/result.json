@@ -1,0 +1,96 @@
+{
+  "scope": "local RC1 validation slice; not full RC1 acceptance",
+  "started_at": "2026-10-18T23:40:45.346622+00:00",
+  "steps": [
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all"
+      ],
+      "exit_code": 0,
+      "log": "1.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      "exit_code": 0,
+      "log": "2.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "log": "3.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "log": "4.log"
+    }
+  ],
+  "status": "PASS",
+  "source_sha256": {
+    "tooling/crates/cli/tests/frontends.rs": "e295a8d4c042994f92629db39429ba07dfecec0b79d61a9d5de6d9a927278bc0",
+    "tooling/crates/cli/src/main.rs": "50552bf5691718f6c5f1fdb9d36d4fac11823bc4fda0ab69e278cb2770ad1e9d",
+    "tooling/crates/core/src/frontend.rs": "59c8d6b20ea96d17dc22f8cf6875e224206053cbd5dc4332b864254bc5b372cb",
+    "tooling/crates/core/src/records.rs": "4d2f7c61e1245a5b0ab6f6bea2d099957a4351ae6775e2fb97509383a19419fa",
+    "tooling/crates/core/src/compression.rs": "a25f261d6bde6c6b235f4a1ea612255c49c1b98f16a5c8d0982502cdbd0b9e19",
+    "tooling/crates/core/src/error.rs": "54c606fab3b71f70c1fbfc27e41cd69e0c342efebcd435cf8d4530aab37c4b5f",
+    "tooling/crates/core/src/lib.rs": "cf0c70c37145651f67efa1250332db7a3aa7b49aff6c3018c483ef243e00d504",
+    "tooling/crates/core/src/digest.rs": "37a274cf539531f18fe4a08e0b599fbcaa9ab1f1762a8b665b39a8daf0361898",
+    "tooling/crates/core/src/files.rs": "9320b67cb7948811f082122b88626aa31d2a09a2d1fc878e6ff50f85afe346bf",
+    "tooling/crates/core/src/json.rs": "fa98d69049d72176b46369de60541467b5774550fd18e6686fb1341475441ffe",
+    "tooling/crates/core/src/elf.rs": "a7f068fd2b28357abf2bc488a3b655078283dcb399671b96cdfe3d12bf567fb5"
+  },
+  "source_commit": "f95f09e7f80e5d6d36a8f5ed9f122cb29bd536b5",
+  "core_tests_passed": 44,
+  "real_cargo_frontend_tests_passed": 1,
+  "host": "macos-aarch64",
+  "not_run": [
+    "Linux/native hosted validation for this slice",
+    "complete RC1 consumer lifecycle",
+    "full five-variant/four-root native build matrix",
+    "untrusted public ELF caller with resource supervision"
+  ],
+  "development_failures": [
+    {
+      "attempt": "a1",
+      "result": "Clippy refused three style findings; corrected before a2"
+    },
+    {
+      "attempt": "a2",
+      "result": "44 cases passed before final borrowed-name follow-up; not proof for final source"
+    },
+    {
+      "commit": "92434c7",
+      "result": "Compile refused duplicate Debug derive; fixed in f95f09e before a3"
+    }
+  ],
+  "log_sha256": {
+    "4.log": "a9898e28404c6abf303560c9feafa2b35f13758ea687ab9def03a3601b2b4e96",
+    "2.log": "3158560a6c55c61db7476c00b456aba64337733cc394634c4f5f0f6e9a575415",
+    "3.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "1.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}
