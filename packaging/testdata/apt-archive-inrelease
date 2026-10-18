@@ -1,0 +1,32 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Origin: metaneutrons
+Label: metaneutrons
+Suite: rolling
+Codename: rolling
+Architectures: amd64 arm64
+Components: main
+Acquire-By-Hash: yes
+Description: Packages for deb.metaneutrons.cc
+Date: Sun, 18 Oct 2026 20:15:56 +0000
+Valid-Until: Fri, 16 Apr 2027 20:15:56 +0000
+SHA256:
+ 16b47cff06ec9368a62134633af583da19118f7ea7eef99050312ea80677d579            18955 archive-state.json
+ c6557287acb1ba9ac48f0f68a44c0395dc1e596188add1e46bfed8335e50291a            23752 main/binary-amd64/Packages
+ 63072c7370c237683bda0a88fac26c37690aa6ed70017adbbbaac2192421411a             6086 main/binary-amd64/Packages.gz
+ d32e63d2e3d03ecef978aeb11adf7c32f3b435493f7e7ff1a1a1d9bfec465193            23103 main/binary-arm64/Packages
+ 327aaf6242bb322f33d0b91692249072e470bea71915e15189889d8a41cae552             5866 main/binary-arm64/Packages.gz
+SHA512:
+ da9d10df20d282e2d38f8380d40fa676356bab8c50c849ece16794bb338682518da0eec07885b5423dc8c405a0f508bff7d28ef885d8f8cd5a6c1971b93cade3            18955 archive-state.json
+ 2eb001beed53dc9d0bc55b181752353ecaa1e9966db9bae891e5f502d22c9904a8899fac9c5d0913eaec86c8a7065ccebc9e26790083c2502ec4d0e77cf6c27c            23752 main/binary-amd64/Packages
+ ddbe31ec94c86b2ad3d1fe08aaf45deae21b76e7a005e5218612f32966b403b8541094eeae47c34d2df932fc43fce5062093d7d5df79322ed44b4ca8149b9219             6086 main/binary-amd64/Packages.gz
+ 8aa1ffab9e540efe293374bbc58cc97f0f6d9a40cc92b85bdaad9b99b386aa281ff98e4f758116bbeb2b0ff61f37f0960271382d037dd82bca60e1988b28ecad            23103 main/binary-arm64/Packages
+ ba6bb77016f07fead840d1c853d261a182a3d71de40caccfe6622b9b500419b2f6ab490b9db2e673c8e0dec7cd9eb06ee25d835b32d18b856931840e3999e410             5866 main/binary-arm64/Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iHUEARYKAB0WIQSgwheC/FB8y9Zm8+0kIHL+yL5UpAUCatUo/AAKCRAkIHL+yL5U
+pK5nAQDBN58FAgFU80LyWc4NrWnt5xrFb6cx68r1YpkqPNY/0gEA3imxV1cBLp72
+OreaKtBNN6CTup95dZX4ud17fdvaRQc=
+=kSYY
+-----END PGP SIGNATURE-----
