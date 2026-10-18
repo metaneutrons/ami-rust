@@ -1,0 +1,40 @@
+{
+  "schema": "ami-rust-rc1-host-input-selection-v1",
+  "scope": "First production host-workspace foundation, not RC1 acceptance or release",
+  "host_rust": {
+    "version": "1.98.1",
+    "commit": "48a229ceaefd4985c50990b14116b6d856af0985",
+    "bootstrap_pins": "release/ci-bootstrap-inputs.json"
+  },
+  "reviewed_candidate_lock_sha256": "cc3ac7771a692dc1c2b154ad6962285209b4d7b1eeb5c918d98ece8ac7aeee66",
+  "production_registry_package_count": 29,
+  "production_registry_identities_equal_reviewed_candidate": true,
+  "feature_changes": [
+    {
+      "package": "serde_json 1.0.145",
+      "feature": "unbounded_depth",
+      "reason": "The dependency-free feature permits an explicit DeserializeSeed counter accepting 128 containers and rejecting 129 before their children; the default parser rejects container 128. The shared parser retains byte, UTF-8, duplicate-key and depth checks."
+    },
+    {
+      "package": "libc 0.2.191",
+      "change": "Direct dependency for narrowly scoped Unix open/openat and descriptor ownership; already in reviewed transitive set."
+    }
+  ],
+  "source_license_review": "evidence/host-dependencies-a2/selection-review.json",
+  "advisory_scan": {
+    "tool": "cargo-audit-audit 0.22.2",
+    "database_commit": "999ec89d5d3f10f20be14750ec8c2d8b44e0ac9b",
+    "no_fetch": true,
+    "vulnerabilities": 0,
+    "warnings": {},
+    "raw_sha256": "1ec5a180a374ac214bc3fa4c0bfc0368da82cf6faa6197d31b39130d454b4fa9"
+  },
+  "inputs": {
+    "tooling/Cargo.toml": "1d202876daf8e98c8658a57605ab29d23153fd9f9805cfa72bc5e0c9246c5243",
+    "tooling/Cargo.lock": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+    "tooling/crates/core/Cargo.toml": "cd3f2620f75f46df67317ae14a18e7b48098d1d2c9b2f902829101d167a0ed16",
+    "tooling/crates/cli/Cargo.toml": "d9a5cc73251d16ec109361a18feb17f0afa967c06048ab24ccdbab1fdc7ab634",
+    "tooling/rust-toolchain.toml": "72da9f9e503464ba7393560f6f51a69fb06be72633d52ae7725fa0ba59dfda22"
+  },
+  "qualification": "Native source build/tests and independent code review still required; no consumer or release acceptance."
+}
