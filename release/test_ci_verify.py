@@ -945,6 +945,33 @@ class HostedConsumerVerifyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "authentication report differs"):
             ci_verify._validate_trusted_consumer_assets(bundle, result, policy, trusted_source)
         auth["workflowRuns"] = [{"hostProfile": result["host"]}]
+
+        # Outer publisher authentication has its own host profile. It may be
+        # Linux while this protected consumer replay runs on macOS, provided
+        # the exact run row came from the hash-bound outer receipt.
+        publisher_run = {"runId": 39089771746, "runAttempt": 1,
+                         "hostProfile": "linux-x86_64"}
+        result["host"] = "macos-aarch64"
+        auth["workflowRuns"] = [publisher_run]
+        ci_verify._validate_trusted_consumer_assets(
+            bundle, result, policy, trusted_source,
+            expected_workflow_runs=[publisher_run])
+        for expected in (
+                [{"runId": 1, "runAttempt": 1, "hostProfile": "linux-x86_64"}],
+                [{"runId": 39089771746, "runAttempt": 2, "hostProfile": "linux-x86_64"}],
+                [{"runId": 39089771746, "runAttempt": 1, "hostProfile": "macos-aarch64"}],
+                [{"runId": True, "runAttempt": 1, "hostProfile": "linux-x86_64"}],
+                [{"runId": 39089771746, "runAttempt": 1, "hostProfile": "linux-x86_64", "extra": 1}],
+                [{"runId": 39089771746, "runAttempt": 1, "hostProfile": "unknown-host"}],
+        ):
+            with self.subTest(expected_workflow_runs=expected):
+                with self.assertRaisesRegex(ValueError, "authentication report differs"):
+                    ci_verify._validate_trusted_consumer_assets(
+                        bundle, result, policy, trusted_source,
+                        expected_workflow_runs=expected)
+
+        result["host"] = "linux-x86_64"
+        auth["workflowRuns"] = [{"hostProfile": "linux-x86_64"}]
         (bundle / "new_project.py").write_bytes(b"changed after authentication")
         with self.assertRaisesRegex(ValueError, "differs from protected source pin"):
             ci_verify._validate_trusted_consumer_assets(bundle, result, policy, trusted_source)

@@ -761,6 +761,72 @@ def _authenticate_public_candidate(*, candidate: Path, tag: str,
         raise
 
 
+def _publisher_workflow_runs_from_outer_receipt(output: Path,
+                                                 outer_authentication: dict[str, Any],
+                                                 source_commit: str,
+                                                 valid_hosts: tuple[str, ...]) -> list[dict[str, Any]]:
+    """Bind consumer verifier workflow claims to the retained outer-auth receipt."""
+    if (type(outer_authentication) is not dict
+            or outer_authentication.get("status") !=
+               "PUBLIC_CANDIDATE_AUTHENTICATED_AND_UNPACKED_NOT_INSTALLED_NOT_R1_ACCEPTED"
+            or outer_authentication.get("authenticated") is not True
+            or outer_authentication.get("unpacked") is not True
+            or outer_authentication.get("receipt_path") != OUTER_RECEIPT_NAME
+            or type(outer_authentication.get("receipt_sha256")) is not str
+            or DIGEST_RE.fullmatch(outer_authentication["receipt_sha256"]) is None):
+        raise ValueError("outer public authentication summary is incomplete or not hash-bound")
+    receipt_path = output / OUTER_RECEIPT_NAME
+    try:
+        info = receipt_path.lstat()
+    except OSError as error:
+        raise ValueError("retained outer authentication receipt is missing") from error
+    if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+            or info.st_size <= 0 or info.st_size > 1024 * 1024):
+        raise ValueError("retained outer authentication receipt is linked or outside its size bound")
+    raw = receipt_path.read_bytes()
+    if len(raw) != info.st_size or hashlib.sha256(raw).hexdigest() != outer_authentication["receipt_sha256"]:
+        raise ValueError("retained outer authentication receipt differs from its verified digest")
+
+    def unique_pairs(rows):
+        value = {}
+        for key, item in rows:
+            if key in value:
+                raise ValueError("retained outer authentication receipt has a duplicate key")
+            value[key] = item
+        return value
+
+    try:
+        receipt = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_pairs,
+                             parse_constant=lambda token: (_ for _ in ()).throw(
+                                 ValueError("retained outer authentication receipt has a non-finite value")))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("retained outer authentication receipt is not strict UTF-8 JSON") from error
+    inner = receipt.get("inner_verification") if type(receipt) is dict else None
+    if (type(receipt) is not dict
+            or receipt.get("status") != outer_authentication["status"]
+            or receipt.get("authenticated") is not True
+            or receipt.get("unpacked") is not True
+            or receipt.get("installed") is not False
+            or receipt.get("r1_accepted") is not False
+            or receipt.get("source_commit") != source_commit
+            or receipt.get("workflow_commit") != source_commit
+            or type(inner) is not dict
+            or inner.get("verified") is not True
+            or inner.get("source_sha") != source_commit
+            or inner.get("workflow_sha") != source_commit):
+        raise ValueError("retained outer authentication receipt does not bind the selected publisher source")
+    workflow_runs = inner.get("workflow_runs")
+    if type(workflow_runs) is not list or len(workflow_runs) != 1:
+        raise ValueError("outer publisher authentication must bind exactly one workflow run")
+    row = workflow_runs[0]
+    if (type(row) is not dict or set(row) != {"runId", "runAttempt", "hostProfile"}
+            or type(row.get("runId")) is not int or row["runId"] <= 0
+            or type(row.get("runAttempt")) is not int or row["runAttempt"] <= 0
+            or row.get("hostProfile") not in valid_hosts):
+        raise ValueError("outer publisher workflow run identity is malformed")
+    return [row]
+
+
 def replay_public_candidate(*, source: Path, source_commit: str,
                             bundle: Path | None = None,
                             candidate_assets: Path | None = None,
@@ -986,8 +1052,13 @@ def replay_public_candidate(*, source: Path, source_commit: str,
             raise ValueError("protected-source verifier returned a different host or release route")
         if verified.get("release_manifest_sha256") != manifest_sha256:
             raise ValueError("protected-source verifier did not bind the externally pinned release manifest")
+        expected_workflow_runs = None
+        if outer_authentication is not None:
+            expected_workflow_runs = _publisher_workflow_runs_from_outer_receipt(
+                output_path, outer_authentication, source_commit, trusted.HOSTS)
         trusted._validate_trusted_consumer_assets(
-            candidate, verified, policy, trusted_source=source_path)
+            candidate, verified, policy, trusted_source=source_path,
+            expected_workflow_runs=expected_workflow_runs)
 
         # Read candidate metadata and documentation only after protected verify.
         candidate_manifest = trusted.strict_json(candidate / "release.json", 1024 * 1024)
