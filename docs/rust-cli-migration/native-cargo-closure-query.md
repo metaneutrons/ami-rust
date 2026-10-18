@@ -86,11 +86,10 @@ evidence, does not establish Python removal, and does not qualify actual Cargo
 producer execution. RC4 must still observe the producer's real subprocess tree
 on each supported host.
 
-The query has not been dispatched or run on GitHub as part of this change. The
-script and workflow have only received local static syntax checks. RC0 remains
-open until the native Ubuntu artifact is reviewed together with the source-level
-build-script evidence; RC4 must still exercise the actual producer on each
-supported host.
+Historical pre-dispatch state: the initial driver received only local static
+syntax checks. The corrected hosted qualification below now supplies the native
+Ubuntu artifact and source-level review; RC4 must still exercise the actual
+producer on each supported host.
 
 ## First native attempt and actual-output regression review
 
@@ -110,8 +109,9 @@ from native output, not an imposed package-count assertion. Native retrieval
 verified 457 lock-bound registry archives, 53,297,461 bytes total. Observed RSS
 was 313,122,816 bytes, workspace 1,980,939,861 bytes and logs 90,602 bytes.
 [Original-attempt digests, corrected parser controls and host fixture evidence](evidence/cargo-native-query-review/first-attempt.json)
-are retained. The corrected exact candidate still needs a successful hosted
-query before RC0 acceptance; the original failure is not rewritten as PASS.
+are retained. At that attempt, the corrected exact candidate still needed a successful hosted
+query before RC0 acceptance. The subsequent result below supplies it; the
+original failure is not rewritten as PASS.
 
 ## Corrected native qualification
 

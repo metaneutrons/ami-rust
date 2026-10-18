@@ -33,5 +33,11 @@
       "published_sha256": "bc6156c8b436327db1cce29dc5e8be5a87acafb95192a95f4bc67dc78799b3c7",
       "bytes": 43071
     }
+  },
+  "current_reconciliation": {
+    "native_query": "https://github.com/metaneutrons/ami-rust/actions/runs/39173711603",
+    "status": "PASS_NATIVE_LINUX_SOURCE_GRAPH_ONLY",
+    "result": "../native-source-39173711603/result.json",
+    "scope": "The original index and static outputs describe their earlier snapshot; the accepted native query now matches 341 package identities and 36 selected build scripts. Actual producer execution remains RC4/RC5."
   }
 }
