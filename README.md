@@ -94,8 +94,12 @@ be installed side by side; uninstall keeps projects and shared prerequisites.
 The SDK contains source and helpers; the Rust compiler, C SDK, native toolchain,
 and vendor inputs are provisioned explicitly by the preparation recipe.
 
-GitHub Releases is the current installation channel. [APT and Homebrew are
-planned next, followed by AUR and rustup integration](docs/distribution-channels-plan.md).
+GitHub Releases is the current installation channel. APT and Homebrew packaging
+is being qualified through a separate `v0.1.0+packaging.1` delivery; it preserves
+the original SDK release. The [package instructions](packaging/README.md) explain
+the launcher, explicit preparation and retained project state. Check the
+[distribution status](docs/distribution-status.md) before using a package channel.
+AUR and rustup remain [later deliveries](docs/distribution-channels-plan.md).
 
 **Host requirements:** macOS 26 on Apple Silicon, or Ubuntu 24.04 on x86-64
 with glibc; an existing Python 3.10+ to bootstrap the pinned interpreter;

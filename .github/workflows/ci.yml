@@ -93,13 +93,39 @@ jobs:
           python3 -I -B release/test_verify_publisher.py
           python3 -I -B release/test_install_publisher.py
 
+  packaging-fixtures:
+    name: Packaging fixtures (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out packaging test inputs
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            packaging/
+            release/*.py
+            release/ci-*.json
+            LICENSE*
+      - name: Run isolated packaging fixture tests
+        run: |
+          python3 --version
+          for suite in packaging/test_*.py; do
+            python3 -I -B "$suite"
+          done
+
   ci-success:
     name: CI Success
     if: always()
-    needs: [installer-fixtures]
+    needs: [installer-fixtures, packaging-fixtures]
     runs-on: ubuntu-24.04
     steps:
-      - name: Require every fixture matrix job to pass
+      - name: Require every fixture job to pass
         env:
-          MATRIX_RESULT: ${{ needs.installer-fixtures.result }}
-        run: test "$MATRIX_RESULT" = success
+          INSTALLER_RESULT: ${{ needs.installer-fixtures.result }}
+          PACKAGING_RESULT: ${{ needs.packaging-fixtures.result }}
+        run: |
+          set -euo pipefail
+          test "$INSTALLER_RESULT" = success
+          test "$PACKAGING_RESULT" = success

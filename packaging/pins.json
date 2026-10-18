@@ -1,0 +1,78 @@
+{
+  "schema": "ami-rust-package-inputs-v1",
+  "sdk_version": "0.1.0",
+  "packaging_revision": 1,
+  "package_version": "0.1.0-1",
+  "packaging_tag": "v0.1.0+packaging.1",
+  "sdk_tag": "v0.1.0",
+  "repository": "metaneutrons/ami-rust",
+  "source_commit": "b4ebb9cce5decd01616b75acf451d0eba9995ee3",
+  "source_tree": "c5d9eed6b057ddadd17356801f8b3897e3e430dc",
+  "sdk_run_id": 39121017959,
+  "sdk_run_attempt": 1,
+  "manifest_sha256": "cd9adcf44264c86eb0bdea35bb16c02529c8ae5b051d4a9dd3aa6007f0972b65",
+  "transport_sha256": "9a93ad5fd1ffc5abcb1abfc059ec14abf6936cf907ea1616e6bf0a814e7cbaa0",
+  "assets": [
+    {
+      "path": "SHA256SUMS",
+      "bytes": 518,
+      "sha256": "fe1d1e1568f884427f9ae1155ad0cc49601b3cb9f2e93ec5dffc422f8f73f4f7"
+    },
+    {
+      "path": "ami-rust-0.1.0-release.tar.xz",
+      "bytes": 25902508,
+      "sha256": "f4a8cbc562d3c43c573a5a34ddfa99d74928ded94c47df45f4182fde71567d5c"
+    },
+    {
+      "path": "ami-rust-0.1.0-release.tar.xz.sigstore.json",
+      "bytes": 10630,
+      "sha256": "464933640a0c35c581942c6dfa0b87bb4e51ac1ca9a9a3530913dd57faa5890d"
+    },
+    {
+      "path": "ami-rust-0.1.0-release.tar.xz.spdx.json",
+      "bytes": 1095112,
+      "sha256": "37dc5bd7cea9b5ea738a07c50e3865f2cf03fe81312173fc2f99bcce4271b30f"
+    },
+    {
+      "path": "ami-rust-0.1.0-transport.json",
+      "bytes": 19136,
+      "sha256": "9a93ad5fd1ffc5abcb1abfc059ec14abf6936cf907ea1616e6bf0a814e7cbaa0"
+    },
+    {
+      "path": "ami-rust-0.1.0-transport.json.sigstore.json",
+      "bytes": 10583,
+      "sha256": "ae3781a9ede1f7a0eea0ee9922aff5c356d2dfd0a98cac6a33822b05141dacb3"
+    }
+  ],
+  "hosts": {
+    "apt": "linux-x86_64",
+    "homebrew": "macos-aarch64"
+  },
+  "maintainer": "Fabian Schmieder <436979+metaneutrons@users.noreply.github.com>",
+  "publisher_proofs": {
+    "SHA256SUMS": [
+      {
+        "bytes": 24387,
+        "sha256": "36578dda5bf6e29dfbb211d51d46a92c327d4a2a1eebc5e8171b568915c1dd87"
+      }
+    ],
+    "ami-rust-0.1.0-release.tar.xz": [
+      {
+        "bytes": 24415,
+        "sha256": "4c7cc4eb24b329bde8a3035edab2316bd758bcbb9069baaee44ac68c925b6f00"
+      }
+    ],
+    "ami-rust-0.1.0-release.tar.xz.spdx.json": [
+      {
+        "bytes": 24419,
+        "sha256": "0b287dd19c3a69e67bd042d185e8388fe4ccc2f615b0468914bd124619b3fe10"
+      }
+    ],
+    "ami-rust-0.1.0-transport.json": [
+      {
+        "bytes": 24274,
+        "sha256": "2e2c69a605765ef6a56da42afeed9b5a6489299658ff448db24391bfbad77bfc"
+      }
+    ]
+  }
+}
