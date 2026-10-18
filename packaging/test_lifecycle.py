@@ -245,7 +245,7 @@ class LifecycleTests(unittest.TestCase):
     def test_lifecycle_root_cannot_overlap_immutable_package_output(self) -> None:
         runner = FakeRunner(self.root, "ubuntu-24.04-x86_64")
         overlapping = self.packages / "campaign"
-        with mock.patch.object(lifecycle.os, "getuid", return_value=501):
+        with mock.patch.object(lifecycle.os, "getuid", return_value=self.root.stat().st_uid):
             with self.assertRaisesRegex(lifecycle.LifecycleError, "must be disjoint"):
                 lifecycle.Lifecycle(self.packages, overlapping, runner=runner,
                                     host_profile="ubuntu-24.04-x86_64").run()
@@ -284,7 +284,7 @@ class LifecycleTests(unittest.TestCase):
     def test_ubuntu_lifecycle_uses_campaign_owned_installs_and_retains_user_state(self) -> None:
         runner = FakeRunner(self.root, "ubuntu-24.04-x86_64")
         campaign_root = self.root / "campaign-apt"
-        with mock.patch.object(lifecycle.os, "getuid", return_value=501):
+        with mock.patch.object(lifecycle.os, "getuid", return_value=self.root.stat().st_uid):
             result = lifecycle.Lifecycle(self.packages, campaign_root, runner=runner,
                                          host_profile="ubuntu-24.04-x86_64", budget_seconds=5400).run()
         labels = [label for label, _argv, _timeout in runner.calls]
@@ -316,7 +316,7 @@ class LifecycleTests(unittest.TestCase):
     def test_homebrew_lifecycle_installs_revision_zero_then_brews_upgrade_to_exact_final_formula(self) -> None:
         runner = FakeRunner(self.root, "macos-26-arm64")
         campaign_root = self.root / "campaign-brew"
-        with mock.patch.object(lifecycle.os, "getuid", return_value=501):
+        with mock.patch.object(lifecycle.os, "getuid", return_value=self.root.stat().st_uid):
             result = lifecycle.Lifecycle(self.packages, campaign_root, runner=runner,
                                          host_profile="macos-26-arm64", budget_seconds=5400,
                                          tap_suffix="test123").run()
@@ -339,7 +339,7 @@ class LifecycleTests(unittest.TestCase):
     def test_failure_propagates_and_cleans_only_owned_package_while_evidence_survives(self) -> None:
         runner = FakeRunner(self.root, "ubuntu-24.04-x86_64", fail_label="qualify-replay-retained")
         campaign_root = self.root / "campaign-fail"
-        with mock.patch.object(lifecycle.os, "getuid", return_value=501):
+        with mock.patch.object(lifecycle.os, "getuid", return_value=self.root.stat().st_uid):
             with self.assertRaisesRegex(lifecycle.CommandFailure, "qualify-replay-retained failed with exit 37"):
                 lifecycle.Lifecycle(self.packages, campaign_root, runner=runner,
                                      host_profile="ubuntu-24.04-x86_64").run()
@@ -354,7 +354,7 @@ class LifecycleTests(unittest.TestCase):
     def test_existing_package_is_refused_without_adoption_or_uninstall(self) -> None:
         runner = FakeRunner(self.root, "ubuntu-24.04-x86_64", installed="0.1.0-9")
         campaign_root = self.root / "campaign-collision"
-        with mock.patch.object(lifecycle.os, "getuid", return_value=501):
+        with mock.patch.object(lifecycle.os, "getuid", return_value=self.root.stat().st_uid):
             with self.assertRaisesRegex(lifecycle.LifecycleError, "already has a dpkg record"):
                 lifecycle.Lifecycle(self.packages, campaign_root, runner=runner,
                                      host_profile="ubuntu-24.04-x86_64").run()
