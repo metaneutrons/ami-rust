@@ -54,6 +54,12 @@ shape. The runtime library path and hash are recorded. `/etc/ld.so.preload`
 must be absent or empty because a nonempty system preload could run before
 Landlock is installed.
 
+For the allowed-fixture denial, the policy child captures the C fixture's
+stdout and stderr, then reports those streams in base64 fields on its own
+stdout. The parent decodes the nested stderr and checks both `EACCES` and the
+exact observed `libpython` path. Refusal diagnostics omit the Python marker;
+that marker is evidence only when it comes from executed Python output.
+
 The positive detector controls finish before sandbox denials. `/usr/bin/true`
 must then execute successfully under the native policy. Negative controls
 attempt direct absolute-path Python execution, an absolute-shebang script,

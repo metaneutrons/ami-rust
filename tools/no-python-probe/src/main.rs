@@ -513,14 +513,30 @@ fn run_probe(args: &[String]) -> Result<(), String> {
                         || line.contains("/usr/bin/true"))
                 })
                 .collect();
+            let expected_target = match case.name.as_str() {
+                "positive_control_direct_absolute_python"
+                | "positive_control_descendant_absolute_python"
+                | "direct_absolute_python"
+                | "transitive_descendant_absolute_python" => python.as_path(),
+                "positive_control_absolute_python_shebang" | "absolute_python_shebang" => {
+                    shebang_path.as_path()
+                }
+                "positive_native_true" => Path::new(TRUE),
+                _ => embedded_binary.as_path(),
+            };
+            let expected_target = expected_target.display().to_string();
+            let expected_rows: Vec<_> = rows
+                .iter()
+                .filter(|line| trace_targets(line, &expected_target))
+                .collect();
             let python_rows = rows
                 .iter()
-                .filter(|line| line.contains(&python.display().to_string()))
+                .filter(|line| trace_targets(line, &python.display().to_string()))
                 .count();
-            if !rows.is_empty() {
+            if !expected_rows.is_empty() {
                 observed_case_routes += 1;
             }
-            if case.name.starts_with("positive_control_") && !rows.is_empty() {
+            if case.name.starts_with("positive_control_") && !expected_rows.is_empty() {
                 observed_python_controls += 1;
             }
             if matches!(
@@ -529,17 +545,16 @@ fn run_probe(args: &[String]) -> Result<(), String> {
                     | "transitive_descendant_absolute_python"
                     | "absolute_python_shebang"
                     | "unlisted_embedded_python_binary"
-            ) && rows.iter().any(|line| {
-                line.split('[')
-                    .nth(1)
-                    .and_then(|tail| tail.split(']').next())
-                    .is_some_and(|code| code.trim() == "1")
-            }) {
+            ) && expected_rows
+                .iter()
+                .any(|line| trace_refuses_target(line, &expected_target))
+            {
                 observed_refusals += 1;
             }
             relevant.push(format!(
-                "{{\"case\":{},\"kernel_events\":[{}],\"python_path_events\":{}}}",
+                "{{\"case\":{},\"expected_target\":{},\"kernel_events\":[{}],\"python_path_events\":{}}}",
                 json_string(&case.name),
+                json_string(&expected_target),
                 rows.iter()
                     .map(|line| json_string(line))
                     .collect::<Vec<_>>()
@@ -913,6 +928,33 @@ fn epoch_micros() -> u128 {
         .duration_since(UNIX_EPOCH)
         .expect("clock before epoch")
         .as_micros()
+}
+
+fn trace_targets(line: &str, target: &str) -> bool {
+    if !(line.contains("posix_spawn") || line.contains("execve")) {
+        return false;
+    }
+    let Some(at) = line.find(target) else {
+        return false;
+    };
+    at > 0
+        && line.as_bytes()[at - 1].is_ascii_whitespace()
+        && line
+            .as_bytes()
+            .get(at + target.len())
+            .is_some_and(u8::is_ascii_whitespace)
+}
+
+fn trace_refuses_target(line: &str, target: &str) -> bool {
+    if !trace_targets(line, target) {
+        return false;
+    }
+    let before = &line[..line.find(target).expect("matched target")];
+    before
+        .split('[')
+        .nth(1)
+        .and_then(|tail| tail.split(']').next())
+        .is_some_and(|code| code.trim() == "1")
 }
 
 fn trace_in_window(line: &str, start: u128, finish: u128) -> bool {
@@ -1298,8 +1340,37 @@ fn verify_hashes(
 }
 
 fn sha256_file(path: &Path) -> Result<String, String> {
-    let bytes =
-        fs::read(path).map_err(|error| format!("read {} for SHA-256: {error}", path.display()))?;
+    let bytes = match fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(error)
+            if error.kind() == std::io::ErrorKind::PermissionDenied
+                && path == Path::new("/usr/bin/sudo") =>
+        {
+            // Some standard macOS runners make this setuid OS binary unreadable
+            // to the runner account. Hash that exact immutable system path via
+            // its existing privileged OS helper, without elevating the probe.
+            let result = Command::new("/usr/bin/sudo")
+                .args(["-n", "/usr/bin/shasum", "-a", "256", "/usr/bin/sudo"])
+                .output()
+                .map_err(|e| e.to_string())?;
+            let text = String::from_utf8(result.stdout).map_err(|e| e.to_string())?;
+            let hash = text
+                .split_whitespace()
+                .next()
+                .ok_or("empty privileged OS hash")?;
+            if !result.status.success()
+                || hash.len() != 64
+                || !hash
+                    .bytes()
+                    .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+                || !text.ends_with("  /usr/bin/sudo\n")
+            {
+                return Err("cannot identify the unreadable OS sudo helper".into());
+            }
+            return Ok(hash.to_owned());
+        }
+        Err(error) => return Err(format!("read {} for SHA-256: {error}", path.display())),
+    };
     Ok(hex(&sha256(&bytes)))
 }
 
@@ -1509,7 +1580,27 @@ fn hex(bytes: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{hex, sha256, trace_in_window};
+    use super::{hex, sha256, trace_in_window, trace_refuses_target, trace_targets};
+
+    #[test]
+    fn kernel_refusal_requires_exact_target_and_errno() {
+        let line = "00:00:00.000123 posix_spawn [  1] /owned/python  0.000010 probe.12";
+        assert!(trace_refuses_target(line, "/owned/python"));
+        assert!(!trace_refuses_target(line, "/owned/py"));
+        assert!(!trace_refuses_target(line, "/other/python"));
+        assert!(!trace_refuses_target(
+            &line.replace("[  1]", "[  2]"),
+            "/owned/python"
+        ));
+        assert!(!trace_refuses_target(
+            &line.replace("[  1]", ""),
+            "/owned/python"
+        ));
+        assert!(!trace_targets(
+            &line.replace("python ", "python-old "),
+            "/owned/python"
+        ));
+    }
 
     #[test]
     fn kernel_trace_window_matches_utc_and_midnight_but_not_neighbours() {

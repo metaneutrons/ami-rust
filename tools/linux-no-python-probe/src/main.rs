@@ -1,6 +1,159 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 #![deny(unsafe_op_in_unsafe_fn)]
 
+#[cfg(any(test, all(target_os = "linux", target_arch = "x86_64")))]
+mod wrapped_output {
+    pub(crate) fn decode_wrapped_field(
+        output: &str,
+        line_prefix: &str,
+        field_name: &str,
+    ) -> Option<Vec<u8>> {
+        let field_prefix = format!("{field_name}=");
+        let line = output.lines().find(|line| line.starts_with(line_prefix))?;
+        let encoded = line
+            .split_whitespace()
+            .find_map(|field| field.strip_prefix(&field_prefix))?;
+        decode_base64(encoded)
+    }
+
+    pub(crate) fn embedded_denial_pass(
+        exit_code: Option<i32>,
+        stdout: &str,
+        stderr: &str,
+        libpython_path: &str,
+        marker: &str,
+    ) -> bool {
+        let Some(child_stdout) = decode_wrapped_field(stdout, "EMBEDDED_FIXTURE ", "stdout_b64")
+        else {
+            return false;
+        };
+        let Some(child_stderr) = decode_wrapped_field(stdout, "EMBEDDED_FIXTURE ", "stderr_b64")
+        else {
+            return false;
+        };
+        let child_stdout = String::from_utf8_lossy(&child_stdout);
+        let child_stderr = String::from_utf8_lossy(&child_stderr);
+        let all_output = format!("{stdout}\n{stderr}");
+        exit_code == Some(82)
+            && stdout.contains("EMBEDDED_FIXTURE exit=Some(82)")
+            && child_stderr.contains("DLOPEN_DENIED errno=13")
+            && child_stderr.contains(libpython_path)
+            && !child_stdout.contains(marker)
+            && !child_stderr.contains(marker)
+            && !all_output.contains(marker)
+    }
+
+    fn decode_base64(encoded: &str) -> Option<Vec<u8>> {
+        if !encoded.len().is_multiple_of(4) {
+            return None;
+        }
+        let mut decoded = Vec::with_capacity(encoded.len() / 4 * 3);
+        for (index, chunk) in encoded.as_bytes().as_chunks::<4>().0.iter().enumerate() {
+            let final_chunk = index + 1 == encoded.len() / 4;
+            let a = base64_value(chunk[0])? as u32;
+            let b = base64_value(chunk[1])? as u32;
+            let (c, d, padding) = match (chunk[2], chunk[3]) {
+                (b'=', b'=') if final_chunk => (0, 0, 2),
+                (c, b'=') if final_chunk => (base64_value(c)? as u32, 0, 1),
+                (c, d) if c != b'=' && d != b'=' => {
+                    (base64_value(c)? as u32, base64_value(d)? as u32, 0)
+                }
+                _ => return None,
+            };
+            if (padding == 2 && b & 0x0f != 0) || (padding == 1 && c & 0x03 != 0) {
+                return None;
+            }
+            let value = (a << 18) | (b << 12) | (c << 6) | d;
+            decoded.push((value >> 16) as u8);
+            if padding < 2 {
+                decoded.push((value >> 8) as u8);
+            }
+            if padding == 0 {
+                decoded.push(value as u8);
+            }
+        }
+        Some(decoded)
+    }
+
+    fn base64_value(byte: u8) -> Option<u8> {
+        match byte {
+            b'A'..=b'Z' => Some(byte - b'A'),
+            b'a'..=b'z' => Some(byte - b'a' + 26),
+            b'0'..=b'9' => Some(byte - b'0' + 52),
+            b'+' => Some(62),
+            b'/' => Some(63),
+            _ => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod wrapped_output_tests {
+    use super::wrapped_output::decode_wrapped_field;
+
+    // Captured from the Ubuntu runner: the fixture's stderr is nested as
+    // base64 in the policy child's stdout, while the policy child's stderr is empty.
+    const EMBEDDED_RUNNER_FIXTURE: &str = "EMBEDDED_FIXTURE exit=Some(82) signal=None stdout_b64= stderr_b64=RExPUEVOX0RFTklFRCBlcnJubz0xMyBtZXNzYWdlPS91c3IvbGliL3g4Nl82NC1saW51eC1nbnUvbGlicHl0aG9uMy4xMi5zby4xLjA6IGNhbm5vdCBvcGVuIHNoYXJlZCBvYmplY3QgZmlsZTogUGVybWlzc2lvbiBkZW5pZWQK stdout= stderr=DLOPEN_DENIED errno=13 message=/usr/lib/x86_64-linux-gnu/libpython3.12.so.1.0: cannot open shared object file: Permission denied\\n";
+
+    #[test]
+    fn embedded_fixture_stderr_is_decoded_from_wrapped_child_stdout() {
+        let outer_stderr = "";
+        assert!(outer_stderr.is_empty());
+        let child_stdout =
+            decode_wrapped_field(EMBEDDED_RUNNER_FIXTURE, "EMBEDDED_FIXTURE ", "stdout_b64")
+                .expect("nested fixture stdout");
+        assert!(child_stdout.is_empty());
+        let decoded =
+            decode_wrapped_field(EMBEDDED_RUNNER_FIXTURE, "EMBEDDED_FIXTURE ", "stderr_b64")
+                .expect("nested fixture stderr");
+        let text = String::from_utf8(decoded).expect("fixture stderr is UTF-8");
+        assert!(text.contains("DLOPEN_DENIED errno=13"));
+        assert!(text.contains("/usr/lib/x86_64-linux-gnu/libpython3.12.so.1.0"));
+        assert!(super::wrapped_output::embedded_denial_pass(
+            Some(82),
+            EMBEDDED_RUNNER_FIXTURE,
+            outer_stderr,
+            "/usr/lib/x86_64-linux-gnu/libpython3.12.so.1.0",
+            "RC0_LINUX_NO_PYTHON_EMBEDDED_MARKER"
+        ));
+        assert!(!super::wrapped_output::embedded_denial_pass(
+            Some(82),
+            EMBEDDED_RUNNER_FIXTURE,
+            outer_stderr,
+            "/different/libpython.so",
+            "RC0_LINUX_NO_PYTHON_EMBEDDED_MARKER"
+        ));
+    }
+
+    #[test]
+    fn wrapped_stream_parser_rejects_missing_or_malformed_fields() {
+        assert_eq!(
+            decode_wrapped_field(
+                "EMBEDDED_FIXTURE exit=82 stderr_b64=QQ==",
+                "EMBEDDED_FIXTURE ",
+                "stderr_b64"
+            ),
+            Some(b"A".to_vec())
+        );
+        assert_eq!(
+            decode_wrapped_field(
+                "OTHER exit=82 stderr_b64=QQ==",
+                "EMBEDDED_FIXTURE ",
+                "stderr_b64"
+            ),
+            None
+        );
+        assert_eq!(
+            decode_wrapped_field(
+                "EMBEDDED_FIXTURE exit=82 stderr_b64=Q===",
+                "EMBEDDED_FIXTURE ",
+                "stderr_b64"
+            ),
+            None
+        );
+    }
+}
+
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn main() {
     linux::entry();
@@ -1111,8 +1264,14 @@ int main(int argc, char **argv) {{
             ),
             "embedded" => (
                 "allowed C executable reaches dlopen, but Landlock denies reading/executing libpython with EACCES before marker".to_owned(),
-                record.capture.exit_code == Some(82) && stdout.contains("EMBEDDED_FIXTURE exit=82") && stderr.contains("DLOPEN_DENIED errno=13") && !all_output.contains(EMBEDDED_MARKER),
-                vec!["fixture_exec_allowed", "dlopen_errno_EACCES", "embedded_marker_absent", "libpython_excluded_from_read_execute"],
+                super::wrapped_output::embedded_denial_pass(
+                    record.capture.exit_code,
+                    &stdout,
+                    &stderr,
+                    &inputs.libpython.display().to_string(),
+                    EMBEDDED_MARKER,
+                ),
+                vec!["fixture_exec_allowed", "wrapped_stderr_decoded", "dlopen_errno_EACCES", "embedded_marker_absent", "libpython_excluded_from_read_execute"],
             ),
             "loader" => (
                 "allowed ELF loader cannot load absolute-path Python because its file is outside read/execute closure".to_owned(),
@@ -1332,8 +1491,11 @@ int main(int argc, char **argv) {{
             92
         } else if !positive && result.capture.launch_errno == Some(EACCES) {
             println!(
-                "DIRECT_DENIED errno=13 marker={marker} error={}",
-                result.capture.launch_error.unwrap_or_default()
+                "{}",
+                denied_python_diagnostic(
+                    "DIRECT",
+                    &result.capture.launch_error.unwrap_or_default()
+                )
             );
             77
         } else {
@@ -1352,6 +1514,10 @@ int main(int argc, char **argv) {{
         }
     }
 
+    fn denied_python_diagnostic(label: &str, error: &str) -> String {
+        format!("{label}_DENIED errno=13 error={error}")
+    }
+
     fn try_python(path: &Path, label: &str) -> i32 {
         let code = format!("print('{DIRECT_MARKER}')");
         let result = run_record(
@@ -1363,8 +1529,8 @@ int main(int argc, char **argv) {{
         );
         if result.capture.launch_errno == Some(EACCES) {
             println!(
-                "{label}_DENIED errno=13 error={}",
-                result.capture.launch_error.unwrap_or_default()
+                "{}",
+                denied_python_diagnostic(label, &result.capture.launch_error.unwrap_or_default())
             );
             77
         } else {
@@ -2334,7 +2500,18 @@ int main(int argc, char **argv) {{
 
     #[cfg(test)]
     mod tests {
-        use super::{base64, hex, Sha256};
+        use super::{base64, denied_python_diagnostic, hex, Sha256, DIRECT_MARKER};
+
+        #[test]
+        fn denied_python_diagnostic_does_not_echo_the_execution_marker() {
+            let diagnostic = denied_python_diagnostic("DIRECT", "Permission denied (os error 13)");
+            assert_eq!(
+                diagnostic,
+                "DIRECT_DENIED errno=13 error=Permission denied (os error 13)"
+            );
+            assert!(!diagnostic.contains(DIRECT_MARKER));
+        }
+
         #[test]
         fn sha256_known_vectors_streaming() {
             let mut hash = Sha256::new();

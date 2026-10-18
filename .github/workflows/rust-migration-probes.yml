@@ -8,6 +8,21 @@ on:
       - tools/linux-no-python-probe/**
       - tools/no-python-probe/**
       - tools/rc0-native-probe.sh
+      - tools/bootstrap-host-rust.sh
+      - release/ci-sdk-inputs.json
+      - release/ci-bootstrap-inputs.json
+      - release/ci-cargo-producers/**
+      - release/ci-resources.json
+      - release/ci_sdk.py
+      - release/ci_cargo.py
+      - release/prepare_sdk.py
+      - release/ci_python.py
+      - release/ci-python-inputs.json
+      - release/inputs/**
+      - targets/x86_64-aros.json
+      - crates/**
+      - native/**
+      - host/elf_audit.py
       - .github/workflows/rust-migration-probes.yml
 
 permissions:

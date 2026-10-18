@@ -87,3 +87,45 @@ The OS dyld shared-cache and reproducible source/loader closure boundaries, and
 Linux enforcement results, remain explicit RC0 review work. No AROS runtime or
 memory qualification, SDK publication, protected checkout change, or RC1–RC5
 acceptance is claimed by these experiments.
+
+## First hosted run and corrections
+
+PR #78's first integration run, 39169664621, is retained as **FAIL**. The macOS
+native design stage passed two audited fresh roots within 248.4 seconds, about
+1.71 GB peak observed descendant RSS and 3.58 GB managed workspace. The later
+observer step stopped when the runner account could not read the setuid
+`/usr/bin/sudo` for hashing. The probe now obtains the digest for that exact OS
+path through the existing noninteractive privileged OS hash helper; the test
+program and interpreter controls remain unprivileged. Host fixture release
+profiles explicitly disable the optional strip tool, which was warning about
+an absent optional LLVM library in the minimal host compiler installation.
+
+Linux metadata/check reached the native link, where the collector correctly
+refused missing physical sibling tools. A symlink pointed back into the input
+capsule. The adapter now copies the unchanged collector binary into its owned
+sibling-tool directory and checks that the copied bytes match. Both original
+inputs and their qualified identities remain unchanged.
+
+The Linux policy controls actually refused the intended Python routes, but two
+assertions failed. A descendant refusal diagnostic echoed the execution marker
+as a label, and the embedding checker read the outer stderr although its child
+stderr was encoded inside wrapper stdout. The diagnostics and nested-stream
+checker are corrected, with regression fixtures; neither Landlock nor seccomp
+permissions were relaxed.
+
+The first hosted macOS ELF and the original local ELF differed in 55 symbol-name
+bytes, with identical size and no local absolute path strings. The experiment
+had referenced SDK path dependencies outside the portable project. The recipe
+now places the SDK Rust sources inside each generated application, as the
+existing project generator does, and restores the declared project workspace
+package fields and complete source-prefix mappings. This is source/configuration
+normalisation before compilation, not rewriting compiler metadata or finished
+ELF symbols. The resulting candidate has its own identity and needs the next
+hosted comparison. The local retry passes both fresh roots; all prior results
+and setup failures are retained.
+
+The independent review also required integration to rerun on all consumed pin,
+source and helper changes, and to bind each kernel EPERM event to the intended
+exact control target. Both checks are now explicit; decoy paths and wrong errno
+values fail their fixtures. The host dependency lock/license/API review remains
+a separate RC0-A2 task. No milestone acceptance is inferred from these repairs.

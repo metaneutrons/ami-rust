@@ -86,6 +86,8 @@ else
 fi
 
 probe_components="$probe_out/components"
+probe_rust_real=$(cd "$probe_components/rust" && pwd -P)
+probe_vendor_real=$(cd "$probe_components/vendor" && pwd -P)
 "$probe_components/rust/bin/rustc" -Vv | tee "$probe_out/evidence/target-rust.txt"
 grep -Fx 'commit-hash: 330d317121e16b5db8e5adc63595910528ff2ee7' "$probe_out/evidence/target-rust.txt"
 grep -Fx "host: $probe_triple" "$probe_out/evidence/target-rust.txt"
@@ -106,7 +108,11 @@ RUSTC="$probe_host_bin/rustc" "$probe_host_bin/cargo" build --release --locked -
   > "$probe_out/evidence/host-build.log" 2>&1
 
 mkdir "$probe_out/bin"
-ln -s "$probe_components/collector/bin/aros-collect" "$probe_out/bin/collect-aros"
+# The collector deliberately resolves sibling tools beside its physical binary
+# on Linux. A symlink resolves back to the input capsule, outside this adapter.
+command cp "$probe_components/collector/bin/aros-collect" "$probe_out/bin/collect-aros"
+chmod 755 "$probe_out/bin/collect-aros"
+test "$(probe_hash "$probe_out/bin/collect-aros")" = "$(probe_hash "$probe_components/collector/bin/aros-collect")"
 for probe_tool in llvm-objdump llvm-nm llvm-ar llvm-strip ld.lld; do
   ln -s "$probe_components/toolchain/bin/$probe_tool" "$probe_out/bin/$probe_tool"
 done
@@ -114,6 +120,11 @@ done
 for probe_case in 'root-a' 'root b with spaces'; do
   probe_project="$probe_out/$probe_case"
   mkdir -p "$probe_project/src" "$probe_project/.cargo" "$probe_project/cargo-home" "$probe_project/tmp"
+  # Keep path dependencies inside the portable application. Cargo package IDs
+  # for external path dependencies otherwise include a host checkout context.
+  mkdir "$probe_project/sdk-source"
+  command cp -R "$probe_source/crates" "$probe_source/examples" "$probe_source/tests" "$probe_project/sdk-source/"
+  command cp "$probe_source/Cargo.toml" "$probe_source/Cargo.lock" "$probe_project/sdk-source/"
   command cp "$probe_source/tools/cargo-native-spike/project-build.rs" "$probe_project/build.rs"
   cat > "$probe_project/src/main.rs" <<'RS'
 #![no_std]
@@ -125,13 +136,18 @@ RS
   cat > "$probe_project/Cargo.toml" <<EOF
 [workspace]
 resolver = "3"
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "MIT OR Apache-2.0"
 [package]
 name = "rc0-native-design"
 version = "0.0.0"
 edition = "2024"
 publish = false
 [dependencies]
-amiga-os = { path = $(printf '%s' "$probe_source/crates/public/amiga-os" | jq -Rs .), default-features = false }
+amiga-os = { path = "sdk-source/crates/public/amiga-os", default-features = false }
 [profile.release]
 opt-level = 2
 panic = "abort"
@@ -144,6 +160,10 @@ strip = "none"
 codegen-units = 1
 EOF
   # Only local activation has absolute paths; no portable state is rewritten.
+  probe_remaps=$(jq -cn --arg source "$probe_source" --arg output "$probe_out" --arg vendor "$probe_vendor_real" --arg rust "$probe_rust_real" --arg project "$probe_project" \
+    '[[$source,"/ami-rust"],[$output,"/build"],[$vendor,"/vendor"],[$rust,"/rust-toolchain"],[$project,"/project"]] | map("--remap-path-prefix="+.[0]+"="+.[1])')
+  probe_target_flags=$(jq -cn --argjson remaps "$probe_remaps" \
+    '["-Copt-level=2","-Cpanic=abort","-Ccodegen-units=1","-Cembed-bitcode=no","-Clto=off","-Clink-arg=--no-gc-sections"] + $remaps')
   cat > "$probe_project/.cargo/config.toml" <<EOF
 target-applies-to-host = false
 [unstable]
@@ -161,16 +181,17 @@ directory = $(printf '%s' "$probe_components/vendor" | jq -Rs .)
 target = $(printf '%s' "$probe_source/targets/x86_64-aros.json" | jq -Rs .)
 jobs = 2
 [host.$probe_triple]
-rustflags = [$(printf '%s' "--remap-path-prefix=$probe_out=/build" | jq -Rs .), $(printf '%s' "--remap-path-prefix=$probe_source=/ami-rust" | jq -Rs .)]
+rustflags = $probe_remaps
 [target.x86_64-aros]
 linker = $(printf '%s' "$probe_out/host-target/release/ami-rust-cargo-native-spike" | jq -Rs .)
-rustflags = ["-Copt-level=2", "-Cpanic=abort", "-Ccodegen-units=1", "-Cembed-bitcode=no", "-Clto=off", "-Clink-arg=--no-gc-sections", $(printf '%s' "--remap-path-prefix=$probe_out=/build" | jq -Rs .), $(printf '%s' "--remap-path-prefix=$probe_source=/ami-rust" | jq -Rs .)]
+rustflags = $probe_target_flags
 EOF
   (
     cd "$probe_project"
     export HOME="$probe_project" CARGO_HOME="$probe_project/cargo-home" TMPDIR="$probe_project/tmp"
     export PATH="$probe_out/bin:$probe_components/cargo/bin:$probe_components/rust/bin:$probe_components/toolchain/bin:/usr/bin:/bin"
     export CARGO_INCREMENTAL=0 CARGO_NET_OFFLINE=true SOURCE_DATE_EPOCH=1791936000
+    export LC_ALL=C TZ=UTC
     export RUSTC="$probe_components/rust/bin/rustc" RUSTDOC="$probe_components/rust/bin/rustdoc"
     export AMI_SPIKE_COLLECTOR="$probe_out/bin/collect-aros" AMI_SPIKE_TOOLCHAIN="$probe_components/toolchain"
     export AMI_SPIKE_CSDK="$probe_components/csdk" AMI_SPIKE_SDK_SOURCE="$probe_source"
