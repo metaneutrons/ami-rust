@@ -76,11 +76,15 @@ fn real_frontend_copies_and_cargo_plugin_have_identical_version_and_refusals() {
         let mut injected = vec!["ami"];
         injected.extend(&args);
         let b = run(&plugin, &injected);
+        let through_cargo = run(&PathBuf::from(env!("CARGO")), &injected);
         assert_eq!(a.status.code(), Some(2));
         assert_eq!(b.status.code(), Some(2));
+        assert_eq!(through_cargo.status.code(), Some(2));
         assert!(a.stdout.is_empty());
         assert_eq!(a.stdout, b.stdout);
         assert_eq!(a.stderr, b.stderr);
+        assert_eq!(a.stdout, through_cargo.stdout);
+        assert_eq!(a.stderr, through_cargo.stderr);
     }
     assert!(!fixture.0.join("build.lock").exists());
 }

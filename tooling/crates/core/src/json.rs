@@ -255,6 +255,40 @@ mod tests {
 
     const PROFILE: JsonProfile = JsonProfile::PackageMetadataStateSelection;
 
+    #[test]
+    fn profiles_match_the_frozen_format_contract() {
+        let contract: Value = serde_json::from_str(include_str!(
+            "../../../../docs/rust-cli-migration/contracts-v1.json"
+        ))
+        .unwrap();
+        let limits = &contract["proposed_schema_policy"]["metadata_limits"];
+        assert_eq!(limits["json_max_container_depth"], JSON_MAX_CONTAINER_DEPTH);
+        for (profile, key) in [
+            (
+                JsonProfile::PackageMetadataStateSelection,
+                "package_metadata_state_selection",
+            ),
+            (JsonProfile::ProjectLock, "project_lock"),
+            (JsonProfile::SdkComponentManifest, "sdk_component_manifest"),
+            (
+                JsonProfile::ReleaseManifestAndInstallReceipt,
+                "release_manifest_and_install_receipt",
+            ),
+            (
+                JsonProfile::PublisherPolicyAndAuthenticationMetadata,
+                "publisher_policy_and_authentication_metadata",
+            ),
+            (
+                JsonProfile::GithubAttestationBundle,
+                "github_attestation_bundle",
+            ),
+            (JsonProfile::CosignBundle, "cosign_bundle"),
+            (JsonProfile::TrustedRoot, "trusted_root"),
+        ] {
+            assert_eq!(limits[key], profile.max_bytes(), "{key}");
+        }
+    }
+
     fn nested_arrays(depth: usize) -> String {
         format!("{}0{}", "[".repeat(depth), "]".repeat(depth))
     }
