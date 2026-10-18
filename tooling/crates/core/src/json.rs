@@ -6,7 +6,6 @@
 
 use std::path::Path;
 
-use serde::Deserialize;
 use serde::de::{DeserializeOwned, DeserializeSeed, MapAccess, SeqAccess, Visitor};
 use serde_json::{Map, Number, Value};
 

@@ -11,7 +11,8 @@ use crate::files::open_regular_nofollow;
 
 /// Return the lowercase SHA-256 digest of an in-memory byte string.
 pub fn sha256_bytes(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    let digest: [u8; 32] = Sha256::digest(bytes).into();
+    encode_hex(&digest)
 }
 
 /// Stream a regular file through SHA-256 without following path symlinks.
@@ -21,7 +22,10 @@ pub fn sha256_file(path: &Path) -> Result<String> {
     let mut buffer = [0_u8; 64 * 1024];
     loop {
         match file.read(&mut buffer) {
-            Ok(0) => return Ok(format!("{:x}", digest.finalize())),
+            Ok(0) => {
+                let value: [u8; 32] = digest.finalize().into();
+                return Ok(encode_hex(&value));
+            }
             Ok(read) => digest.update(&buffer[..read]),
             Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
             Err(error) => {
@@ -31,6 +35,16 @@ pub fn sha256_file(path: &Path) -> Result<String> {
             }
         }
     }
+}
+
+fn encode_hex(bytes: &[u8; 32]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut output = String::with_capacity(64);
+    for byte in bytes {
+        output.push(char::from(HEX[usize::from(byte >> 4)]));
+        output.push(char::from(HEX[usize::from(byte & 15)]));
+    }
+    output
 }
 
 /// Return whether `value` is exactly 64 lowercase hexadecimal characters.
