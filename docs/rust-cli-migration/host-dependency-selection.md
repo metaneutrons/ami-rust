@@ -1,6 +1,6 @@
 # RC0-A2 host dependency selection
 
-Status: selected dependency/source/license candidate for the shared Rust host core, pending native Linux qualification and the bounded API corrections. This is not a production lock or release acceptance. The standalone probe is `tools/host-contract-deps/`; its reviewed input records are in [evidence/host-dependencies-a2](evidence/host-dependencies-a2).
+Status: selected dependency/source/license candidate for the shared Rust host core, with native Linux/macOS API qualification completed. This is not a production lock or release acceptance. The standalone probe is `tools/host-contract-deps/`; its reviewed input records are in [evidence/host-dependencies-a2](evidence/host-dependencies-a2).
 
 ## Proposed direct pins
 
@@ -15,7 +15,7 @@ Status: selected dependency/source/license candidate for the shared Rust host co
 
 The candidate uses no CLI framework. For the current narrow, compatibility-driven command surface, implement parsing with `std::env::args_os` and table-driven contract tests; this avoids adding a CLI dependency before help, error, and exit behavior are frozen. Reconsider `clap` only if generated command trees, shell completion, or richer diagnostics become a requirement, and then review its full graph separately.
 
-The exact crate archives and Cargo package metadata were available locally and their lock checksums were verified. The six packages declare Rust versions from 1.56 through 1.88; the probe itself sets `rust-version = "1.98.1"`. The only executed host here is macOS `aarch64-apple-darwin` with Rust/Cargo 1.98.1. This is evidence for that host, not a general target-support claim. The official release pages document the selected [Serde](https://docs.rs/crate/serde/1.0.228), [serde_json](https://docs.rs/crate/serde_json/1.0.145), [sha2](https://docs.rs/crate/sha2/0.11.1), [tar](https://docs.rs/crate/tar/0.4.46), [flate2](https://docs.rs/crate/flate2/1.1.10), and [lzma-rust2](https://docs.rs/crate/lzma-rust2/0.22.0) versions. The `tar` release marks `xattr` as a default feature; the [XZ reader API](https://docs.rs/lzma-rust2/0.22.0/lzma_rust2/struct.XzReader.html#method.new_mem_limit) documents its memory limit in KiB and checks the block's estimated decoder memory before dictionary allocation. `lzma-rust2` 0.23.0 appeared on the registry one day before this A2 freeze ([release list](https://docs.rs/crate/lzma-rust2/0.22.0)); it is not selected because 0.22.0 is the exact reviewed and fixture-tested candidate, not because 0.23.0 is presumed unsuitable.
+The exact crate archives and Cargo package metadata were available locally and their lock checksums were verified. The six packages declare Rust versions from 1.56 through 1.88; the probe itself sets `rust-version = "1.98.1"`. The original local review executed macOS `aarch64-apple-darwin` under Rust/Cargo 1.98.1. The subsequent hosted run 39172161086 passes the exact corrected thirteen-test candidate on both supported hosts ([source/lock/log identities](evidence/cargo-native-query-review/host-fixture-results.json)). The official release pages document the selected [Serde](https://docs.rs/crate/serde/1.0.228), [serde_json](https://docs.rs/crate/serde_json/1.0.145), [sha2](https://docs.rs/crate/sha2/0.11.1), [tar](https://docs.rs/crate/tar/0.4.46), [flate2](https://docs.rs/crate/flate2/1.1.10), and [lzma-rust2](https://docs.rs/crate/lzma-rust2/0.22.0) versions. The `tar` release marks `xattr` as a default feature; the [XZ reader API](https://docs.rs/lzma-rust2/0.22.0/lzma_rust2/struct.XzReader.html#method.new_mem_limit) documents its memory limit in KiB and checks the block's estimated decoder memory before dictionary allocation. `lzma-rust2` 0.23.0 appeared on the registry one day before this A2 freeze ([release list](https://docs.rs/crate/lzma-rust2/0.22.0)); it is not selected because 0.22.0 is the exact reviewed and fixture-tested candidate, not because 0.23.0 is presumed unsuitable.
 
 ## A1 to A2 lock identity
 
@@ -69,7 +69,7 @@ passed
 
 ## Remaining host qualification and production integration work
 
-1. Build and run the host fixture on the two supported release hosts, Linux x86-64 and macOS arm64. Windows is outside scope. The current proof is macOS arm64 only.
+1. Build and run the host fixture on the two supported release hosts, Linux x86-64 and macOS arm64. Windows is outside scope. Both supported hosts now pass the thirteen-test API candidate in run 39172161086; the remaining items below concern actual production integration.
 2. Run the no-Python process observer with a pinned `RUSTC`, a sanitized `PATH`, and wrappers unset or explicitly allowlisted. Repeat for any target that activates platform tool branches.
 3. Freeze compression details: XZ concatenation and complete-input behavior; gzip concatenated-member/trailing-byte behavior; compressed-input, decoded-output, and decoder-memory limits for both formats.
 4. Extend archive compatibility fixtures before extraction: PAX and GNU long-name records, normalization/case collisions, symlink chains and aliases, ownership and mode policy, and extraction in a directory resistant to concurrent path substitution. [`tar`'s unpacking documentation](https://docs.rs/tar/0.4.46/tar/) describes its path checks as best effort; the probe currently only validates metadata and does not address filesystem races.
@@ -84,7 +84,7 @@ Review found two defects in the metadata-only prototype, separate from crate
 selection: raw TAR header size can differ from the PAX-resolved entry size, and
 PAX/GNU extension records may be buffered by the library before member checks.
 The corrected candidate uses effective-size accounting and a fail-on-overflow decoded
-input reader before Archive construction, with adversarial fixtures. Independent review confirmed both repairs; all 13 tests, formatting and Clippy with warnings denied passed locally under pinned Rust1.98.1 ([corrected source/result identities](evidence/host-dependencies-a2/corrected-api-results.json)). These
+input reader before Archive construction, with adversarial fixtures. Independent review confirmed both repairs; all 13 tests, formatting and Clippy with warnings denied passed locally under pinned Rust 1.98.1 ([corrected source/result identities](evidence/host-dependencies-a2/corrected-api-results.json)). These
 repairs do not qualify extraction, symlink-chain handling or filesystem races;
 those remain production RC1 tests. Frozen A2 evidence retains the original
 nine-test result; the new native CI candidate records the corrected source.

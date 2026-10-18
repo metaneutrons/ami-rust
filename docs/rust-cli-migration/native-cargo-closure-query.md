@@ -91,3 +91,24 @@ script and workflow have only received local static syntax checks. RC0 remains
 open until the native Ubuntu artifact is reviewed together with the source-level
 build-script evidence; RC4 must still exercise the actual producer on each
 supported host.
+
+## First native attempt and actual-output regression review
+
+[Run 39172161134](https://github.com/metaneutrons/ami-rust/actions/runs/39172161134)
+for candidate `844f52d` remains **FAIL**. All source, lock, archive, bootstrap,
+Cargo-tree and metadata commands returned their expected status, but the new
+checker used `format_version` instead of Cargo's actual `version` JSON field.
+The checker is corrected, with pure graph parsing that can review ephemeral
+runner paths after the runner has gone. Empty resolution/tree and ambiguous
+package data fail closed. The complete actual native output passes locally;
+eleven minimally altered real-output cases are refused before any accepted
+graph report is written. These controls now run in the hosted query itself.
+
+The actual native graph has 341 selected package identities and 36 custom-build
+scripts, matching the earlier source-level identity sets. This finding comes
+from native output, not an imposed package-count assertion. Native retrieval
+verified 457 lock-bound registry archives, 53,297,461 bytes total. Observed RSS
+was 313,122,816 bytes, workspace 1,980,939,861 bytes and logs 90,602 bytes.
+[Original-attempt digests, corrected parser controls and host fixture evidence](evidence/cargo-native-query-review/first-attempt.json)
+are retained. The corrected exact candidate still needs a successful hosted
+query before RC0 acceptance; the original failure is not rewritten as PASS.

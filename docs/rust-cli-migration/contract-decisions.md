@@ -106,3 +106,17 @@ reported in [host-dependency-selection.md](host-dependency-selection.md).
 The original conditional proposal above records the decision sequence; native
 Linux qualification and the final RC0 acceptance record remain required before
 promoting the lock to a production host core.
+
+## Static host-core identity
+
+The selected architecture builds one native ami-rust executable per supported
+host, with the shared Rust core statically linked. cargo-ami is a byte-identical
+regular-file copy; it normalizes Cargo's injected command token and calls the
+same parser/dispatcher. Package and retained inventories require both paths to
+match the accepted native artifact. CLI and core SHA-256 fields both identify
+the exact containing executable bytes and are equal in this contract. No
+separate rlib or dynamic core artifact is shipped just to populate a digest.
+Any separately built linker/compiler guard has its own authenticated inventory
+entry, even though it reuses the same core source. This resolves the proposed
+record fields before their first implementation/publication; historical records
+remain unchanged.

@@ -1,0 +1,78 @@
+{
+  "schema": "ami-rust-native-cargo-parser-review-v2",
+  "inputs": {
+    "linux-tree-features.stdout.txt": "6a445177f1a6d3839c259b13cab86b9abce37643662b4555fe67325bbd8e3532",
+    "cargo-metadata-linux.json": "eb801b9da7b472b71ee1ef2f77853575bc9e1cd4d18ed7a18146f9525f7a851a"
+  },
+  "driver_sha256": "255f14b3964589d2fc30fbc7d166fc68f17bceeb24bd37de5006d3a148721291",
+  "positive": {
+    "schema": "ami-rust-native-cargo-graph-v1",
+    "claim": "locked Linux normal/build dependency graph with all-static; source metadata only",
+    "target": "x86_64-unknown-linux-gnu",
+    "selected_package_count": 341,
+    "selected_identity_source_set_sha256": "639db66394dceb9022a54454a642d46c1989094aafe0b88898dfa748e09a45e6",
+    "cargo_tree_line_count": 1032,
+    "metadata_package_record_count": 451,
+    "metadata_resolve_node_count": 451,
+    "metadata_root": "path+file:///home/runner/work/_temp/rc0-cargo-source-closure/work/job/cargo-source#cargo@0.100.0"
+  },
+  "graph_sha256": "b50ac7090676699795323341cc5a1390e8bb7cd39367b644d0bdc36e1953201a",
+  "counters": [
+    {
+      "case": "missing-version",
+      "status": "EXPECTED_REFUSAL",
+      "error": "cargo metadata output is not format version 1"
+    },
+    {
+      "case": "wrong-version",
+      "status": "EXPECTED_REFUSAL",
+      "error": "cargo metadata output is not format version 1"
+    },
+    {
+      "case": "string-version",
+      "status": "EXPECTED_REFUSAL",
+      "error": "cargo metadata output is not format version 1"
+    },
+    {
+      "case": "boolean-version",
+      "status": "EXPECTED_REFUSAL",
+      "error": "cargo metadata output is not format version 1"
+    },
+    {
+      "case": "missing-packages",
+      "status": "EXPECTED_REFUSAL",
+      "error": "cargo metadata output is not format version 1"
+    },
+    {
+      "case": "empty-packages",
+      "status": "EXPECTED_REFUSAL",
+      "error": "cargo metadata output is not format version 1"
+    },
+    {
+      "case": "missing-resolve",
+      "status": "EXPECTED_REFUSAL",
+      "error": "cargo metadata has no resolved package nodes"
+    },
+    {
+      "case": "empty-nodes",
+      "status": "EXPECTED_REFUSAL",
+      "error": "cargo metadata has no resolved package nodes"
+    },
+    {
+      "case": "ambiguous-package",
+      "status": "EXPECTED_REFUSAL",
+      "error": "cargo metadata does not uniquely identify selected package: ('cargo', '0.100.0')"
+    },
+    {
+      "case": "empty-tree",
+      "status": "EXPECTED_REFUSAL",
+      "error": "cargo tree selected no packages"
+    },
+    {
+      "case": "unknown-tree-package",
+      "status": "EXPECTED_REFUSAL",
+      "error": "cargo metadata does not uniquely identify selected package: ('not-in-the-lock', '0.0.0')"
+    }
+  ],
+  "claim": "Offline actual native artifacts; original CI remains FAIL; corrected candidate CI required."
+}

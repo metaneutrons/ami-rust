@@ -474,6 +474,15 @@
       "cosign_bundle": 1048576,
       "trusted_root": 16777216,
       "behavior": "Read a regular non-symlink file with a bound before parsing; enforce the same bound while reading to refuse growth. UTF-8 without BOM, one JSON value, recursive unique keys; exact schema validation follows. Security limits are tested at boundary and one byte/depth beyond."
+    },
+    "static_core_binding": {
+      "artifact": "One native ami-rust executable per host, statically linking the shared Rust host core.",
+      "frontends": "Install cargo-ami as a byte-identical regular-file copy of ami-rust; argv0 and the Cargo-injected ami token select frontend normalization. Both call the same parser/dispatcher.",
+      "cli_sha256": "SHA-256 over the exact accepted native executable file bytes.",
+      "core_sha256": "The same containing executable SHA-256, equal to cli_sha256 for this static-core contract. No separate .rlib, dynamic library or source-tree digest is substituted.",
+      "other_helpers": "Any separate compiler guard or linker executable has its own exact authenticated inventory entry; reusing the core source does not exempt its executable bytes from verification.",
+      "alias_verification": "Both frontend paths must be owned regular executable files with the same accepted byte length and digest; replacing either with a different program fails package/retained-inventory validation.",
+      "retention": "Retained copies bind their own original host/CLI/SDK/package identities; a newer global CLI never silently reinterprets an older retained record."
     }
   },
   "future_frontend_contract": {
@@ -599,7 +608,7 @@
           "derive"
         ],
         "purpose": "typed schema serialization/deserialization; exact version already in root lock/vendor",
-        "status": "Exact candidate in standalone lock; source/license review approved, native Linux qualification pending"
+        "status": "Selected in exact standalone lock; reviewed source/licenses/advisories; both-host API fixtures passed"
       },
       {
         "crate": "serde_json",
@@ -611,7 +620,7 @@
           "std"
         ],
         "purpose": "bounded JSON; recursive custom visitor rejects duplicate keys before typed decoding; exact version already in root lock/vendor",
-        "status": "Exact candidate in standalone lock; source/license review approved, native Linux qualification pending"
+        "status": "Selected in exact standalone lock; reviewed source/licenses/advisories; both-host API fixtures passed"
       },
       {
         "crate": "sha2",
@@ -624,7 +633,7 @@
           "oid"
         ],
         "purpose": "SHA-256; shared with lzma-rust2 xz feature so host lock has one sha2 version; leave target graph sha2 0.10.9 unchanged",
-        "status": "Exact candidate in standalone lock; source/license review approved, native Linux qualification pending",
+        "status": "Selected in exact standalone lock; reviewed source/licenses/advisories; both-host API fixtures passed",
         "default_features": true
       },
       {
@@ -636,7 +645,7 @@
         "features": [],
         "purpose": "streaming TAR; default-features=false excludes xattr",
         "security_floor": "0.4.45+; 0.4.46 is above affected <=0.4.44 ranges in GHSA-gchp-q4r4-x4ff and GHSA-j4xf-2g29-59ph",
-        "status": "Exact candidate in standalone lock; source/license review approved, native Linux qualification pending",
+        "status": "Selected in exact standalone lock; reviewed source/licenses/advisories; both-host API fixtures passed",
         "default_features": false
       },
       {
@@ -649,7 +658,7 @@
           "rust_backend"
         ],
         "purpose": "gzip with pure-Rust backend; default-features=false, no external zlib",
-        "status": "Exact candidate in standalone lock; source/license review approved, native Linux qualification pending",
+        "status": "Selected in exact standalone lock; reviewed source/licenses/advisories; both-host API fixtures passed",
         "default_features": false
       },
       {
@@ -663,7 +672,7 @@
           "xz"
         ],
         "purpose": "XZ processing with decoder memory bound; default-features=false; enable std,xz only; do not enable optimization",
-        "status": "Exact candidate in standalone lock; source/license review approved, native Linux qualification pending",
+        "status": "Selected in exact standalone lock; reviewed source/licenses/advisories; both-host API fixtures passed",
         "review_basis": "XZ memory-limit API and bounded controls reviewed; RustSec0.22.2 audit has zero known findings against database999ec89d5d3f10f20be14750ec8c2d8b44e0ac9b. Full-input/stream policy remains a production RC1 test.",
         "default_features": false
       }
@@ -678,7 +687,7 @@
       "Selected feature sets have no host-native C dependency; macos-aarch64/linux-x86_64 support is plausible under Rust 1.98.1, not qualified until both-host builds.",
       "Before freeze, review the complete exact lock for licenses and advisories, exercise the selected APIs and build on both supported hosts."
     ],
-    "status": "Exact 29-registry-crate candidate lock and selected API/source/license review approved; macOS thirteen-test correction passed. Native Linux qualification remains required before RC0 dependency freeze. Production host-core integration remains RC1.",
+    "status": "Exact 29-registry-crate development selection: source/license/advisory review and thirteen API fixtures passed on both supported hosts in run 39172161086, candidate 844f52d. Production host-core integration remains RC1; any graph/feature changes require reviewed new identities.",
     "selection_record": "host-dependency-selection.md and tools/host-contract-deps/Cargo.lock; exact 29-crate candidate under native-host qualification"
   },
   "proposed_fixtures": [

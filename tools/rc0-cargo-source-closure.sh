@@ -240,7 +240,10 @@ def tool_inventory(env: dict[str, str]) -> dict:
 def parse_native_graph(tree_path: Path, metadata_path: Path, source: Path) -> dict:
     tree_text = tree_path.read_text(encoding="utf-8")
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-    if metadata.get("format_version") != 1 or not isinstance(metadata.get("packages"), list):
+    # --format-version selects Cargo's JSON `version` field, not a field named
+    # after the command-line option. Check the actual retained native output.
+    if (type(metadata.get("version")) is not int or metadata["version"] != 1
+            or not isinstance(metadata.get("packages"), list) or not metadata["packages"]):
         raise ValueError("cargo metadata output is not format version 1")
     package_map: dict[tuple[str, str], list[dict]] = {}
     for package in metadata["packages"]:
@@ -264,14 +267,23 @@ def parse_native_graph(tree_path: Path, metadata_path: Path, source: Path) -> di
         if features:
             item["features"].update(feature for feature in features.split(",") if feature)
 
-    node_ids = {row.get("id") for row in (metadata.get("resolve") or {}).get("nodes", [])}
+    resolution = metadata.get("resolve")
+    if (not isinstance(resolution, dict) or not isinstance(resolution.get("nodes"), list)
+            or not resolution["nodes"]):
+        raise ValueError("cargo metadata has no resolved package nodes")
+    node_ids = {row.get("id") for row in resolution["nodes"]}
+    if not selected:
+        raise ValueError("cargo tree selected no packages")
     selected_rows = []
     for (name, version), selected_row in sorted(selected.items()):
         candidates = package_map.get((name, version), [])
         if len(candidates) > 1 and selected_row["manifest_dir"]:
-            source_dir = Path(selected_row["manifest_dir"]).resolve(strict=True)
+            # Both paths are Cargo output data. Do not require the ephemeral
+            # runner filesystem to still exist when reviewing retained output.
+            source_dir = os.path.normpath(selected_row["manifest_dir"])
             candidates = [candidate for candidate in candidates
-                          if Path(candidate["manifest_path"]).parent.resolve(strict=True) == source_dir]
+                          if Path(candidate["manifest_path"]).is_absolute()
+                          and os.path.normpath(str(Path(candidate["manifest_path"]).parent)) == source_dir]
         elif len(candidates) > 1:
             registry_candidates = [candidate for candidate in candidates if candidate.get("source")]
             if len(registry_candidates) == 1:
@@ -279,7 +291,7 @@ def parse_native_graph(tree_path: Path, metadata_path: Path, source: Path) -> di
         if len(candidates) != 1:
             raise ValueError("cargo metadata does not uniquely identify selected package: " + repr((name, version)))
         package = candidates[0]
-        if node_ids and package["id"] not in node_ids:
+        if package["id"] not in node_ids:
             raise ValueError("cargo metadata resolution omits a package in the native cargo-tree graph")
         selected_rows.append({"name": name, "version": version, "package_id": package["id"],
                               "source": package.get("source"),
@@ -302,12 +314,55 @@ def parse_native_graph(tree_path: Path, metadata_path: Path, source: Path) -> di
         "metadata_root": metadata.get("resolve", {}).get("root"),
         "packages": selected_rows,
     }
-    write_json(OUTPUT / "locked-linux-cargo-graph.json", graph)
-    return {"selected_package_count": len(selected_rows),
-            "cargo_tree_line_count": graph["cargo_tree_line_count"],
-            "metadata_package_record_count": graph["metadata_package_record_count"],
-            "metadata_resolve_node_count": graph["metadata_resolve_node_count"],
-            "locked_graph_sha256": sha256(OUTPUT / "locked-linux-cargo-graph.json")}
+    return graph
+
+
+def probe_native_graph_refusals(tree_path: Path, metadata_path: Path, work: Path, source: Path) -> list[dict]:
+    """Exercise this parser with altered copies of actual native Cargo output."""
+    original = json.loads(metadata_path.read_text(encoding="utf-8"))
+    controls = work / "graph-parser-controls"
+    controls.mkdir()
+    rows = []
+    for label in ("missing-version", "wrong-version", "string-version", "boolean-version",
+                  "missing-packages", "empty-packages", "missing-resolve", "empty-nodes",
+                  "ambiguous-package", "empty-tree", "unknown-tree-package"):
+        altered = json.loads(json.dumps(original))
+        tree = tree_path
+        if label == "missing-version":
+            del altered["version"]
+        elif label == "wrong-version":
+            altered["version"] = 2
+        elif label == "string-version":
+            altered["version"] = "1"
+        elif label == "boolean-version":
+            altered["version"] = True
+        elif label == "missing-packages":
+            del altered["packages"]
+        elif label == "empty-packages":
+            altered["packages"] = []
+        elif label == "missing-resolve":
+            del altered["resolve"]
+        elif label == "empty-nodes":
+            altered["resolve"]["nodes"] = []
+        elif label == "ambiguous-package":
+            # Cargo itself is necessarily selected; a repeated identical row
+            # must not be resolved by accepting the first directory/list entry.
+            cargo_rows = [row for row in altered["packages"] if row["name"] == "cargo"]
+            if len(cargo_rows) != 1:
+                raise ValueError("control requires one Cargo package record")
+            altered["packages"].append(cargo_rows[0])
+        else:
+            tree = controls / (label + ".txt")
+            tree.write_text("" if label == "empty-tree" else "not-in-the-lock v0.0.0\n", encoding="utf-8")
+        metadata = controls / (label + ".json")
+        write_json(metadata, altered)
+        try:
+            parse_native_graph(tree, metadata, source)
+        except ValueError as error:
+            rows.append({"case": label, "status": "EXPECTED_REFUSAL", "error": str(error)})
+        else:
+            raise ValueError("native graph parser accepted altered control: " + label)
+    return rows
 
 
 def validate_fetched_registry_inputs(lock_info: dict, cargo_home: Path) -> dict:
@@ -595,7 +650,13 @@ def main() -> int:
         metadata_run = run("cargo-metadata-linux-filter-platform-all-static", metadata_command,
                            cwd=source, env=query_env, stdout_path=metadata_path,
                            stderr_path=OUTPUT / "cargo-metadata-linux.stderr.log", timeout=180)
-        graph_info = parse_native_graph(tree_path, metadata_path, source)
+        graph = parse_native_graph(tree_path, metadata_path, source)
+        receipt["graph_parser_counterprobes"] = probe_native_graph_refusals(tree_path, metadata_path, work, source)
+        write_json(OUTPUT / "locked-linux-cargo-graph.json", graph)
+        graph_info = {key: graph[key] for key in (
+            "selected_package_count", "cargo_tree_line_count", "metadata_package_record_count",
+            "metadata_resolve_node_count", "selected_identity_source_set_sha256")}
+        graph_info["locked_graph_sha256"] = sha256(OUTPUT / "locked-linux-cargo-graph.json")
         receipt["queries"] = {
             "cargo_tree": {"command": tree["argv"], "exit_code": tree["exit_code"],
                            "stdout": tree["stdout"], "stderr": tree["stderr"],
