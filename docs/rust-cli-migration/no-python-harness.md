@@ -1,3 +1,8 @@
+> Historical first-slice result below: source PR #77. The current probe adds
+> a tenth, allowlisted embedding/loader case and optional independent kernel
+> observation. See [the integration probe record](rc0-integration-probes.md).
+> RC0-A4 remains open pending exact two-host evidence and closure review.
+
 # RC0-A4 no-Python harness feasibility probe
 
 Status: **PARTIAL; RC0-A4 remains open.** The bounded macOS run passes a native

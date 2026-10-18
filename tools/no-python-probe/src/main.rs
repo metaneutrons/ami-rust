@@ -4,6 +4,7 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command, Output};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const SANDBOX_EXEC: &str = "/usr/bin/sandbox-exec";
 const TRUE: &str = "/usr/bin/true";
@@ -12,6 +13,7 @@ const CLANG: &str = "/usr/bin/clang";
 const SYSTEM_PROFILE: &str = "/System/Library/Sandbox/Profiles/system.sb";
 const DYLD_PROFILE: &str = "/System/Library/Sandbox/Profiles/dyld-support.sb";
 const REFUSED_EXIT: i32 = 77;
+const OBSERVER_CLOCK_UNCERTAINTY_MICROS: u128 = 10_000;
 const DIRECT_MARKER: &str = "RC0_NO_PYTHON_PROBE_DIRECT_EXECUTION_MARKER";
 const SHEBANG_MARKER: &str = "RC0_NO_PYTHON_PROBE_SHEBANG_EXECUTION_MARKER";
 const EMBEDDED_MARKER: &str = "RC0_NO_PYTHON_PROBE_EMBEDDED_EXECUTION_MARKER";
@@ -26,6 +28,8 @@ struct Component {
 
 struct CaseResult {
     name: String,
+    started_unix_micros: u128,
+    finished_unix_micros: u128,
     status: String,
     exit_code: Option<i32>,
     passed: bool,
@@ -76,6 +80,34 @@ fn run_probe(args: &[String]) -> Result<(), String> {
         .ok_or_else(|| "report path must have a parent directory".to_owned())?;
     fs::create_dir_all(artifact_dir)
         .map_err(|error| format!("create artifact directory: {error}"))?;
+    let mut observer = if args.iter().any(|arg| arg == "--observe") {
+        let stdout = fs::File::create(artifact_dir.join("exec-observer.raw.log"))
+            .map_err(|e| e.to_string())?;
+        let stderr = fs::File::create(artifact_dir.join("exec-observer.stderr.log"))
+            .map_err(|e| e.to_string())?;
+        let child = Command::new("/usr/bin/sudo")
+            .args([
+                "-n",
+                "/usr/bin/env",
+                "TZ=UTC",
+                "/usr/bin/fs_usage",
+                "-w",
+                "-f",
+                "exec",
+                "-t",
+                "30",
+            ])
+            .stdout(stdout)
+            .stderr(stderr)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        // This bounded startup delay is never evidence of readiness. The
+        // unconfined controls must subsequently appear in the kernel trace.
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        Some(child)
+    } else {
+        None
+    };
 
     let executable =
         env::current_exe().map_err(|error| format!("resolve running probe executable: {error}"))?;
@@ -111,6 +143,16 @@ fn run_probe(args: &[String]) -> Result<(), String> {
         .map_err(|error| format!("write sandbox profile: {error}"))?;
 
     let mut components = BTreeMap::<String, Component>::new();
+    if observer.is_some() {
+        for path in ["/usr/bin/fs_usage", "/usr/bin/sudo", "/usr/bin/env"] {
+            add_component(
+                &mut components,
+                Path::new(path),
+                "OS kernel-observer launch chain",
+                false,
+            )?;
+        }
+    }
     add_component(&mut components, &executable, "probe executable", true)?;
     add_component(&mut components, &true_path, "positive native command", true)?;
     add_component(
@@ -165,7 +207,7 @@ fn run_probe(args: &[String]) -> Result<(), String> {
         add_component(
             &mut components,
             &embedded_source,
-            "owned embedded-runtime countercontrol source; never executed",
+            "owned embedded-runtime countercontrol source",
             false,
         )?;
         add_component(
@@ -187,6 +229,33 @@ fn run_probe(args: &[String]) -> Result<(), String> {
         roots.push((embedded_binary.as_path(), "embedded countercontrol"));
     }
     let dependency_edges = collect_dependency_closure(&mut components, &roots)?;
+
+    // Separate execution permission from loader permission: allow the embedding
+    // fixture to execute, but explicitly refuse its resolved libpython mapping.
+    // This does not try to infer interpreter semantics from an opaque binary.
+    let embedded_dependency = dependency_edges.iter().find(|edge| {
+        edge.source == embedded_binary.display().to_string()
+            && edge
+                .requested_path
+                .to_ascii_lowercase()
+                .contains("libpython")
+    });
+    let embedded_loader_profile = artifact_dir.join("macos-embedded-loader.sb");
+    if let Some(library) = embedded_dependency.and_then(|edge| edge.resolved_path.as_ref()) {
+        let profile = format!(
+            "{}\n(allow process-exec (literal \"{}\"))\n(deny file-read-data file-map-executable (literal \"{}\"))\n",
+            sandbox_profile(&executable, &shebang_path, &embedded_binary),
+            scheme_escape(&embedded_binary.display().to_string()),
+            scheme_escape(library)
+        );
+        fs::write(&embedded_loader_profile, profile).map_err(|error| error.to_string())?;
+        add_component(
+            &mut components,
+            &embedded_loader_profile,
+            "owned dynamic-loader refusal policy",
+            false,
+        )?;
+    }
 
     let before_hashes = component_hashes(&components)?;
     let mut cases = Vec::new();
@@ -267,6 +336,8 @@ fn run_probe(args: &[String]) -> Result<(), String> {
     } else {
         cases.push(CaseResult {
             name: "positive_control_embedded_python_binary".to_owned(),
+            started_unix_micros: 0,
+            finished_unix_micros: 0,
             status: "not-run".to_owned(),
             exit_code: None,
             passed: false,
@@ -367,6 +438,8 @@ fn run_probe(args: &[String]) -> Result<(), String> {
         }
         Err(error) => CaseResult {
             name: "unlisted_embedded_python_binary".to_owned(),
+            started_unix_micros: 0,
+            finished_unix_micros: 0,
             status: "not-run".to_owned(),
             exit_code: None,
             passed: false,
@@ -379,7 +452,121 @@ fn run_probe(args: &[String]) -> Result<(), String> {
         },
     };
     cases.push(embedded_case);
+    if embedded_loader_profile.is_file() {
+        verify_hashes(
+            &components,
+            &before_hashes,
+            "before allowlisted embedding loader control",
+        )?;
+        cases.push(run_case(
+            "allowlisted_embedding_library_refused",
+            &embedded_loader_profile,
+            &embedded_binary,
+            &[],
+            |output| {
+                !output.status.success()
+                    && !String::from_utf8_lossy(&output.stdout).contains(EMBEDDED_MARKER)
+                    && String::from_utf8_lossy(&output.stderr)
+                        .to_ascii_lowercase()
+                        .contains("libpython")
+            },
+        ));
+    }
     verify_hashes(&components, &before_hashes, "after all controls")?;
+    let mut observed_python_controls = 0;
+    let mut observed_case_routes = 0;
+    let mut observed_refusals = 0;
+    let observer_result = if let Some(child) = observer.as_mut() {
+        let status = child.wait().map_err(|e| e.to_string())?;
+        if !status.success() {
+            return Err("independent fs_usage observer failed; retain stderr".into());
+        }
+        let trace_path = artifact_dir.join("exec-observer.raw.log");
+        if fs::metadata(&trace_path).map_err(|e| e.to_string())?.len() > 16 * 1024 * 1024 {
+            return Err("kernel execution trace exceeds its bounded proof size".into());
+        }
+        let trace = fs::read_to_string(trace_path).map_err(|e| e.to_string())?;
+        for pair in cases.windows(2) {
+            if pair[0].finished_unix_micros != 0
+                && pair[1].started_unix_micros
+                    < pair[0].finished_unix_micros + 2 * OBSERVER_CLOCK_UNCERTAINTY_MICROS
+            {
+                return Err("kernel trace correlation windows overlap".into());
+            }
+        }
+        let mut relevant = Vec::new();
+        for case in &cases {
+            if case.started_unix_micros == 0 {
+                continue;
+            }
+            let rows: Vec<_> = trace
+                .lines()
+                .filter(|line| {
+                    trace_in_window(
+                        line,
+                        case.started_unix_micros
+                            .saturating_sub(OBSERVER_CLOCK_UNCERTAINTY_MICROS),
+                        case.finished_unix_micros + OBSERVER_CLOCK_UNCERTAINTY_MICROS,
+                    ) && (line.contains(&python.display().to_string())
+                        || line.contains(&artifact_dir.display().to_string())
+                        || line.contains(&executable.display().to_string())
+                        || line.contains("/usr/bin/true"))
+                })
+                .collect();
+            let expected_target = match case.name.as_str() {
+                "positive_control_direct_absolute_python"
+                | "positive_control_descendant_absolute_python"
+                | "direct_absolute_python"
+                | "transitive_descendant_absolute_python" => python.as_path(),
+                "positive_control_absolute_python_shebang" | "absolute_python_shebang" => {
+                    shebang_path.as_path()
+                }
+                "positive_native_true" => Path::new(TRUE),
+                _ => embedded_binary.as_path(),
+            };
+            let expected_target = expected_target.display().to_string();
+            let expected_rows: Vec<_> = rows
+                .iter()
+                .filter(|line| trace_targets(line, &expected_target))
+                .collect();
+            let python_rows = rows
+                .iter()
+                .filter(|line| trace_targets(line, &python.display().to_string()))
+                .count();
+            if !expected_rows.is_empty() {
+                observed_case_routes += 1;
+            }
+            if case.name.starts_with("positive_control_") && !expected_rows.is_empty() {
+                observed_python_controls += 1;
+            }
+            if matches!(
+                case.name.as_str(),
+                "direct_absolute_python"
+                    | "transitive_descendant_absolute_python"
+                    | "absolute_python_shebang"
+                    | "unlisted_embedded_python_binary"
+            ) && expected_rows
+                .iter()
+                .any(|line| trace_refuses_target(line, &expected_target))
+            {
+                observed_refusals += 1;
+            }
+            relevant.push(format!(
+                "{{\"case\":{},\"expected_target\":{},\"kernel_events\":[{}],\"python_path_events\":{}}}",
+                json_string(&case.name),
+                json_string(&expected_target),
+                rows.iter()
+                    .map(|line| json_string(line))
+                    .collect::<Vec<_>>()
+                    .join(","),
+                python_rows
+            ));
+        }
+        format!("{{\"mechanism\":\"Apple fs_usage kernel exec/spawn trace, UTC\",\"exit_code\":{},\"positive_interpreter_route_controls_observed\":{},\"all_case_routes_observed\":{},\"kernel_eperm_refusals_observed\":{},\"cases\":[{}],\"clock_uncertainty_micros\":10000,\"minimum_case_separation_millis\":25,\"scope\":\"named owned controls and disjoint measured time windows; not universal interpreter-semantic detection\"}}",
+            status.code().unwrap_or(-1), observed_python_controls, observed_case_routes, observed_refusals, relevant.join(","))
+    } else {
+        "null".to_owned()
+    };
 
     let closure_json = components
         .values()
@@ -446,13 +633,13 @@ fn run_probe(args: &[String]) -> Result<(), String> {
     };
     let embedded_build_summary = match &embedded_build {
         Ok(()) if embedded_positive_control_passed => {
-            "built; executed only as the owned unconfined positive control".to_owned()
+            "built; unconfined positive control and sandboxed loader control executed".to_owned()
         }
         Ok(()) => "built; positive control did not pass, no execution claim".to_owned(),
         Err(error) => format!("unavailable: {error}"),
     };
     let report = format!(
-        "{{\n  \"schema\": \"ami-rust-no-python-probe-v3\",\n  \"overall\": {},\n  \"host\": {{\"os\": {}, \"arch\": {}}},\n  \"policy\": {{\"mechanism\": \"/usr/bin/sandbox-exec with deny-default process-exec allowlist\", \"allowed_exec_paths\": [{}, {}, {}], \"python_path_is_allowed\": false, \"network_and_file_writes_denied\": true, \"hashes_rechecked_before_each_case_and_after\": true, \"hash_root_is_runtime_observation_not_committed_trust_pin\": true}},\n  \"python_countercontrol\": {{\"path\": {}, \"role\": \"test-only pinned CPython positive and detector control; sandbox cases must refuse it\"}},\n  \"positive_control_execution\": \"owned interpreter/script/embedding controls ran outside the sandbox and emitted their distinct markers; the same markers are required absent from sandbox refusal outputs\",\n  \"embedded_fixture_build\": {},\n  \"embedded_runtime_preflight\": {{\"fixture\": {}, \"python_dependency_detected\": {}, \"matched_dependency\": {}, \"test_policy\": \"exclude from process-exec allowlist; dependency inspection does not automatically construct or enforce the allowlist\", \"fixture_executed_unconfined_control_only\": {}, \"sandbox_refusal_marker_absent\": {}}},\n  \"component_closure_status\": \"recursive Mach-O load-reference inspection; absolute LC_RPATH and @loader_path dependencies are resolved, LC_ID_DYLIB self-names are excluded, and unresolved dyld shared-cache or loader-relative dependencies prevent a complete closure claim\",\n  \"declared_hash_verified_components\": [\n    {}\n  ],\n  \"dependency_edges\": [\n    {}\n  ],\n  \"cases\": [\n    {}\n  ],\n  \"qualification_limits\": [\"A dynamically linked embedded-Python fixture is refused only because its executable path is absent from the allowlist; the sandbox does not identify Python semantics inside an allowed binary.\", \"Static or otherwise opaque embedded runtimes cannot be excluded by exec observation. A reviewed source/build/dependency closure and reproducible component identity are required; arbitrary-language detection is not claimed.\", \"The test harness can read the caller-visible EPERM in these controls; this run does not qualify an independent per-exec audit stream for arbitrary commands.\", \"The OS shared-cache dependency edges recorded below have no ordinary file bytes to hash in this user process; this limits the local hash closure.\", \"This run qualifies the macOS host only. No Linux runner was available in this task.\", \"sandbox-exec is deprecated Apple tooling; the probe records its observed behavior on this host, not a supported long-term Apple sandbox API contract.\", \"Per-run path hashing is evidence and drift detection, not protection from a same-user time-of-check/time-of-use replacement race.\"]\n}}\n",
+        "{{\n  \"schema\": \"ami-rust-no-python-probe-v4\",\n  \"overall\": {},\n  \"host\": {{\"os\": {}, \"arch\": {}}},\n  \"policy\": {{\"mechanism\": \"/usr/bin/sandbox-exec with deny-default process-exec allowlist\", \"allowed_exec_paths\": [{}, {}, {}], \"python_path_is_allowed\": false, \"network_and_file_writes_denied\": true, \"hashes_rechecked_before_each_case_and_after\": true, \"hash_root_is_runtime_observation_not_committed_trust_pin\": true}},\n  \"python_countercontrol\": {{\"path\": {}, \"role\": \"test-only pinned CPython positive and detector control; sandbox cases must refuse it\"}},\n  \"positive_control_execution\": \"owned interpreter/script/embedding controls ran outside the sandbox and emitted their distinct markers; the same markers are required absent from sandbox refusal outputs\",\n  \"embedded_fixture_build\": {},\n  \"embedded_runtime_preflight\": {{\"fixture\": {}, \"python_dependency_detected\": {}, \"matched_dependency\": {}, \"test_policy\": \"exclude from process-exec allowlist; dependency inspection does not automatically construct or enforce the allowlist\", \"fixture_executed_unconfined_control_only\": {}, \"sandbox_refusal_marker_absent\": {}}},\n  \"component_closure_status\": \"recursive Mach-O load-reference inspection; absolute LC_RPATH and @loader_path dependencies are resolved, LC_ID_DYLIB self-names are excluded, and unresolved dyld shared-cache or loader-relative dependencies prevent a complete closure claim\",\n  \"declared_hash_verified_components\": [\n    {}\n  ],\n  \"dependency_edges\": [\n    {}\n  ],\n  \"cases\": [\n    {}\n  ],\n  \"qualification_limits\": [\"The original unlisted-embedding case refuses process execution; the separate allowlisted-embedding case denies its resolved libpython mapping. Neither identifies Python semantics inside an opaque allowed binary.\", \"Static or otherwise opaque embedded runtimes cannot be excluded by exec observation. A reviewed source/build/dependency closure and reproducible component identity are required; arbitrary-language detection is not claimed.\", \"The test harness can read the caller-visible EPERM in these controls; this run does not qualify an independent per-exec audit stream for arbitrary commands.\", \"The OS shared-cache dependency edges recorded below have no ordinary file bytes to hash in this user process; this limits the local hash closure.\", \"This run qualifies the macOS host only. No Linux runner was available in this task.\", \"sandbox-exec is deprecated Apple tooling; the probe records its observed behavior on this host, not a supported long-term Apple sandbox API contract.\", \"Per-run path hashing is evidence and drift detection, not protection from a same-user time-of-check/time-of-use replacement race.\"]\n}}\n",
         json_string(overall),
         json_string(env::consts::OS),
         json_string(env::consts::ARCH),
@@ -472,6 +659,18 @@ fn run_probe(args: &[String]) -> Result<(), String> {
         dependency_edges_json,
         cases_json,
     );
+    let mut report = report;
+    let closing = report.rfind('}').ok_or("missing report terminator")?;
+    let os_version = Command::new("/usr/bin/sw_vers")
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !os_version.status.success() {
+        return Err("cannot identify the OS runtime boundary".into());
+    }
+    report.insert_str(closing, &format!(
+        ",\n  \"os_runtime_identity\": {},\n  \"independent_observer\": {},\n  \"allowlisted_dynamic_embedding_control\": {{\"executed_under_policy\": true, \"library_mapping_denied\": {}, \"requires_reviewed_source_for_static_embedding\": true}}\n",
+        json_string(&String::from_utf8_lossy(&os_version.stdout)), observer_result, cases.iter().any(|case| case.name == "allowlisted_embedding_library_refused" && case.passed)
+    ));
     fs::write(&report_path, report.as_bytes())
         .map_err(|error| format!("write report {}: {error}", report_path.display()))?;
 
@@ -485,6 +684,23 @@ fn run_probe(args: &[String]) -> Result<(), String> {
         );
     }
     println!("REPORT={}", report_path.display());
+    if observer.is_some()
+        && (observed_python_controls != 4
+            || observed_case_routes != cases.len()
+            || observed_refusals != 4)
+    {
+        return Err(
+            "kernel observer did not observe all ten control routes and four kernel EPERM refusals"
+                .into(),
+        );
+    }
+    if overall == "FAIL"
+        || !cases
+            .iter()
+            .any(|case| case.name == "allowlisted_embedding_library_refused" && case.passed)
+    {
+        return Err("one or more required no-Python control cases failed".into());
+    }
     Ok(())
 }
 
@@ -560,7 +776,7 @@ fn run_control(args: &[String]) -> Result<(), String> {
                 }
             }
         }
-        _ => return Err(format!("unknown control mode {mode:?}")),
+        _ => Err(format!("unknown control mode {mode:?}")),
     }
 }
 
@@ -596,9 +812,12 @@ fn run_command_case(
     args: &[&str],
     expected: impl FnOnce(&Output) -> bool,
 ) -> CaseResult {
+    // Keep trace-correlation windows disjoint despite the fs_usage wall/monotonic clock calibration.
+    std::thread::sleep(std::time::Duration::from_millis(25));
+    let started = epoch_micros();
     let mut child = Command::new(command);
     child.env_clear().args(args);
-    match child.output() {
+    let mut result = match child.output() {
         Ok(output) => case_from_output(
             name,
             std::iter::once(command.display().to_string())
@@ -609,6 +828,8 @@ fn run_command_case(
         ),
         Err(error) => CaseResult {
             name: name.to_owned(),
+            started_unix_micros: 0,
+            finished_unix_micros: 0,
             status: "launch-error".to_owned(),
             exit_code: None,
             passed: false,
@@ -618,7 +839,10 @@ fn run_command_case(
                 .chain(args.iter().map(|arg| (*arg).to_owned()))
                 .collect(),
         },
-    }
+    };
+    result.started_unix_micros = started;
+    result.finished_unix_micros = epoch_micros();
+    result
 }
 
 fn run_native_control_case(
@@ -640,14 +864,19 @@ fn run_case(
     args: &[&str],
     expected: impl FnOnce(&Output) -> bool,
 ) -> CaseResult {
+    // Keep trace-correlation windows disjoint despite the fs_usage wall/monotonic clock calibration.
+    std::thread::sleep(std::time::Duration::from_millis(25));
+    let started = epoch_micros();
     let mut command_args = vec!["-f".to_owned(), profile.display().to_string()];
     command_args.push(command.display().to_string());
     command_args.extend(args.iter().map(|arg| (*arg).to_owned()));
     let output = Command::new(SANDBOX_EXEC).args(&command_args).output();
-    match output {
+    let mut result = match output {
         Ok(output) => case_from_output(name, invocation_vector(&command_args), output, expected),
         Err(error) => CaseResult {
             name: name.to_owned(),
+            started_unix_micros: 0,
+            finished_unix_micros: 0,
             status: "launcher-error".to_owned(),
             exit_code: None,
             passed: false,
@@ -655,7 +884,10 @@ fn run_case(
             stderr: error.to_string(),
             command: invocation_vector(&command_args),
         },
-    }
+    };
+    result.started_unix_micros = started;
+    result.finished_unix_micros = epoch_micros();
+    result
 }
 
 fn run_control_case(
@@ -665,14 +897,19 @@ fn run_control_case(
     control_args: &[&str],
     expected: impl FnOnce(&Output) -> bool,
 ) -> CaseResult {
+    // Keep trace-correlation windows disjoint despite the fs_usage wall/monotonic clock calibration.
+    std::thread::sleep(std::time::Duration::from_millis(25));
+    let started = epoch_micros();
     let mut command_args = vec!["-f".to_owned(), profile.display().to_string()];
     command_args.push(executable.display().to_string());
     command_args.push("--control".to_owned());
     command_args.extend(control_args.iter().map(|arg| (*arg).to_owned()));
-    match Command::new(SANDBOX_EXEC).args(&command_args).output() {
+    let mut result = match Command::new(SANDBOX_EXEC).args(&command_args).output() {
         Ok(output) => case_from_output(name, invocation_vector(&command_args), output, expected),
         Err(error) => CaseResult {
             name: name.to_owned(),
+            started_unix_micros: 0,
+            finished_unix_micros: 0,
             status: "launcher-error".to_owned(),
             exit_code: None,
             passed: false,
@@ -680,7 +917,65 @@ fn run_control_case(
             stderr: error.to_string(),
             command: invocation_vector(&command_args),
         },
+    };
+    result.started_unix_micros = started;
+    result.finished_unix_micros = epoch_micros();
+    result
+}
+
+fn epoch_micros() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock before epoch")
+        .as_micros()
+}
+
+fn trace_targets(line: &str, target: &str) -> bool {
+    if !(line.contains("posix_spawn") || line.contains("execve")) {
+        return false;
     }
+    let Some(at) = line.find(target) else {
+        return false;
+    };
+    at > 0
+        && line.as_bytes()[at - 1].is_ascii_whitespace()
+        && line
+            .as_bytes()
+            .get(at + target.len())
+            .is_some_and(u8::is_ascii_whitespace)
+}
+
+fn trace_refuses_target(line: &str, target: &str) -> bool {
+    if !trace_targets(line, target) {
+        return false;
+    }
+    let before = &line[..line.find(target).expect("matched target")];
+    before
+        .split('[')
+        .nth(1)
+        .and_then(|tail| tail.split(']').next())
+        .is_some_and(|code| code.trim() == "1")
+}
+
+fn trace_in_window(line: &str, start: u128, finish: u128) -> bool {
+    let Some(clock) = line.split_whitespace().next() else {
+        return false;
+    };
+    let mut parts = clock.split([':', '.']);
+    let parsed: Option<Vec<u128>> = parts.by_ref().map(|s| s.parse().ok()).collect();
+    let Some(parts) = parsed else {
+        return false;
+    };
+    if parts.len() != 4 || parts[0] > 23 || parts[1] > 59 || parts[2] > 59 || parts[3] > 999999 {
+        return false;
+    }
+    let day = 86_400_000_000u128;
+    let relative = ((parts[0] * 60 + parts[1]) * 60 + parts[2]) * 1_000_000 + parts[3];
+    let base = start / day * day + relative;
+    [Some(base), base.checked_add(day), base.checked_sub(day)]
+        .into_iter()
+        .flatten()
+        .any(|at| start <= at && at <= finish)
 }
 
 fn invocation_vector(arguments: &[String]) -> Vec<String> {
@@ -698,6 +993,8 @@ fn case_from_output(
     let passed = expected(&output);
     CaseResult {
         name: name.to_owned(),
+        started_unix_micros: 0,
+        finished_unix_micros: 0,
         status: if output.status.success() {
             "success".to_owned()
         } else {
@@ -1043,8 +1340,37 @@ fn verify_hashes(
 }
 
 fn sha256_file(path: &Path) -> Result<String, String> {
-    let bytes =
-        fs::read(path).map_err(|error| format!("read {} for SHA-256: {error}", path.display()))?;
+    let bytes = match fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(error)
+            if error.kind() == std::io::ErrorKind::PermissionDenied
+                && path == Path::new("/usr/bin/sudo") =>
+        {
+            // Some standard macOS runners make this setuid OS binary unreadable
+            // to the runner account. Hash that exact immutable system path via
+            // its existing privileged OS helper, without elevating the probe.
+            let result = Command::new("/usr/bin/sudo")
+                .args(["-n", "/usr/bin/shasum", "-a", "256", "/usr/bin/sudo"])
+                .output()
+                .map_err(|e| e.to_string())?;
+            let text = String::from_utf8(result.stdout).map_err(|e| e.to_string())?;
+            let hash = text
+                .split_whitespace()
+                .next()
+                .ok_or("empty privileged OS hash")?;
+            if !result.status.success()
+                || hash.len() != 64
+                || !hash
+                    .bytes()
+                    .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+                || !text.ends_with("  /usr/bin/sudo\n")
+            {
+                return Err("cannot identify the unreadable OS sudo helper".into());
+            }
+            return Ok(hash.to_owned());
+        }
+        Err(error) => return Err(format!("read {} for SHA-256: {error}", path.display())),
+    };
     Ok(hex(&sha256(&bytes)))
 }
 
@@ -1080,9 +1406,9 @@ fn sha256(data: &[u8]) -> [u8; 32] {
     }
     padded.extend_from_slice(&bit_length.to_be_bytes());
 
-    for block in padded.chunks_exact(64) {
+    for block in padded.as_chunks::<64>().0 {
         let mut words = [0u32; 64];
-        for (index, chunk) in block.chunks_exact(4).take(16).enumerate() {
+        for (index, chunk) in block.as_chunks::<4>().0.iter().take(16).enumerate() {
             words[index] = u32::from_be_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
         }
         for index in 16..64 {
@@ -1169,11 +1495,13 @@ fn case_json(case: &CaseResult) -> String {
         .collect::<Vec<_>>()
         .join(",");
     format!(
-        "{{\"name\":{},\"status\":{},\"exit_code\":{},\"passed\":{},\"command\":[{}],\"stdout\":{},\"stderr\":{}}}",
+        "{{\"name\":{},\"status\":{},\"exit_code\":{},\"passed\":{},\"started_unix_micros\":{},\"finished_unix_micros\":{},\"command\":[{}],\"stdout\":{},\"stderr\":{}}}",
         json_string(&case.name),
         json_string(&case.status),
         case.exit_code.map(|code| code.to_string()).unwrap_or_else(|| "null".to_owned()),
         case.passed,
+        case.started_unix_micros,
+        case.finished_unix_micros,
         command,
         json_string(&case.stdout),
         json_string(&case.stderr)
@@ -1252,7 +1580,49 @@ fn hex(bytes: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{hex, sha256};
+    use super::{hex, sha256, trace_in_window, trace_refuses_target, trace_targets};
+
+    #[test]
+    fn kernel_refusal_requires_exact_target_and_errno() {
+        let line = "00:00:00.000123 posix_spawn [  1] /owned/python  0.000010 probe.12";
+        assert!(trace_refuses_target(line, "/owned/python"));
+        assert!(!trace_refuses_target(line, "/owned/py"));
+        assert!(!trace_refuses_target(line, "/other/python"));
+        assert!(!trace_refuses_target(
+            &line.replace("[  1]", "[  2]"),
+            "/owned/python"
+        ));
+        assert!(!trace_refuses_target(
+            &line.replace("[  1]", ""),
+            "/owned/python"
+        ));
+        assert!(!trace_targets(
+            &line.replace("python ", "python-old "),
+            "/owned/python"
+        ));
+    }
+
+    #[test]
+    fn kernel_trace_window_matches_utc_and_midnight_but_not_neighbours() {
+        let day = 86_400_000_000u128;
+        assert!(trace_in_window(
+            "00:00:00.000123 execve /owned",
+            day - 5,
+            day + 200
+        ));
+        assert!(!trace_in_window(
+            "00:00:00.000201 execve /owned",
+            day - 5,
+            day + 200
+        ));
+        assert!(!trace_in_window(
+            "23:59:59.999000 execve /owned",
+            day - 5,
+            day + 200
+        ));
+        assert!(!trace_in_window("invalid header", 0, day));
+        assert!(!trace_in_window("00:00:99.000001 execve /owned", 0, day));
+    }
 
     #[test]
     fn sha256_matches_standard_abc_vector() {
