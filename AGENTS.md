@@ -8,8 +8,9 @@ may remain temporarily in internal tests/release scripts only. The medium-term
 goal is complete retirement from active project tooling, including tests,
 qualification, component production and releases. Preserve historical releases,
 source obligations and evidence. The authoritative proposal and acceptance
-criteria are in `docs/rust-cli-cargo-migration-plan.md`. This is planning only;
-implementation is not yet authorised.
+criteria are in `docs/rust-cli-cargo-migration-plan.md`. Fabian subsequently
+authorised tracking and execution in milestone dependency order on 2026-10-18.
+Keep unmet acceptance gates open; no release is accepted merely by starting work.
 
 ## Portability patches
 

@@ -1,16 +1,16 @@
-# Rust CLI, Cargo integration and Python retirement — revision 1
+# Rust CLI, Cargo integration and Python retirement — revision 2
 
 Date: 2026-10-18. Decision owner: Fabian Schmieder.
 
-**Authority:** this repository document defines the proposed migration and its
-acceptance criteria. Fabian requested this plan, including complete medium-term
-Python retirement. Implementation, qualification runs, tracking setup and
-publication are not authorised by that request. No migration criterion has
-passed merely because this plan exists.
+**Authority:** this repository document defines the migration and its acceptance
+criteria. On 2026-10-18 Fabian authorised issue/milestone tracking and execution
+of this plan in dependency order, including the bounded RC0 probes. Every
+implementation, qualification and release gate remains required; authorisation
+is not evidence that a criterion has passed.
 
-Epic and milestone issues: pending; no GitHub objects have been created for this
-proposal. After tracking is authorised, issues own execution status and evidence;
-this versioned plan owns requirements. The accepted [R1](release-status.md) and
+Epic: [#69](https://github.com/metaneutrons/ami-rust/issues/69). The linked
+milestone issues own execution status and evidence; this versioned plan owns
+requirements. Native GitHub milestones group the corresponding delivery work. The accepted [R1](release-status.md) and
 [APT/Homebrew delivery](distribution-status.md) remain closed on their original
 inputs. This initiative is a subsequent SDK/tooling change.
 
@@ -149,11 +149,12 @@ selection and Cargo.lock before implementation builds, after licence/security re
 
 ## 4. Deliveries and acceptance
 
-All execution issues are pending. Dependencies below refer to milestone IDs,
-not uncreated GitHub issue numbers. Each future acceptance maps every criterion
+Dependencies below refer to stable milestone IDs. Each future acceptance maps every criterion
 to exact source/input hashes, commands, outcomes and durable evidence.
 
 ### RC0 — Contracts, dependency closure and Cargo design
+
+Execution: [#70](https://github.com/metaneutrons/ami-rust/issues/70); [delivery milestone](https://github.com/metaneutrons/ami-rust/milestone/1).
 
 Dependencies: accepted R1/D0/D1 inputs; implementation authorisation before any
 experiment. Deliver a reviewed contract and bounded integration design first.
@@ -183,6 +184,8 @@ experiment. Deliver a reviewed contract and bounded integration design first.
 
 ### RC1 — Rust consumer CLI with equivalent behaviour
 
+Execution: [#71](https://github.com/metaneutrons/ami-rust/issues/71); [delivery milestone](https://github.com/metaneutrons/ami-rust/milestone/2).
+
 Dependencies: RC0. Port the existing validated recipe before changing its
 native semantics. Python can temporarily remain only in internal tests/release
 execution, not behind any newly accepted Rust consumer command.
@@ -208,6 +211,8 @@ execution, not behind any newly accepted Rust consumer command.
   contract fails clearly without silently invoking the historical Python driver.
 
 ### RC2 — Cargo owns the complete application build
+
+Execution: [#72](https://github.com/metaneutrons/ami-rust/issues/72); [delivery milestone](https://github.com/metaneutrons/ami-rust/milestone/3).
 
 Dependencies: RC1 and the RC0 Cargo design. Preserve the compatibility build
 command as a thin facade over the new path; retire the independent build engine.
@@ -236,6 +241,8 @@ command as a thin facade over the new path; retire the independent build engine.
   updating a golden hash alone cannot establish equivalence.
 
 ### RC3 — Publish a Python-free public SDK/tooling release
+
+Execution: [#73](https://github.com/metaneutrons/ami-rust/issues/73); [delivery milestone](https://github.com/metaneutrons/ami-rust/milestone/4).
 
 Dependencies: RC1 and RC2. This is the first independently releasable migration
 outcome, not completion of the medium-term Python-retirement objective.
@@ -266,6 +273,8 @@ outcome, not completion of the medium-term Python-retirement objective.
 
 ### RC4 — Rust maintainer tooling, tests and component production
 
+Execution: [#74](https://github.com/metaneutrons/ami-rust/issues/74); [delivery milestone](https://github.com/metaneutrons/ami-rust/milestone/5).
+
 Dependencies: RC3 for rollout; design and isolated internal ports may proceed
 after RC0 without changing the public candidate. Move active maintainer tasks
 to `cargo xtask`/Rust integration tests, reusing the host core.
@@ -294,6 +303,8 @@ to `cargo xtask`/Rust integration tests, reusing the host core.
   helpers have been removed from the active tree.
 
 ### RC5 — Demonstrate complete active Python retirement
+
+Execution: [#75](https://github.com/metaneutrons/ami-rust/issues/75); [delivery milestone](https://github.com/metaneutrons/ami-rust/milestone/6).
 
 Dependencies: RC4. This milestone is mandatory for initiative completion.
 
@@ -352,8 +363,8 @@ maintain two independent production implementations indefinitely.
 Use cheap host-side Rust fixture/lint checks for portable changes; use native
 macOS/Linux checks when platform behaviour changes. Run four clean build roots
 and the complete native matrix at the named integration/release gates, not after
-each prose or parser change. No new native tests or CI runs are part of this
-planning task. Existing realistic [memory](memory-policy.md),
+each prose or parser change. Execution is now authorised; run the named probes and qualification only when
+their dependencies and prospectively recorded inputs are ready. Existing realistic [memory](memory-policy.md),
 [storage](local-storage-policy.md) and hosted resource contracts apply; measure
 new binary/preparation costs and agree any necessary prospective revision before
 a campaign. There is no new overall project timer or arbitrary application cap.
@@ -374,7 +385,10 @@ qualification. Closure is based on evidence, not the amount of code translated.
 
 - 2026-10-18: Fabian requested the Rust public CLI/Cargo migration plan, limited
   transitional Python to internal tests/releases, and made complete medium-term
-  Python retirement the intended outcome. Implementation remains unauthorised.
+  Python retirement the intended outcome. Revision 1 was planning only.
+- 2026-10-18: Fabian authorised the epic/milestone tracking and instructed execution.
+  Revision 2 adds the actual issue/milestone links and execution authority;
+  all 24 acceptance criteria and the qualified input boundaries are unchanged.
 - This proposal neither reopens accepted R1/D0/D1 nor changes the deferred
   AUR/rustup delivery gates in [the distribution plan](distribution-channels-plan.md).
   The migration does not depend on their implementation.
