@@ -1,6 +1,6 @@
 # APT installation — Ubuntu 24.04 amd64
 
-These are the delivery commands for SDK 0.1.0, Debian packaging revision 1.
+These are the delivery commands for SDK 0.1.0, Debian packaging revision 2.
 Channel availability is recorded separately in the distribution status.
 Run them on Ubuntu 24.04 x86-64. The archive's pinned primary fingerprint is
 `1B7B79417383648BBFBE282E01AB8296EF0FCD76`; its signing subkey is
@@ -14,7 +14,7 @@ sudo install -m 0644 "$KEY" /usr/share/keyrings/metaneutrons-archive-keyring.pgp
 rm -f "$KEY"
 printf '%s\n' 'Types: deb' 'URIs: https://deb.metaneutrons.cc' 'Suites: rolling' 'Components: main' 'Architectures: amd64' 'Signed-By: /usr/share/keyrings/metaneutrons-archive-keyring.pgp' | sudo tee /etc/apt/sources.list.d/metaneutrons.sources >/dev/null
 sudo apt-get update
-sudo apt-get install --yes ami-rust=0.1.0-1
+sudo apt-get install --yes ami-rust=0.1.0-2
 ami-rust verify-package
 ```
 

@@ -326,7 +326,8 @@ def _compare(base_sha: str, head_sha: str) -> dict[str, object]:
 
 
 def _validate_branch(base_sha: str, head_sha: str, formula: bytes, readme: bytes,
-                     bot: dict[str, object], branch_name: str) -> None:
+                     bot: dict[str, object], branch_name: str,
+                     pins: dict[str, object]) -> None:
     commit = api(f"repos/{TAP_REPOSITORY}/commits/{head_sha}")
     if type(commit) is not dict or commit.get("sha") != head_sha:
         raise TapPublicationError("tap publication branch head cannot be read")
@@ -338,7 +339,7 @@ def _validate_branch(base_sha: str, head_sha: str, formula: bytes, readme: bytes
     identity = _commit_identity(bot)
     author = details.get("author") if type(details) is dict else None
     committer = details.get("committer") if type(details) is dict else None
-    if (type(details) is not dict or details.get("message") != _commit_message()
+    if (type(details) is not dict or details.get("message") != _commit_message(pins)
             or type(author) is not dict or type(committer) is not dict
             or any(author.get(key) != value or committer.get(key) != value
                    for key, value in identity.items())):
@@ -359,8 +360,9 @@ def _validate_branch(base_sha: str, head_sha: str, formula: bytes, readme: bytes
         raise TapPublicationError("tap branch README differs from the protected generator output")
 
 
-def _commit_message() -> str:
-    return "feat: distribute ami-rust 0.1.0 packaging 1"
+def _commit_message(pins: dict[str, object]) -> str:
+    return (f"feat: distribute ami-rust {pins['sdk_version']} "
+            f"packaging {pins['packaging_revision']}")
 
 
 def _branch_name(pins: dict[str, object]) -> str:
@@ -503,7 +505,7 @@ def open_publication(formula_path: Path, receipt_path: Path) -> dict[str, object
             tree_sha = _require_sha(tree.get("sha"), "tap publication tree SHA")
             identity = _commit_identity(bot)
             commit = api(f"repos/{TAP_REPOSITORY}/git/commits", method="POST", data={
-                "message": _commit_message(),
+                "message": _commit_message(pins),
                 "tree": tree_sha,
                 "parents": [base_sha],
                 "author": identity,
@@ -524,7 +526,7 @@ def open_publication(formula_path: Path, receipt_path: Path) -> dict[str, object
                 raise TapPublicationError("existing tap publication ref is malformed")
             head_sha = _require_sha(ref["object"].get("sha"), "existing tap branch SHA")
 
-        _validate_branch(base_sha, head_sha, formula, expected_readme, bot, branch_name)
+        _validate_branch(base_sha, head_sha, formula, expected_readme, bot, branch_name, pins)
         matching = _pull_requests(branch_name)
         if len(matching) > 1:
             raise TapPublicationError("more than one tap pull request exists for the publication branch")
@@ -541,7 +543,7 @@ def open_publication(formula_path: Path, receipt_path: Path) -> dict[str, object
                 raise TapPublicationError("existing tap pull request is not open")
         else:
             pr = api(f"repos/{TAP_REPOSITORY}/pulls", method="POST", data={
-                "title": _commit_message(),
+                "title": _commit_message(pins),
                 "body": ("Add the exact attested ami-rust formula and regenerate the tap README.\n\n"
                          f"Formula SHA-256: `{formula_sha}`\n"
                          f"Base: `main` at `{base_sha}`\n\n"
@@ -645,7 +647,7 @@ def merge_publication(formula_path: Path, open_receipt_path: Path,
             or hashlib.sha256(branch_readme).hexdigest() != opened["readme_sha256"]):
         raise TapPublicationError("tap branch README differs from the open receipt")
     _validate_branch(opened["base_sha"], head_sha, formula, branch_readme,
-                     bot, opened["branch"])
+                     bot, opened["branch"], pins)
 
     merged_already = pr.get("state") == "closed" and pr.get("merged") is True
     if merged_already:
@@ -682,7 +684,7 @@ def merge_publication(formula_path: Path, open_receipt_path: Path,
         raise TapPublicationError("main already contains different ami-rust formula bytes")
     response = api(f"repos/{TAP_REPOSITORY}/pulls/{number}/merge", method="PUT",
                    data={"merge_method": "squash", "sha": head_sha,
-                         "commit_title": _commit_message()})
+                         "commit_title": _commit_message(pins)})
     if type(response) is not dict or response.get("merged") is not True:
         raise TapPublicationError("GitHub did not confirm the squash merge")
     merge_sha = _require_sha(response.get("sha"), "squash merge commit SHA")

@@ -1,9 +1,9 @@
 {
   "schema": "ami-rust-package-inputs-v1",
   "sdk_version": "0.1.0",
-  "packaging_revision": 1,
-  "package_version": "0.1.0-1",
-  "packaging_tag": "v0.1.0+packaging.1",
+  "packaging_revision": 2,
+  "package_version": "0.1.0-2",
+  "packaging_tag": "v0.1.0+packaging.2",
   "sdk_tag": "v0.1.0",
   "repository": "metaneutrons/ami-rust",
   "source_commit": "b4ebb9cce5decd01616b75acf451d0eba9995ee3",

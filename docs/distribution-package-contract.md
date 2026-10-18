@@ -11,9 +11,9 @@ This contract defines the intended delivery; acceptance is recorded separately.
 
 SDK `0.1.0` remains exactly the R1-accepted six-asset release at source
 `b4ebb9cce5decd01616b75acf451d0eba9995ee3`, producer `39121017959/1`.
-The additional GitHub release/tag is `v0.1.0+packaging.1`: an independent,
+The additional GitHub release/tag is `v0.1.0+packaging.2`: an independent,
 protected-source packaging delivery, not a replacement SDK. Debian version is
-`0.1.0-1`; Homebrew uses `version "0.1.0"`, `revision 1`. Never append package
+`0.1.0-2`; Homebrew uses `version "0.1.0"`, `revision 2`. Never append package
 files to the frozen SDK release, repoint its tag or change its original assets.
 Publish the packaging release without making it the default/latest SDK release.
 
@@ -31,7 +31,7 @@ distinct outcomes. A downstream failure does not mutate an accepted SDK.
 
 The single inventory identifies every package control file, original SDK asset
 and publisher proof by size/hash/mode. A neutral archive contains `usr/bin`,
-`usr/libexec/ami-rust/0.1.0-1` and package documentation. Debian installs these
+`usr/libexec/ami-rust/0.1.0-2` and package documentation. Debian installs these
 under `/usr`; Homebrew places the contents of `usr` in its versioned Cellar
 prefix. The launcher resolves its own real location. Debian declares Python
 3.10+, Git and CA certificates; Homebrew declares Python 3.14, Git, macOS 26+

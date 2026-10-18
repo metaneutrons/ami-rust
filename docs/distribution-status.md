@@ -6,7 +6,7 @@ and unchanged. APT and Homebrew are separate follow-up deliveries tracked by
 
 | Gate | Current evidence |
 | --- | --- |
-| Package identities and ownership | [Delivery contract](distribution-package-contract.md); SDK 0.1.0, Debian 0.1.0-1, Homebrew revision 1 |
+| Package identities and ownership | [Delivery contract](distribution-package-contract.md); SDK 0.1.0, Debian 0.1.0-2, Homebrew revision 2 |
 | Local cold adapter consumer | Preparation, new project, offline build, input check and R1-identical SHA utility passed in a fresh macOS 26 state; earlier failures retained |
 | APT archive registration | [APT archive PR #26](https://github.com/metaneutrons/apt-archive/pull/26), merged after all required checks |
 | Homebrew host policy | [Tap PR #70](https://github.com/metaneutrons/homebrew-tap/pull/70), merged after all required checks |
@@ -21,3 +21,19 @@ The additional packaging release does not replace the default/latest SDK release
 Prospective instructions: [APT](../packaging/INSTALL-APT.md),
 [Homebrew](../packaging/INSTALL-HOMEBREW.md),
 [explicit user preparation](../packaging/README.md).
+
+## Preserved first packaging attempt
+
+Protected producer [39158406951/1](https://github.com/metaneutrons/ami-rust/actions/runs/39158406951)
+passed package generation, signing, provenance verification and corrupted-input
+counter-tests. Staging then failed because GitHub did not expose its private
+draft through the release-by-tag endpoint. The tag `v0.1.0+packaging.1` and its
+12 signed draft assets remain preserved. That draft was never made public and
+neither APT nor Homebrew was changed by that run.
+
+The next candidate uses packaging revision 2 with SDK 0.1.0 unchanged. Staging
+uses the confirmed release ID and reconciles hidden drafts before creating a
+release. Final public clients also preserve the original cold-preparation
+receipts, component footprints, command RSS observations and sampled volume
+free-space delta. The volume delta is an observation of the runner volume;
+it is not represented as an exact per-process disk peak.

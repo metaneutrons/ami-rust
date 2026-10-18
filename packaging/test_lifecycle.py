@@ -210,7 +210,7 @@ class LifecycleTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name).resolve()
         self.packages = self.root / "packages"
-        package_fixture(self.packages)
+        self.pins = package_fixture(self.packages)
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
@@ -256,8 +256,8 @@ class LifecycleTests(unittest.TestCase):
         final_inventory = lifecycle.file_inventory(self.packages)
         fixture = lifecycle.make_debian_upgrade_fixture(package, self.root / "fixture")
         self.assertEqual(fixture["kind"], "local-unsigned-upgrade-fixture")
-        self.assertEqual(fixture["version"], "0.1.0-0")
-        self.assertEqual(fixture["revision"], 0)
+        self.assertEqual(fixture["version"], f"{self.pins['sdk_version']}-{self.pins['packaging_revision'] - 1}")
+        self.assertEqual(fixture["revision"], package.pins["packaging_revision"] - 1)
         fixture_path = Path(str(fixture["path"]))
         members = lifecycle.parse_ar(fixture_path.read_bytes())
         final_members = lifecycle.parse_ar(package.deb.read_bytes())
@@ -265,7 +265,7 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(fixture["data_sha256"], fixture["final_data_sha256"])
         final_control = lifecycle.deb_control(final_members["control.tar.gz"])
         fixture_control = lifecycle.deb_control(members["control.tar.gz"])
-        self.assertEqual(fixture_control.replace(b"Version: 0.1.0-0\n", b"Version: 0.1.0-1\n", 1), final_control)
+        self.assertEqual(fixture_control.replace(f"Version: {fixture['version']}\n".encode(), f"Version: {package.pins['package_version']}\n".encode(), 1), final_control)
         self.assertEqual(lifecycle.file_inventory(self.packages), final_inventory)
 
     def test_homebrew_revision_zero_fixture_keeps_url_and_does_not_edit_final_formula(self) -> None:
@@ -278,7 +278,7 @@ class LifecycleTests(unittest.TestCase):
         self.assertNotIn(b"  revision ", fixture_raw)
         self.assertIn(b"url \"https://github.com/metaneutrons/ami-rust/releases/download/", fixture_raw)
         self.assertIn(b"sha256 \"" + hashlib.sha256(package.archive.read_bytes()).hexdigest().encode() + b"\"", fixture_raw)
-        self.assertEqual(final_raw.replace(b"  revision 1\n", b"", 1), fixture_raw)
+        self.assertEqual(final_raw.replace(f"  revision {package.pins['packaging_revision']}\n".encode(), b"", 1), fixture_raw)
         self.assertEqual(lifecycle.file_inventory(self.packages), final_inventory)
 
     def test_ubuntu_lifecycle_uses_campaign_owned_installs_and_retains_user_state(self) -> None:
@@ -308,7 +308,7 @@ class LifecycleTests(unittest.TestCase):
                          state / "retained/bin/ami-rust")
         self.assertTrue((campaign_root / "qualification/persistent.json").is_file())
         fixture = result["upgrade_fixture"]
-        self.assertEqual(fixture["version"], "0.1.0-0")
+        self.assertEqual(fixture["version"], f"{self.pins['sdk_version']}-{self.pins['packaging_revision'] - 1}")
         self.assertEqual(lifecycle.file_inventory(self.packages), result["package_output_inventory"])
         phases = list((campaign_root / "evidence").glob("*.json"))
         self.assertTrue(any(json.loads(path.read_text())["status"] == "PASS" for path in phases))

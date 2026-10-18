@@ -225,6 +225,7 @@ jobs:
             ${{ runner.temp }}/public-client/*.json
             ${{ runner.temp }}/public-client/*.log
             ${{ runner.temp }}/public-client/*.sh
+            ${{ runner.temp }}/public-client/original-sdk-receipts/
             ${{ runner.temp }}/public-client/archive-verification/
             ${{ runner.temp }}/public-client/consumer/evidence-*/
             ${{ runner.temp }}/public-client/consumer/persistent.json

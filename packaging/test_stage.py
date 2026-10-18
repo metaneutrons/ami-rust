@@ -11,6 +11,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from types import SimpleNamespace
+from urllib.parse import quote
 from unittest import mock
 
 
@@ -162,6 +163,8 @@ class StagePreflightTests(unittest.TestCase):
         expected_name = package_names(self.pins)[0]
         release_ref = "repos/metaneutrons/ami-rust/git/ref/tags/v0.1.0%2Bpackaging.1"
         release_endpoint = "repos/metaneutrons/ami-rust/releases/tags/v0.1.0%2Bpackaging.1"
+        release_list = "repos/metaneutrons/ami-rust/releases?per_page=100&page=1"
+        release_by_id = "repos/metaneutrons/ami-rust/releases/52"
 
         def api(path, *, method="GET", data=None, missing=False):
             api_calls.append((path, method))
@@ -172,9 +175,18 @@ class StagePreflightTests(unittest.TestCase):
             if path == release_ref:
                 return {"object": {"type": "commit", "sha": self.source_commit}}
             if path == release_endpoint:
-                return {"id": 52, "draft": True, "prerelease": True, "assets": [{
+                return None
+            if path == release_list:
+                return [{"id": 52, "tag_name": self.pins["packaging_tag"],
+                         "draft": True, "prerelease": True, "assets": [{
                     "name": expected_name, "size": 999, "digest": "sha256:" + "0" * 64,
-                }]}
+                }]}]
+            if path == release_by_id:
+                return {"id": 52, "tag_name": self.pins["packaging_tag"],
+                        "draft": True, "prerelease": True, "assets": [{
+                            "name": expected_name, "size": 999,
+                            "digest": "sha256:" + "0" * 64,
+                        }]}
             self.fail(f"unexpected preflight call: {method} {path}")
 
         with (
@@ -186,40 +198,129 @@ class StagePreflightTests(unittest.TestCase):
 
         run.assert_not_called()
         self.assertTrue(all(method == "GET" for _path, method in api_calls))
+        self.assertNotIn(("repos/metaneutrons/ami-rust/git/refs", "POST"), api_calls)
+        self.assertNotIn(("repos/metaneutrons/ami-rust/releases", "POST"), api_calls)
         self.assertFalse(receipt.exists())
         self.assertFalse((self.root / "draft-readback").exists())
 
+    def test_truncated_release_list_refuses_creation(self) -> None:
+        receipt = self.root / "truncated-receipt.json"
+        api_calls = []
+        release_endpoint = "repos/metaneutrons/ami-rust/releases/tags/v0.1.0%2Bpackaging.1"
+        release_list = "repos/metaneutrons/ami-rust/releases?per_page=100&page=1"
+
+        def api(path, *, method="GET", data=None, missing=False):
+            api_calls.append((path, method))
+            if path.endswith("/git/ref/tags/v0.1.0"):
+                return {"object": {"type": "commit", "sha": self.pins["source_commit"]}}
+            if path.endswith("/releases/tags/v0.1.0"):
+                return sdk_release(self.pins)
+            if path == "repos/metaneutrons/ami-rust/git/ref/tags/v0.1.0%2Bpackaging.1":
+                return None
+            if path == release_endpoint:
+                return None
+            if path == release_list:
+                return [{"id": 100 + index, "tag_name": f"other-{index}"}
+                        for index in range(stage.RELEASES_PER_PAGE)]
+            self.fail(f"unexpected API call: {method} {path}")
+
+        with (
+            mock.patch.object(stage, "api", side_effect=api),
+            mock.patch.object(stage, "MAX_RELEASE_PAGES", 1),
+            mock.patch.object(stage.subprocess, "run") as run,
+        ):
+            with self.assertRaisesRegex(ValueError, "release list is truncated"):
+                stage.run(self.directory, self.pins, Path("/fixture/gh"), receipt)
+
+        run.assert_not_called()
+        self.assertTrue(all(method == "GET" for _path, method in api_calls))
+        self.assertNotIn(("repos/metaneutrons/ami-rust/git/refs", "POST"), api_calls)
+        self.assertNotIn(("repos/metaneutrons/ami-rust/releases", "POST"), api_calls)
+        self.assertFalse(receipt.exists())
+
+    def test_duplicate_listed_tag_refuses_ambiguous_recovery(self) -> None:
+        receipt = self.root / "duplicate-tag-receipt.json"
+        api_calls = []
+        release_endpoint = "repos/metaneutrons/ami-rust/releases/tags/v0.1.0%2Bpackaging.1"
+        release_list = "repos/metaneutrons/ami-rust/releases?per_page=100&page=1"
+        listed = [
+            {"id": release_id, "tag_name": self.pins["packaging_tag"],
+             "draft": True, "prerelease": True, "assets": []}
+            for release_id in (52, 53)
+        ]
+
+        def api(path, *, method="GET", data=None, missing=False):
+            api_calls.append((path, method))
+            if path.endswith("/git/ref/tags/v0.1.0"):
+                return {"object": {"type": "commit", "sha": self.pins["source_commit"]}}
+            if path.endswith("/releases/tags/v0.1.0"):
+                return sdk_release(self.pins)
+            if path == "repos/metaneutrons/ami-rust/git/ref/tags/v0.1.0%2Bpackaging.1":
+                return {"object": {"type": "commit", "sha": self.source_commit}}
+            if path == release_endpoint:
+                return None
+            if path == release_list:
+                return listed
+            self.fail(f"unexpected API call: {method} {path}")
+
+        with (
+            mock.patch.object(stage, "api", side_effect=api),
+            mock.patch.object(stage.subprocess, "run") as run,
+        ):
+            with self.assertRaisesRegex(ValueError, "multiple GitHub releases"):
+                stage.run(self.directory, self.pins, Path("/fixture/gh"), receipt)
+
+        run.assert_not_called()
+        self.assertTrue(all(method == "GET" for _path, method in api_calls))
+        self.assertNotIn(("repos/metaneutrons/ami-rust/git/refs", "POST"), api_calls)
+        self.assertNotIn(("repos/metaneutrons/ami-rust/releases", "POST"), api_calls)
+        self.assertFalse(receipt.exists())
+
     def test_complete_stage_checks_private_and_anonymous_public_readback(self) -> None:
         receipt = self.root / "stage-receipt.json"
-        sdk = sdk_release(self.pins)
-        release_ref = "repos/metaneutrons/ami-rust/git/ref/tags/v0.1.0%2Bpackaging.1"
-        release_endpoint = "repos/metaneutrons/ami-rust/releases/tags/v0.1.0%2Bpackaging.1"
+        pins = dict(self.pins)
+        pins.update({"packaging_revision": 2, "package_version": "0.1.0-2",
+                     "packaging_tag": "v0.1.0+packaging.2"})
+        fixture_root = self.root / "revision-two"
+        fixture_root.mkdir()
+        directory, data, source_commit = package_fixture(fixture_root, pins)
+        sdk = sdk_release(pins)
+        encoded_tag = quote(pins["packaging_tag"], safe="")
+        release_ref = f"repos/metaneutrons/ami-rust/git/ref/tags/{encoded_tag}"
+        release_endpoint = f"repos/metaneutrons/ami-rust/releases/tags/{encoded_tag}"
+        release_list = "repos/metaneutrons/ami-rust/releases?per_page=100&page=1"
+        release_by_id = "repos/metaneutrons/ami-rust/releases/52"
         release_state: dict | None = None
         tag_exists = False
         api_calls: list[tuple[str, str, dict | None]] = []
         uploads: list[list[str]] = []
         public_requests: list[tuple[str, int]] = []
-        public_content = {"https://fixture.invalid/" + name: raw for name, raw in self.data.items()}
+        public_content = {"https://fixture.invalid/" + name: raw for name, raw in data.items()}
 
         def api(path, *, method="GET", data=None, missing=False):
             nonlocal release_state, tag_exists
             api_calls.append((path, method, data))
             if path.endswith("/git/ref/tags/v0.1.0"):
-                return {"object": {"type": "commit", "sha": self.pins["source_commit"]}}
+                return {"object": {"type": "commit", "sha": pins["source_commit"]}}
             if path.endswith("/releases/tags/v0.1.0"):
                 return sdk
             if path == release_ref:
                 return ({"object": {"type": "commit", "sha": self.source_commit}}
                         if tag_exists else None)
+            if path == release_endpoint:
+                return None
+            if path == release_list:
+                return []
             if path == "repos/metaneutrons/ami-rust/git/refs" and method == "POST":
                 tag_exists = True
                 return {"ref": data["ref"]}
             if path == "repos/metaneutrons/ami-rust/releases" and method == "POST":
-                release_state = {"id": 52, "draft": True, "prerelease": True, "assets": []}
+                release_state = {"id": 52, "tag_name": pins["packaging_tag"],
+                                 "draft": True, "prerelease": True, "assets": []}
                 return release_state
-            if path == release_endpoint:
+            if path == release_by_id and method == "GET":
                 return release_state
-            if path == "repos/metaneutrons/ami-rust/releases/52" and method == "PATCH":
+            if path == release_by_id and method == "PATCH":
                 release_state = {**release_state, **data}
                 return release_state
             if path == "repos/metaneutrons/ami-rust/releases/latest":
@@ -234,11 +335,11 @@ class StagePreflightTests(unittest.TestCase):
                 release_state["assets"] = [
                     {"name": name, "size": len(raw), "digest": "sha256:" + digest(raw),
                      "browser_download_url": "https://fixture.invalid/" + name}
-                    for name, raw in sorted(self.data.items())
+                    for name, raw in sorted(data.items())
                 ]
             elif command[1:3] == ["release", "download"]:
                 target = Path(command[command.index("--dir") + 1])
-                for name, raw in self.data.items():
+                for name, raw in data.items():
                     (target / name).write_bytes(raw)
             else:
                 self.fail(f"unexpected GH command: {command}")
@@ -253,21 +354,102 @@ class StagePreflightTests(unittest.TestCase):
             mock.patch.object(stage.subprocess, "run", side_effect=run),
             mock.patch.object(stage, "urlopen", side_effect=open_url),
         ):
-            stage.run(self.directory, self.pins, Path("/fixture/gh"), receipt)
+            stage.run(directory, pins, Path("/fixture/gh"), receipt)
 
-        self.assertEqual(uploads, [sorted(self.data)])
+        self.assertEqual(uploads, [sorted(data)])
         readback = self.root / "draft-readback"
         self.assertEqual(readback.stat().st_mode & 0o777, 0o700)
-        self.assertEqual({path.name for path in readback.iterdir()}, set(self.data))
-        self.assertEqual({(path.name, path.read_bytes()) for path in readback.iterdir()}, set(self.data.items()))
+        self.assertEqual({path.name for path in readback.iterdir()}, set(data))
+        self.assertEqual({(path.name, path.read_bytes()) for path in readback.iterdir()}, set(data.items()))
         self.assertEqual({url for url, timeout in public_requests}, set(public_content))
         self.assertTrue(all(timeout == 180 for _url, timeout in public_requests))
         receipt_value = json.loads(receipt.read_text(encoding="utf-8"))
         self.assertEqual(receipt_value["status"], "PASS_PUBLIC_PACKAGING_STAGE_NOT_CHANNEL_ACCEPTANCE")
-        self.assertEqual(receipt_value["source_commit"], self.source_commit)
+        self.assertEqual(receipt_value["source_commit"], source_commit)
         self.assertTrue(receipt_value["original_sdk_unchanged"])
         writes = [(path, method) for path, method, _data in api_calls if method != "GET"]
-        self.assertEqual([method for _path, method in writes], ["POST", "POST", "PATCH"])
+        self.assertEqual(writes, [
+            ("repos/metaneutrons/ami-rust/git/refs", "POST"),
+            ("repos/metaneutrons/ami-rust/releases", "POST"),
+            (release_by_id, "PATCH"),
+        ])
+        self.assertGreaterEqual(sum(path == release_by_id and method == "GET"
+                                    for path, method, _data in api_calls), 3)
+        self.assertEqual(sum(path == release_endpoint for path, _method, _data in api_calls), 1)
+        created = next(data for path, method, data in api_calls
+                       if path == "repos/metaneutrons/ami-rust/releases" and method == "POST")
+        self.assertEqual(created["tag_name"], "v0.1.0+packaging.2")
+        self.assertEqual(created["name"], "ami-rust 0.1.0 — APT and Homebrew packaging 2")
+
+    def test_existing_public_release_uses_its_id_without_reupload_or_patch(self) -> None:
+        receipt = self.root / "existing-public-receipt.json"
+        sdk = sdk_release(self.pins)
+        release_ref = "repos/metaneutrons/ami-rust/git/ref/tags/v0.1.0%2Bpackaging.1"
+        release_endpoint = "repos/metaneutrons/ami-rust/releases/tags/v0.1.0%2Bpackaging.1"
+        release_by_id = "repos/metaneutrons/ami-rust/releases/52"
+        api_calls = []
+        gh_commands = []
+        public_requests = []
+        public_content = {"https://fixture.invalid/" + name: raw for name, raw in self.data.items()}
+        public_release = {
+            "id": 52,
+            "tag_name": self.pins["packaging_tag"],
+            "draft": False,
+            "prerelease": True,
+            "assets": [
+                {"name": name, "size": len(raw), "digest": "sha256:" + digest(raw),
+                 "browser_download_url": "https://fixture.invalid/" + name}
+                for name, raw in sorted(self.data.items())
+            ],
+        }
+
+        def api(path, *, method="GET", data=None, missing=False):
+            api_calls.append((path, method, data))
+            if path.endswith("/git/ref/tags/v0.1.0"):
+                return {"object": {"type": "commit", "sha": self.pins["source_commit"]}}
+            if path.endswith("/releases/tags/v0.1.0"):
+                return sdk
+            if path == release_ref:
+                return {"object": {"type": "commit", "sha": self.source_commit}}
+            if path == release_endpoint or path == release_by_id:
+                return public_release
+            if path == "repos/metaneutrons/ami-rust/releases/latest":
+                return sdk
+            self.fail(f"unexpected API call: {method} {path}")
+
+        def run(command, *, check, timeout):
+            command = [str(value) for value in command]
+            gh_commands.append(command)
+            if command[1:3] != ["release", "download"]:
+                self.fail(f"unexpected GH command: {command}")
+            target = Path(command[command.index("--dir") + 1])
+            for name, raw in self.data.items():
+                (target / name).write_bytes(raw)
+            return SimpleNamespace(returncode=0)
+
+        def open_url(url, *, timeout):
+            public_requests.append((url, timeout))
+            return io.BytesIO(public_content[url])
+
+        with (
+            mock.patch.object(stage, "api", side_effect=api),
+            mock.patch.object(stage.subprocess, "run", side_effect=run),
+            mock.patch.object(stage, "urlopen", side_effect=open_url),
+        ):
+            stage.run(self.directory, self.pins, Path("/fixture/gh"), receipt)
+
+        self.assertEqual(len(gh_commands), 1)
+        self.assertEqual(gh_commands[0][1:3], ["release", "download"])
+        self.assertEqual({url for url, _timeout in public_requests}, set(public_content))
+        self.assertTrue(all(path != "repos/metaneutrons/ami-rust/releases"
+                            or method != "POST" for path, method, _data in api_calls))
+        self.assertTrue(all(method != "PATCH" for _path, method, _data in api_calls))
+        self.assertFalse(any(path.startswith("repos/metaneutrons/ami-rust/releases?")
+                             for path, _method, _data in api_calls))
+        self.assertTrue(any(path == release_by_id for path, method, _data in api_calls
+                            if method == "GET"))
+        self.assertEqual(json.loads(receipt.read_text())["status"],
+                         "PASS_PUBLIC_PACKAGING_STAGE_NOT_CHANNEL_ACCEPTANCE")
 
 
 if __name__ == "__main__":
