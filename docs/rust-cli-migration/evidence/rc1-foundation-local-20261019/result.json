@@ -47,5 +47,7 @@
       "reason": "Initial 21 tests and verbatim README pass; a4 additionally binds limits to the normative contract and tests real Cargo refusal propagation."
     }
   ],
-  "qualification_limit": "Local macOS foundation only; native hosted Linux/macOS tests and the complete RC1 consumer/lifecycle/build matrix remain outstanding."
+  "qualification_limit": "Local macOS foundation only; native hosted Linux/macOS tests and the complete RC1 consumer/lifecycle/build matrix remain outstanding.",
+  "source_commit_scope": "Local pre-rebase source identity retained in the recovery chain, not a public commit link. The exact source_hashes below match the rebased publication candidate; no executed Rust source changed during rebase.",
+  "rebased_code_identity_verified_at": "f893fda9be093167874cfb03edbc527abbe63d98"
 }
