@@ -2028,10 +2028,13 @@
     "bounded_current_derivation": {
       "outputs": "Preserves 2,835 regular files and changes exactly 530 public headers, libdrm_nouveau.a and aom.pc.",
       "generator": "The selected public-header generator is the classic tools/genmodule C host tool; the recipe parser accepts the five-output writeincludes form and verifies exact C source inputs and flags.",
+      "genmodule_invocations": 213,
+      "genmodule_invocation_count_method": "106 selected header recipes run once in each of two roots, plus one absolute-config counter case; this corrects the prior estimate of 273.",
       "nouveau": "Replays the frozen compilation database for exactly 825 Nouveau C objects, then archives them with pinned llvm-ar/llvm-ranlib; the full AROS Ninja build is not invoked.",
       "aom": "Runs CMake script mode over pinned libaom metadata, plus Perl/Git through the selected CMake script and pkg-config for relocation checks.",
       "evidence": [
         "release/csdk_producer.py:224-241",
+        "release/ci_csdk.py:219-310",
         "release/csdk_producer.py:265-309",
         "release/csdk_recipes.py:265-345",
         "release/csdk_metadata.py:284-365",
@@ -2045,18 +2048,20 @@
         "release/csdk_recipes.py:265-345",
         "recipes/build.ninja:285467-286169",
         "recipes/build.ninja:322539",
-        "recipes/build.ninja:322548"
+        "recipes/build.ninja:322548",
+        "recipes/build.ninja:322126-322156"
       ],
       "observed_python_edges_in_archive": [
         "AROS-NX/rom/dos/genstrings.py",
         "AROS-NX/arch/all-pc/udis86/scripts/ud_itab.py",
         "AROS-NX/workbench/system/AboutAROS/scripts/acknowledgements2header.py",
         "AROS-NX/scripts/symbols/audit-symbols.py",
-        "Mesa generator commands in the full Ninja file"
+        "Mesa generator commands in the full Ninja file",
+        "AROS-NX/scripts/kickstart/localise-symbols.py"
       ],
-      "finding": "The captured full Ninja file contains real Python generator/audit invocations. The bounded portable C-SDK producer parses and executes only its selected classic genmodule, Nouveau C compile records and AOM metadata recipe; it does not run Ninja over all captured edges. Any future source build that follows the full upstream graph is blocked from RC5 until those active Python generators are replaced, excluded by a reviewed bounded closure, or supplied as authenticated non-Python outputs with source obligations retained.",
-      "explicit_python_command_records": 69,
-      "explicit_python_command_count_method": "Static count of recipes/build.ninja COMMAND records that set RUN_PYTHON or PYTHON_EXECUTABLE, or directly invoke a Python script; source archive only."
+      "finding": "The captured full Ninja file contains real Python generator/audit invocations. The bounded portable C-SDK producer parses and executes only its selected classic genmodule, Nouveau C compile records and AOM metadata recipe; it does not run Ninja over all captured edges. Static recount finds 72 Python COMMAND records; the prior count of 69 omitted three direct scripts/kickstart/localise-symbols.py edges at lines 322126, 322141 and 322156. Any future source build that follows the full upstream graph is blocked from RC5 until those active Python generators are replaced, excluded by a reviewed bounded closure, or supplied as authenticated non-Python outputs with source obligations retained.",
+      "explicit_python_command_records": 72,
+      "explicit_python_command_count_method": "Static count of recipes/build.ninja COMMAND records: 9 set RUN_PYTHON, 54 set PYTHON_EXECUTABLE, and 9 directly invoke a Python script, with no overlap; source archive only."
     }
   },
   "current_test_and_workflow_evidence": {

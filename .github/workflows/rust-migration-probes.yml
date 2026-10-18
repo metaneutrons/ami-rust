@@ -1,0 +1,169 @@
+name: Rust migration RC0 integration
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - tools/cargo-native-spike/**
+      - tools/linux-no-python-probe/**
+      - tools/no-python-probe/**
+      - tools/rc0-native-probe.sh
+      - .github/workflows/rust-migration-probes.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc0-integration-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-design:
+    name: RC0 native Cargo (${{ matrix.profile }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            profile: linux-x86_64
+          - os: macos-26
+            profile: macos-aarch64
+    steps:
+      - name: Check out exact probe source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Refuse ambient override before creating output
+        env:
+          PROBE_HOST: ${{ matrix.profile }}
+          PROBE_CANDIDATE: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if RUSTFLAGS=--cfg=unexpected_rc0_override bash tools/rc0-native-probe.sh "$RUNNER_TEMP/refused-output" "$PROBE_HOST"; then
+            echo 'invalid ambient configuration was accepted' >&2
+            exit 1
+          else
+            test "$?" = 2
+          fi
+          test ! -e "$RUNNER_TEMP/refused-output"
+      - name: Supervise both fresh Cargo roots and preserve failure evidence
+        env:
+          PROBE_HOST: ${{ matrix.profile }}
+          PROBE_CANDIDATE: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # Transitional INTERNAL test orchestration only. The observed Cargo
+          # recipe does not execute these Python test/audit oracles.
+          python3 -I -B - <<'PY'
+          import importlib.util, json, os
+          from pathlib import Path
+          import subprocess, time
+
+          root = Path.cwd()
+          spec = importlib.util.spec_from_file_location('rc0_supervisor', root / 'release/ci_sdk.py')
+          sdk = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(sdk)
+          temporary = Path(os.environ['RUNNER_TEMP'])
+          sdk.validate_resource_policy(sdk.read_json(root / 'release/ci-resources.json'), temporary)
+          work = temporary / 'rc0-integration'
+          work.mkdir()
+          proof = work / 'proof'
+          proof.mkdir()
+          unused = work / 'unused-python-root'
+          env = dict(os.environ)
+          # Provision an explicit test environment; the separate counterprobe
+          # proves that the driver refuses an injected override before mutation.
+          removed = [k for k in env if k.startswith('CARGO_') or k in {
+              'RUSTFLAGS','RUSTC','RUSTDOC','RUSTC_WRAPPER','RUSTC_WORKSPACE_WRAPPER',
+              'RUSTC_BOOTSTRAP','RUSTDOCFLAGS'}]
+          for k in removed:
+              del env[k]
+          supervisor = sdk.Supervisor(work, proof, unused, env)
+          result = {'schema': 'ami-rust-rc0-native-integration-v1',
+                    'status': 'FAIL', 'claim': 'RC0 design only; not runtime or release acceptance',
+                    'source_commit': subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(),
+                    'source_tree': subprocess.check_output(['git','rev-parse','HEAD^{tree}'], text=True).strip(),
+                    'candidate_commit': os.environ.get('PROBE_CANDIDATE'),
+                    'host': os.environ['PROBE_HOST'], 'started_unix': time.time(),
+                    'cleared_runner_environment_keys': sorted(removed),
+                    'internal_python_orchestration': True, 'commands': []}
+          try:
+              supervisor.run(['bash', str(root / 'tools/rc0-native-probe.sh'), str(work / 'run'),
+                              os.environ['PROBE_HOST']], cwd=root, label='native-cargo', timeout=1200)
+              spec = importlib.util.spec_from_file_location('rc0_audit', root / 'host/elf_audit.py')
+              audit = importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(audit)
+              result['artifacts'] = {}
+              for case in ['root-a', 'root b with spaces']:
+                  executable = work / 'run/evidence' / (case + '-native-elf')
+                  report = audit.audit(executable, 'core')
+                  (proof / (case + '-audit.json')).write_text(json.dumps(report, indent=2) + '\n')
+                  result['artifacts'][case] = {'bytes': executable.stat().st_size, 'sha256': sdk.sha256(executable),
+                                               'independent_elf_audit': report['result']}
+              assert len({r['sha256'] for r in result['artifacts'].values()}) == 1
+              result['status'] = 'PASS_NATIVE_CARGO_DESIGN_ONLY'
+          finally:
+              result['commands'] = supervisor.commands
+              result['elapsed_seconds'] = time.time() - result['started_unix']
+              result['peak_rss_bytes'] = supervisor.peak_rss
+              result['peak_workspace_bytes'] = supervisor.peak_workspace
+              result['limits'] = supervisor.limits
+              (proof / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
+          PY
+      - name: Exercise macOS interpreter and embedded-loader controls
+        if: matrix.profile == 'macos-aarch64'
+        run: |
+          set -euo pipefail
+          python3 -I -B release/ci_python.py --prefix "$RUNNER_TEMP/rc0-control-python" --inputs release/ci-python-inputs.json
+          cli_host="$RUNNER_TEMP/rc0-integration/run/host/toolchain/bin"
+          export RUSTC="$cli_host/rustc" RUSTDOC="$cli_host/rustdoc"
+          export CARGO_HOME="$RUNNER_TEMP/rc0-macos-probe-cargo-home"
+          "$cli_host/cargo" run --release --locked --offline --manifest-path tools/no-python-probe/Cargo.toml -- --observe \
+            --python "$RUNNER_TEMP/rc0-control-python/runtime/python/bin/python3.12" \
+            --report "$RUNNER_TEMP/rc0-integration/run/evidence/macos-enforcement/report.json"
+      - name: Preserve bounded native design results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rc0-native-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/rc0-integration/proof/
+            ${{ runner.temp }}/rc0-integration/logs/
+            ${{ runner.temp }}/rc0-integration/run/evidence/
+          if-no-files-found: error
+          retention-days: 7
+
+  linux-enforcement:
+    name: RC0 Linux no-Python controls
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact enforcement source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            tools/
+            release/ci-bootstrap-inputs.json
+      - name: Install pinned host Rust
+        run: bash tools/bootstrap-host-rust.sh "$RUNNER_TEMP/rc0-linux-host" x86_64-unknown-linux-gnu
+      - name: Build and exercise inherited execution policy
+        run: |
+          set -euo pipefail
+          cli_host="$RUNNER_TEMP/rc0-linux-host/toolchain/bin"
+          export RUSTC="$cli_host/rustc" RUSTDOC="$cli_host/rustdoc"
+          export CARGO_HOME="$RUNNER_TEMP/rc0-linux-cargo-home"
+          export PATH="$cli_host:/usr/bin:/bin"
+          "$cli_host/cargo" test --locked --offline --manifest-path tools/linux-no-python-probe/Cargo.toml
+          "$cli_host/cargo" run --locked --offline --manifest-path tools/linux-no-python-probe/Cargo.toml -- --self-test --output "$RUNNER_TEMP/rc0-linux-no-python"
+      - name: Preserve enforcement control results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rc0-linux-no-python-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/rc0-linux-no-python/
+          if-no-files-found: error
+          retention-days: 7

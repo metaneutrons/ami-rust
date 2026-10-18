@@ -183,7 +183,7 @@ fn compact(bytes: &[u8]) -> Result<Vec<u8>, String> {
 
 fn link(arguments: Vec<OsString>) -> Result<(), String> {
     let collector = selected("AMI_SPIKE_COLLECTOR")?;
-    let native = selected("AMI_SPIKE_NATIVE_OBJECTS")?;
+    let mut native = None;
     let csdk = selected("AMI_SPIKE_CSDK")?;
     let toolchain = selected("AMI_SPIKE_TOOLCHAIN")?;
     let mut output = None;
@@ -195,6 +195,13 @@ fn link(arguments: Vec<OsString>) -> Result<(), String> {
                 return Err("duplicate output".into());
             }
             output = Some(PathBuf::from(iter.next().ok_or("missing output")?));
+        } else if let Some(value) = arg
+            .to_str()
+            .and_then(|s| s.strip_prefix("--ami-native-objects="))
+        {
+            if native.replace(PathBuf::from(value)).is_some() {
+                return Err("duplicate native object selection".into());
+            }
         } else if arg == "-flavor" {
             if iter.next().as_deref() != Some(std::ffi::OsStr::new("gnu")) {
                 return Err("only rust-lld's explicit GNU flavor is supported".into());
@@ -206,6 +213,11 @@ fn link(arguments: Vec<OsString>) -> Result<(), String> {
         }
     }
     let output = output.ok_or("missing -o output")?;
+    let native = match native {
+        Some(path) if path.is_absolute() && path.is_dir() => path,
+        Some(_) => return Err("invalid build-script native object directory".into()),
+        None => selected("AMI_SPIKE_NATIVE_OBJECTS")?,
+    };
     let unstripped = output.with_extension("spike-unstripped");
     let stripped = output.with_extension("spike-stripped");
     let mut command = Command::new(collector);
