@@ -1,54 +1,44 @@
-# ami-rust M2 and independent R1 plan — revision 25
+# ami-rust M2 and independent R1 plan — revision 26
 
-## Current release disposition — revision 25 (2026-10-18)
+**Post-R1 distribution roadmap:** [Distribution channels](distribution-channels-plan.md) plans APT and Homebrew first, then AUR and rustup integration. These are follow-up deliveries, not new R1 acceptance gates; this is planning only.
 
-R1 remains open. The former `v0.1.0` prerelease at publisher source
-`e3d0adbd25aee4ad61a0506f7a451e69955cecba` passed its 32 prepublication
-M1/M2/R1-A1–A7 checks but failed R1-A8. It must not be promoted to stable/latest.
-At Fabian's explicit request, its public release, assets and tag were deleted
-on 2026-10-18. Keep the already retained local historical evidence; no public
-archive release is required. The failed bytes must not become the stable release.
-The earlier prepublication PASS results describe that candidate; they do not
-establish a successful public installation or qualify a corrected release.
+## Current release disposition — revision 26 (2026-10-18)
 
-The public replay exposed two defects: GitHub CLI user-state files were
-mistaken for downloaded proof files, and consumer validation required the
-publisher's host to equal the installation host. The latter also affects the
-verbatim documented preparation command in the frozen publisher source.
-A fixed replay wrapper cannot repair that frozen command while claiming an
-unchanged documented flow. See [release status](release-status.md).
+The corrected `0.1.0` release is R1-qualified and R1-published: all 32 inherited M1/M2 and
+R1-A1–A7 criteria passed independent acceptance. The exact publisher source is
+`b4ebb9cce5decd01616b75acf451d0eba9995ee3`, tree
+`c5d9eed6b057ddadd17356801f8b3897e3e430dc`.
+Protected [SDK run 39121017959](https://github.com/metaneutrons/ami-rust/actions/runs/39121017959)
+and [public consumer run 39143613042](https://github.com/metaneutrons/ami-rust/actions/runs/39143613042),
+both attempt 1, passed on both supported hosts using the same authenticated
+distribution bundle and their own verified host tools.
 
-Fabian explicitly authorised a one-time `0.1.0` version-reuse exception on
-2026-10-18. Correct the source and qualify a fresh source-bound `0.1.0`
-candidate; pin its exact commit, tag and input identities after protected
-merge/source CI. The proposed `0.1.1` version migration is withdrawn. The old
-public candidate has been removed; the corrected release will receive its own
-source, checksums and provenance. Retained local records identify the earlier
-failed bytes. This exception
-authorises version reuse only: no failing result, signature, provenance claim
-or acceptance criterion is waived. See the [exception record](release-version-exception-20261018.md).
-Keep all existing acceptance criteria. Bind publisher run ID,
-attempt, repository, workflow and source to the authenticated release producer;
-validate publisher and consumer host profiles independently. Do not rewrite
-compiler metadata, authentication claims, old receipts or frozen source.
+The corrected [release](https://github.com/metaneutrons/ami-rust/releases/tag/v0.1.0)
+(ID `416548451`) is stable and latest. Anonymous byte/authentication checks
+passed. Fresh public-input AROS runtime and complete memory replay passed
+independent review: all 155 measured cases and both additional checks. R1-A8
+passed independent acceptance; stable promotion and the final two anonymous
+identity reads plus six byte-for-byte downloads completed successfully.
+R1 is closed with GO for the documented supported scope.
+The [release status](release-status.md) and [public evidence summary](evidence/r1-0.1.0.json)
+record measured outcomes and exact acceptance/run/asset identities.
 
-Before exposure, both supported consumer hosts must install/build/uninstall
-from the same authenticated publisher bundle selected for distribution. A pair
-of per-host producer-matched bundles does not establish this universal-package
-requirement. Keep the four clean consumer roots and existing negative,
-metadata, runtime, memory, licence, authenticity and public replay checks.
-Requalify all source-bound release criteria for the corrected candidate;
-historical evidence remains context and byte oracles only.
+Fabian's one-time `0.1.0` version-reuse exception remains narrowly scoped. The
+retired e3 candidate (release ID `416229826`) failed public replay and was deleted
+at his explicit request. Its local evidence remains historical; its bytes and
+acceptance cannot substitute for this corrected b4 candidate. The CLI-state and
+publisher/consumer host fixes were merged through [PR 58](https://github.com/metaneutrons/ami-rust/pull/58).
+See the [version exception](release-version-exception-20261018.md).
 
-The AROS ABI-v1 boot baseline, target SDK scope and realistic memory policy
-remain unchanged. AROS-NX, aros-tools and nxpk remain outside this work.
-Existing 90-minute campaign budgets, fresh-clock rules and local free-space
-policy remain in force. This is a release repair; it does not add SDK features
-or introduce another general application memory ceiling.
+The immutable ABI-v1/QEMU baseline, supported host/SDK scope, memory policy and
+all acceptance criteria remain in force. This revision updates disposition and
+links only. APT/Homebrew/AUR/rustup are separately planned follow-ups; they add
+no R1 release gate. AROS-NX, aros-tools and nxpk remain outside this work.
 
-The [revision 24 plan](m2-r1-plan-rev24.md) is retained verbatim. Dated status
-sections below are historical where this disposition supersedes them.
-
+The [revision 25 plan](m2-r1-plan-rev25.md) is retained verbatim, as is
+[revision 24](m2-r1-plan-rev24.md). Dated qualification-status statements below
+are historical where this disposition supersedes them. Normative acceptance
+criteria retain their full scope.
 
 **Current resource policy — revision 23:** [Memory policy](memory-policy.md)
 is authoritative for the current candidate. There is no fixed per-allocation,
@@ -322,7 +312,7 @@ The minimum delivery comprises target specification, startup/FFI bridge sources,
 - **R1-A5 — documentation and maintenance:** Deliver and execute verbatim installation, clean build and utility-run instructions on both supported hosts. Provide a minimal new-project example, target API reference, unsafe-boundary/task-affinity notes, compiler/SDK compatibility table, panic/OOM semantics, troubleshooting and explicit exclusions (`std`, native compiler, other CPUs/OSes and unqualified hardware). Document host uninstall/restore without deleting unrelated SDKs. A named maintainer owns dependency/security intake and compiler/SDK upgrade qualification; changing qualified inputs requires compatibility evidence before updating the supported matrix, not a floating nightly or an invented support-duration promise.
 - **R1-A6 — independent release integrity:** The SDK/reference-executable artifact set uses hardened binary-release controls independently of M7: commit-pinned build actions, protected publication credentials, asset checksums, signatures, provenance attestations, dependency/SBOM inventory and license/redistribution review for shipped bridge/SDK/runtime/dependencies. A clean-room consumer verifies every declared asset from its recorded producer identity, installs the SDK without package-manager support and runs the utility. A modified archive/executable, missing declared asset or inconsistent manifest fails verification before acceptance. Publisher private keys and local absolute development paths are absent from distributed payloads; reviewer records actual verification identities/results rather than assuming trust from filenames.
 - **R1-A7 — independent acceptance and limits:** A reviewer other than the artifact author maps R1-A1 through R1-A6 and inherited M1/M2 criteria to durable final-candidate evidence, including artifact hashes, host/guest matrices, actual RAM/code-size measurements under the current memory policy and positive/counter-probes. Historical experiment quotas do not reject otherwise valid applications. Include a support statement in the unpublished candidate documentation confined to the qualified PC x86-64 QEMU profile; physical machines require additional evidence before being advertised. Unresolved `nxpk`, repository, GUI or OS-atomicity criteria are listed as outside this release and do not block R1; unresolved SDK ABI, runtime, reproducibility or provenance failures do block it. Mark R1-qualified only when all relevant evidence passes; leave other milestone issues open.
-- **R1-A8 — separately authorised publication:** After explicit publication authorisation, publish the qualified SDK/reference assets and release notes under their own version without a `nxpk` prerequisite. Verify publicly retrieved payload bytes against R1-qualified hashes, signatures/attestations and complete asset manifest, then replay the documented consumer install/build/run from those retrieved assets on both hosts. Failed/incomplete publication must not be promoted as a supported release; preserve or restore the previously usable release channel. Record actual release URL and verification evidence as R1-published separately from R1-qualified. The owner’s conditional authorisation is recorded, but the still-open R1-A6 and R1-A7 gates prevent publication now.
+- **R1-A8 — separately authorised publication:** After explicit publication authorisation, publish the qualified SDK/reference assets and release notes under their own version without a `nxpk` prerequisite. Verify publicly retrieved payload bytes against R1-qualified hashes, signatures/attestations and complete asset manifest, then replay the documented consumer install/build/run from those retrieved assets on both hosts. Failed/incomplete publication must not be promoted as a supported release; preserve or restore the previously usable release channel. Record actual release URL and verification evidence as R1-published separately from R1-qualified. The owner’s conditional authorisation is recorded; the current disposition and evidence above determine whether qualification and public replay have actually passed.
 
 
 Measured hosted capacity, remaining prerequisite blockers and the original resource proposal are recorded in the hosted preparation record (retained development record: `r1-hosted-ci-preparation-20261015.md`). This record does not close R1-A6.

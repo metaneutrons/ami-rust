@@ -5,6 +5,7 @@
 <p align="center">
   <a href="https://github.com/metaneutrons/ami-rust/actions/workflows/ci.yml"><img src="https://github.com/metaneutrons/ami-rust/actions/workflows/ci.yml/badge.svg?branch=main" alt="Source CI"></a>
   <a href="https://github.com/metaneutrons/ami-rust/actions/workflows/sdk-qualify.yml"><img src="https://github.com/metaneutrons/ami-rust/actions/workflows/sdk-qualify.yml/badge.svg?branch=main" alt="SDK qualification workflow"></a>
+  <a href="https://github.com/metaneutrons/ami-rust/releases/latest"><img src="https://img.shields.io/github/v/release/metaneutrons/ami-rust?color=ff825e&amp;style=flat-square" alt="Latest SDK release"></a>
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-7c8cf8?style=flat-square" alt="License: MIT OR Apache-2.0"></a>
   <a href="docs/compatibility.md"><img src="https://img.shields.io/badge/target-AROS%20x86--64%20ABI--v1-ff825e?style=flat-square" alt="Target: AROS x86-64 ABI-v1"></a>
   <a href="docs/api.md"><img src="https://img.shields.io/badge/Rust-no__std%20%2B%20alloc-91b8d6?style=flat-square" alt="Rust: no_std plus alloc"></a>
@@ -25,10 +26,10 @@
 
 ---
 
-> **First release in qualification.** The initial `0.1.0` SDK is being qualified.
-> A green build badge is a workflow result; supported-release status is recorded
-> in the [release status](docs/release-status.md) after the complete public
-> installation and AROS replay checks.
+> **0.1.0 is available.** The first SDK release passed independent macOS/Linux
+> installation and build replay, plus the complete AROS runtime and memory matrix.
+> [Install the SDK](docs/quickstart.md) · [Read the qualification evidence](docs/release-status.md).
+> Runtime support is confined to the documented PC x86-64 ABI-v1 QEMU profile.
 
 ## Modern Rust, native AROS
 
@@ -93,10 +94,13 @@ be installed side by side; uninstall keeps projects and shared prerequisites.
 The SDK contains source and helpers; the Rust compiler, C SDK, native toolchain,
 and vendor inputs are provisioned explicitly by the preparation recipe.
 
+GitHub Releases is the current installation channel. [APT and Homebrew are
+planned next, followed by AUR and rustup integration](docs/distribution-channels-plan.md).
+
 **Host requirements:** macOS 26 on Apple Silicon, or Ubuntu 24.04 on x86-64
 with glibc; an existing Python 3.10+ to bootstrap the pinned interpreter;
-6 GiB physical RAM and 24 GiB free space for preparation. These are the initial
-host profiles under qualification. The [compatibility guide](docs/compatibility.md)
+6 GiB physical RAM and 24 GiB free space for preparation. These are the initially
+qualified host profiles. The [compatibility guide](docs/compatibility.md)
 records the exact inputs and target configuration.
 
 ## Try something useful
@@ -139,6 +143,7 @@ machine's 512 MiB RAM is a test profile. See the [memory policy](docs/memory-pol
 | [Supported hosts and target](docs/compatibility.md) | [Memory and allocation](docs/memory-policy.md) |
 | [Current release status](docs/release-status.md) | [Protected SDK production](docs/hosted-sdk-producer.md) |
 | [Release verification](docs/public-release-replay.md) | [Authoritative release plan](docs/m2-r1-plan.md) |
+| [Distribution roadmap: APT, Homebrew, AUR, rustup](docs/distribution-channels-plan.md) | [Compatibility and limits](docs/compatibility.md) |
 
 ## Contributing
 

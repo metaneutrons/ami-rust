@@ -38,9 +38,19 @@ prepublication passes do not establish R1 completion.
 5. Complete the public two-host consumer replay and the required native replay
    before stable/latest promotion. Verify the final anonymous public downloads.
 
-The final corrected commit and checksums are pending. Removal of the old
-public candidate is complete; corrected qualification and publication remain
-open. This exception does not establish a general permission to
+The corrected release is publisher commit
+`b4ebb9cce5decd01616b75acf451d0eba9995ee3`, tree
+`c5d9eed6b057ddadd17356801f8b3897e3e430dc`, from protected SDK run
+`39121017959/1`. Its public two-host consumer run `39143613042/1` and fresh
+155-case plus two-check native replay passed independent acceptance. Release
+ID `416548451` is now stable/latest. The payload
+`ami-rust-0.1.0-release.tar.xz` has SHA-256
+`f4a8cbc562d3c43c573a5a34ddfa99d74928ded94c47df45f4182fde71567d5c`;
+final anonymous downloads matched all six accepted files. See the
+[public evidence summary](evidence/r1-0.1.0.json).
+
+Removal of the old public candidate and qualification/publication of the
+corrected release are complete. This exception does not establish a general permission to
 replace future released versions, relax any acceptance test, reuse acceptance
 for changed inputs or waive campaign budgets.
 
