@@ -19,11 +19,19 @@ The corrected candidate source is
 Its protected SDK [run 39121017959](https://github.com/metaneutrons/ami-rust/actions/runs/39121017959)
 completed with all nine jobs successful, including both independent consumers
 using the same Linux-authenticated distribution and their own host tools.
-Local artifact recovery remains incomplete: both producer ZIP downloads timed
-out, and the sealed local qualification campaign closed without acceptance.
-Strict local readback, cross-host comparison, independent cryptographic checks,
-a fresh complete native matrix, public installation/replay and stable promotion
-remain open. A successful workflow is not R1 acceptance.
+A separately bounded local recovery has now verified all eight exact workflow
+artifacts, both producer readbacks, four consumer build roots, the inner and
+outer signatures/provenance, and the installation, uninstall and licence
+records. Independent distribution review found no open defect. The original
+failed ZIP-download campaign remains preserved as a failed attempt.
+
+Native qualification remains open. The first current-source attempt completed
+the Linux-produced 48-case phase; the macOS-produced phase captured all 48
+statuses but failed during host-QEMU evidence capture. A complete repeat uses
+fresh evidence paths and controlled process input under the original deadline.
+Neither that partial result nor a successful hosted workflow establishes R1
+acceptance. The full native result, independent acceptance, public installation
+and replay, and stable promotion remain required.
 
 The following records describe the retired candidate and its failed public replay:
 
