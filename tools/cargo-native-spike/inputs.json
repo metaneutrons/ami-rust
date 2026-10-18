@@ -1,0 +1,23 @@
+{
+  "schema": "ami-rust-rc0-cargo-spike-v1",
+  "scope": "Internal feasibility probe only; not a supported linker or accepted SDK",
+  "source_anchor": "8c5de39f26838d838b41dec5a89c9a888dbc20d5",
+  "host_compiler": {
+    "version": "1.98.1",
+    "commit": "48a229ceaefd4985c50990b14116b6d856af0985",
+    "archive_pins": "release/ci-bootstrap-inputs.json#/rust/components",
+    "external_rust_dependencies": 0
+  },
+  "target_input_authority": "docs/compatibility.md",
+  "target_rust_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
+  "cargo_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+  "cargo_patch_sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f",
+  "csdk_spec": "release/portable-csdk/spec.json",
+  "native_objects": "Reuse verified entry.o, startup.o, sdk.o and layout.o from an isolated accepted-reference build; record all hashes per probe",
+  "limits": {
+    "command_seconds": 1200,
+    "campaign_seconds": 5400,
+    "observed_rss_bytes": 4294967296,
+    "generated_workspace_bytes": 12884901888
+  }
+}

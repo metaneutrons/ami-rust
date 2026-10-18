@@ -115,17 +115,106 @@ jobs:
             python3 -I -B "$suite"
           done
 
+  rust-migration-scope:
+    name: Select Rust migration checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      affected: ${{ steps.scope.outputs.affected }}
+    steps:
+      - name: Check out the exact comparison source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/workflows/ci.yml
+      - name: Select affected prototype and pin changes
+        id: scope
+        env:
+          CLI_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          [[ "$CLI_BASE" =~ ^[0-9a-f]{40}$ ]]
+          if [ "$CLI_BASE" = 0000000000000000000000000000000000000000 ]; then
+            printf 'affected=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! git cat-file -e "$CLI_BASE^{commit}"; then
+            git fetch --no-tags --filter=blob:none --depth=1 origin "$CLI_BASE"
+          fi
+          if git diff --quiet "$CLI_BASE" "$GITHUB_SHA" -- tools/ .github/workflows/ci.yml release/ci-bootstrap-inputs.json; then
+            printf 'affected=false\n' >> "$GITHUB_OUTPUT"
+          else
+            cli_diff_status=$?
+            test "$cli_diff_status" = 1
+            printf 'affected=true\n' >> "$GITHUB_OUTPUT"
+          fi
+
+  rust-migration-fixtures:
+    name: Rust migration fixtures (${{ matrix.os }})
+    needs: rust-migration-scope
+    if: needs.rust-migration-scope.outputs.affected == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            triple: x86_64-unknown-linux-gnu
+          - os: macos-26
+            triple: aarch64-apple-darwin
+    steps:
+      - name: Check out isolated Rust migration probes
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            tools/
+            release/ci-bootstrap-inputs.json
+      - name: Install the existing hash-pinned host Rust inputs
+        env:
+          CLI_HOST_TRIPLE: ${{ matrix.triple }}
+        run: bash tools/bootstrap-host-rust.sh "$RUNNER_TEMP/ami-rust-rc0-host" "$CLI_HOST_TRIPLE"
+      - name: Test the standalone Rust prototypes offline
+        run: |
+          set -euo pipefail
+          cli_rust="$RUNNER_TEMP/ami-rust-rc0-host/toolchain/bin"
+          export RUSTC="$cli_rust/rustc"
+          export RUSTDOC="$cli_rust/rustdoc"
+          export CARGO_HOME="$RUNNER_TEMP/ami-rust-rc0-cargo-home"
+          export CARGO_BUILD_JOBS=2
+          export PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin"
+          for cli_probe in cargo-native-spike no-python-probe; do
+            "$cli_rust/cargo" test --locked --offline \
+              --manifest-path "tools/$cli_probe/Cargo.toml" \
+              --target-dir "$RUNNER_TEMP/ami-rust-rc0-$cli_probe"
+          done
+
   ci-success:
     name: CI Success
     if: always()
-    needs: [installer-fixtures, packaging-fixtures]
+    needs: [installer-fixtures, packaging-fixtures, rust-migration-scope, rust-migration-fixtures]
     runs-on: ubuntu-24.04
     steps:
       - name: Require every fixture job to pass
         env:
           INSTALLER_RESULT: ${{ needs.installer-fixtures.result }}
           PACKAGING_RESULT: ${{ needs.packaging-fixtures.result }}
+          RUST_MIGRATION_RESULT: ${{ needs.rust-migration-fixtures.result }}
+          RUST_MIGRATION_SCOPE_RESULT: ${{ needs.rust-migration-scope.result }}
+          RUST_MIGRATION_AFFECTED: ${{ needs.rust-migration-scope.outputs.affected }}
         run: |
           set -euo pipefail
           test "$INSTALLER_RESULT" = success
           test "$PACKAGING_RESULT" = success
+          test "$RUST_MIGRATION_SCOPE_RESULT" = success
+          if [ "$RUST_MIGRATION_AFFECTED" = true ]; then
+            test "$RUST_MIGRATION_RESULT" = success
+          else
+            test "$RUST_MIGRATION_AFFECTED" = false
+            test "$RUST_MIGRATION_RESULT" = skipped
+          fi
