@@ -279,12 +279,18 @@ mod tests {
         let temporary = TempDir::new();
         let name = std::ffi::OsString::from_vec(vec![b'i', b'n', b'p', b'u', b't', 0xff]);
         let file = temporary.path().join(name);
-        fs::write(&file, b"binary-name").expect("write non-UTF-8 fixture");
-
-        assert_eq!(
-            read_regular_bounded(&file, 11).unwrap().as_slice(),
-            &b"binary-name"[..]
-        );
+        // APFS refuses invalid UTF-8 filenames; Linux filesystems may accept
+        // them. Neither case may silently select a lossy-decoded decoy path.
+        let decoy = temporary.path().join("input\u{fffd}");
+        fs::write(&decoy, b"decoy").unwrap();
+        match fs::write(&file, b"binary-name") {
+            Ok(()) => assert_eq!(read_regular_bounded(&file, 11).unwrap(), b"binary-name"),
+            Err(error) if error.raw_os_error() == Some(libc::EILSEQ) => {
+                assert!(read_regular_bounded(&file, 11).is_err());
+            }
+            Err(error) => panic!("cannot create non-UTF-8 fixture: {error}"),
+        }
+        assert_eq!(fs::read(decoy).unwrap(), b"decoy");
     }
 
     #[test]
