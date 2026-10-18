@@ -1,0 +1,469 @@
+{
+  "schema": "ami-rust-legacy-compatibility-fixture-pins-v1",
+  "source_commit": "b16a025a7b3b1d072b1633e1f5cbd4d927fdd80e",
+  "scope": "Frozen legacy consumer/oracle inputs for RC1 differential fixtures; new schema and hostile-input additions are specified by contracts-v1.json. Not a Rust parity result.",
+  "lifecycle": "Python oracle is internal transitional test infrastructure only. At RC4 active copies are removed; this source identity remains inert historical evidence. Never execute old launcher during migration.",
+  "capability_contract": "contracts-v1.json",
+  "files": [
+    {
+      "path": "host/build.py",
+      "sha256": "88839d90b25c8962929501b5c97886c7531b1775c467f510b772b532578684f6",
+      "bytes": 18618,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "host/cli.py",
+      "sha256": "9826874170599d9219f952473718be8fe5658dda4a902b77bfa546c511ee0949",
+      "bytes": 18476,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "host/compact_sections.py",
+      "sha256": "e8f573237eb88227f4267a313246d5badbe47c5c52411ce96be3c73ec602e0cb",
+      "bytes": 2878,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "host/contracts.py",
+      "sha256": "6984a7aaa1fbd22ab01877ed4d8cbf88ba1c0dddf46bbc96ea53bedb46fe0176",
+      "bytes": 8846,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "host/elf_audit.py",
+      "sha256": "fa2cafc555e382129f120ed60f6b99135526942245b5d1316f0195edc2bcb8f2",
+      "bytes": 4312,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "host/test_cli.py",
+      "sha256": "0cee4c398bf81464f6eba38491e0037bc3efca50e751e78bca43a0ffe92ef465",
+      "bytes": 20170,
+      "role": "legacy_oracle_suite",
+      "command": [
+        "python3",
+        "-I",
+        "-B",
+        "host/test_cli.py"
+      ],
+      "cases": [
+        "StandaloneCliTests.test_verify_emits_compact_development_status_without_running_driver",
+        "StandaloneCliTests.test_version_does_not_require_sdk_imports",
+        "StandaloneCliTests.test_build_preserves_opaque_arguments_and_space_paths",
+        "StandaloneCliTests.test_child_status_23_is_returned_exactly",
+        "StandaloneCliTests.test_missing_lock_refuses_before_driver_effect",
+        "StandaloneCliTests.test_nonisolated_invocation_refuses_before_driver_effect",
+        "StandaloneCliTests.test_same_length_helper_tamper_refuses_before_driver_effect",
+        "StandaloneCliTests.test_tampered_contracts_top_level_effect_does_not_execute",
+        "StandaloneCliTests.test_manifest_pins_the_running_cli_source",
+        "StandaloneCliTests.test_same_length_driver_tamper_refuses_before_driver_effect",
+        "StandaloneCliTests.test_unlisted_host_helper_refuses_before_driver_effect",
+        "StandaloneCliTests.test_manifest_hash_tamper_refuses_before_driver_effect",
+        "StandaloneCliTests.test_duplicate_inventory_entry_refuses_before_driver_effect",
+        "StandaloneCliTests.test_unsafe_inventory_path_refuses_before_driver_effect",
+        "StandaloneCliTests.test_bytecode_cache_refuses_before_driver_effect",
+        "StandaloneCliTests.test_tampered_python_identity_refuses_before_driver_effect",
+        "StandaloneCliTests.test_different_correctly_hashed_python_path_refuses",
+        "StandaloneCliTests.test_duplicate_project_lock_key_refuses_before_driver_effect",
+        "StandaloneCliTests.test_symlink_in_host_tree_refuses_before_driver_effect",
+        "StandaloneCliTests.test_existing_output_directory_refuses_before_driver_effect"
+      ]
+    },
+    {
+      "path": "host/test_contracts.py",
+      "sha256": "5541f23e621dd959d57a23e79b728c7edcfd75f5ae26596968c1ccf7fef33e06",
+      "bytes": 21687,
+      "role": "legacy_oracle_suite",
+      "command": [
+        "python3",
+        "-I",
+        "-B",
+        "host/test_contracts.py"
+      ],
+      "cases": [
+        "ContractSelectionTests.test_valid_full_selection_uses_actual_host_and_local_python",
+        "ContractSelectionTests.test_same_length_modified_sdk_file_is_rejected",
+        "ContractSelectionTests.test_same_length_modified_sdk_helper_is_rejected",
+        "ContractSelectionTests.test_same_length_modified_local_python_helper_is_rejected",
+        "ContractSelectionTests.test_same_length_modified_prerequisite_is_rejected",
+        "ContractSelectionTests.test_missing_profile_component_is_rejected",
+        "ContractSelectionTests.test_extra_profile_component_is_rejected",
+        "ContractSelectionTests.test_missing_project_component_is_rejected",
+        "ContractSelectionTests.test_extra_project_component_is_rejected",
+        "ContractSelectionTests.test_cargo_cannot_reuse_rust_component_root",
+        "ContractSelectionTests.test_same_length_modified_cargo_is_rejected",
+        "ContractSelectionTests.test_missing_cargo_file_is_rejected",
+        "ContractSelectionTests.test_non_executable_cargo_is_rejected",
+        "ContractSelectionTests.test_missing_cargo_binary_path_is_rejected",
+        "ContractSelectionTests.test_unsafe_cargo_binary_path_is_rejected",
+        "ContractSelectionTests.test_missing_cargo_metadata_mode_is_rejected",
+        "ContractSelectionTests.test_unknown_cargo_metadata_mode_is_rejected",
+        "ContractSelectionTests.test_missing_component_file_is_rejected",
+        "ContractSelectionTests.test_duplicate_json_key_is_rejected",
+        "ContractSelectionTests.test_duplicate_inventory_file_path_is_rejected",
+        "ContractSelectionTests.test_unsafe_inventory_path_is_rejected",
+        "ContractSelectionTests.test_dot_segment_sdk_symlink_name_is_rejected",
+        "ContractSelectionTests.test_backslash_sdk_symlink_name_is_rejected",
+        "ContractSelectionTests.test_colon_sdk_symlink_name_is_rejected",
+        "ContractSelectionTests.test_escaping_component_symlink_is_rejected",
+        "ContractSelectionTests.test_unexpected_extra_prerequisite_file_is_rejected",
+        "ContractSelectionTests.test_host_profile_mismatch_is_rejected",
+        "ContractSelectionTests.test_malformed_manifest_hash_is_rejected",
+        "ContractSelectionTests.test_missing_cargo_lock_is_rejected_before_output",
+        "ContractSelectionTests.test_target_override_is_rejected_before_output"
+      ]
+    },
+    {
+      "path": "packaging/cli.py",
+      "sha256": "c9ebf03734968a19a6ee9242fdb04a04e314b9da2dbdb682a762b610d81d6378",
+      "bytes": 12918,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "packaging/test_cli.py",
+      "sha256": "7ac683997e3783f54069e0859021ad72a783fc7e5f6170b3480192b482d32343",
+      "bytes": 25076,
+      "role": "legacy_oracle_suite",
+      "command": [
+        "python3",
+        "-I",
+        "-B",
+        "packaging/test_cli.py"
+      ],
+      "cases": [
+        "PackageInventoryTests.test_tiny_complete_package_passes",
+        "PackageInventoryTests.test_changed_bytes_are_rejected",
+        "PackageInventoryTests.test_symlinked_inventory_file_is_rejected",
+        "PackageInventoryTests.test_missing_file_is_rejected",
+        "PackageInventoryTests.test_extra_file_is_rejected",
+        "PackageInventoryTests.test_duplicate_inventory_path_is_rejected",
+        "PackageInventoryTests.test_unsafe_inventory_path_is_rejected",
+        "PackageInventoryTests.test_duplicate_json_key_is_rejected",
+        "HostProfileTests.test_only_macos_26_arm64_and_ubuntu_24_04_x64_are_supported",
+        "HostProfileTests.test_other_architectures_and_os_releases_are_rejected",
+        "StatePathTests.test_fresh_and_private_existing_states_are_accepted",
+        "StatePathTests.test_non_private_state_is_rejected",
+        "StatePathTests.test_existing_and_non_normalized_fresh_paths_are_rejected",
+        "StatePathTests.test_symlink_component_is_rejected",
+        "StatePathTests.test_package_overlap_is_rejected",
+        "StatePathTests.test_state_ancestor_of_retained_package_is_allowed_for_recovery",
+        "AdapterCommandTests.test_new_calls_both_original_sdk_entrypoints_with_exact_arguments",
+        "AdapterCommandTests.test_build_defaults_package_and_forwards_features_after_separator",
+        "AdapterCommandTests.test_build_accepts_explicit_package_before_separator",
+        "AdapterCommandTests.test_check_inputs_calls_the_original_source_verifier",
+        "AdapterCommandTests.test_prepare_calls_pinned_git_and_original_prerequisite_entrypoints",
+        "AdapterCommandTests.test_ready_state_failure_precedes_any_sdk_subprocess",
+        "AdapterCommandTests.test_process_exit_preserves_original_sdk_failure_status",
+        "WorkerProofSetTests.test_incomplete_publisher_subject_set_fails_before_install"
+      ]
+    },
+    {
+      "path": "packaging/worker.py",
+      "sha256": "c345a30b076fbea506700ba42b79a9e701a5130bdbc81ee3ad96c5f5eaa12320",
+      "bytes": 3794,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/candidate_auth.py",
+      "sha256": "78b1f4461dc1a3b46a4cf6408bb3ae8785b018034f91c0d7c51b6f46f28c5e72",
+      "bytes": 45381,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/ci_auth.py",
+      "sha256": "e30c752762ebcca2dba8a0e396d89745868165eed1f7f178140ad900166734a0",
+      "bytes": 47477,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/ci_cargo.py",
+      "sha256": "589a8abc9fc4b0537b4b9646d441413f4eb005288bbc3ea0220f5218ffc18da2",
+      "bytes": 51694,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/ci_csdk.py",
+      "sha256": "14029eeb4123f901c58cce0c3043516186508449da4e8123ab3c081af271b9b6",
+      "bytes": 18002,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/ci_python.py",
+      "sha256": "b25514fbf2f11d5802dc37c2771ef68f15ece3dbd975f40838d0cd70e3cd1fb7",
+      "bytes": 18683,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/ci_sdk.py",
+      "sha256": "873ec820c1bb30b3751854b5526741f5d679fd9577c8964dab462ec559e6aee1",
+      "bytes": 117064,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/ci_verify.py",
+      "sha256": "da40cdbcd4cc48fb8f5dc9d443acfd57d010ffa53d2179f985294c07a9c342dd",
+      "bytes": 115445,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/consumer_inputs.py",
+      "sha256": "4e432600743f900732166e562f66276bceae05b1c5f04c885cdf07b71624def7",
+      "bytes": 3820,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/contract_probes.py",
+      "sha256": "119f2044cacd449d87ed6e8b71afe75e5f622b59f59319b95c950d81347d3ed8",
+      "bytes": 30518,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/install.py",
+      "sha256": "0e77fa70bcaa69d08de3102e18c102a063b276c654242e676dd20fab6d74e984",
+      "bytes": 63529,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/install_publisher.py",
+      "sha256": "aacb2fa2c00045af9e01bdeb30782d3c04dd853a6822a538ca674043b98751fc",
+      "bytes": 11456,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/new_project.py",
+      "sha256": "7168138e40a803e9f674fabc8673176a0ab3ef6343a58ac6d6dacd3985c10470",
+      "bytes": 9179,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/prepare_sdk.py",
+      "sha256": "f92e14a111f194737cebd50a095a88acf0f7f085ef692ea567375786e968163e",
+      "bytes": 48795,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/public_candidate.py",
+      "sha256": "f7b833619d8bae4de4427b14d3cb0cb1e4300953c47d531d7326f6cf24093b5e",
+      "bytes": 29255,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/public_replay.py",
+      "sha256": "7c3f12f9ec1716103f304edc659c0d2fdb785531bf6acce2d3e57bdc0434e7fe",
+      "bytes": 69547,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/public_transport.py",
+      "sha256": "1e89733da554a12c6484f0e2c1a83172e6aa5ad9acb2b3167c331941a2fd78d7",
+      "bytes": 26101,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/selection_probes.py",
+      "sha256": "4585d7e956159e41c5c531c7c20111bdd2c0e1ea67aaca4c97cbc68a39012c43",
+      "bytes": 30362,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/stage_candidate.py",
+      "sha256": "5ac701c524bb6d7beeb525768fffd6c9749af3b6bd9d335ed10ec42aa4137bae",
+      "bytes": 24215,
+      "role": "legacy_consumer"
+    },
+    {
+      "path": "release/test_consumer_inputs.py",
+      "sha256": "6037fc1cbbf5cf367122d6dd9d35ef04e416703029380660339712c895a7d559",
+      "bytes": 8953,
+      "role": "legacy_oracle_suite",
+      "command": [
+        "python3",
+        "-I",
+        "-B",
+        "release/test_consumer_inputs.py"
+      ],
+      "cases": [
+        "ConsumerInputProvisioningTests.test_returns_exact_six_roots_and_full_inventories_in_order",
+        "ConsumerInputProvisioningTests.test_existing_component_staging_fails_before_provider_calls",
+        "ConsumerInputProvisioningTests.test_corrupted_component_fails_inventory_without_success_report"
+      ]
+    },
+    {
+      "path": "release/test_contract_probes.py",
+      "sha256": "03f3d4d04d7f425eaa56f1a4946f9f032ae5495037d65cd4c732b22b42c88e76",
+      "bytes": 20465,
+      "role": "legacy_oracle_suite",
+      "command": [
+        "python3",
+        "-I",
+        "-B",
+        "release/test_contract_probes.py"
+      ],
+      "cases": [
+        "CompileContractProbeTests.test_standalone_compile_fail_manifest_has_explicit_license_and_loads_in_cargo",
+        "CompileContractProbeTests.test_valid_eight_case_pass_binds_flags_and_restores_environment",
+        "CompileContractProbeTests.test_positive_fixture_failure_refuses",
+        "CompileContractProbeTests.test_negative_unexpected_success_refuses",
+        "CompileContractProbeTests.test_negative_wrong_diagnostic_refuses",
+        "CompileContractProbeTests.test_supervisor_stop_is_not_an_accepted_negative",
+        "CompileContractProbeTests.test_selected_root_mutation_refuses_before_any_command",
+        "CompileContractProbeTests.test_candidate_input_mutation_during_probe_refuses",
+        "CompileContractProbeTests.test_cleanup_refuses_symlink_cache_without_touching_target"
+      ]
+    },
+    {
+      "path": "release/test_install.py",
+      "sha256": "379ba1ab0f3795dd880c17ec46705bf976da9b21bc9a57f7884c573e73bcd64c",
+      "bytes": 30191,
+      "role": "legacy_oracle_suite",
+      "command": [
+        "python3",
+        "-I",
+        "-B",
+        "release/test_install.py"
+      ],
+      "cases": [
+        "InstallerFixture.test_valid_signature_verifies_without_installing_and_disclaims_provenance",
+        "InstallerFixture.test_install_then_uninstall_removes_only_owned_tree",
+        "InstallerFixture.test_wrong_trusted_public_key_is_rejected",
+        "InstallerFixture.test_changed_manifest_without_resigning_is_rejected_before_install",
+        "InstallerFixture.test_changed_archive_asset_is_rejected_before_extraction",
+        "InstallerFixture.test_missing_or_unlisted_bundle_asset_is_rejected",
+        "InstallerFixture.test_duplicate_manifest_json_key_is_rejected_even_when_signed",
+        "InstallerFixture.test_archive_rejects_unsafe_paths_and_nonregular_members",
+        "InstallerFixture.test_archive_rejects_sdk_manifest_hash_and_member_identity_mismatch",
+        "InstallerFixture.test_failed_candidate_install_leaves_prior_version_unchanged",
+        "InstallerFixture.test_modified_native_executable_is_rejected_before_install",
+        "InstallerFixture.test_unsafe_trust_permissions_are_rejected",
+        "InstallerFixture.test_signed_inner_and_outer_manifest_inconsistency_is_rejected",
+        "InstallerFixture.test_unsafe_verifier_permissions_are_rejected",
+        "InstallerFixture.test_real_signal_during_staging_preserves_previous_installation",
+        "InstallerFixture.test_existing_prefix_is_refused_without_mutation",
+        "InstallerFixture.test_modified_installed_file_refuses_uninstall",
+        "InstallerFixture.test_extra_user_file_refuses_uninstall",
+        "InstallerFixture.test_symlink_in_installation_refuses_uninstall",
+        "InstallerFixture.test_wrong_external_receipt_pin_refuses_uninstall",
+        "InstallerFixture.test_receipt_pin_must_be_fresh_and_outside_prefix",
+        "InstallerFixture.test_isolated_python_ignores_ambient_sitecustomize"
+      ]
+    },
+    {
+      "path": "release/test_install_publisher.py",
+      "sha256": "b72457f2a8333eea37f132b78f5dbee535a80f6e4d6026df13732099bac11f1e",
+      "bytes": 12198,
+      "role": "legacy_oracle_suite",
+      "command": [
+        "python3",
+        "-I",
+        "-B",
+        "release/test_install_publisher.py"
+      ],
+      "cases": [
+        "ProductionInstallerAdapterTests.test_synthetic_adapter_installs_retains_report_and_uninstalls_atomically",
+        "ProductionInstallerAdapterTests.test_production_install_cli_returns_the_verified_host",
+        "ProductionInstallerAdapterTests.test_modified_asset_is_rejected_after_synthetic_verifier",
+        "ProductionInstallerAdapterTests.test_legacy_manifest_path_rejects_nonqualification_candidate",
+        "ProductionInstallerAdapterTests.test_policy_and_pinned_trust_must_be_external_to_bundle",
+        "ProductionInstallerAdapterTests.test_receipt_rejects_report_manifest_or_source_identity_drift"
+      ]
+    },
+    {
+      "path": "release/test_prepare_sdk.py",
+      "sha256": "cd879c0928e7d3728771655eeb1c2276b0330ad8499b2e0041a3979e1231ad6c",
+      "bytes": 36410,
+      "role": "legacy_oracle_suite",
+      "command": [
+        "python3",
+        "-I",
+        "-B",
+        "release/test_prepare_sdk.py"
+      ],
+      "cases": [
+        "PrepareSdkTests.test_portable_path_contract",
+        "PrepareSdkTests.test_production_candidate_removes_only_path_dependent_installer_records",
+        "PrepareSdkTests.test_counterfeit_portable_csdk_candidate_pin_is_rejected",
+        "PrepareSdkTests.test_portable_csdk_original_must_match_both_frozen_template_profiles",
+        "PrepareSdkTests.test_portable_csdk_rejects_malformed_candidate_profile_inventories",
+        "PrepareSdkTests.test_portable_rust_profile_refuses_missing_or_duplicate_admin_records",
+        "PrepareSdkTests.test_deterministic_complete_94_member_archive_and_metadata_only_cargo",
+        "PrepareSdkTests.test_committed_source_byte_change_outside_inventory_is_rejected",
+        "PrepareSdkTests.test_malformed_host_receipt_is_rejected",
+        "PrepareSdkTests.test_malformed_duplicate_profile_is_rejected",
+        "PrepareSdkTests.test_sealed_runtime_budgets_cannot_drift_in_extra_or_template",
+        "PrepareSdkTests.test_helper_change_without_updated_normative_pin_is_rejected",
+        "PrepareSdkTests.test_success_receipt_cannot_hide_overbudget_or_failed_command"
+      ]
+    },
+    {
+      "path": "release/test_selection_probes.py",
+      "sha256": "0a8fc9e8779d005351e9c27403244c903a36b38375a22b4955df524dc37fd70b",
+      "bytes": 14915,
+      "role": "legacy_oracle_suite",
+      "command": [
+        "python3",
+        "-I",
+        "-B",
+        "release/test_selection_probes.py"
+      ],
+      "cases": [
+        "SelectionProbeTests.test_real_cli_accepts_full_fixture_then_refuses_each_isolated_mutation",
+        "SelectionProbeTests.test_supervisor_success_cannot_be_counted_as_expected_negative",
+        "SelectionProbeTests.test_stopped_or_wrong_diagnostic_negative_is_not_accepted",
+        "SelectionProbeTests.test_sentinel_hashes_detect_mutation"
+      ]
+    },
+    {
+      "path": "release/test_verify_publisher.py",
+      "sha256": "29b2e773adf3959401537bd68113ab9a9354c662ec2d7312c75d532e34d6c4a1",
+      "bytes": 18825,
+      "role": "legacy_oracle_suite",
+      "command": [
+        "python3",
+        "-I",
+        "-B",
+        "release/test_verify_publisher.py"
+      ],
+      "cases": [
+        "PublisherVerificationAdapterTests.test_nonfinite_json_constants_and_overflow_refused",
+        "PublisherVerificationAdapterTests.test_accepts_exact_synthetic_policy_and_separates_direct_subjects",
+        "PublisherVerificationAdapterTests.test_requires_exact_github_and_publisher_parameters_and_standard_run_metadata",
+        "PublisherVerificationAdapterTests.test_rejects_old_private_input_commit_policy",
+        "PublisherVerificationAdapterTests.test_rejects_wrong_signed_source_dependency",
+        "PublisherVerificationAdapterTests.test_rejects_changed_input_manifest_before_tool_use",
+        "PublisherVerificationAdapterTests.test_rejects_signed_material_set_mismatch",
+        "PublisherVerificationAdapterTests.test_rejects_non_hosted_runner_claim",
+        "PublisherVerificationAdapterTests.test_rejects_wrong_signed_release_environment_claim",
+        "PublisherVerificationAdapterTests.test_rejects_extra_payload_even_when_unlisted",
+        "PublisherVerificationAdapterTests.test_rejects_payload_digest_change_before_tool_use",
+        "PublisherVerificationAdapterTests.test_rejects_duplicate_authentication_json_keys",
+        "PublisherVerificationAdapterTests.test_rejects_qualification_only_manifest",
+        "PublisherVerificationAdapterTests.test_rejects_wrong_tool_pin"
+      ]
+    },
+    {
+      "path": "release/verify_publisher.py",
+      "sha256": "446e3557d17bc8dfe1c145c948a37361b04e188ed5b9f15539e264d3e9221174",
+      "bytes": 34988,
+      "role": "legacy_consumer"
+    }
+  ],
+  "observations": [
+    {
+      "host": "macos-aarch64",
+      "commands": [
+        "host/test_contracts.py",
+        "host/test_cli.py"
+      ],
+      "test_counts": [
+        30,
+        20
+      ],
+      "status": "PASS",
+      "date": "2026-10-19"
+    },
+    {
+      "coverage": "Existing installer, publisher and package suites passed unchanged in CI run39170474191 on Linux and macOS; host/test_cli and host/test_contracts were not run by that workflow.",
+      "run": "https://github.com/metaneutrons/ami-rust/actions/runs/39170474191"
+    }
+  ]
+}

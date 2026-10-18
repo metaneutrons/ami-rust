@@ -1,0 +1,47 @@
+{
+  "path": "/home/runner/work/_temp/rc0-integration/run/evidence/root b with spaces-native-elf",
+  "sha256": "f43ba62f560fbca46f11486a95c433cabba83a24ba52bd8ed130cfa025524acd",
+  "file_bytes": 342136,
+  "variant": "core",
+  "code_ro_bytes": 162154,
+  "writable_bss_bytes": 3720,
+  "allocated_static_bytes": 165874,
+  "static_owned_estimate_bytes": 296946,
+  "entry": {
+    "name": "__startup_entry",
+    "info": 18,
+    "other": 0,
+    "section": 1,
+    "value": 0,
+    "size": 17
+  },
+  "relocation_types": {
+    "1": 2571,
+    "2": 108,
+    "10": 28,
+    "4": 43,
+    "11": 4,
+    "24": 1
+  },
+  "strong_undefined": [],
+  "limits": {
+    "file": 1048576,
+    "code_ro": 524288,
+    "static_owned": 33554432
+  },
+  "limits_are_product_constraints": false,
+  "limits_scope": "reference-test-thresholds",
+  "reference_status": {
+    "within_reference_limits": true,
+    "observations": {
+      "file": "within-reference-threshold",
+      "code_ro": "within-reference-threshold",
+      "static_owned": "within-reference-threshold"
+    }
+  },
+  "result": "PASS",
+  "allocated_section_count": 526,
+  "relocation_count": 2755,
+  "raw_report_sha256": "0dc3962d220ca329c41c247ddf9af13ba5e38237a17ff8e81ba84d8fc903c075",
+  "publication": "Summary omits detailed section/relocation tables; full raw report and artifact retained by the indexed digest."
+}

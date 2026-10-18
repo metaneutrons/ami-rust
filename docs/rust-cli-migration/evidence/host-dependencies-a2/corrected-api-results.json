@@ -1,0 +1,60 @@
+{
+  "schema": "ami-rust-host-api-corrected-probe-v1",
+  "source_commit_base": "b16a025a7b3b1d072b1633e1f5cbd4d927fdd80e",
+  "source_status": "Candidate file hashes below; included in the same reviewed PR",
+  "inputs": {
+    "tools/host-contract-deps/src/lib.rs": "7ba18fd6bf6d9ddef52ff52af207c2dcb5ee2eb9e29a90542ef78e728b3a0ebc",
+    "tools/host-contract-deps/Cargo.toml": "0bcae12a8f2955b83833bc23a4d5b14bab2195af52aa9f79f8e841ed54221aea",
+    "tools/host-contract-deps/Cargo.lock": "cc3ac7771a692dc1c2b154ad6962285209b4d7b1eeb5c918d98ece8ac7aeee66"
+  },
+  "scope": "TAR effective size and bounded extension/trailing input regression fixtures; no extraction/installer acceptance",
+  "commands": [
+    {
+      "argv": [
+        "cargo +1.98.1",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "tools/host-contract-deps/Cargo.toml"
+      ],
+      "exit_code": 0,
+      "seconds": 5.353
+    },
+    {
+      "argv": [
+        "cargo +1.98.1",
+        "fmt",
+        "--manifest-path",
+        "tools/host-contract-deps/Cargo.toml",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "seconds": 0.078
+    },
+    {
+      "argv": [
+        "cargo +1.98.1",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--all-targets",
+        "--manifest-path",
+        "tools/host-contract-deps/Cargo.toml",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "seconds": 2.045
+    }
+  ],
+  "test_result": {
+    "passed": 13,
+    "failed": 0,
+    "coverage": "Original nine API controls plus effective PAX size conflicts, oversized extension records and trailing decoded TAR bytes"
+  },
+  "original_result_sha256": "4dd96c6ab79f46ebb6fda06f67d8528b8142080b9582f8315e0bf9b9acc1ba70",
+  "publication_transform": "Host compiler path expressed as selected Cargo1.98.1; raw command/output records remain retained."
+}

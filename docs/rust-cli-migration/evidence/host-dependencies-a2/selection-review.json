@@ -1,0 +1,202 @@
+{
+  "schema": "ami-rust-host-dependency-selection-review-v1",
+  "date": "2026-10-19",
+  "status": "DEPENDENCY_SOURCE_LICENSE_SELECTION_APPROVED_PENDING_HOST_QUALIFICATION",
+  "lock_sha256": "cc3ac7771a692dc1c2b154ad6962285209b4d7b1eeb5c918d98ece8ac7aeee66",
+  "registry_packages": 29,
+  "license_files_verified": 61,
+  "method": "Primary and independent source review: exact Cargo.toml expressions, recorded license file sizes/digests and selected build-script call sites. Known RustSec advisory scan has zero findings against the separately pinned database.",
+  "obligations": [
+    "Retain upstream copyright notices and the applicable complete license texts in source obligations and new binary distributions.",
+    "Include Unicode License V3 for unicode-ident in addition to the selected MIT permission.",
+    "Preserve Apache notices and identify modifications when applicable; no missing upstream NOTICE file was found.",
+    "The historic dependency-review.json records the earlier in-progress stage and remains unchanged; this later decision supersedes only that stage."
+  ],
+  "packages": [
+    {
+      "name": "adler2",
+      "version": "2.0.1",
+      "selected_permission": "MIT",
+      "license_file_count": 3
+    },
+    {
+      "name": "block-buffer",
+      "version": "0.12.1",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "cfg-if",
+      "version": "1.0.5",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "const-oid",
+      "version": "0.10.2",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "cpufeatures",
+      "version": "0.3.1",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "crc32fast",
+      "version": "1.5.2",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "crypto-common",
+      "version": "0.2.2",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "digest",
+      "version": "0.11.3",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "filetime",
+      "version": "0.2.29",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "flate2",
+      "version": "1.1.10",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "hybrid-array",
+      "version": "0.4.15",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "itoa",
+      "version": "1.0.18",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "libc",
+      "version": "0.2.191",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "lzma-rust2",
+      "version": "0.22.0",
+      "selected_permission": "Apache-2.0",
+      "license_file_count": 1
+    },
+    {
+      "name": "memchr",
+      "version": "2.8.3",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "miniz_oxide",
+      "version": "0.9.1",
+      "selected_permission": "MIT",
+      "license_file_count": 4
+    },
+    {
+      "name": "proc-macro2",
+      "version": "1.0.107",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "quote",
+      "version": "1.0.47",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "ryu",
+      "version": "1.0.23",
+      "selected_permission": "Apache-2.0",
+      "license_file_count": 2
+    },
+    {
+      "name": "serde",
+      "version": "1.0.228",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "serde_core",
+      "version": "1.0.228",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "serde_derive",
+      "version": "1.0.228",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "serde_json",
+      "version": "1.0.145",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "sha2",
+      "version": "0.11.1",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "simd-adler32",
+      "version": "0.3.10",
+      "selected_permission": "MIT",
+      "license_file_count": 1
+    },
+    {
+      "name": "syn",
+      "version": "2.0.119",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "tar",
+      "version": "0.4.46",
+      "selected_permission": "MIT",
+      "license_file_count": 2
+    },
+    {
+      "name": "typenum",
+      "version": "1.20.1",
+      "selected_permission": "MIT",
+      "license_file_count": 3
+    },
+    {
+      "name": "unicode-ident",
+      "version": "1.0.27",
+      "selected_permission": "MIT AND Unicode-3.0",
+      "license_file_count": 3
+    }
+  ],
+  "api_review": {
+    "tar": "Effective PAX size and whole decoded-input cap fixes are required before adoption. Crate selection remains approved.",
+    "compression": "Full-input/concatenated-stream behavior must be frozen and tested before production use under RC1.",
+    "json": "Recursive duplicate rejection is suitable; production byte/depth/schema limits remain required."
+  },
+  "not_accepted": [
+    "Linux build/test until native CI completes",
+    "Production extraction, installation, trust or receipt behavior",
+    "RC0 milestone as a whole",
+    "Any new SDK/release"
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "schema": "ami-rust-rc0-native-integration-v1",
+  "status": "PASS_NATIVE_CARGO_DESIGN_ONLY",
+  "claim": "RC0 design only; not runtime or release acceptance",
+  "source_commit": "25e2be0c110236f4309076312d59a765cf5fe859",
+  "source_tree": "77c788ebc139b1366d18d01778beff5e80524277",
+  "candidate_commit": "5a1ad03bd50cdf0484c32efea03dfa614024c838",
+  "host": "linux-x86_64",
+  "started_unix": 1792360963.286774,
+  "cleared_runner_environment_keys": [],
+  "internal_python_orchestration": true,
+  "commands": [
+    {
+      "label": "native-cargo",
+      "exit_code": 0,
+      "stop_reason": null,
+      "elapsed_seconds": 139.156,
+      "rss_peak_observed_bytes": 1834442752,
+      "managed_peak_observed_bytes": 4382713573,
+      "log_peak_observed_bytes": 3551124,
+      "stdout_log": "logs/native-cargo.stdout.log",
+      "stderr_log": "logs/native-cargo.stderr.log"
+    }
+  ],
+  "artifacts": {
+    "root-a": {
+      "bytes": 342136,
+      "sha256": "f43ba62f560fbca46f11486a95c433cabba83a24ba52bd8ed130cfa025524acd",
+      "independent_elf_audit": "PASS"
+    },
+    "root b with spaces": {
+      "bytes": 342136,
+      "sha256": "f43ba62f560fbca46f11486a95c433cabba83a24ba52bd8ed130cfa025524acd",
+      "independent_elf_audit": "PASS"
+    }
+  },
+  "elapsed_seconds": 139.32219052314758,
+  "peak_rss_bytes": 1834442752,
+  "peak_workspace_bytes": 4382713573,
+  "limits": {
+    "rss_bytes": 4294967296,
+    "workspace_bytes": 12884901888,
+    "log_bytes": 16777216,
+    "seconds": 1200
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "database": {
+    "advisory-count": 1338,
+    "last-commit": "999ec89d5d3f10f20be14750ec8c2d8b44e0ac9b",
+    "last-updated": "2026-10-17T17:23:59+02:00"
+  },
+  "lockfile": {
+    "dependency-count": 30
+  },
+  "settings": {
+    "target_arch": [],
+    "target_os": [],
+    "severity": null,
+    "ignore": [],
+    "informational_warnings": [
+      "unmaintained",
+      "unsound",
+      "notice"
+    ]
+  },
+  "vulnerabilities": {
+    "found": false,
+    "count": 0,
+    "list": []
+  },
+  "warnings": {},
+  "local_database_provenance": {
+    "verification": "git rev-parse HEAD and git log -1 --format=%cI",
+    "no_fetch": true,
+    "note": "cargo-audit 0.22.2 --no-fetch JSON omits last-commit and last-updated; these two fields were filled from the specified local advisory-db checkout after the audit."
+  }
+}

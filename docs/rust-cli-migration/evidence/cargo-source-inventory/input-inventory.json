@@ -1,0 +1,3676 @@
+{
+  "schema": "ami-rust-cargo-bootstrap-source-inputs-v1",
+  "cargo_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+  "cargo_lock_sha256": "b4ccfa53ccf8d7360c0359c1533d801759629f9cdd486d9a0a88e512717058d9",
+  "source_patch_sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f",
+  "registry_packages": 523,
+  "exact_lock_checksum_matches": 523,
+  "downloaded_archive_count": 130,
+  "downloaded_archive_bytes": 26262874,
+  "downloaded_archive_max_bytes": 7195821,
+  "all_archive_bytes": 81009371,
+  "all_archive_max_bytes": 7195821,
+  "packages": [
+    {
+      "name": "adler2",
+      "version": "2.0.1",
+      "checksum": "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa",
+      "bytes": 13366,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "aho-corasick",
+      "version": "1.1.4",
+      "checksum": "ddd31a130427c27518df266943a5308ed92d4b226cc639f5a8f1002816174301",
+      "bytes": 184015,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "alloca",
+      "version": "0.4.0",
+      "checksum": "e5a7d05ea6aea7e9e64d25b9156ba2fee3fdd659e34e41063cd2fc7cd020d7f4",
+      "bytes": 4257,
+      "origin": "downloaded"
+    },
+    {
+      "name": "allocator-api2",
+      "version": "0.2.21",
+      "checksum": "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923",
+      "bytes": 63622,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "android_system_properties",
+      "version": "0.1.5",
+      "checksum": "819e7219dbd41043ac279b19830f2efc897156490d7fd6ea916720117ee66311",
+      "bytes": 5243,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "anes",
+      "version": "0.1.6",
+      "checksum": "4b46cbb362ab8752921c97e041f5e366ee6297bd428a31275b9fcf1e380f7299",
+      "bytes": 23857,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "annotate-snippets",
+      "version": "0.12.16",
+      "checksum": "f211a51805bc641f3ad5b7664c77d2547af685cc33b4cd8d31964027a46f13f1",
+      "bytes": 56108,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "anstream",
+      "version": "1.0.0",
+      "checksum": "824a212faf96e9acacdbd09febd34438f8f711fb84e09a8916013cd7815ca28d",
+      "bytes": 28916,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "anstyle",
+      "version": "1.0.14",
+      "checksum": "940b3a0ca603d1eade50a4846a2afffd5ef57a9feac2c0e2ec2e14f9ead76000",
+      "bytes": 17787,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "anstyle-hyperlink",
+      "version": "1.0.2",
+      "checksum": "7a14cad0fa1d1fb02de486a95ea7fd8dd28567b82f65b4ca34bffa7da81823e4",
+      "bytes": 13503,
+      "origin": "downloaded"
+    },
+    {
+      "name": "anstyle-lossy",
+      "version": "1.1.5",
+      "checksum": "d9ca7d0f520afcd6d817970d0b2d5fd7c630c75e7783cae046b8b8a783c5befa",
+      "bytes": 10261,
+      "origin": "downloaded"
+    },
+    {
+      "name": "anstyle-parse",
+      "version": "1.0.0",
+      "checksum": "52ce7f38b242319f7cabaa6813055467063ecdc9d355bbb4ce0c68908cd8130e",
+      "bytes": 22042,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "anstyle-progress",
+      "version": "0.1.0",
+      "checksum": "ee65f3323c89eac2de51015f125682e9a88c3bf7a10d0c39b3768ff6af654ff7",
+      "bytes": 10874,
+      "origin": "downloaded"
+    },
+    {
+      "name": "anstyle-query",
+      "version": "1.1.5",
+      "checksum": "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc",
+      "bytes": 10264,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "anstyle-svg",
+      "version": "1.1.0",
+      "checksum": "db7ec5fa88fc0837393f6b110b0764aeb0a673952bc91300628641dd0fffbf85",
+      "bytes": 19265,
+      "origin": "downloaded"
+    },
+    {
+      "name": "anstyle-wincon",
+      "version": "3.0.11",
+      "checksum": "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d",
+      "bytes": 12638,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "anyhow",
+      "version": "1.0.103",
+      "checksum": "2a4385e2e34eb35d6b3efe798b9eb88096925d87726c0798709bf56d9ed84af3",
+      "bytes": 48746,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "arc-swap",
+      "version": "1.9.2",
+      "checksum": "c049c0be4daef0b145cb3555416b3b8ef5b7888a38aea1a3a155801fe7b0810b",
+      "bytes": 81495,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "arrayref",
+      "version": "0.3.9",
+      "checksum": "76a2e8124351fda1ef8aaaa3bbd7ebbcb486bbcd4225aca0aa0d84bb2db8fecb",
+      "bytes": 9186,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "arrayvec",
+      "version": "0.7.7",
+      "checksum": "f02882884d3e1bc524fb12c79f107f6ad0e1cfd498c536ffb494301740995dfe",
+      "bytes": 33192,
+      "origin": "downloaded"
+    },
+    {
+      "name": "async-trait",
+      "version": "0.1.89",
+      "checksum": "9035ad2d096bed7955a320ee7e2230574d28fd3c3a0f186cbea1ff3c7eed5dbb",
+      "bytes": 32171,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "atomic-waker",
+      "version": "1.1.2",
+      "checksum": "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0",
+      "bytes": 12422,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "autocfg",
+      "version": "1.5.1",
+      "checksum": "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53",
+      "bytes": 18911,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "base16ct",
+      "version": "0.2.0",
+      "checksum": "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf",
+      "bytes": 10240,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "base64",
+      "version": "0.22.1",
+      "checksum": "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6",
+      "bytes": 81597,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "base64ct",
+      "version": "1.8.3",
+      "checksum": "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06",
+      "bytes": 32227,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "bit-set",
+      "version": "0.8.0",
+      "checksum": "08807e080ed7f9d5433fa9b275196cfc35414f66a0c79d864dc51a0d825231a3",
+      "bytes": 16289,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "bit-vec",
+      "version": "0.8.0",
+      "checksum": "5e764a1d40d510daf35e07be9eb06e75770908c27d411ee6c92109c9840eaaf7",
+      "bytes": 24132,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "bitflags",
+      "version": "1.3.2",
+      "checksum": "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a",
+      "bytes": 23021,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "bitflags",
+      "version": "2.13.0",
+      "checksum": "b4388bee8683e3d04af747c73422af53102d2bd24d9eadb6cbc100baef4b43f8",
+      "bytes": 51280,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "bitmaps",
+      "version": "2.1.0",
+      "checksum": "031043d04099746d8db04daf1fa424b2bc8bd69d92b25962dcde24da39ab64a2",
+      "bytes": 16717,
+      "origin": "downloaded"
+    },
+    {
+      "name": "blake3",
+      "version": "1.8.5",
+      "checksum": "0aa83c34e62843d924f905e0f5c866eb1dd6545fc4d719e803d9ba6030371fce",
+      "bytes": 209089,
+      "origin": "downloaded"
+    },
+    {
+      "name": "block-buffer",
+      "version": "0.10.4",
+      "checksum": "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71",
+      "bytes": 10538,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "block-buffer",
+      "version": "0.12.1",
+      "checksum": "d2f6c7dbe95a6ed67ad9f18e57daf93a2f034c524b99fd2b76d18fdfeb6660aa",
+      "bytes": 15902,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "block2",
+      "version": "0.6.2",
+      "checksum": "cdeb9d870516001442e364c5220d3574d2da8dc765554b4a617230d33fa58ef5",
+      "bytes": 34505,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "bstr",
+      "version": "1.12.3",
+      "checksum": "5cee35f73844aa3014bb606320a6c1f010249dbdf43342fe54b5a4f6a8ed4b79",
+      "bytes": 355150,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "bumpalo",
+      "version": "3.20.3",
+      "checksum": "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649",
+      "bytes": 98671,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "byteorder",
+      "version": "1.5.0",
+      "checksum": "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b",
+      "bytes": 23288,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "bytes",
+      "version": "1.12.0",
+      "checksum": "8ae3f5d315924270530207e2a68396c3cc547f6dca3fbdca317cfb1a51edb593",
+      "bytes": 75441,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "camino",
+      "version": "1.2.4",
+      "checksum": "5f2d30e4173c4026932d51d31d6b0613b1fd3014bf3f9f8943d4ba139c437ba0",
+      "bytes": 43631,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "cargo-platform",
+      "version": "0.3.3",
+      "checksum": "dd0061da739915fae12ea00e16397555ed4371a6bb285431aab930f61b0aa4ba",
+      "bytes": 13489,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "cargo_metadata",
+      "version": "0.23.1",
+      "checksum": "ef987d17b0a113becdd19d3d0022d04d7ef41f9efe4f3fb63ac44ba61df3ade9",
+      "bytes": 30497,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "cast",
+      "version": "0.3.0",
+      "checksum": "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5",
+      "bytes": 11452,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "cc",
+      "version": "1.2.65",
+      "checksum": "e228eec9be7c17ccb640b59b36a5cd805ea2a564a4c5e162c2f659fea30d3b96",
+      "bytes": 95435,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "cfg-if",
+      "version": "1.0.4",
+      "checksum": "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801",
+      "bytes": 9360,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "cfg_aliases",
+      "version": "0.2.2",
+      "checksum": "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527",
+      "bytes": 6527,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "chacha20",
+      "version": "0.10.1",
+      "checksum": "d524456ba66e72eb8b115ff89e01e497f8e6d11d78b70b1aa13c0fbd97540a81",
+      "bytes": 38187,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ciborium",
+      "version": "0.2.2",
+      "checksum": "42e69ffd6f0917f5c029256a24d0161db17cea3997d185db0d35926308770f0e",
+      "bytes": 35611,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ciborium-io",
+      "version": "0.2.2",
+      "checksum": "05afea1e0a06c9be33d539b876f1ce3692f4afea2cb41f740e7743225ed1c757",
+      "bytes": 6697,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ciborium-ll",
+      "version": "0.2.2",
+      "checksum": "57663b653d948a338bfb3eeba9bb2fd5fcfaecb9e199e87e1eda4d9e8b240fd9",
+      "bytes": 14695,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "clap",
+      "version": "4.6.1",
+      "checksum": "1ddb117e43bbf7dacf0a4190fef4d345b9bad68dfc649cb349e7d17d28428e51",
+      "bytes": 61836,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "clap_builder",
+      "version": "4.6.0",
+      "checksum": "714a53001bf66416adb0e2ef5ac857140e7dc3a0c48fb28b2f10762fc4b5069f",
+      "bytes": 171122,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "clap_complete",
+      "version": "4.6.6",
+      "checksum": "97bf4965940c2382204c0ded6dd3dd48c0c4e872f1e76fb1bf94f45991a2cb6a",
+      "bytes": 51274,
+      "origin": "downloaded"
+    },
+    {
+      "name": "clap_lex",
+      "version": "1.1.0",
+      "checksum": "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9",
+      "bytes": 13470,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "clru",
+      "version": "0.6.3",
+      "checksum": "197fd99cb113a8d5d9b6376f3aa817f32c1078f2343b714fff7d2ca44fdf67d5",
+      "bytes": 19012,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "cmov",
+      "version": "0.5.4",
+      "checksum": "0c9ea0ac24bc397ab3c98583a3c9ba74fa56b09a4449bbe172b9b1ddb016027a",
+      "bytes": 27367,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "color-print",
+      "version": "0.3.7",
+      "checksum": "3aa954171903797d5623e047d9ab69d91b493657917bdfb8c2c80ecaf9cdb6f4",
+      "bytes": 11586,
+      "origin": "downloaded"
+    },
+    {
+      "name": "color-print-proc-macro",
+      "version": "0.3.7",
+      "checksum": "692186b5ebe54007e45a59aea47ece9eb4108e141326c304cdc91699a7118a22",
+      "bytes": 23082,
+      "origin": "downloaded"
+    },
+    {
+      "name": "colorchoice",
+      "version": "1.0.5",
+      "checksum": "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570",
+      "bytes": 8187,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "const-oid",
+      "version": "0.9.6",
+      "checksum": "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8",
+      "bytes": 45382,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "const-oid",
+      "version": "0.10.2",
+      "checksum": "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c",
+      "bytes": 61449,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "constant_time_eq",
+      "version": "0.4.2",
+      "checksum": "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b",
+      "bytes": 25831,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "content_inspector",
+      "version": "0.2.4",
+      "checksum": "b7bda66e858c683005a53a9a60c69a4aca7eeaa45d124526e389f7aec8e62f38",
+      "bytes": 11386,
+      "origin": "downloaded"
+    },
+    {
+      "name": "core-foundation",
+      "version": "0.10.1",
+      "checksum": "b2a6cd9ae233e7f62ba4e9353e81a88df7fc8a5987b8d445b4d90c879bd156f6",
+      "bytes": 28886,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "core-foundation-sys",
+      "version": "0.8.7",
+      "checksum": "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b",
+      "bytes": 37712,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "cpufeatures",
+      "version": "0.2.17",
+      "checksum": "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280",
+      "bytes": 13466,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "cpufeatures",
+      "version": "0.3.0",
+      "checksum": "8b2a41393f66f16b0823bb79094d54ac5fbd34ab292ddafb9a0456ac9f87d201",
+      "bytes": 14156,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "crc32fast",
+      "version": "1.5.0",
+      "checksum": "9481c1c90cbf2ac953f07c8d4a58aa3945c425b7185c9154d67a65e4230da511",
+      "bytes": 40723,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "criterion",
+      "version": "0.8.2",
+      "checksum": "950046b2aa2492f9a536f5f4f9a3de7b9e2476e575e05bd6c333371add4d98f3",
+      "bytes": 122924,
+      "origin": "downloaded"
+    },
+    {
+      "name": "criterion-plot",
+      "version": "0.8.2",
+      "checksum": "d8d80a2f4f5b554395e47b5d8305bc3d27813bacb73493eb1001e8f76dae29ea",
+      "bytes": 24800,
+      "origin": "downloaded"
+    },
+    {
+      "name": "crossbeam-channel",
+      "version": "0.5.15",
+      "checksum": "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2",
+      "bytes": 92716,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "crossbeam-deque",
+      "version": "0.8.6",
+      "checksum": "9dd111b7b7f7d55b72c0a6ae361660ee5853c9af73f70c3c2ef6858b950e2e51",
+      "bytes": 22471,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "crossbeam-epoch",
+      "version": "0.9.18",
+      "checksum": "5b82ac4a3c2ca9c3460964f020e1402edd5753411d7737aa39c3714ad1b5420e",
+      "bytes": 46875,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "crossbeam-utils",
+      "version": "0.8.21",
+      "checksum": "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28",
+      "bytes": 42691,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "crunchy",
+      "version": "0.2.4",
+      "checksum": "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5",
+      "bytes": 3887,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "crypto-bigint",
+      "version": "0.5.5",
+      "checksum": "0dc92fb57ca44df6db8059111ab3af99a63d5d0f8375d9972e319a379c6bab76",
+      "bytes": 83384,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "crypto-common",
+      "version": "0.1.6",
+      "checksum": "1bfb12502f3fc46cca1bb51ac28df9d618d813cdc3d2f25b9fe775a34af26bb3",
+      "bytes": 8760,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "crypto-common",
+      "version": "0.2.2",
+      "checksum": "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453",
+      "bytes": 15449,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ct-codecs",
+      "version": "1.1.7",
+      "checksum": "49fb0c6640b4507ebd99ff67677009e381ba5eee1d14df78de4a3d16eb123c39",
+      "bytes": 11450,
+      "origin": "downloaded"
+    },
+    {
+      "name": "ctutils",
+      "version": "0.4.2",
+      "checksum": "7d5515a3834141de9eafb9717ad39eea8247b5674e6066c404e8c4b365d2a29e",
+      "bytes": 32739,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "curl",
+      "version": "0.4.50",
+      "checksum": "3a45ee8994e5307cb4c60cfc1c20bf7263ffb771ddc135c9f768a14bcbc15b09",
+      "bytes": 96599,
+      "origin": "downloaded"
+    },
+    {
+      "name": "curl-sys",
+      "version": "0.4.90+curl-8.21.0",
+      "checksum": "97799a0d220bfb3361e0fe4936966ff8c4b24d65c3f06dfc70d7b680b44e7897",
+      "bytes": 1844535,
+      "origin": "downloaded"
+    },
+    {
+      "name": "darling",
+      "version": "0.20.11",
+      "checksum": "fc7f46116c46ff9ab3eb1597a45688b6715c6e628b5c133e288e709a29bcb4ee",
+      "bytes": 37614,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "darling_core",
+      "version": "0.20.11",
+      "checksum": "0d00b9596d185e565c2207a0b01f8bd1a135483d02d9b7b0a54b11da8d53412e",
+      "bytes": 68006,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "darling_macro",
+      "version": "0.20.11",
+      "checksum": "fc34b93ccb385b40dc71c6fceac4b2ad23662c7eeb248cf10d529b7e055b6ead",
+      "bytes": 2532,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "dashmap",
+      "version": "6.2.1",
+      "checksum": "e6361d5c062261c78a176addb82d4c821ae42bed6089de0e12603cd25de2059c",
+      "bytes": 26885,
+      "origin": "downloaded"
+    },
+    {
+      "name": "defmt",
+      "version": "1.1.0",
+      "checksum": "a6e524506490a1953d237cb87b1cfc1e46f88c18f10a22dfe0f507dc6bfc7f7f",
+      "bytes": 34342,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "defmt-macros",
+      "version": "1.1.0",
+      "checksum": "f0a27770e9c8f719a79d8b638281f4d828f77d8fd61e0bd94451b9b85e576a0b",
+      "bytes": 27690,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "defmt-parser",
+      "version": "1.0.0",
+      "checksum": "10d60334b3b2e7c9d91ef8150abfb6fa4c1c39ebbcf4a81c2e346aad939fee3e",
+      "bytes": 10881,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "der",
+      "version": "0.7.10",
+      "checksum": "e7c1832837b905bbfb5101e07cc24c8deddf52f93225eee6ead5f4d63d53ddcb",
+      "bytes": 90111,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "deranged",
+      "version": "0.5.8",
+      "checksum": "7cd812cc2bc1d69d4764bd80df88b4317eaef9e773c75226407d9bc0876b211c",
+      "bytes": 26885,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "derive_builder",
+      "version": "0.20.2",
+      "checksum": "507dfb09ea8b7fa618fcf76e953f4f5e192547945816d5358edffe39f6f94947",
+      "bytes": 36661,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "derive_builder_core",
+      "version": "0.20.2",
+      "checksum": "2d5bcf7b024d6835cfb3d473887cd966994907effbe9227e8c8219824d06c4e8",
+      "bytes": 31397,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "derive_builder_macro",
+      "version": "0.20.2",
+      "checksum": "ab63b0e2bf4d5928aff72e83a7dace85d7bba5fe12dcc3c5a572d78caffd3f3c",
+      "bytes": 6360,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "digest",
+      "version": "0.10.7",
+      "checksum": "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292",
+      "bytes": 19557,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "digest",
+      "version": "0.11.3",
+      "checksum": "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2",
+      "bytes": 28955,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "dispatch2",
+      "version": "0.3.1",
+      "checksum": "1e0e367e4e7da84520dedcac1901e4da967309406d1e51017ae1abfb97adbd38",
+      "bytes": 55299,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "displaydoc",
+      "version": "0.2.6",
+      "checksum": "1ac70aa55017e108007fbaf5aa0f54b021c98f92ff8af59d42eda9da96e3dd4f",
+      "bytes": 21191,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "dunce",
+      "version": "1.0.5",
+      "checksum": "92773504d58c093f6de2459af4af33faa518c13451eb8f2b5698ed3d36e7c813",
+      "bytes": 8244,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "dyn-clone",
+      "version": "1.0.20",
+      "checksum": "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555",
+      "bytes": 13134,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ecdsa",
+      "version": "0.16.9",
+      "checksum": "ee27f32b5c5292967d2d4a9d7f1e0b0aed2c15daded5a60300e4abb9d8020bca",
+      "bytes": 31406,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ed25519-compact",
+      "version": "2.3.1",
+      "checksum": "5c24599140dc39d7a81e4476e7573d41bbc18e07c803900298e522a5fbcfbfb6",
+      "bytes": 38876,
+      "origin": "downloaded"
+    },
+    {
+      "name": "either",
+      "version": "1.16.0",
+      "checksum": "91622ff5e7162018101f2fea40d6ebf4a78bbe5a49736a2020649edf9693679e",
+      "bytes": 21248,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "elliptic-curve",
+      "version": "0.13.8",
+      "checksum": "b5e6043086bf7973472e0c7dff2142ea0b680d30e18d9cc40f267efbf222bd47",
+      "bytes": 63198,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "encoding_rs",
+      "version": "0.8.35",
+      "checksum": "75030f3c4f45dafd7586dd6780965a8c7e8e285a5ecb86713e63a79c5b2766f3",
+      "bytes": 1381050,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "equivalent",
+      "version": "1.0.2",
+      "checksum": "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f",
+      "bytes": 7419,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "erased-serde",
+      "version": "0.4.10",
+      "checksum": "d2add8a07dd6a8d93ff627029c51de145e12686fbc36ecb298ac22e74cf02dec",
+      "bytes": 31339,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "errno",
+      "version": "0.3.14",
+      "checksum": "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb",
+      "bytes": 12002,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "escargot",
+      "version": "0.5.15",
+      "checksum": "11c3aea32bc97b500c9ca6a72b768a26e558264303d101d3409cf6d57a9ed0cf",
+      "bytes": 21657,
+      "origin": "downloaded"
+    },
+    {
+      "name": "fallible-iterator",
+      "version": "0.3.0",
+      "checksum": "2acce4a10f12dc2fb14a218589d4f1f62ef011b2d0cc4b3cb1bba8e94da14649",
+      "bytes": 19639,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "fallible-streaming-iterator",
+      "version": "0.1.9",
+      "checksum": "7360491ce676a36bf9bb3c56c1aa791658183a54d2744120f27285738d90465a",
+      "bytes": 9249,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "faster-hex",
+      "version": "0.10.0",
+      "checksum": "7223ae2d2f179b803433d9c830478527e92b8117eab39460edae7f1614d9fb73",
+      "bytes": 13419,
+      "origin": "downloaded"
+    },
+    {
+      "name": "fastrand",
+      "version": "2.4.1",
+      "checksum": "9f1f227452a390804cdb637b74a86990f2a7d7ba4b7d5693aac9b4dd6defd8d6",
+      "bytes": 20773,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ff",
+      "version": "0.13.1",
+      "checksum": "c0b50bfb653653f9ca9095b427bed08ab8d75a137839d9ad64eb11810d5b6393",
+      "bytes": 18607,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "fiat-crypto",
+      "version": "0.3.0",
+      "checksum": "64cd1e32ddd350061ae6edb1b082d7c54915b5c672c389143b9a63403a109f24",
+      "bytes": 600542,
+      "origin": "downloaded"
+    },
+    {
+      "name": "filetime",
+      "version": "0.2.29",
+      "checksum": "5c287a33c7f0a620c38e641e7f60827713987b3c0f26e8ddc9462cc69cf75759",
+      "bytes": 16977,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "find-msvc-tools",
+      "version": "0.1.9",
+      "checksum": "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582",
+      "bytes": 31493,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "flate2",
+      "version": "1.1.9",
+      "checksum": "843fba2746e448b37e26a819579957415c8cef339bf08564fe8b7ddbd959573c",
+      "bytes": 82745,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "fnv",
+      "version": "1.0.7",
+      "checksum": "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1",
+      "bytes": 11266,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "foldhash",
+      "version": "0.2.0",
+      "checksum": "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb",
+      "bytes": 23329,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "foreign-types",
+      "version": "0.3.2",
+      "checksum": "f6f339eb8adc052cd2ca78910fda869aefa38d22d5cb648e6485e4d3fc06f3b1",
+      "bytes": 7504,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "foreign-types-shared",
+      "version": "0.1.1",
+      "checksum": "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b",
+      "bytes": 5672,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "form_urlencoded",
+      "version": "1.2.2",
+      "checksum": "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf",
+      "bytes": 9347,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "futures",
+      "version": "0.3.32",
+      "checksum": "8b147ee9d1f6d097cef9ce628cd2ee62288d963e16fb287bd9286455b241382d",
+      "bytes": 61234,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "futures-channel",
+      "version": "0.3.32",
+      "checksum": "07bbe89c50d7a535e539b8c17bc0b49bdb77747034daa8087407d655f3f7cc1d",
+      "bytes": 33213,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "futures-core",
+      "version": "0.3.32",
+      "checksum": "7e3450815272ef58cec6d564423f6e755e25379b217b0bc688e295ba24df6b1d",
+      "bytes": 14684,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "futures-executor",
+      "version": "0.3.32",
+      "checksum": "baf29c38818342a3b26b5b923639e7b1f4a61fc5e76102d4b1981c6dc7a7579d",
+      "bytes": 18581,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "futures-io",
+      "version": "0.3.32",
+      "checksum": "cecba35d7ad927e23624b22ad55235f2239cfa44fd10428eecbeba6d6a717718",
+      "bytes": 9191,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "futures-macro",
+      "version": "0.3.32",
+      "checksum": "e835b70203e41293343137df5c0664546da5745f82ec9b84d40be8336958447b",
+      "bytes": 11929,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "futures-sink",
+      "version": "0.3.32",
+      "checksum": "c39754e157331b013978ec91992bde1ac089843443c49cbc7f46150b0fad0893",
+      "bytes": 8106,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "futures-task",
+      "version": "0.3.32",
+      "checksum": "037711b3d59c33004d3856fbdc83b99d4ff37a24768fa1be9ce3538a1cde4393",
+      "bytes": 11377,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "futures-timer",
+      "version": "3.0.4",
+      "checksum": "af43fadb8a98512d547e37b4e92e0ced13e205c061b87b4623eff01d918d6968",
+      "bytes": 24860,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "futures-util",
+      "version": "0.3.32",
+      "checksum": "389ca41296e6190b48053de0321d02a77f32f8a5d2461dd38762c0593805c6d6",
+      "bytes": 168797,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "generic-array",
+      "version": "0.14.9",
+      "checksum": "4bb6743198531e02858aeaea5398fcc883e71851fcbcb5a2f773e2fb6cb1edf2",
+      "bytes": 17439,
+      "origin": "downloaded"
+    },
+    {
+      "name": "getrandom",
+      "version": "0.2.17",
+      "checksum": "ff2abc00be7fca6ebc474524697ae276ad847ad0a6b3faa4bcb027e9a4614ad0",
+      "bytes": 40780,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "getrandom",
+      "version": "0.3.4",
+      "checksum": "899def5c37c4fd7b2664648c28120ecec138e4d395b459e5ca34f9cce2dd77fd",
+      "bytes": 50932,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "getrandom",
+      "version": "0.4.3",
+      "checksum": "300e883d756b2e4ec94e02791f39b04b522276138852cfc41d9fb7e904106099",
+      "bytes": 52437,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "git2",
+      "version": "0.21.0",
+      "checksum": "ddddbf932745a6be37109b6112d3ee09696106f848449069d3a57bba937ab82e",
+      "bytes": 242222,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "git2-curl",
+      "version": "0.22.0",
+      "checksum": "1f1f6fe01327a2f7a1d6ee519c14651f79530aa4d64e870f4cf672efe697bea5",
+      "bytes": 16527,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix",
+      "version": "0.85.0",
+      "checksum": "fa8b2e38ebfc4484dfef8580ddcaf8abb7285e6f3eb6413ff6775d104ae96ca6",
+      "bytes": 313068,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-actor",
+      "version": "0.41.1",
+      "checksum": "8bc998b8f746dda8565450d08a63b792ced9165d8c27a1ed3f02799ec6a7820f",
+      "bytes": 12317,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-attributes",
+      "version": "0.33.2",
+      "checksum": "39b40888d0ed415c0744a6cdc61eebf0304c9d26ab726725b718443c322e5ba4",
+      "bytes": 22410,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-bitmap",
+      "version": "0.3.2",
+      "checksum": "52ebef0c26ad305747649e727bbcd56a7b7910754eb7cea88f6dff6f93c51283",
+      "bytes": 9213,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-chunk",
+      "version": "0.7.2",
+      "checksum": "9faee47943b638e58ddd5e275a4906ad3e4b6c8584f1d41bd18ab9032ec52afb",
+      "bytes": 10876,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-command",
+      "version": "0.9.1",
+      "checksum": "00706d4fef135ef4b01680d5218c6ee40cda8baf697b864296cbc887d19118f6",
+      "bytes": 14918,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-commitgraph",
+      "version": "0.37.1",
+      "checksum": "7f675d0df484a7f6a47e64bd6f311af489d947c0323b0564f36d14f3d7762abb",
+      "bytes": 21534,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-config",
+      "version": "0.58.0",
+      "checksum": "a29bf266c4cdaf759e535c24ad4ce655b987aeb6911075643403cc7cc5ade583",
+      "bytes": 79330,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-config-value",
+      "version": "0.18.1",
+      "checksum": "ed42168329552f6c2e5df09665c104199d45d84bedb53683738a49b57fe1baab",
+      "bytes": 15728,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-credentials",
+      "version": "0.38.1",
+      "checksum": "f40cd22f0dd71988be12d6e78b1709de2370e1957c5f107ff31e56caeba3745d",
+      "bytes": 21457,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-date",
+      "version": "0.15.5",
+      "checksum": "3d63f9e28b59ddeb1a1eb9e5cf986a9222b5d484947445edbc20473939cc7fd0",
+      "bytes": 19190,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-diff",
+      "version": "0.65.0",
+      "checksum": "92c6d56c94edf92d78203a1cd416f770e35e10b6955ede6b9d7d0c22ff88a5f3",
+      "bytes": 65668,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-dir",
+      "version": "0.27.0",
+      "checksum": "20098fba2b9c6e29361ccb4c0379d42dfb81fc7f86f7ab11f2dff4528c0bf01f",
+      "bytes": 34758,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-discover",
+      "version": "0.53.0",
+      "checksum": "d624d5b23b10c1d85337645227abe353ac95ab8ff66a7bdd5ce689b2db33a722",
+      "bytes": 26326,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-error",
+      "version": "0.2.4",
+      "checksum": "e57831e199be480af90dcd7e459abed8a174c09ec9a6e2cc8f7ca6c54598b06b",
+      "bytes": 23128,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-features",
+      "version": "0.48.1",
+      "checksum": "1849ae154d38bc403185be14fa871e38e3c93ee606875d94e207fdb9fba52dbc",
+      "bytes": 33862,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-filter",
+      "version": "0.32.0",
+      "checksum": "6644fb2ef97928c278675b239f366b457103d7e436f811d27331a8daf212759c",
+      "bytes": 39210,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-fs",
+      "version": "0.21.2",
+      "checksum": "6cdff46db8798e47e2f727d84b9379aac5add3dd3d9d0b07bb4d7d5d640771fe",
+      "bytes": 22439,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-glob",
+      "version": "0.26.1",
+      "checksum": "d1fcb8ef5b16bcf874abe9b68d8abb3c0493c876d367ab824151f30a0f3f3756",
+      "bytes": 20511,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-hash",
+      "version": "0.25.1",
+      "checksum": "cb0926d3819c837750b4e03c7754901e73f68b8c9b690753a6372a1bed4eedce",
+      "bytes": 20770,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-hashtable",
+      "version": "0.15.2",
+      "checksum": "7e261d54091f0d1c729bc83f54548c071bdec60a697de1e58e88bdfd7a99d24e",
+      "bytes": 10400,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-ignore",
+      "version": "0.21.1",
+      "checksum": "d491bab9bf2c9f341dc754f425c31d5d3f63aca615312167b82e1deeaca97d8d",
+      "bytes": 11939,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-imara-diff",
+      "version": "0.2.3",
+      "checksum": "b305d85504de270ad3525d726a6b69cc59ee7b2269b014387651107ab9f0755b",
+      "bytes": 42786,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-index",
+      "version": "0.53.0",
+      "checksum": "36d45f82ec5a4d7542ea595e9ad16e03e26c8cb4f221e5bc9fcdcf469f63a681",
+      "bytes": 63816,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-lock",
+      "version": "23.0.1",
+      "checksum": "65c9dedd9e90b0d47624d2ed241d394e09294118364e87b9b7e5f1fe755f3c2c",
+      "bytes": 15363,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-negotiate",
+      "version": "0.33.0",
+      "checksum": "63d6081882a5f575ace9f53924a7c85f69bbd0f96071b982df12f258ab338cc9",
+      "bytes": 15988,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-object",
+      "version": "0.62.0",
+      "checksum": "019b38afc3eac1e41f9fe09a327664b313ba4a120fa5f40e3678795d0e42783e",
+      "bytes": 58825,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-odb",
+      "version": "0.82.0",
+      "checksum": "7fadc59f6fa0f9dd445eceee61060a2b59ca557f48da9fc677f567db535b782a",
+      "bytes": 67027,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-pack",
+      "version": "0.72.0",
+      "checksum": "ca3e7f1726cd2c0cd1cf1fc20be8a8e623f0b163f1f8d6fc836cfb9bc8cd758b",
+      "bytes": 111660,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-packetline",
+      "version": "0.21.5",
+      "checksum": "b217dd0ee0c4021ecf169a4a519b1b4f80d15e3f3765f3dc466223dc0ac891d7",
+      "bytes": 29523,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-path",
+      "version": "0.12.1",
+      "checksum": "afa6ac14cd14939ea94a496ce7460daa6511c09f5b84757e9cfc6f9c8d0f93a6",
+      "bytes": 33336,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-pathspec",
+      "version": "0.18.1",
+      "checksum": "3050783b41ee11511e1e8fb35623df81806194f4030395f14f48ea37c2798c9f",
+      "bytes": 22717,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-prompt",
+      "version": "0.15.1",
+      "checksum": "3ee604d7746080ae7e1023bf47204bcc2c5f307bfbe2306a3c90b1bfd1a2c6d8",
+      "bytes": 13452,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-protocol",
+      "version": "0.63.0",
+      "checksum": "978468bae4ea2df20c72db3b20d0bdb548a0c1090b85a83643b553e6e0e041f2",
+      "bytes": 60220,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-quote",
+      "version": "0.7.2",
+      "checksum": "a6e541fc33cc2b783b7979040d445a0c86a2eca747c8faea4ca84230d06ae6ef",
+      "bytes": 8971,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-ref",
+      "version": "0.65.0",
+      "checksum": "9bbfbce1dfd7d7f8469ddef6d3518376aff664348f153cbe0fc3e58ef993d24e",
+      "bytes": 70315,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-refspec",
+      "version": "0.43.0",
+      "checksum": "7bc36a4fb1a1540b59cf2da498783080743fa274b02a3f19ca444fc4015a9d4f",
+      "bytes": 26729,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-revision",
+      "version": "0.47.0",
+      "checksum": "885075c3c21eb9c06e0be3b3728ba5932c04e1c1011dcee7c81801980e3e986f",
+      "bytes": 31344,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-revwalk",
+      "version": "0.33.0",
+      "checksum": "8f11fe7ca2585193d3d70bbe0be175a2008d883a704cc7a55e454e113e689455",
+      "bytes": 18885,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-sec",
+      "version": "0.14.1",
+      "checksum": "ab8519976e4c7e486270740a5400369f37940779b80bd1377d94cfa1125d01b3",
+      "bytes": 14721,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-shallow",
+      "version": "0.12.1",
+      "checksum": "a292fc2fe548c5dfa575479d16b445b0ddf1dd2f56f1fec6aed386f82553cd97",
+      "bytes": 14140,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-status",
+      "version": "0.32.0",
+      "checksum": "aec3293f75db1212f99217832cbc70c30faeb95cefc97c7f1a17fd3bcf13a72e",
+      "bytes": 43867,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-submodule",
+      "version": "0.32.0",
+      "checksum": "a7f9f594f7cbda0b38ba6b633b3e9a7b7901acdc5d27bc186a16633800cd1ac8",
+      "bytes": 22099,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-tempfile",
+      "version": "23.0.2",
+      "checksum": "6ef60812443484e67bf84e444cc71b4c78ae62deb822221774a4fa0c57fdb17f",
+      "bytes": 21172,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-trace",
+      "version": "0.1.20",
+      "checksum": "44dc45eae785c0eb14173e0f152e6e224dcf4d45b6a6999a3aed22af541ad678",
+      "bytes": 9505,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-transport",
+      "version": "0.57.2",
+      "checksum": "186874f7ad1fb2f9a2f2aa9c2dabc7f9dd087bef74c1a0eee2b4a9cf0248fcb3",
+      "bytes": 71807,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-traverse",
+      "version": "0.59.0",
+      "checksum": "5062cca8f2977565bbaf666ec31dbdb9bc9d9293beb65f9bec52e6c1121b62a1",
+      "bytes": 30320,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-url",
+      "version": "0.36.1",
+      "checksum": "65bb01ec69d55e82ccb7a19e264501ead4e6aac38463a8cebfdd81e22bb67ab2",
+      "bytes": 21780,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-utils",
+      "version": "0.3.3",
+      "checksum": "66c50966184123caf580ffa64e28031a878597f1c7fceb8fe19566c38eb1b771",
+      "bytes": 11248,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-validate",
+      "version": "0.11.2",
+      "checksum": "7bc6fc771c4063ba7cd2f47b91fb6076251c6a823b64b7fe7b8874b0fe4afae3",
+      "bytes": 13317,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-worktree",
+      "version": "0.54.0",
+      "checksum": "92399ed66f259592050c6ed9dc80105e095a2f8e87e6b83d98aa2e21d8e27036",
+      "bytes": 27091,
+      "origin": "downloaded"
+    },
+    {
+      "name": "gix-worktree-stream",
+      "version": "0.34.0",
+      "checksum": "55f3a878c89a05470ad98c644b0015777c530da24854dd29e41fe4f41176840f",
+      "bytes": 20844,
+      "origin": "downloaded"
+    },
+    {
+      "name": "glob",
+      "version": "0.3.3",
+      "checksum": "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280",
+      "bytes": 22861,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "globset",
+      "version": "0.4.18",
+      "checksum": "52dfc19153a48bde0cbd630453615c8151bce3a5adfac7a0aebfbf0a1e1f57e3",
+      "bytes": 28970,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "group",
+      "version": "0.13.0",
+      "checksum": "f0f9ef7462f7c099f518d754361858f86d8a07af53ba9af0fe635bbccb151a63",
+      "bytes": 16526,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "h2",
+      "version": "0.4.15",
+      "checksum": "6cb093c84e8bd9b188d4c4a8cb6579fc016968d14c99882163cd3ff402a4f155",
+      "bytes": 180875,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "half",
+      "version": "2.7.1",
+      "checksum": "6ea2d84b969582b4b1864a92dc5d27cd2b77b622a8d79306834f1be5ba20d84b",
+      "bytes": 61040,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "handlebars",
+      "version": "6.4.2",
+      "checksum": "f26569a2763497b7bd3fbd19374b774ea6038c5293678771259cd534d49740ff",
+      "bytes": 111817,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "hash32",
+      "version": "0.3.1",
+      "checksum": "47d60b12902ba28e2730cd37e95b8c9223af2808df9e902d4df49588d1470606",
+      "bytes": 10273,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.14.5",
+      "checksum": "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1",
+      "bytes": 141498,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.16.1",
+      "checksum": "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100",
+      "bytes": 147785,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.17.1",
+      "checksum": "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a",
+      "bytes": 155512,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "hashlink",
+      "version": "0.12.0",
+      "checksum": "a5081f264ed7adee96ea4b4778b6bb9da0a7228b084587aa3bd3ff05da7c5a3b",
+      "bytes": 32251,
+      "origin": "downloaded"
+    },
+    {
+      "name": "heapless",
+      "version": "0.8.0",
+      "checksum": "0bfb9eb618601c89945a70e254898da93b13be0388091d42117462b265bb3fad",
+      "bytes": 77802,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "heck",
+      "version": "0.5.0",
+      "checksum": "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea",
+      "bytes": 11517,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "hex",
+      "version": "0.4.3",
+      "checksum": "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70",
+      "bytes": 13299,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "hkdf",
+      "version": "0.12.4",
+      "checksum": "7b5f8eb2ad728638ea2c7d47a21db23b7b58a72ed6a38256b8a1849f15fbbdf7",
+      "bytes": 171163,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "hmac",
+      "version": "0.12.1",
+      "checksum": "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e",
+      "bytes": 42657,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "hmac",
+      "version": "0.13.0",
+      "checksum": "6303bc9732ae41b04cb554b844a762b4115a61bfaa81e3e83050991eeb56863f",
+      "bytes": 45167,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "home",
+      "version": "0.5.12",
+      "checksum": "cc627f471c528ff0c4a49e1d5e60450c8f6461dd6d10ba9dcd3a61d3dff7728d",
+      "bytes": 9445,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "html-escape",
+      "version": "0.2.13",
+      "checksum": "6d1ad449764d627e22bfd7cd5e8868264fc9236e07c752972b4080cd351cb476",
+      "bytes": 23345,
+      "origin": "downloaded"
+    },
+    {
+      "name": "http",
+      "version": "1.4.2",
+      "checksum": "6970f50e31d6fc17d3fa27329444bfa74e196cf62e95052a3f6fee181dba6425",
+      "bytes": 110471,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "http-auth",
+      "version": "0.1.10",
+      "checksum": "150fa4a9462ef926824cf4519c84ed652ca8f4fbae34cb8af045b5cbcaf98822",
+      "bytes": 41282,
+      "origin": "downloaded"
+    },
+    {
+      "name": "http-body",
+      "version": "1.0.1",
+      "checksum": "1efedce1fb8e6913f23e0c92de8e62cd5b772a67e7b3946df930a62566c93184",
+      "bytes": 6125,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "http-body-util",
+      "version": "0.1.3",
+      "checksum": "b021d93e26becf5dc7e1b75b1bed1fd93124b374ceb73f43d4d4eafec896a64a",
+      "bytes": 16975,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "httparse",
+      "version": "1.10.1",
+      "checksum": "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87",
+      "bytes": 45190,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "hybrid-array",
+      "version": "0.4.13",
+      "checksum": "818356c5132c1fede50f837ca96afbe78ff42413047f4abb886217845e1b6c8c",
+      "bytes": 36445,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "hyper",
+      "version": "1.10.1",
+      "checksum": "55281c53a1894c864990125767da440a4e630446785086f52523b20033b74498",
+      "bytes": 165884,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "hyper-rustls",
+      "version": "0.27.9",
+      "checksum": "33ca68d021ef39cf6463ab54c1d0f5daf03377b70561305bb89a8f83aab66e0f",
+      "bytes": 22935,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "hyper-util",
+      "version": "0.1.20",
+      "checksum": "96547c2556ec9d12fb1578c4eaf448b04993e7fb79cbaad930a656880a6bdfa0",
+      "bytes": 112807,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "icu_collections",
+      "version": "2.2.0",
+      "checksum": "2984d1cd16c883d7935b9e07e44071dca8d917fd52ecc02c04d5fa0b5a3f191c",
+      "bytes": 88011,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "icu_locale_core",
+      "version": "2.2.0",
+      "checksum": "92219b62b3e2b4d88ac5119f8904c10f8f61bf7e95b640d25ba3075e6cac2c29",
+      "bytes": 78639,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "icu_normalizer",
+      "version": "2.2.0",
+      "checksum": "c56e5ee99d6e3d33bd91c5d85458b6005a22140021cc324cea84dd0e72cff3b4",
+      "bytes": 78154,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "icu_normalizer_data",
+      "version": "2.2.0",
+      "checksum": "da3be0ae77ea334f4da67c12f149704f19f81d1adf7c51cf482943e84a2bad38",
+      "bytes": 67134,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "icu_properties",
+      "version": "2.2.0",
+      "checksum": "bee3b67d0ea5c2cca5003417989af8996f8604e34fb9ddf96208a033901e70de",
+      "bytes": 63950,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "icu_properties_data",
+      "version": "2.2.0",
+      "checksum": "8e2bbb201e0c04f7b4b3e14382af113e17ba4f63e2c9d2ee626b720cbce54a14",
+      "bytes": 168901,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "icu_provider",
+      "version": "2.2.0",
+      "checksum": "139c4cf31c8b5f33d7e199446eff9c1e02decfc2f0eec2c8d71f65befa45b421",
+      "bytes": 51620,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ident_case",
+      "version": "1.0.1",
+      "checksum": "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39",
+      "bytes": 3492,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "idna",
+      "version": "1.1.0",
+      "checksum": "3b0875f23caa03898994f6ddc501886a45c7d3d62d04d2d90788d47be1b1e4de",
+      "bytes": 148747,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "idna_adapter",
+      "version": "1.2.2",
+      "checksum": "cb68373c0d6620ef8105e855e7745e18b0d00d3bdb07fb532e434244cdb9a714",
+      "bytes": 10444,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ignore",
+      "version": "0.4.26",
+      "checksum": "b915661dd01db3f05050265b2477bcc6527b3792388e2749b41623cc592be67d",
+      "bytes": 59579,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "im-rc",
+      "version": "15.1.0",
+      "checksum": "af1955a75fa080c677d3972822ec4bad316169ab1cfc6c257a942c2265dbe5fe",
+      "bytes": 194077,
+      "origin": "downloaded"
+    },
+    {
+      "name": "indexmap",
+      "version": "2.14.0",
+      "checksum": "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9",
+      "bytes": 104085,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ipnet",
+      "version": "2.12.0",
+      "checksum": "d98f6fed1fde3f8c21bc40a1abb88dd75e67924f9cffc3ef95607bad8017f8e2",
+      "bytes": 31000,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "is_executable",
+      "version": "1.0.6",
+      "checksum": "82cb6a9f675da968c63b6208c641b9dca58fc0133ae53375736b1767b0cab8bd",
+      "bytes": 9229,
+      "origin": "downloaded"
+    },
+    {
+      "name": "is_terminal_polyfill",
+      "version": "1.70.2",
+      "checksum": "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695",
+      "bytes": 7548,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "itertools",
+      "version": "0.13.0",
+      "checksum": "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186",
+      "bytes": 146261,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "itertools",
+      "version": "0.15.0",
+      "checksum": "8b4baf93f58d4425749ca49a51c50ebab072c5df6994d08fed93541c331481dc",
+      "bytes": 164131,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "itoa",
+      "version": "0.4.8",
+      "checksum": "b71991ff56294aa922b450139ee08b3bfc70982c6b2c7562771375cf73542dd4",
+      "bytes": 11926,
+      "origin": "downloaded"
+    },
+    {
+      "name": "itoa",
+      "version": "1.0.18",
+      "checksum": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682",
+      "bytes": 15935,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "jiff",
+      "version": "0.2.31",
+      "checksum": "ccfe6121cbe750cf81efa362d85c0bde7ea298ec43092d3a193baca59cdbd634",
+      "bytes": 767455,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "jiff-static",
+      "version": "0.2.31",
+      "checksum": "e165e897f662d428f3cd3828a919dbe067c2d42bb1031eede74ef9d27ecdedd2",
+      "bytes": 83046,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "jiff-tzdb",
+      "version": "0.1.6",
+      "checksum": "c900ef84826f1338a557697dc8fc601df9ca9af4ac137c7fb61d4c6f2dfd3076",
+      "bytes": 62478,
+      "origin": "downloaded"
+    },
+    {
+      "name": "jiff-tzdb-platform",
+      "version": "0.1.3",
+      "checksum": "875a5a69ac2bab1a891711cf5eccbec1ce0341ea805560dcd90b7a2e925132e8",
+      "bytes": 3179,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "jobserver",
+      "version": "0.1.34",
+      "checksum": "9afb3de4395d6b3e67a780b6de64b51c978ecf11cb9a462c66be7d4ca9039d33",
+      "bytes": 29013,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "js-sys",
+      "version": "0.3.103",
+      "checksum": "53b44bfcdb3f8d5837a46dae1ca9660a837176eee74a28b229bc626816589102",
+      "bytes": 108366,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "kstring",
+      "version": "2.0.2",
+      "checksum": "558bf9508a558512042d3095138b1f7b8fe90c5467d94f9f1da28b3731c5dbd1",
+      "bytes": 23044,
+      "origin": "downloaded"
+    },
+    {
+      "name": "lazy_static",
+      "version": "1.5.0",
+      "checksum": "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe",
+      "bytes": 14025,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "leb128",
+      "version": "0.2.7",
+      "checksum": "c83bff1d572d6b9aeef67ddfc8448e4a3737909cb28e81f97c791b9018703e52",
+      "bytes": 13874,
+      "origin": "downloaded"
+    },
+    {
+      "name": "libc",
+      "version": "0.2.186",
+      "checksum": "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66",
+      "bytes": 821883,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "libgit2-sys",
+      "version": "0.18.5+1.9.4",
+      "checksum": "005d6ae6eac1912906073e069f7db60b1fa98e052a68227824afe3e3a1c59ca2",
+      "bytes": 1869440,
+      "origin": "downloaded"
+    },
+    {
+      "name": "libloading",
+      "version": "0.9.0",
+      "checksum": "754ca22de805bb5744484a5b151a9e1a8e837d5dc232c2d7d8c2e3492edc8b60",
+      "bytes": 33816,
+      "origin": "downloaded"
+    },
+    {
+      "name": "libnghttp2-sys",
+      "version": "0.1.13+1.68.1",
+      "checksum": "492e00167f1418c15648144f42bbfc63099806ecee9bf8d09a6353d6b4856b3c",
+      "bytes": 2167330,
+      "origin": "downloaded"
+    },
+    {
+      "name": "libsqlite3-sys",
+      "version": "0.38.1",
+      "checksum": "f6c19a05435c21ac299d71b6a9c13db3e3f47c520517d58990a462a1397a61db",
+      "bytes": 5361552,
+      "origin": "downloaded"
+    },
+    {
+      "name": "libssh2-sys",
+      "version": "0.3.2",
+      "checksum": "c04141a07bb0c0bc461cb657808764de571702a59bc5c726c400ac9a7625e3ab",
+      "bytes": 579225,
+      "origin": "downloaded"
+    },
+    {
+      "name": "libz-sys",
+      "version": "1.1.29",
+      "checksum": "85bc9657773828b90eeb625adff10eeac83cc21bbfd8e23a03eaa8a33c9e28d9",
+      "bytes": 887737,
+      "origin": "downloaded"
+    },
+    {
+      "name": "linux-raw-sys",
+      "version": "0.12.1",
+      "checksum": "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53",
+      "bytes": 3006116,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "litemap",
+      "version": "0.8.2",
+      "checksum": "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0",
+      "bytes": 34572,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "lock_api",
+      "version": "0.4.14",
+      "checksum": "224399e74b87b5f3557511d98dff8b14089b3dadafcab6bb93eab67d3aace965",
+      "bytes": 29249,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "log",
+      "version": "0.4.33",
+      "checksum": "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad",
+      "bytes": 52997,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "matchers",
+      "version": "0.2.0",
+      "checksum": "d1525a2a28c7f4fa0fc98bb91ae755d1e2d1505079e05539e35bc876b5d65ae9",
+      "bytes": 7075,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "maybe-async",
+      "version": "0.2.11",
+      "checksum": "746873a384ad60adc5db74471dfaba74bd278afbdcfd81db93fafcdfc8b5ca0c",
+      "bytes": 22858,
+      "origin": "downloaded"
+    },
+    {
+      "name": "memchr",
+      "version": "2.8.2",
+      "checksum": "88904434abc2901f197fe8cc55f0445e7ded921dba5911dad2e2b39b48e663c4",
+      "bytes": 99069,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "memfd",
+      "version": "0.6.5",
+      "checksum": "ad38eb12aea514a0466ea40a80fd8cc83637065948eb4a426e4aa46261175227",
+      "bytes": 12909,
+      "origin": "downloaded"
+    },
+    {
+      "name": "memmap2",
+      "version": "0.9.11",
+      "checksum": "d1219ed1b7f229ee7104d281dd01d6802fe28bb6e95d292942c4daacdeb798c0",
+      "bytes": 35116,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "mime",
+      "version": "0.3.17",
+      "checksum": "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a",
+      "bytes": 15712,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "minimal-lexical",
+      "version": "0.2.1",
+      "checksum": "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a",
+      "bytes": 94841,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "miniz_oxide",
+      "version": "0.8.9",
+      "checksum": "1fa76a2c86f704bdb222d66965fb3d63269ce38518b83cb0575fca855ebb6316",
+      "bytes": 67132,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "mio",
+      "version": "1.2.1",
+      "checksum": "02bd0af71c67b473010cbbc60715ee815645a4dc942899111f494b4b737d6fda",
+      "bytes": 106774,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "miow",
+      "version": "0.6.1",
+      "checksum": "536bfad37a309d62069485248eeaba1e8d9853aaf951caaeaed0585a95346f08",
+      "bytes": 30539,
+      "origin": "downloaded"
+    },
+    {
+      "name": "nix",
+      "version": "0.31.3",
+      "checksum": "cf20d2fde8ff38632c426f1165ed7436270b44f199fc55284c38276f9db47c3d",
+      "bytes": 347476,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "nom",
+      "version": "7.1.3",
+      "checksum": "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a",
+      "bytes": 117570,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "nonempty",
+      "version": "0.12.0",
+      "checksum": "9737e026353e5cd0736f98eddae28665118eb6f6600902a7f50db585621fecb6",
+      "bytes": 13105,
+      "origin": "downloaded"
+    },
+    {
+      "name": "normalize-line-endings",
+      "version": "0.3.0",
+      "checksum": "61807f77802ff30975e01f4f071c8ba10c022052f98b3294119f3e615d13e5be",
+      "bytes": 5737,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "normpath",
+      "version": "1.5.1",
+      "checksum": "b9985ef7269fa99f3b12437bb698381da2428743ab90f20393f399fa14cab21a",
+      "bytes": 24648,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "nu-ansi-term",
+      "version": "0.50.3",
+      "checksum": "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5",
+      "bytes": 29597,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "num-conv",
+      "version": "0.2.2",
+      "checksum": "521739c6d2bac4aa25192232afe6841231376b2b26d4d9fae5ecf8ca5772e441",
+      "bytes": 7441,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "num-modular",
+      "version": "0.6.4",
+      "checksum": "fc41a1374056e9672221567958a66c16be12d0e2c1b408761e14d901c237d5e0",
+      "bytes": 47263,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "num-order",
+      "version": "1.2.0",
+      "checksum": "537b596b97c40fcf8056d153049eb22f481c17ebce72a513ec9286e4986d1bb6",
+      "bytes": 19500,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "num-traits",
+      "version": "0.2.19",
+      "checksum": "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841",
+      "bytes": 51631,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "objc2",
+      "version": "0.6.4",
+      "checksum": "3a12a8ed07aefc768292f076dc3ac8c48f3781c8f2d5851dd3d98950e8c5a89f",
+      "bytes": 275200,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "objc2-cloud-kit",
+      "version": "0.3.2",
+      "checksum": "73ad74d880bb43877038da939b7427bba67e9dd42004a18b809ba7d87cee241c",
+      "bytes": 68818,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "objc2-core-data",
+      "version": "0.3.2",
+      "checksum": "0b402a653efbb5e82ce4df10683b6b28027616a2715e90009947d50b8dd298fa",
+      "bytes": 39186,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "objc2-core-foundation",
+      "version": "0.3.2",
+      "checksum": "2a180dd8642fa45cdb7dd721cd4c11b1cadd4929ce112ebd8b9f5803cc79d536",
+      "bytes": 180804,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "objc2-core-graphics",
+      "version": "0.3.2",
+      "checksum": "e022c9d066895efa1345f8e33e584b9f958da2fd4cd116792e15e07e4720a807",
+      "bytes": 84981,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "objc2-core-image",
+      "version": "0.3.2",
+      "checksum": "e5d563b38d2b97209f8e861173de434bd0214cf020e3423a52624cd1d989f006",
+      "bytes": 95862,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "objc2-core-location",
+      "version": "0.3.2",
+      "checksum": "ca347214e24bc973fc025fd0d36ebb179ff30536ed1f80252706db19ee452009",
+      "bytes": 17032,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "objc2-core-text",
+      "version": "0.3.2",
+      "checksum": "0cde0dfb48d25d2b4862161a4d5fcc0e3c24367869ad306b0c9ec0073bfed92d",
+      "bytes": 96485,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "objc2-encode",
+      "version": "4.1.0",
+      "checksum": "ef25abbcd74fb2609453eb695bd2f860d389e457f67dc17cafc8b8cbc89d0c33",
+      "bytes": 21004,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "objc2-foundation",
+      "version": "0.3.2",
+      "checksum": "e3e0adef53c21f888deb4fa59fc59f7eb17404926ee8a6f59f5df0fd7f9f3272",
+      "bytes": 345384,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "objc2-io-surface",
+      "version": "0.3.2",
+      "checksum": "180788110936d59bab6bd83b6060ffdfffb3b922ba1396b312ae795e1de9d81d",
+      "bytes": 11722,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "objc2-quartz-core",
+      "version": "0.3.2",
+      "checksum": "96c1358452b371bf9f104e21ec536d37a650eb10f7ee379fff67d2e08d537f1f",
+      "bytes": 30036,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "objc2-ui-kit",
+      "version": "0.3.2",
+      "checksum": "d87d638e33c06f577498cbcc50491496a3ed4246998a7fbba7ccb98b1e7eab22",
+      "bytes": 551453,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "objc2-user-notifications",
+      "version": "0.3.2",
+      "checksum": "9df9128cbbfef73cda168416ccf7f837b62737d748333bfe9ab71c245d76613e",
+      "bytes": 12257,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "once_cell",
+      "version": "1.21.4",
+      "checksum": "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50",
+      "bytes": 35010,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "once_cell_polyfill",
+      "version": "1.70.2",
+      "checksum": "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe",
+      "bytes": 7448,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "oorandom",
+      "version": "11.1.5",
+      "checksum": "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e",
+      "bytes": 23750,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "opener",
+      "version": "0.8.5",
+      "checksum": "b2b03ff07a220d0d0ec9a1f0f238951b7967a5a2e96aefcd21a117b1083415e9",
+      "bytes": 27941,
+      "origin": "downloaded"
+    },
+    {
+      "name": "openssl",
+      "version": "0.10.81",
+      "checksum": "77823a27f0babb03091cb9ed9ef80af3b39dbc82f97e8fa530374b7dafd87a45",
+      "bytes": 311187,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "openssl-macros",
+      "version": "0.1.1",
+      "checksum": "a948666b637a0f465e8564c73e89d4dde00d72d4d473cc972f390fc3dcee7d9c",
+      "bytes": 5601,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "openssl-probe",
+      "version": "0.1.6",
+      "checksum": "d05e27ee213611ffe7d6348b942e8f942b37114c00cc03cec254295a4a17852e",
+      "bytes": 8128,
+      "origin": "downloaded"
+    },
+    {
+      "name": "openssl-src",
+      "version": "300.6.1+3.6.3",
+      "checksum": "46eb8fb9fb3b61ce1c0f8a026c4c1a0714d3a9e138e7fbde78753ce2babc3846",
+      "bytes": 7195821,
+      "origin": "downloaded"
+    },
+    {
+      "name": "openssl-sys",
+      "version": "0.9.117",
+      "checksum": "b47e7e6bb2c38cd930d25a23b40fa52e068c10e85f3e03a7f5ba5aaca5713695",
+      "bytes": 76045,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ordered-float",
+      "version": "2.10.1",
+      "checksum": "68f19d67e5a2795c94e73e0bb1cc1a7edeb2e28efd39e2e1c9b7a40c1108b11c",
+      "bytes": 16029,
+      "origin": "downloaded"
+    },
+    {
+      "name": "orion",
+      "version": "0.17.15",
+      "checksum": "5e6758747fd1ce1efaf2bd43219ac4aa9e28263b236b2b6a1e486bcd06820707",
+      "bytes": 245236,
+      "origin": "downloaded"
+    },
+    {
+      "name": "os_info",
+      "version": "3.15.0",
+      "checksum": "9cf20a545b305cf1da722b236b5155c9bb35f1d5ceb28c048bd96ca842f41b5b",
+      "bytes": 27902,
+      "origin": "downloaded"
+    },
+    {
+      "name": "p384",
+      "version": "0.13.1",
+      "checksum": "fe42f1670a52a47d448f14b6a5c61dd78fce51856e68edaa38f7ae3a46b8d6b6",
+      "bytes": 193022,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "page_size",
+      "version": "0.6.0",
+      "checksum": "30d5b2194ed13191c1999ae0704b7839fb18384fa22e49b57eeaa97d79ce40da",
+      "bytes": 8479,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "parking_lot",
+      "version": "0.12.5",
+      "checksum": "93857453250e3077bd71ff98b6a65ea6621a19bb0f559a85248955ac12c45a1a",
+      "bytes": 46735,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "parking_lot_core",
+      "version": "0.9.12",
+      "checksum": "2621685985a2ebf1c516881c026032ac7deafcda1a2c9b7850dc81e3dfcb64c1",
+      "bytes": 34110,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "partial_ref",
+      "version": "0.3.3",
+      "checksum": "0f728bc9b1479656e40cba507034904a8c44027c0efdbbaf6a4bdc5f2d3a910c",
+      "bytes": 14550,
+      "origin": "downloaded"
+    },
+    {
+      "name": "partial_ref_derive",
+      "version": "0.3.3",
+      "checksum": "300e1d2cb5b898b5a5342e994e0d0c367dbfe69cbf717cd307045ec9fb057581",
+      "bytes": 8048,
+      "origin": "downloaded"
+    },
+    {
+      "name": "pasetors",
+      "version": "0.7.8",
+      "checksum": "e838401fb2873bad417e6a03179014c748746f67311cb7317ab14fc0881fa9f0",
+      "bytes": 153184,
+      "origin": "downloaded"
+    },
+    {
+      "name": "pathdiff",
+      "version": "0.2.3",
+      "checksum": "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3",
+      "bytes": 7495,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "pem-rfc7468",
+      "version": "0.7.0",
+      "checksum": "88b39c9bfcfc231068454382784bb460aae594343fb030d46e9f50a645418412",
+      "bytes": 24159,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "percent-encoding",
+      "version": "2.3.2",
+      "checksum": "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220",
+      "bytes": 11583,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "pest",
+      "version": "2.8.6",
+      "checksum": "e0848c601009d37dfa3430c4666e147e49cdcf1b92ecd3e63657d8a5f19da662",
+      "bytes": 130316,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "pest_derive",
+      "version": "2.8.6",
+      "checksum": "11f486f1ea21e6c10ed15d5a7c77165d0ee443402f0780849d1768e7d9d6fe77",
+      "bytes": 44342,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "pest_generator",
+      "version": "2.8.6",
+      "checksum": "8040c4647b13b210a963c1ed407c1ff4fdfa01c31d6d2a098218702e6664f94f",
+      "bytes": 43975,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "pest_meta",
+      "version": "2.8.6",
+      "checksum": "89815c69d36021a140146f26659a81d6c2afa33d216d736dd4be5381a7362220",
+      "bytes": 68276,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "pin-project-lite",
+      "version": "0.2.17",
+      "checksum": "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd",
+      "bytes": 31034,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "pkcs8",
+      "version": "0.10.2",
+      "checksum": "f950b2377845cebe5cf8b5165cb3cc1a5e0fa5cfa3e1f7f55707d8fd82e0a7b7",
+      "bytes": 26360,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "pkg-config",
+      "version": "0.3.33",
+      "checksum": "19f132c84eca552bf34cab8ec81f1c1dcc229b811638f9d283dceabe58c5569e",
+      "bytes": 21590,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "plotters",
+      "version": "0.3.7",
+      "checksum": "5aeb6f403d7a4911efb1e33402027fc44f29b5bf6def3effcc22d7bb75f2b747",
+      "bytes": 149031,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "plotters-backend",
+      "version": "0.3.7",
+      "checksum": "df42e13c12958a16b3f7f4386b9ab1f3e7933914ecea48da7139435263a4172a",
+      "bytes": 13709,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "plotters-svg",
+      "version": "0.3.7",
+      "checksum": "51bae2ac328883f7acdfea3d66a7c35751187f870bc81f94563733a154d7a670",
+      "bytes": 6715,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "portable-atomic",
+      "version": "1.13.1",
+      "checksum": "c33a9471896f1c69cecef8d20cbe2f7accd12527ce60845ff44c153bb2a21b49",
+      "bytes": 197001,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "portable-atomic-util",
+      "version": "0.2.7",
+      "checksum": "c2a106d1259c23fac8e543272398ae0e3c0b8d33c88ed73d0cc71b0f1d902618",
+      "bytes": 53577,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "potential_utf",
+      "version": "0.1.5",
+      "checksum": "0103b1cef7ec0cf76490e969665504990193874ea05c85ff9bab8b911d0a0564",
+      "bytes": 10189,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "powerfmt",
+      "version": "0.2.0",
+      "checksum": "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391",
+      "bytes": 15165,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ppv-lite86",
+      "version": "0.2.21",
+      "checksum": "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9",
+      "bytes": 22522,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "primeorder",
+      "version": "0.13.6",
+      "checksum": "353e1ca18966c16d9deb1c69278edbc5f194139612772bd9537af60ac231e1e6",
+      "bytes": 21296,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "proc-macro-error-attr2",
+      "version": "2.0.0",
+      "checksum": "96de42df36bb9bba5542fe9f1a054b8cc87e172759a1868aa05c1f3acc89dfc5",
+      "bytes": 7745,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "proc-macro-error2",
+      "version": "2.0.1",
+      "checksum": "11ec05c52be0a07b08061f7dd003e7d7092e0472bc731b4af7bb1ef876109802",
+      "bytes": 24807,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "proc-macro2",
+      "version": "1.0.106",
+      "checksum": "8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934",
+      "bytes": 59765,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "prodash",
+      "version": "31.0.0",
+      "checksum": "962200e2d7d551451297d9fdce85138374019ada198e30ea9ede38034e27604c",
+      "bytes": 95697,
+      "origin": "downloaded"
+    },
+    {
+      "name": "proptest",
+      "version": "1.11.0",
+      "checksum": "4b45fcc2344c680f5025fe57779faef368840d0bd1f42f216291f0dc4ace4744",
+      "bytes": 207859,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "pulldown-cmark",
+      "version": "0.13.4",
+      "checksum": "e9f068eba8e7071c5f9511831b44f32c740d5adf574e990f946ddb53db2f314e",
+      "bytes": 155043,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "pulldown-cmark-escape",
+      "version": "0.11.0",
+      "checksum": "007d8adb5ddab6f8e3f491ac63566a7d5002cc7ed73901f72057943fa71ae1ae",
+      "bytes": 6719,
+      "origin": "downloaded"
+    },
+    {
+      "name": "quick-error",
+      "version": "1.2.3",
+      "checksum": "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0",
+      "bytes": 15066,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "quote",
+      "version": "1.0.46",
+      "checksum": "dfbc457d0c7a0759a614551b11a6409e5951f6c7537be1f1b7682b9ae9230368",
+      "bytes": 31628,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "r-efi",
+      "version": "5.3.0",
+      "checksum": "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f",
+      "bytes": 64532,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "r-efi",
+      "version": "6.0.0",
+      "checksum": "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf",
+      "bytes": 65303,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rand",
+      "version": "0.9.4",
+      "checksum": "44c5af06bb1b7d3216d91932aed5265164bf384dc89cd6ba05cf59a35f5f76ea",
+      "bytes": 99786,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rand",
+      "version": "0.10.1",
+      "checksum": "d2e8e8bcc7961af1fdac401278c6a831614941f6164ee3bf4ce61b7edb162207",
+      "bytes": 105801,
+      "origin": "downloaded"
+    },
+    {
+      "name": "rand_chacha",
+      "version": "0.9.0",
+      "checksum": "d3022b5f1df60f26e1ffddd6c66e8aa15de382ae63b3a0c1bfc0e4d3e3f325cb",
+      "bytes": 18258,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rand_core",
+      "version": "0.6.4",
+      "checksum": "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c",
+      "bytes": 22666,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rand_core",
+      "version": "0.9.5",
+      "checksum": "76afc826de14238e6e8c374ddcc1fa19e374fd8dd986b0d2af0d02377261d83c",
+      "bytes": 24129,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rand_core",
+      "version": "0.10.1",
+      "checksum": "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69",
+      "bytes": 22833,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rand_xorshift",
+      "version": "0.4.0",
+      "checksum": "513962919efc330f829edb2535844d1b912b0fbe2ca165d613e4e8788bb05a5a",
+      "bytes": 10262,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rand_xoshiro",
+      "version": "0.6.0",
+      "checksum": "6f97cdb2a36ed4183de61b2f824cc45c9f1037f28afe0a322e9fff4c108b5aaa",
+      "bytes": 17125,
+      "origin": "downloaded"
+    },
+    {
+      "name": "rayon",
+      "version": "1.12.0",
+      "checksum": "fb39b166781f92d482534ef4b4b1b2568f42613b53e5b6c160e24cfbfa30926d",
+      "bytes": 183391,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rayon-core",
+      "version": "1.13.0",
+      "checksum": "22e18b0f0062d30d4230b2e85ff77fdfe4326feb054b9783a3460d8435c8ab91",
+      "bytes": 73151,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "redox_syscall",
+      "version": "0.5.18",
+      "checksum": "ed2bf2547551a7053d6fdfafda3f938979645c44812fbfcda098faae3f1a362d",
+      "bytes": 30747,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ref-cast",
+      "version": "1.0.25",
+      "checksum": "f354300ae66f76f1c85c5f84693f0ce81d747e2c3f21a45fef496d89c960bf7d",
+      "bytes": 15192,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ref-cast-impl",
+      "version": "1.0.25",
+      "checksum": "b7186006dcb21920990093f30e3dea63b7d6e977bf1256be20c3563a5db070da",
+      "bytes": 10167,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "regex",
+      "version": "1.12.4",
+      "checksum": "f1292b7759ae1cb9ec195452d1390a074f0cd8541ab7a5a8c31cd6db45d4a6ba",
+      "bytes": 153468,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "regex-automata",
+      "version": "0.4.14",
+      "checksum": "6e1dd4122fc1595e8162618945476892eefca7b88c52820e74af6262213cae8f",
+      "bytes": 618012,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "regex-syntax",
+      "version": "0.8.11",
+      "checksum": "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4",
+      "bytes": 359055,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "reqwest",
+      "version": "0.13.4",
+      "checksum": "219c5811de6525e5416c7d5d53bb656d3afdbc6c5af816e0802bcfa42dbdc1c3",
+      "bytes": 162754,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rfc6979",
+      "version": "0.4.0",
+      "checksum": "f8dd2a808d456c4a54e300a23e9f5a67e122c3024119acbfd73e3bf664491cb2",
+      "bytes": 9140,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ring",
+      "version": "0.17.14",
+      "checksum": "a4689e6c2294d81e88dc6261c768b63bc4fcdb852be6d1352498b114f61383b7",
+      "bytes": 1502610,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rsqlite-vfs",
+      "version": "0.1.1",
+      "checksum": "c51c9ae4df8a7fba42103df5c621fa3c37eccf3a3c650879e90fc48b11cc192c",
+      "bytes": 20095,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rusqlite",
+      "version": "0.40.1",
+      "checksum": "11438310b19e3109b6446c33d1ed5e889428cf2e278407bc7896bc4aaea43323",
+      "bytes": 177923,
+      "origin": "downloaded"
+    },
+    {
+      "name": "rustc-hash",
+      "version": "1.1.0",
+      "checksum": "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2",
+      "bytes": 9331,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rustc-hash",
+      "version": "2.1.2",
+      "checksum": "94300abf3f1ae2e2b8ffb7b58043de3d399c73fa6f4b73826402a5c457614dbe",
+      "bytes": 14754,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rustc-stable-hash",
+      "version": "0.1.2",
+      "checksum": "781442f29170c5c93b7185ad559492601acdc71d5bb0706f5868094f45cfcd08",
+      "bytes": 20359,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rustix",
+      "version": "1.1.4",
+      "checksum": "b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190",
+      "bytes": 425241,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rustls",
+      "version": "0.23.41",
+      "checksum": "6b92b125634d9b795e7beca796cc790df15a7fb38323bf3196fda83292d06b1f",
+      "bytes": 374360,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rustls-pki-types",
+      "version": "1.15.0",
+      "checksum": "764899a24af3980067ee14bc143654f297b22eaebfe3c7b6b211920a5a59b046",
+      "bytes": 35697,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rustls-webpki",
+      "version": "0.103.13",
+      "checksum": "61c429a8649f110dddef65e2a5ad240f747e85f7758a6bccc7e5777bd33f756e",
+      "bytes": 87513,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rustversion",
+      "version": "1.0.22",
+      "checksum": "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d",
+      "bytes": 21096,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "rusty-fork",
+      "version": "0.3.1",
+      "checksum": "cc6bf79ff24e648f6da1f8d1f011e9cac26491b619e6b9280f2b47f1774e6ee2",
+      "bytes": 21108,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "same-file",
+      "version": "1.0.6",
+      "checksum": "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502",
+      "bytes": 10183,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "schannel",
+      "version": "0.1.29",
+      "checksum": "91c1b7e4904c873ef0710c1f407dde2e6287de2bebc1bbbf7d430bb7cbffd939",
+      "bytes": 34352,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "schemars",
+      "version": "1.2.1",
+      "checksum": "a2b42f36aa1cd011945615b92222f6bf73c599a102a300334cd7f8dbeec726cc",
+      "bytes": 94403,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "schemars_derive",
+      "version": "1.2.1",
+      "checksum": "7d115b50f4aaeea07e79c1912f645c7513d81715d0420f8bc77a18c6260b307f",
+      "bytes": 31319,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "scopeguard",
+      "version": "1.2.0",
+      "checksum": "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49",
+      "bytes": 11619,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "sec1",
+      "version": "0.7.3",
+      "checksum": "d3e97a565f76233a6003f9f5c54be1d9c5bdfa3eccfb189469f11ec4901c47dc",
+      "bytes": 17979,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "security-framework",
+      "version": "3.7.0",
+      "checksum": "b7f4bc775c73d9a02cde8bf7b2ec4c9d12743edf609006c7facc23998404cd1d",
+      "bytes": 89115,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "security-framework-sys",
+      "version": "2.17.0",
+      "checksum": "6ce2691df843ecc5d231c0b14ece2acc3efb62c0a398c7e1d875f3983ce020e3",
+      "bytes": 21078,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "semver",
+      "version": "1.0.28",
+      "checksum": "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd",
+      "bytes": 33064,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "serde",
+      "version": "1.0.228",
+      "checksum": "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e",
+      "bytes": 83652,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "serde-untagged",
+      "version": "0.1.9",
+      "checksum": "f9faf48a4a2d2693be24c6289dbe26552776eb7737074e6722891fadbe6c5058",
+      "bytes": 17718,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "serde-value",
+      "version": "0.7.0",
+      "checksum": "f3a1a3341211875ef120e117ea7fd5228530ae7e7036a779fdc9117be6b3282c",
+      "bytes": 10249,
+      "origin": "downloaded"
+    },
+    {
+      "name": "serde_core",
+      "version": "1.0.228",
+      "checksum": "41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad",
+      "bytes": 63111,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "serde_derive",
+      "version": "1.0.228",
+      "checksum": "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79",
+      "bytes": 59605,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "serde_derive_internals",
+      "version": "0.29.1",
+      "checksum": "18d26a20a969b9e3fdf2fc2d9f21eda6c40e2de84c9408bb5d3b05d499aae711",
+      "bytes": 26189,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "serde_ignored",
+      "version": "0.1.14",
+      "checksum": "115dffd5f3853e06e746965a20dcbae6ee747ae30b543d91b0e089668bb07798",
+      "bytes": 13078,
+      "origin": "downloaded"
+    },
+    {
+      "name": "serde_json",
+      "version": "1.0.150",
+      "checksum": "e8014e44b4736ed0538adeecded0fce2a272f22dc9578a7eb6b2d9993c74cfb9",
+      "bytes": 155574,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "serde_spanned",
+      "version": "1.1.1",
+      "checksum": "6662b5879511e06e8999a8a235d848113e942c9124f211511b16466ee2995f26",
+      "bytes": 11025,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "sha1",
+      "version": "0.10.6",
+      "checksum": "e3bf829a2d51ab4a5ddf1352d8470c140cadc8301b2ae1789db023f01cedd6ba",
+      "bytes": 13517,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "sha1",
+      "version": "0.11.0",
+      "checksum": "aacc4cc499359472b4abe1bf11d0b12e688af9a805fa5e3016f9a386dc2d0214",
+      "bytes": 15458,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "sha1-checked",
+      "version": "0.10.0",
+      "checksum": "89f599ac0c323ebb1c6082821a54962b839832b03984598375bff3975b804423",
+      "bytes": 783840,
+      "origin": "downloaded"
+    },
+    {
+      "name": "sha2",
+      "version": "0.10.9",
+      "checksum": "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283",
+      "bytes": 29271,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "sha2",
+      "version": "0.11.0",
+      "checksum": "446ba717509524cb3f22f17ecc096f10f4822d76ab5c0b9822c5f9c284e825f4",
+      "bytes": 33969,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "sharded-slab",
+      "version": "0.1.7",
+      "checksum": "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6",
+      "bytes": 58227,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "shell-escape",
+      "version": "0.1.5",
+      "checksum": "45bb67a18fa91266cc7807181f62f9178a6873bfad7dc788c42e6430db40184f",
+      "bytes": 6847,
+      "origin": "downloaded"
+    },
+    {
+      "name": "shell-words",
+      "version": "1.1.1",
+      "checksum": "dc6fe69c597f9c37bfeeeeeb33da3530379845f10be461a66d16d03eca2ded77",
+      "bytes": 10012,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "shlex",
+      "version": "1.3.0",
+      "checksum": "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64",
+      "bytes": 18713,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "shlex",
+      "version": "2.0.1",
+      "checksum": "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba",
+      "bytes": 19332,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "signature",
+      "version": "2.2.0",
+      "checksum": "77549399552de45a898a580c1b41d445bf730df867cc44e6c0233bbc4b8329de",
+      "bytes": 15531,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "simd-adler32",
+      "version": "0.3.9",
+      "checksum": "703d5c7ef118737c72f1af64ad2f6f8c5e1921f818cdcb97b8fe6fc69bf66214",
+      "bytes": 18572,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "similar",
+      "version": "3.1.1",
+      "checksum": "e6505efef05804732ed8a3f2d4f279429eb485bd69d5b0cc6b19cc02005cda16",
+      "bytes": 79833,
+      "origin": "downloaded"
+    },
+    {
+      "name": "sized-chunks",
+      "version": "0.6.5",
+      "checksum": "16d69225bde7a69b235da73377861095455d298f2b970996eec25ddbb42b3d1e",
+      "bytes": 43628,
+      "origin": "downloaded"
+    },
+    {
+      "name": "slab",
+      "version": "0.4.12",
+      "checksum": "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5",
+      "bytes": 19080,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "smallvec",
+      "version": "1.15.2",
+      "checksum": "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90",
+      "bytes": 34899,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "snapbox",
+      "version": "1.2.2",
+      "checksum": "8de56eb4784a2c5c1efede55a0f06fbf481bc12b42b355b9525c15db1e3581a8",
+      "bytes": 56925,
+      "origin": "downloaded"
+    },
+    {
+      "name": "snapbox-macros",
+      "version": "1.1.0",
+      "checksum": "ed4a172e483585ebbc7c7f7d1705ca7e3f94f606ed78caa14805673189fd5455",
+      "bytes": 7895,
+      "origin": "downloaded"
+    },
+    {
+      "name": "socket2",
+      "version": "0.6.4",
+      "checksum": "52d1cfed4120b4d927bf7c0f86d2087a4a7d6027c906d9f9d525a80573b9be51",
+      "bytes": 59888,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "spki",
+      "version": "0.7.3",
+      "checksum": "d91ed6c858b01f942cd56b37a94b3e0a1798290327d1236e4d9cf4eaca44d29d",
+      "bytes": 16409,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "sqlite-wasm-rs",
+      "version": "0.5.5",
+      "checksum": "dc3efc0da82635d7e1ced0053bbbfa8c7ab9645d0bf36ceb4f7127bb85315d75",
+      "bytes": 5954429,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "stable_deref_trait",
+      "version": "1.2.1",
+      "checksum": "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596",
+      "bytes": 8186,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "static_assertions",
+      "version": "1.1.0",
+      "checksum": "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f",
+      "bytes": 18480,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "strsim",
+      "version": "0.11.1",
+      "checksum": "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f",
+      "bytes": 14266,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "subtle",
+      "version": "2.6.1",
+      "checksum": "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292",
+      "bytes": 14562,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "supports-hyperlinks",
+      "version": "3.2.0",
+      "checksum": "e396b6523b11ccb83120b115a0b7366de372751aa6edf19844dfb13a6af97e91",
+      "bytes": 8455,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "supports-unicode",
+      "version": "3.0.0",
+      "checksum": "b7401a30af6cb5818bb64852270bb722533397edcfc7344954a38f420819ece2",
+      "bytes": 7825,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "syn",
+      "version": "1.0.109",
+      "checksum": "72b64191b275b66ffe2469e8af2c1cfe3bafa67b529ead792a6d0160888b4237",
+      "bytes": 237611,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "syn",
+      "version": "2.0.118",
+      "checksum": "1b9ae57f904213ebb649ce6895b8a66c66f0203b9319718f69a5612a065b1422",
+      "bytes": 305533,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "sync_wrapper",
+      "version": "1.0.2",
+      "checksum": "0bf256ce5efdfa370213c1dabab5935a12e49f2c58d15e9eac2870d3b4f27263",
+      "bytes": 6958,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "synstructure",
+      "version": "0.12.6",
+      "checksum": "f36bdaa60a83aca3921b5259d5400cbf5e90fc51931376a9bd4a0eb79aa7210f",
+      "bytes": 18429,
+      "origin": "downloaded"
+    },
+    {
+      "name": "synstructure",
+      "version": "0.13.2",
+      "checksum": "728a70f3dbaf5bab7f0c4b1ac8d7ae5ea60a4b5549c8a5914361c99147a709d2",
+      "bytes": 18950,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tar",
+      "version": "0.4.46",
+      "checksum": "3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840",
+      "bytes": 70809,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tempfile",
+      "version": "3.27.0",
+      "checksum": "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd",
+      "bytes": 44780,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "terminal_size",
+      "version": "0.4.4",
+      "checksum": "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874",
+      "bytes": 10022,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "thiserror",
+      "version": "1.0.69",
+      "checksum": "b6aaf5339b578ea85b50e080feb250a3e8ae8cfcdff9a461c9ec2904bc923f52",
+      "bytes": 22198,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "thiserror",
+      "version": "2.0.18",
+      "checksum": "4288b5bcbc7920c07a1149a35cf9590a2aa808e0bc1eafaade0b80947865fbc4",
+      "bytes": 28875,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "thiserror-impl",
+      "version": "1.0.69",
+      "checksum": "4fee6c4efc90059e10f81e6d42c60a18f76588c3d74cb83a0b242a2b6c7504c1",
+      "bytes": 18365,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "thiserror-impl",
+      "version": "2.0.18",
+      "checksum": "ebc4ee7f67670e9b64d05fa4253e753e016c6c95ff35b89b7941d6b856dec1d5",
+      "bytes": 21413,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "thread_local",
+      "version": "1.1.9",
+      "checksum": "f60246a4944f24f6e018aa17cdeffb7818b76356965d03b07d6a9886e8962185",
+      "bytes": 19315,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "time",
+      "version": "0.3.52",
+      "checksum": "0e48db7b415311b615f910b3dcaa4557bcd4bf1982379c95c223fd8c2a20e210",
+      "bytes": 272610,
+      "origin": "downloaded"
+    },
+    {
+      "name": "time-core",
+      "version": "0.1.9",
+      "checksum": "9e1c906769ad99c88eaa54e728060edef082f8e358ff32030cb7c7d315e81109",
+      "bytes": 10320,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "time-macros",
+      "version": "0.2.31",
+      "checksum": "c431b87111666e491a90baa837f914fb45cd5dc3c268591b0220ff5057f2085f",
+      "bytes": 33491,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tinystr",
+      "version": "0.8.3",
+      "checksum": "c8323304221c2a851516f22236c5722a72eaa19749016521d6dff0824447d96d",
+      "bytes": 24710,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tinytemplate",
+      "version": "1.2.1",
+      "checksum": "be4d6b5f19ff7664e8c98d03e2139cb510db9b0a60b55f8e8709b689d939b6bc",
+      "bytes": 26490,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tinyvec",
+      "version": "1.11.0",
+      "checksum": "3e61e67053d25a4e82c844e8424039d9745781b3fc4f32b8d55ed50f5f667ef3",
+      "bytes": 53096,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tinyvec_macros",
+      "version": "0.1.1",
+      "checksum": "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20",
+      "bytes": 5865,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tokio",
+      "version": "1.52.3",
+      "checksum": "8fc7f01b389ac15039e4dc9531aa973a135d7a4135281b12d7c1bc79fd57fffe",
+      "bytes": 901393,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tokio-rustls",
+      "version": "0.26.4",
+      "checksum": "1729aa945f29d91ba541258c8df89027d5792d85a8841fb65e8bf0f4ede4ef61",
+      "bytes": 35430,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tokio-util",
+      "version": "0.7.18",
+      "checksum": "9ae9cec805b01e8fc3fd2fe289f89149a9b66dd16786abd8b19cfa7b48cb0098",
+      "bytes": 140550,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "toml",
+      "version": "1.1.2+spec-1.1.0",
+      "checksum": "81f3d15e84cbcd896376e6730314d59fb5a87f31e4b038454184435cd57defee",
+      "bytes": 56327,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "toml_datetime",
+      "version": "1.1.1+spec-1.1.0",
+      "checksum": "3165f65f62e28e0115a00b2ebdd37eb6f3b641855f9d636d3cd4103767159ad7",
+      "bytes": 17982,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "toml_edit",
+      "version": "0.25.12+spec-1.1.0",
+      "checksum": "d2153edc6955a6c354fad8f5efd38b6a8769bdccf9fe50f8e1329f81b0baa5d7",
+      "bytes": 68620,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "toml_parser",
+      "version": "1.1.2+spec-1.1.0",
+      "checksum": "a2abe9b86193656635d2411dc43050282ca48aa31c2451210f4202550afb7526",
+      "bytes": 35485,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "toml_writer",
+      "version": "1.1.1+spec-1.1.0",
+      "checksum": "756daf9b1013ebe47a8776667b466417e2d4c5679d441c26230efd9ef78692db",
+      "bytes": 18841,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tower",
+      "version": "0.5.3",
+      "checksum": "ebe5ef63511595f1344e2d5cfa636d973292adc0eec1f0ad45fae9f0851ab1d4",
+      "bytes": 110488,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tower-http",
+      "version": "0.6.11",
+      "checksum": "4cfcf7e2740e6fc6d4d688b4ef00650406bb94adf4731e43c096c3a19fe40840",
+      "bytes": 156773,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tower-layer",
+      "version": "0.3.3",
+      "checksum": "121c2a6cda46980bb0fcd1647ffaf6cd3fc79a013de288782836f6df9c48780e",
+      "bytes": 6180,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tower-service",
+      "version": "0.3.3",
+      "checksum": "8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3",
+      "bytes": 6950,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tracing",
+      "version": "0.1.44",
+      "checksum": "63e71662fa4b2a2c3a26f570f037eb95bb1f85397f3cd8076caed2f026a6d100",
+      "bytes": 463135,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tracing-attributes",
+      "version": "0.1.31",
+      "checksum": "7490cfa5ec963746568740651ac6781f701c9c5ea257c58e057f3ba8cf69e8da",
+      "bytes": 39733,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tracing-chrome",
+      "version": "0.7.2",
+      "checksum": "bf0a738ed5d6450a9fb96e86a23ad808de2b727fd1394585da5cdd6788ffe724",
+      "bytes": 14030,
+      "origin": "downloaded"
+    },
+    {
+      "name": "tracing-core",
+      "version": "0.1.36",
+      "checksum": "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a",
+      "bytes": 63967,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tracing-log",
+      "version": "0.2.0",
+      "checksum": "ee855f1f400bd0e5c02d150ae5de3840039a3f54b025156404e34c23c03f47c3",
+      "bytes": 17561,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "tracing-subscriber",
+      "version": "0.3.23",
+      "checksum": "cb7f578e5945fb242538965c2d0b04418d38ec25c79d160cd279bf0731c8d319",
+      "bytes": 213773,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "try-lock",
+      "version": "0.2.5",
+      "checksum": "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b",
+      "bytes": 4314,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "typeid",
+      "version": "1.0.3",
+      "checksum": "bc7d623258602320d5c55d1bc22793b57daff0ec7efc270ea7d55ce1d5f5471c",
+      "bytes": 9006,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "typenum",
+      "version": "1.20.1",
+      "checksum": "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20",
+      "bytes": 105479,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "ucd-trie",
+      "version": "0.1.7",
+      "checksum": "2896d95c02a80c6d6a5d6e953d479f5ddf2dfdb6a244441010e373ac0fb88971",
+      "bytes": 46795,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "unarray",
+      "version": "0.1.4",
+      "checksum": "eaea85b334db583fe3274d12b4cd1880032beab409c0d774be044d4480ab9a94",
+      "bytes": 12895,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "unicase",
+      "version": "2.9.0",
+      "checksum": "dbc4bc3a9f746d862c45cb89d705aa10f187bb96c76001afab07a0d35ce60142",
+      "bytes": 24368,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "unicode-bom",
+      "version": "2.0.3",
+      "checksum": "7eec5d1121208364f6793f7d2e222bf75a915c19557537745b195b253dd64217",
+      "bytes": 10773,
+      "origin": "downloaded"
+    },
+    {
+      "name": "unicode-ident",
+      "version": "1.0.24",
+      "checksum": "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75",
+      "bytes": 49298,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "unicode-normalization",
+      "version": "0.1.25",
+      "checksum": "5fd4f6878c9cb28d874b009da9e8d183b5abc80117c40bbd187a1fde336be6e8",
+      "bytes": 128462,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "unicode-width",
+      "version": "0.2.2",
+      "checksum": "b4ac048d71ede7ee76d585517add45da530660ef4390e49b098733c6e897f254",
+      "bytes": 282768,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "unicode-xid",
+      "version": "0.2.6",
+      "checksum": "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853",
+      "bytes": 15744,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "untrusted",
+      "version": "0.9.0",
+      "checksum": "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1",
+      "bytes": 14447,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "url",
+      "version": "2.5.8",
+      "checksum": "ff67a8a4397373c3ef660812acab3268222035010ab8680ec4215f38ba3d0eed",
+      "bytes": 86512,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "utf8-width",
+      "version": "0.1.8",
+      "checksum": "1292c0d970b54115d14f2492fe0170adf21d68a1de108eebc51c1df4f346a091",
+      "bytes": 3212,
+      "origin": "downloaded"
+    },
+    {
+      "name": "utf8_iter",
+      "version": "1.0.4",
+      "checksum": "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be",
+      "bytes": 10437,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "utf8parse",
+      "version": "0.2.2",
+      "checksum": "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821",
+      "bytes": 13499,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "valuable",
+      "version": "0.1.1",
+      "checksum": "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65",
+      "bytes": 28679,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "varisat",
+      "version": "0.2.2",
+      "checksum": "ebe609851d1e9196674ac295f656bd8601200a1077343d22b345013497807caf",
+      "bytes": 56090,
+      "origin": "downloaded"
+    },
+    {
+      "name": "varisat-checker",
+      "version": "0.2.2",
+      "checksum": "135c977c5913ed6e98f6b81b8e4d322211303b7d40dae773caef7ad1de6c763b",
+      "bytes": 21634,
+      "origin": "downloaded"
+    },
+    {
+      "name": "varisat-dimacs",
+      "version": "0.2.2",
+      "checksum": "3d1dee4e21be1f04c0a939f7ae710cced47233a578de08a1b3c7d50848402636",
+      "bytes": 9878,
+      "origin": "downloaded"
+    },
+    {
+      "name": "varisat-formula",
+      "version": "0.2.2",
+      "checksum": "395c5543b9bfd9076d6d3af49d6c34a4b91b0b355998c0a5ec6ed7265d364520",
+      "bytes": 11554,
+      "origin": "downloaded"
+    },
+    {
+      "name": "varisat-internal-macros",
+      "version": "0.2.2",
+      "checksum": "602ece773543d066aa7848455486c6c0422a3f214da7a2b899100f3c4f12408d",
+      "bytes": 7524,
+      "origin": "downloaded"
+    },
+    {
+      "name": "varisat-internal-proof",
+      "version": "0.2.2",
+      "checksum": "6163bb7bc9018af077b76d64f976803d141c36a27d640f1437dddc4fd527d207",
+      "bytes": 10909,
+      "origin": "downloaded"
+    },
+    {
+      "name": "vcpkg",
+      "version": "0.2.15",
+      "checksum": "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426",
+      "bytes": 228735,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "vec_mut_scan",
+      "version": "0.3.0",
+      "checksum": "68ed610a8d5e63d9c0e31300e8fdb55104c5f21e422743a9dc74848fa8317fd2",
+      "bytes": 8028,
+      "origin": "downloaded"
+    },
+    {
+      "name": "version_check",
+      "version": "0.9.5",
+      "checksum": "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a",
+      "bytes": 15554,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "wait-timeout",
+      "version": "0.2.1",
+      "checksum": "09ac3b126d3914f9849036f826e054cbabdc8519970b8998ddaf3b5bd3c65f11",
+      "bytes": 11435,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "walkdir",
+      "version": "2.5.0",
+      "checksum": "29790946404f91d9c5d06f9874efddea1dc06c5efe94541a7d6863108e3a5e4b",
+      "bytes": 23951,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "want",
+      "version": "0.3.1",
+      "checksum": "bfa7760aed19e106de2c7c0b581b509f2f25d3dacaf737cb82ac61bc6d760b0e",
+      "bytes": 6398,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "wasi",
+      "version": "0.11.1+wasi-snapshot-preview1",
+      "checksum": "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b",
+      "bytes": 28477,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "wasip2",
+      "version": "1.0.4+wasi-0.2.12",
+      "checksum": "b67efb37e106e55ce722a510d6b5f9c17f083e5fc79afc2badeb12cc313d9487",
+      "bytes": 135311,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "wasm-bindgen",
+      "version": "0.2.126",
+      "checksum": "4b067c0c11094aef6b7a801c1e34a26affafdf3d051dba08456b868789aaf9a4",
+      "bytes": 67461,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "wasm-bindgen-futures",
+      "version": "0.4.76",
+      "checksum": "c62df1340f32221cb9c54d6a27b030e3dba64361d4a95bed55f9aacb44da291d",
+      "bytes": 8262,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "wasm-bindgen-macro",
+      "version": "0.2.126",
+      "checksum": "167ce5e579f6bcf889c4f7175a8a5a585de84e8ff93976ce393efa5f2837aab1",
+      "bytes": 9303,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "wasm-bindgen-macro-support",
+      "version": "0.2.126",
+      "checksum": "f3997c7839262f4ef12cf90b818d6340c18e80f263f1a94bf157d0ec4420380e",
+      "bytes": 82688,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "wasm-bindgen-shared",
+      "version": "0.2.126",
+      "checksum": "dc1b4cb0cc549fcf58d7dfc081778139b3d283a081644e833e84682ad71cea24",
+      "bytes": 11287,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "web-sys",
+      "version": "0.3.103",
+      "checksum": "8622dcb61c0bcc9fffa6938bed81210af2da9a7e4a1a834b2e37a59b6dfb6141",
+      "bytes": 675560,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "winapi",
+      "version": "0.3.9",
+      "checksum": "5c839a674fcd7a98952e593242ea400abe93992746761e38641405d28b00f419",
+      "bytes": 1200382,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "winapi-i686-pc-windows-gnu",
+      "version": "0.4.0",
+      "checksum": "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6",
+      "bytes": 2918815,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "winapi-util",
+      "version": "0.1.11",
+      "checksum": "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22",
+      "bytes": 13368,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "winapi-x86_64-pc-windows-gnu",
+      "version": "0.4.0",
+      "checksum": "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f",
+      "bytes": 2947998,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "windows-link",
+      "version": "0.2.1",
+      "checksum": "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5",
+      "bytes": 6133,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "windows-sys",
+      "version": "0.52.0",
+      "checksum": "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d",
+      "bytes": 2576877,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "windows-sys",
+      "version": "0.61.2",
+      "checksum": "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc",
+      "bytes": 2517186,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "windows-targets",
+      "version": "0.52.6",
+      "checksum": "9b724f72796e036ab90c1021d4780d4d3d648aca59e491e6b98e725b84e99973",
+      "bytes": 6403,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "windows_aarch64_gnullvm",
+      "version": "0.52.6",
+      "checksum": "32a4622180e7a0ec044bb555404c800bc9fd9ec262ec147edd5989ccd0c02cd3",
+      "bytes": 435718,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "windows_aarch64_msvc",
+      "version": "0.52.6",
+      "checksum": "09ec2a7bb152e2252b53fa7803150007879548bc709c039df7627cabbd05d469",
+      "bytes": 832615,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "windows_i686_gnu",
+      "version": "0.52.6",
+      "checksum": "8e9b5ad5ab802e97eb8e295ac6720e509ee4c243f69d781394014ebfe8bbfa0b",
+      "bytes": 880402,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "windows_i686_gnullvm",
+      "version": "0.52.6",
+      "checksum": "0eee52d38c090b3caa76c563b86c3a4bd71ef1a819287c19d586d7334ae8ed66",
+      "bytes": 475940,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "windows_i686_msvc",
+      "version": "0.52.6",
+      "checksum": "240948bc05c5e7c6dabba28bf89d89ffce3e303022809e73deaefe4f6ec56c66",
+      "bytes": 901163,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "windows_x86_64_gnu",
+      "version": "0.52.6",
+      "checksum": "147a5c80aabfbf0c7d901cb5895d1de30ef2907eb21fbbab29ca94c5b08b1a78",
+      "bytes": 836363,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "windows_x86_64_gnullvm",
+      "version": "0.52.6",
+      "checksum": "24d5b23dc417412679681396f2b49f3de8c1473deb516bd34410872eff51ed0d",
+      "bytes": 435707,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "windows_x86_64_msvc",
+      "version": "0.52.6",
+      "checksum": "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec",
+      "bytes": 832564,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "winnow",
+      "version": "1.0.3",
+      "checksum": "0592e1c9d151f854e6fd382574c3a0855250e1d9b2f99d9281c6e6391af352f1",
+      "bytes": 187990,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "wit-bindgen",
+      "version": "0.57.1",
+      "checksum": "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e",
+      "bytes": 71227,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "writeable",
+      "version": "0.6.3",
+      "checksum": "1ffae5123b2d3fc086436f8834ae3ab053a283cfac8fe0a0b8eaae044768a4c4",
+      "bytes": 26685,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "yoke",
+      "version": "0.8.3",
+      "checksum": "709fe23a0424b6a435d82152b1bd3fdfb0833487d5fa90d05d42762a9891fef5",
+      "bytes": 33132,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "yoke-derive",
+      "version": "0.8.2",
+      "checksum": "de844c262c8848816172cef550288e7dc6c7b7814b4ee56b3e1553f275f1858e",
+      "bytes": 15077,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "zerocopy",
+      "version": "0.8.52",
+      "checksum": "ce1022995ff5ff5d841ad7d994facc23098cd40152f2c1d11cd607c6f530653f",
+      "bytes": 284102,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "zerocopy-derive",
+      "version": "0.8.52",
+      "checksum": "1ae7f38b72ec2a254e2b87ef277cf2cd4fb97cbebf944faa6f33354da0867930",
+      "bytes": 98218,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "zerofrom",
+      "version": "0.1.8",
+      "checksum": "0ec05a11813ea801ff6d75110ad09cd0824ddba17dfe17128ea0d5f68e6c5272",
+      "bytes": 6156,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "zerofrom-derive",
+      "version": "0.1.7",
+      "checksum": "11532158c46691caf0f2593ea8358fed6bbf68a0315e80aae9bd41fbade684a1",
+      "bytes": 8853,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "zeroize",
+      "version": "1.9.0",
+      "checksum": "e13c156562582aa81c60cb29407084cdb54c4164760106ab78e6c5b0858cf64e",
+      "bytes": 24480,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "zerotrie",
+      "version": "0.2.4",
+      "checksum": "0f9152d31db0792fa83f70fb2f83148effb5c1f5b8c7686c3459e361d9bc20bf",
+      "bytes": 83690,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "zerovec",
+      "version": "0.11.6",
+      "checksum": "90f911cbc359ab6af17377d242225f4d75119aec87ea711a880987b18cd7b239",
+      "bytes": 128583,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "zerovec-derive",
+      "version": "0.11.3",
+      "checksum": "625dc425cab0dca6dc3c3319506e6593dcb08a9f387ea3b284dbd52a92c40555",
+      "bytes": 22115,
+      "origin": "global-cache-copy"
+    },
+    {
+      "name": "zlib-rs",
+      "version": "0.6.4",
+      "checksum": "977347db8caa080403f6b6b7c1cda9479a8e869316f7e13a59b19076a40f94e3",
+      "bytes": 213728,
+      "origin": "downloaded"
+    },
+    {
+      "name": "zmij",
+      "version": "1.0.21",
+      "checksum": "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa",
+      "bytes": 26665,
+      "origin": "global-cache-copy"
+    }
+  ]
+}

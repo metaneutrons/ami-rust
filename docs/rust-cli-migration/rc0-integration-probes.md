@@ -129,3 +129,37 @@ source and helper changes, and to bind each kernel EPERM event to the intended
 exact control target. Both checks are now explicit; decoy paths and wrong errno
 values fail their fixtures. The host dependency lock/license/API review remains
 a separate RC0-A2 task. No milestone acceptance is inferred from these repairs.
+
+## Corrected hosted qualification
+
+[Run 39170474195](https://github.com/metaneutrons/ami-rust/actions/runs/39170474195)
+passed all three integration jobs for candidate
+`5a1ad03bd50cdf0484c32efea03dfa614024c838`; PR #78 merged at
+`b16a025a7b3b1d072b1633e1f5cbd4d927fdd80e`.
+The machine results, independent ELF audit summaries, original report digests and an artifact file/digest
+inventory are retained in [the evidence directory](evidence/rc0-integration-39170474195/index.json).
+
+All four fresh host/root combinations produce the identical 342,136-byte final
+native executable, SHA-256
+`f43ba62f560fbca46f11486a95c433cabba83a24ba52bd8ed130cfa025524acd`.
+This matches the latest local colocated-source recipe, superseding the earlier
+external-path experiment while preserving its results above.
+
+| Host | Native command duration | Observed peak descendant RSS | Managed workspace | Result |
+| --- | ---: | ---: | ---: | --- |
+| Ubuntu 24.04 x86-64 | 139.156 s | 1,834,442,752 bytes | 4,382,713,573 bytes | Two roots and independent ELF audits PASS |
+| macOS 26 arm64 | 171.516 s | 1,709,998,080 bytes | 3,585,602,688 bytes | Two roots and independent ELF audits PASS |
+
+Both fit the prospectively selected 4 GiB descendant RSS, 12 GiB workspace,
+16 MiB logs and 1,200-second command bounds. These are hosted experiment limits,
+not AROS application allocation limits. Internal resource orchestration and the
+independent ELF oracle still use Python, outside the experimental Cargo process.
+Their retirement belongs to RC4; this campaign cannot establish RC5.
+
+Linux's 12 interpreter-policy controls pass. macOS's ten controls pass, with
+independent observation of all ten routes, four positive interpreter routes and
+four exact-target kernel EPERM refusals. Its complete-source-closure status
+remains PARTIAL; controlled-route evidence does not identify interpreter
+semantics hidden inside arbitrary allowed binaries. Selected executable source
+and build provenance remain part of the acceptance boundary. No new AROS
+runtime, complete consumer implementation or release is accepted here.

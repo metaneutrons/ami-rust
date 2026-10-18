@@ -1,0 +1,1032 @@
+cargo v0.100.0 (${RETAINED_SOURCE_REVIEW}/upstream-cargo) all-static,default,http-transport-curl,openssl,vendored-libgit2,vendored-openssl
+anstream v1.0.0 auto,default,wincon
+anstyle v1.0.14 default,std
+anstyle-parse v1.0.0 default,utf8
+utf8parse v0.2.2 default
+anstyle-query v1.1.5
+colorchoice v1.0.5
+is_terminal_polyfill v1.70.2 default
+utf8parse v0.2.2 default
+anstyle v1.0.14 default,std
+anstyle-progress v0.1.0 default,std
+anyhow v1.0.103 default,std
+async-trait v0.1.89 (proc-macro)
+proc-macro2 v1.0.106 default,proc-macro
+unicode-ident v1.0.24
+quote v1.0.46 default,proc-macro
+proc-macro2 v1.0.106 default,proc-macro (*)
+syn v2.0.118 clone-impls,default,derive,extra-traits,fold,full,parsing,printing,proc-macro,visit,visit-mut
+proc-macro2 v1.0.106 default,proc-macro (*)
+quote v1.0.46 default,proc-macro (*)
+unicode-ident v1.0.24
+base64 v0.22.1 alloc,default,std
+blake3 v1.8.5 default,std
+arrayref v0.3.9
+arrayvec v0.7.7
+cfg-if v1.0.4
+constant_time_eq v0.4.2 std
+cpufeatures v0.3.0
+cc v1.2.65 parallel
+find-msvc-tools v0.1.9
+jobserver v0.1.34
+libc v0.2.186 default,std
+libc v0.2.186 default,std
+shlex v2.0.1 default,std
+cargo-credential v0.4.11 (${RETAINED_SOURCE_REVIEW}/upstream-cargo/credential/cargo-credential)
+anyhow v1.0.103 default,std
+libc v0.2.186 default,extra_traits,std
+serde v1.0.228 default,derive,serde_derive,std
+serde_core v1.0.228 alloc,default,result,std
+serde_derive v1.0.228 (proc-macro) default
+proc-macro2 v1.0.106 default,proc-macro (*)
+quote v1.0.46 default,proc-macro (*)
+syn v2.0.118 clone-impls,default,derive,extra-traits,fold,full,parsing,printing,proc-macro,visit,visit-mut (*)
+serde_json v1.0.150 default,raw_value,std
+itoa v1.0.18
+memchr v2.8.2 alloc,default,std
+serde_core v1.0.228 alloc,default,result,std
+zmij v1.0.21
+thiserror v2.0.18 default,std
+thiserror-impl v2.0.18 (proc-macro)
+proc-macro2 v1.0.106 default,proc-macro (*)
+quote v1.0.46 default,proc-macro (*)
+syn v2.0.118 clone-impls,default,derive,extra-traits,fold,full,parsing,printing,proc-macro,visit,visit-mut (*)
+time v0.3.52 alloc,default,formatting,parsing,serde,std
+deranged v0.5.8 default,serde
+serde_core v1.0.228 alloc,default,result,std
+num-conv v0.2.2
+powerfmt v0.2.0
+serde_core v1.0.228 alloc,default,result,std
+time-core v0.1.9
+cargo-credential-libsecret v0.5.10 (${RETAINED_SOURCE_REVIEW}/upstream-cargo/credential/cargo-credential-libsecret)
+anyhow v1.0.103 default,std
+cargo-credential v0.4.11 (${RETAINED_SOURCE_REVIEW}/upstream-cargo/credential/cargo-credential)  (*)
+libloading v0.9.0 default,std
+cfg-if v1.0.4
+cargo-platform v0.3.3 (${RETAINED_SOURCE_REVIEW}/upstream-cargo/crates/cargo-platform)
+serde_core v1.0.228 alloc,default,result,std
+cargo-util v0.2.32 (${RETAINED_SOURCE_REVIEW}/upstream-cargo/crates/cargo-util)
+anyhow v1.0.103 default,std
+filetime v0.2.29
+cfg-if v1.0.4
+libc v0.2.186 default,extra_traits,std
+hex v0.4.3 alloc,default,std
+ignore v0.4.26
+crossbeam-deque v0.8.6 default,std
+crossbeam-epoch v0.9.18 alloc,std
+crossbeam-utils v0.8.21 default,std
+crossbeam-utils v0.8.21 default,std
+globset v0.4.18 default,log
+aho-corasick v1.1.4 default,perf-literal,std
+memchr v2.8.2 alloc,default,std
+bstr v1.12.3 alloc,default,std,unicode
+memchr v2.8.2 alloc,default,std
+regex-automata v0.4.14 alloc,dfa-build,dfa-onepass,dfa-search,hybrid,meta,nfa,nfa-backtrack,nfa-pikevm,nfa-thompson,perf,perf-inline,perf-literal,perf-literal-multisubstring,perf-literal-substring,std,syntax,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment,unicode-word-boundary
+aho-corasick v1.1.4 default,perf-literal,std (*)
+memchr v2.8.2 alloc,default,std
+regex-syntax v0.8.11 default,std,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment
+log v0.4.33 std
+regex-automata v0.4.14 alloc,dfa-build,dfa-onepass,dfa-search,hybrid,meta,nfa,nfa-backtrack,nfa-pikevm,nfa-thompson,perf,perf-inline,perf-literal,perf-literal-multisubstring,perf-literal-substring,std,syntax,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment,unicode-word-boundary (*)
+regex-syntax v0.8.11 default,std,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment
+log v0.4.33 std
+memchr v2.8.2 alloc,default,std
+regex-automata v0.4.14 alloc,dfa-build,dfa-onepass,dfa-search,hybrid,meta,nfa,nfa-backtrack,nfa-pikevm,nfa-thompson,perf,perf-inline,perf-literal,perf-literal-multisubstring,perf-literal-substring,std,syntax,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment,unicode-word-boundary (*)
+same-file v1.0.6
+walkdir v2.5.0
+same-file v1.0.6
+jobserver v0.1.34
+libc v0.2.186 default,extra_traits,std
+libc v0.2.186 default,extra_traits,std
+portable-atomic v1.13.1 default,fallback
+same-file v1.0.6
+sha2 v0.11.0 alloc,default,oid
+cfg-if v1.0.4
+cpufeatures v0.3.0
+digest v0.11.3 alloc,block-api,default,mac,oid
+block-buffer v0.12.1
+hybrid-array v0.4.13
+typenum v1.20.1 const-generics
+const-oid v0.10.2
+crypto-common v0.2.2
+hybrid-array v0.4.13  (*)
+ctutils v0.4.2
+cmov v0.5.4
+shell-escape v0.1.5
+tempfile v3.27.0 default,getrandom
+fastrand v2.4.1 alloc,default,std
+getrandom v0.4.3 std,sys_rng,wasm_js
+cfg-if v1.0.4
+libc v0.2.186 default,extra_traits,std
+rand_core v0.10.1
+once_cell v1.21.4 alloc,default,race,std
+rustix v1.1.4 alloc,default,fs,std,termios
+bitflags v2.13.0 std
+linux-raw-sys v0.12.1 auxvec,elf,errno,general,ioctl,no_std
+tracing v0.1.44 attributes,std,tracing-attributes
+pin-project-lite v0.2.17
+tracing-attributes v0.1.31 (proc-macro)
+proc-macro2 v1.0.106 default,proc-macro (*)
+quote v1.0.46 default,proc-macro (*)
+syn v2.0.118 clone-impls,default,derive,extra-traits,fold,full,parsing,printing,proc-macro,visit,visit-mut (*)
+tracing-core v0.1.36 default,once_cell,std
+once_cell v1.21.4 alloc,default,race,std
+walkdir v2.5.0  (*)
+cargo-util-schemas v0.14.3 (${RETAINED_SOURCE_REVIEW}/upstream-cargo/crates/cargo-util-schemas)
+jiff v0.2.31 alloc,default,perf-inline,serde,std,tz-fat,tz-system,tzdb-bundle-platform,tzdb-concatenated,tzdb-zoneinfo
+serde_core v1.0.228 alloc,default,result,std
+semver v1.0.28 default,serde,std
+serde_core v1.0.228 alloc,default,result,std
+serde v1.0.228 default,derive,serde_derive,std (*)
+serde-untagged v0.1.9
+erased-serde v0.4.10 alloc
+serde_core v1.0.228 alloc,default,result,std
+typeid v1.0.3
+serde_core v1.0.228 alloc,default,result,std
+typeid v1.0.3
+serde-value v0.7.0
+ordered-float v2.10.1 default,std
+num-traits v0.2.19 std
+autocfg v1.5.1
+serde v1.0.228 default,derive,serde_derive,std (*)
+thiserror v2.0.18 default,std (*)
+toml v1.1.2+spec-1.1.0 display,parse,preserve_order,serde,std
+indexmap v2.14.0 default,std
+equivalent v1.0.2
+hashbrown v0.17.1 allocator-api2,default,default-hasher,equivalent,inline-more,raw-entry
+allocator-api2 v0.2.21 alloc
+equivalent v1.0.2
+foldhash v0.2.0
+serde_core v1.0.228 alloc,default,result,std
+serde_spanned v1.1.1 alloc,default,serde,std
+serde_core v1.0.228 alloc,default,result,std
+toml_datetime v1.1.1+spec-1.1.0 alloc,default,serde,std
+serde_core v1.0.228 alloc,default,result,std
+toml_parser v1.1.2+spec-1.1.0 alloc,default,std
+winnow v1.0.3 alloc,ascii,binary,default,parser,std
+toml_writer v1.1.1+spec-1.1.0 alloc,default,std
+winnow v1.0.3 alloc,ascii,binary,default,parser,std
+unicode-ident v1.0.24
+url v2.5.8 default,std
+form_urlencoded v1.2.2 alloc,std
+percent-encoding v2.3.2 alloc,default,std
+idna v1.1.0 alloc,compiled_data,std
+idna_adapter v1.2.2 compiled_data
+icu_normalizer v2.2.0 compiled_data
+icu_collections v2.2.0
+displaydoc v0.2.6 (proc-macro)
+proc-macro2 v1.0.106 default,proc-macro (*)
+quote v1.0.46 default,proc-macro (*)
+syn v2.0.118 clone-impls,default,derive,extra-traits,fold,full,parsing,printing,proc-macro,visit,visit-mut (*)
+potential_utf v0.1.5 zerovec
+zerovec v0.11.6 derive,yoke
+yoke v0.8.3 derive,zerofrom
+stable_deref_trait v1.2.1
+yoke-derive v0.8.2 (proc-macro)
+proc-macro2 v1.0.106 default,proc-macro (*)
+quote v1.0.46 default,proc-macro (*)
+syn v2.0.118 clone-impls,default,derive,extra-traits,fold,full,parsing,printing,proc-macro,visit,visit-mut (*)
+synstructure v0.13.2 default,proc-macro
+proc-macro2 v1.0.106 default,proc-macro (*)
+quote v1.0.46 default,proc-macro (*)
+syn v2.0.118 clone-impls,default,derive,extra-traits,fold,full,parsing,printing,proc-macro,visit,visit-mut (*)
+zerofrom v0.1.8 derive
+zerofrom-derive v0.1.7 (proc-macro)
+proc-macro2 v1.0.106 default,proc-macro (*)
+quote v1.0.46 default,proc-macro (*)
+syn v2.0.118 clone-impls,default,derive,extra-traits,fold,full,parsing,printing,proc-macro,visit,visit-mut (*)
+synstructure v0.13.2 default,proc-macro (*)
+zerofrom v0.1.8 derive (*)
+zerovec-derive v0.11.3 (proc-macro)
+proc-macro2 v1.0.106 default,proc-macro (*)
+quote v1.0.46 default,proc-macro (*)
+syn v2.0.118 clone-impls,default,derive,extra-traits,fold,full,parsing,printing,proc-macro,visit,visit-mut (*)
+utf8_iter v1.0.4
+yoke v0.8.3 derive,zerofrom (*)
+zerofrom v0.1.8 derive (*)
+zerovec v0.11.6 derive,yoke (*)
+icu_normalizer_data v2.2.0
+icu_provider v2.2.0 baked
+displaydoc v0.2.6 (proc-macro)  (*)
+icu_locale_core v2.2.0 zerovec
+displaydoc v0.2.6 (proc-macro)  (*)
+litemap v0.8.2
+tinystr v0.8.3 zerovec
+displaydoc v0.2.6 (proc-macro)  (*)
+zerovec v0.11.6 derive,yoke (*)
+writeable v0.6.3
+zerovec v0.11.6 derive,yoke (*)
+writeable v0.6.3
+yoke v0.8.3 derive,zerofrom (*)
+zerofrom v0.1.8 derive (*)
+zerotrie v0.2.4 yoke,zerofrom
+displaydoc v0.2.6 (proc-macro)  (*)
+yoke v0.8.3 derive,zerofrom (*)
+zerofrom v0.1.8 derive (*)
+zerovec v0.11.6 derive,yoke (*)
+smallvec v1.15.2 const_generics,write
+zerovec v0.11.6 derive,yoke (*)
+icu_properties v2.2.0 compiled_data
+icu_collections v2.2.0  (*)
+icu_locale_core v2.2.0 zerovec (*)
+icu_properties_data v2.2.0
+icu_provider v2.2.0 baked (*)
+zerotrie v0.2.4 yoke,zerofrom (*)
+zerovec v0.11.6 derive,yoke (*)
+smallvec v1.15.2 const_generics,write
+utf8_iter v1.0.4
+percent-encoding v2.3.2 alloc,default,std
+cargo-util-terminal v0.1.2 (${RETAINED_SOURCE_REVIEW}/upstream-cargo/crates/cargo-util-terminal)
+annotate-snippets v0.12.16 default,simd,std
+anstyle v1.0.14 default,std
+memchr v2.8.2 alloc,default,std
+unicode-width v0.2.2 cjk,default
+anstream v1.0.0 auto,default,wincon (*)
+anstyle v1.0.14 default,std
+anstyle-hyperlink v1.0.2 default,file,std
+libc v0.2.186 default,extra_traits,std
+percent-encoding v2.3.2 alloc,default,std
+anstyle-progress v0.1.0 default,std
+anyhow v1.0.103 default,std
+libc v0.2.186 default,extra_traits,std
+serde v1.0.228 default,derive,serde_derive,std (*)
+serde_json v1.0.150 default,raw_value,std (*)
+supports-hyperlinks v3.2.0
+supports-unicode v3.0.0
+clap v4.6.1 color,default,error-context,help,std,suggestions,unstable-ext,usage,wrap_help
+clap_builder v4.6.0 color,error-context,help,std,suggestions,unstable-ext,usage,wrap_help
+anstream v1.0.0 auto,default,wincon (*)
+anstyle v1.0.14 default,std
+clap_lex v1.1.0
+strsim v0.11.1
+terminal_size v0.4.4
+rustix v1.1.4 alloc,default,fs,std,termios (*)
+clap_complete v4.6.6 default,unstable-dynamic
+clap v4.6.1 color,default,error-context,help,std,suggestions,unstable-ext,usage,wrap_help (*)
+clap_lex v1.1.0
+is_executable v1.0.6
+shlex v1.3.0 default,std
+color-print v0.3.7
+color-print-proc-macro v0.3.7 (proc-macro)
+nom v7.1.3 alloc,default,std
+memchr v2.8.2 alloc,std
+minimal-lexical v0.2.1 std
+proc-macro2 v1.0.106 default,proc-macro (*)
+quote v1.0.46 default,proc-macro (*)
+syn v2.0.118 clone-impls,default,derive,extra-traits,fold,full,parsing,printing,proc-macro,visit,visit-mut (*)
+crates-io v0.41.2 (${RETAINED_SOURCE_REVIEW}/upstream-cargo/crates/crates-io)
+http v1.4.2 default,std
+bytes v1.12.0 default,std
+itoa v1.0.18
+percent-encoding v2.3.2 alloc,default,std
+serde v1.0.228 default,derive,serde_derive,std (*)
+serde_json v1.0.150 default,raw_value,std (*)
+thiserror v2.0.18 default,std (*)
+url v2.5.8 default,std (*)
+curl v0.4.50 default,force-system-lib-on-osx,http2,openssl-probe,openssl-sys,ssl,static-curl
+curl-sys v0.4.90+curl-8.21.0 default,force-system-lib-on-osx,http2,libnghttp2-sys,openssl-sys,ssl,static-curl
+libc v0.2.186 default,extra_traits,std
+libnghttp2-sys v0.1.13+1.68.1
+libc v0.2.186 default,extra_traits,std
+cc v1.2.65 parallel (*)
+libz-sys v1.1.29 libc
+libc v0.2.186 default,extra_traits,std
+cc v1.2.65 parallel (*)
+pkg-config v0.3.33
+vcpkg v0.2.15
+openssl-sys v0.9.117 openssl-src,vendored
+libc v0.2.186 default,extra_traits,std
+cc v1.2.65 parallel (*)
+openssl-src v300.6.1+3.6.3 default,legacy
+cc v1.2.65 parallel (*)
+pkg-config v0.3.33
+vcpkg v0.2.15
+cc v1.2.65 parallel (*)
+pkg-config v0.3.33
+libc v0.2.186 default,extra_traits,std
+openssl-probe v0.1.6
+openssl-sys v0.9.117 openssl-src,vendored (*)
+socket2 v0.6.4
+libc v0.2.186 default,extra_traits,std
+curl-sys v0.4.90+curl-8.21.0 default,force-system-lib-on-osx,http2,libnghttp2-sys,openssl-sys,ssl,static-curl (*)
+filetime v0.2.29  (*)
+flate2 v1.1.9 any_impl,any_zlib,zlib-rs
+zlib-rs v0.6.4 c-allocator,default,rust-allocator,std
+futures v0.3.32 alloc,async-await,executor,futures-executor,std
+futures-channel v0.3.32 alloc,futures-sink,sink,std
+futures-core v0.3.32 alloc,std
+futures-sink v0.3.32 alloc,std
+futures-core v0.3.32 alloc,std
+futures-executor v0.3.32 std
+futures-core v0.3.32 alloc,std
+futures-task v0.3.32 alloc,std
+futures-util v0.3.32 alloc,async-await,async-await-macro,channel,futures-channel,futures-io,futures-macro,futures-sink,io,memchr,sink,slab,std
+futures-channel v0.3.32 alloc,futures-sink,sink,std (*)
+futures-core v0.3.32 alloc,std
+futures-io v0.3.32 std
+futures-macro v0.3.32 (proc-macro)
+proc-macro2 v1.0.106 default,proc-macro (*)
+quote v1.0.46 default,proc-macro (*)
+syn v2.0.118 clone-impls,default,derive,extra-traits,fold,full,parsing,printing,proc-macro,visit,visit-mut (*)
+futures-sink v0.3.32 alloc,std
+futures-task v0.3.32 alloc,std
+memchr v2.8.2 alloc,default,std
+pin-project-lite v0.2.17
+slab v0.4.12 std
+futures-io v0.3.32 std
+futures-sink v0.3.32 alloc,std
+futures-task v0.3.32 alloc,std
+futures-util v0.3.32 alloc,async-await,async-await-macro,channel,futures-channel,futures-io,futures-macro,futures-sink,io,memchr,sink,slab,std (*)
+futures-timer v3.0.4
+git2 v0.21.0 cred,default,https,openssl-probe,openssl-sys,ssh
+bitflags v2.13.0 std
+libc v0.2.186 default,extra_traits,std
+libgit2-sys v0.18.5+1.9.4 https,libssh2-sys,openssl-sys,ssh,vendored
+libc v0.2.186 default,extra_traits,std
+libssh2-sys v0.3.2
+libc v0.2.186 default,extra_traits,std
+libz-sys v1.1.29 libc (*)
+openssl-sys v0.9.117 openssl-src,vendored (*)
+cc v1.2.65 parallel (*)
+pkg-config v0.3.33
+libz-sys v1.1.29 libc (*)
+openssl-sys v0.9.117 openssl-src,vendored (*)
+cc v1.2.65 parallel (*)
+pkg-config v0.3.33
+log v0.4.33 std
+openssl-probe v0.1.6
+openssl-sys v0.9.117 openssl-src,vendored (*)
+url v2.5.8 default,std (*)
+git2-curl v0.22.0
+curl v0.4.50 default,force-system-lib-on-osx,http2,openssl-probe,openssl-sys,ssl,static-curl (*)
+git2 v0.21.0 cred,default,https,openssl-probe,openssl-sys,ssh (*)
+log v0.4.33 std
+url v2.5.8 default,std (*)
+gix v0.85.0 attributes,blob-diff,blocking-http-transport-curl,blocking-network-client,command,credentials,dirwalk,excludes,gix-status,index,parallel,prodash,progress-tree,sha1,status
+gix-actor v0.41.1
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-date v0.15.5
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-error v0.2.4
+bstr v1.12.3 alloc,default,std,unicode (*)
+itoa v1.0.18
+jiff v0.2.31 alloc,default,perf-inline,serde,std,tz-fat,tz-system,tzdb-bundle-platform,tzdb-concatenated,tzdb-zoneinfo (*)
+gix-error v0.2.4  (*)
+gix-attributes v0.33.2
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-glob v0.26.1
+bitflags v2.13.0 std
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-features v0.48.1 crc32,default,fs-read-dir,io-pipe,once_cell,parallel,prodash,progress,walkdir,zlib
+bytes v1.12.0 default,std
+crc32fast v1.5.0 default,std
+cfg-if v1.0.4
+crossbeam-channel v0.5.15 default,std
+crossbeam-utils v0.8.21 default,std
+gix-path v0.12.1
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-trace v0.1.20 default
+gix-validate v0.11.2
+bstr v1.12.3 alloc,default,std,unicode (*)
+thiserror v2.0.18 default,std (*)
+gix-trace v0.1.20 default
+gix-utils v0.3.3 bstr
+bstr v1.12.3 alloc,default,std,unicode (*)
+fastrand v2.4.1 alloc,default,std
+unicode-normalization v0.1.25
+tinyvec v1.11.0 alloc,default,tinyvec_macros
+tinyvec_macros v0.1.1
+libc v0.2.186 default,extra_traits,std
+once_cell v1.21.4 alloc,default,race,std
+parking_lot v0.12.5 default
+lock_api v0.4.14 atomic_usize,default
+scopeguard v1.2.0
+parking_lot_core v0.9.12
+cfg-if v1.0.4
+libc v0.2.186 default,extra_traits,std
+smallvec v1.15.2 const_generics,write
+prodash v31.0.0 default,parking_lot,progress-tree
+parking_lot v0.12.5 default (*)
+thiserror v2.0.18 default,std (*)
+walkdir v2.5.0  (*)
+zlib-rs v0.6.4 c-allocator,default,rust-allocator,std
+gix-path v0.12.1  (*)
+gix-path v0.12.1  (*)
+gix-quote v0.7.2
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-error v0.2.4  (*)
+gix-utils v0.3.3 bstr (*)
+gix-trace v0.1.20 default
+kstring v2.0.2 default,std,unsafe
+static_assertions v1.1.0
+smallvec v1.15.2 const_generics,write
+thiserror v2.0.18 default,std (*)
+unicode-bom v2.0.3
+gix-command v0.9.1
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-path v0.12.1  (*)
+gix-quote v0.7.2  (*)
+gix-trace v0.1.20 default
+shell-words v1.1.1 default,std
+gix-commitgraph v0.37.1
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-chunk v0.7.2
+gix-error v0.2.4  (*)
+gix-error v0.2.4  (*)
+gix-hash v0.25.1 default,sha1
+faster-hex v0.10.0 alloc,std
+heapless v0.8.0
+hash32 v0.3.1
+byteorder v1.5.0
+stable_deref_trait v1.2.1
+gix-features v0.48.1 crc32,default,fs-read-dir,io-pipe,once_cell,parallel,prodash,progress,walkdir,zlib (*)
+sha1-checked v0.10.0
+digest v0.10.7 alloc,block-buffer,const-oid,core-api,default,mac,oid,std,subtle
+block-buffer v0.10.4
+generic-array v0.14.9 more_lengths,zeroize
+typenum v1.20.1 const-generics
+zeroize v1.9.0 alloc
+version_check v0.9.5
+const-oid v0.9.6
+crypto-common v0.1.6 std
+generic-array v0.14.9 more_lengths,zeroize (*)
+typenum v1.20.1 const-generics
+subtle v2.6.1 i128
+sha1 v0.10.6 compress
+cfg-if v1.0.4
+cpufeatures v0.2.17
+digest v0.10.7 alloc,block-buffer,const-oid,core-api,default,mac,oid,std,subtle (*)
+thiserror v2.0.18 default,std (*)
+memmap2 v0.9.11
+libc v0.2.186 default,extra_traits,std
+nonempty v0.12.0 default,std
+gix-config v0.58.0
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-config-value v0.18.1
+bitflags v2.13.0 std
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-path v0.12.1  (*)
+libc v0.2.186 default,extra_traits,std
+thiserror v2.0.18 default,std (*)
+gix-features v0.48.1 crc32,default,fs-read-dir,io-pipe,once_cell,parallel,prodash,progress,walkdir,zlib (*)
+gix-glob v0.26.1  (*)
+gix-path v0.12.1  (*)
+gix-ref v0.65.0
+gix-actor v0.41.1  (*)
+gix-features v0.48.1 crc32,default,fs-read-dir,io-pipe,once_cell,parallel,prodash,progress,walkdir,zlib (*)
+gix-fs v0.21.2
+bstr v1.12.3 alloc,default,std,unicode (*)
+fastrand v2.4.1 alloc,default,std
+gix-features v0.48.1 crc32,default,fs-read-dir,io-pipe,once_cell,parallel,prodash,progress,walkdir,zlib (*)
+gix-path v0.12.1  (*)
+gix-utils v0.3.3 bstr (*)
+thiserror v2.0.18 default,std (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-lock v23.0.1
+gix-tempfile v23.0.2 default,hp-hashmap
+dashmap v6.2.1
+cfg-if v1.0.4
+crossbeam-utils v0.8.21 default,std
+hashbrown v0.14.5 raw
+lock_api v0.4.14 atomic_usize,default (*)
+once_cell v1.21.4 alloc,default,race,std
+parking_lot_core v0.9.12  (*)
+gix-fs v0.21.2  (*)
+libc v0.2.186 default,extra_traits,std
+parking_lot v0.12.5 default (*)
+tempfile v3.27.0 default,getrandom (*)
+gix-utils v0.3.3 bstr (*)
+thiserror v2.0.18 default,std (*)
+gix-object v0.62.0
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-actor v0.41.1  (*)
+gix-date v0.15.5  (*)
+gix-features v0.48.1 crc32,default,fs-read-dir,io-pipe,once_cell,parallel,prodash,progress,walkdir,zlib (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-hashtable v0.15.2
+gix-hash v0.25.1 default,sha1 (*)
+hashbrown v0.17.1 allocator-api2,default,default-hasher,equivalent,inline-more,raw-entry (*)
+parking_lot v0.12.5 default (*)
+gix-utils v0.3.3 bstr (*)
+gix-validate v0.11.2  (*)
+itoa v1.0.18
+smallvec v1.15.2 const_generics,write
+thiserror v2.0.18 default,std (*)
+gix-path v0.12.1  (*)
+gix-tempfile v23.0.2 default,hp-hashmap (*)
+gix-utils v0.3.3 bstr (*)
+gix-validate v0.11.2  (*)
+memmap2 v0.9.11  (*)
+thiserror v2.0.18 default,std (*)
+gix-sec v0.14.1
+bitflags v2.13.0 std
+libc v0.2.186 default,extra_traits,std
+smallvec v1.15.2 const_generics,write
+thiserror v2.0.18 default,std (*)
+unicode-bom v2.0.3
+gix-credentials v0.38.1
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-command v0.9.1  (*)
+gix-config-value v0.18.1  (*)
+gix-date v0.15.5  (*)
+gix-path v0.12.1  (*)
+gix-prompt v0.15.1
+gix-command v0.9.1  (*)
+gix-config-value v0.18.1  (*)
+parking_lot v0.12.5 default (*)
+rustix v1.1.4 alloc,default,fs,std,termios (*)
+thiserror v2.0.18 default,std (*)
+gix-sec v0.14.1  (*)
+gix-trace v0.1.20 default
+gix-url v0.36.1
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-path v0.12.1  (*)
+percent-encoding v2.3.2 alloc,default,std
+thiserror v2.0.18 default,std (*)
+thiserror v2.0.18 default,std (*)
+gix-date v0.15.5  (*)
+gix-diff v0.65.0 blob,index
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-attributes v0.33.2  (*)
+gix-command v0.9.1  (*)
+gix-filter v0.32.0
+bstr v1.12.3 alloc,default,std,unicode (*)
+encoding_rs v0.8.35 alloc,default
+cfg-if v1.0.4
+gix-attributes v0.33.2  (*)
+gix-command v0.9.1  (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-object v0.62.0  (*)
+gix-packetline v0.21.5 blocking-io,default
+bstr v1.12.3 alloc,default,std,unicode (*)
+faster-hex v0.10.0 alloc,std (*)
+gix-trace v0.1.20 default
+thiserror v2.0.18 default,std (*)
+gix-path v0.12.1  (*)
+gix-quote v0.7.2  (*)
+gix-trace v0.1.20 default
+gix-utils v0.3.3 bstr (*)
+smallvec v1.15.2 const_generics,write
+thiserror v2.0.18 default,std (*)
+gix-fs v0.21.2  (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-imara-diff v0.2.3 default
+bstr v1.12.3 alloc,default,std,unicode (*)
+hashbrown v0.17.1 allocator-api2,default,default-hasher,equivalent,inline-more,raw-entry (*)
+gix-index v0.53.0
+bitflags v2.13.0 std
+bstr v1.12.3 alloc,default,std,unicode (*)
+filetime v0.2.29  (*)
+fnv v1.0.7 default,std
+gix-bitmap v0.3.2
+gix-error v0.2.4  (*)
+gix-features v0.48.1 crc32,default,fs-read-dir,io-pipe,once_cell,parallel,prodash,progress,walkdir,zlib (*)
+gix-fs v0.21.2  (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-lock v23.0.1  (*)
+gix-object v0.62.0  (*)
+gix-traverse v0.59.0
+bitflags v2.13.0 std
+gix-commitgraph v0.37.1  (*)
+gix-date v0.15.5  (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-hashtable v0.15.2  (*)
+gix-object v0.62.0  (*)
+gix-revwalk v0.33.0
+gix-commitgraph v0.37.1  (*)
+gix-date v0.15.5  (*)
+gix-error v0.2.4  (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-hashtable v0.15.2  (*)
+gix-object v0.62.0  (*)
+smallvec v1.15.2 const_generics,write
+thiserror v2.0.18 default,std (*)
+smallvec v1.15.2 const_generics,write
+thiserror v2.0.18 default,std (*)
+gix-utils v0.3.3 bstr (*)
+gix-validate v0.11.2  (*)
+hashbrown v0.17.1 allocator-api2,default,default-hasher,equivalent,inline-more,raw-entry (*)
+itoa v1.0.18
+libc v0.2.186 default,extra_traits,std
+memmap2 v0.9.11  (*)
+rustix v1.1.4 alloc,default,fs,std,termios (*)
+smallvec v1.15.2 const_generics,write
+thiserror v2.0.18 default,std (*)
+gix-object v0.62.0  (*)
+gix-path v0.12.1  (*)
+gix-pathspec v0.18.1
+bitflags v2.13.0 std
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-attributes v0.33.2  (*)
+gix-config-value v0.18.1  (*)
+gix-glob v0.26.1  (*)
+gix-path v0.12.1  (*)
+thiserror v2.0.18 default,std (*)
+gix-tempfile v23.0.2 default,hp-hashmap (*)
+gix-trace v0.1.20 default
+gix-traverse v0.59.0  (*)
+gix-worktree v0.54.0 attributes
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-attributes v0.33.2  (*)
+gix-fs v0.21.2  (*)
+gix-glob v0.26.1  (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-ignore v0.21.1
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-glob v0.26.1  (*)
+gix-path v0.12.1  (*)
+gix-trace v0.1.20 default
+unicode-bom v2.0.3
+gix-index v0.53.0  (*)
+gix-object v0.62.0  (*)
+gix-path v0.12.1  (*)
+gix-validate v0.11.2  (*)
+thiserror v2.0.18 default,std (*)
+gix-dir v0.27.0
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-discover v0.53.0
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-fs v0.21.2  (*)
+gix-path v0.12.1  (*)
+gix-ref v0.65.0  (*)
+gix-sec v0.14.1  (*)
+thiserror v2.0.18 default,std (*)
+gix-fs v0.21.2  (*)
+gix-ignore v0.21.1  (*)
+gix-index v0.53.0  (*)
+gix-object v0.62.0  (*)
+gix-path v0.12.1  (*)
+gix-pathspec v0.18.1  (*)
+gix-trace v0.1.20 default
+gix-utils v0.3.3 bstr (*)
+gix-worktree v0.54.0 attributes (*)
+thiserror v2.0.18 default,std (*)
+gix-discover v0.53.0  (*)
+gix-error v0.2.4  (*)
+gix-features v0.48.1 crc32,default,fs-read-dir,io-pipe,once_cell,parallel,prodash,progress,walkdir,zlib (*)
+gix-filter v0.32.0  (*)
+gix-fs v0.21.2  (*)
+gix-glob v0.26.1  (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-hashtable v0.15.2  (*)
+gix-ignore v0.21.1  (*)
+gix-index v0.53.0  (*)
+gix-lock v23.0.1  (*)
+gix-negotiate v0.33.0
+bitflags v2.13.0 std
+gix-commitgraph v0.37.1  (*)
+gix-date v0.15.5  (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-object v0.62.0  (*)
+gix-revwalk v0.33.0  (*)
+gix-object v0.62.0  (*)
+gix-odb v0.82.0
+arc-swap v1.9.2
+rustversion v1.0.22 (proc-macro)
+gix-features v0.48.1 crc32,default,fs-read-dir,io-pipe,once_cell,parallel,prodash,progress,walkdir,zlib (*)
+gix-fs v0.21.2  (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-hashtable v0.15.2  (*)
+gix-object v0.62.0  (*)
+gix-pack v0.72.0 object-cache-dynamic,sha1,streaming-input
+clru v0.6.3
+hashbrown v0.16.1 allocator-api2,default,default-hasher,equivalent,inline-more,raw-entry
+allocator-api2 v0.2.21 alloc
+equivalent v1.0.2
+foldhash v0.2.0
+gix-chunk v0.7.2  (*)
+gix-error v0.2.4  (*)
+gix-features v0.48.1 crc32,default,fs-read-dir,io-pipe,once_cell,parallel,prodash,progress,walkdir,zlib (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-hashtable v0.15.2  (*)
+gix-object v0.62.0  (*)
+gix-path v0.12.1  (*)
+gix-tempfile v23.0.2 default,hp-hashmap (*)
+memmap2 v0.9.11  (*)
+parking_lot v0.12.5 default (*)
+smallvec v1.15.2 const_generics,write
+thiserror v2.0.18 default,std (*)
+gix-path v0.12.1  (*)
+gix-quote v0.7.2  (*)
+memmap2 v0.9.11  (*)
+parking_lot v0.12.5 default (*)
+tempfile v3.27.0 default,getrandom (*)
+thiserror v2.0.18 default,std (*)
+gix-pack v0.72.0 object-cache-dynamic,sha1,streaming-input (*)
+gix-path v0.12.1  (*)
+gix-pathspec v0.18.1  (*)
+gix-prompt v0.15.1  (*)
+gix-protocol v0.63.0 blocking-client,fetch,handshake
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-credentials v0.38.1  (*)
+gix-date v0.15.5  (*)
+gix-features v0.48.1 crc32,default,fs-read-dir,io-pipe,once_cell,parallel,prodash,progress,walkdir,zlib (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-lock v23.0.1  (*)
+gix-negotiate v0.33.0  (*)
+gix-object v0.62.0  (*)
+gix-ref v0.65.0  (*)
+gix-refspec v0.43.0
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-error v0.2.4  (*)
+gix-glob v0.26.1  (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-revision v0.47.0
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-commitgraph v0.37.1  (*)
+gix-date v0.15.5  (*)
+gix-error v0.2.4  (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-object v0.62.0  (*)
+gix-revwalk v0.33.0  (*)
+nonempty v0.12.0 default,std
+gix-validate v0.11.2  (*)
+smallvec v1.15.2 const_generics,write
+thiserror v2.0.18 default,std (*)
+gix-revwalk v0.33.0  (*)
+gix-shallow v0.12.1
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-lock v23.0.1  (*)
+nonempty v0.12.0 default,std
+thiserror v2.0.18 default,std (*)
+gix-trace v0.1.20 default
+gix-transport v0.57.2 base64,blocking-client,curl,default,gix-credentials,http-client,http-client-curl
+base64 v0.22.1 alloc,default,std
+bstr v1.12.3 alloc,default,std,unicode (*)
+curl v0.4.50 default,force-system-lib-on-osx,http2,openssl-probe,openssl-sys,ssl,static-curl (*)
+gix-command v0.9.1  (*)
+gix-credentials v0.38.1  (*)
+gix-features v0.48.1 crc32,default,fs-read-dir,io-pipe,once_cell,parallel,prodash,progress,walkdir,zlib (*)
+gix-packetline v0.21.5 blocking-io,default (*)
+gix-quote v0.7.2  (*)
+gix-sec v0.14.1  (*)
+gix-url v0.36.1  (*)
+thiserror v2.0.18 default,std (*)
+gix-utils v0.3.3 bstr (*)
+maybe-async v0.2.11 (proc-macro) default,is_sync
+proc-macro2 v1.0.106 default,proc-macro (*)
+quote v1.0.46 default,proc-macro (*)
+syn v2.0.118 clone-impls,default,derive,extra-traits,fold,full,parsing,printing,proc-macro,visit,visit-mut (*)
+nonempty v0.12.0 default,std
+thiserror v2.0.18 default,std (*)
+gix-ref v0.65.0  (*)
+gix-refspec v0.43.0  (*)
+gix-revision v0.47.0  (*)
+gix-revwalk v0.33.0  (*)
+gix-sec v0.14.1  (*)
+gix-shallow v0.12.1  (*)
+gix-status v0.32.0 worktree-rewrites
+bstr v1.12.3 alloc,default,std,unicode (*)
+filetime v0.2.29  (*)
+gix-diff v0.65.0 blob,index (*)
+gix-dir v0.27.0  (*)
+gix-features v0.48.1 crc32,default,fs-read-dir,io-pipe,once_cell,parallel,prodash,progress,walkdir,zlib (*)
+gix-filter v0.32.0  (*)
+gix-fs v0.21.2  (*)
+gix-hash v0.25.1 default,sha1 (*)
+gix-index v0.53.0  (*)
+gix-object v0.62.0  (*)
+gix-path v0.12.1  (*)
+gix-pathspec v0.18.1  (*)
+gix-worktree v0.54.0 attributes (*)
+thiserror v2.0.18 default,std (*)
+gix-submodule v0.32.0
+bstr v1.12.3 alloc,default,std,unicode (*)
+gix-config v0.58.0  (*)
+gix-path v0.12.1  (*)
+gix-pathspec v0.18.1  (*)
+gix-refspec v0.43.0  (*)
+gix-url v0.36.1  (*)
+thiserror v2.0.18 default,std (*)
+gix-tempfile v23.0.2 default,hp-hashmap (*)
+gix-trace v0.1.20 default
+gix-transport v0.57.2 base64,blocking-client,curl,default,gix-credentials,http-client,http-client-curl (*)
+gix-traverse v0.59.0  (*)
+gix-url v0.36.1  (*)
+gix-utils v0.3.3 bstr (*)
+gix-validate v0.11.2  (*)
+gix-worktree v0.54.0 attributes (*)
+nonempty v0.12.0 default,std
+prodash v31.0.0 default,parking_lot,progress-tree (*)
+smallvec v1.15.2 const_generics,write
+thiserror v2.0.18 default,std (*)
+glob v0.3.3
+heck v0.5.0
+hex v0.4.3 alloc,default,std
+hmac v0.13.0
+digest v0.11.3 alloc,block-api,default,mac,oid (*)
+home v0.5.12
+http v1.4.2 default,std (*)
+http-auth v0.1.10
+memchr v2.8.2 alloc,default,std
+ignore v0.4.26  (*)
+im-rc v15.1.0
+bitmaps v2.1.0 default,std
+typenum v1.20.1 const-generics
+rand_core v0.6.4 alloc,getrandom,std
+getrandom v0.2.17 std
+cfg-if v1.0.4
+libc v0.2.186 default,extra_traits,std
+rand_xoshiro v0.6.0
+rand_core v0.6.4 alloc,getrandom,std (*)
+sized-chunks v0.6.5 default,std
+bitmaps v2.1.0 default,std (*)
+typenum v1.20.1 const-generics
+typenum v1.20.1 const-generics
+version_check v0.9.5
+indexmap v2.14.0 default,std (*)
+itertools v0.15.0 default,use_alloc,use_std
+either v1.16.0 std,use_std
+jiff v0.2.31 alloc,default,perf-inline,serde,std,tz-fat,tz-system,tzdb-bundle-platform,tzdb-concatenated,tzdb-zoneinfo (*)
+jobserver v0.1.34  (*)
+libc v0.2.186 default,extra_traits,std
+libgit2-sys v0.18.5+1.9.4 https,libssh2-sys,openssl-sys,ssh,vendored (*)
+memchr v2.8.2 alloc,default,std
+opener v0.8.5
+bstr v1.12.3 alloc,default,std,unicode (*)
+openssl v0.10.81 default,vendored
+bitflags v2.13.0 std
+cfg-if v1.0.4
+foreign-types v0.3.2
+foreign-types-shared v0.1.1
+libc v0.2.186 default,extra_traits,std
+openssl-macros v0.1.1 (proc-macro)
+proc-macro2 v1.0.106 default,proc-macro (*)
+quote v1.0.46 default,proc-macro (*)
+syn v2.0.118 clone-impls,default,derive,extra-traits,fold,full,parsing,printing,proc-macro,visit,visit-mut (*)
+openssl-sys v0.9.117 openssl-src,vendored (*)
+os_info v3.15.0
+log v0.4.33 std
+nix v0.31.3 default,feature
+bitflags v2.13.0 std
+cfg-if v1.0.4
+libc v0.2.186 default,extra_traits,std
+cfg_aliases v0.2.2
+pasetors v0.7.8 default,ed25519-compact,orion,p384,paserk,rand_core,regex,serde,serde_json,sha2,std,time,v3,v4
+ct-codecs v1.1.7
+ed25519-compact v2.3.1 getrandom,random
+getrandom v0.4.3 std,sys_rng,wasm_js (*)
+getrandom v0.4.3 std,sys_rng,wasm_js (*)
+orion v0.17.15
+fiat-crypto v0.3.0
+subtle v2.6.1 i128
+p384 v0.13.1 alloc,arithmetic,default,digest,ecdh,ecdsa,ecdsa-core,pem,pkcs8,sha2,sha384,std
+ecdsa v0.16.9 alloc,arithmetic,der,digest,hazmat,pem,pkcs8,rfc6979,signing,spki,std,verifying
+der v0.7.10 alloc,oid,pem,std,zeroize
+const-oid v0.9.6
+pem-rfc7468 v0.7.0 alloc
+base64ct v1.8.3 alloc
+zeroize v1.9.0 alloc
+digest v0.10.7 alloc,block-buffer,const-oid,core-api,default,mac,oid,std,subtle (*)
+elliptic-curve v0.13.8 alloc,arithmetic,digest,ecdh,ff,group,hazmat,pem,pkcs8,sec1,std
+base16ct v0.2.0 alloc
+crypto-bigint v0.5.5 generic-array,rand_core,zeroize
+generic-array v0.14.9 more_lengths,zeroize (*)
+rand_core v0.6.4 alloc,getrandom,std (*)
+subtle v2.6.1 i128
+zeroize v1.9.0 alloc
+digest v0.10.7 alloc,block-buffer,const-oid,core-api,default,mac,oid,std,subtle (*)
+ff v0.13.1 alloc
+rand_core v0.6.4 alloc,getrandom,std (*)
+subtle v2.6.1 i128
+generic-array v0.14.9 more_lengths,zeroize (*)
+group v0.13.0 alloc
+ff v0.13.1 alloc (*)
+rand_core v0.6.4 alloc,getrandom,std (*)
+subtle v2.6.1 i128
+hkdf v0.12.4
+hmac v0.12.1 reset
+digest v0.10.7 alloc,block-buffer,const-oid,core-api,default,mac,oid,std,subtle (*)
+pem-rfc7468 v0.7.0 alloc (*)
+pkcs8 v0.10.2 alloc,pem,std
+der v0.7.10 alloc,oid,pem,std,zeroize (*)
+spki v0.7.3 alloc,pem,std
+der v0.7.10 alloc,oid,pem,std,zeroize (*)
+rand_core v0.6.4 alloc,getrandom,std (*)
+sec1 v0.7.3 alloc,default,der,pem,pkcs8,point,std,subtle,zeroize
+base16ct v0.2.0 alloc
+der v0.7.10 alloc,oid,pem,std,zeroize (*)
+generic-array v0.14.9 more_lengths,zeroize (*)
+pkcs8 v0.10.2 alloc,pem,std (*)
+subtle v2.6.1 i128
+zeroize v1.9.0 alloc
+subtle v2.6.1 i128
+zeroize v1.9.0 alloc
+rfc6979 v0.4.0
+hmac v0.12.1 reset (*)
+subtle v2.6.1 i128
+signature v2.2.0 alloc,digest,rand_core,std
+digest v0.10.7 alloc,block-buffer,const-oid,core-api,default,mac,oid,std,subtle (*)
+rand_core v0.6.4 alloc,getrandom,std (*)
+spki v0.7.3 alloc,pem,std (*)
+elliptic-curve v0.13.8 alloc,arithmetic,digest,ecdh,ff,group,hazmat,pem,pkcs8,sec1,std (*)
+primeorder v0.13.6
+elliptic-curve v0.13.8 alloc,arithmetic,digest,ecdh,ff,group,hazmat,pem,pkcs8,sec1,std (*)
+sha2 v0.10.9 default,std
+cfg-if v1.0.4
+cpufeatures v0.2.17
+digest v0.10.7 alloc,block-buffer,const-oid,core-api,default,mac,oid,std,subtle (*)
+rand_core v0.6.4 alloc,getrandom,std (*)
+regex v1.12.4 default,perf,perf-backtrack,perf-cache,perf-dfa,perf-inline,perf-literal,perf-onepass,std,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment
+aho-corasick v1.1.4 default,perf-literal,std (*)
+memchr v2.8.2 alloc,default,std
+regex-automata v0.4.14 alloc,dfa-build,dfa-onepass,dfa-search,hybrid,meta,nfa,nfa-backtrack,nfa-pikevm,nfa-thompson,perf,perf-inline,perf-literal,perf-literal-multisubstring,perf-literal-substring,std,syntax,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment,unicode-word-boundary (*)
+regex-syntax v0.8.11 default,std,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment
+serde v1.0.228 default,derive,serde_derive,std (*)
+serde_derive v1.0.228 (proc-macro) default (*)
+serde_json v1.0.150 default,raw_value,std (*)
+sha2 v0.10.9 default,std (*)
+subtle v2.6.1 i128
+time v0.3.52 alloc,default,formatting,parsing,serde,std (*)
+zeroize v1.9.0 alloc
+pathdiff v0.2.3
+portable-atomic v1.13.1 default,fallback
+rand v0.10.1 alloc,default,std,std_rng,sys_rng,thread_rng
+chacha20 v0.10.1 rng
+cfg-if v1.0.4
+cpufeatures v0.3.0
+rand_core v0.10.1
+getrandom v0.4.3 std,sys_rng,wasm_js (*)
+rand_core v0.10.1
+regex v1.12.4 default,perf,perf-backtrack,perf-cache,perf-dfa,perf-inline,perf-literal,perf-onepass,std,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment (*)
+rusqlite v0.40.1 bundled,cache,default,fallible_uint,ffi-sqlite-wasm-rs,hashlink,modern_sqlite
+bitflags v2.13.0 std
+fallible-iterator v0.3.0 alloc,default
+fallible-streaming-iterator v0.1.9
+hashlink v0.12.0
+hashbrown v0.17.1 allocator-api2,default,default-hasher,equivalent,inline-more,raw-entry (*)
+libsqlite3-sys v0.38.1 bundled,bundled_bindings,cc,default,min_sqlite_version_3_34_1,pkg-config,vcpkg
+cc v1.2.65 parallel (*)
+pkg-config v0.3.33
+vcpkg v0.2.15
+smallvec v1.15.2 const_generics,write
+rustc-hash v2.1.2 default,std
+rustc-stable-hash v0.1.2
+rustfix v0.9.8 (${RETAINED_SOURCE_REVIEW}/upstream-cargo/crates/rustfix)
+serde v1.0.228 default,derive,serde_derive,std (*)
+serde_json v1.0.150 default,raw_value,std (*)
+thiserror v2.0.18 default,std (*)
+same-file v1.0.6
+semver v1.0.28 default,serde,std (*)
+serde v1.0.228 default,derive,serde_derive,std (*)
+serde-untagged v0.1.9  (*)
+serde_ignored v0.1.14
+serde_core v1.0.228 alloc,default,result,std
+serde_json v1.0.150 default,raw_value,std (*)
+sha1 v0.11.0 alloc,default,oid
+cfg-if v1.0.4
+cpufeatures v0.3.0
+digest v0.11.3 alloc,block-api,default,mac,oid (*)
+shell-escape v0.1.5
+tar v0.4.46
+filetime v0.2.29  (*)
+libc v0.2.186 default,extra_traits,std
+tempfile v3.27.0 default,getrandom (*)
+thiserror v2.0.18 default,std (*)
+time v0.3.52 alloc,default,formatting,parsing,serde,std (*)
+toml v1.1.2+spec-1.1.0 display,parse,preserve_order,serde,std (*)
+toml_edit v0.25.12+spec-1.1.0 default,display,parse,serde
+indexmap v2.14.0 default,std (*)
+serde_core v1.0.228 alloc,default,result,std
+serde_spanned v1.1.1 alloc,default,serde,std (*)
+toml_datetime v1.1.1+spec-1.1.0 alloc,default,serde,std (*)
+toml_parser v1.1.2+spec-1.1.0 alloc,default,std (*)
+toml_writer v1.1.1+spec-1.1.0 alloc,default,std
+winnow v1.0.3 alloc,ascii,binary,default,parser,std
+toml_parser v1.1.2+spec-1.1.0 alloc,default,std (*)
+toml_writer v1.1.1+spec-1.1.0 alloc,default,std
+tracing v0.1.44 attributes,std,tracing-attributes (*)
+tracing-chrome v0.7.2
+serde_json v1.0.150 default,raw_value,std (*)
+tracing-core v0.1.36 default,once_cell,std (*)
+tracing-subscriber v0.3.23 alloc,ansi,default,env-filter,fmt,matchers,nu-ansi-term,once_cell,registry,sharded-slab,smallvec,std,thread_local,tracing,tracing-log
+matchers v0.2.0
+regex-automata v0.4.14 alloc,dfa-build,dfa-onepass,dfa-search,hybrid,meta,nfa,nfa-backtrack,nfa-pikevm,nfa-thompson,perf,perf-inline,perf-literal,perf-literal-multisubstring,perf-literal-substring,std,syntax,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment,unicode-word-boundary (*)
+nu-ansi-term v0.50.3 default,std
+once_cell v1.21.4 alloc,default,race,std
+regex-automata v0.4.14 alloc,dfa-build,dfa-onepass,dfa-search,hybrid,meta,nfa,nfa-backtrack,nfa-pikevm,nfa-thompson,perf,perf-inline,perf-literal,perf-literal-multisubstring,perf-literal-substring,std,syntax,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment,unicode-word-boundary (*)
+sharded-slab v0.1.7
+lazy_static v1.5.0
+smallvec v1.15.2 const_generics,write
+thread_local v1.1.9
+cfg-if v1.0.4
+tracing v0.1.44 attributes,std,tracing-attributes (*)
+tracing-core v0.1.36 default,once_cell,std (*)
+tracing-log v0.2.0 log-tracer,std
+log v0.4.33 std
+once_cell v1.21.4 alloc,default,race,std
+tracing-core v0.1.36 default,once_cell,std (*)
+tracing-subscriber v0.3.23 alloc,ansi,default,env-filter,fmt,matchers,nu-ansi-term,once_cell,registry,sharded-slab,smallvec,std,thread_local,tracing,tracing-log (*)
+unicase v2.9.0
+unicode-ident v1.0.24
+unicode-width v0.2.2 cjk,default
+url v2.5.8 default,std (*)
+walkdir v2.5.0  (*)
+winnow v1.0.3 alloc,ascii,binary,default,parser,std
+flate2 v1.1.9 any_impl,any_zlib,zlib-rs
+zlib-rs v0.6.4 rust-allocator,std
+tar v0.4.46
+filetime v0.2.29
+cfg-if v1.0.4
+libc v0.2.186 default,std
+libc v0.2.186 default,std

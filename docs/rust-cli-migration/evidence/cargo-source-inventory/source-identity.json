@@ -1,0 +1,11 @@
+{
+  "cargo_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+  "cargo_lock_sha256": "b4ccfa53ccf8d7360c0359c1533d801759629f9cdd486d9a0a88e512717058d9",
+  "source_patch_sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f",
+  "patched_files": {
+    "src/compiler/build_runner/compilation_files.rs": "b572e74e742cca08765540aa9f611b1877defc08d146cff52fcd9b0c039106db",
+    "src/workspace/features.rs": "0db8ba62877729fdee23ee8ae26f11a7b79fdd8bf086845a53c5f097eb1eacc3"
+  },
+  "upstream_cargo_archive_sha256": "ae4002b08f2a6fbf08d4a39d3804777a23a13f7c109bba093cdebfb055a0b985",
+  "upstream_cargo_archive_bytes": 21114880
+}

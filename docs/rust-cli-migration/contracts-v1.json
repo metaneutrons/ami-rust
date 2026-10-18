@@ -460,6 +460,20 @@
         "Missing, changed, linked, ambiguous, unsupported or wrongly owned inputs refuse without output mutation.",
         "State v1 is not upgraded in place; prepare fresh v2 and retain old state."
       ]
+    },
+    "metadata_limits": {
+      "scope": "New Rust host contract parser; these input limits do not cap AROS application memory or executable size. Component archive bounds remain tied to their separately authenticated inventory/resource profile.",
+      "unit": "bytes",
+      "json_max_container_depth": 128,
+      "package_metadata_state_selection": 2097152,
+      "project_lock": 1048576,
+      "sdk_component_manifest": 16777216,
+      "release_manifest_and_install_receipt": 4194304,
+      "publisher_policy_and_authentication_metadata": 1048576,
+      "github_attestation_bundle": 2097152,
+      "cosign_bundle": 1048576,
+      "trusted_root": 16777216,
+      "behavior": "Read a regular non-symlink file with a bound before parsing; enforce the same bound while reading to refuse growth. UTF-8 without BOM, one JSON value, recursive unique keys; exact schema validation follows. Security limits are tested at boundary and one byte/depth beyond."
     }
   },
   "future_frontend_contract": {
@@ -585,7 +599,7 @@
           "derive"
         ],
         "purpose": "typed schema serialization/deserialization; exact version already in root lock/vendor",
-        "status": "conditional candidate; not frozen until host lock, transitive review, and both-host builds pass"
+        "status": "Exact candidate in standalone lock; source/license review approved, native Linux qualification pending"
       },
       {
         "crate": "serde_json",
@@ -597,7 +611,7 @@
           "std"
         ],
         "purpose": "bounded JSON; recursive custom visitor rejects duplicate keys before typed decoding; exact version already in root lock/vendor",
-        "status": "conditional candidate; not frozen until host lock, transitive review, and both-host builds pass"
+        "status": "Exact candidate in standalone lock; source/license review approved, native Linux qualification pending"
       },
       {
         "crate": "sha2",
@@ -606,10 +620,12 @@
         "license": "MIT OR Apache-2.0",
         "msrv": "1.88",
         "features": [
-          "std"
+          "alloc",
+          "oid"
         ],
         "purpose": "SHA-256; shared with lzma-rust2 xz feature so host lock has one sha2 version; leave target graph sha2 0.10.9 unchanged",
-        "status": "conditional candidate; not frozen until host lock, transitive review, and both-host builds pass"
+        "status": "Exact candidate in standalone lock; source/license review approved, native Linux qualification pending",
+        "default_features": true
       },
       {
         "crate": "tar",
@@ -620,7 +636,8 @@
         "features": [],
         "purpose": "streaming TAR; default-features=false excludes xattr",
         "security_floor": "0.4.45+; 0.4.46 is above affected <=0.4.44 ranges in GHSA-gchp-q4r4-x4ff and GHSA-j4xf-2g29-59ph",
-        "status": "conditional candidate; not frozen until host lock, transitive review, and both-host builds pass"
+        "status": "Exact candidate in standalone lock; source/license review approved, native Linux qualification pending",
+        "default_features": false
       },
       {
         "crate": "flate2",
@@ -632,7 +649,8 @@
           "rust_backend"
         ],
         "purpose": "gzip with pure-Rust backend; default-features=false, no external zlib",
-        "status": "conditional candidate; not frozen until host lock, transitive review, and both-host builds pass"
+        "status": "Exact candidate in standalone lock; source/license review approved, native Linux qualification pending",
+        "default_features": false
       },
       {
         "crate": "lzma-rust2",
@@ -645,8 +663,9 @@
           "xz"
         ],
         "purpose": "XZ processing with decoder memory bound; default-features=false; enable std,xz only; do not enable optimization",
-        "status": "conditional candidate; not frozen until host lock, transitive review, and both-host builds pass",
-        "review_basis": "XZ XzReader::new_mem_limit is present; 0.22.0 changelog fixes allocation from declared dictionary and XZ index sizes; no API/advisory blocker identified in read-only review; formal advisory audit remains pending"
+        "status": "Exact candidate in standalone lock; source/license review approved, native Linux qualification pending",
+        "review_basis": "XZ memory-limit API and bounded controls reviewed; RustSec0.22.2 audit has zero known findings against database999ec89d5d3f10f20be14750ec8c2d8b44e0ac9b. Full-input/stream policy remains a production RC1 test.",
+        "default_features": false
       }
     ],
     "resolution_rules": [
@@ -659,7 +678,8 @@
       "Selected feature sets have no host-native C dependency; macos-aarch64/linux-x86_64 support is plausible under Rust 1.98.1, not qualified until both-host builds.",
       "Before freeze, review the complete exact lock for licenses and advisories, exercise the selected APIs and build on both supported hosts."
     ],
-    "status": "conditional exact direct-version candidates only; freeze is pending a separate host-core Cargo.lock, complete transitive license/advisory review, and successful builds on both supported hosts"
+    "status": "Exact 29-registry-crate candidate lock and selected API/source/license review approved; macOS thirteen-test correction passed. Native Linux qualification remains required before RC0 dependency freeze. Production host-core integration remains RC1.",
+    "selection_record": "host-dependency-selection.md and tools/host-contract-deps/Cargo.lock; exact 29-crate candidate under native-host qualification"
   },
   "proposed_fixtures": [
     {
@@ -992,5 +1012,6 @@
       ],
       "claim": "RC0 acceptance"
     }
-  ]
+  ],
+  "compatibility_fixture_pins": "legacy-fixture-pins.json"
 }

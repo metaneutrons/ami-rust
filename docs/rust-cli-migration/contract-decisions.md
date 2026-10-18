@@ -52,7 +52,7 @@ Conditional exact direct-version candidates for a separate host-core workspace a
 | --- | --- | --- | --- |
 | serde | =1.0.228; std, derive | MIT OR Apache-2.0; 1.56 | Reuse the root lock/vendor version for typed schemas. |
 | serde_json | =1.0.145; std | MIT OR Apache-2.0; 1.61 | Reuse the root lock/vendor version with a recursive duplicate-key visitor. |
-| sha2 | =0.11.1; std | MIT OR Apache-2.0; 1.88 | One host-core version shared with lzma-rust2's XZ feature. Leave target sha2 0.10.9 unchanged. |
+| sha2 | =0.11.1; default (alloc, oid) | MIT OR Apache-2.0; 1.88 | One host-core version shared with lzma-rust2's XZ feature. Leave target sha2 0.10.9 unchanged. |
 | tar | =0.4.46; default features off | MIT OR Apache-2.0; 1.63 | Streaming archive reader; no xattr. Above the fix floor for [GHSA-gchp-q4r4-x4ff](https://github.com/advisories/GHSA-gchp-q4r4-x4ff) and [GHSA-j4xf-2g29-59ph](https://github.com/advisories/GHSA-j4xf-2g29-59ph). |
 | flate2 | =1.1.10; default features off, rust_backend | MIT OR Apache-2.0; 1.67 | Gzip through pure-Rust miniz_oxide, without system zlib. |
 | lzma-rust2 | =0.22.0; default features off, std and xz | Apache-2.0; 1.85 | `XzReader::new_mem_limit` is present. The 0.22.0 changelog fixes allocation driven by declared dictionary and XZ index sizes. Do not enable optimization. The advisory review remains open. |
@@ -74,3 +74,35 @@ RC0-A3 still needs a two-host Cargo-to-final-ELF design. RC0-A4 still needs ordi
 contracts-v1.json enumerates each fixture and result. Required coverage includes alias parity; exact parser/status behavior; nested duplicate JSON keys and non-finite values; schema negotiation; every lock identity; hostile TAR entries including PAX size conflicts; bounded XZ/gzip; external trust decoys; state/prefix owner and mode failures; build-lock contention and failure retention; receipt-pin failure after publication; uninstall tombstone recovery; dry-run and explicit v1 migration; both-host parity; and direct/transitive Python process controls.
 
 These files record contract decisions and fixture proposals only. This contract task performed no host-core implementation, host-core build/test or qualification; dependency lock, transitive license/advisory review and both-host validation remain open.
+
+## Concrete parser and compatibility inputs
+
+[legacy-fixture-pins.json](legacy-fixture-pins.json) binds the 26 existing
+consumer implementations and ten legacy oracle suites (145 named unittest
+cases) to source `b16a025a7b3b1d072b1633e1f5cbd4d927fdd80e` and per-file
+hashes. These generators define actual legacy fixtures, alongside the 17 new
+contract families in contracts-v1.json. They are internal transitional oracles;
+RC1 must compare Rust behavior and intentional v2 changes, and RC4 removes
+active Python oracles while retaining these immutable source identities.
+The two previously unselected host suites pass 50 cases locally and now run on
+both release hosts in CI. Prior fixture CI remains recorded separately.
+
+The machine contract's metadata_limits freezes JSON input bounds before RC1:
+2 MiB package/state/selection metadata, 1 MiB project locks, 16 MiB SDK/component
+manifests, 4 MiB release manifests/receipts, and the existing external publisher
+policy/authentication/root limits. New JSON accepts at most 128 nested
+containers. Each file reader must enforce size before and during reading, and
+parsing rejects BOM, duplicates, trailing input and invalid/non-finite numbers.
+These are untrusted format boundaries, independent of application memory policy.
+Decoder/whole-archive and member limits remain format-specific; the standalone
+API probes demonstrate enforcement mechanisms and do not silently replace
+production archive compatibility rules. The release SDK's current strict TAR
+profile refuses PAX size overrides; the prototype likewise refuses disagreement
+between effective and raw header size. Upstream component archive profiles
+require their own inventory-backed compatibility fixtures during RC1.
+
+The host dependency/source/license review has selected the exact candidate
+reported in [host-dependency-selection.md](host-dependency-selection.md).
+The original conditional proposal above records the decision sequence; native
+Linux qualification and the final RC0 acceptance record remain required before
+promoting the lock to a production host core.
