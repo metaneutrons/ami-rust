@@ -6,6 +6,8 @@
   <a href="https://github.com/metaneutrons/ami-rust/actions/workflows/ci.yml"><img src="https://github.com/metaneutrons/ami-rust/actions/workflows/ci.yml/badge.svg?branch=main" alt="Source CI"></a>
   <a href="https://github.com/metaneutrons/ami-rust/actions/workflows/sdk-qualify.yml"><img src="https://github.com/metaneutrons/ami-rust/actions/workflows/sdk-qualify.yml/badge.svg?branch=main" alt="SDK qualification workflow"></a>
   <a href="https://github.com/metaneutrons/ami-rust/releases/latest"><img src="https://img.shields.io/github/v/release/metaneutrons/ami-rust?color=ff825e&amp;style=flat-square" alt="Latest SDK release"></a>
+  <a href="packaging/INSTALL-APT.md"><img src="https://img.shields.io/badge/APT-available-398f4f?style=flat-square" alt="APT package available"></a>
+  <a href="packaging/INSTALL-HOMEBREW.md"><img src="https://img.shields.io/badge/Homebrew-available-398f4f?style=flat-square" alt="Homebrew package available"></a>
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-7c8cf8?style=flat-square" alt="License: MIT OR Apache-2.0"></a>
   <a href="docs/compatibility.md"><img src="https://img.shields.io/badge/target-AROS%20x86--64%20ABI--v1-ff825e?style=flat-square" alt="Target: AROS x86-64 ABI-v1"></a>
   <a href="docs/api.md"><img src="https://img.shields.io/badge/Rust-no__std%20%2B%20alloc-91b8d6?style=flat-square" alt="Rust: no_std plus alloc"></a>
@@ -21,15 +23,20 @@
   <a href="docs/api.md">API guide</a> ·
   <a href="docs/compatibility.md">Compatibility</a> ·
   <a href="https://github.com/metaneutrons/ami-rust/releases">Releases</a> ·
+  <a href="packaging/INSTALL-APT.md">APT</a> ·
+  <a href="packaging/INSTALL-HOMEBREW.md">Homebrew</a> ·
   <a href="docs/release-status.md">Release status</a>
 </p>
 
 ---
 
-> **0.1.0 is available.** The first SDK release passed independent macOS/Linux
+> **SDK 0.1.0 is available.** The release passed independent macOS/Linux
 > installation and build replay, plus the complete AROS runtime and memory matrix.
-> [Install the SDK](docs/quickstart.md) · [Read the qualification evidence](docs/release-status.md).
-> Runtime support is confined to the documented PC x86-64 ABI-v1 QEMU profile.
+> Install with [APT on Ubuntu 24.04 amd64](packaging/INSTALL-APT.md) or
+> [Homebrew on macOS 26 Apple Silicon](packaging/INSTALL-HOMEBREW.md), or use the
+> [direct SDK guide](docs/quickstart.md). See [release evidence](docs/release-status.md)
+> and [package channel status](docs/distribution-status.md). Runtime support is
+> confined to the documented PC x86-64 ABI-v1 QEMU profile.
 
 ## Modern Rust, native AROS
 
@@ -94,18 +101,21 @@ be installed side by side; uninstall keeps projects and shared prerequisites.
 The SDK contains source and helpers; the Rust compiler, C SDK, native toolchain,
 and vendor inputs are provisioned explicitly by the preparation recipe.
 
-GitHub Releases is the current installation channel. APT and Homebrew packaging
-is being qualified through a separate `v0.1.0+packaging.2` delivery; it preserves
-the original SDK release. The [package instructions](packaging/README.md) explain
-the launcher, explicit preparation and retained project state. Check the
-[distribution status](docs/distribution-status.md) before using a package channel.
-AUR and rustup remain [later deliveries](docs/distribution-channels-plan.md).
+GitHub Releases remains the canonical SDK artifact and recovery channel. The
+separate `v0.1.0+packaging.2` release makes packages available while preserving
+the original SDK release. Install with [APT on Ubuntu 24.04 amd64](packaging/INSTALL-APT.md)
+or [Homebrew on macOS 26 Apple Silicon](packaging/INSTALL-HOMEBREW.md). Both
+package routes require the same [explicit user preparation before the first
+build](packaging/README.md). Read the [distribution status](docs/distribution-status.md)
+for acceptance evidence. AUR and rustup remain
+[later deliveries](docs/distribution-channels-plan.md).
 
-**Host requirements:** macOS 26 on Apple Silicon, or Ubuntu 24.04 on x86-64
-with glibc; an existing Python 3.10+ to bootstrap the pinned interpreter;
-6 GiB physical RAM and 24 GiB free space for preparation. These are the initially
-qualified host profiles. The [compatibility guide](docs/compatibility.md)
-records the exact inputs and target configuration.
+**Supported package hosts:** APT on Ubuntu 24.04 amd64, and Homebrew on macOS 26
+Apple Silicon. These are the only qualified package-host profiles. Direct
+GitHub-release installation requires an existing Python 3.10+ to bootstrap the
+pinned interpreter. Preparation requires 6 GiB physical RAM and 24 GiB free
+space. The [compatibility guide](docs/compatibility.md) records the exact inputs
+and target configuration.
 
 ## Try something useful
 
@@ -128,6 +138,7 @@ shows the runtime with and without allocation.
 | Area | Initial SDK scope |
 | --- | --- |
 | Development hosts | macOS Apple Silicon; Linux x86-64 |
+| Package channels | APT: Ubuntu 24.04 amd64; Homebrew: macOS 26 Apple Silicon |
 | Target | Native PC x86-64 AROS ABI-v1 |
 | Rust libraries | `core`, `alloc`, and the documented SDK facade |
 | Native services | Files, stdout/stderr, libraries, signals, local ports/messages, synchronous callbacks |
@@ -144,6 +155,7 @@ machine's 512 MiB RAM is a test profile. See the [memory policy](docs/memory-pol
 | Start here | Go deeper |
 | --- | --- |
 | [Installation and first project](docs/quickstart.md) | [API and lifetime contracts](docs/api.md) |
+| [APT installation](packaging/INSTALL-APT.md) · [Homebrew installation](packaging/INSTALL-HOMEBREW.md) | [Package preparation and retained state](packaging/README.md) |
 | [Supported hosts and target](docs/compatibility.md) | [Memory and allocation](docs/memory-policy.md) |
 | [Current release status](docs/release-status.md) | [Protected SDK production](docs/hosted-sdk-producer.md) |
 | [Release verification](docs/public-release-replay.md) | [Authoritative release plan](docs/m2-r1-plan.md) |

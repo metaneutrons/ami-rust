@@ -1,0 +1,662 @@
+{
+  "schema": "ami-rust-distribution-acceptance-v1",
+  "status": "GO_D0_D1_APT_HOMEBREW",
+  "accepted_date": "2026-10-18",
+  "sdk": {
+    "version": "0.1.0",
+    "source_commit": "b4ebb9cce5decd01616b75acf451d0eba9995ee3",
+    "release_id": 416548451,
+    "asset_count": 6,
+    "unchanged_and_latest": true
+  },
+  "packaging": {
+    "tag": "v0.1.0+packaging.2",
+    "release_id": 416661964,
+    "sdk_version": "0.1.0",
+    "revision": 2,
+    "debian_version": "0.1.0-2",
+    "homebrew_version": "0.1.0_2",
+    "publisher_commit": "a65b6d22bce94e30d5f89627dc176ff01117ebef",
+    "publisher_tree": "2db2669e54bf121274ac2f231fa21ad16c75fe80",
+    "producer_run_id": 39159711172,
+    "producer_run_attempt": 1,
+    "candidate_sha256": "9052d51fe4689f5842ecee6e03624ecd6e6eb9363e1b47be231ceed4f3f5e247",
+    "qualification_run_id": 39161396600,
+    "qualification_controller_commit": "bace932ac59f61172fe1ace0b5878f2c49b65c09",
+    "publication_run_id": 39162102531,
+    "publication_controller_commit": "bace932ac59f61172fe1ace0b5878f2c49b65c09",
+    "assets": [
+      {
+        "path": "ami-rust-0.1.0-packaging.2.tar.xz",
+        "bytes": 26044756,
+        "sha256": "6567abfb4e36a2bf82816f51512343f4d1232c97c866e648fdf68ab4cf7f2448"
+      },
+      {
+        "path": "ami-rust-0.1.0-packaging.2.tar.xz.sigstore.json",
+        "bytes": 10833,
+        "sha256": "b52259687660b527a576626b4263dd8399810c3740add6d2d599a5b7a9bf44bc"
+      },
+      {
+        "path": "ami-rust-0.1.0-packaging.2.tar.xz.spdx.json",
+        "bytes": 4243,
+        "sha256": "e7bfcbf1eda60a0d10376e3fa02b292b408853a8aa225aa9a577592fe54bb2d3"
+      },
+      {
+        "path": "ami-rust.rb",
+        "bytes": 1678,
+        "sha256": "53e2aa69d5e5b01de67c0d8fefde1ae21036005f8abf9588b077ffeedca4c16d"
+      },
+      {
+        "path": "ami-rust.rb.sigstore.json",
+        "bytes": 10692,
+        "sha256": "094e45265c6aeef7cd38a007ea6669229a36624952d3156c6d370748f1685b51"
+      },
+      {
+        "path": "ami-rust_0.1.0-2_amd64.deb",
+        "bytes": 26045116,
+        "sha256": "8dfac42a6a0bb6a09a3f486490547e3daaac5da8cdc128bbb4fd22f2356e46f1"
+      },
+      {
+        "path": "ami-rust_0.1.0-2_amd64.deb.sigstore.json",
+        "bytes": 10786,
+        "sha256": "b8e70d54a1187958b13ed335fc961ead505e147387f41cd33d45ff06883092ab"
+      },
+      {
+        "path": "ami-rust_0.1.0-2_amd64.deb.spdx.json",
+        "bytes": 4215,
+        "sha256": "611b7a2b07d85b3528538899036f12422603ee10d24b3cc29f78892e00f079f6"
+      },
+      {
+        "path": "candidate.json",
+        "bytes": 2393,
+        "sha256": "9052d51fe4689f5842ecee6e03624ecd6e6eb9363e1b47be231ceed4f3f5e247"
+      },
+      {
+        "path": "metadata-report.json",
+        "bytes": 2509,
+        "sha256": "e6a47d4126beaabe4cc38661c179afa6f3d658f47a6748317e1804acb74d0b24"
+      },
+      {
+        "path": "packaging-report.json",
+        "bytes": 1005,
+        "sha256": "dd82cfd9ede9a892f1963b3ddf7be15e6018db2b0fb961aa98eefe63534a6a92"
+      },
+      {
+        "path": "SHA256SUMS",
+        "bytes": 1053,
+        "sha256": "658e3e4dcf8d665b6de6472887172f1d57470b06b886ec2d66d43df40ec772ab"
+      }
+    ]
+  },
+  "criteria": [
+    {
+      "id": "D0-A1",
+      "status": "PASS",
+      "evidence": "One adapter reuses the original pinned SDK verifier, provisioner, installer, project generator/lock and build driver; package and user state ownership remain separate."
+    },
+    {
+      "id": "D0-A2",
+      "status": "PASS",
+      "evidence": "Twelve sealed files retain complete inventories, protected-source provenance, signatures, upstream licences and byte mapping to the six accepted SDK assets. Real cryptographic corruption probes and wrong-host/input/version fixtures reject."
+    },
+    {
+      "id": "D0-A3",
+      "status": "PASS",
+      "evidence": "Both actual package managers pass install, preparation, locked offline build, local lower-revision upgrade, remove and reinstall. Public clients rebuild retained projects after removal and preserve global Rust settings."
+    },
+    {
+      "id": "D0-A4",
+      "status": "PASS",
+      "evidence": "Existing R1 installer recovery remains unchanged. Adapter integrity/ownership and failed-state fixtures reject safely; fresh-state retries and actual retained-launcher rebuild after package removal pass. Only campaign-owned package state is cleaned."
+    },
+    {
+      "id": "D0-A5",
+      "status": "PASS",
+      "evidence": "Published package sizes, scoped filesystem inventories, original preparation receipts and command RSS/work measurements, observed volume-space deltas and cold/warm timings are retained; all named campaigns close within their prospective limits."
+    },
+    {
+      "id": "APT-A1",
+      "status": "PASS",
+      "evidence": "Canonical amd64 Debian control/layout, dependencies, modes, inventory and SPDX mapping pass; the exact public DEB has protected producer provenance and signatures."
+    },
+    {
+      "id": "APT-A2",
+      "status": "PASS",
+      "evidence": "A fresh Ubuntu 24.04 amd64 client executes the documented dedicated-keyring/deb822 setup and install, then prepares/builds and reproduces the accepted R1 native SHA. Signature, strongest SHA512 by-hash and exact pool payload checks pass; altered signature/index/payload/key/time cases reject."
+    },
+    {
+      "id": "APT-A3",
+      "status": "PASS",
+      "evidence": "The public client installs an explicitly local unsigned lower-revision fixture, upgrades through the signed archive to ami-rust=0.1.0-2 and replays the project. Package removal and separate source/keyring removal execute as documented. Existing archive transaction safeguards and post-publication verification remain in force."
+    },
+    {
+      "id": "BREW-A1",
+      "status": "PASS",
+      "evidence": "The exact attested formula passes protected tap syntax/style/audit, install and meaningful brew test on macOS 26 Apple Silicon; unsupported hosts reject."
+    },
+    {
+      "id": "BREW-A2",
+      "status": "PASS",
+      "evidence": "The actual macOS lifecycle passes install, prepare/build, reinstall, upgrade, removal, retained-state replay and owned-keg/tap cleanup, including the real retained-two-keg inventory. Auto-pruned and foreign inventory cases are covered by regression tests."
+    },
+    {
+      "id": "BREW-A3",
+      "status": "PASS",
+      "evidence": "A narrowly scoped GitHub App opens the exact formula/README PR, required CI passes before merge, public formula bytes match the attested file, and a fresh public-tap client installs/tests/builds successfully."
+    }
+  ],
+  "links": {
+    "producer": "https://github.com/metaneutrons/ami-rust/actions/runs/39159711172",
+    "requalification": "https://github.com/metaneutrons/ami-rust/actions/runs/39161396600",
+    "publication_and_public_clients": "https://github.com/metaneutrons/ami-rust/actions/runs/39162102531",
+    "tap_pull_request": "https://github.com/metaneutrons/homebrew-tap/pull/71",
+    "tap_ci": "https://github.com/metaneutrons/homebrew-tap/actions/runs/39162144348",
+    "archive": "https://github.com/metaneutrons/apt-archive/actions/runs/39162383740"
+  },
+  "clients": {
+    "apt": {
+      "status": "PASS_PUBLIC_CHANNEL_CONSUMER",
+      "elapsed_seconds": 261.0438940525055,
+      "commands": [
+        {
+          "label": "signed-public-archive",
+          "exit_code": 0,
+          "elapsed_seconds": 2.4677932262420654
+        },
+        {
+          "label": "verbatim-public-install",
+          "exit_code": 0,
+          "elapsed_seconds": 8.430044651031494
+        },
+        {
+          "label": "consumer",
+          "exit_code": 0,
+          "elapsed_seconds": 144.77927470207214
+        },
+        {
+          "label": "install-lower-revision-fixture",
+          "exit_code": 0,
+          "elapsed_seconds": 2.4185659885406494
+        },
+        {
+          "label": "verify-lower-revision",
+          "exit_code": 0,
+          "elapsed_seconds": 0.015927553176879883
+        },
+        {
+          "label": "upgrade-from-public-archive",
+          "exit_code": 0,
+          "elapsed_seconds": 2.267989158630371
+        },
+        {
+          "label": "verify-public-archive-upgrade",
+          "exit_code": 0,
+          "elapsed_seconds": 0.015673398971557617
+        },
+        {
+          "label": "verify-upgraded-public-package",
+          "exit_code": 0,
+          "elapsed_seconds": 0.1137535572052002
+        },
+        {
+          "label": "replay-public-apt-upgrade",
+          "exit_code": 0,
+          "elapsed_seconds": 32.273550510406494
+        },
+        {
+          "label": "remove-public-package",
+          "exit_code": 0,
+          "elapsed_seconds": 1.5667634010314941
+        },
+        {
+          "label": "verbatim-retained-commands",
+          "exit_code": 0,
+          "elapsed_seconds": 32.378151416778564
+        },
+        {
+          "label": "retained-project-after-removal",
+          "exit_code": 0,
+          "elapsed_seconds": 32.67744493484497
+        },
+        {
+          "label": "verbatim-public-apt-archive-cleanup",
+          "exit_code": 0,
+          "elapsed_seconds": 1.2671568393707275
+        }
+      ],
+      "reference_native_sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162",
+      "reference_native_bytes": 928208,
+      "resource_observations": {
+        "scopes": {
+          "retained_snapshot": {
+            "regular_file_bytes": 27172143,
+            "allocated_file_bytes": 27201536,
+            "regular_file_count": 18,
+            "symlink_count": 0
+          },
+          "source": {
+            "regular_file_bytes": 273500150,
+            "allocated_file_bytes": 274341888,
+            "regular_file_count": 337,
+            "symlink_count": 0
+          },
+          "python_bootstrap": {
+            "regular_file_bytes": 289909403,
+            "allocated_file_bytes": 299143168,
+            "regular_file_count": 3512,
+            "symlink_count": 1049
+          },
+          "preparation": {
+            "regular_file_bytes": 1308320518,
+            "allocated_file_bytes": 1339412480,
+            "regular_file_count": 12697,
+            "symlink_count": 134
+          },
+          "installed_sdk": {
+            "regular_file_bytes": 35702286,
+            "allocated_file_bytes": 36229120,
+            "regular_file_count": 203,
+            "symlink_count": 0
+          },
+          "whole_sdk_state": {
+            "regular_file_bytes": 1965370455,
+            "allocated_file_bytes": 2007371776,
+            "regular_file_count": 16885,
+            "symlink_count": 1183
+          },
+          "project": {
+            "regular_file_bytes": 5008216,
+            "allocated_file_bytes": 5292032,
+            "regular_file_count": 99,
+            "symlink_count": 0
+          },
+          "build_outputs": {
+            "regular_file_bytes": 85100736,
+            "allocated_file_bytes": 85180416,
+            "regular_file_count": 54,
+            "symlink_count": 6
+          }
+        },
+        "volume": {
+          "scope": "observed_volume_free_space_delta",
+          "sampling_interval_seconds": 1.0,
+          "sample_count": 260,
+          "start_free_bytes": 91602186240,
+          "minimum_free_bytes": 88857870336,
+          "peak_free_delta_bytes": 2744315904,
+          "sampling_error": null,
+          "thread_stopped": true
+        },
+        "supervised_original_sdk_commands": [
+          {
+            "label": "client-prepare-verify",
+            "elapsed_seconds": 0.976,
+            "rss_peak_observed_bytes": 66621440,
+            "managed_peak_observed_bytes": 804170042
+          },
+          {
+            "label": "sdk-install-rust-rustc",
+            "elapsed_seconds": 0.63,
+            "rss_peak_observed_bytes": 6123520,
+            "managed_peak_observed_bytes": 1748217826
+          },
+          {
+            "label": "sdk-install-rust-rust-std",
+            "elapsed_seconds": 0.771,
+            "rss_peak_observed_bytes": 4067328,
+            "managed_peak_observed_bytes": 1603683796
+          },
+          {
+            "label": "sdk-install-rust-rust-src",
+            "elapsed_seconds": 29.161,
+            "rss_peak_observed_bytes": 6017024,
+            "managed_peak_observed_bytes": 1562504591
+          },
+          {
+            "label": "sdk-install-rust-cargo",
+            "elapsed_seconds": 0.606,
+            "rss_peak_observed_bytes": 4030464,
+            "managed_peak_observed_bytes": 1562411740
+          },
+          {
+            "label": "verify-consumer-rust-identity",
+            "elapsed_seconds": 0.184,
+            "rss_peak_observed_bytes": 17362944,
+            "managed_peak_observed_bytes": 1513938732
+          }
+        ],
+        "original_receipts": {
+          "scope": "original_sdk_supervisor_receipts",
+          "files": [
+            {
+              "path": "consumer-preparation.json",
+              "bytes": 13816,
+              "sha256": "59b656b10c4c926fe9569569c38bc97dbf5358029cd68d164866f12ca2e683d5"
+            },
+            {
+              "path": "tool-bootstrap.json",
+              "bytes": 4616,
+              "sha256": "e4d585bd17158e00c2912f40e05465f6504de7d5f5421f7d0eda2f7ca2af4a7b"
+            }
+          ]
+        }
+      },
+      "phases": {
+        "evidence-initial": {
+          "status": "PASS_PACKAGE_CONSUMER_EXERCISE_NOT_CHANNEL_PUBLICATION",
+          "elapsed_seconds": 144.74151229858398,
+          "commands": [
+            {
+              "label": "verbatim-instructions",
+              "exit_code": 0,
+              "elapsed_seconds": 107.86417078971863
+            },
+            {
+              "label": "reference-lock",
+              "exit_code": 0,
+              "elapsed_seconds": 3.1194238662719727
+            },
+            {
+              "label": "reference-build",
+              "exit_code": 0,
+              "elapsed_seconds": 26.362037658691406
+            },
+            {
+              "label": "retained-inputs",
+              "exit_code": 0,
+              "elapsed_seconds": 7.378810405731201
+            }
+          ]
+        },
+        "evidence-public-apt-upgrade": {
+          "status": "PASS_PACKAGE_LIFECYCLE_REPLAY_NOT_CHANNEL_PUBLICATION",
+          "elapsed_seconds": 32.2212290763855,
+          "commands": [
+            {
+              "label": "package-verification",
+              "exit_code": 0,
+              "elapsed_seconds": 0.11383485794067383
+            },
+            {
+              "label": "offline-rebuild",
+              "exit_code": 0,
+              "elapsed_seconds": 24.713887929916382
+            },
+            {
+              "label": "retained-inputs",
+              "exit_code": 0,
+              "elapsed_seconds": 7.3787548542022705
+            }
+          ]
+        },
+        "evidence-public-removal": {
+          "status": "PASS_PACKAGE_LIFECYCLE_REPLAY_NOT_CHANNEL_PUBLICATION",
+          "elapsed_seconds": 32.62001156806946,
+          "commands": [
+            {
+              "label": "package-verification",
+              "exit_code": 0,
+              "elapsed_seconds": 0.11404228210449219
+            },
+            {
+              "label": "offline-rebuild",
+              "exit_code": 0,
+              "elapsed_seconds": 25.063254594802856
+            },
+            {
+              "label": "retained-inputs",
+              "exit_code": 0,
+              "elapsed_seconds": 7.427640438079834
+            }
+          ]
+        }
+      },
+      "budget_exception": false
+    },
+    "homebrew": {
+      "status": "PASS_PUBLIC_CHANNEL_CONSUMER",
+      "elapsed_seconds": 359.33392691612244,
+      "commands": [
+        {
+          "label": "verbatim-public-install",
+          "exit_code": 0,
+          "elapsed_seconds": 21.90970015525818
+        },
+        {
+          "label": "consumer",
+          "exit_code": 0,
+          "elapsed_seconds": 257.91379404067993
+        },
+        {
+          "label": "remove-public-package",
+          "exit_code": 0,
+          "elapsed_seconds": 1.5767838954925537
+        },
+        {
+          "label": "verbatim-retained-commands",
+          "exit_code": 0,
+          "elapsed_seconds": 38.87006998062134
+        },
+        {
+          "label": "retained-project-after-removal",
+          "exit_code": 0,
+          "elapsed_seconds": 38.47689604759216
+        }
+      ],
+      "reference_native_sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162",
+      "reference_native_bytes": 928208,
+      "resource_observations": {
+        "scopes": {
+          "retained_snapshot": {
+            "regular_file_bytes": 27172145,
+            "allocated_file_bytes": 27201536,
+            "regular_file_count": 18,
+            "symlink_count": 0
+          },
+          "source": {
+            "regular_file_bytes": 273500196,
+            "allocated_file_bytes": 282812416,
+            "regular_file_count": 337,
+            "symlink_count": 0
+          },
+          "python_bootstrap": {
+            "regular_file_bytes": 92144767,
+            "allocated_file_bytes": 96063488,
+            "regular_file_count": 1680,
+            "symlink_count": 10
+          },
+          "preparation": {
+            "regular_file_bytes": 1062571030,
+            "allocated_file_bytes": 1093677056,
+            "regular_file_count": 12685,
+            "symlink_count": 17
+          },
+          "installed_sdk": {
+            "regular_file_bytes": 35702286,
+            "allocated_file_bytes": 36229120,
+            "regular_file_count": 203,
+            "symlink_count": 0
+          },
+          "whole_sdk_state": {
+            "regular_file_bytes": 1521856387,
+            "allocated_file_bytes": 1567027200,
+            "regular_file_count": 15041,
+            "symlink_count": 27
+          },
+          "project": {
+            "regular_file_bytes": 5008225,
+            "allocated_file_bytes": 5292032,
+            "regular_file_count": 99,
+            "symlink_count": 0
+          },
+          "build_outputs": {
+            "regular_file_bytes": 85618599,
+            "allocated_file_bytes": 85704704,
+            "regular_file_count": 55,
+            "symlink_count": 6
+          }
+        },
+        "volume": {
+          "scope": "observed_volume_free_space_delta",
+          "sampling_interval_seconds": 1.0,
+          "sample_count": 334,
+          "start_free_bytes": 102577336320,
+          "minimum_free_bytes": 100028907520,
+          "peak_free_delta_bytes": 2548428800,
+          "sampling_error": null,
+          "thread_stopped": true
+        },
+        "supervised_original_sdk_commands": [
+          {
+            "label": "client-prepare-verify",
+            "elapsed_seconds": 1.581,
+            "rss_peak_observed_bytes": 90112000,
+            "managed_peak_observed_bytes": 602594452
+          },
+          {
+            "label": "sdk-install-rust-rustc",
+            "elapsed_seconds": 1.401,
+            "rss_peak_observed_bytes": 3604480,
+            "managed_peak_observed_bytes": 1232575012
+          },
+          {
+            "label": "sdk-install-rust-rust-std",
+            "elapsed_seconds": 1.536,
+            "rss_peak_observed_bytes": 4194304,
+            "managed_peak_observed_bytes": 1231279240
+          },
+          {
+            "label": "sdk-install-rust-rust-src",
+            "elapsed_seconds": 102.472,
+            "rss_peak_observed_bytes": 5554176,
+            "managed_peak_observed_bytes": 1205925165
+          },
+          {
+            "label": "sdk-install-rust-cargo",
+            "elapsed_seconds": 1.501,
+            "rss_peak_observed_bytes": 3981312,
+            "managed_peak_observed_bytes": 1195883285
+          },
+          {
+            "label": "verify-consumer-rust-identity",
+            "elapsed_seconds": 0.686,
+            "rss_peak_observed_bytes": 28557312,
+            "managed_peak_observed_bytes": 1153363265
+          }
+        ],
+        "original_receipts": {
+          "scope": "original_sdk_supervisor_receipts",
+          "files": [
+            {
+              "path": "consumer-preparation.json",
+              "bytes": 13785,
+              "sha256": "b673eb8abdce990159727a4f0ee83cef94dda96dd13077c021d5df03d2efc906"
+            },
+            {
+              "path": "tool-bootstrap.json",
+              "bytes": 4610,
+              "sha256": "d55750b64acee593888b29e26aaaec4069cb372bcd0c2cdf114c75a92f9b2d38"
+            }
+          ]
+        }
+      },
+      "phases": {
+        "evidence-initial": {
+          "status": "PASS_PACKAGE_CONSUMER_EXERCISE_NOT_CHANNEL_PUBLICATION",
+          "elapsed_seconds": 257.83073711395264,
+          "commands": [
+            {
+              "label": "verbatim-instructions",
+              "exit_code": 0,
+              "elapsed_seconds": 213.04533290863037
+            },
+            {
+              "label": "reference-lock",
+              "exit_code": 0,
+              "elapsed_seconds": 4.045344829559326
+            },
+            {
+              "label": "reference-build",
+              "exit_code": 0,
+              "elapsed_seconds": 32.27057194709778
+            },
+            {
+              "label": "retained-inputs",
+              "exit_code": 0,
+              "elapsed_seconds": 8.4075288772583
+            }
+          ]
+        },
+        "evidence-public-removal": {
+          "status": "PASS_PACKAGE_LIFECYCLE_REPLAY_NOT_CHANNEL_PUBLICATION",
+          "elapsed_seconds": 38.35712718963623,
+          "commands": [
+            {
+              "label": "package-verification",
+              "exit_code": 0,
+              "elapsed_seconds": 0.13747406005859375
+            },
+            {
+              "label": "offline-rebuild",
+              "exit_code": 0,
+              "elapsed_seconds": 29.663787841796875
+            },
+            {
+              "label": "retained-inputs",
+              "exit_code": 0,
+              "elapsed_seconds": 8.515185832977295
+            }
+          ]
+        }
+      },
+      "budget_exception": false
+    }
+  },
+  "lifecycle_seconds": {
+    "linux": 223.82720834799966,
+    "macos": 436.19995370800007
+  },
+  "archive": {
+    "status": "PASS_PUBLIC_APT_SIGNATURE_BY_HASH_AND_PAYLOAD",
+    "base_url": "https://deb.metaneutrons.cc",
+    "primary_fingerprint": "1B7B79417383648BBFBE282E01AB8296EF0FCD76",
+    "signing_subkey": "A0C21782FC507CCBD666F3ED242072FEC8BE54A4",
+    "index_algorithm": "SHA512",
+    "index_path": "dists/rolling/main/binary-amd64/by-hash/SHA512/ddbe31ec94c86b2ad3d1fe08aaf45deae21b76e7a005e5218612f32966b403b8541094eeae47c34d2df932fc43fce5062093d7d5df79322ed44b4ca8149b9219",
+    "package": {
+      "Package": "ami-rust",
+      "Version": "0.1.0-2",
+      "Section": "devel",
+      "Priority": "optional",
+      "Architecture": "amd64",
+      "Maintainer": "Fabian Schmieder <436979+metaneutrons@users.noreply.github.com>",
+      "Depends": "python3 (>= 3.10), git, ca-certificates",
+      "Installed-Size": "26539",
+      "Description": "Native PC x86-64 AROS ABI-v1 SDK host tooling\nInstalls the pinned ami-rust SDK payload and package verifier.",
+      "Filename": "pool/main/a/ami-rust/ami-rust_0.1.0-2_amd64.deb",
+      "Size": "26045116",
+      "SHA256": "8dfac42a6a0bb6a09a3f486490547e3daaac5da8cdc128bbb4fd22f2356e46f1",
+      "SHA512": "797f17a08d61abf31ac509c695bd40d58f8caf19143e8e65ed48679af20cd60eb27e0a092e8f3ab74a42f0b9d0e5bd04990bf55929ea37c69dfd00ecf0e7032d"
+    },
+    "corruption_counter_probe": "PASS",
+    "real_client_installation": "SEPARATE_GATE"
+  },
+  "scope_notes": [
+    "First public package delivery: lower-revision upgrade fixtures are local, unsigned and never published.",
+    "Filesystem scopes overlap and must not be summed. The sampled free-space delta covers the observed runner volume, not an isolated process disk peak.",
+    "Cold initial phases include preparation, project/build, reference rebuild and input verification; warm command timings are recorded separately.",
+    "SDK ABI-v1/QEMU baseline and all original R1 evidence remain unchanged. AROS-NX, aros-tools and nxpk were not changed.",
+    "AUR and rustup remain deferred."
+  ],
+  "preserved_failures": [
+    {
+      "run_id": 39158406951,
+      "disposition": "Private draft lookup failure before channel publication; packaging revision 1 remains a preserved draft."
+    },
+    {
+      "run_id": 39159711172,
+      "disposition": "Signed revision 2 staged successfully and Linux passed; macOS controller rejected valid retained kegs. The exact candidate passed new requalification 39161396600."
+    }
+  ],
+  "budget_exceptions": []
+}

@@ -1,17 +1,21 @@
-# Distribution channels — revision 3
+# Distribution channels — revision 4
 
-Owner decision: 2026-10-18. D0 and D1 APT/Homebrew implementation and qualification
-are now authorised, including a packaging delivery for SDK 0.1.0. D2 AUR and D3
-rustup remain deferred. Requirements authority: this file in `metaneutrons/ami-rust`.
-The external master plan is a derived summary.
+Owner decision: 2026-10-18. D0, D1-APT and D1-BREW are accepted against the
+criteria below without removing or weakening any criterion. APT and Homebrew are
+available for the supported hosts recorded here. D2 AUR and D3 rustup remain
+deferred. The acceptance record and criterion mapping are in
+[`distribution-0.1.0.json`](evidence/distribution-0.1.0.json). Requirements
+authority: this file in `metaneutrons/ami-rust`; the external master plan is a
+derived summary.
 
 ## Outcome and sequence
 
-Add supported APT and Homebrew installation paths after R1. Add AUR afterwards,
-then qualify rustup integration. GitHub Releases remains the canonical artifact
-and recovery channel throughout. These are follow-up deliveries, not additional
-R1 gates. The accepted R1 release, qualified baseline and sealed evidence
-remain immutable; these channels have their own subsequent acceptance records.
+APT and Homebrew now provide supported installation paths after R1. AUR remains
+the next delivery, followed by rustup feasibility and qualification. GitHub
+Releases remains the canonical artifact and recovery channel. These are
+follow-up deliveries, not additional R1 gates. The accepted R1 release,
+qualified baseline and sealed evidence remain immutable; these channels have
+their own acceptance records.
 
 | Delivery | Outcome | Initial host coverage | Depends on |
 | --- | --- | --- | --- |
@@ -102,16 +106,15 @@ merely a wrapper does not satisfy it.
 ## D1-APT — Linux package and signed archive
 
 Produce a canonical Debian binary package with the correct host architecture
-(`amd64`, not the Rust target triple). Reuse an existing owner-operated shared
-APT archive if available. The project builds/attests the `.deb`; the archive
-verifies it and publishes signed repository metadata. Archive signing keys and
-storage write credentials do not belong in the ami-rust producer repository.
+(`amd64`, not the Rust target triple). The project builds and attests the `.deb`;
+the existing owner-operated `metaneutrons/apt-archive` verifies it and publishes
+signed repository metadata. Archive signing keys and storage write credentials
+do not belong in the ami-rust producer repository.
 
-The user-facing goal is a documented repository setup followed by
-`apt install ami-rust`; names and archive URL are provisional until D0 surveys
-ownership and existing infrastructure. Scope trust with a dedicated keyring and
-`Signed-By`, and provide a deb822 `.sources` example. Package installation must
-not broaden trust to unrelated repositories.
+The user-facing flow is documented repository setup followed by installation
+of `ami-rust=0.1.0-2` from `https://deb.metaneutrons.cc`. Scope trust with a
+dedicated keyring and `Signed-By`, and provide a deb822 `.sources` example.
+Package installation must not broaden trust to unrelated repositories.
 
 - **APT-A1:** inspect package contents/control data, canonical filename,
   architecture, dependencies, permissions and licence/source inventory; verify
@@ -234,6 +237,17 @@ The immutable SDK release `v0.1.0` is preserved; the new packaging release is
 `v0.1.0+packaging.2`, with Debian version `0.1.0-2` and Homebrew revision 2.
 Packaging publication keeps the SDK release as `latest`; all new channel
 artifacts have their own protected-source provenance and acceptance.
+
+## D0 and D1 acceptance record — revision 4
+
+All D0-A1–A5, APT-A1–A3 and BREW-A1–A3 criteria above passed. Their wording and
+scope remain unchanged. This acceptance applies to SDK `0.1.0`, Debian
+`0.1.0-2` and Homebrew revision 2 on the exact host profiles in this plan. The
+criterion-by-criterion mapping, commands, measurements, run identities and
+retained receipts are in [`distribution-0.1.0.json`](evidence/distribution-0.1.0.json)
+and the [distribution status](distribution-status.md). The initial macOS
+controller failure remains recorded there; it did not change the sealed
+candidate or the acceptance criteria.
 
 ## Sources checked on 2026-10-18
 
