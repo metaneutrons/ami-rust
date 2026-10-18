@@ -112,3 +112,7 @@ was 313,122,816 bytes, workspace 1,980,939,861 bytes and logs 90,602 bytes.
 [Original-attempt digests, corrected parser controls and host fixture evidence](evidence/cargo-native-query-review/first-attempt.json)
 are retained. The corrected exact candidate still needs a successful hosted
 query before RC0 acceptance; the original failure is not rewritten as PASS.
+
+## Corrected native qualification
+
+[Run39173711603](https://github.com/metaneutrons/ami-rust/actions/runs/39173711603) passed for exact candidate `f356132d31bd68515d3fd6cdb1b5ee50f1719c43`; PR79 merged at `8777a4166ef5e988f7c21f3f10d8d2602fb4a9b1`. The accepted native graph is byte-identical to the reviewed corrected actual-output graph, SHA-256 `b50ac7090676699795323341cc5a1390e8bb7cd39367b644d0bdc36e1953201a`: 341 selected packages,36 build scripts. All 11 graph counterprobes and the same-gate valid/altered lock controls passed. Duration 20.341 s including supervision, peak observed RSS 326,914,048 bytes, workspace 2,010,423,044 bytes and logs 90,602 bytes remain within the admitted profile. [Durable measured result, graph and raw-artifact digest index](evidence/native-source-39173711603/result.json) preserve the finding beyond artifact expiry. No actual producer/no-Python execution claim is added.

@@ -1,0 +1,276 @@
+{
+  "schema": "ami-rust-native-cargo-source-closure-v1",
+  "status": "PASS_NATIVE_LINUX_SOURCE_GRAPH_ONLY",
+  "claim": "native Linux source graph and input inventory only; no package compilation, build.rs execution, or runtime observation",
+  "source_identity": {
+    "bootstrap_helper_sha256": "647de48a5dd5b2e1ea289f6d95c3e456168420ddc93028205b0baa051e2f365f",
+    "bootstrap_inputs_sha256": "5c3557a2696457d76562f8883efa2c7d2c4cfc583f4f5814a722907a1f639f81",
+    "cargo_lock": {
+      "bytes": 136479,
+      "git_packages": 0,
+      "packages": 550,
+      "registry_packages": 523,
+      "sha256": "b4ccfa53ccf8d7360c0359c1533d801759629f9cdd486d9a0a88e512717058d9",
+      "workspace_path_packages": 27
+    },
+    "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+    "fetched_head": "3efb1f477e99b42974b982d939fd100303cdf7db",
+    "patch": {
+      "inputs_json_sha256": "5c3557a2696457d76562f8883efa2c7d2c4cfc583f4f5814a722907a1f639f81",
+      "path": "host/cargo-repro/cargo-metadata.patch",
+      "sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f",
+      "source_json_sha256": "73c9fc79976541cb43cefb39ce878218a3245493e86bb37fac449ec3bee00a52",
+      "targets": [
+        {
+          "patched_sha256": "b572e74e742cca08765540aa9f611b1877defc08d146cff52fcd9b0c039106db",
+          "path": "src/compiler/build_runner/compilation_files.rs",
+          "upstream_sha256": "275e1ff7e6512bbbb3b30a7f0ceb9c7d455745e6aafce0484cb73d8fe31e0e67"
+        },
+        {
+          "patched_sha256": "0db8ba62877729fdee23ee8ae26f11a7b79fdd8bf086845a53c5f097eb1eacc3",
+          "path": "src/workspace/features.rs",
+          "upstream_sha256": "2747b5598654963df7d9270b07fc7dbd80a700cf219b26db71b0d2291ea74638"
+        }
+      ]
+    },
+    "patched_source_diff_sha256": "add91f19784376b3203c730cb7b3f1028ac24e831a98508d4daa8a1f8060df76",
+    "patched_targets": [
+      {
+        "path": "src/compiler/build_runner/compilation_files.rs",
+        "sha256": "b572e74e742cca08765540aa9f611b1877defc08d146cff52fcd9b0c039106db"
+      },
+      {
+        "path": "src/workspace/features.rs",
+        "sha256": "0db8ba62877729fdee23ee8ae26f11a7b79fdd8bf086845a53c5f097eb1eacc3"
+      }
+    ],
+    "resource_policy_sha256": "b9a5fbfff842847c30b5f56ea4e1d3a368f4bda30689f0407ed9d33610571646",
+    "upstream": "https://github.com/rust-lang/cargo.git",
+    "upstream_git_tree": "6aba36cdd15a91fb4f26fca10b3e592fe786649a",
+    "verified_lock": {
+      "bytes": 136479,
+      "git_packages": 0,
+      "packages": 550,
+      "registry_packages": 523,
+      "sha256": "b4ccfa53ccf8d7360c0359c1533d801759629f9cdd486d9a0a88e512717058d9",
+      "workspace_path_packages": 27
+    }
+  },
+  "host": {
+    "machine": "x86_64",
+    "os_release": "PRETTY_NAME=\"Ubuntu 24.04.5 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.5 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo\n",
+    "os_release_sha256": "87458b3b1f1ca0e5c693ade771de7007c3783bdc692fa6b39eb6414bf2af2763",
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "system": "Linux"
+  },
+  "host_rust": {
+    "archives": [
+      {
+        "bytes": 79727616,
+        "component": "rustc",
+        "sha256": "e974f036b28565f37c0f3bd92ddefa809bee16c04f9dcf07b9ed96e05aaaf7c4",
+        "url": "https://static.rust-lang.org/dist/2026-09-03/rustc-1.98.1-x86_64-unknown-linux-gnu.tar.xz"
+      },
+      {
+        "bytes": 30715684,
+        "component": "rust-std",
+        "sha256": "fa3ff450172a16c026944030230c5069947af93c728d9179971d44e5e0cfb561",
+        "url": "https://static.rust-lang.org/dist/2026-09-03/rust-std-1.98.1-x86_64-unknown-linux-gnu.tar.xz"
+      },
+      {
+        "bytes": 11662108,
+        "component": "cargo",
+        "sha256": "ea1de9f9e23107d97ee2b41a72c552f34064a593da503789218387aee59f3ba4",
+        "url": "https://static.rust-lang.org/dist/2026-09-03/cargo-1.98.1-x86_64-unknown-linux-gnu.tar.xz"
+      }
+    ],
+    "bootstrap_command": [
+      "/usr/bin/bash",
+      "/home/runner/work/ami-rust/ami-rust/tools/bootstrap-host-rust.sh",
+      "/home/runner/work/_temp/rc0-cargo-source-closure/work/job/host-rust",
+      "x86_64-unknown-linux-gnu"
+    ],
+    "bootstrap_helper_sha256": "647de48a5dd5b2e1ea289f6d95c3e456168420ddc93028205b0baa051e2f365f",
+    "cargo_sha256": "da77c8b33849312255ccde3179198ada4c8deb370488d050286146b1d1b27e14",
+    "cargo_version": "cargo 1.98.1 (797e8a9bc 2026-08-05)\nrelease: 1.98.1\ncommit-hash: 797e8a9bca276c1c9f9f738d2a20f484fa4eea9d\ncommit-date: 2026-08-05\nhost: x86_64-unknown-linux-gnu\nlibgit2: 1.9.4 (sys:0.21.0 vendored)\nlibcurl: 8.21.0-DEV (sys:0.4.90+curl-8.21.0 vendored ssl:OpenSSL/3.6.3)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Ubuntu 24.4.0 (noble) [64-bit]",
+    "rustc_sha256": "859254978c0a0402c32f949f6de0d99aee73be8d15f45aac00ae1448aac51e74",
+    "rustc_version": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8",
+    "rustdoc_sha256": "3ff7fed6d1064d8d75d24ae8beff9fe1d68031d3d819966481d22c3c9002b709"
+  },
+  "registry_inputs": {
+    "archive_bytes_max": 7195821,
+    "archive_bytes_total": 53297461,
+    "fetch_command": [
+      "/home/runner/work/_temp/rc0-cargo-source-closure/work/job/host-rust/toolchain/bin/cargo",
+      "fetch",
+      "--locked",
+      "--manifest-path",
+      "/home/runner/work/_temp/rc0-cargo-source-closure/work/job/cargo-source/Cargo.toml",
+      "--target",
+      "x86_64-unknown-linux-gnu"
+    ],
+    "fetch_phase_preceded_all_queries": true,
+    "fetch_status": "SUCCESS",
+    "fetched_registry_archive_count": 457,
+    "isolated_cargo_home": "work/cargo-home",
+    "registry_source_inputs_sha256": "c01083e03c351c61e4102738dc9c3af2517a4723b0214797d1f4537c4cd4a151"
+  },
+  "queries": {
+    "cargo_metadata": {
+      "command": [
+        "/home/runner/work/_temp/rc0-cargo-source-closure/work/job/host-rust/toolchain/bin/cargo",
+        "metadata",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "/home/runner/work/_temp/rc0-cargo-source-closure/work/job/cargo-source/Cargo.toml",
+        "--format-version",
+        "1",
+        "--filter-platform",
+        "x86_64-unknown-linux-gnu",
+        "--features",
+        "all-static"
+      ],
+      "exit_code": 0,
+      "status": "PASS_SOURCE_GRAPH_ONLY",
+      "stderr": {
+        "bytes": 0,
+        "path": "cargo-metadata-linux.stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 2048832,
+        "path": "cargo-metadata-linux.json",
+        "sha256": "eb801b9da7b472b71ee1ef2f77853575bc9e1cd4d18ed7a18146f9525f7a851a"
+      }
+    },
+    "cargo_tree": {
+      "command": [
+        "/home/runner/work/_temp/rc0-cargo-source-closure/work/job/host-rust/toolchain/bin/cargo",
+        "tree",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "/home/runner/work/_temp/rc0-cargo-source-closure/work/job/cargo-source/Cargo.toml",
+        "--package",
+        "cargo",
+        "--features",
+        "all-static",
+        "-e",
+        "normal,build",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "--color",
+        "never",
+        "--prefix",
+        "none",
+        "--format",
+        "{p} {f}"
+      ],
+      "exit_code": 0,
+      "status": "PASS_SOURCE_GRAPH_ONLY",
+      "stderr": {
+        "bytes": 0,
+        "path": "linux-tree-features.stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 39730,
+        "path": "linux-tree-features.stdout.txt",
+        "sha256": "6a445177f1a6d3839c259b13cab86b9abce37643662b4555fe67325bbd8e3532"
+      }
+    },
+    "selected_graph": {
+      "cargo_tree_line_count": 1032,
+      "locked_graph_sha256": "b50ac7090676699795323341cc5a1390e8bb7cd39367b644d0bdc36e1953201a",
+      "metadata_package_record_count": 451,
+      "metadata_resolve_node_count": 451,
+      "selected_identity_source_set_sha256": "639db66394dceb9022a54454a642d46c1989094aafe0b88898dfa748e09a45e6",
+      "selected_package_count": 341
+    }
+  },
+  "lock_verifier_counterprobe": {
+    "bad_copy_exit_code": 2,
+    "bad_copy_stderr": "LOCK_REFUSED: Cargo.lock does not match the pinned bytes and SHA-256",
+    "good_copy_exit_code": 0,
+    "isolated_copies_only": true,
+    "status": "PASS_SAME_VERIFY_LOCK_GATE",
+    "verifier_mode_has_no_network_or_write_behavior": true
+  },
+  "graph_parser_counterprobes": [
+    {
+      "case": "missing-version",
+      "error": "cargo metadata output is not format version 1",
+      "status": "EXPECTED_REFUSAL"
+    },
+    {
+      "case": "wrong-version",
+      "error": "cargo metadata output is not format version 1",
+      "status": "EXPECTED_REFUSAL"
+    },
+    {
+      "case": "string-version",
+      "error": "cargo metadata output is not format version 1",
+      "status": "EXPECTED_REFUSAL"
+    },
+    {
+      "case": "boolean-version",
+      "error": "cargo metadata output is not format version 1",
+      "status": "EXPECTED_REFUSAL"
+    },
+    {
+      "case": "missing-packages",
+      "error": "cargo metadata output is not format version 1",
+      "status": "EXPECTED_REFUSAL"
+    },
+    {
+      "case": "empty-packages",
+      "error": "cargo metadata output is not format version 1",
+      "status": "EXPECTED_REFUSAL"
+    },
+    {
+      "case": "missing-resolve",
+      "error": "cargo metadata has no resolved package nodes",
+      "status": "EXPECTED_REFUSAL"
+    },
+    {
+      "case": "empty-nodes",
+      "error": "cargo metadata has no resolved package nodes",
+      "status": "EXPECTED_REFUSAL"
+    },
+    {
+      "case": "ambiguous-package",
+      "error": "cargo metadata does not uniquely identify selected package: ('cargo', '0.100.0')",
+      "status": "EXPECTED_REFUSAL"
+    },
+    {
+      "case": "empty-tree",
+      "error": "cargo tree selected no packages",
+      "status": "EXPECTED_REFUSAL"
+    },
+    {
+      "case": "unknown-tree-package",
+      "error": "cargo metadata does not uniquely identify selected package: ('not-in-the-lock', '0.0.0')",
+      "status": "EXPECTED_REFUSAL"
+    }
+  ],
+  "elapsed_seconds": 19.686,
+  "internal_python_orchestration": true,
+  "candidate_commit": "f356132d31bd68515d3fd6cdb1b5ee50f1719c43",
+  "checkout_commit": "8228fc9abbabb80e1825e1aa4338bd7d32707cbc",
+  "checkout_tree": "c5aa47c3b430737f865e494a976c315e6953651c",
+  "run": "https://github.com/metaneutrons/ami-rust/actions/runs/39173711603",
+  "observed_resources": {
+    "peak_rss_bytes": 326914048,
+    "peak_workspace_bytes": 2010423044,
+    "peak_log_bytes": 90602,
+    "driver_elapsed_seconds": 19.686
+  },
+  "graph_matches_previously_reviewed_native_output": true,
+  "selected_build_script_count": 36,
+  "host_fixture_run": "https://github.com/metaneutrons/ami-rust/actions/runs/39173711594",
+  "host_api_tests": {
+    "linux-x86_64": 13,
+    "macos-aarch64": 13
+  }
+}

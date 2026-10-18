@@ -1,6 +1,6 @@
 {
   "schema": "ami-rust-cli-contract-v1",
-  "document_status": "proposed_RC0_freeze_not_implementation_or_qualification",
+  "document_status": "frozen_RC0_design_for_RC1_not_implementation_or_release_acceptance",
   "date": "2026-10-18",
   "source_survey": {
     "document": "docs/rust-cli-migration/consumer-contracts.md",
@@ -9,11 +9,11 @@
     "plan_revision": 2
   },
   "qualification": {
-    "rc0_a1_a2": "proposed contract and fixtures recorded; not acceptance",
-    "rc0_a3": "two-host Cargo-to-final-ELF design remains unqualified",
-    "rc0_a4": "process-tree/no-Python observation remains unqualified",
-    "implementation": "no implementation, build, test, protected workflow or closure claim is established here",
-    "dependency_status": "conditional candidates only; exact host lock, full transitive license/advisory review, selected API tests, and builds on both hosts remain open"
+    "rc0_a1_a2": "Contract and reviewed 29-crate development candidate accepted; see rc0-acceptance.md for exact evidence. Production lock/feature changes require their own review.",
+    "rc0_a3": "Minimal normal-Cargo native design passed two fresh roots on both hosts in 39170474195; production guards and full build matrix remain RC1/RC2.",
+    "rc0_a4": "Named controlled harness routes passed both hosts; full supported process/provenance closure remains RC1-RC5.",
+    "implementation": "No production Rust consumer, runtime or release acceptance is established by RC0.",
+    "dependency_status": "Selected exact standalone lock cc3ac7771a692dc1c2b154ad6962285209b4d7b1eeb5c918d98ece8ac7aeee66; source/license/advisory review plus 13 API tests both hosts passed."
   },
   "observed_interfaces": {
     "package_launcher": {
@@ -796,7 +796,7 @@
     {
       "scope": "C-SDK producer",
       "evidence": "corresponding-source archive has 33,043 entries and 71 Python sources; its Ninja graph has 72 Python command records: nine RUN_PYTHON, 54 PYTHON_EXECUTABLE and nine direct scripts. The prior count of 69 omitted three direct kickstart/localise-symbols.py edges; bounded current producer is not full Ninja",
-      "replacement_removal": "For full-Ninja RC5, replace/exclude every active Python edge via reviewed bounded derivation or authenticated non-Python input while retaining source obligations; otherwise bound and qualify the supported producer."
+      "replacement_removal": "RC5 supports the existing bounded portable C-SDK derivation only. The full upstream Ninja graph and its 72 Python command records are inert corresponding-source/recipe data, excluded from active execution. Any selected interpreter-dependent edge in the bounded path remains RC4 replacement work and requires actual two-host RC5 qualification. Full Ninja execution is outside the supported producer; adding it requires a separately reviewed executable closure."
     },
     {
       "scope": "protected workflows",

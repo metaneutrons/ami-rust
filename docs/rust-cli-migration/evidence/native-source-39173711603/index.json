@@ -1,0 +1,322 @@
+{
+  "schema": "ami-rust-evidence-digest-index-v1",
+  "run": "https://github.com/metaneutrons/ami-rust/actions/runs/39173711603",
+  "claim": "Original artifact identities; graph and measured summary are durable here; full original artifacts retained privately. Includes isolated altered copies used by negative controls.",
+  "files": [
+    {
+      "path": "output/cargo-metadata-linux.json",
+      "bytes": 2048832,
+      "sha256": "eb801b9da7b472b71ee1ef2f77853575bc9e1cd4d18ed7a18146f9525f7a851a"
+    },
+    {
+      "path": "output/cargo-metadata-linux.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/cargo-source.patch.diff",
+      "bytes": 3499,
+      "sha256": "add91f19784376b3203c730cb7b3f1028ac24e831a98508d4daa8a1f8060df76"
+    },
+    {
+      "path": "output/cargo-source.patch.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/apply-cargo-source-patch.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/apply-cargo-source-patch.stdout.log",
+      "bytes": 101,
+      "sha256": "1e8f116086572dba82e7d06851edc3f410f83e7e505c17b3cb14cc46dbc9e13e"
+    },
+    {
+      "path": "output/commands/bootstrap-host-rust-1.98.1.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/bootstrap-host-rust-1.98.1.stdout.log",
+      "bytes": 1168,
+      "sha256": "cf8b5fab4fd4de5663e00cc108144d1cb66cac73336e06d6a6a91a3e19df79e7"
+    },
+    {
+      "path": "output/commands/cargo-fetch-locked-native-target.stderr.log",
+      "bytes": 14520,
+      "sha256": "e1249f08c966caf11d1a1307becf91591f1a616a47cde79f12c3878f9c1de34f"
+    },
+    {
+      "path": "output/commands/cargo-fetch-locked-native-target.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/git-add-origin.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/git-add-origin.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/git-checkout-pinned-commit.stderr.log",
+      "bytes": 82,
+      "sha256": "1a8e78a3cf13b46385902560093cf9cc21a629f57642fb391404e17559c8a53f"
+    },
+    {
+      "path": "output/commands/git-checkout-pinned-commit.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/git-fetch-pinned-commit.stderr.log",
+      "bytes": 116,
+      "sha256": "464a628383f6eb4bd3b23f2f18aaf4e3c38d92331d9548f2be853fe1f7fc7724"
+    },
+    {
+      "path": "output/commands/git-fetch-pinned-commit.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/git-init.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/git-init.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/git-patched-paths.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/git-patched-paths.stdout.log",
+      "bytes": 73,
+      "sha256": "e6d0d0fbc8254727905fabcd9f191b4af2fe0410f3764513409daf8ccfdb1b34"
+    },
+    {
+      "path": "output/commands/git-source-head.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/git-source-head.stdout.log",
+      "bytes": 41,
+      "sha256": "ec51cecdc2a6d8e4550b2099d47ab772976f0e9510295c764c3b6ecd1678cc13"
+    },
+    {
+      "path": "output/commands/git-source-tree.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/git-source-tree.stdout.log",
+      "bytes": 41,
+      "sha256": "54356f362c14755ccbe39e63169b618301f88fc73e1f70a8c2db0fe0c1852dad"
+    },
+    {
+      "path": "output/commands/verify-bad-lock-copy.stderr.log",
+      "bytes": 69,
+      "sha256": "4bdb9cd643372790ff978bf8574deaae18a8d15974c7fc106a687197b463ef78"
+    },
+    {
+      "path": "output/commands/verify-bad-lock-copy.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/verify-good-lock-copy.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/commands/verify-good-lock-copy.stdout.log",
+      "bytes": 189,
+      "sha256": "de035ad1d9a884a1f3d37889f4f1ca2e2ea2b59d1dc3f1729d38d71e99867b5a"
+    },
+    {
+      "path": "output/commands.json",
+      "bytes": 35004,
+      "sha256": "3d6dd4a56940254fed18157d2b7e28b8d80d9ac3313e172614fa285cf6b0ade3"
+    },
+    {
+      "path": "output/linux-tree-features.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/linux-tree-features.stdout.txt",
+      "bytes": 39730,
+      "sha256": "6a445177f1a6d3839c259b13cab86b9abce37643662b4555fe67325bbd8e3532"
+    },
+    {
+      "path": "output/locked-linux-cargo-graph.json",
+      "bytes": 100948,
+      "sha256": "b50ac7090676699795323341cc5a1390e8bb7cd39367b644d0bdc36e1953201a"
+    },
+    {
+      "path": "output/pinned-cargo-version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/pinned-cargo-version.txt",
+      "bytes": 335,
+      "sha256": "7fc6ad478d019e0476951b73108239883610ccde17d169b59fa201aa336ef38e"
+    },
+    {
+      "path": "output/pinned-rustc-version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/pinned-rustc-version.txt",
+      "bytes": 196,
+      "sha256": "778fbc643a806f0dd123c056e66201d7e8a56a61928ec0a33171be8d6c2d5a37"
+    },
+    {
+      "path": "output/query-result.json",
+      "bytes": 54917,
+      "sha256": "2659e09651a338774104bb70053fdefdafa3acde4f70bc6bb535f6b283758903"
+    },
+    {
+      "path": "output/registry-source-inputs.json",
+      "bytes": 140820,
+      "sha256": "c01083e03c351c61e4102738dc9c3af2517a4723b0214797d1f4537c4cd4a151"
+    },
+    {
+      "path": "output/supervisor-result.json",
+      "bytes": 1845,
+      "sha256": "26f4ea930c3d71274f151701f32f27def4b43406981e35b64faa491f5c7f4334"
+    },
+    {
+      "path": "output/tools/ar.version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/tools/ar.version.txt",
+      "bytes": 283,
+      "sha256": "7ac005d69683d0de20ba048eade500afe576c8e0e802f903f4e1a31428942755"
+    },
+    {
+      "path": "output/tools/cc.version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/tools/cc.version.txt",
+      "bytes": 266,
+      "sha256": "ae487f55927d605284a32711e4ecf6bc3be2bcd5a9de414ace0936264b741f85"
+    },
+    {
+      "path": "output/tools/curl.version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/tools/curl.version.txt",
+      "bytes": 573,
+      "sha256": "33eceb652e29e62b38752899c5275004cc76ff888056856cafba53374f9719e6"
+    },
+    {
+      "path": "output/tools/git.version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/tools/git.version.txt",
+      "bytes": 19,
+      "sha256": "e928567de6f903039a669b7647bf037309d50e4f7916bb5c06f7b05d3bf966fe"
+    },
+    {
+      "path": "output/tools/jq.version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/tools/jq.version.txt",
+      "bytes": 7,
+      "sha256": "2292a8fb4fb7f1acaba560309e1da16b5724247cc1fd7542f6698941ff8e4579"
+    },
+    {
+      "path": "output/tools/make.version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/tools/make.version.txt",
+      "bytes": 297,
+      "sha256": "8ee498ee2fc27e8dcdf99191b454077df95e3840d841ec94321748b6d7f36819"
+    },
+    {
+      "path": "output/tools/patch.version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/tools/patch.version.txt",
+      "bytes": 347,
+      "sha256": "0f262d227713e53ac79165163c1ec3d84fe55fdea2d7b80fce954e2c924ca12a"
+    },
+    {
+      "path": "output/tools/perl.version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/tools/perl.version.txt",
+      "bytes": 560,
+      "sha256": "f531407cdb67e534abb9ce96fb0183fce0a7872d84e7650a29884f593f1c2e56"
+    },
+    {
+      "path": "output/tools/pkg-config.version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/tools/pkg-config.version.txt",
+      "bytes": 6,
+      "sha256": "25cec9739d3218e48acc5d8c3d4333e1d624121c5b7ab3bcddc71d0fa0134b83"
+    },
+    {
+      "path": "output/tools/shasum.version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/tools/shasum.version.txt",
+      "bytes": 5,
+      "sha256": "5c93499f67ae2a6876a6e4c196d8a03decd87a322e63f8163785b72bd9102d5e"
+    },
+    {
+      "path": "output/tools/tar.version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/tools/tar.version.txt",
+      "bytes": 313,
+      "sha256": "b112e5578260c103cafae7150e33b8fe1b5d0720a158d88be5ea8f6d9d26f478"
+    },
+    {
+      "path": "work/logs/native-cargo-source-graph.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "work/logs/native-cargo-source-graph.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}
