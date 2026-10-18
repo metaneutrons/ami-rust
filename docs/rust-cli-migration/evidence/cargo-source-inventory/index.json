@@ -1,6 +1,6 @@
 {
   "schema": "ami-rust-cargo-source-review-index-v1",
-  "scope": "Exact523 registry archives+27workspace inputs; both target graph queries were executed on macOS. Linux host graph awaits native query. No producer runtime trace.",
+  "scope": "Historical source-review snapshot: exactly 523 registry archives and 27 workspace inputs; both target graph queries below were executed on macOS. The later native Linux query is reconciled in current_reconciliation; no producer runtime trace is claimed.",
   "publication_transform": "Machine-local source review root replaced by logical placeholder; originals retained. Trailing row whitespace removed from published text views; raw originals/digests unchanged.",
   "files": {
     "source-identity.json": {
