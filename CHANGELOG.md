@@ -1,6 +1,7 @@
 # Changelog
 
-## 0.1.0 (2026-10-17)
+## 0.1.0 (2026-10-18)
+
 
 ### Features
 
@@ -11,6 +12,7 @@
 * stage exact SDK release assets with draft readback ([#20](https://github.com/metaneutrons/ami-rust/issues/20)) ([75a8e40](https://github.com/metaneutrons/ami-rust/commit/75a8e407d5e03a27368566a5fd7f0abec4e3b68a))
 * verify public SDK retrieval and consumer replay ([#14](https://github.com/metaneutrons/ami-rust/issues/14)) ([7136125](https://github.com/metaneutrons/ami-rust/commit/7136125a335f5c4934b874b87d464698911c7602))
 
+
 ### Bug Fixes
 
 * account for native build intermediates ([#18](https://github.com/metaneutrons/ami-rust/issues/18)) ([916b8d8](https://github.com/metaneutrons/ami-rust/commit/916b8d86b459741d989aa711d90a237e443025e0))
@@ -18,6 +20,7 @@
 * align SBOM identity with the production SDK version ([#21](https://github.com/metaneutrons/ami-rust/issues/21)) ([1c51bdc](https://github.com/metaneutrons/ami-rust/commit/1c51bdcd2e53015f92649b4e921b81fae9e4e626))
 * avoid duplicate SDK workspace inventory scans ([#43](https://github.com/metaneutrons/ami-rust/issues/43)) ([11e58e0](https://github.com/metaneutrons/ami-rust/commit/11e58e0a8677ddef80cdbef2687ba35e0c6d5289))
 * bind public releases to their source tags ([#19](https://github.com/metaneutrons/ami-rust/issues/19)) ([aceebfb](https://github.com/metaneutrons/ami-rust/commit/aceebfbe61463817a51ad9bae39db50f29e9615b))
+* bind public SBOM reads to authenticated asset size ([#55](https://github.com/metaneutrons/ami-rust/issues/55)) ([5dfdfbb](https://github.com/metaneutrons/ami-rust/commit/5dfdfbb30c54135eb15f83d4f652d92752b30402))
 * bind SDK packaging to the qualified R4 native profile ([#39](https://github.com/metaneutrons/ami-rust/issues/39)) ([84ed4a7](https://github.com/metaneutrons/ami-rust/commit/84ed4a7b2a88373229784616c0036c1ba9e2b8c0))
 * **ci:** pin the hosted Python runtime independently of runner images ([#6](https://github.com/metaneutrons/ami-rust/issues/6)) ([ea0cf65](https://github.com/metaneutrons/ami-rust/commit/ea0cf65e46d56b6e7b8154e0ce1369a7b33b1d2b))
 * correct Cargo notice capsule inventory self-reference ([#28](https://github.com/metaneutrons/ami-rust/issues/28)) ([1094b27](https://github.com/metaneutrons/ami-rust/commit/1094b27b00f2a7d6100aec79bb26a37b2037d381))
