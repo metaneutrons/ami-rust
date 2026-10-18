@@ -1,0 +1,33 @@
+{
+  "schema": "ami-rust-host-dependency-fixture-results-v1",
+  "candidate_commit": "844f52d2edd46ba372a518614f6ddcc8a3a146a2",
+  "run": "https://github.com/metaneutrons/ami-rust/actions/runs/39172161086",
+  "host_contract_probe_lock_sha256": "cc3ac7771a692dc1c2b154ad6962285209b4d7b1eeb5c918d98ece8ac7aeee66",
+  "host_contract_probe_source_sha256": "7ba18fd6bf6d9ddef52ff52af207c2dcb5ee2eb9e29a90542ef78e728b3a0ebc",
+  "hosts": {
+    "linux-x86_64": {
+      "job": 117807345184,
+      "conclusion": "SUCCESS",
+      "unit_suite_passed_counts": [
+        3,
+        3,
+        13,
+        0
+      ],
+      "host_contract_probe_tests_passed": 13,
+      "raw_log_sha256": "201eb64e9a87d7132819ab8b9604bea20c8ce3753961a7035283f19271f084de"
+    },
+    "macos-aarch64": {
+      "job": 117807345115,
+      "conclusion": "SUCCESS",
+      "unit_suite_passed_counts": [
+        3,
+        3,
+        13,
+        0
+      ],
+      "host_contract_probe_tests_passed": 13,
+      "raw_log_sha256": "805fa6a40bd6281b67930c616503daa5e20fa1e01a993bcbfa79fbbf7c5b56be"
+    }
+  }
+}

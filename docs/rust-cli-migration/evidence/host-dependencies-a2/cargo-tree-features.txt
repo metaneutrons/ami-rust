@@ -1,0 +1,120 @@
+ami-rust-host-contract-probe v0.0.0 (${SOURCE_ROOT}/tools/host-contract-deps)
+├── tar v0.4.46
+│   ├── libc feature "default"
+│   │   ├── libc v0.2.191
+│   │   └── libc feature "std"
+│   │       └── libc v0.2.191
+│   └── filetime feature "default"
+│       └── filetime v0.2.29
+│           ├── cfg-if feature "default"
+│           │   └── cfg-if v1.0.5
+│           └── libc feature "default" (*)
+├── flate2 feature "rust_backend"
+│   ├── flate2 v1.1.10
+│   │   ├── crc32fast v1.5.2
+│   │   │   └── cfg-if feature "default" (*)
+│   │   ├── miniz_oxide feature "default"
+│   │   │   ├── miniz_oxide v0.9.1
+│   │   │   │   ├── adler2 v2.0.1
+│   │   │   │   └── simd-adler32 v0.3.10
+│   │   │   └── miniz_oxide feature "with-alloc"
+│   │   │       └── miniz_oxide v0.9.1 (*)
+│   │   └── miniz_oxide feature "simd"
+│   │       ├── miniz_oxide v0.9.1 (*)
+│   │       └── miniz_oxide feature "simd-adler32"
+│   │           └── miniz_oxide v0.9.1 (*)
+│   ├── flate2 feature "any_impl"
+│   │   └── flate2 v1.1.10 (*)
+│   └── flate2 feature "miniz_oxide"
+│       ├── flate2 v1.1.10 (*)
+│       └── flate2 feature "any_impl" (*)
+├── lzma-rust2 feature "std"
+│   └── lzma-rust2 v0.22.0
+│       └── sha2 feature "default"
+│           ├── sha2 v0.11.1
+│           │   ├── cfg-if feature "default" (*)
+│           │   ├── cpufeatures feature "default"
+│           │   │   └── cpufeatures v0.3.1
+│           │   │       └── libc v0.2.191
+│           │   └── digest feature "default"
+│           │       ├── digest v0.11.3
+│           │       │   ├── block-buffer feature "default"
+│           │       │   │   └── block-buffer v0.12.1
+│           │       │   │       └── hybrid-array feature "default"
+│           │       │   │           └── hybrid-array v0.4.15
+│           │       │   │               ├── typenum feature "const-generics"
+│           │       │   │               │   └── typenum v1.20.1
+│           │       │   │               └── typenum feature "default"
+│           │       │   │                   └── typenum v1.20.1
+│           │       │   ├── const-oid feature "default"
+│           │       │   │   └── const-oid v0.10.2
+│           │       │   └── crypto-common feature "default"
+│           │       │       └── crypto-common v0.2.2
+│           │       │           └── hybrid-array feature "default" (*)
+│           │       └── digest feature "block-api"
+│           │           └── digest v0.11.3 (*)
+│           ├── sha2 feature "alloc"
+│           │   ├── sha2 v0.11.1 (*)
+│           │   └── digest feature "alloc"
+│           │       └── digest v0.11.3 (*)
+│           └── sha2 feature "oid"
+│               ├── sha2 v0.11.1 (*)
+│               └── digest feature "oid"
+│                   └── digest v0.11.3 (*)
+├── lzma-rust2 feature "xz"
+│   ├── lzma-rust2 v0.22.0 (*)
+│   └── lzma-rust2 feature "sha2"
+│       └── lzma-rust2 v0.22.0 (*)
+├── sha2 feature "default" (*)
+├── serde feature "default"
+│   ├── serde v1.0.228
+│   │   ├── serde_core feature "result"
+│   │   │   └── serde_core v1.0.228
+│   │   └── serde_derive feature "default"
+│   │       └── serde_derive v1.0.228 (proc-macro)
+│   │           ├── proc-macro2 feature "proc-macro"
+│   │           │   └── proc-macro2 v1.0.107
+│   │           │       └── unicode-ident feature "default"
+│   │           │           └── unicode-ident v1.0.27
+│   │           ├── quote feature "proc-macro"
+│   │           │   ├── quote v1.0.47
+│   │           │   │   └── proc-macro2 v1.0.107 (*)
+│   │           │   └── proc-macro2 feature "proc-macro" (*)
+│   │           ├── syn feature "clone-impls"
+│   │           │   └── syn v2.0.119
+│   │           │       ├── proc-macro2 v1.0.107 (*)
+│   │           │       ├── quote v1.0.47 (*)
+│   │           │       └── unicode-ident feature "default" (*)
+│   │           ├── syn feature "derive"
+│   │           │   └── syn v2.0.119 (*)
+│   │           ├── syn feature "parsing"
+│   │           │   └── syn v2.0.119 (*)
+│   │           ├── syn feature "printing"
+│   │           │   └── syn v2.0.119 (*)
+│   │           └── syn feature "proc-macro"
+│   │               ├── syn v2.0.119 (*)
+│   │               ├── proc-macro2 feature "proc-macro" (*)
+│   │               └── quote feature "proc-macro" (*)
+│   └── serde feature "std"
+│       ├── serde v1.0.228 (*)
+│       └── serde_core feature "std"
+│           └── serde_core v1.0.228
+├── serde feature "derive"
+│   ├── serde v1.0.228 (*)
+│   └── serde feature "serde_derive"
+│       └── serde v1.0.228 (*)
+└── serde_json feature "default"
+    ├── serde_json v1.0.145
+    │   ├── memchr v2.8.3
+    │   ├── serde_core v1.0.228
+    │   ├── itoa feature "default"
+    │   │   └── itoa v1.0.18
+    │   └── ryu feature "default"
+    │       └── ryu v1.0.23
+    └── serde_json feature "std"
+        ├── serde_json v1.0.145 (*)
+        ├── serde_core feature "std" (*)
+        └── memchr feature "std"
+            ├── memchr v2.8.3
+            └── memchr feature "alloc"
+                └── memchr v2.8.3

@@ -1,0 +1,154 @@
+name: RC0 native Linux Cargo source graph
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - tools/rc0-cargo-source-closure.sh
+      - .github/workflows/rust-source-closure.yml
+      - tools/bootstrap-host-rust.sh
+      - release/ci-bootstrap-inputs.json
+      - release/ci-resources.json
+      - release/ci_sdk.py
+      - release/ci_cargo.py
+      - release/prepare_sdk.py
+      - host/cargo-repro/source.json
+      - host/cargo-repro/cargo-metadata.patch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc0-cargo-source-closure-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-linux-source-graph:
+    name: Pinned Cargo source graph (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out reviewed source without retaining credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Admit capacity and supervise the bounded source query
+        shell: bash
+        env:
+          RC0_CANDIDATE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          python3 -I -B - <<'PY'
+          import importlib.util
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import shutil
+          import subprocess
+          import sys
+
+          root = Path.cwd().resolve(strict=True)
+          runner_temp = Path(os.environ["RUNNER_TEMP"]).resolve(strict=True)
+          run_root = runner_temp / "rc0-cargo-source-closure"
+          if run_root.exists() or run_root.is_symlink():
+              raise SystemExit("source-closure run root must be fresh")
+          run_root.mkdir()
+          work = run_root / "work"
+          output = run_root / "output"
+          unused_python_root = run_root / "unused-python-root"
+          work.mkdir()
+          output.mkdir()
+
+          spec = importlib.util.spec_from_file_location("rc0_source_closure_sdk", root / "release/ci_sdk.py")
+          if spec is None or spec.loader is None:
+              raise SystemExit("cannot load the reviewed SDK resource supervisor")
+          sdk = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(sdk)
+          resources = sdk.read_json(root / "release/ci-resources.json")
+          capacity = sdk.validate_resource_policy(resources, runner_temp)
+
+          base_env = {
+              "HOME": str(work / "home"),
+              "TMPDIR": str(work / "tmp"),
+              "PATH": "/usr/bin:/bin",
+              "LC_ALL": "C",
+              "TZ": "UTC",
+              "GIT_CONFIG_NOSYSTEM": "1",
+              "GIT_TERMINAL_PROMPT": "0",
+          }
+          (work / "home").mkdir()
+          (work / "tmp").mkdir()
+          git = shutil.which("git", path=base_env["PATH"])
+          bash = shutil.which("bash", path=base_env["PATH"])
+          if git is None or bash is None:
+              raise SystemExit("Ubuntu source-query prerequisites git and bash are missing")
+          checkout = subprocess.check_output([git, "rev-parse", "HEAD"], cwd=root, env=base_env, text=True).strip()
+          checkout_tree = subprocess.check_output([git, "rev-parse", "HEAD^{tree}"], cwd=root, env=base_env, text=True).strip()
+          candidate_commit = os.environ.get("RC0_CANDIDATE_COMMIT", "")
+          if not re.fullmatch(r"[0-9a-f]{40}", candidate_commit):
+              raise SystemExit("candidate commit input is not a 40-character Git SHA-1")
+          limits = {
+              "rss_bytes": resources["build"]["rss_bytes"],
+              "workspace_bytes": resources["build"]["workspace_bytes"],
+              "log_bytes": resources["build"]["log_bytes"],
+              "seconds": 900,
+          }
+          supervisor = sdk.Supervisor(work, output, unused_python_root, base_env, limits=limits)
+          result = {
+              "schema": "ami-rust-native-cargo-source-closure-supervisor-v1",
+              "status": "FAIL",
+              "claim": "bounded source metadata query only; no package compilation or build.rs execution",
+              "candidate_commit": candidate_commit,
+              "checkout_commit": checkout,
+              "checkout_tree": checkout_tree,
+              "host_capacity": capacity,
+              "limits": limits,
+              "resource_policy_sha256": sdk.sha256(root / "release/ci-resources.json"),
+              "internal_python_orchestration": True,
+              "python_executable": sys.executable,
+          }
+          try:
+              command = [bash, str(root / "tools/rc0-cargo-source-closure.sh"), str(work / "job"), str(output)]
+              result["driver_command"] = command
+              supervisor.run(command, cwd=root, label="native-cargo-source-graph", timeout=900)
+              driver = sdk.read_json(output / "query-result.json", 4 * 1024**2)
+              if driver.get("status") != "PASS_NATIVE_LINUX_SOURCE_GRAPH_ONLY":
+                  raise RuntimeError("source-query driver did not report its bounded pass status")
+              result["status"] = "PASS_NATIVE_LINUX_SOURCE_GRAPH_ONLY"
+              result["driver_status"] = driver["status"]
+              result["driver_elapsed_seconds"] = driver.get("elapsed_seconds")
+          except BaseException as error:
+              result["error"] = type(error).__name__ + ": " + str(error)[:2000]
+              try:
+                  driver_path = output / "query-result.json"
+                  if driver_path.is_file() and not driver_path.is_symlink():
+                      driver = sdk.read_json(driver_path, 4 * 1024**2)
+                      result["driver_status"] = driver.get("status")
+                      result["driver_phase"] = driver.get("phase")
+                      result["driver_error"] = driver.get("error")
+              except BaseException as read_error:
+                  result["driver_receipt_error"] = type(read_error).__name__ + ": " + str(read_error)[:500]
+          finally:
+              result["supervisor_commands"] = supervisor.commands
+              result["peak_rss_bytes"] = supervisor.peak_rss
+              result["peak_workspace_bytes"] = supervisor.peak_workspace
+              result["peak_log_bytes"] = supervisor.peak_logs
+              result["workspace_limit_bytes"] = supervisor.limits["workspace_bytes"]
+              result["log_limit_bytes"] = supervisor.limits["log_bytes"]
+              (output / "supervisor-result.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+          if result["status"] != "PASS_NATIVE_LINUX_SOURCE_GRAPH_ONLY":
+              raise SystemExit(1)
+          PY
+
+      - name: Retain bounded source identity and query results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rc0-cargo-source-closure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/rc0-cargo-source-closure/output/
+            ${{ runner.temp }}/rc0-cargo-source-closure/work/logs/
+          if-no-files-found: warn
+          retention-days: 14

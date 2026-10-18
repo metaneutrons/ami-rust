@@ -59,6 +59,8 @@ jobs:
           test -x /usr/bin/ssh-keygen
           python3 -I -B release/test_install.py
           python3 -I -B release/test_cargo_notice_inventory.py
+          python3 -I -B host/test_contracts.py
+          python3 -I -B host/test_cli.py
           python3 -I -B host/tests/test_host_capacity.py
           python3 -I -B host/tests/test_allocation_layout.py
           python3 -I -B host/tests/test_elf_audit.py
@@ -188,7 +190,11 @@ jobs:
           export CARGO_HOME="$RUNNER_TEMP/ami-rust-rc0-cargo-home"
           export CARGO_BUILD_JOBS=2
           export PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin"
-          for cli_probe in cargo-native-spike no-python-probe; do
+          # The separate host-core candidate has a reviewed registry lock. Fetch
+          # its authenticated checksum-bound archives before offline execution.
+          "$cli_rust/cargo" fetch --locked \
+            --manifest-path tools/host-contract-deps/Cargo.toml
+          for cli_probe in cargo-native-spike no-python-probe host-contract-deps; do
             "$cli_rust/cargo" test --locked --offline \
               --manifest-path "tools/$cli_probe/Cargo.toml" \
               --target-dir "$RUNNER_TEMP/ami-rust-rc0-$cli_probe"

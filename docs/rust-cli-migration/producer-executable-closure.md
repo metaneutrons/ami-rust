@@ -65,6 +65,55 @@ The full archived Ninja file has 72 Python COMMAND records: 9 set RUN_PYTHON, 54
 
 The inventory count has been corrected to 72 in docs/rust-cli-migration/python-dependencies.json. Any later producer change that runs the full source graph must revisit every one of those 72 commands, not just the number of .py files. The source scripts remain part of the corresponding-source and notice obligations even while unexecuted.
 
+
+## Subsequent exact Cargo source inventory
+
+The initial missing-source finding above is historical. The subsequent review
+reconstructed the exact upstream commit and patch and obtained all 523 registry
+archives from the 550-record lock. All 523 archive SHA-256 values match their
+lock checksums. Total compressed input is 81,009,371 bytes, with a 7,195,821-byte
+largest archive; 393 were copied from an existing checksum-verified cache and
+130 were fetched (26,262,874 bytes). The 27 path packages belong to the pinned
+upstream source. [Source/input identities and selected build-script inventories](evidence/cargo-source-inventory/index.json)
+are retained publicly; complete source copies remain separate from the report.
+
+Native macOS querying selects 349 package identities and 37 build scripts.
+A Linux-target query executed on macOS selects 341 identities and 36 scripts,
+but this cannot prove Linux-host build-dependency selection. The new
+[native Ubuntu metadata query](native-cargo-closure-query.md) resolves that
+remaining selection question without running package build scripts or a full
+Cargo build. Actual helper execution remains RC4 qualification work.
+
+The inspected non-rustc helper branches in that exact graph are:
+
+| Source anchor | Selected conditional helper family |
+| --- | --- |
+| Cargo `build.rs:60–85,118–135` | Git log for the checked-out commit unless CFG_OMIT_GIT_HASH disables it. |
+| curl-sys `build.rs:26–52,290–301,342–365,464` | macOS force-system-lib branch; Linux vendored C build with nghttp2/OpenSSL. Source includes an ignored-status Git submodule attempt when curl/.git is absent. |
+| libgit2-sys `build.rs:85–125,245–305` | Vendored C through cc, SSH/libssh2, Linux OpenSSL or macOS Secure Transport. Existing libgit2/src skips its submodule fallback. |
+| libssh2-sys `build.rs:22–39,66–93,116–194` | C through cc unless explicit pkg-config override; source includes a conditional submodule attempt. |
+| openssl-sys `build/main.rs:48–58,188–190`; openssl-src `src/lib.rs:157–160,637–676` | Vendored Perl Configure and make depend/build_libs/install_dev. The current overlay stages a /usr/local prefix with DESTDIR; no Python generator found in this selected route. |
+| libsqlite3-sys `build.rs:52–88,103–144` | Bundled C plus pre-generated bindings; no selected bindgen execution. Explicit pkg-config environment override remains a separate branch. |
+| libnghttp2-sys `build.rs:51–104` | Listed C sources through cc; no selected CMake/Perl/make route. |
+| libz-sys `build.rs:16–23,33–98,101–140,221–236` | pkg-config/system -lz compiler probe, then bundled C fallback. Selected features include libc, not static/zlib-ng. Cargo's all-static flag does not make this dependency unconditionally static. |
+
+These are source branches, not observed subprocesses. Their recorded build-script
+hashes are in the selected-source inventories. The openssl-src helper preimage
+is `c0f7ee0384ee12835abc6197122dc60ac75e33a3906dfe90bc378e62df56839d`;
+the pinned overlay patch is
+`67f92b277d2cb9508ca3d6d041ebf9feb0ddbf05e97a9419960f313344cd6de8`,
+producing helper SHA-256
+`992641416caf72adc67e9196ee4e452f5ba284e8586050c9d2ed8bb1d287c1a5`.
+Host Git/C compiler/archive/Perl/make/pkg-config identities and branch outcomes
+must be recorded in the actual RC4 producer qualification. No selected intrinsic
+Python call was found in these helpers; the outer producer remains Python.
+
+The new RC0 source-query driver/workflow use transitional internal Python.
+Assign their orchestration to RC4 replacement and RC5 removal, together with
+inline Python in the RC0 native Cargo workflow. The earlier 104-file `.py`
+inventory is a survey of its stated base, not a claim that extensionless or
+inline Python can be omitted from complete retirement.
+
 ## Work to reach RC4/RC5
 
 1. Close the bootstrap Cargo gap with a content inventory for the exact upstream commit, patch and 550-package lock; identify every selected build.rs and its external calls under each supported host triple. Keep the bootstrap Cargo graph separate from the x86_64 AROS application graph.

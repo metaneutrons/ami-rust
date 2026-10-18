@@ -1,0 +1,223 @@
+{
+  "target": "x86_64-unknown-linux-gnu",
+  "package_ids": 341,
+  "build_script_count": 36,
+  "build_scripts": [
+    {
+      "package": "anyhow 1.0.103",
+      "script": "vendor/anyhow-1.0.103/build.rs",
+      "sha256": "89d1baedcff59822ed692d3a33f131c211a213bdec33c83f68b54110d9c64223",
+      "line": "anyhow v1.0.103 default,std"
+    },
+    {
+      "package": "blake3 1.8.5",
+      "script": "vendor/blake3-1.8.5/build.rs",
+      "sha256": "680019541096959dba4e1b6795ecf1b17233f18d7d2450fe1c5d446d71c9cca5",
+      "line": "blake3 v1.8.5 default,std"
+    },
+    {
+      "package": "cargo 0.100.0",
+      "script": "upstream-cargo/build.rs",
+      "sha256": "1ecb6a68feb6172cbb0664450f2ec511d8fa4c493cce91a48aa3aa971ee048b9",
+      "line": "cargo v0.100.0 (${RETAINED_SOURCE_REVIEW}/upstream-cargo) all-static,default,http-transport-curl,openssl,vendored-libgit2,vendored-openssl"
+    },
+    {
+      "package": "crc32fast 1.5.0",
+      "script": "vendor/crc32fast-1.5.0/build.rs",
+      "sha256": "62279ea110418e1b57e46ed5689cae892f3fa424ba237733ecbf4660c3dee71c",
+      "line": "crc32fast v1.5.0 default,std"
+    },
+    {
+      "package": "crossbeam-utils 0.8.21",
+      "script": "vendor/crossbeam-utils-0.8.21/build.rs",
+      "sha256": "7a7f9e56ea7fb4f78c4e532b84b9d27be719d600e85eaeb3a2f4b79a4f0b419c",
+      "line": "crossbeam-utils v0.8.21 default,std"
+    },
+    {
+      "package": "curl 0.4.50",
+      "script": "vendor/curl-0.4.50/build.rs",
+      "sha256": "f29eedf062b251a1bd9baf2355c1bb5f78dcff1f7fc654dc89cf989f108a295f",
+      "line": "curl v0.4.50 default,force-system-lib-on-osx,http2,openssl-probe,openssl-sys,ssl,static-curl (*)"
+    },
+    {
+      "package": "curl-sys 0.4.90+curl-8.21.0",
+      "script": "vendor/curl-sys-0.4.90+curl-8.21.0/build.rs",
+      "sha256": "89210b7aa880f9fce4bd1106c9de1999f477435a4d6f568aec5acc77a3dcfdc3",
+      "line": "curl-sys v0.4.90+curl-8.21.0 default,force-system-lib-on-osx,http2,libnghttp2-sys,openssl-sys,ssl,static-curl (*)"
+    },
+    {
+      "package": "erased-serde 0.4.10",
+      "script": "vendor/erased-serde-0.4.10/build.rs",
+      "sha256": "cc81259cd7861fc7c4b054656fc50bc381b5e96f22501e1c77f045ca93d41f77",
+      "line": "erased-serde v0.4.10 alloc"
+    },
+    {
+      "package": "generic-array 0.14.9",
+      "script": "vendor/generic-array-0.14.9/build.rs",
+      "sha256": "595eefc53394bb56b047d1419d6da7fdfb2345f30d09f1b8cec6c88a40c4afe8",
+      "line": "generic-array v0.14.9 more_lengths,zeroize (*)"
+    },
+    {
+      "package": "getrandom 0.4.3",
+      "script": "vendor/getrandom-0.4.3/build.rs",
+      "sha256": "662faa06d7b2a9c5bea2c17a127a90e00b9f9b31105b0360da516e47cf816e95",
+      "line": "getrandom v0.4.3 std,sys_rng,wasm_js (*)"
+    },
+    {
+      "package": "heapless 0.8.0",
+      "script": "vendor/heapless-0.8.0/build.rs",
+      "sha256": "9ab92dc01d7bbf84d7c96c9956c44747a82aed49809765e33053569fdc0581a9",
+      "line": "heapless v0.8.0 "
+    },
+    {
+      "package": "icu_normalizer_data 2.2.0",
+      "script": "vendor/icu_normalizer_data-2.2.0/build.rs",
+      "sha256": "c2d446772e3d766a804963dbf36e51729f910920f91f4b68c0c199fe6ca0853e",
+      "line": "icu_normalizer_data v2.2.0 "
+    },
+    {
+      "package": "icu_properties_data 2.2.0",
+      "script": "vendor/icu_properties_data-2.2.0/build.rs",
+      "sha256": "c2d446772e3d766a804963dbf36e51729f910920f91f4b68c0c199fe6ca0853e",
+      "line": "icu_properties_data v2.2.0 "
+    },
+    {
+      "package": "im-rc 15.1.0",
+      "script": "vendor/im-rc-15.1.0/build.rs",
+      "sha256": "0c187f99a0ce4d13fba739f9dc6c92ed1e0f2307984e101556574796c81406cb",
+      "line": "im-rc v15.1.0 "
+    },
+    {
+      "package": "libc 0.2.186",
+      "script": "vendor/libc-0.2.186/build.rs",
+      "sha256": "4b348c53d0a0cd0067ef9887b50f60a1fffdc5d00dda5c0e27fae6aa0ce3dee8",
+      "line": "libc v0.2.186 default,std"
+    },
+    {
+      "package": "libgit2-sys 0.18.5+1.9.4",
+      "script": "vendor/libgit2-sys-0.18.5+1.9.4/build.rs",
+      "sha256": "6e6ca8455813fd6ee45f723bfcfb41afe1702f4619532ef326543e667c458fc3",
+      "line": "libgit2-sys v0.18.5+1.9.4 https,libssh2-sys,openssl-sys,ssh,vendored (*)"
+    },
+    {
+      "package": "libnghttp2-sys 0.1.13+1.68.1",
+      "script": "vendor/libnghttp2-sys-0.1.13+1.68.1/build.rs",
+      "sha256": "e9bedf034468761c08d0fca416451c7ecd9bfac0f06f9feaaf9974379dde8dc6",
+      "line": "libnghttp2-sys v0.1.13+1.68.1 "
+    },
+    {
+      "package": "libsqlite3-sys 0.38.1",
+      "script": "vendor/libsqlite3-sys-0.38.1/build.rs",
+      "sha256": "31fc2fb353d09faa8607c938de0fd9e963b7fbc091ce7ee750cc39e7830a5f7e",
+      "line": "libsqlite3-sys v0.38.1 bundled,bundled_bindings,cc,default,min_sqlite_version_3_34_1,pkg-config,vcpkg"
+    },
+    {
+      "package": "libssh2-sys 0.3.2",
+      "script": "vendor/libssh2-sys-0.3.2/build.rs",
+      "sha256": "50a2d29234dabb261e036d309277ac735f61a3607361fc903c670f6b847dbb78",
+      "line": "libssh2-sys v0.3.2 "
+    },
+    {
+      "package": "libz-sys 1.1.29",
+      "script": "vendor/libz-sys-1.1.29/build.rs",
+      "sha256": "e822df6714fe0c0d8282366f25e4be41f940c551fb96e9040993a2554515c9a0",
+      "line": "libz-sys v1.1.29 libc (*)"
+    },
+    {
+      "package": "nix 0.31.3",
+      "script": "vendor/nix-0.31.3/build.rs",
+      "sha256": "b41a7d4331f46c610c5f2bcb151894b5cf49527677d39174223c634c0d7162ed",
+      "line": "nix v0.31.3 default,feature"
+    },
+    {
+      "package": "num-traits 0.2.19",
+      "script": "vendor/num-traits-0.2.19/build.rs",
+      "sha256": "d3969209fc1c9d201c66ed11820d0b328600d75b3971f8ceebeab04900bc0587",
+      "line": "num-traits v0.2.19 std"
+    },
+    {
+      "package": "openssl 0.10.81",
+      "script": "vendor/openssl-0.10.81/build.rs",
+      "sha256": "ee2656bba4668b5850a6ff638a56910dbc555c0f1e574c3b4210a45a3ea98382",
+      "line": "openssl v0.10.81 default,vendored"
+    },
+    {
+      "package": "openssl-sys 0.9.117",
+      "script": "vendor/openssl-sys-0.9.117/build/main.rs",
+      "sha256": "3a7f63b3c446451801ac03c34e03051b8d3ebcceea28b8fb2688922255629d27",
+      "line": "openssl-sys v0.9.117 openssl-src,vendored (*)"
+    },
+    {
+      "package": "parking_lot_core 0.9.12",
+      "script": "vendor/parking_lot_core-0.9.12/build.rs",
+      "sha256": "3698c936b75f8332d9b6b30a8a6838ea116c1ff0a819a025c9ea9696e4d8ce72",
+      "line": "parking_lot_core v0.9.12  (*)"
+    },
+    {
+      "package": "portable-atomic 1.13.1",
+      "script": "vendor/portable-atomic-1.13.1/build.rs",
+      "sha256": "4bd0a08a8377b9a468a97a98197db80312a802221b1d7421d6efb40e9e447e2a",
+      "line": "portable-atomic v1.13.1 default,fallback"
+    },
+    {
+      "package": "proc-macro2 1.0.106",
+      "script": "vendor/proc-macro2-1.0.106/build.rs",
+      "sha256": "baeb20b52f6b536be8657a566591a507bb2e34a45cf8baa42b135510a0c3c729",
+      "line": "proc-macro2 v1.0.106 default,proc-macro (*)"
+    },
+    {
+      "package": "quote 1.0.46",
+      "script": "vendor/quote-1.0.46/build.rs",
+      "sha256": "cd6808c02e476b09a520105e2c6f6d325cccb1ecd542cbbcc836a0ae6f6fb0f1",
+      "line": "quote v1.0.46 default,proc-macro (*)"
+    },
+    {
+      "package": "rustix 1.1.4",
+      "script": "vendor/rustix-1.1.4/build.rs",
+      "sha256": "74cb32e64aa6fe99c2496a425b016e22f4e43c438a8237966b8acae04a98eaf9",
+      "line": "rustix v1.1.4 alloc,default,fs,std,termios (*)"
+    },
+    {
+      "package": "rustversion 1.0.22",
+      "script": "vendor/rustversion-1.0.22/build/build.rs",
+      "sha256": "6d869d2230fa9c4f8ae0df956b06438a070df276649135d4309f56eac72ddbe3",
+      "line": "rustversion v1.0.22 (proc-macro) "
+    },
+    {
+      "package": "serde 1.0.228",
+      "script": "vendor/serde-1.0.228/build.rs",
+      "sha256": "c99c25e1a11f3e51b61dd8c25bdbfbd090e43e5f1f2014f41f28e214dd8310d5",
+      "line": "serde v1.0.228 default,derive,serde_derive,std (*)"
+    },
+    {
+      "package": "serde_core 1.0.228",
+      "script": "vendor/serde_core-1.0.228/build.rs",
+      "sha256": "a5fdacb9913eeede5fc08f39acbd31b2508483fdc20c79d6bc274d74407a1816",
+      "line": "serde_core v1.0.228 alloc,default,result,std"
+    },
+    {
+      "package": "serde_json 1.0.150",
+      "script": "vendor/serde_json-1.0.150/build.rs",
+      "sha256": "a681e754be844c7dbef957f5d2d00b01f37c5dca160ef1055a8d8f975697a881",
+      "line": "serde_json v1.0.150 default,raw_value,std (*)"
+    },
+    {
+      "package": "thiserror 2.0.18",
+      "script": "vendor/thiserror-2.0.18/build.rs",
+      "sha256": "18bf4b4af0f507c7fdfe4dbfc98b5ac3d6a5ef924f46ee56125fd8b22fd61b4c",
+      "line": "thiserror v2.0.18 default,std (*)"
+    },
+    {
+      "package": "typeid 1.0.3",
+      "script": "vendor/typeid-1.0.3/build.rs",
+      "sha256": "688afbcaa398ea159c3481b26d74fde6ce3a675d48364d772557c8e91100de46",
+      "line": "typeid v1.0.3 "
+    },
+    {
+      "package": "zmij 1.0.21",
+      "script": "vendor/zmij-1.0.21/build.rs",
+      "sha256": "13201b550236a9ff2186b5303c77341d3b0874989fdaf39613a7452e4ce57817",
+      "line": "zmij v1.0.21 "
+    }
+  ]
+}

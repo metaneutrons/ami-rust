@@ -1,0 +1,35 @@
+{
+  "schema": "ami-rust-host-dependency-evidence-index-v1",
+  "claim": "Candidate dependency/source/API review, not release or RC0 acceptance",
+  "publication_transform": "Machine-local source/evidence/cache prefixes replaced with logical placeholders. Original raw bytes retained; raw and published digests follow.",
+  "files": {
+    "audit.json": {
+      "raw_sha256": "dec81cb89b15083c47a297d46858232f1976a80e581958dd778630b1577bc3f3",
+      "published_sha256": "dec81cb89b15083c47a297d46858232f1976a80e581958dd778630b1577bc3f3"
+    },
+    "dependency-review.json": {
+      "raw_sha256": "1d4f158ee8b59a35647e9cf00e266a93affcb83c79c8d4087ecb211a38d3191e",
+      "published_sha256": "1d4f158ee8b59a35647e9cf00e266a93affcb83c79c8d4087ecb211a38d3191e"
+    },
+    "comparison.json": {
+      "raw_sha256": "72d91029acf6af8c7d22dcd7384edaa7255f04a063c7d00437f2f067324eee25",
+      "published_sha256": "9d062245f868726a82a2cd2ab47193e0d9eb6f4592594a8535045d45e481178c"
+    },
+    "prototype-results.json": {
+      "raw_sha256": "997eb694e56ee8b10a741d69a2045720649158bbb1f84350abd30703d0fd3887",
+      "published_sha256": "997eb694e56ee8b10a741d69a2045720649158bbb1f84350abd30703d0fd3887"
+    },
+    "source-review.json": {
+      "raw_sha256": "6b8237ae447f2e2d18d35e5600cc499bbafc80e4b3260aab7acd81990584096d",
+      "published_sha256": "6b8237ae447f2e2d18d35e5600cc499bbafc80e4b3260aab7acd81990584096d"
+    },
+    "cargo-audit-raw.json": {
+      "raw_sha256": "370c84197d4223bcee082b02c1904e273122fd586500eabf53a4da32cad4c89b",
+      "published_sha256": "370c84197d4223bcee082b02c1904e273122fd586500eabf53a4da32cad4c89b"
+    },
+    "cargo-tree-features.txt": {
+      "raw_sha256": "66486ba4cdc298562c30899d15529117ee606df38e81d3fdbb41b8f7bb3f5903",
+      "published_sha256": "b1a33bac0a357744b3554a3323819f6f68394d669c85bfd5a8fa569ec0ad38c4"
+    }
+  }
+}

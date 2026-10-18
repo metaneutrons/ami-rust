@@ -1,0 +1,37 @@
+{
+  "schema": "ami-rust-cargo-source-review-index-v1",
+  "scope": "Exact523 registry archives+27workspace inputs; both target graph queries were executed on macOS. Linux host graph awaits native query. No producer runtime trace.",
+  "publication_transform": "Machine-local source review root replaced by logical placeholder; originals retained. Trailing row whitespace removed from published text views; raw originals/digests unchanged.",
+  "files": {
+    "source-identity.json": {
+      "raw_sha256": "0af6fc7d3d777bb9f80f221ccd8bc96e1286cd0e4f38e7b094274e0d42aeea95",
+      "published_sha256": "0af6fc7d3d777bb9f80f221ccd8bc96e1286cd0e4f38e7b094274e0d42aeea95",
+      "bytes": 644
+    },
+    "input-inventory.json": {
+      "raw_sha256": "70df1aec760ec9a9b0cf5b5728b74c394d7d172dc8a3311f991e01db6609ee15",
+      "published_sha256": "70df1aec760ec9a9b0cf5b5728b74c394d7d172dc8a3311f991e01db6609ee15",
+      "bytes": 110717
+    },
+    "linux-selected-build-scripts.json": {
+      "raw_sha256": "48e87a3d4a773cd2ef0a8ca75acad5ad7d1844e9429a5d8075dcdd0a0ec0e250",
+      "published_sha256": "54b97ba3962edee346aa29bc53624aea2bfda57b0eb9150195bd09cdebb99687",
+      "bytes": 8994
+    },
+    "macos-selected-build-scripts.json": {
+      "raw_sha256": "213c916ec344096ca8eb717ea8247e0a8bdc0ce7e2cac4231584b53ce2be500e",
+      "published_sha256": "b25f18f5b7ed79727e23bcd86230c5b7c36801fb59f35d30bbc55916f0de8f9b",
+      "bytes": 9209
+    },
+    "linux-tree-features.stdout.txt": {
+      "raw_sha256": "5eef407dd87fcb529babc0b771b376c07e5f65279d86c1df0b3579813855440d",
+      "published_sha256": "b9c6b51fcea01d5d115228397520bb855d5248f4d6462d22c1c4d8f90f8a1f01",
+      "bytes": 39430
+    },
+    "macos-tree-features.stdout.txt": {
+      "raw_sha256": "2dd616f5a365e96d9be70b8aa1452ecdc4fef766a96f5c97574f54d4692e0e52",
+      "published_sha256": "bc6156c8b436327db1cce29dc5e8be5a87acafb95192a95f4bc67dc78799b3c7",
+      "bytes": 43071
+    }
+  }
+}

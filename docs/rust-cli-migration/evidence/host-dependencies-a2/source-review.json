@@ -1,0 +1,302 @@
+{
+  "schema": "ami-rust-rc0-host-source-review-v1",
+  "scope": "A2 29-crate dependency graph, exact local registry sources from Cargo metadata; build scripts read at their call sites.",
+  "selected_registry_package_count": 29,
+  "selected_resolved_features": [
+    {
+      "name": "adler2",
+      "version": "2.0.1",
+      "enabled_features": []
+    },
+    {
+      "name": "block-buffer",
+      "version": "0.12.1",
+      "enabled_features": []
+    },
+    {
+      "name": "cfg-if",
+      "version": "1.0.5",
+      "enabled_features": []
+    },
+    {
+      "name": "const-oid",
+      "version": "0.10.2",
+      "enabled_features": []
+    },
+    {
+      "name": "cpufeatures",
+      "version": "0.3.1",
+      "enabled_features": []
+    },
+    {
+      "name": "crc32fast",
+      "version": "1.5.2",
+      "enabled_features": []
+    },
+    {
+      "name": "crypto-common",
+      "version": "0.2.2",
+      "enabled_features": []
+    },
+    {
+      "name": "digest",
+      "version": "0.11.3",
+      "enabled_features": [
+        "alloc",
+        "block-api",
+        "default",
+        "oid"
+      ]
+    },
+    {
+      "name": "filetime",
+      "version": "0.2.29",
+      "enabled_features": []
+    },
+    {
+      "name": "flate2",
+      "version": "1.1.10",
+      "enabled_features": [
+        "any_impl",
+        "miniz_oxide",
+        "rust_backend"
+      ]
+    },
+    {
+      "name": "hybrid-array",
+      "version": "0.4.15",
+      "enabled_features": []
+    },
+    {
+      "name": "itoa",
+      "version": "1.0.18",
+      "enabled_features": []
+    },
+    {
+      "name": "libc",
+      "version": "0.2.191",
+      "enabled_features": [
+        "default",
+        "std"
+      ]
+    },
+    {
+      "name": "lzma-rust2",
+      "version": "0.22.0",
+      "enabled_features": [
+        "sha2",
+        "std",
+        "xz"
+      ]
+    },
+    {
+      "name": "memchr",
+      "version": "2.8.3",
+      "enabled_features": [
+        "alloc",
+        "std"
+      ]
+    },
+    {
+      "name": "miniz_oxide",
+      "version": "0.9.1",
+      "enabled_features": [
+        "default",
+        "simd",
+        "simd-adler32",
+        "with-alloc"
+      ]
+    },
+    {
+      "name": "proc-macro2",
+      "version": "1.0.107",
+      "enabled_features": [
+        "proc-macro"
+      ]
+    },
+    {
+      "name": "quote",
+      "version": "1.0.47",
+      "enabled_features": [
+        "proc-macro"
+      ]
+    },
+    {
+      "name": "ryu",
+      "version": "1.0.23",
+      "enabled_features": []
+    },
+    {
+      "name": "serde",
+      "version": "1.0.228",
+      "enabled_features": [
+        "default",
+        "derive",
+        "serde_derive",
+        "std"
+      ]
+    },
+    {
+      "name": "serde_core",
+      "version": "1.0.228",
+      "enabled_features": [
+        "result",
+        "std"
+      ]
+    },
+    {
+      "name": "serde_derive",
+      "version": "1.0.228",
+      "enabled_features": [
+        "default"
+      ]
+    },
+    {
+      "name": "serde_json",
+      "version": "1.0.145",
+      "enabled_features": [
+        "default",
+        "std"
+      ]
+    },
+    {
+      "name": "sha2",
+      "version": "0.11.1",
+      "enabled_features": [
+        "alloc",
+        "default",
+        "oid"
+      ]
+    },
+    {
+      "name": "simd-adler32",
+      "version": "0.3.10",
+      "enabled_features": []
+    },
+    {
+      "name": "syn",
+      "version": "2.0.119",
+      "enabled_features": [
+        "clone-impls",
+        "derive",
+        "parsing",
+        "printing",
+        "proc-macro"
+      ]
+    },
+    {
+      "name": "tar",
+      "version": "0.4.46",
+      "enabled_features": []
+    },
+    {
+      "name": "typenum",
+      "version": "1.20.1",
+      "enabled_features": [
+        "const-generics"
+      ]
+    },
+    {
+      "name": "unicode-ident",
+      "version": "1.0.27",
+      "enabled_features": []
+    }
+  ],
+  "selected_build_script_count": 7,
+  "build_scripts": [
+    {
+      "package": "crc32fast",
+      "version": "1.5.2",
+      "path": "build.rs",
+      "sha256": "deb6052c4a586e8875ef677fe2d9e9dcfafebfa949803455ea8eff6e7dbde436",
+      "lines": "build.rs:3-34",
+      "behavior": "Invokes the RUSTC path with --version, then emits compiler-version cfg flags.",
+      "python_process": false
+    },
+    {
+      "package": "libc",
+      "version": "0.2.191",
+      "path": "build.rs",
+      "sha256": "e70593206df4d2a3138eab463567e0ae8f91c1bea565da4ab5370ea8986840ac",
+      "lines": "build.rs:165-226,389-414,557-600",
+      "behavior": "Runs rustc --version (through RUSTC_WRAPPER when configured); only on target_os=freebsd with LIBC_CI calls freebsd-version; only on target_os=emscripten calls emcc -dumpversion.",
+      "python_process": false
+    },
+    {
+      "package": "proc-macro2",
+      "version": "1.0.107",
+      "path": "build.rs",
+      "sha256": "baeb20b52f6b536be8657a566591a507bb2e34a45cf8baa42b135510a0c3c729",
+      "lines": "build.rs:165-205,248-257",
+      "behavior": "Runs RUSTC --version and compiles feature probes through RUSTC_WRAPPER and RUSTC_WORKSPACE_WRAPPER when configured. These are compiler probes, not Python tools.",
+      "python_process": false
+    },
+    {
+      "package": "quote",
+      "version": "1.0.47",
+      "path": "build.rs",
+      "sha256": "cd6808c02e476b09a520105e2c6f6d325cccb1ecd542cbbcc836a0ae6f6fb0f1",
+      "lines": "build.rs:5-31",
+      "behavior": "Invokes RUSTC --version to select cfg values.",
+      "python_process": false
+    },
+    {
+      "package": "serde",
+      "version": "1.0.228",
+      "path": "build.rs",
+      "sha256": "c99c25e1a11f3e51b61dd8c25bdbfbd090e43e5f1f2014f41f28e214dd8310d5",
+      "lines": "build.rs:19-27,60-69",
+      "behavior": "Writes its generated private module under OUT_DIR and invokes RUSTC --version to select cfg values.",
+      "python_process": false
+    },
+    {
+      "package": "serde_core",
+      "version": "1.0.228",
+      "path": "build.rs",
+      "sha256": "a5fdacb9913eeede5fc08f39acbd31b2508483fdc20c79d6bc274d74407a1816",
+      "lines": "build.rs:104-113",
+      "behavior": "Invokes RUSTC --version to select cfg values.",
+      "python_process": false
+    },
+    {
+      "package": "serde_json",
+      "version": "1.0.145",
+      "path": "build.rs",
+      "sha256": "1630d0bbfc936b0975d840cec5cfb5910d861b6afeeeeabe11000a2c202d571d",
+      "lines": "build.rs:3-28",
+      "behavior": "Reads CARGO_CFG_TARGET_ARCH and CARGO_CFG_TARGET_POINTER_WIDTH and emits cfg values; no process invocation.",
+      "python_process": false
+    }
+  ],
+  "a1_build_script_removed_from_a2": {
+    "package": "rustix",
+    "version": "1.1.5",
+    "path": "build.rs",
+    "sha256": "f7609b919173e7121493266d0f89db724a1e47bb105ebd05397f869639603eec",
+    "lines": "build.rs:219-270",
+    "behavior": "A1-only: probes rustc by compiling feature snippets; uses RUSTC_WRAPPER when configured. It was removed from A2 with rustix/xattr and is not part of A2 build closure.",
+    "python_process": false
+  },
+  "runtime_src_process_api_scan": {
+    "patterns": [
+      "std::process",
+      "process::Command",
+      "Command::new"
+    ],
+    "matches": [],
+    "scope_note": "Supporting scan of every selected crate src/**/*.rs; direct build-script call sites were reviewed separately."
+  },
+  "license_inventory": {
+    "review_status": "LICENSE_AND_SOURCE_REVIEW_IN_PROGRESS_NOT_ACCEPTED",
+    "packages_with_inventory": 29,
+    "license_file_count": 61,
+    "recorded_files_rehashed_against_local_source": true,
+    "legal_acceptance": false
+  },
+  "python_executable_assessment": {
+    "direct_python_invocation_in_selected_build_scripts": false,
+    "direct_process_api_match_in_selected_runtime_src": false,
+    "process_tree_proven": false,
+    "limitation": "RUSTC, RUSTC_WRAPPER, and RUSTC_WORKSPACE_WRAPPER are executable inputs; configured wrappers may run arbitrary child processes. Run OS process-tree observation on each supported host with an explicit toolchain/wrapper allowlist before making an end-to-end no-Python claim."
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "schema": "ami-rust-native-cargo-query-attempt-v1",
+  "candidate_commit": "844f52d2edd46ba372a518614f6ddcc8a3a146a2",
+  "checkout_commit": "9dff170c820fd2a311afda457215b5655caaf683",
+  "run": "https://github.com/metaneutrons/ami-rust/actions/runs/39172161134",
+  "ci_status": "FAIL",
+  "failure": "Checker expected nonexistent format_version field; Cargo metadata uses version. All acquisition, pin, lock-counterprobe, bootstrap, tree and metadata commands completed with expected statuses.",
+  "phase": "offline-linux-metadata-query",
+  "raw_query_result_sha256": "2c00dd9dc2d2c6a1cf882868a27c9c42d9e635683a3af01b1878f9db186f4b9e",
+  "raw_supervisor_result_sha256": "7a1328ef07bb76dbbcc7689c0cb9e20b8e176317f7f63019ba8b25345ccbf642",
+  "source_identity": {
+    "bootstrap_helper_sha256": "647de48a5dd5b2e1ea289f6d95c3e456168420ddc93028205b0baa051e2f365f",
+    "bootstrap_inputs_sha256": "5c3557a2696457d76562f8883efa2c7d2c4cfc583f4f5814a722907a1f639f81",
+    "cargo_lock": {
+      "bytes": 136479,
+      "git_packages": 0,
+      "packages": 550,
+      "registry_packages": 523,
+      "sha256": "b4ccfa53ccf8d7360c0359c1533d801759629f9cdd486d9a0a88e512717058d9",
+      "workspace_path_packages": 27
+    },
+    "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+    "fetched_head": "3efb1f477e99b42974b982d939fd100303cdf7db",
+    "patch": {
+      "inputs_json_sha256": "5c3557a2696457d76562f8883efa2c7d2c4cfc583f4f5814a722907a1f639f81",
+      "path": "host/cargo-repro/cargo-metadata.patch",
+      "sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f",
+      "source_json_sha256": "73c9fc79976541cb43cefb39ce878218a3245493e86bb37fac449ec3bee00a52",
+      "targets": [
+        {
+          "patched_sha256": "b572e74e742cca08765540aa9f611b1877defc08d146cff52fcd9b0c039106db",
+          "path": "src/compiler/build_runner/compilation_files.rs",
+          "upstream_sha256": "275e1ff7e6512bbbb3b30a7f0ceb9c7d455745e6aafce0484cb73d8fe31e0e67"
+        },
+        {
+          "patched_sha256": "0db8ba62877729fdee23ee8ae26f11a7b79fdd8bf086845a53c5f097eb1eacc3",
+          "path": "src/workspace/features.rs",
+          "upstream_sha256": "2747b5598654963df7d9270b07fc7dbd80a700cf219b26db71b0d2291ea74638"
+        }
+      ]
+    },
+    "patched_source_diff_sha256": "add91f19784376b3203c730cb7b3f1028ac24e831a98508d4daa8a1f8060df76",
+    "patched_targets": [
+      {
+        "path": "src/compiler/build_runner/compilation_files.rs",
+        "sha256": "b572e74e742cca08765540aa9f611b1877defc08d146cff52fcd9b0c039106db"
+      },
+      {
+        "path": "src/workspace/features.rs",
+        "sha256": "0db8ba62877729fdee23ee8ae26f11a7b79fdd8bf086845a53c5f097eb1eacc3"
+      }
+    ],
+    "resource_policy_sha256": "b9a5fbfff842847c30b5f56ea4e1d3a368f4bda30689f0407ed9d33610571646",
+    "upstream": "https://github.com/rust-lang/cargo.git",
+    "upstream_git_tree": "6aba36cdd15a91fb4f26fca10b3e592fe786649a",
+    "verified_lock": {
+      "bytes": 136479,
+      "git_packages": 0,
+      "packages": 550,
+      "registry_packages": 523,
+      "sha256": "b4ccfa53ccf8d7360c0359c1533d801759629f9cdd486d9a0a88e512717058d9",
+      "workspace_path_packages": 27
+    }
+  },
+  "registry_input_summary": {
+    "archive_bytes_max": 7195821,
+    "archive_bytes_total": 53297461,
+    "fetch_phase_preceded_all_queries": true,
+    "fetch_status": "SUCCESS",
+    "fetched_registry_archive_count": 457,
+    "registry_source_inputs_sha256": "c01083e03c351c61e4102738dc9c3af2517a4723b0214797d1f4537c4cd4a151"
+  },
+  "observed_resources": {
+    "peak_rss_bytes": 313122816,
+    "peak_workspace_bytes": 1980939861,
+    "peak_log_bytes": 90602
+  },
+  "offline_corrected_review": {
+    "selected_packages": 341,
+    "metadata_packages": 451,
+    "selected_identity_source_set_sha256": "639db66394dceb9022a54454a642d46c1989094aafe0b88898dfa748e09a45e6",
+    "selected_build_scripts": 36,
+    "package_identity_set_matches_previous_linux_target_source_review": true,
+    "build_script_identity_set_matches_previous_source_review": true,
+    "claim": "Actual native outputs reviewed after original CI failure; corrected candidate still requires native CI."
+  }
+}
