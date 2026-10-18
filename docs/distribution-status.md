@@ -11,8 +11,8 @@ and unchanged. APT and Homebrew are separate follow-up deliveries tracked by
 | APT archive registration | [APT archive PR #26](https://github.com/metaneutrons/apt-archive/pull/26), merged after all required checks |
 | Homebrew host policy | [Tap PR #70](https://github.com/metaneutrons/homebrew-tap/pull/70), merged after all required checks |
 | Producer development preflight | Pinned verifier downloads, public SDK retrieval and deterministic package/metadata generation passed locally; exact publisher proof selection is frozen |
-| Protected package production and staged readback | Pending |
-| Actual package-manager lifecycle on both hosts | Pending |
+| Protected package production and staged readback | [39159711172/1](https://github.com/metaneutrons/ami-rust/actions/runs/39159711172): exact revision-2 public bytes, signatures, provenance and counter-probes passed |
+| Actual package-manager lifecycle on both hosts | Linux passed; macOS install/build/remove/reinstall passed, but its active-keg query rejected valid retained versions after upgrade; unchanged candidate requalification required |
 | Attested formula PR, qualification and tap readback | Pending |
 | Signed public APT metadata, SHA512 by-hash, exact package and real client | Pending |
 
@@ -37,3 +37,16 @@ release. Final public clients also preserve the original cold-preparation
 receipts, component footprints, command RSS observations and sampled volume
 free-space delta. The volume delta is an observation of the runner volume;
 it is not represented as an exact per-process disk peak.
+
+## Immutable candidate requalification
+
+Revision 2 remains the same twelve signed assets from producer 39159711172/1.
+macOS's upgrade installed both `0.1.0_2` and the lower fixture keg; the test
+controller incorrectly treated that valid Homebrew inventory as a package
+identity error. No package or SDK input is changed to correct the query.
+The protected requalification workflow reads an explicit candidate identity,
+checks its original successful staging gates and signatures, and reruns both
+host lifecycles with the corrected controller. Publication requires that new
+qualification to pass; the original failed run remains failed and preserved.
+The public APT client also exercises signed-archive upgrade and documented
+source/keyring removal before acceptance.

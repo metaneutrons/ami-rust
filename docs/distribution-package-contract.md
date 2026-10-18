@@ -92,3 +92,10 @@ unchanged. Matching component/native hashes support reuse of runtime evidence;
 any changed compiler choice, Cargo/link flags, runtime or resulting native bytes
 requires the affected qualification again. AROS-NX and aros-tools remain
 unchanged; nxpk, AUR and rustup implementation remain outside this delivery.
+
+The first public APT client additionally installs an explicitly labelled local
+lower-revision fixture, then upgrades to the exact final version through the
+signed public archive. Its retained project must still rebuild. The final APT
+cleanup executes the documented source/keyring removal independently of package
+removal. These are publication-controller checks; they do not change the sealed
+package candidate or SDK inputs.

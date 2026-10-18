@@ -1,0 +1,210 @@
+name: Requalify sealed package candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ami-rust-protected-builds
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Protected source and channel access
+    runs-on: ubuntu-24.04
+    environment: release
+    timeout-minutes: 10
+    steps:
+      - name: Require the protected publisher
+        env:
+          PROTECTED: ${{ github.ref_protected }}
+          BREW_ID: ${{ vars.HOMEBREW_APP_CLIENT_ID }}
+          BREW_KEY: ${{ secrets.HOMEBREW_APP_PRIVATE_KEY }}
+          ARCHIVE_ID: ${{ vars.ARCHIVE_DISPATCH_CLIENT_ID }}
+          ARCHIVE_KEY: ${{ secrets.ARCHIVE_DISPATCH_PRIVATE_KEY }}
+        run: |
+          test "$GITHUB_REPOSITORY" = metaneutrons/ami-rust
+          test "$GITHUB_REF" = refs/heads/main
+          test "$PROTECTED" = true
+          test -n "$BREW_ID" && test -n "$BREW_KEY"
+          test -n "$ARCHIVE_ID" && test -n "$ARCHIVE_KEY"
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        id: tap
+        with:
+          client-id: ${{ vars.HOMEBREW_APP_CLIENT_ID }}
+          private-key: ${{ secrets.HOMEBREW_APP_PRIVATE_KEY }}
+          owner: metaneutrons
+          repositories: homebrew-tap
+          permission-contents: write
+          permission-pull-requests: write
+          permission-checks: read
+          permission-statuses: read
+          permission-administration: read
+      - name: Verify the tap scope and required protection
+        env:
+          GH_TOKEN: ${{ steps.tap.outputs.token }}
+        run: |
+          gh api installation/repositories --jq '[.total_count, [.repositories[].full_name]] == [1, ["metaneutrons/homebrew-tap"]]' | grep -qx true
+          gh api repos/metaneutrons/homebrew-tap/branches/main/protection --jq '.required_status_checks | .strict and (.contexts | index("Formula qualification") != null)' | grep -qx true
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        id: archive
+        with:
+          client-id: ${{ vars.ARCHIVE_DISPATCH_CLIENT_ID }}
+          private-key: ${{ secrets.ARCHIVE_DISPATCH_PRIVATE_KEY }}
+          owner: metaneutrons
+          repositories: apt-archive
+          permission-actions: write
+          permission-contents: read
+      - name: Verify archive scope and dispatch target
+        env:
+          GH_TOKEN: ${{ steps.archive.outputs.token }}
+        run: |
+          gh api installation/repositories --jq '[.total_count, [.repositories[].full_name]] == [1, ["metaneutrons/apt-archive"]]' | grep -qx true
+          gh api repos/metaneutrons/apt-archive/actions/workflows/publish.yml --jq .state | grep -qx active
+
+  package:
+    name: Authenticate sealed package candidate
+    needs: preflight
+    runs-on: ubuntu-24.04
+    environment: release
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      attestations: read
+    outputs:
+      commit: ${{ steps.identity.outputs.commit }}
+      tree: ${{ steps.identity.outputs.tree }}
+      epoch: ${{ steps.identity.outputs.epoch }}
+      run_id: ${{ steps.identity.outputs.run_id }}
+      attempt: ${{ steps.identity.outputs.attempt }}
+      candidate_sha256: ${{ steps.identity.outputs.candidate_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate the pinned original producer and staged candidate
+        id: identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -I -B packaging/control.py requalification-input --receipt "$RUNNER_TEMP/requalification-input.json"
+      - name: Authenticate the unchanged public candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT: ${{ steps.identity.outputs.commit }}
+          TREE: ${{ steps.identity.outputs.tree }}
+          EPOCH: ${{ steps.identity.outputs.epoch }}
+          CANDIDATE_RUN: ${{ steps.identity.outputs.run_id }}
+          CANDIDATE_ATTEMPT: ${{ steps.identity.outputs.attempt }}
+          CANDIDATE_SHA256: ${{ steps.identity.outputs.candidate_sha256 }}
+        run: |
+          python3 -I -B packaging/auth.py bootstrap --tools "$RUNNER_TEMP/package-tools"
+          tag=$(python3 -c 'import json; print(json.load(open("packaging/pins.json"))["packaging_tag"])')
+          "$RUNNER_TEMP/package-tools/gh" release download "$tag" --repo metaneutrons/ami-rust --dir "$RUNNER_TEMP/package-candidate"
+          python3 -I -B - <<'PY'
+          import hashlib, os, pathlib
+          candidate = pathlib.Path(os.environ['RUNNER_TEMP']) / 'package-candidate/candidate.json'
+          if hashlib.sha256(candidate.read_bytes()).hexdigest() != os.environ['CANDIDATE_SHA256']:
+              raise SystemExit('Public candidate differs from pinned sealed revision 2')
+          PY
+          python3 -I -B packaging/candidate.py verify --pins packaging/pins.json --directory "$RUNNER_TEMP/package-candidate" --source-commit "$COMMIT" --source-tree "$TREE" --run-id "$CANDIDATE_RUN" --run-attempt "$CANDIDATE_ATTEMPT" --epoch "$EPOCH"
+          python3 -I -B packaging/auth.py verify --directory "$RUNNER_TEMP/package-candidate" --tools "$RUNNER_TEMP/package-tools" --source-commit "$COMMIT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: package-requalification-input-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/requalification-input.json
+          if-no-files-found: error
+          retention-days: 30
+
+  qualify:
+    name: Package lifecycle (${{ matrix.profile }})
+    needs: package
+    runs-on: ${{ matrix.os }}
+    environment: release
+    timeout-minutes: 95
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            profile: linux-x86_64
+          - os: macos-26
+            profile: macos-aarch64
+    permissions:
+      contents: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Obtain the same sealed public candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT: ${{ needs.package.outputs.commit }}
+          CANDIDATE_SHA256: ${{ needs.package.outputs.candidate_sha256 }}
+          CANDIDATE_RUN: ${{ needs.package.outputs.run_id }}
+          CANDIDATE_ATTEMPT: ${{ needs.package.outputs.attempt }}
+          TREE: ${{ needs.package.outputs.tree }}
+          EPOCH: ${{ needs.package.outputs.epoch }}
+        run: |
+          python3 -I -B packaging/auth.py bootstrap --tools "$RUNNER_TEMP/package-tools"
+          tag=$(python3 -c 'import json; print(json.load(open("packaging/pins.json"))["packaging_tag"])')
+          "$RUNNER_TEMP/package-tools/gh" release download "$tag" --repo metaneutrons/ami-rust --dir "$RUNNER_TEMP/package-candidate"
+          python3 -I -B - <<'PY'
+          import hashlib, os, pathlib
+          wanted = os.environ.get('CANDIDATE_SHA256')
+          path = pathlib.Path(os.environ['RUNNER_TEMP']) / 'package-candidate/candidate.json'
+          if wanted and hashlib.sha256(path.read_bytes()).hexdigest() != wanted:
+              raise SystemExit('Published candidate differs from qualified sealed inventory')
+          PY
+          python3 -I -B packaging/candidate.py verify --pins packaging/pins.json --directory "$RUNNER_TEMP/package-candidate" --source-commit "$COMMIT" --source-tree "$TREE" --run-id "$CANDIDATE_RUN" --run-attempt "$CANDIDATE_ATTEMPT" --epoch "$EPOCH"
+          python3 -I -B packaging/auth.py verify --directory "$RUNNER_TEMP/package-candidate" --tools "$RUNNER_TEMP/package-tools" --source-commit "$COMMIT"
+      - name: Install, prepare, build and qualify the complete lifecycle
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          python3 -I -B - <<'PY'
+          import hashlib, json, os, pathlib, shutil
+          root = pathlib.Path(os.environ['RUNNER_TEMP'])
+          candidate = root / 'package-candidate'
+          destination = root / 'package-lifecycle-inputs'
+          destination.mkdir(mode=0o700)
+          build = json.loads((candidate / 'packaging-report.json').read_text())
+          metadata = json.loads((candidate / 'metadata-report.json').read_text())
+          names = set(build['outputs']) | set(metadata['generated_files']) | {'packaging-report.json', 'metadata-report.json'}
+          for name in sorted(names):
+              source = candidate / name
+              target = destination / name
+              shutil.copyfile(source, target)
+              if hashlib.sha256(source.read_bytes()).digest() != hashlib.sha256(target.read_bytes()).digest():
+                  raise SystemExit('Lifecycle input copy differs from authenticated candidate')
+          PY
+          python3 -I -B packaging/lifecycle.py --packages-dir "$RUNNER_TEMP/package-lifecycle-inputs" --root "$RUNNER_TEMP/package-lifecycle"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: package-lifecycle-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/package-lifecycle/evidence/
+            ${{ runner.temp }}/package-lifecycle/qualification/evidence-*/
+            ${{ runner.temp }}/package-lifecycle/qualification/persistent.json
+          if-no-files-found: error
+          retention-days: 30
+
+  qualification:
+    name: Package qualification
+    if: always()
+    needs: [preflight, package, qualify]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require all package qualification gates
+        env:
+          PREFLIGHT: ${{ needs.preflight.result }}
+          PACKAGE: ${{ needs.package.result }}
+          QUALIFY: ${{ needs.qualify.result }}
+        run: |
+          test "$PREFLIGHT" = success
+          test "$PACKAGE" = success
+          test "$QUALIFY" = success

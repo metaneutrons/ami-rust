@@ -3,12 +3,14 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import importlib.util
 import json
 from pathlib import Path
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from urllib.parse import quote
 from unittest import mock
 
@@ -41,6 +43,23 @@ JOB_NAMES = (
     "Package lifecycle (macos-aarch64)",
     "Package qualification",
 )
+REQUALIFICATION_JOB_NAMES = (
+    "Protected source and channel access",
+    "Authenticate sealed package candidate",
+    "Package lifecycle (linux-x86_64)",
+    "Package lifecycle (macos-aarch64)",
+    "Package qualification",
+)
+ORIGINAL_RUN_ID = 39159711172
+ORIGINAL_ATTEMPT = 1
+ORIGINAL_COMMIT = "a65b6d22bce94e30d5f89627dc176ff01117ebef"
+ORIGINAL_TREE = "2db2669e54bf121274ac2f231fa21ad16c75fe80"
+CONTROLLER_COMMIT = "c" * 40
+CONTROLLER_TREE = "d" * 40
+REQUALIFICATION_RUN_ID = 39160000123
+CANDIDATE_SHA256 = "9052d51fe4689f5842ecee6e03624ecd6e6eb9363e1b47be231ceed4f3f5e247"
+ORIGINAL_EPOCH = 1792352194
+ORIGINAL_DATE = datetime.fromtimestamp(ORIGINAL_EPOCH, tz=timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def producer_responses(*, run_changes: dict | None = None, jobs: list | None = None,
@@ -126,6 +145,75 @@ def recording_api(responses: dict[str, dict]):
 
 
 class ControlTests(unittest.TestCase):
+    def requalification_pins(self, **overrides) -> dict:
+        identity = {
+            "commit": ORIGINAL_COMMIT,
+            "tree": ORIGINAL_TREE,
+            "epoch": ORIGINAL_EPOCH,
+            "run_id": ORIGINAL_RUN_ID,
+            "attempt": ORIGINAL_ATTEMPT,
+            "candidate_sha256": CANDIDATE_SHA256,
+        }
+        identity.update(overrides)
+        return {
+            "schema": "ami-rust-package-requalification-v1",
+            "candidate": identity,
+            "reason": "Correct the lifecycle controller while retaining the sealed package candidate.",
+        }
+
+    def requalification_responses(self, *, pins: dict | None = None,
+                                  original_run_changes: dict | None = None,
+                                  original_jobs: list | None = None,
+                                  controller_compare_changes: dict | None = None,
+                                  candidate_compare_changes: dict | None = None,
+                                  original_source_changes: dict | None = None,
+                                  qualification_jobs: list | None = None) -> dict[str, dict]:
+        pins = self.requalification_pins() if pins is None else pins
+        encoded_pins = (json.dumps(pins, sort_keys=True) + "\n").encode()
+        original_run = {
+            "conclusion": "failure", "status": "completed", "event": "workflow_dispatch",
+            "head_branch": "main", "path": ".github/workflows/packages.yml@refs/heads/main",
+            "repository": {"full_name": REPO}, "run_attempt": ORIGINAL_ATTEMPT,
+            "head_sha": ORIGINAL_COMMIT,
+        }
+        original_run.update(original_run_changes or {})
+        original_gate_jobs = ([{"name": name, "conclusion": "failure"
+                                if name in (JOB_NAMES[3], JOB_NAMES[4]) else "success"}
+                               for name in JOB_NAMES]
+                              if original_jobs is None else original_jobs)
+        controller_gates = ([{"name": name, "conclusion": "success"}
+                             for name in REQUALIFICATION_JOB_NAMES]
+                            if qualification_jobs is None else qualification_jobs)
+        controller_comparison = {"merge_base_commit": {"sha": CONTROLLER_COMMIT}, "status": "ahead"}
+        controller_comparison.update(controller_compare_changes or {})
+        candidate_comparison = {"merge_base_commit": {"sha": ORIGINAL_COMMIT}, "status": "ahead"}
+        candidate_comparison.update(candidate_compare_changes or {})
+        original_source = {"tree": {"sha": ORIGINAL_TREE}, "committer": {"date": ORIGINAL_DATE}}
+        original_source.update(original_source_changes or {})
+        return {
+            f"repos/{REPO}/actions/runs/{REQUALIFICATION_RUN_ID}": {
+                "conclusion": "success", "status": "completed", "event": "workflow_dispatch",
+                "head_branch": "main",
+                "path": ".github/workflows/requalify-packages.yml@refs/heads/main",
+                "repository": {"full_name": REPO}, "run_attempt": 1,
+                "head_sha": CONTROLLER_COMMIT,
+            },
+            f"repos/{REPO}/actions/runs/{REQUALIFICATION_RUN_ID}/attempts/1/jobs?per_page=100": {
+                "total_count": len(controller_gates), "jobs": controller_gates,
+            },
+            f"repos/{REPO}/compare/{CONTROLLER_COMMIT}...main": controller_comparison,
+            f"repos/{REPO}/contents/packaging/requalification.json?ref={CONTROLLER_COMMIT}": {
+                "type": "file", "path": "packaging/requalification.json", "encoding": "base64",
+                "size": len(encoded_pins), "content": base64.b64encode(encoded_pins).decode() + "\n",
+            },
+            f"repos/{REPO}/actions/runs/{ORIGINAL_RUN_ID}": original_run,
+            f"repos/{REPO}/actions/runs/{ORIGINAL_RUN_ID}/attempts/{ORIGINAL_ATTEMPT}/jobs?per_page=100": {
+                "total_count": len(original_gate_jobs), "jobs": original_gate_jobs,
+            },
+            f"repos/{REPO}/compare/{ORIGINAL_COMMIT}...{CONTROLLER_COMMIT}": candidate_comparison,
+            f"repos/{REPO}/git/commits/{ORIGINAL_COMMIT}": original_source,
+        }
+
     def test_producer_accepts_five_successful_gates_and_exact_attempt_ancestor(self) -> None:
         responses = producer_responses()
         api, calls = recording_api(responses)
@@ -166,6 +254,122 @@ class ControlTests(unittest.TestCase):
                         control.producer(RUN_ID)
                 self.assertEqual(len(calls), expected_calls)
                 self.assertTrue(all(method == "GET" for _, method, _, _ in calls))
+
+    def test_requalification_input_accepts_exact_pinned_staged_candidate(self) -> None:
+        responses = self.requalification_responses()
+        api, calls = recording_api(responses)
+        with mock.patch.object(control, "api", side_effect=api):
+            result = control.requalification_input(CONTROLLER_COMMIT)
+
+        self.assertEqual(result, {
+            "commit": ORIGINAL_COMMIT,
+            "tree": ORIGINAL_TREE,
+            "epoch": ORIGINAL_EPOCH,
+            "run_id": ORIGINAL_RUN_ID,
+            "attempt": ORIGINAL_ATTEMPT,
+            "candidate_sha256": CANDIDATE_SHA256,
+            "newcontroller_source_commit": CONTROLLER_COMMIT,
+        })
+        self.assertIn(
+            (f"repos/{REPO}/contents/packaging/requalification.json?ref={CONTROLLER_COMMIT}",
+             "GET", None, False),
+            calls,
+        )
+        self.assertIn(
+            (f"repos/{REPO}/actions/runs/{ORIGINAL_RUN_ID}/attempts/{ORIGINAL_ATTEMPT}/jobs?per_page=100",
+             "GET", None, False),
+            calls,
+        )
+
+    def test_requalification_producer_requires_its_five_gates_and_returns_original_identity(self) -> None:
+        responses = self.requalification_responses()
+        api, calls = recording_api(responses)
+        with mock.patch.object(control, "api", side_effect=api):
+            result = control.producer(REQUALIFICATION_RUN_ID)
+        self.assertEqual(result["run_id"], ORIGINAL_RUN_ID)
+        self.assertEqual(result["attempt"], ORIGINAL_ATTEMPT)
+        self.assertEqual(result["candidate_sha256"], CANDIDATE_SHA256)
+        self.assertEqual(result["qualification_run_id"], REQUALIFICATION_RUN_ID)
+        self.assertEqual(result["newcontroller_source_commit"], CONTROLLER_COMMIT)
+
+        missing_auth_gate = [{"name": name, "conclusion": "success"}
+                             for name in REQUALIFICATION_JOB_NAMES
+                             if name != "Authenticate sealed package candidate"]
+        responses = self.requalification_responses(qualification_jobs=missing_auth_gate)
+        api, calls = recording_api(responses)
+        with mock.patch.object(control, "api", side_effect=api):
+            with self.assertRaisesRegex(ValueError, "Authenticate sealed package candidate"):
+                control.producer(REQUALIFICATION_RUN_ID)
+        self.assertEqual(len(calls), 2)
+
+    def test_requalification_rejects_failed_original_staging_and_identity_mismatches(self) -> None:
+        failed_original_jobs = [
+            {"name": JOB_NAMES[0], "conclusion": "success"},
+            {"name": JOB_NAMES[1], "conclusion": "failure"},
+        ]
+        cases = (
+            ("failed staging", {"original_jobs": failed_original_jobs}, "unsuccessful"),
+            ("wrong original source", {"original_run_changes": {"head_sha": "9" * 40}},
+             "original producer run identity"),
+            ("mutated candidate source pin", {"pins": self.requalification_pins(commit="9" * 40)},
+             "original producer run identity"),
+            ("wrong original attempt", {"original_run_changes": {"run_attempt": 2}},
+             "original producer run identity"),
+            ("candidate source is not an ancestor", {"candidate_compare_changes": {"status": "behind"}},
+             "not an ancestor"),
+            ("tree pin mismatch", {"original_source_changes": {"tree": {"sha": "8" * 40}}},
+             "tree and epoch"),
+            ("epoch pin mismatch", {"pins": self.requalification_pins(epoch=ORIGINAL_EPOCH + 1)},
+             "tree and epoch"),
+            ("controller not on main", {"controller_compare_changes": {"status": "behind"}},
+             "controller source is no longer an ancestor"),
+        )
+        for label, options, message in cases:
+            with self.subTest(label=label):
+                responses = self.requalification_responses(**options)
+                api, calls = recording_api(responses)
+                with mock.patch.object(control, "api", side_effect=api):
+                    with self.assertRaisesRegex(ValueError, message):
+                        control.requalification_input(CONTROLLER_COMMIT)
+
+    def test_requalification_rejects_malformed_pins_and_non_package_original_run(self) -> None:
+        invalid_pins = (
+            self.requalification_pins(commit="not-a-commit"),
+            self.requalification_pins(candidate_sha256="xyz"),
+        )
+        for pins in invalid_pins:
+            with self.subTest(pins=pins["candidate"]):
+                responses = self.requalification_responses(pins=pins)
+                api, _ = recording_api(responses)
+                with mock.patch.object(control, "api", side_effect=api):
+                    with self.assertRaisesRegex(ValueError, "candidate (commit|identity)"):
+                        control.requalification_input(CONTROLLER_COMMIT)
+
+        responses = self.requalification_responses(
+            original_run_changes={"path": ".github/workflows/ci.yml@refs/heads/main"}
+        )
+        api, _ = recording_api(responses)
+        with mock.patch.object(control, "api", side_effect=api):
+            with self.assertRaisesRegex(ValueError, "original producer run identity"):
+                control.requalification_input(CONTROLLER_COMMIT)
+
+        content_path = f"repos/{REPO}/contents/packaging/requalification.json?ref={CONTROLLER_COMMIT}"
+        duplicate_json = b'{"schema":"ami-rust-package-requalification-v1",' \
+            b'"schema":"ami-rust-package-requalification-v1"}'
+        responses = self.requalification_responses()
+        responses[content_path]["content"] = base64.b64encode(duplicate_json).decode()
+        responses[content_path]["size"] = len(duplicate_json)
+        api, _ = recording_api(responses)
+        with mock.patch.object(control, "api", side_effect=api):
+            with self.assertRaisesRegex(ValueError, "duplicate JSON key"):
+                control.requalification_input(CONTROLLER_COMMIT)
+
+        responses = self.requalification_responses()
+        responses[content_path]["content"] = " " * (control.MAX_REQUALIFICATION_BASE64_BYTES + 1)
+        api, _ = recording_api(responses)
+        with mock.patch.object(control, "api", side_effect=api):
+            with self.assertRaisesRegex(ValueError, "encoded byte bound"):
+                control.requalification_input(CONTROLLER_COMMIT)
 
     def stable_responses(self, directory: CandidateDirectory, *, tag_sha: str = COMMIT,
                          assets: list[dict] | None = None) -> tuple[dict[str, dict], dict]:
