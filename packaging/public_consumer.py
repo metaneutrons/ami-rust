@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import importlib.util
 import json
 import os
@@ -32,14 +33,15 @@ def main():
         if key in {"HOME", "PATH", "TMPDIR", "LANG", "LC_ALL", "USER", "LOGNAME"}
         or (key.startswith("HOMEBREW_") and not any(word in key for word in ("TOKEN", "SECRET", "KEY")))}
 
-    def run(label, argv):
+    def run(label, argv, *, environment=None):
         remaining = started + 5100 - time.time()
         if remaining <= 0:
             raise TimeoutError("public client execution cutoff reached")
         with (root / (label + ".stdout.log")).open("x") as out, (root / (label + ".stderr.log")).open("x") as err:
             command_started = time.time()
             process = subprocess.Popen([str(value) for value in argv], stdout=out, stderr=err,
-                                       env=consumer_environment, start_new_session=True)
+                                       env=consumer_environment if environment is None else environment,
+                                       start_new_session=True)
             try:
                 code = process.wait(timeout=remaining)
             except subprocess.TimeoutExpired:
@@ -87,6 +89,19 @@ def main():
                    else ["brew", "uninstall", "ami-rust"])
         run("remove-public-package", removal)
         retained = root / "consumer/user-home/ami-rust-0.1.0-state/retained/bin/ami-rust"
+        persistent = json.loads((root / "consumer/persistent.json").read_text())
+        retained_blocks = re.findall(r"```sh\n(.*?)\n```", (HERE / "README.md").read_text(), re.S)
+        if len(retained_blocks) != 2:
+            raise ValueError("package instructions must contain the initial and retained command blocks")
+        retained_script = root / "verbatim-retained-commands.sh"
+        retained_script.write_text(retained_blocks[1] + "\n")
+        retained_environment = {**consumer_environment, "STATE": persistent["state"],
+                                "PROJECT": persistent["project"], "HOME": str(root / "consumer/user-home")}
+        run("verbatim-retained-commands", ["/bin/bash", "-e", "-o", "pipefail", retained_script],
+            environment=retained_environment)
+        native = root / "consumer/user-home/hello-aros-rebuild/artifacts/AMIRUST"
+        if hashlib.sha256(native.read_bytes()).hexdigest() != persistent["hello_native_sha256"]:
+            raise ValueError("documented retained-state recipe changed the native output")
         run("retained-project-after-removal", [sys.executable, "-I", "-B", HERE / "qualify.py", "replay",
             "--root", root / "consumer", "--executable", retained, "--phase", "public-removal"])
         if time.time() - started > 5400:
