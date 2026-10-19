@@ -1,0 +1,112 @@
+{
+  "cases": [
+    {
+      "bundle_preserved": true,
+      "case": "fresh-install",
+      "decision": "both accepted",
+      "inventory_files": 6,
+      "receipt_sha256": "5fa1940e7e11e25024bcdb3086f6dc86d3e1a0f4e02f649690f12b1300128a25",
+      "tree_equal": true
+    },
+    {
+      "bundle_preserved": true,
+      "case": "correct-uninstall",
+      "decision": "both accepted",
+      "external_pin_retained": true
+    },
+    {
+      "case": "occupied-prefix",
+      "decision": "both refused",
+      "filesystem_unchanged": true,
+      "legacy_exit": 2,
+      "rust_exit": 2
+    },
+    {
+      "case": "occupied-pin",
+      "decision": "both refused",
+      "filesystem_unchanged": true,
+      "legacy_exit": 2,
+      "prefix_unpublished": true,
+      "rust_exit": 2
+    },
+    {
+      "case": "tampered-uninstall",
+      "decision": "both refused",
+      "filesystem_unchanged": true,
+      "legacy_exit": 2
+    },
+    {
+      "case": "extra-empty-directory-uninstall",
+      "decision": "both refused",
+      "filesystem_unchanged": true,
+      "legacy_exit": 2
+    }
+  ],
+  "limitations": [
+    "No injected post-publication partial failure; public API exposes no fault-injection hook.",
+    "The Rust bridge intentionally uses the receipt bytes from the legacy disposable-signature install; authentication and receipt parsing remain outside this filesystem-layer comparison.",
+    "No native Linux execution was performed."
+  ],
+  "lock_resolution": {
+    "bridge_lock_sha256": "567241d13921ced87bde4c469c968eba4ad2c87a08c91ecdcc7acdd1820d7e34",
+    "bridge_registry_package_count": 29,
+    "copied_lock_locked_check_exit": 101,
+    "copied_lock_requires_standalone_workspace_resolution": true,
+    "method": "copied tooling/Cargo.lock; resolved the standalone bridge workspace offline, then checked the locked graph",
+    "offline_resolution_check_exit": 0,
+    "public_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+    "public_registry_package_count": 29,
+    "registry_package_tuples_equal": true,
+    "resolved_locked_build_exit": 0
+  },
+  "logs": [
+    "runs/positive-install.python.json",
+    "runs/positive-install.rust.json",
+    "runs/positive-uninstall.python.json",
+    "runs/positive-uninstall.rust.json",
+    "runs/occupied-prefix.python.json",
+    "runs/occupied-prefix.rust.json",
+    "runs/occupied-pin.python.json",
+    "runs/occupied-pin.rust.json",
+    "runs/tampered-uninstall-setup-install.python.json",
+    "runs/tampered-uninstall-setup-install.rust.json",
+    "runs/tampered-uninstall.python.json",
+    "runs/tampered-uninstall.rust.json",
+    "runs/extra-directory-uninstall-setup-install.python.json",
+    "runs/extra-directory-uninstall-setup-install.rust.json",
+    "runs/extra-directory-uninstall.python.json",
+    "runs/extra-directory-uninstall.rust.json"
+  ],
+  "python": {
+    "invocation": "-I -B",
+    "path": "/Volumes/Dev/Source/Amiga/ami-rust/qualification/channels/20261018/local-adapter-a4/consumer/user-home/ami-rust-0.1.0-state/ami-rust-python-bootstrap/runtime/python/bin/python3.12",
+    "sha256": "aed8ed802d0387d6831dead5885840e4e2ff3a7984dd7297e9a5f4466e9cda1d",
+    "version": "3.12.15"
+  },
+  "rust": {
+    "binary": "/Volumes/Dev/Source/Amiga/ami-rust/evidence/rc1-transactions-differential-20261019-a1/target/debug/rc1-transaction-differential",
+    "crate": "ami-rust-core transaction API",
+    "toolchain": "1.98.1"
+  },
+  "scope": "host filesystem transaction effects only; no Rust receipt/authentication/CLI capability claim",
+  "source_sha256": {
+    "tooling/crates/core/src/compression.rs": "a25f261d6bde6c6b235f4a1ea612255c49c1b98f16a5c8d0982502cdbd0b9e19",
+    "tooling/crates/core/src/digest.rs": "37a274cf539531f18fe4a08e0b599fbcaa9ab1f1762a8b665b39a8daf0361898",
+    "tooling/crates/core/src/directory.rs": "0f789a9dfe8709548ac79072dc13e55d54ba2b435e612a906712e3da0286c381",
+    "tooling/crates/core/src/elf.rs": "a7f068fd2b28357abf2bc488a3b655078283dcb399671b96cdfe3d12bf567fb5",
+    "tooling/crates/core/src/error.rs": "54c606fab3b71f70c1fbfc27e41cd69e0c342efebcd435cf8d4530aab37c4b5f",
+    "tooling/crates/core/src/files.rs": "9320b67cb7948811f082122b88626aa31d2a09a2d1fc878e6ff50f85afe346bf",
+    "tooling/crates/core/src/frontend.rs": "59c8d6b20ea96d17dc22f8cf6875e224206053cbd5dc4332b864254bc5b372cb",
+    "tooling/crates/core/src/inventory.rs": "4a1d9025ba57e35a4c7e162e69c0e3d15105831e6618625bf3fc5d41144a4460",
+    "tooling/crates/core/src/json.rs": "fa98d69049d72176b46369de60541467b5774550fd18e6686fb1341475441ffe",
+    "tooling/crates/core/src/lib.rs": "5c1fceea6e548d6e347735cf37e11aa7bcb2295e5e2952f0be6b105563b66cfe",
+    "tooling/crates/core/src/mutations.rs": "9a46e5541322dcdcbdd4ae86dd2634df97ee7334fe73dcfa33093845f862a60f",
+    "tooling/crates/core/src/ownership.rs": "483a4b18d9b684bd55ff241d1cedea26063928a3b002080983e7cc3936d25f29",
+    "tooling/crates/core/src/publisher_tar.rs": "827f0303b3a7dda90ac90a72efb736402ac7b5ded652fdcca5ee281be1afb9d8",
+    "tooling/crates/core/src/records.rs": "693b1262ab6140ea9b65e69b30ba0d02a7877b30fe5eabb0e0ea41582e10c867",
+    "tooling/crates/core/src/signals.rs": "db55598d9bd1121946b1bbfbbbd1004f64bc1b8a087cc09d18d97f00925e2513",
+    "tooling/crates/core/src/transaction.rs": "fc7c8b34254cd75b533a1994fe71fe2da98df2c58619d68260b4b39f19a3214c"
+  },
+  "source_unchanged_during_run": true,
+  "status": "pass"
+}

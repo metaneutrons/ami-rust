@@ -1,0 +1,3 @@
+    Checking ami-rust-core v0.2.0-dev (/Volumes/Dev/Source/Amiga/ami-rust/release/public-replay-proof-output-fix-20261018/tooling/crates/core)
+    Checking ami-rust-cli v0.2.0-dev (/Volumes/Dev/Source/Amiga/ami-rust/release/public-replay-proof-output-fix-20261018/tooling/crates/cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.27s

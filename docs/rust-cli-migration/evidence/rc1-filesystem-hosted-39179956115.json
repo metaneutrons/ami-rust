@@ -1,0 +1,48 @@
+{
+  "schema": "ami-rust-rc1-filesystem-hosted-v1",
+  "scope": "Complete component inventory, project-lock and publisher SDK archive validation slice; not complete RC1 acceptance",
+  "candidate_commit": "b5dcbd883bbfb464d8733c0319a9da162bef5729",
+  "base_commit": "6527ea4c1b21b2908982a538441fda18da9988e4",
+  "merge_commit": "dff1ef51ab77bdc60e0ace252e3b4d66ec6a11a1",
+  "pr": "https://github.com/metaneutrons/ami-rust/pull/83",
+  "run": "https://github.com/metaneutrons/ami-rust/actions/runs/39179956115",
+  "status": "PASS",
+  "host_results": {
+    "linux": {
+      "job": 117830418995,
+      "test_counts": [
+        3,
+        3,
+        13,
+        0,
+        0,
+        1,
+        73,
+        0
+      ],
+      "failed": 0,
+      "log_bytes": 80311,
+      "log_sha256": "97d77a368a98f6328c0f11115d290428e2a3cb7665826822dd67546c41bc654e"
+    },
+    "macos": {
+      "job": 117830419036,
+      "test_counts": [
+        3,
+        3,
+        13,
+        0,
+        0,
+        1,
+        73,
+        0
+      ],
+      "failed": 0,
+      "log_bytes": 83042,
+      "log_sha256": "6bb71d80bbc8351db3c856006a6431ba15715223c6175d0c06fe67027b2cd512"
+    }
+  },
+  "production_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+  "core_tests_per_host": 73,
+  "frontend_tests_per_host": 1,
+  "complete_rc1_accepted": false
+}

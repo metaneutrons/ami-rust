@@ -1,0 +1,11 @@
+{
+  "bridge_registry_package_count": 29,
+  "only_bridge": [],
+  "only_public": [],
+  "public_copy_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+  "public_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+  "public_registry_package_count": 29,
+  "registry_tuple_sets_equal": true,
+  "resolved_bridge_lock_sha256": "567241d13921ced87bde4c469c968eba4ad2c87a08c91ecdcc7acdd1820d7e34",
+  "resolved_lock_matches_initial_offline_resolution": true
+}
