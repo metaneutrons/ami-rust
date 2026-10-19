@@ -48,10 +48,45 @@ fn member<'a>(value: &'a Map<String, Value>, field: &str) -> Result<&'a Value> {
 /// claims. The caller must have obtained these bytes from the exact pinned
 /// successful command, with the policy identity selectors and trusted root.
 pub fn check_github_output(raw: &[u8], context: PublisherClaimContext<'_>) -> Result<()> {
-    if !["release.json", "sdk.tar.xz", "SHAUTIL"].contains(&context.subject)
-        || !is_sha256_digest(context.subject_sha256)
-    {
+    if !["release.json", "sdk.tar.xz", "SHAUTIL"].contains(&context.subject) {
         return Err(refuse("invalid expected publisher subject"));
+    }
+    check_expected_github_output(raw, context)
+}
+
+/// The public transport has a separate, closed four-subject contract. It does
+/// not acquire the inner bundle's installation authority through this parser.
+pub fn check_outer_github_output(
+    raw: &[u8],
+    context: PublisherClaimContext<'_>,
+    sdk_version: &str,
+) -> Result<()> {
+    if sdk_version.is_empty()
+        || sdk_version.len() > 64
+        || !sdk_version
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b".+_-".contains(&b))
+    {
+        return Err(refuse("invalid outer SDK version"));
+    }
+    let payload = format!("ami-rust-{sdk_version}-release.tar.xz");
+    let subjects = [
+        payload.clone(),
+        format!("{payload}.spdx.json"),
+        format!("ami-rust-{sdk_version}-transport.json"),
+        "SHA256SUMS".to_owned(),
+    ];
+    if !subjects.iter().any(|subject| subject == context.subject)
+        || context.host != Host::LinuxX86_64
+    {
+        return Err(refuse("invalid outer publisher subject or host"));
+    }
+    check_expected_github_output(raw, context)
+}
+
+fn check_expected_github_output(raw: &[u8], context: PublisherClaimContext<'_>) -> Result<()> {
+    if !is_sha256_digest(context.subject_sha256) {
+        return Err(refuse("invalid expected publisher subject digest"));
     }
     let output = parse_json_value(raw, JsonProfile::VerifierOutput)?;
     let rows = output

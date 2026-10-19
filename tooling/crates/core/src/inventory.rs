@@ -83,9 +83,24 @@ pub fn verify_complete_directory(
     links: &[LinkIdentity],
     limits: InventoryLimits,
 ) -> Result<Measurement> {
+    verify_complete_directory_checked(root, files, links, limits, || Ok(()))
+}
+
+/// Verify through a retained root descriptor while allowing the caller to
+/// cancel between rows, tree entries, hash blocks, and link-resolution steps.
+/// The callback also runs immediately before a successful return.
+pub fn verify_complete_directory_checked(
+    root: &Directory,
+    files: &[FileIdentity],
+    links: &[LinkIdentity],
+    limits: InventoryLimits,
+    mut cancellation_check: impl FnMut() -> Result<()>,
+) -> Result<Measurement> {
+    cancellation_check()?;
     let mut expected = BTreeMap::new();
     let mut expected_bytes = 0_u64;
     for file in files {
+        cancellation_check()?;
         validate_relative_inventory_path(&file.path)?;
         if !is_sha256_digest(&file.sha256) || file.mode.is_some_and(|mode| mode & !0o7777 != 0) {
             return Err(Refusal::new("invalid inventory digest or permission mode"));
@@ -101,6 +116,7 @@ pub fn verify_complete_directory(
         }
     }
     for link in links {
+        cancellation_check()?;
         validate_relative_inventory_path(&link.path)?;
         validate_target(&link.target)?;
         if expected
@@ -115,6 +131,7 @@ pub fn verify_complete_directory(
     }
     // A leaf can never also be another member's directory ancestor.
     for path in expected.keys() {
+        cancellation_check()?;
         for (offset, _) in path.match_indices('/') {
             if expected.contains_key(&path[..offset]) {
                 return Err(Refusal::new("inventory leaf is also a directory ancestor"));
@@ -128,8 +145,10 @@ pub fn verify_complete_directory(
     let mut entries = 0_usize;
     let mut directories = 0_usize;
     while let Some(prefix) = pending.pop() {
+        cancellation_check()?;
         let directory = root.relative_directory(&prefix)?;
         for name in directory.names(limits.max_tree_entries - entries)? {
+            cancellation_check()?;
             entries = entries
                 .checked_add(1)
                 .ok_or_else(|| Refusal::new("tree count overflow"))?;
@@ -147,7 +166,7 @@ pub fn verify_complete_directory(
             validate_relative_inventory_path(&path)?;
             match expected.get(path.as_str()) {
                 Some(Expected::File(file)) => {
-                    verify_file(&directory, name, file)?;
+                    verify_file(&directory, name, file, &mut cancellation_check)?;
                     actual.insert(path.clone(), Actual::File);
                     visited.insert(path);
                 }
@@ -175,8 +194,15 @@ pub fn verify_complete_directory(
         return Err(Refusal::new("component inventory has missing entries"));
     }
     for link in links {
-        resolve_link(link, &actual, limits.max_link_resolution_steps)?;
+        cancellation_check()?;
+        resolve_link_checked(
+            link,
+            &actual,
+            limits.max_link_resolution_steps,
+            &mut cancellation_check,
+        )?;
     }
+    cancellation_check()?;
     Ok(Measurement {
         files: files.len(),
         symlinks: links.len(),
@@ -185,7 +211,12 @@ pub fn verify_complete_directory(
     })
 }
 
-fn verify_file(directory: &Directory, name: &str, expected: &FileIdentity) -> Result<()> {
+fn verify_file(
+    directory: &Directory,
+    name: &str,
+    expected: &FileIdentity,
+    cancellation_check: &mut impl FnMut() -> Result<()>,
+) -> Result<()> {
     let mut file = directory.regular(OsStr::new(name))?;
     let metadata = file
         .metadata()
@@ -203,6 +234,7 @@ fn verify_file(directory: &Directory, name: &str, expected: &FileIdentity) -> Re
     let mut total = 0_u64;
     let mut buffer = [0_u8; 64 * 1024];
     loop {
+        cancellation_check()?;
         // Never hash an unbounded growing file. Read at most one excess byte.
         let remaining = expected.bytes - total;
         let amount = usize::try_from(remaining.min(buffer.len() as u64)).unwrap();
@@ -253,7 +285,16 @@ fn resolve_link(
     link: &LinkIdentity,
     actual: &BTreeMap<String, Actual<'_>>,
     maximum: usize,
-) -> Result<()> {
+) -> Result<String> {
+    resolve_link_checked(link, actual, maximum, &mut || Ok(()))
+}
+
+fn resolve_link_checked(
+    link: &LinkIdentity,
+    actual: &BTreeMap<String, Actual<'_>>,
+    maximum: usize,
+    cancellation_check: &mut impl FnMut() -> Result<()>,
+) -> Result<String> {
     let mut current: Vec<&str> = link
         .path
         .rsplit_once('/')
@@ -261,6 +302,7 @@ fn resolve_link(
     let mut pending: VecDeque<&str> = link.target.split('/').collect();
     let mut steps = 0_usize;
     while let Some(part) = pending.pop_front() {
+        cancellation_check()?;
         if steps == maximum {
             return Err(Refusal::new("component link resolution exceeds work bound"));
         }
@@ -292,7 +334,43 @@ fn resolve_link(
             }
         }
     }
-    Ok(())
+    Ok(current.join("/"))
+}
+
+/// Resolve an inventoried executable alias only after rechecking the complete
+/// component. The caller still verifies the resulting ordinary executable and
+/// executes the original alias so argv[0]-selected tool behavior is preserved.
+pub(crate) fn verified_link_destination(
+    root: &Directory,
+    files: &[FileIdentity],
+    links: &[LinkIdentity],
+    path: &str,
+    limits: InventoryLimits,
+) -> Result<String> {
+    verify_complete_directory(root, files, links, limits)?;
+    let link = links
+        .iter()
+        .find(|link| link.path == path)
+        .ok_or_else(|| Refusal::new("executable alias is absent from component inventory"))?;
+    let mut actual = BTreeMap::new();
+    for file in files {
+        actual.insert(file.path.clone(), Actual::File);
+    }
+    for link in links {
+        actual.insert(link.path.clone(), Actual::Link(link.target.as_str()));
+    }
+    for path in files
+        .iter()
+        .map(|file| file.path.as_str())
+        .chain(links.iter().map(|link| link.path.as_str()))
+    {
+        for (offset, _) in path.match_indices('/') {
+            actual
+                .entry(path[..offset].to_owned())
+                .or_insert(Actual::Directory);
+        }
+    }
+    resolve_link(link, &actual, limits.max_link_resolution_steps)
 }
 
 #[cfg(test)]
@@ -342,6 +420,45 @@ mod tests {
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, contents).unwrap();
         fs::set_permissions(path, fs::Permissions::from_mode(0o644)).unwrap();
+    }
+
+    #[test]
+    fn checked_verification_succeeds_and_cancels_between_hash_blocks() {
+        let root = Fixture::new();
+        let contents = vec![b'x'; 1024 * 1024];
+        write(&root.0, "large", &contents);
+        let row = file("large", &contents);
+        let directory = Directory::open(&root.0).unwrap();
+
+        let mut checks = 0;
+        let measurement = verify_complete_directory_checked(
+            &directory,
+            std::slice::from_ref(&row),
+            &[],
+            limits(),
+            || {
+                checks += 1;
+                Ok(())
+            },
+        )
+        .unwrap();
+        assert_eq!(measurement.file_bytes, contents.len() as u64);
+        assert!(checks > 0);
+
+        let mut hash_checks = 0;
+        let result = verify_file(&directory, "large", &row, &mut || {
+            hash_checks += 1;
+            if hash_checks == 4 {
+                Err(Refusal::new("cancelled during inventory hashing"))
+            } else {
+                Ok(())
+            }
+        });
+        assert!(result.is_err());
+        assert_eq!(hash_checks, 4);
+        // The fourth callback is checked before its read, after at most three
+        // 64 KiB blocks. The read-only file contains substantially more data.
+        assert!((hash_checks - 1) * 64 * 1024 < contents.len());
     }
 
     #[test]

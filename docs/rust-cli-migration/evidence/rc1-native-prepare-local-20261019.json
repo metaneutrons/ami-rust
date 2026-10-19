@@ -1,0 +1,150 @@
+{
+  "schema": "ami-rust-rc1-prepare-development-evidence-v1",
+  "date": "2026-10-19",
+  "stage": "local partial implementation; RC1 not accepted",
+  "acceptance_authority": {
+    "plan_revision": 2,
+    "issue": 71,
+    "criteria": [
+      "RC1-A1",
+      "RC1-A2",
+      "RC1-A3",
+      "RC1-A4"
+    ],
+    "all_criteria_open": true
+  },
+  "source": {
+    "code_commit": "9ece7d10a26a31074089fb5a8bd13579c030656e",
+    "tooling_tree": "c41cbfe208782801e8516f22f30de928f5648923",
+    "host_rust": "1.98.1",
+    "cargo_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+    "registry_identities": 29
+  },
+  "host": "macOS 26 Apple Silicon",
+  "implemented_flow": [
+    "package verification and separate CLI/SDK/package version reporting",
+    "owned retained launcher and exact source checkout",
+    "pinned verifier acquisition through the OS curl bootstrap",
+    "publisher materials reconstruction and outer GH/Cosign authentication",
+    "bounded outer extraction and inner native-v2 authentication binding",
+    "receipt-pinned installation and fixed initial target baseline admission",
+    "six component acquisition/provisioning and inventory verification",
+    "selection/READY-v2 publication and input recheck"
+  ],
+  "local_checks": {
+    "format": "PASS",
+    "clippy_all_targets_warnings_denied": "PASS",
+    "ordinary_workspace_tests_passed": 327,
+    "core_tests_passed": 324,
+    "core_ignored_tests": 6,
+    "standalone_opt_in_integrations_ignored_in_ordinary_run": 2,
+    "ignored_tests_note": "Three retained-input tests were explicitly executed separately; isolated child fixtures are invoked by their asserting parent tests. No ignored test is counted as ordinary passed."
+  },
+  "retained_input_controls": [
+    {
+      "case": "both accepted host Cargo archives",
+      "result": "PASS; isolated altered compressed copy refused",
+      "compiler_execution": false
+    },
+    {
+      "case": "source-derived publisher input manifest",
+      "result": "PASS; exact byte equality with accepted manifest",
+      "sha256": "00203acd0e657b73f13f2d45d139759df23e952b0ad1388f348d809fd01e70e5"
+    },
+    {
+      "case": "actual outer publisher verification",
+      "result": "PASS; four GH plus two Cosign calls; isolated altered GH signature refused by actual verifier"
+    }
+  ],
+  "cold_historical_control": {
+    "fixture": "isolated new CLI/package records around unchanged authenticated historical SDK-v1 assets; not an authenticated native-v2 release",
+    "verify_package": {
+      "operation": "verify-package",
+      "exit": 0,
+      "elapsed_seconds": 0.157,
+      "source": "9ece7d10a26a31074089fb5a8bd13579c030656e",
+      "binary_sha256": "4055ae2f453e7207e7282c43cc5daa8acf9cf16b70333ef56f7fd3e380fc0634",
+      "fixture": "isolated native package records around immutable historical SDK; genuine outer authentication followed by expected legacy-v1 refusal, not native-v2 positive qualification"
+    },
+    "prepare": {
+      "operation": "prepare",
+      "exit": 2,
+      "elapsed_seconds": 15.89,
+      "source": "9ece7d10a26a31074089fb5a8bd13579c030656e",
+      "binary_sha256": "4055ae2f453e7207e7282c43cc5daa8acf9cf16b70333ef56f7fd3e380fc0634",
+      "fixture": "isolated native package records around immutable historical SDK; genuine outer authentication followed by expected legacy-v1 refusal, not native-v2 positive qualification"
+    },
+    "outer_authentication": true,
+    "actual_verifier_calls": 6,
+    "peak_verifier_visible_rss_bytes": 35176448,
+    "peak_managed_workspace_bytes": 512826774,
+    "expected_refusal": {
+      "phase": "inner-publisher-authentication",
+      "ready": false,
+      "reason": "incompatible release manifest schema",
+      "schema": "ami-rust-prepare-failure-v1",
+      "state_retained": true
+    },
+    "sdk_installation_present": false,
+    "ready_present": false
+  },
+  "portable_frontend": {
+    "result": "PASS; deliberately appended local build prefix refused on isolated copy",
+    "bytes": 2582832,
+    "sha256": "4055ae2f453e7207e7282c43cc5daa8acf9cf16b70333ef56f7fd3e380fc0634"
+  },
+  "limits": {
+    "publisher_per_call_seconds": 60,
+    "publisher_total_seconds": 300,
+    "visible_rss_bytes": 4294967296,
+    "workspace_bytes": 12884901888,
+    "log_bytes": 16777216,
+    "managed_workspace_includes_complete_prepare_state": true,
+    "workspace_overflow_counterprobe": "PASS using a sparse logical 12 GiB + 1 byte file, without physical allocation"
+  },
+  "remaining_gates": [
+    "Positive authenticated native-v2 SDK preparation through all six real component installations; provisioning code is not yet qualified by this legacy refusal control",
+    "Both supported hosts under the accepted no-Python observer; native command selection alone is not no-Python qualification",
+    "Full differential failure/lifecycle/ownership cases and interrupted preparation",
+    "Project/lock/build/migration/retained replay command integration",
+    "Five unchanged target variants in two fresh roots per host",
+    "Production of actual host CLI assets with new protected-main provenance and inner/outer binding",
+    "Whole prepare deadline/cleanup qualification, in addition to the implemented per-command and resource bounds"
+  ],
+  "preserved_boundaries": [
+    "AROS-NG, AROS-NX and aros-tools untouched",
+    "Qualified x86-64 AROS ABI-v1 baseline and pinned target compiler unchanged",
+    "SDK 0.1.0 and packaging releases unchanged",
+    "nxpk excluded; no release publication"
+  ],
+  "log_identities": {
+    "29-prepare-format.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "30-prepare-clippy.log": {
+      "bytes": 356,
+      "sha256": "352874791cfa8ac016ba62df25b521d7a8dda1eb853999f9f15d8110b48f1859"
+    },
+    "31-prepare-workspace.log": {
+      "bytes": 33065,
+      "sha256": "7d5eb27d0049f5ea62dbd2749c6610471808c3b4630e04e4b3a33a807bd38a1c"
+    },
+    "32-retained-cargo.log": {
+      "bytes": 491,
+      "sha256": "80d86ac653578f566d58de331714d848d99223d67a352df4b0d5bf0fb40938d3"
+    },
+    "33-retained-materials.log": {
+      "bytes": 374,
+      "sha256": "a43f4d622bb2a8510e847758954587e8fa45ecbeac4f23a56746ffb645bf234d"
+    },
+    "34-retained-outer.log": {
+      "bytes": 457,
+      "sha256": "6b951911bcf28cf32a78aff5353efc1d44fbed6ccdff81848b2ce1c4595c93cb"
+    },
+    "35-portable-native-cli.log": {
+      "bytes": 1526,
+      "sha256": "15358bf2cfcc0ad6c061b6fbd4f1ced31a598136e5404fd39f759fe02d49a139"
+    }
+  }
+}

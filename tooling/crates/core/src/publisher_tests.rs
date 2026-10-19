@@ -396,6 +396,7 @@ fn check_exec_pin(path: &Path, digest: &str) -> Result<()> {
         started: Instant::now(),
         cancelled: &mut not_cancelled,
         resource_reports: Vec::new(),
+        managed_workspace: None,
     };
     check_pin(&pin, true, &mut observer)
 }
@@ -446,6 +447,7 @@ fn observation_checks_cancellation_and_deadline_without_sleeping() {
         started: Instant::now(),
         cancelled: &mut cancelled,
         resource_reports: Vec::new(),
+        managed_workspace: None,
     };
     assert_eq!(
         cancellation_observation.check().unwrap_err().to_string(),
@@ -457,11 +459,50 @@ fn observation_checks_cancellation_and_deadline_without_sleeping() {
         started: Instant::now() - TOTAL_TIMEOUT - Duration::from_secs(1),
         cancelled: &mut not_cancelled,
         resource_reports: Vec::new(),
+        managed_workspace: None,
     };
     assert_eq!(
         deadline_observation.check().unwrap_err().to_string(),
         "publisher verification deadline expired"
     );
+}
+
+#[test]
+fn prepare_verifiers_account_for_the_complete_managed_state() {
+    let fixture = FixtureDir::new();
+    let payload = fixture.path().join("managed-state.bin");
+    write_file(&payload, &[0; 4096], 0o600);
+    let executable = Path::new("/usr/bin/true");
+    let pin = PinnedPolicyFile {
+        path: executable.to_str().unwrap().to_owned(),
+        sha256: parse_digest(&sha256_bytes(&fs::read(executable).unwrap())).unwrap(),
+    };
+    let mut cancelled = || false;
+    let mut observer = Observation {
+        started: Instant::now(),
+        cancelled: &mut cancelled,
+        resource_reports: Vec::new(),
+        managed_workspace: Some(fixture.path().to_path_buf()),
+    };
+    let home = PublisherHome::new().unwrap();
+    let captured = run_verifier_attempt(&pin, Vec::new(), &home, &mut observer).unwrap();
+    assert!(captured.status.success());
+    assert_eq!(observer.resource_reports.len(), 1);
+    assert!(observer.resource_reports[0].peak_workspace_bytes >= 4096);
+    home.finish().unwrap();
+
+    // A sparse logical file supplies an over-limit counterprobe without
+    // allocating a 12 GiB physical fixture or changing the host profile.
+    OpenOptions::new()
+        .write(true)
+        .open(&payload)
+        .unwrap()
+        .set_len(12 * 1024 * 1024 * 1024 + 1)
+        .unwrap();
+    let home = PublisherHome::new().unwrap();
+    let error = run_verifier_attempt(&pin, Vec::new(), &home, &mut observer).unwrap_err();
+    assert!(error.to_string().contains("workspace"), "{error}");
+    home.finish().unwrap();
 }
 
 fn native_fixture_from_legacy(raw: &[u8]) -> Vec<u8> {

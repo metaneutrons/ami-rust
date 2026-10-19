@@ -696,6 +696,25 @@ pub fn remove_verified_installation(
     remove_with_hook(prefix, files, receipt_digest, |_, _| Ok(()))
 }
 
+/// Inspect the same complete owned installation used by removal, without
+/// renaming or deleting it. The caller must first validate receipt semantics.
+pub(crate) fn inspect_verified_installation(
+    prefix: &Path,
+    files: &[FileIdentity],
+    receipt_digest: &str,
+) -> Result<ownership::ExistingTarget> {
+    let target = ownership::existing_install_target(prefix)?;
+    let (identities, directories) = removal_layout(target.root(), files, receipt_digest)?;
+    read_pinned_receipt(target.root(), receipt_digest)?;
+    verify_exact_tree(target.root(), &identities, &directories)?;
+    recheck_directory_identity(
+        target.parent(),
+        target.path().parent().expect("validated parent"),
+    )?;
+    recheck_directory_identity(target.root(), target.path())?;
+    Ok(target)
+}
+
 #[derive(Clone, Copy)]
 enum RemovalBoundary {
     Verified,

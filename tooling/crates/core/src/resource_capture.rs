@@ -147,6 +147,30 @@ pub fn capture_with_resources(
     required_roots: &[PathBuf],
     cancelled: impl FnMut() -> bool,
 ) -> std::result::Result<ResourceCapturedProcess, ResourceCaptureError> {
+    capture_with_resources_observed(
+        spec,
+        capture_limits,
+        resource_limits,
+        sample_limits,
+        required_roots,
+        cancelled,
+        |_| Ok(()),
+    )
+}
+
+/// As `capture_with_resources`, invoking one additional fallible observer at
+/// every bounded capture pass. The extra observer runs before resource
+/// sampling, allowing a caller to enforce a cheap local bound before a
+/// potentially more expensive process-table and directory sample.
+pub(crate) fn capture_with_resources_observed(
+    spec: &CommandSpec,
+    capture_limits: CaptureLimits,
+    resource_limits: ResourceLimits,
+    sample_limits: SampleLimits,
+    required_roots: &[PathBuf],
+    cancelled: impl FnMut() -> bool,
+    mut additional_observer: impl FnMut(CaptureObservation) -> io::Result<()>,
+) -> std::result::Result<ResourceCapturedProcess, ResourceCaptureError> {
     validate_sample_limits(sample_limits, required_roots.len()).map_err(|error| {
         ResourceCaptureError::Setup {
             error,
@@ -170,6 +194,7 @@ pub fn capture_with_resources(
         previous_groups: Vec::new(),
     };
     let result = process_capture::capture_observed(spec, capture_limits, cancelled, |event| {
+        additional_observer(event)?;
         observer.observe(event)
     });
     let report = observer.report;
