@@ -25,6 +25,7 @@ REQUIRED_SOURCES = (
     "tooling/crates/xtask/src/consumer_observe.rs",
     "tooling/crates/xtask/src/consumer_report.rs",
     "tooling/crates/xtask/src/consumer_runtime.rs",
+    "tooling/crates/xtask/src/legacy_migration_fixture.rs",
     "tooling/crates/xtask/src/native_release.rs",
     "tooling/crates/xtask/src/prepare_sigterm.rs",
     "tooling/fixtures/accepted-r1-inputs.json",
@@ -208,6 +209,7 @@ class NativeToolingMaterialsTests(unittest.TestCase):
             "tooling/crates/xtask/src/consumer_observe.rs",
             "tooling/crates/xtask/src/consumer_report.rs",
             "tooling/crates/xtask/src/consumer_runtime.rs",
+            "tooling/crates/xtask/src/legacy_migration_fixture.rs",
             "tooling/crates/xtask/src/prepare_sigterm.rs",
         )
         for path in sampler_sources:

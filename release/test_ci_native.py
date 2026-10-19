@@ -416,7 +416,11 @@ class NativeMatrixTests(unittest.TestCase):
     def test_completed_matrix_report_survives_later_retained_replay_failure(self):
         self._run_signed_package_lifecycle_matrix_case(fail_replay=True)
 
-    def _run_signed_package_lifecycle_matrix_case(self, *, fail_replay=False):
+    def test_retained_removal_refuses_changed_global_configuration(self):
+        self._run_signed_package_lifecycle_matrix_case(mutate_replay=True)
+
+    def _run_signed_package_lifecycle_matrix_case(self, *, fail_replay=False, mutate_replay=False):
+        (self.work / "home").mkdir(mode=0o700)
         outer = self.work / "outer"
         metadata = outer / "metadata"
         metadata.mkdir(parents=True)
@@ -472,6 +476,8 @@ class NativeMatrixTests(unittest.TestCase):
                 if executable == prepared_state / "retained/bin/ami-rust":
                     self.assertFalse(package.exists())
                     self.assertEqual(len(matrix_calls), 1)
+                    if mutate_replay:
+                        (self.work / "home/.cargo/config.toml").chmod(0o644)
                 return auth.encoded({"status": "PASS"})
             return b""
 
@@ -485,6 +491,14 @@ class NativeMatrixTests(unittest.TestCase):
             matrix_calls.append(True)
             return {"build_count": 10, "fixture": True}
 
+        def migration(*args):
+            self.assertEqual(len(matrix_calls), 1)
+            area = self.work / "native-legacy-migration-fixture"
+            area.mkdir(mode=0o700)
+            for name in ("project", "legacy-sdk", "output"):
+                (area / name).mkdir(mode=0o700)
+            return {"status": "SYNTHETIC_ORDER_FIXTURE_NO_MIGRATION_EVIDENCE"}
+
         # Composition is a stub in this lifecycle-order fixture. Supply inert
         # notice data locally so the test also works in the narrow installer
         # CI checkout; actual legal bytes are checked by package production.
@@ -497,10 +511,17 @@ class NativeMatrixTests(unittest.TestCase):
         with patch.object(native, "ROOT", fixture_source), \
                 patch.object(native, "_supervised_run", side_effect=compose), \
                 patch.object(native, "_qualify_native_build_matrix", side_effect=matrix), \
+                patch.object(native, "_qualify_native_migration", side_effect=migration) as migration_probe, \
                 patch.object(native, "_qualify_prepare_interruption", return_value={
                     "status": "SYNTHETIC_MATRIX_ORDER_FIXTURE_NO_SIGTERM_EVIDENCE"}) as interruption_probe:
             if fail_replay:
                 with self.assertRaisesRegex(ValueError, "isolated retained replay refusal"):
+                    native._qualify_native_package(
+                        self.work, self.output, outer, self.work / "bundle", self.frontend,
+                        self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
+                        identity, config, command)
+            elif mutate_replay:
+                with self.assertRaisesRegex(ValueError, "changed protected state/project/global config"):
                     native._qualify_native_package(
                         self.work, self.output, outer, self.work / "bundle", self.frontend,
                         self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
@@ -511,9 +532,16 @@ class NativeMatrixTests(unittest.TestCase):
                     self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
                     identity, config, command)
                 self.assertEqual(report["native_matrix"], {"build_count": 10, "fixture": True})
+                preservation = report["retained_removal_preservation"]
+                self.assertEqual(preservation["before"], preservation["after"])
+                self.assertEqual(set(preservation["before"]), {
+                    "ready_state_and_retained_tooling", "old_project", "global_cargo_config",
+                    "global_rustup_config", "unrelated_sdk", "user_data",
+                    "migration_project", "migration_legacy-sdk", "migration_output"})
         self.assertEqual(auth.parsed(auth.read(self.output / "native-build-matrix.json")),
                          {"build_count": 10, "fixture": True})
         interruption_probe.assert_called_once()
+        migration_probe.assert_called_once()
         self.assertEqual(commands[-2:], ["15-retained-input-recheck", "16-retained-offline-replay"])
         self.assertFalse(package.exists())
 
@@ -624,6 +652,45 @@ class NativeObservationSpecTests(unittest.TestCase):
         before = native._retained_state_snapshot(self.state)
         (self.state / "empty").mkdir()
         self.assertNotEqual(before, native._retained_state_snapshot(self.state))
+
+    def test_migration_binds_legacy_lock_and_reads_interpreter_without_execution(self):
+        legacy = self.work / "legacy"
+        legacy.mkdir(mode=0o700)
+        interpreter = legacy / "python"
+        interpreter.write_bytes(b"inert interpreter identity, never executed\n")
+        lock = legacy / "old-lock.json"
+        lock.write_bytes(auth.encoded({"schema": "ami-rust-project-lock-v1",
+                                      "host": {"python": str(interpreter)}}))
+        destination = self.work / "migration-output"
+        destination.mkdir(mode=0o700)
+        args = ["migrate", "--project", legacy, "--from-lock", lock,
+                "--output", destination / "native-lock.json"]
+        spec = self.spec(args)
+        self.assertEqual(spec["phase"], "lock")
+        self.assertEqual(spec["component_record"], str(lock))
+        self.assertIn({"path": str(lock), "sha256": auth.sha(lock.read_bytes())}, spec["bindings"])
+        self.assertEqual(spec["read_files"], [str(interpreter)])
+        self.assertIn(str(interpreter), spec["deny_exec"])
+        self.assertNotIn(str(interpreter), spec["executables"])
+        self.assertIn(str(destination), [row["path"] for row in spec["write_trees"]])
+        self.assertNotIn(str(legacy), [row["path"] for row in spec["write_trees"]])
+        lock.write_bytes(auth.encoded({"schema": "ami-rust-project-lock-v2"}))
+        with self.assertRaisesRegex(ValueError, "inert legacy v1"):
+            self.spec(args)
+        with self.assertRaisesRegex(ValueError, "explicit legacy lock and output"):
+            self.spec(["migrate", "--project", legacy])
+
+    def test_preservation_snapshot_detects_same_bytes_replaced_output(self):
+        root = self.work / "existing-output"
+        root.mkdir(mode=0o700)
+        target = root / "lock.json"
+        target.write_bytes(b"same accepted lock bytes\n")
+        before = native._preservation_snapshot({"output": root})
+        replacement = root / "replacement.json"
+        replacement.write_bytes(target.read_bytes())
+        replacement.replace(target)
+        self.assertEqual(target.read_bytes(), b"same accepted lock bytes\n")
+        self.assertNotEqual(before, native._preservation_snapshot({"output": root}))
 
     def test_disposable_retry_can_write_only_its_partial_state_to_expose_mutations(self):
         self.state.mkdir(mode=0o700)

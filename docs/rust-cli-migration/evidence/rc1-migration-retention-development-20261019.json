@@ -1,0 +1,141 @@
+{
+  "schema": "ami-rust-migration-retention-development-v1",
+  "recorded_utc": "2026-10-19T23:01:59.854787+00:00",
+  "scope": "Local macOS development plus Linux compile/lint. Does not establish fresh publisher authentication, full signed cold preparation, both-host acceptance, package-manager upgrade or RC1 acceptance.",
+  "source_files": {
+    "release/ci_auth.py": "7c4de27349d13d4ad0039a374187ddbc6817629a6e0db81995956bf5719303ba",
+    "release/ci_native.py": "c89873951ed03e382b784ab909417ab9de7570315352e547ab3e947c2bff6813",
+    "release/native-tooling-inputs.json": "66160aef3a6336497c27f633590c21560d1e32df491dc80c075527155491676c",
+    "release/test_ci_native.py": "a8d5ea0dc880d3e1863a98cf8170282091d3d1795ca24dbe635c841f6aa8f754",
+    "release/test_native_tooling_materials.py": "846c8ff8699eddb8ff4abd3d34774acabde061173438dd3c082c95d30df38481",
+    "tooling/crates/xtask/src/legacy_migration_fixture.rs": "6bacf932d76f18e96482c6fbf6a724b7089f2375201ce0fd712cb816147dfb87",
+    "tooling/crates/xtask/src/main.rs": "8cc6e715b3c64121992b0fdb65ea05d2d61a2a737946561fc3213b4431af93d4"
+  },
+  "reports": {
+    "components": {
+      "status": "PASS_MACOS_OBSERVER_AND_NULL_CONTROLS_LINUX_COMPILE_ONLY",
+      "sha256": "a428cc6ba906bc71862a9df690073f70c82aabfcfb16dfa88f2f5a7cf24f223b"
+    },
+    "historical_migration": {
+      "status": "PASS_ACTUAL_RETAINED_V1_TO_V2_PUBLIC_MIGRATION_WITHOUT_PYTHON_EXECUTION",
+      "sha256": "228eb932cec0be3f406c88e0be98e7dd3fff0cdd5ea04f76ec656844f03734be"
+    },
+    "generator": {
+      "status": "PASS_ACTUAL_RUST_FIXTURE_AND_UNCHANGED_OCCUPIED_REFUSAL",
+      "sha256": "f1df8127a8c684fea81f7ab32d665e3c7c0a547d99949bd996cc259c0efa30bd"
+    },
+    "coordinator": {
+      "status": "PASS_COMPLETE_LOCAL_PUBLIC_MIGRATION_COORDINATOR_PATH",
+      "sha256": "a25fd941efb09511db5afc6c5fab75bea14ff5e62ff34997f396e90a2fb60792"
+    },
+    "cli_build": {
+      "status": "PASS_CURRENT_PORTABLE_CLI_AND_CONSISTENCY_ONLY_PACKAGE",
+      "sha256": "d900ab2f5d2ced57c1a91105f84c300e33376ed19ac1bfb5241a198c4a272aec"
+    }
+  },
+  "public_cli": {
+    "sha256": "74a54bd07618b21692c2fac0326a965db39297a1d8ef2004916cbf100702bd7f",
+    "build_report_sha256": "d900ab2f5d2ced57c1a91105f84c300e33376ed19ac1bfb5241a198c4a272aec",
+    "current_compile_input_files_rechecked": 80,
+    "scope": "Current portable CLI build; only maintainer fixture code subsequently changed. Public CLI/core/embedded native input configuration remains byte-identical."
+  },
+  "retained_v1_project": {
+    "old_lock_sha256": "c0fd3660ac10c732461f92929e5f3155decf0c3f2a46447845e177632f5f34a0",
+    "old_sdk_manifest_sha256": "c9ad5878d4ef336ad3284d9993554677dadf421092d889548bc3e06f99f1a14e",
+    "status": "PASS_ACTUAL_RETAINED_V1_TO_V2_PUBLIC_MIGRATION_WITHOUT_PYTHON_EXECUTION",
+    "new_lock_schema": "ami-rust-project-lock-v2",
+    "migrated_lock_sha256": "acd4aa52c3aa25cf9b68267a8f2c033176a229e1a239f2e2fb55b92f84b1acb3",
+    "wrong_receipt_exit": 2,
+    "occupied_output_exit": 2,
+    "verified_new_lock": true,
+    "rebuild": {
+      "build_receipt_sha256": "3791597bb96627a956fc049861fdd55b5e7a4a0299507a89f6d4231159cc76dd",
+      "native_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69",
+      "reference_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69",
+      "status": "PASS_BYTE_EQUAL_TO_RETAINED_V1_NATIVE_EXECUTABLE"
+    },
+    "old_project_sdk_components_and_new_installation_unchanged": true,
+    "limitation": "Genuine retained 0.1.0 project data; new native installation is a separately identified synthetic consistency fixture, not authenticated publication."
+  },
+  "portable_ci_path": {
+    "status": "PASS_COMPLETE_LOCAL_PUBLIC_MIGRATION_COORDINATOR_PATH",
+    "effects_report_sha256": "e63f14b528c94bf575057247229a97c61a48150787bc1311b10d2e6bfdd52450",
+    "checks": [
+      "Rust synthetic v1 fixture generator with real baseline inventories and project SDK source copy",
+      "wrong receipt refuses without output",
+      "public migrate writes separate native v2 lock",
+      "occupied output refuses with exact native diagnostic and unchanged full output identity",
+      "native lock verification",
+      "actual offline migrated build reproduces original native ELF",
+      "complete byte/link/ownership/mode/inode/time snapshots of state/projects/legacy SDK/global Cargo and Rustup config/unrelated SDK and user data"
+    ],
+    "limitation": "Synthetic READY and installation wrapper in this local integration run; full protected signed both-host execution remains required."
+  },
+  "generator_controls": [
+    "mode0775 pinned interpreter is hashed as inert data without execution",
+    "occupied fixture output refuses unchanged",
+    "world-writable inert interpreter refuses before output creation",
+    "original ready state and project unchanged"
+  ],
+  "retained_removal": "Coordinator now compares complete before/after preservation digests after package removal and actual retained replay. A deliberately changed global Cargo config mode fails the internal fixture. Actual signed removal remains pending.",
+  "historical_survey_correction": "The earlier three-inventory mismatch came from a failed native-v2 source checkout. The separate retained local-adapter-a4 v1 SDK matches all six accepted baseline inventory references, passes its complete 93-file SDK inventory and the actual migration/rebuild above.",
+  "resources": {
+    "components": {
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      },
+      "rss_peak_bytes": 1304494080,
+      "workspace_peak_bytes": 8912273786
+    },
+    "historical_migration": {
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      },
+      "rss_peak_bytes": 2416640000,
+      "workspace_peak_bytes": 2173776389
+    },
+    "generator": {
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      },
+      "rss_peak_bytes": 74235904,
+      "workspace_peak_bytes": 2262858792
+    },
+    "coordinator": {
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      },
+      "rss_peak_bytes": 2415067136,
+      "workspace_peak_bytes": 1995083635
+    },
+    "cli_build": {
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      },
+      "rss_peak_bytes": 1320861696,
+      "workspace_peak_bytes": 2214490781
+    }
+  },
+  "history": "Failed a16 source-freeze check, a19 private-visibility compile error, missing adapter admission a2 and initial generator mode-policy refusal remain retained. Successful earlier results retain their original scope.",
+  "remaining": [
+    "Complete signed both-host cold/warm and migration/removal lifecycle under observation",
+    "Actual side-by-side version/state preservation on both hosts; package-manager upgrades remain RC3",
+    "Complete two-root/five-variant native and host-metadata/Serde comparison",
+    "RC1 acceptance then unchanged RC2-RC5 requirements"
+  ]
+}
