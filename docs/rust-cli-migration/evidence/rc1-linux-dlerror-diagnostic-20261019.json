@@ -1,0 +1,243 @@
+{
+  "schema": "ami-rust-pr100-acdb-hosted-result-v1",
+  "source_head": "acdbf0769e27faa299e0e46fb2a671c1b082a0a6",
+  "ci_merge": "f8936e8b7d43ac81467831ea2dcc0cc9be83490f",
+  "run_id": 39319786820,
+  "run_attempt": 1,
+  "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39319786820",
+  "conclusion": "failure",
+  "macos_job": "success",
+  "linux_job": "failure",
+  "host_evidence": [
+    {
+      "host": "linux",
+      "artifact_id": 12219477753,
+      "artifact_sha256": "e0d1eaa72f79aab40777db6caaea585266cae75e6d7118a4f81a5827270bf65e",
+      "artifact_bytes": 76230,
+      "artifact_file_count": 42,
+      "ci_checkout": {
+        "clean_checkout_verified": true,
+        "commit": "f8936e8b7d43ac81467831ea2dcc0cc9be83490f",
+        "tree": "654b9736bc1f90bea0371021afc4e4d5761abaec"
+      },
+      "parser_cases": 131,
+      "parser_report_sha256": "cac36e2eccf582e1eaaa54bfe2c6159d5b0b65e60a529a6fdc55a46df51b9ba9",
+      "historical_comparison": [
+        {
+          "kind": "transactions",
+          "cases": 9,
+          "report_sha256": "1437dc999ce3eb110f73fff27919b5466030c86e6b8f23d39f39d1ac7ea86a41",
+          "binding_sha256": "b9acd7ba4e554f796ab667bec3a91ea4a28c6b778edad6d806ba62b08f3e36a9",
+          "verified_source_count": 58
+        },
+        {
+          "kind": "filesystem",
+          "cases": 50,
+          "report_sha256": "865e0f281a7fec4b0f7e0157595171f1b3fe0fb783a75e3b932c492493cfdab3",
+          "binding_sha256": "d8565ae481f71480d593fb7cbc3298736be39ca55ed942eb2ec84915d9940b45",
+          "verified_source_count": 58
+        },
+        {
+          "kind": "receipt_lifecycle",
+          "cases": 2,
+          "report_sha256": "0b5f4d71be89a730adaf3eb8017e501f05780da2ed23647df7e1aa50ddfd2659",
+          "binding_sha256": "8d55665298a8bba96c053d0df6f91e5eb62261c587b815d7241147bd7b1c929b",
+          "verified_source_count": 61
+        }
+      ],
+      "historical_pair_count": 192,
+      "controls_status": "RUNNING",
+      "recorded_control_cases": [
+        "unconfined_direct",
+        "unconfined_transitive",
+        "unconfined_shebang",
+        "unconfined_embedded",
+        "native_descendant_missing_stdin",
+        "native_positive",
+        "restricted_direct",
+        "restricted_transitive",
+        "restricted_shebang"
+      ],
+      "adapter_reports": [
+        {
+          "name": "native_descendant_missing_stdin",
+          "sha256": "5e388084a20fab06ae4f6d53b3a5d0e8b68821056d40a436c9668618c89af1b5",
+          "child_exit_code": 2,
+          "child_signal": null
+        },
+        {
+          "name": "native_positive",
+          "sha256": "a68b1bc6a867a1b47036b1ff02d6b92b422cb01b44038c19dfd8b798c8ace589",
+          "child_exit_code": 0,
+          "child_signal": null
+        },
+        {
+          "name": "restricted_direct",
+          "sha256": "01dcbbd265aa048d719b40005efc1c8608893e1e7832fc71eca6a38fece36b71",
+          "child_exit_code": 0,
+          "child_signal": null
+        },
+        {
+          "name": "restricted_embedded",
+          "sha256": "68288ea15309eed82d054971652b77164835104765d3edc5c325c50beef2b903",
+          "child_exit_code": 77,
+          "child_signal": null
+        },
+        {
+          "name": "restricted_shebang",
+          "sha256": "108b2a814d86da44e4db06fc9b96868bbfc043ff32553ccc1bdf60939b1b51e8",
+          "child_exit_code": 0,
+          "child_signal": null
+        },
+        {
+          "name": "restricted_transitive",
+          "sha256": "f987d2388c92f810914b939619d7f5fb367384237fdcb0369ff2aafc60ae0008",
+          "child_exit_code": 0,
+          "child_signal": null
+        }
+      ],
+      "controls_report_sha256": "969d4fda3ef912e2d2792a3d9490a219968c3c90e868e6032874b1954fca7258"
+    },
+    {
+      "host": "macos",
+      "artifact_id": 12220125620,
+      "artifact_sha256": "3aa1c12ab9988f7fe937f512bc1c1b67d98ac66489aa3f20f35e27890ba61fc7",
+      "artifact_bytes": 73273,
+      "artifact_file_count": 39,
+      "ci_checkout": {
+        "clean_checkout_verified": true,
+        "commit": "f8936e8b7d43ac81467831ea2dcc0cc9be83490f",
+        "tree": "654b9736bc1f90bea0371021afc4e4d5761abaec"
+      },
+      "parser_cases": 131,
+      "parser_report_sha256": "6176cf441a41f85bbbfeb033eaf1ec23b8c9693f806f1ca0c3241e7cf7463d7c",
+      "historical_comparison": [
+        {
+          "kind": "transactions",
+          "cases": 9,
+          "report_sha256": "cfb99ae8ae78007915feefa46085c50404b1519dc0ebe8c795fe470b34b14bea",
+          "binding_sha256": "49b7db462122b1c4459dae1f86347ef19b05e5c49b880f35d07538b2dc7725d2",
+          "verified_source_count": 58
+        },
+        {
+          "kind": "filesystem",
+          "cases": 50,
+          "report_sha256": "285d49b422d7165179e55f79ad83b34e5249f47f6fce3e7a77baef1d9b8b1087",
+          "binding_sha256": "380afdca78226ea7622d58ece4908fa05fd9b58eae328e6b8ced5079dcddab3a",
+          "verified_source_count": 58
+        },
+        {
+          "kind": "receipt_lifecycle",
+          "cases": 2,
+          "report_sha256": "9c24282d4fcb0d80f36f882bdfbd889bd082c7bbe058ad6939937fdc1e4877dc",
+          "binding_sha256": "2537dc3d14ccb2629adc1a2b876eed9aa5c32d83a306840eb14f177e73d1ebc8",
+          "verified_source_count": 61
+        }
+      ],
+      "historical_pair_count": 192,
+      "controls_status": "PASS_NARROW_NATIVE_INTERPRETER_CONTROLS",
+      "recorded_control_cases": [
+        "unconfined_direct",
+        "unconfined_transitive",
+        "unconfined_shebang",
+        "unconfined_embedded",
+        "native_positive",
+        "restricted_direct",
+        "restricted_transitive",
+        "restricted_shebang",
+        "restricted_embedded"
+      ],
+      "adapter_reports": [
+        {
+          "name": "native_positive",
+          "sha256": "41cd9b0361dc0f1b02acc42354eca392581e20e304d7dfea72567555c532a0a4",
+          "child_exit_code": 0,
+          "child_signal": null
+        },
+        {
+          "name": "restricted_direct",
+          "sha256": "946edb8182c22b68a686c74ded2dff3a23dc7e8e3eb50ed35ad9fc3391a43433",
+          "child_exit_code": 0,
+          "child_signal": null
+        },
+        {
+          "name": "restricted_embedded",
+          "sha256": "bf46b46195d4a2d94961c044417901ee7e9277b36e56222e523c1eec4f873353",
+          "child_exit_code": 77,
+          "child_signal": null
+        },
+        {
+          "name": "restricted_shebang",
+          "sha256": "e1bad5d2f79beeb3bf2657c0cdec1ffd4f948e6460df8912f445761719a2008c",
+          "child_exit_code": 0,
+          "child_signal": null
+        },
+        {
+          "name": "restricted_transitive",
+          "sha256": "3a5fe90ff8d5b754b08482f492815139dcda323304f96aac6007fed930f4fbe0",
+          "child_exit_code": 0,
+          "child_signal": null
+        }
+      ],
+      "controls_report_sha256": "5fd42fb4211948288fbbd850ca8e693add116a6069db0d00af5589a4ce7c0f4f"
+    }
+  ],
+  "linux_failure": "The omitted-stdin counterprobe fails child exit2/no marker; the otherwise-identical allowed native descendant succeeds exit0/marker. Direct/transitive/shebang refusals succeed. Embedded load returns77 with no Python marker and exact-path Permission denied loader diagnostic; errno is0. The final assertion incorrectly requires dlopen errno13, which POSIX does not define. The exact corrected diagnostic test remains to be rerun.",
+  "scope": "Both hosts have192 narrow historical comparisons. Mac9 interpreter controls pass. Linux actual omitted-stdin/allowed-descendant differential and direct/transitive/shebang controls pass; embedded attempt returns77 and loaderPermissionDenied, but final wrongerrno assertion fails. That failure stays retained; exact corrected candidate must complete final effects/marker checks before Linux control acceptance. No full signed lifecycle, RC1 acceptance or release.",
+  "next_change": "Check the actual dlerror permission-denial reason and preserve errno as diagnostic data. Continue requiring exit77, exact librarypath, no Python marker, valid captures and the unconfined embedded positive. No kernel policy or executable/library/network allowance change.",
+  "diagnostic_reference": "https://pubs.opengroup.org/onlinepubs/9699919799/functions/dlopen.html",
+  "pending_correction": {
+    "path": "tooling/crates/xtask/tests/consumer_enforcement.rs",
+    "sha256": "bf69ea87edd3e9776c18f4a6f4aa147e43ea4720a1572e6c67eb14b87cff80c2",
+    "change": "Require the platform loader permission-denial diagnostic; retain dlopen errno only as raw data because POSIX defines no errno values for this API. Exit77, exact requested libpython path, missing Python marker and unconfined embedded positive remain required. No kernel policy changes.",
+    "component_gate": {
+      "report_sha256": "7e2098af3a2dd314e1c3ae2bea463697485cc97b3031238eee8a91d94d039508",
+      "driver_sha256": "20d45a33e6210f704ca50a3bab8bc6d810e14002b127c177732a4df97336cdf5",
+      "status": "PASS_FOCUSED_COMPONENT_CHECKS_NOT_LINUX_RUNTIME",
+      "commands": [
+        {
+          "label": "format-changed-integration-source",
+          "exit_code": 0,
+          "stop_reason": null
+        },
+        {
+          "label": "clone-prior-component-cache",
+          "exit_code": 0,
+          "stop_reason": null
+        },
+        {
+          "label": "strict-clippy",
+          "exit_code": 0,
+          "stop_reason": null
+        },
+        {
+          "label": "consumer-control-parser-tests",
+          "exit_code": 0,
+          "stop_reason": null
+        },
+        {
+          "label": "adapter-unit-tests",
+          "exit_code": 0,
+          "stop_reason": null
+        },
+        {
+          "label": "source-material-positive-negative-controls",
+          "exit_code": 0,
+          "stop_reason": null
+        },
+        {
+          "label": "workflow-lint",
+          "exit_code": 0,
+          "stop_reason": null
+        }
+      ],
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      }
+    },
+    "runtime_rerun": "PENDING_EXACT_CANDIDATE_CI"
+  }
+}

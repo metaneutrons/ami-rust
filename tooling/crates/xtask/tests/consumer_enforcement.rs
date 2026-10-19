@@ -499,15 +499,18 @@ fn native_interpreter_controls_are_refused_under_the_adapter_policy() -> Result<
         &python_library.display().to_string(),
         "restricted embedded denied library path",
     )?;
+    // POSIX reports dlopen failures through dlerror; it defines no errno
+    // value. Keep errno as raw diagnostic data, and require the actual loader
+    // permission-denial reason in addition to exit 77, path and no marker.
     let expected_denial = if platform == Platform::Linux {
-        "DLOPEN_DENIED errno=13"
+        "cannot open shared object file: Permission denied"
     } else {
-        "DLOPEN_DENIED errno=1"
+        "(blocked by sandbox)"
     };
     require_text(
         embedded.stderr.as_bytes(),
         expected_denial,
-        "restricted embedded denial errno",
+        "restricted embedded loader permission denial",
     )?;
     require_no_text(
         embedded.stdout.as_bytes(),
