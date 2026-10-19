@@ -253,7 +253,7 @@ jobs:
             --rust-bin-dir "$cli_rust" --cargo-home "$RUNNER_TEMP/ami-rust-rc0-cargo-home" \
             --output-dir "$RUNNER_TEMP/ami-rust-historical-parsers"
           mkdir -m 700 "$RUNNER_TEMP/ami-rust-historical-home" "$RUNNER_TEMP/ami-rust-historical-tmp"
-          for historical_test in transactions filesystem; do
+          for historical_test in transactions filesystem receipt_lifecycle; do
             env -i PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin" \
               HOME="$RUNNER_TEMP/ami-rust-historical-home" TMPDIR="$RUNNER_TEMP/ami-rust-historical-tmp" \
               RUSTC="$cli_rust/rustc" RUSTDOC="$cli_rust/rustdoc" \
@@ -287,6 +287,10 @@ jobs:
             ${{ runner.temp }}/ami-rust-historical-filesystem/report.json
             ${{ runner.temp }}/ami-rust-historical-filesystem/binding.json
             ${{ runner.temp }}/ami-rust-historical-filesystem/coordinator.*.raw
+            ${{ runner.temp }}/ami-rust-historical-receipt_lifecycle/report.json
+            ${{ runner.temp }}/ami-rust-historical-receipt_lifecycle/binding.json
+            ${{ runner.temp }}/ami-rust-historical-receipt_lifecycle/failure.json
+            ${{ runner.temp }}/ami-rust-historical-receipt_lifecycle/helper.*.raw
           if-no-files-found: error
           retention-days: 7
           compression-level: 9

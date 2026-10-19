@@ -25,6 +25,7 @@ REQUIRED_SOURCES = (
     "tooling/crates/xtask/src/native_release.rs",
     "tooling/fixtures/accepted-r1-inputs.json",
     "tooling/fixtures/accepted-r1-support-inputs.json",
+    "tooling/macos-host-selection.rs",
     "tools/bootstrap-host-rust.sh",
     "tools/build-native-cli.sh",
 )
@@ -130,6 +131,19 @@ class NativeToolingMaterialsTests(unittest.TestCase):
         self.assertEqual(result["materials"], [
             {"uri": uri, "digest": expected[uri]} for uri in sorted(expected)
         ])
+
+    def test_shared_macos_host_selector_is_digest_bound(self):
+        path = "tooling/macos-host-selection.rs"
+        result = auth.input_manifest_for_sdk(self.source, "0.2.0")
+        rows = {row["uri"]: row["digest"] for row in result["materials"]}
+        uri = f"git+https://github.com/{auth.REPO}#{path}"
+        self.assertEqual(rows[uri], {"sha256": digest(self.source_contents[path])})
+
+        changed = self.source_contents[path] + b"changed host selection\n"
+        self._write(path, changed)
+        result = auth.input_manifest_for_sdk(self.source, "0.2.0")
+        rows = {row["uri"]: row["digest"] for row in result["materials"]}
+        self.assertEqual(rows[uri], {"sha256": digest(changed)})
 
     def test_rejects_mismatched_lock_pin_and_capsule(self):
         self._set_config(lambda config: config["cargo_lock"].update(sha256="0" * 64))

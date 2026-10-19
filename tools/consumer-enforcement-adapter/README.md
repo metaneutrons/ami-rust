@@ -31,10 +31,35 @@ must be inside a declared writable root; transient generated tools additionally
 require reviewed source/build closure evidence. `read-library PATH SHA256`
 grants a separate, hash-checked library-mapping allowance: macOS permits file
 data reads and `file-map-executable` for that canonical regular file, without
-granting `process-exec`; Linux permits `READ_FILE` only. The adapter verifies
-the declared SHA-256 before and after the command. A library mapping cannot
-overlap an explicitly denied library, an executable allowance, or a writable
-tree.
+granting `process-exec`; Linux permits `READ_FILE` only. The policy path is the
+normalized absolute lookup spelling (no `.` or `..` components or repeated
+separators), which can contain genuine symlink components. The adapter retains
+that spelling and separately hashes the canonical regular-file target. On
+macOS, when the lookup spelling differs from the canonical target, the profile
+adds only exact `file-read-metadata` permission for the lookup path and the
+lookup prefixes whose spelling differs from their canonical target. This
+library rule grants file data and executable mapping only for the canonical
+target, and never adds the alias to `process-exec`. Independently declared
+`read-file` and `read-tree` scopes keep their own data-read permissions; an
+alias inside such a scope is not subject to a policy-wide metadata-only
+guarantee. Library hash/target checks and explicit deny rules still apply.
+
+Before and after the command the adapter resolves the lookup spelling and
+checks the canonical target path, target device/inode, and content hash. A
+retargeted lookup path or changed target identity is an evidence failure. Two
+distinct lookup spellings may map to the same canonical target when their
+expected hashes agree; duplicate spellings and inconsistent hashes are
+rejected. Lookup aliases are rejected when they overlap a child-writable tree
+or explicit denied library/executable paths, just as canonical targets are.
+The input and symlink lookup graph must remain trusted and immutable while the
+command runs. Before/after checks report persistent changes; they do not prove
+an atomic race-free lookup.
+
+The Linux backend is unchanged: Landlock `READ_FILE` applies to the canonical
+target and does not restrict metadata lookups, so the macOS alias-only metadata
+rule is not needed there. The adapter verifies the declared SHA-256 before and
+after the command. A library mapping cannot overlap an explicitly denied
+library, an executable allowance, or a writable tree.
 
 For output roots that do not exist before a fresh command, the policy directive
 is `exec-derived-tree ROLE EXISTING_EMPTY_PRIVATE_PARENT SOURCE_CLOSURE_SHA256`

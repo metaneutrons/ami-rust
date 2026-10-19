@@ -31,9 +31,13 @@ struct ExecDerivedTree {
 
 #[derive(Clone, Debug)]
 struct ReadLibraryRule {
+    lookup_path: PathBuf,
+    lookup_metadata_paths: Vec<PathBuf>,
     path: PathBuf,
     expected_sha256: String,
     pre_run_sha256: String,
+    pre_run_target_dev: u64,
+    pre_run_target_ino: u64,
 }
 
 #[derive(Debug, Default)]
@@ -72,9 +76,18 @@ struct ExecHashCheck {
 }
 
 struct ReadLibraryHashCheck {
+    lookup_path: PathBuf,
+    lookup_metadata_paths: Vec<PathBuf>,
     path: PathBuf,
     expected_sha256: String,
     pre_run_sha256: String,
+    pre_run_target_dev: u64,
+    pre_run_target_ino: u64,
+    post_run_lookup_target: Option<PathBuf>,
+    post_run_lookup_target_matches: bool,
+    post_run_target_dev: Option<u64>,
+    post_run_target_ino: Option<u64>,
+    post_run_target_identity_matches: bool,
     post_run_sha256: Option<String>,
     post_run_hash_matches: bool,
 }
@@ -231,12 +244,7 @@ fn run(args: &[String]) -> Result<i32, String> {
         }
     }
     for check in &library_hash_checks {
-        if !check.post_run_hash_matches {
-            evidence_failures.push(format!(
-                "declared library hash did not match after run: {}",
-                check.path.display()
-            ));
-        }
+        evidence_failures.extend(read_library_evidence_failures(check));
     }
     for (label, capture) in [("stdout", &out_capture), ("stderr", &err_capture)] {
         if let Some(error) = &capture.write_error {
@@ -305,6 +313,7 @@ fn parse_policy(text: &str) -> Result<Policy, String> {
     let mut future_derived = Vec::new();
     let mut pending_exec_derived_trees = Vec::new();
     let mut library_seen = BTreeSet::new();
+    let mut library_targets = BTreeMap::new();
     for (index, raw) in text.lines().enumerate() {
         let line = raw.trim();
         if line.is_empty() || line.starts_with('#') || line == "consumer-policy-v1" {
@@ -392,21 +401,74 @@ fn parse_policy(text: &str) -> Result<Policy, String> {
                     .rsplit_once(' ')
                     .ok_or_else(|| "read-library requires PATH SHA256".to_owned())?;
                 validate_hash(hash)?;
-                let path = existing_regular_file(path_text)?;
+                let lookup_path = normalized_absolute_lookup_path(path_text)?;
+                if !library_seen.insert(lookup_path.clone()) {
+                    return Err(format!(
+                        "duplicate read-library lookup path {}",
+                        lookup_path.display()
+                    ));
+                }
+                let path_text = lookup_path.to_string_lossy();
+                let path = existing_regular_file(&path_text)?;
+                let expected_sha256 = hash.to_ascii_lowercase();
+                if let Some(previous) = library_targets.get(&path) {
+                    if previous != &expected_sha256 {
+                        return Err(format!(
+                            "inconsistent read-library hashes for canonical target {}",
+                            path.display()
+                        ));
+                    }
+                }
+                let metadata = fs::symlink_metadata(&path).map_err(|error| {
+                    format!("inspect read-library target {}: {error}", path.display())
+                })?;
+                if !metadata.file_type().is_file() {
+                    return Err(format!(
+                        "read-library target is not a regular file: {}",
+                        path.display()
+                    ));
+                }
                 let actual = sha256_file(&path)?;
-                if actual != hash.to_ascii_lowercase() {
+                if actual != expected_sha256 {
                     return Err(format!(
                         "read-library hash mismatch for {}: expected {hash}, got {actual}",
                         path.display()
                     ));
                 }
-                if !library_seen.insert(path.clone()) {
-                    return Err(format!("duplicate read-library path {}", path.display()));
+                let lookup_target = fs::canonicalize(&lookup_path).map_err(|error| {
+                    format!(
+                        "recheck read-library lookup path {}: {error}",
+                        lookup_path.display()
+                    )
+                })?;
+                if lookup_target != path {
+                    return Err(format!(
+                        "read-library lookup target changed while hashing: {}",
+                        lookup_path.display()
+                    ));
                 }
+                let after_hash = fs::symlink_metadata(&path).map_err(|error| {
+                    format!("recheck read-library target {}: {error}", path.display())
+                })?;
+                if !after_hash.file_type().is_file()
+                    || metadata.dev() != after_hash.dev()
+                    || metadata.ino() != after_hash.ino()
+                {
+                    return Err(format!(
+                        "read-library target identity changed while hashing: {}",
+                        path.display()
+                    ));
+                }
+                library_targets.insert(path.clone(), expected_sha256.clone());
+                let lookup_metadata_paths = lookup_metadata_paths(&lookup_path)?;
                 policy.read_libraries.push(ReadLibraryRule {
+                    lookup_metadata_paths,
+                    lookup_path,
                     path,
-                    expected_sha256: hash.to_ascii_lowercase(),
+                    expected_sha256,
                     pre_run_sha256: actual,
+                    pre_run_target_dev: metadata.dev(),
+                    pre_run_target_ino: metadata.ino(),
                 });
             }
             "read-tree" => {
@@ -581,10 +643,9 @@ fn parse_policy(text: &str) -> Result<Policy, String> {
     dedup_paths(&mut policy.read_files)?;
     dedup_paths(&mut policy.read_directories)?;
     for denied in &policy.deny_library {
-        let overlaps_mapping = policy
-            .read_libraries
-            .iter()
-            .any(|library| paths_overlap(&library.path, denied));
+        let overlaps_mapping = policy.read_libraries.iter().any(|library| {
+            paths_overlap(&library.path, denied) || paths_overlap(&library.lookup_path, denied)
+        });
         let overlaps_read = policy
             .read_files
             .iter()
@@ -613,22 +674,35 @@ fn parse_policy(text: &str) -> Result<Policy, String> {
         }
     }
     for library in &policy.read_libraries {
-        let overlaps_execution = policy
-            .exec
-            .iter()
-            .any(|rule| paths_overlap(&rule.path, &library.path))
-            || policy
-                .exec_derived_trees
+        let protected_paths = [&library.path, &library.lookup_path];
+        let overlaps_execution = policy.exec.iter().any(|rule| {
+            protected_paths
                 .iter()
-                .any(|tree| paths_overlap(&tree.path, &library.path));
+                .any(|path| paths_overlap(path, &rule.path))
+        }) || policy.exec_derived_trees.iter().any(|tree| {
+            protected_paths
+                .iter()
+                .any(|path| paths_overlap(path, &tree.path))
+        });
+        let overlaps_denied_execution = policy.deny_exec.iter().any(|denied| {
+            protected_paths
+                .iter()
+                .any(|path| paths_overlap(path, denied))
+        });
+        if overlaps_denied_execution {
+            return Err(format!(
+                "read-library overlaps an explicitly denied executable path: {}",
+                library.lookup_path.display()
+            ));
+        }
         let overlaps_write = policy
             .write_trees
             .iter()
-            .any(|(_, root)| paths_overlap(root, &library.path));
+            .any(|(_, root)| protected_paths.iter().any(|path| paths_overlap(root, path)));
         if overlaps_execution || overlaps_write {
             return Err(format!(
                 "read-library overlaps an executable or writable allowance: {}",
-                library.path.display()
+                library.lookup_path.display()
             ));
         }
     }
@@ -666,6 +740,39 @@ fn existing_regular_file(path: &str) -> Result<PathBuf, String> {
         return Err(format!("not a regular file: {}", canonical.display()));
     }
     Ok(canonical)
+}
+
+// Traversing a directory alias needs metadata permission at each unresolved
+// spelling, not only at the eventual library name. Canonical data/map rules
+// remain separate and the complete lookup is rechecked after the command.
+fn lookup_metadata_paths(lookup: &Path) -> Result<Vec<PathBuf>, String> {
+    let mut paths = Vec::new();
+    for prefix in lookup.ancestors() {
+        let canonical = fs::canonicalize(prefix).map_err(|error| {
+            format!(
+                "resolve library lookup prefix {}: {error}",
+                prefix.display()
+            )
+        })?;
+        if canonical != prefix {
+            paths.push(prefix.to_path_buf());
+        }
+    }
+    Ok(paths)
+}
+
+fn normalized_absolute_lookup_path(path: &str) -> Result<PathBuf, String> {
+    let requested = absolute_path(path)?;
+    let mut components = path.split('/');
+    if components.next() != Some("")
+        || components.any(|component| component.is_empty() || component == "." || component == "..")
+        || path.as_bytes().contains(&0)
+    {
+        return Err(format!(
+            "read-library lookup path must be normalized without . or ..: {path}"
+        ));
+    }
+    Ok(requested)
 }
 
 fn existing_empty_private_parent(path: &str) -> Result<PathBuf, String> {
@@ -874,6 +981,12 @@ fn build_profile(policy: &Policy) -> String {
             "(allow file-read* file-map-executable (literal \"{}\"))\n",
             scheme_escape(&library.path.display().to_string())
         ));
+        for lookup in &library.lookup_metadata_paths {
+            out.push_str(&format!(
+                "(allow file-read-metadata (literal \"{}\"))\n",
+                scheme_escape(&lookup.display().to_string())
+            ));
+        }
     }
     for path in &policy.read_files {
         out.push_str(&format!(
@@ -1039,13 +1152,46 @@ fn report_json(
     let read_library_mappings = library_hash_checks
         .iter()
         .map(|check| {
+            let lookup_permissions = if check.lookup_path == check.path {
+                "[]".to_owned()
+            } else {
+                format!("[{}]", json("file-read-metadata"))
+            };
+            let post_target_identity = match (
+                check.post_run_target_dev,
+                check.post_run_target_ino,
+            ) {
+                (Some(device), Some(inode)) => {
+                    format!("{{\"device\":{device},\"inode\":{inode}}}")
+                }
+                _ => "null".to_owned(),
+            };
             format!(
-                "{{\"path\":{},\"identity\":\"library-sha256\",\"expected_sha256\":{},\"permissions\":[\"file-read*\",\"file-map-executable\"],\"process_exec\":false,\"hash_verified_before_run\":{},\"pre_run_sha256\":{},\"post_run_sha256\":{},\"post_run_hash_matches\":{}}}",
+                "{{\"path\":{},\"identity\":\"library-sha256\",\"lookup_path\":{},\"canonical_path\":{},\"lookup_is_alias\":{},\"permissions\":[\"file-read*\",\"file-map-executable\"],\"lookup_metadata_paths\":[{}],\"lookup_permissions\":{},\"process_exec\":false,\"hash_verified_before_run\":{},\"pre_run_sha256\":{},\"expected_sha256\":{},\"pre_run_lookup_target\":{},\"post_run_lookup_target\":{},\"post_run_lookup_target_matches\":{},\"pre_run_target_identity\":{{\"device\":{},\"inode\":{}}},\"post_run_target_identity\":{},\"post_run_target_identity_matches\":{},\"post_run_sha256\":{},\"post_run_hash_matches\":{}}}",
                 json(&check.path.display().to_string()),
-                json(&check.expected_sha256),
+                json(&check.lookup_path.display().to_string()),
+                json(&check.path.display().to_string()),
+                check.lookup_path != check.path,
+                check.lookup_metadata_paths.iter().map(|path| json(&path.display().to_string())).collect::<Vec<_>>().join(","),
+                lookup_permissions,
                 check.pre_run_sha256 == check.expected_sha256,
                 json(&check.pre_run_sha256),
-                check.post_run_sha256.as_ref().map(|hash| json(hash)).unwrap_or_else(|| "null".to_owned()),
+                json(&check.expected_sha256),
+                json(&check.path.display().to_string()),
+                check
+                    .post_run_lookup_target
+                    .as_ref()
+                    .map(|path| json(&path.display().to_string()))
+                    .unwrap_or_else(|| "null".to_owned()),
+                check.post_run_lookup_target_matches,
+                check.pre_run_target_dev,
+                check.pre_run_target_ino,
+                post_target_identity,
+                check.post_run_target_identity_matches,
+                check.post_run_sha256
+                    .as_ref()
+                    .map(|hash| json(hash))
+                    .unwrap_or_else(|| "null".to_owned()),
                 check.post_run_hash_matches,
             )
         })
@@ -1201,11 +1347,18 @@ fn verify_read_library_hashes(policy: &Policy) -> Vec<ReadLibraryHashCheck> {
         .read_libraries
         .iter()
         .map(|library| {
-            let remains_canonical =
-                fs::canonicalize(&library.path).ok().as_deref() == Some(library.path.as_path());
-            let remains_regular = fs::symlink_metadata(&library.path)
-                .is_ok_and(|metadata| metadata.file_type().is_file());
-            let post_run_sha256 = if remains_canonical && remains_regular {
+            let post_run_lookup_target = fs::canonicalize(&library.lookup_path).ok();
+            let post_run_lookup_target_matches =
+                post_run_lookup_target.as_ref() == Some(&library.path);
+            let post_metadata = fs::symlink_metadata(&library.path)
+                .ok()
+                .filter(|metadata| metadata.file_type().is_file());
+            let post_run_target_dev = post_metadata.as_ref().map(|metadata| metadata.dev());
+            let post_run_target_ino = post_metadata.as_ref().map(|metadata| metadata.ino());
+            let post_run_target_identity_matches = post_run_target_dev
+                == Some(library.pre_run_target_dev)
+                && post_run_target_ino == Some(library.pre_run_target_ino);
+            let post_run_sha256 = if post_metadata.is_some() {
                 sha256_file(&library.path).ok()
             } else {
                 None
@@ -1213,14 +1366,46 @@ fn verify_read_library_hashes(policy: &Policy) -> Vec<ReadLibraryHashCheck> {
             let post_run_hash_matches =
                 post_run_sha256.as_deref() == Some(library.expected_sha256.as_str());
             ReadLibraryHashCheck {
+                lookup_path: library.lookup_path.clone(),
+                lookup_metadata_paths: library.lookup_metadata_paths.clone(),
                 path: library.path.clone(),
                 expected_sha256: library.expected_sha256.clone(),
                 pre_run_sha256: library.pre_run_sha256.clone(),
+                pre_run_target_dev: library.pre_run_target_dev,
+                pre_run_target_ino: library.pre_run_target_ino,
+                post_run_lookup_target,
+                post_run_lookup_target_matches,
+                post_run_target_dev,
+                post_run_target_ino,
+                post_run_target_identity_matches,
                 post_run_sha256,
                 post_run_hash_matches,
             }
         })
         .collect()
+}
+
+fn read_library_evidence_failures(check: &ReadLibraryHashCheck) -> Vec<String> {
+    let mut failures = Vec::new();
+    if !check.post_run_lookup_target_matches {
+        failures.push(format!(
+            "read-library lookup path no longer resolves to the declared canonical target: {}",
+            check.lookup_path.display()
+        ));
+    }
+    if !check.post_run_target_identity_matches {
+        failures.push(format!(
+            "declared read-library target identity changed after run: {}",
+            check.path.display()
+        ));
+    }
+    if !check.post_run_hash_matches {
+        failures.push(format!(
+            "declared library hash did not match after run: {}",
+            check.path.display()
+        ));
+    }
+    failures
 }
 
 fn control(args: &[String]) -> Result<(), String> {
@@ -1640,6 +1825,326 @@ mod tests {
 
         fs::write(&library, b"changed library").expect("mutate library fixture");
         assert!(!verify_read_library_hashes(&policy)[0].post_run_hash_matches);
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn read_library_alias_grants_metadata_only_on_lookup_spelling() {
+        let root = private_test_root("read-library-alias");
+        let target_dir = root.join("real-xcode");
+        let lookup_dir =
+            root.join("xcode-select/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang");
+        let second_lookup_dir =
+            root.join("xcode-current/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang");
+        create_private_directory(&target_dir);
+        create_private_directory(&lookup_dir);
+        create_private_directory(&second_lookup_dir);
+        let canonical_library = target_dir.join("libclang.dylib");
+        let lookup_component = lookup_dir.join("Current");
+        let second_lookup_component = second_lookup_dir.join("Current");
+        let lookup_path = lookup_component.join("libclang.dylib");
+        let second_lookup_path = second_lookup_component.join("libclang.dylib");
+        fs::write(&canonical_library, b"selected Xcode clang library")
+            .expect("write canonical library fixture");
+        std::os::unix::fs::symlink(&target_dir, &lookup_component)
+            .expect("create Xcode lookup alias");
+        std::os::unix::fs::symlink(&target_dir, &second_lookup_component)
+            .expect("create second stable lookup alias");
+        let digest = sha256_file(&canonical_library).expect("hash canonical library");
+        let executable = executable_path();
+        let policy_text = format!(
+            "consumer-policy-v1\nexec {}\nread-library {} {}\nread-library {} {}\n",
+            executable.display(),
+            lookup_path.display(),
+            digest,
+            second_lookup_path.display(),
+            digest
+        );
+        let policy = parse_policy(&policy_text).expect("accept distinct aliases of one target");
+        assert_eq!(policy.read_libraries.len(), 2);
+        assert_eq!(policy.read_libraries[0].lookup_path, lookup_path);
+        assert_eq!(policy.read_libraries[0].path, canonical_library);
+        assert_eq!(policy.read_libraries[1].lookup_path, second_lookup_path);
+        assert_eq!(policy.read_libraries[1].path, canonical_library);
+
+        let profile = build_profile(&policy);
+        for directory_alias in [&lookup_component, &second_lookup_component] {
+            assert!(profile.contains(&format!(
+                "(allow file-read-metadata (literal \"{}\"))",
+                directory_alias.display()
+            )));
+            assert!(!profile.contains(&format!(
+                "(allow file-read* file-map-executable (literal \"{}\"))",
+                directory_alias.display()
+            )));
+        }
+        for alias in [&lookup_path, &second_lookup_path] {
+            assert!(profile.contains(&format!(
+                "(allow file-read-metadata (literal \"{}\"))",
+                alias.display()
+            )));
+            assert!(!profile.contains(&format!(
+                "(allow file-read* file-map-executable (literal \"{}\"))",
+                alias.display()
+            )));
+            assert!(!profile.contains(&format!(
+                "(allow file-read* (literal \"{}\"))",
+                alias.display()
+            )));
+        }
+        assert!(profile.contains(&format!(
+            "(allow file-read* file-map-executable (literal \"{}\"))",
+            canonical_library.display()
+        )));
+        let process_exec = profile
+            .split("(allow process-exec")
+            .nth(1)
+            .expect("process-exec rule")
+            .split(')')
+            .next()
+            .expect("process-exec rule body");
+        assert!(!process_exec.contains(&lookup_path.display().to_string()));
+        assert!(!process_exec.contains(&canonical_library.display().to_string()));
+
+        let checks = verify_read_library_hashes(&policy);
+        assert_eq!(checks.len(), 2);
+        assert!(checks.iter().all(|check| {
+            check.post_run_lookup_target_matches
+                && check.post_run_target_identity_matches
+                && check.post_run_hash_matches
+        }));
+        assert!(
+            checks
+                .iter()
+                .all(|check| read_library_evidence_failures(check).is_empty())
+        );
+        let report = report_json(
+            Path::new("/policy"),
+            Path::new("/profile"),
+            &executable,
+            &[],
+            1,
+            2,
+            Some(0),
+            None,
+            Path::new("/stdout"),
+            Path::new("/stderr"),
+            &test_capture(),
+            &test_capture(),
+            None,
+            &[],
+            &verify_exec_hashes(&policy),
+            &checks,
+            &policy,
+        );
+        assert!(report.contains(&format!(
+            "\"lookup_path\":\"{}\",\"canonical_path\":\"{}\",\"lookup_is_alias\":true",
+            lookup_path.display(),
+            canonical_library.display()
+        )));
+        assert!(report.contains("\"lookup_permissions\":[\"file-read-metadata\"]"));
+        assert!(report.contains("\"post_run_lookup_target_matches\":true"));
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn read_library_alias_retargeting_fails_post_run_evidence() {
+        let root = private_test_root("read-library-retarget");
+        let original_dir = root.join("original");
+        let replacement_dir = root.join("replacement");
+        let lookup_dir = root.join("lookup");
+        create_private_directory(&original_dir);
+        create_private_directory(&replacement_dir);
+        create_private_directory(&lookup_dir);
+        let original = original_dir.join("libclang.dylib");
+        let replacement = replacement_dir.join("libclang.dylib");
+        let lookup_component = lookup_dir.join("Current");
+        let lookup = lookup_component.join("libclang.dylib");
+        fs::write(&original, b"same bytes for both targets").expect("write original target");
+        fs::write(&replacement, b"same bytes for both targets").expect("write replacement target");
+        std::os::unix::fs::symlink(&original_dir, &lookup_component)
+            .expect("create initial lookup directory alias");
+        let digest = sha256_file(&original).expect("hash declared target");
+        let executable = executable_path();
+        let policy_text = format!(
+            "consumer-policy-v1\nexec {}\nread-library {} {}\n",
+            executable.display(),
+            lookup.display(),
+            digest
+        );
+        let policy = parse_policy(&policy_text).expect("accept stable initial alias");
+
+        fs::remove_file(&lookup_component).expect("remove initial lookup directory alias");
+        std::os::unix::fs::symlink(&replacement_dir, &lookup_component)
+            .expect("retarget lookup directory alias to same-content file");
+        let check = verify_read_library_hashes(&policy)
+            .pop()
+            .expect("one library identity check");
+        assert_eq!(
+            check.post_run_lookup_target.as_deref(),
+            Some(replacement.as_path())
+        );
+        assert!(!check.post_run_lookup_target_matches);
+        assert!(check.post_run_target_identity_matches);
+        assert!(check.post_run_hash_matches);
+        let failures = read_library_evidence_failures(&check);
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("lookup path no longer resolves"));
+        assert!(failures[0].contains(&lookup.display().to_string()));
+
+        let report = report_json(
+            Path::new("/policy"),
+            Path::new("/profile"),
+            &executable,
+            &[],
+            1,
+            2,
+            Some(0),
+            None,
+            Path::new("/stdout"),
+            Path::new("/stderr"),
+            &test_capture(),
+            &test_capture(),
+            None,
+            &failures,
+            &verify_exec_hashes(&policy),
+            &[check],
+            &policy,
+        );
+        assert!(report.contains("\"qualification_evidence_valid\":false"));
+        assert!(report.contains("\"post_run_lookup_target_matches\":false"));
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn read_library_lookup_paths_are_normalized_and_conflicts_include_aliases() {
+        let root = private_test_root("read-library-alias-conflicts");
+        let target_dir = root.join("target");
+        let lookup_dir = root.join("lookup");
+        let second_lookup_dir = root.join("lookup-two");
+        let write_tree = root.join("write-tree");
+        create_private_directory(&target_dir);
+        create_private_directory(&lookup_dir);
+        create_private_directory(&second_lookup_dir);
+        create_private_directory(&write_tree);
+        let target = target_dir.join("libfixture.dylib");
+        let lookup = lookup_dir.join("libfixture.dylib");
+        let second_lookup = second_lookup_dir.join("libfixture.dylib");
+        fs::write(&target, b"alias conflict fixture").expect("write target fixture");
+        std::os::unix::fs::symlink(&target, &lookup).expect("create lookup alias");
+        std::os::unix::fs::symlink(&target, &second_lookup).expect("create second alias");
+        let digest = sha256_file(&target).expect("hash fixture target");
+        let executable = executable_path();
+
+        let duplicate = format!(
+            "consumer-policy-v1\nexec {}\nread-library {} {}\nread-library {} {}\n",
+            executable.display(),
+            lookup.display(),
+            digest,
+            lookup.display(),
+            digest
+        );
+        assert!(
+            parse_policy(&duplicate)
+                .expect_err("reject duplicate lookup spelling")
+                .contains("duplicate read-library lookup path")
+        );
+        let dot_path = format!(
+            "{}/./{}",
+            lookup.parent().expect("lookup parent").display(),
+            lookup
+                .file_name()
+                .expect("lookup filename")
+                .to_string_lossy()
+        );
+        let unnormalized = format!(
+            "consumer-policy-v1\nexec {}\nread-library {} {}\n",
+            executable.display(),
+            dot_path,
+            digest
+        );
+        assert!(
+            parse_policy(&unnormalized)
+                .expect_err("reject dot component")
+                .contains("must be normalized")
+        );
+        let parent_path = format!(
+            "{}/../{}/{}",
+            lookup.parent().expect("lookup parent").display(),
+            lookup
+                .parent()
+                .expect("lookup parent")
+                .file_name()
+                .expect("lookup parent name")
+                .to_string_lossy(),
+            lookup
+                .file_name()
+                .expect("lookup filename")
+                .to_string_lossy()
+        );
+        let unnormalized = format!(
+            "consumer-policy-v1\nexec {}\nread-library {} {}\n",
+            executable.display(),
+            parent_path,
+            digest
+        );
+        assert!(
+            parse_policy(&unnormalized)
+                .expect_err("reject parent component")
+                .contains("must be normalized")
+        );
+
+        let inconsistent = format!(
+            "consumer-policy-v1\nexec {}\nread-library {} {}\nread-library {} {}\n",
+            executable.display(),
+            lookup.display(),
+            digest,
+            second_lookup.display(),
+            "0".repeat(64)
+        );
+        assert!(
+            parse_policy(&inconsistent)
+                .expect_err("reject inconsistent hashes for one canonical target")
+                .contains("inconsistent read-library hashes")
+        );
+
+        let denied_library = format!(
+            "consumer-policy-v1\nexec {}\nread-library {} {}\ndeny-library {}\n",
+            executable.display(),
+            lookup.display(),
+            digest,
+            lookup.display()
+        );
+        assert!(
+            parse_policy(&denied_library)
+                .expect_err("reject a denied lookup alias")
+                .contains("deny-library overlaps")
+        );
+        let denied_executable = format!(
+            "consumer-policy-v1\nexec {}\nread-library {} {}\ndeny-exec {}\n",
+            executable.display(),
+            lookup.display(),
+            digest,
+            lookup.display()
+        );
+        assert!(
+            parse_policy(&denied_executable)
+                .expect_err("reject an explicitly denied executable alias")
+                .contains("explicitly denied executable")
+        );
+        let writable_alias = format!(
+            "consumer-policy-v1\nexec {}\nwrite-tree work {}\nread-library {} {}\n",
+            executable.display(),
+            lookup_dir.display(),
+            lookup.display(),
+            digest
+        );
+        assert!(
+            parse_policy(&writable_alias)
+                .expect_err("reject a lookup alias inside a child writable tree")
+                .contains("executable or writable allowance")
+        );
+
         fs::remove_dir_all(root).expect("remove test root");
     }
 

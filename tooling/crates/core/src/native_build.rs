@@ -151,7 +151,13 @@ pub fn run_build(
 
     install_build_tool_aliases(&bin, &output_path, &selected)?;
 
-    let recipe = NativeBuildRecipe::new(
+    let campaign_start = Instant::now();
+    let mut command_records = Vec::new();
+    #[cfg(target_os = "macos")]
+    let host_tools = SelectedMacosHost::select(&mut session, campaign_start, &mut command_records)?;
+
+    #[allow(unused_mut)]
+    let mut recipe = NativeBuildRecipe::new(
         NativeRecipePaths {
             source_root: checked.installation.path().join("sdk"),
             output_root: output_path.clone(),
@@ -181,10 +187,14 @@ pub fn run_build(
         checked.lock.host.platform,
         checked.selected_inputs.recipe.source_date_epoch,
     );
+    #[cfg(target_os = "macos")]
+    recipe.select_macos_host_tools(
+        host_tools.selection.clang.canonical_path.clone(),
+        host_tools.selection.sdk.canonical_path.clone(),
+    )?;
     let cargo_config = recipe.cargo_config_toml(&options)?;
     write_new_file(&cargo_home, "config.toml", cargo_config.as_bytes(), 0o600)?;
 
-    let campaign_start = Instant::now();
     let probe_environment = remove_registry_credentials(session.environment());
     let rustc_probe = CommandSpec::new(
         selected.rustc.as_os_str().to_os_string(),
@@ -236,7 +246,6 @@ pub fn run_build(
         .ok_or_else(|| Refusal::new("Cargo probe returned no captured output"))?;
     let cargo_version = utf8_output(&cargo_probe_output.stdout, "cargo -Vv output")?;
 
-    let mut command_records = Vec::new();
     for command in recipe.c_compile_commands(&options)? {
         let observed = run_observed(
             &mut session,
@@ -384,6 +393,12 @@ pub fn run_build(
         ));
     }
 
+    #[cfg(target_os = "macos")]
+    let macos_host_tools_receipt =
+        host_tools.recheck(&mut session, campaign_start, &mut command_records)?;
+    #[cfg(not(target_os = "macos"))]
+    let macos_host_tools_receipt = Value::Null;
+
     // Cargo target outputs have been moved into the canonical artifact tree;
     // retiring the private scratch tree happens before the PASS receipt.
     fs::remove_dir_all(output_path.join("work"))?;
@@ -404,6 +419,7 @@ pub fn run_build(
         "status": "PASS",
         "claim": "native build only; runtime and release qualification require separate evidence",
         "host": host_key(checked.lock.host.platform),
+        "macos_host_tools": macos_host_tools_receipt,
         // This is the stable Rust host profile. The former Python backend used
         // platform.platform(), a descriptive string that varies by interpreter.
         "platform": host_key(checked.lock.host.platform),
@@ -439,6 +455,138 @@ pub fn run_build(
         native_executable: Some(executable_path),
         receipt: Some(output_path.join("build-receipt.json")),
     })
+}
+
+#[cfg(target_os = "macos")]
+struct SelectedMacosHost {
+    selection: crate::macos_host_selection::HostSelection,
+    selector_sha256: String,
+    input_sha256: BTreeMap<PathBuf, String>,
+}
+
+#[cfg(target_os = "macos")]
+impl SelectedMacosHost {
+    fn select(
+        session: &mut ConsumerSession<'_>,
+        started: Instant,
+        commands: &mut Vec<Value>,
+    ) -> Result<Self> {
+        let selector_sha256 = sha256_file(Path::new("/usr/bin/xcode-select"))?;
+        let selected =
+            selected_developer_directory(session, started, commands, "MacOS-host-select")?;
+        let selection = crate::macos_host_selection::resolve_selected(&selected)
+            .map_err(|error| Refusal::new(format!("macOS host-tool selection failed: {error}")))?;
+        let input_sha256 = [
+            &selection.clang,
+            &selection.linker,
+            &selection.sdk_settings_json,
+            &selection.sdk_settings_plist,
+        ]
+        .into_iter()
+        .map(|identity| {
+            Ok((
+                identity.canonical_path.clone(),
+                sha256_file(&identity.canonical_path)?,
+            ))
+        })
+        .collect::<Result<BTreeMap<_, _>>>()?;
+        Ok(Self {
+            selection,
+            selector_sha256,
+            input_sha256,
+        })
+    }
+
+    fn recheck(
+        &self,
+        session: &mut ConsumerSession<'_>,
+        started: Instant,
+        commands: &mut Vec<Value>,
+    ) -> Result<Value> {
+        let current =
+            selected_developer_directory(session, started, commands, "MacOS-host-recheck")?;
+        if current != self.selection.developer_directory.requested_path
+            || sha256_file(Path::new("/usr/bin/xcode-select"))? != self.selector_sha256
+        {
+            return Err(Refusal::new(
+                "selected macOS developer directory or selector changed during build",
+            ));
+        }
+        self.selection
+            .recheck()
+            .map_err(|error| Refusal::new(format!("macOS host-tool recheck failed: {error}")))?;
+        for (path, digest) in &self.input_sha256 {
+            if sha256_file(path)? != *digest {
+                return Err(Refusal::new(
+                    "selected macOS host-tool or SDK metadata bytes changed during build",
+                ));
+            }
+        }
+        let selected = &self.selection;
+        let identities = [
+            ("installation", &selected.installation_root),
+            ("developer_directory", &selected.developer_directory),
+            ("clang", &selected.clang),
+            ("linker", &selected.linker),
+            ("sdk", &selected.sdk),
+            ("sdk_settings_json", &selected.sdk_settings_json),
+            ("sdk_settings_plist", &selected.sdk_settings_plist),
+        ]
+        .into_iter()
+        .map(|(name, entry)| {
+            Ok((
+                name,
+                json!({
+                    "requested_path": path_text(&entry.requested_path)?,
+                    "canonical_path": path_text(&entry.canonical_path)?,
+                    "uid": entry.uid, "gid": entry.gid, "mode": entry.mode,
+                    "device": entry.device, "inode": entry.inode, "bytes": entry.bytes,
+                    "modified_seconds": entry.modified_seconds,
+                    "modified_nanoseconds": entry.modified_nanoseconds,
+                    "sha256": self.input_sha256.get(&entry.canonical_path),
+                }),
+            ))
+        })
+        .collect::<Result<BTreeMap<_, _>>>()?;
+        Ok(json!({
+            "layout": selected.layout.as_str(),
+            "selector": "/usr/bin/xcode-select",
+            "selector_sha256": self.selector_sha256,
+            "identities": identities,
+            "rechecked": true,
+            "scope": "native host build scripts and procedural macros; AROS target inputs unchanged",
+        }))
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn selected_developer_directory(
+    session: &mut ConsumerSession<'_>,
+    started: Instant,
+    commands: &mut Vec<Value>,
+    label: &str,
+) -> Result<PathBuf> {
+    let spec = CommandSpec::new(
+        "/usr/bin/xcode-select",
+        vec![OsString::from("-p")],
+        session.path(),
+        remove_registry_credentials(session.environment()),
+    );
+    let observed = run_observed(session, started, label, spec, commands, true)?;
+    if let Some(code) = observed.failure_exit_code {
+        return Err(Refusal::new("macOS developer-directory selection failed").with_exit_code(code));
+    }
+    let output = observed
+        .output
+        .ok_or_else(|| Refusal::new("macOS selector returned no output"))?;
+    let text = utf8_output(&output.stdout, "xcode-select -p output")?;
+    let path = text.strip_suffix('\n').unwrap_or(&text);
+    if path.is_empty() || path.contains(['\n', '\r', '\0']) {
+        return Err(Refusal::new(
+            "macOS selector did not return one developer directory",
+        ));
+    }
+    Ok(PathBuf::from(path))
 }
 
 struct SelectedTools {
