@@ -400,6 +400,7 @@ pub fn run_build(
     }
 
     let receipt = json!({
+        "schema": "ami-rust-native-build-receipt-v1",
         "status": "PASS",
         "claim": "native build only; runtime and release qualification require separate evidence",
         "host": host_key(checked.lock.host.platform),

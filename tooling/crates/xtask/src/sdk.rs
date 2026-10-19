@@ -1,9 +1,10 @@
 //! Draft an unsigned native SDK-v2 archive from retained legacy SDK members.
 //!
-//! The accepted R1 baseline is compiled into this tool. Target source files and
-//! host component manifests are copied byte-for-byte only when their sizes and
-//! SHA-256 digests match that baseline. This module does not authenticate the
-//! producer, qualify a release, or publish the returned draft.
+//! The accepted R1 baseline is compiled into this tool. Target source files,
+//! the qualification C-bind support header, and host component manifests are
+//! copied byte-for-byte only when their sizes and SHA-256 digests match their
+//! compiled baselines. This module does not authenticate the producer, qualify
+//! a release, or publish the returned draft.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
@@ -20,8 +21,14 @@ use lzma_rust2::{XzOptions, XzWriter};
 use serde_json::{Map, Value};
 
 const ACCEPTED_BASELINE: &[u8] = include_bytes!("../../../fixtures/accepted-r1-inputs.json");
+const ACCEPTED_SUPPORT_INPUTS: &[u8] =
+    include_bytes!("../../../fixtures/accepted-r1-support-inputs.json");
 const BASELINE_SCHEMA: &str = "ami-rust-accepted-r1-inputs-v1";
+const SUPPORT_BASELINE_SCHEMA: &str = "ami-rust-accepted-r1-support-inputs-v1";
 const BASELINE_VERSION: &str = "0.1.0";
+const SUPPORT_INPUT_PATH: &str = "scripts/measurement/m1_measurement.h";
+const SOURCE_SDK_ARCHIVE_SHA256: &str =
+    "087f69659f1d0d5136b2c07789488c23dd52ca7b38b21579183620a5fbc61dd4";
 const SDK_SCHEMA: &str = "ami-rust-sdk-v2";
 const SDK_DRIVER: &str = "ami-rust-native-compatibility-v1";
 const SDK_MANIFEST_PATH: &str = "contract/sdk.json";
@@ -80,6 +87,7 @@ struct AcceptedBaseline {
     rust_llvm: String,
     source_date_epoch: u64,
     target_inputs: BTreeMap<String, FileIdentity>,
+    support_inputs: BTreeMap<String, FileIdentity>,
     component_manifests: BTreeMap<String, FileIdentity>,
 }
 
@@ -145,11 +153,48 @@ fn load_accepted_baseline() -> Result<AcceptedBaseline> {
         ));
     }
 
+    let support = parse_json_value(ACCEPTED_SUPPORT_INPUTS, JsonProfile::SdkComponentManifest)?;
+    let support_object = support
+        .as_object()
+        .filter(|object| {
+            object.len() == 3
+                && object.contains_key("schema")
+                && object.contains_key("source_sdk_archive_sha256")
+                && object.contains_key("files")
+        })
+        .ok_or_else(|| Refusal::new("compiled accepted R1 support baseline has invalid fields"))?;
+    if string_field(&support, "schema")? != SUPPORT_BASELINE_SCHEMA
+        || string_field(&support, "source_sdk_archive_sha256")? != SOURCE_SDK_ARCHIVE_SHA256
+        || !is_sha256_digest(SOURCE_SDK_ARCHIVE_SHA256)
+    {
+        return Err(Refusal::new(
+            "compiled accepted R1 support baseline source identity is unsupported",
+        ));
+    }
+    let support_inputs = parse_identity_rows(
+        support_object
+            .get("files")
+            .ok_or_else(|| Refusal::new("compiled accepted R1 support files are missing"))?,
+        "accepted R1 support input",
+        Some(1),
+    )?;
+    if support_inputs
+        .keys()
+        .map(String::as_str)
+        .collect::<BTreeSet<_>>()
+        != BTreeSet::from([SUPPORT_INPUT_PATH])
+    {
+        return Err(Refusal::new(
+            "compiled accepted R1 support inventory does not contain the fixed C-bind header",
+        ));
+    }
+
     Ok(AcceptedBaseline {
         rust_commit,
         rust_llvm,
         source_date_epoch,
         target_inputs,
+        support_inputs,
         component_manifests,
     })
 }
@@ -230,6 +275,7 @@ fn assemble_with_baseline(
     for identity in baseline
         .target_inputs
         .values()
+        .chain(baseline.support_inputs.values())
         .chain(baseline.component_manifests.values())
     {
         let contents = source_members
@@ -292,6 +338,12 @@ fn validate_baseline_shape(baseline: &AcceptedBaseline) -> Result<()> {
         || baseline.rust_llvm.is_empty()
         || baseline.source_date_epoch == 0
         || baseline.target_inputs.is_empty()
+        || baseline
+            .support_inputs
+            .keys()
+            .map(String::as_str)
+            .collect::<BTreeSet<_>>()
+            != BTreeSet::from([SUPPORT_INPUT_PATH])
         || baseline.component_manifests.len() != EXPECTED_COMPONENT_MANIFESTS
         || baseline
             .target_inputs
@@ -623,8 +675,9 @@ fn number_field(value: &Value, name: &str) -> Result<u64> {
 #[cfg(test)]
 mod tests {
     use super::{
-        ACCEPTED_BASELINE, AcceptedBaseline, COMPONENTS, FileIdentity, HOSTS, LEGAL_NOTICE_PATHS,
-        NativeSdkDraft, assemble_with_baseline, component_manifest_paths, load_accepted_baseline,
+        ACCEPTED_BASELINE, ACCEPTED_SUPPORT_INPUTS, AcceptedBaseline, COMPONENTS, FileIdentity,
+        HOSTS, LEGAL_NOTICE_PATHS, NativeSdkDraft, SOURCE_SDK_ARCHIVE_SHA256, SUPPORT_INPUT_PATH,
+        assemble_with_baseline, component_manifest_paths, load_accepted_baseline,
     };
     use ami_rust_core::{
         compression::{DecodeLimits, copy_xz},
@@ -649,11 +702,17 @@ mod tests {
             .map(|path| identity_for(&path, source_members))
             .map(|identity| (identity.path.clone(), identity))
             .collect();
+        let support_inputs = [SUPPORT_INPUT_PATH]
+            .into_iter()
+            .map(|path| identity_for(path, source_members))
+            .map(|identity| (identity.path.clone(), identity))
+            .collect();
         AcceptedBaseline {
             rust_commit: "330d317121e16b5db8e5adc63595910528ff2ee7".to_owned(),
             rust_llvm: "23.1.1".to_owned(),
             source_date_epoch: 1_791_936_000,
             target_inputs,
+            support_inputs,
             component_manifests,
         }
     }
@@ -676,6 +735,10 @@ mod tests {
                 format!("original notice: {path}\n").into_bytes(),
             );
         }
+        members.insert(
+            SUPPORT_INPUT_PATH.to_owned(),
+            b"/* accepted qualification C-bind support fixture */\n".to_vec(),
+        );
         // Other legacy SDK members are intentionally excluded from the draft.
         members.insert("docs/legacy.md".to_owned(), b"legacy\n".to_vec());
         members
@@ -794,6 +857,16 @@ mod tests {
     fn compiled_baseline_has_the_fixed_target_and_profile_inventories() {
         let baseline = load_accepted_baseline().expect("load compiled baseline");
         assert_eq!(baseline.target_inputs.len(), 56);
+        assert_eq!(baseline.support_inputs.len(), 1);
+        let support = baseline
+            .support_inputs
+            .get(SUPPORT_INPUT_PATH)
+            .expect("fixed qualification C-bind support input");
+        assert_eq!(support.bytes, 2_383);
+        assert_eq!(
+            support.sha256,
+            "0bf0037d373c72bba88865c8202761dd2fcf310752ae7e12afe7f2775aa98a4c"
+        );
         assert_eq!(baseline.component_manifests.len(), 12);
         assert_eq!(
             baseline.rust_commit,
@@ -802,6 +875,11 @@ mod tests {
         assert_eq!(baseline.rust_llvm, "23.1.1");
         assert_eq!(baseline.source_date_epoch, 1_791_936_000);
         assert!(ACCEPTED_BASELINE.starts_with(b"{"));
+        assert!(ACCEPTED_SUPPORT_INPUTS.starts_with(b"{"));
+        assert_eq!(
+            SOURCE_SDK_ARCHIVE_SHA256,
+            "087f69659f1d0d5136b2c07789488c23dd52ca7b38b21579183620a5fbc61dd4"
+        );
     }
 
     #[test]
@@ -821,10 +899,14 @@ mod tests {
             inputs.get("Cargo.lock").unwrap()
         );
         assert!(!first.files.contains_key("docs/legacy.md"));
-        assert_eq!(first.files.len(), 20);
+        assert_eq!(first.files.len(), 21);
         for path in LEGAL_NOTICE_PATHS {
             assert_eq!(first.files.get(path).unwrap(), inputs.get(path).unwrap());
         }
+        assert_eq!(
+            first.files.get(SUPPORT_INPUT_PATH).unwrap(),
+            inputs.get(SUPPORT_INPUT_PATH).unwrap()
+        );
         assert!(first.files.contains_key("README.md"));
         assert!(first.files.contains_key("contract/sdk.json"));
         assert!(
@@ -884,6 +966,21 @@ mod tests {
         missing_notice.remove(LEGAL_NOTICE_PATHS[0]);
         assert!(
             assemble_with_baseline(&missing_notice, SOURCE_IDENTITY, "0.2.0", &baseline).is_err()
+        );
+
+        let mut changed_support = inputs.clone();
+        changed_support.insert(
+            SUPPORT_INPUT_PATH.to_owned(),
+            b"changed qualification support header\n".to_vec(),
+        );
+        assert!(
+            assemble_with_baseline(&changed_support, SOURCE_IDENTITY, "0.2.0", &baseline).is_err()
+        );
+
+        let mut missing_support = inputs.clone();
+        missing_support.remove(SUPPORT_INPUT_PATH);
+        assert!(
+            assemble_with_baseline(&missing_support, SOURCE_IDENTITY, "0.2.0", &baseline).is_err()
         );
 
         let mut extra = inputs;

@@ -79,7 +79,7 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         name: "inspect or migrate",
         command: "migrate",
-        implemented: false,
+        implemented: true,
     },
 ];
 
@@ -88,6 +88,16 @@ pub enum Invocation {
     Help,
     Version,
     VerifyPackage,
+    InspectMigration {
+        project: PathBuf,
+    },
+    MigrateProject {
+        project: PathBuf,
+        from_lock: PathBuf,
+        prefix: PathBuf,
+        receipt_sha256: String,
+        output: PathBuf,
+    },
     Prepare {
         state: PathBuf,
     },
@@ -219,6 +229,9 @@ pub fn parse(executable: &Path, arguments: &[OsString]) -> Result<Invocation> {
     }
     if args.first().is_some_and(|arg| arg == "uninstall") {
         return parse_uninstall(&args[1..]);
+    }
+    if args.first().is_some_and(|arg| arg == "migrate") {
+        return parse_migrate(&args[1..]);
     }
     if let Some(arg) = args.first()
         && CAPABILITIES.iter().any(|item| {
@@ -361,6 +374,60 @@ fn parse_uninstall(arguments: &[OsString]) -> Result<Invocation> {
     })
 }
 
+fn parse_migrate(arguments: &[OsString]) -> Result<Invocation> {
+    let dry_run_count = arguments.iter().filter(|arg| *arg == "--dry-run").count();
+    if dry_run_count > 1 {
+        return Err(Refusal::new("--dry-run may be supplied only once"));
+    }
+    let mut paths = Vec::new();
+    let mut index = 0;
+    while index < arguments.len() {
+        if arguments[index] == "--dry-run" {
+            index += 1;
+        } else {
+            paths.push(arguments[index].clone());
+            if let Some(value) = arguments.get(index + 1) {
+                paths.push(value.clone());
+            }
+            index += 2;
+        }
+    }
+    let mut options = parse_path_options(
+        &paths,
+        &[
+            "--project",
+            "--from-lock",
+            "--install-prefix",
+            "--receipt-sha256",
+            "--output",
+        ],
+        "migrate",
+    )?;
+    let project = take_path(&mut options, "--project", "migrate")?;
+    if options.is_empty() {
+        return Ok(Invocation::InspectMigration { project });
+    }
+    if dry_run_count != 0 {
+        return Err(Refusal::new("migration dry-run accepts only --project"));
+    }
+    let from_lock = take_path(&mut options, "--from-lock", "migrate")?;
+    let prefix = take_path(&mut options, "--install-prefix", "migrate")?;
+    let receipt_sha256 = take_path(&mut options, "--receipt-sha256", "migrate")?;
+    let receipt_sha256 = receipt_sha256
+        .to_str()
+        .filter(|value| crate::digest::is_sha256_digest(value))
+        .ok_or_else(|| Refusal::new("receipt SHA-256 must be 64 lowercase hexadecimal digits"))?
+        .to_owned();
+    let output = take_path(&mut options, "--output", "migrate")?;
+    Ok(Invocation::MigrateProject {
+        project,
+        from_lock,
+        prefix,
+        receipt_sha256,
+        output,
+    })
+}
+
 fn parse_path_options(
     arguments: &[OsString],
     accepted: &[&str],
@@ -484,7 +551,7 @@ struct UninstallResult<'a> {
 
 pub fn render(invocation: Invocation) -> Result<CommandOutput> {
     match invocation {
-        Invocation::Help => Ok(CommandOutput::success(b"ami-rust native host tooling\n\nUsage:\n  ami-rust verify-package\n  ami-rust prepare --state FRESH_PRIVATE_PATH\n  ami-rust check-inputs --state PRIVATE_PATH\n  ami-rust new --state PRIVATE_PATH --project FRESH_PROJECT\n  ami-rust verify --sdk-lock FILE\n  ami-rust build --sdk-lock FILE --output-dir FRESH -- build --manifest-path PATH --package NAME --release --locked --offline\n  ami-rust build --state PRIVATE_PATH --project ABSOLUTE_PROJECT --output-dir FRESH [--package NAME] [-- CARGO_OPTIONS]\n  ami-rust lock --prefix PREFIX --selection FILE --project PROJECT --output FRESH_LOCK\n  ami-rust --version\n  ami-rust --help\n  ami-rust verify --bundle PATH --policy EXTERNAL_POLICY\n  ami-rust install --bundle BUNDLE --policy EXTERNAL_POLICY --prefix FRESH_PREFIX [--receipt-pin FRESH_EXTERNAL_FILE]\n  ami-rust uninstall --prefix PREFIX --receipt-sha256 SHA256\n\nRelease verification authenticates the publisher and checks SDK-v2 structure; it does not claim R1 acceptance or native build qualification.\n".to_vec())),
+        Invocation::Help => Ok(CommandOutput::success(b"ami-rust native host tooling\n\nUsage:\n  ami-rust verify-package\n  ami-rust prepare --state FRESH_PRIVATE_PATH\n  ami-rust check-inputs --state PRIVATE_PATH\n  ami-rust new --state PRIVATE_PATH --project FRESH_PROJECT\n  ami-rust verify --sdk-lock FILE\n  ami-rust build --sdk-lock FILE --output-dir FRESH -- build --manifest-path PATH --package NAME --release --locked --offline\n  ami-rust build --state PRIVATE_PATH --project ABSOLUTE_PROJECT --output-dir FRESH [--package NAME] [-- CARGO_OPTIONS]\n  ami-rust lock --prefix PREFIX --selection FILE --project PROJECT --output FRESH_LOCK\n  ami-rust --version\n  ami-rust --help\n  ami-rust verify --bundle PATH --policy EXTERNAL_POLICY\n  ami-rust install --bundle BUNDLE --policy EXTERNAL_POLICY --prefix FRESH_PREFIX [--receipt-pin FRESH_EXTERNAL_FILE]\n  ami-rust uninstall --prefix PREFIX --receipt-sha256 SHA256\n  ami-rust migrate [--dry-run] --project PROJECT\n  ami-rust migrate --project PROJECT --from-lock OLD --install-prefix PREFIX --receipt-sha256 SHA256 --output FRESH_LOCK\n\nRelease verification authenticates the publisher and checks SDK-v2 structure; it does not claim R1 acceptance or native build qualification.\n".to_vec())),
         Invocation::Version => {
             let package = optional_executing_package()?;
             let mut output = serde_json::to_vec(&Version {
@@ -506,6 +573,16 @@ pub fn render(invocation: Invocation) -> Result<CommandOutput> {
                 "verified_files":package.measurement().files,"verified_bytes":package.measurement().file_bytes});
             json_output(&value).map(CommandOutput::success)
         }
+        Invocation::InspectMigration { project } => with_signals(|signals| {
+            let report = crate::native_migrate::dry_run(&project, signals)?;
+            encode_json_line(&report).map(CommandOutput::success)
+        }),
+        Invocation::MigrateProject { project, from_lock, prefix, receipt_sha256, output } => with_signals(|signals| {
+            let report = crate::native_migrate::migrate(
+                &project, &from_lock, &prefix, &receipt_sha256, &output, signals,
+            )?;
+            encode_json_line(&report).map(CommandOutput::success)
+        }),
         Invocation::Prepare { state } => {
             let package = executing_package()?;
             let prepared = crate::native_prepare::prepare(&package, &state)?;
@@ -1345,7 +1422,7 @@ mod tests {
         assert_eq!(actual, expected);
         assert_eq!(
             CAPABILITIES.iter().filter(|item| item.implemented).count(),
-            12
+            13
         );
         assert!(CAPABILITIES.iter().any(|item| {
             item.name == "verify release" && item.command == "verify" && item.implemented
@@ -1378,6 +1455,77 @@ mod tests {
             }
             let error = parse(Path::new("ami-rust"), &args(&[item.command])).unwrap_err();
             assert!(error.to_string().contains("not implemented"));
+        }
+    }
+
+    #[test]
+    fn migration_is_read_only_by_default_and_requires_complete_explicit_write_options() {
+        for binary in ["ami-rust", "cargo-ami"] {
+            for arguments in [
+                args(&["migrate", "--project", "/project"]),
+                args(&["migrate", "--dry-run", "--project", "/project"]),
+                args(&["migrate", "--project", "/project", "--dry-run"]),
+            ] {
+                assert_eq!(
+                    parse(Path::new(binary), &arguments).unwrap(),
+                    Invocation::InspectMigration {
+                        project: PathBuf::from("/project")
+                    }
+                );
+            }
+            let digest = "a".repeat(64);
+            let write = args(&[
+                "migrate",
+                "--project",
+                "/project",
+                "--from-lock",
+                "/old.json",
+                "--install-prefix",
+                "/sdk",
+                "--receipt-sha256",
+                &digest,
+                "--output",
+                "/new.json",
+            ]);
+            assert_eq!(
+                parse(Path::new(binary), &write).unwrap(),
+                Invocation::MigrateProject {
+                    project: "/project".into(),
+                    from_lock: "/old.json".into(),
+                    prefix: "/sdk".into(),
+                    receipt_sha256: digest,
+                    output: "/new.json".into(),
+                }
+            );
+            for invalid in [
+                args(&["migrate"]),
+                args(&["migrate", "--project", "--dry-run", "/project"]),
+                args(&["migrate", "--project", "/p", "--dry-run", "--dry-run"]),
+                args(&["migrate", "--project", "/p", "--output", "/new"]),
+                args(&[
+                    "migrate",
+                    "--project",
+                    "/p",
+                    "--dry-run",
+                    "--output",
+                    "/new",
+                ]),
+                args(&[
+                    "migrate",
+                    "--project",
+                    "/p",
+                    "--from-lock",
+                    "/old",
+                    "--install-prefix",
+                    "/sdk",
+                    "--receipt-sha256",
+                    "bad",
+                    "--output",
+                    "/new",
+                ]),
+            ] {
+                assert!(parse(Path::new(binary), &invalid).is_err());
+            }
         }
     }
 }

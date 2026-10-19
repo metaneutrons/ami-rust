@@ -251,6 +251,50 @@ pub fn lock_project(
     output: &Path,
     signals: &SigtermGuard,
 ) -> Result<ProjectLockResult> {
+    lock_project_impl(
+        installation,
+        selection,
+        project,
+        output,
+        BindingPolicy::Current,
+        signals,
+    )
+}
+
+/// Preserve an independently validated historical project binding while
+/// selecting a fresh native SDK lock. The binding is never rewritten or
+/// interpreted as the identity of the new installation.
+pub(crate) fn lock_project_for_migration(
+    installation: &CheckedNativeInstallation,
+    selection: &SelectionV2,
+    project: &Path,
+    output: &Path,
+    expected_legacy_binding: Option<&[u8]>,
+    signals: &SigtermGuard,
+) -> Result<ProjectLockResult> {
+    lock_project_impl(
+        installation,
+        selection,
+        project,
+        output,
+        BindingPolicy::Retained(expected_legacy_binding),
+        signals,
+    )
+}
+
+enum BindingPolicy<'a> {
+    Current,
+    Retained(Option<&'a [u8]>),
+}
+
+fn lock_project_impl(
+    installation: &CheckedNativeInstallation,
+    selection: &SelectionV2,
+    project: &Path,
+    output: &Path,
+    binding_policy: BindingPolicy<'_>,
+    signals: &SigtermGuard,
+) -> Result<ProjectLockResult> {
     signals.check()?;
     let project = canonical_existing_directory(project, "project directory")?;
     let project_root = Directory::open(&project)?;
@@ -258,8 +302,19 @@ pub fn lock_project(
     let selected_inputs = validate_installation_selection(installation, selection, host)?;
     let cli_sha256 = native_cli_digest(installation, host)?;
     let binding = read_optional_binding(&project, &project_root)?;
-    if let Some(binding) = binding {
-        validate_sdk_binding(&binding, installation)?;
+    match binding_policy {
+        BindingPolicy::Current => {
+            if let Some(raw) = &binding {
+                validate_sdk_binding(raw, installation)?;
+            }
+        }
+        BindingPolicy::Retained(expected) => {
+            if binding.as_deref() != expected {
+                return Err(Refusal::new(
+                    "legacy project SDK binding changed during migration",
+                ));
+            }
+        }
     }
     let cargo = cargo_identity(&project_root, signals)?;
     let lock_bytes = encode_project_lock(installation, selection, host, &cli_sha256, &cargo)?;
@@ -272,6 +327,11 @@ pub fn lock_project(
         ));
     }
     recheck_project_directory(&project, &project_root)?;
+    if read_optional_binding(&project, &project_root)? != binding {
+        return Err(Refusal::new(
+            "project SDK binding changed while creating its lock",
+        ));
+    }
     let target = ownership::fresh_output(output)?;
     let output_text = target
         .path()

@@ -25,6 +25,7 @@ pub mod json;
 mod mutations;
 pub mod native_build;
 pub mod native_install;
+pub mod native_migrate;
 pub mod native_prepare;
 pub mod native_project;
 pub mod native_recipe;

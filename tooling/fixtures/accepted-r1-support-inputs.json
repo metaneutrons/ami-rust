@@ -1,0 +1,11 @@
+{
+  "schema": "ami-rust-accepted-r1-support-inputs-v1",
+  "source_sdk_archive_sha256": "087f69659f1d0d5136b2c07789488c23dd52ca7b38b21579183620a5fbc61dd4",
+  "files": [
+    {
+      "path": "scripts/measurement/m1_measurement.h",
+      "bytes": 2383,
+      "sha256": "0bf0037d373c72bba88865c8202761dd2fcf310752ae7e12afe7f2775aa98a4c"
+    }
+  ]
+}
