@@ -899,7 +899,7 @@ fn provision_remote_whole_component(
         signals,
         session,
     )?;
-    extracted.archive.rename_no_replace(
+    extracted.archive.move_directory_no_replace(
         &extracted.root_name,
         component_stage,
         OsStr::new(label),
@@ -1030,7 +1030,7 @@ fn provision_local_component(
         signals,
         session,
     )?;
-    extracted.archive.rename_no_replace(
+    extracted.archive.move_directory_no_replace(
         &extracted.root_name,
         component_stage,
         OsStr::new(label),
@@ -1655,6 +1655,56 @@ fn cargo_archive_error(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[ignore = "requires a retained checked native installation and a fresh private source-copy state; downloads pinned components"]
+    fn retained_native_installation_provisions_all_six_component_inventories() {
+        let state = PathBuf::from(std::env::var_os("AMI_RUST_PROVISION_TEST_STATE").unwrap());
+        let prefix = PathBuf::from(std::env::var_os("AMI_RUST_PROVISION_TEST_PREFIX").unwrap());
+        let receipt = std::env::var("AMI_RUST_PROVISION_TEST_RECEIPT_SHA256").unwrap();
+        let installation = CheckedNativeInstallation::open(&prefix, &receipt).unwrap();
+        let signals = SigtermGuard::acquire().unwrap();
+        let mut session = ConsumerSession::new(&state, &signals).unwrap();
+        let baseline = InitialBaseline::load().unwrap();
+        let curl_path = Path::new("/usr/bin/curl");
+        let curl_raw = crate::publisher_files::read_open_regular(
+            ownership::protected_regular_file(curl_path, true).unwrap(),
+            256 * 1024 * 1024,
+        )
+        .unwrap();
+        let curl = CurlExecutablePin::new(curl_path, sha256_bytes(&curl_raw)).unwrap();
+        let result = provision_native_consumer_components(
+            &installation,
+            &baseline,
+            Host::current().unwrap(),
+            &state.join("source"),
+            &mut session,
+            &curl,
+            &signals,
+        )
+        .unwrap();
+        assert_eq!(result.measurements.len(), COMPONENT_NAMES.len());
+        let rows: BTreeMap<_, _> = result
+            .measurements
+            .iter()
+            .map(|(name, row)| {
+                assert!(row.files > 0);
+                (
+                    name,
+                    serde_json::json!({"files":row.files, "symlinks":row.symlinks,
+                                     "regular_file_bytes":row.file_bytes}),
+                )
+            })
+            .collect();
+        std::fs::write(state.join("component-provision-test.json"), serde_json::to_vec_pretty(
+            &serde_json::json!({"status":"PASS_SIX_COMPONENT_INVENTORIES_NOT_PREPARE_ACCEPTANCE",
+                "host":host_key(Host::current().unwrap()), "installation_receipt_sha256":receipt,
+                "components":rows, "claim":"Retained-input provisioning regression only; no complete package, READY or no-Python acceptance"})
+        ).unwrap()).unwrap();
+        installation.recheck().unwrap();
+        drop(session);
+        signals.finish().unwrap();
+    }
 
     #[test]
     fn host_component_order_roots_and_admin_paths_match_both_accepted_targets() {

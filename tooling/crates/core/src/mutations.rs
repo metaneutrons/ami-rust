@@ -167,7 +167,6 @@ impl Directory {
     /// Atomically rename a regular file or directory into a sibling name
     /// without replacing any existing destination. Unsupported platforms or
     /// kernel/filesystem operations fail closed.
-    #[allow(unsafe_code)]
     pub(crate) fn rename_no_replace(
         &self,
         source: &OsStr,
@@ -175,6 +174,41 @@ impl Directory {
         destination: &OsStr,
     ) -> Result<()> {
         require_same_directory(self, destination_parent)?;
+        self.rename_exclusive(source, destination_parent, destination)
+    }
+
+    /// Move a staged directory between retained parents on one filesystem.
+    /// Existing destinations are never replaced; there is no copy fallback.
+    /// Callers own both private parents and recheck the component inventory
+    /// before exposing its published location to a consumer.
+    pub(crate) fn move_directory_no_replace(
+        &self,
+        source: &OsStr,
+        destination_parent: &Self,
+        destination: &OsStr,
+    ) -> Result<()> {
+        use std::os::unix::fs::MetadataExt;
+
+        if self.metadata()?.dev() != destination_parent.metadata()?.dev() {
+            return Err(Refusal::new(
+                "exclusive directory move requires one shared filesystem",
+            ));
+        }
+        if self.entry_kind(source)? != EntryKind::Directory {
+            return Err(Refusal::new(
+                "exclusive directory move source must be a directory",
+            ));
+        }
+        self.rename_exclusive(source, destination_parent, destination)
+    }
+
+    #[allow(unsafe_code)]
+    fn rename_exclusive(
+        &self,
+        source: &OsStr,
+        destination_parent: &Self,
+        destination: &OsStr,
+    ) -> Result<()> {
         let source_name = name(source)?;
         let destination_name = name(destination)?;
         match self.entry_kind(source)? {
@@ -711,6 +745,134 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn component_directory_move_uses_distinct_retained_parents_without_replacement() {
+        let fixture = Fixture::new();
+        let root = Directory::open(&fixture.0).unwrap();
+        let extraction = root
+            .mkdir_new(OsStr::new("archive-extraction"), 0o700)
+            .unwrap();
+        let staging = root
+            .mkdir_new(OsStr::new("component-staging"), 0o700)
+            .unwrap();
+        let component = extraction
+            .mkdir_new(OsStr::new("archive-root"), 0o700)
+            .unwrap();
+        component
+            .create_new_file(OsStr::new("manifest"), 0o600)
+            .unwrap()
+            .write_all(b"verified component bytes")
+            .unwrap();
+        // This is the cold-provisioning failure: sibling-only publication must
+        // continue to refuse different parents for transaction/receipt callers.
+        assert!(
+            extraction
+                .rename_no_replace(
+                    OsStr::new("archive-root"),
+                    &staging,
+                    OsStr::new("toolchain")
+                )
+                .is_err()
+        );
+
+        staging
+            .create_new_file(OsStr::new("occupied-file"), 0o600)
+            .unwrap()
+            .write_all(b"keep file")
+            .unwrap();
+        staging
+            .mkdir_new(OsStr::new("occupied-dir"), 0o700)
+            .unwrap();
+        symlink(
+            "occupied-file",
+            fixture.0.join("component-staging/occupied-link"),
+        )
+        .unwrap();
+        for destination in ["occupied-file", "occupied-dir", "occupied-link"] {
+            assert!(
+                extraction
+                    .move_directory_no_replace(
+                        OsStr::new("archive-root"),
+                        &staging,
+                        OsStr::new(destination)
+                    )
+                    .is_err()
+            );
+            assert_eq!(
+                fs::read(fixture.0.join("archive-extraction/archive-root/manifest")).unwrap(),
+                b"verified component bytes"
+            );
+        }
+        assert_eq!(
+            fs::read(fixture.0.join("component-staging/occupied-file")).unwrap(),
+            b"keep file"
+        );
+        assert!(
+            fixture
+                .0
+                .join("component-staging/occupied-link")
+                .is_symlink()
+        );
+
+        // The live descriptors remain the authority after both names move.
+        fs::rename(
+            fixture.0.join("archive-extraction"),
+            fixture.0.join("extraction-renamed"),
+        )
+        .unwrap();
+        fs::rename(
+            fixture.0.join("component-staging"),
+            fixture.0.join("staging-renamed"),
+        )
+        .unwrap();
+        extraction
+            .move_directory_no_replace(
+                OsStr::new("archive-root"),
+                &staging,
+                OsStr::new("toolchain"),
+            )
+            .unwrap();
+        assert!(!fixture.0.join("extraction-renamed/archive-root").exists());
+        assert_eq!(
+            fs::read(fixture.0.join("staging-renamed/toolchain/manifest")).unwrap(),
+            b"verified component bytes"
+        );
+        assert_eq!(
+            component
+                .regular(OsStr::new("manifest"))
+                .unwrap()
+                .metadata()
+                .unwrap()
+                .len(),
+            24
+        );
+
+        extraction
+            .create_new_file(OsStr::new("not-a-directory"), 0o600)
+            .unwrap();
+        symlink(
+            "../staging-renamed/toolchain",
+            fixture.0.join("extraction-renamed/linked-source"),
+        )
+        .unwrap();
+        for source in [
+            "not-a-directory",
+            "linked-source",
+            "../staging-renamed/toolchain",
+        ] {
+            assert!(
+                extraction
+                    .move_directory_no_replace(
+                        OsStr::new(source),
+                        &staging,
+                        OsStr::new("must-not-exist")
+                    )
+                    .is_err()
+            );
+            assert!(!fixture.0.join("staging-renamed/must-not-exist").exists());
+        }
     }
 
     #[test]
