@@ -1,0 +1,47 @@
+{
+  "schema": "ami-rust-rc1-resource-inputs-hosted-v1",
+  "status": "PASS",
+  "ci_run": 39217220046,
+  "ci_url": "https://github.com/metaneutrons/ami-rust/actions/runs/39217220046",
+  "head_commit": "d6b15037b8e86782bb7a5916ca2dc6f0e6562309",
+  "code_commit": "b2dceaa73d2104c697bff87c630a80ea4dcffba3",
+  "all_seven_jobs_successful": true,
+  "hosts": [
+    {
+      "host": "linux",
+      "job_id": 117943853547,
+      "job_name": "Rust migration fixtures (ubuntu-24.04)",
+      "job_url": "https://github.com/metaneutrons/ami-rust/actions/runs/39217220046/job/117943853547",
+      "core_unit_tests": 233,
+      "frontend_integration_tests": 1,
+      "manifest_oracle_integration_tests": 1,
+      "process_scope_oracle_integration_tests": 1,
+      "total_rust_tests": 236,
+      "ignored_fixtures_executed_by_asserting_parent": 2,
+      "raw_log_bytes": 61364,
+      "raw_log_sha256": "d53f7febe617a5ba7851ef81d27a203cedac2d7712794443568791a656da80d7",
+      "raw_log_file": "rc1-resource-inputs-linux-39217220046.log"
+    },
+    {
+      "host": "macos",
+      "job_id": 117943853469,
+      "job_name": "Rust migration fixtures (macos-26)",
+      "job_url": "https://github.com/metaneutrons/ami-rust/actions/runs/39217220046/job/117943853469",
+      "core_unit_tests": 233,
+      "frontend_integration_tests": 1,
+      "manifest_oracle_integration_tests": 1,
+      "process_scope_oracle_integration_tests": 1,
+      "total_rust_tests": 236,
+      "ignored_fixtures_executed_by_asserting_parent": 2,
+      "raw_log_bytes": 61016,
+      "raw_log_sha256": "8c6536109e77e359e241a7eb004a52f0b6aa0772d996e334ea61442a3d22189e",
+      "raw_log_file": "rc1-resource-inputs-macos-39217220046.log"
+    }
+  ],
+  "consumer_capabilities_activated": false,
+  "rc1_accepted": false,
+  "scope": "Native process ownership, pure scope/RSS parity, file/log sampling and existing host fixtures. No integrated resource/no-Python consumer or native SDK/runtime qualification.",
+  "merged_at": "2026-10-19T07:54:14Z",
+  "merge_commit": "eca780d0767e27ba1745c46156b9b9aeef22c08a",
+  "merged_tooling_tree_identical": true
+}

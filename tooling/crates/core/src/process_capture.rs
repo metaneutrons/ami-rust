@@ -29,6 +29,28 @@ use std::{
 const POLL_QUANTUM: Duration = Duration::from_millis(25);
 const READ_BUFFER_BYTES: usize = 8 * 1024;
 const READ_BUDGET_PER_PASS: usize = 64 * 1024;
+const OBSERVATION_SAMPLE_INTERVAL: Duration = Duration::from_millis(100);
+
+/// What an observer should do with this progress notification.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CaptureObservationPhase {
+    /// A bounded output-drain pass completed. Cheap checks may run every time;
+    /// expensive scans should run only when `sample_due` is true.
+    Running { sample_due: bool },
+    /// WNOWAIT observed direct-child exit and the final output-tail drain ended.
+    /// This notification always requests a final sample before normal reap.
+    BeforeReap,
+}
+
+/// Direct-child and retained-output progress at an observer call.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CaptureObservation {
+    pub direct_pid: u32,
+    pub elapsed: Duration,
+    pub stdout_bytes: usize,
+    pub stderr_bytes: usize,
+    pub phase: CaptureObservationPhase,
+}
 
 /// A command description with a complete, replacement environment.
 #[derive(Clone, Debug)]
@@ -98,6 +120,7 @@ impl CapturedProcess {
 pub enum CaptureCause {
     Timeout,
     Cancelled,
+    Observation(io::Error),
     StdoutLimitExceeded,
     StderrLimitExceeded,
     DescendantRetainedPipe,
@@ -110,6 +133,7 @@ impl fmt::Display for CaptureCause {
         match self {
             Self::Timeout => formatter.write_str("command deadline expired"),
             Self::Cancelled => formatter.write_str("command was cancelled"),
+            Self::Observation(error) => write!(formatter, "command observation failed: {error}"),
             Self::StdoutLimitExceeded => formatter.write_str("command stdout limit exceeded"),
             Self::StderrLimitExceeded => formatter.write_str("command stderr limit exceeded"),
             Self::DescendantRetainedPipe => {
@@ -147,7 +171,7 @@ impl fmt::Display for CaptureError {
 impl Error for CaptureError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match &self.cause {
-            CaptureCause::Io(error) => Some(error),
+            CaptureCause::Io(error) | CaptureCause::Observation(error) => Some(error),
             _ => self
                 .cleanup_error
                 .as_ref()
@@ -172,7 +196,31 @@ impl Error for CaptureError {
 pub fn capture(
     spec: &CommandSpec,
     limits: CaptureLimits,
+    cancelled: impl FnMut() -> bool,
+) -> std::result::Result<CapturedProcess, CaptureError> {
+    capture_inner(spec, limits, cancelled, |_| Ok(()))
+}
+
+/// Run one command and invoke `observer` after every bounded output-drain
+/// pass. `Running { sample_due: false }` still permits cheap progress or
+/// cancellation accounting; callers can defer expensive sampling until
+/// `sample_due` is true. `BeforeReap` always follows WNOWAIT exit observation
+/// and the final output-tail drain. Observer errors are distinct capture
+/// failures, and observer panics trigger child cleanup before unwinding.
+pub fn capture_observed(
+    spec: &CommandSpec,
+    limits: CaptureLimits,
+    cancelled: impl FnMut() -> bool,
+    observer: impl FnMut(CaptureObservation) -> io::Result<()>,
+) -> std::result::Result<CapturedProcess, CaptureError> {
+    capture_inner(spec, limits, cancelled, observer)
+}
+
+fn capture_inner(
+    spec: &CommandSpec,
+    limits: CaptureLimits,
     mut cancelled: impl FnMut() -> bool,
+    mut observer: impl FnMut(CaptureObservation) -> io::Result<()>,
 ) -> std::result::Result<CapturedProcess, CaptureError> {
     let started = Instant::now();
     if let Err(error) = validate_paths(spec) {
@@ -259,8 +307,10 @@ pub fn capture(
             &mut stdout,
             &mut stderr,
             limits,
+            started,
             deadline,
             &mut cancelled,
+            &mut observer,
         )
     }));
 
@@ -467,15 +517,22 @@ impl RunningChild {
     }
 }
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "The bounded loop receives its child, pipes, output buffers, and callback state explicitly."
+)]
 fn run_capture_loop(
     child: &mut RunningChild,
     pipes: &mut Pipes,
     stdout: &mut Vec<u8>,
     stderr: &mut Vec<u8>,
     limits: CaptureLimits,
+    started: Instant,
     deadline: Instant,
     cancelled: &mut impl FnMut() -> bool,
+    observer: &mut impl FnMut(CaptureObservation) -> io::Result<()>,
 ) -> std::result::Result<(), CaptureCause> {
+    let mut next_sample = started;
     loop {
         if cancelled() {
             return Err(CaptureCause::Cancelled);
@@ -491,6 +548,28 @@ fn run_capture_loop(
         let stderr_state = drain_pipe(&mut pipes.stderr, stderr, limits.stderr_bytes)
             .map_err(|error| error.into_cause(false))?;
 
+        let observed_at = Instant::now();
+        let sample_due = observed_at >= next_sample;
+        if sample_due {
+            next_sample = observed_at
+                .checked_add(OBSERVATION_SAMPLE_INTERVAL)
+                .unwrap_or(observed_at);
+        }
+        observer(CaptureObservation {
+            direct_pid: child.lease.pid(),
+            elapsed: started.elapsed(),
+            stdout_bytes: stdout.len(),
+            stderr_bytes: stderr.len(),
+            phase: CaptureObservationPhase::Running { sample_due },
+        })
+        .map_err(CaptureCause::Observation)?;
+        if cancelled() {
+            return Err(CaptureCause::Cancelled);
+        }
+        if Instant::now() >= deadline {
+            return Err(CaptureCause::Timeout);
+        }
+
         if child.exited_without_reaping().map_err(CaptureCause::Io)? {
             // The child can exit just after the first read pass. Once WNOWAIT
             // observes that exit, do a final read pass so its last buffered
@@ -505,6 +584,20 @@ fn run_capture_loop(
                 || final_stderr == DrainState::BudgetExhausted
             {
                 continue;
+            }
+            observer(CaptureObservation {
+                direct_pid: child.lease.pid(),
+                elapsed: started.elapsed(),
+                stdout_bytes: stdout.len(),
+                stderr_bytes: stderr.len(),
+                phase: CaptureObservationPhase::BeforeReap,
+            })
+            .map_err(CaptureCause::Observation)?;
+            if cancelled() {
+                return Err(CaptureCause::Cancelled);
+            }
+            if Instant::now() >= deadline {
+                return Err(CaptureCause::Timeout);
             }
             if !pipes.eof() {
                 return Err(CaptureCause::DescendantRetainedPipe);
@@ -783,6 +876,59 @@ mod tests {
         &output[payload_start..end_at]
     }
 
+    fn has_live_nonroot_group_member(ps_output: &[u8], root_pid: u32) -> io::Result<bool> {
+        let output = std::str::from_utf8(ps_output).map_err(|error| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("ps output is not UTF-8: {error}"),
+            )
+        })?;
+        for line in output.lines() {
+            let mut fields = line.split_whitespace();
+            let Some(pid) = fields.next() else {
+                continue;
+            };
+            let ppid = fields.next().ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidData, "ps row missing parent PID")
+            })?;
+            let pgid = fields.next().ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidData, "ps row missing process group")
+            })?;
+            let state = fields.next().ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidData, "ps row missing process state")
+            })?;
+            if fields.next().is_some() {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "ps row contains unexpected columns",
+                ));
+            }
+
+            let pid = pid.parse::<u32>().map_err(|error| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("invalid ps PID: {error}"),
+                )
+            })?;
+            let _ppid = ppid.parse::<u32>().map_err(|error| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("invalid ps parent PID: {error}"),
+                )
+            })?;
+            let pgid = pgid.parse::<u32>().map_err(|error| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("invalid ps process group: {error}"),
+                )
+            })?;
+            if pid != root_pid && pgid == root_pid && !state.starts_with('Z') {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
     #[test]
     #[allow(
         unsafe_code,
@@ -891,6 +1037,21 @@ mod tests {
                 let marker = std::env::var_os("AMI_CAPTURE_MARKER").unwrap();
                 fs::write(marker, b"ready").expect("write moved-group readiness marker");
                 thread::sleep(Duration::from_secs(2));
+            }
+            "observed_tail" => {
+                std::io::stdout()
+                    .write_all(b"out-tail")
+                    .expect("write observed stdout tail");
+                std::io::stderr()
+                    .write_all(b"err-tail")
+                    .expect("write observed stderr tail");
+                std::io::stdout()
+                    .flush()
+                    .expect("flush observed stdout tail");
+                std::io::stderr()
+                    .flush()
+                    .expect("flush observed stderr tail");
+                std::process::exit(0);
             }
             "silent" => std::process::exit(0),
             "write_marker" => {
@@ -1060,6 +1221,247 @@ mod tests {
                     .any(|window| window == b"short stderr")
             );
         }
+    }
+
+    #[test]
+    fn observed_capture_matches_noop_capture_and_samples_final_output_tail() {
+        let temp = TempDirectory::new();
+        let command = quiet_spec("observed_tail", &temp.0);
+        let baseline = capture(&command, limits(), || false).unwrap();
+        let mut observations = Vec::new();
+        let observed = capture_observed(
+            &command,
+            limits(),
+            || false,
+            |event| {
+                observations.push(event);
+                Ok(())
+            },
+        )
+        .unwrap();
+
+        assert_eq!(observed.status, baseline.status);
+        assert_eq!(observed.stdout, baseline.stdout);
+        assert_eq!(observed.stderr, baseline.stderr);
+        assert!(observed.elapsed > Duration::ZERO);
+        assert!(observations.iter().any(|event| matches!(
+            event.phase,
+            CaptureObservationPhase::Running { sample_due: true }
+        )));
+        let final_sample = observations
+            .iter()
+            .rev()
+            .find(|event| event.phase == CaptureObservationPhase::BeforeReap)
+            .expect("successful command receives final pre-reap observation");
+        assert!(final_sample.direct_pid > 0);
+        assert_eq!(final_sample.stdout_bytes, observed.stdout.len());
+        assert_eq!(final_sample.stderr_bytes, observed.stderr.len());
+        assert!(observed.stdout.ends_with(b"out-tail"));
+        assert!(observed.stderr.ends_with(b"err-tail"));
+    }
+
+    #[test]
+    fn observer_error_cleans_child_and_is_reported_separately() {
+        let temp = TempDirectory::new();
+        let marker = temp.0.join("observer-error-child-survived");
+        let mut command = spec("write_marker_after_delay", &temp.0);
+        command
+            .env
+            .insert("AMI_CAPTURE_MARKER".into(), marker.as_os_str().to_owned());
+        let error = capture_observed(
+            &command,
+            limits(),
+            || false,
+            |_| Err(io::Error::other("fixture observer refusal")),
+        )
+        .unwrap_err();
+
+        assert!(matches!(
+            error.cause,
+            CaptureCause::Observation(ref cause)
+                if cause.to_string() == "fixture observer refusal"
+        ));
+        assert!(error.status.is_some());
+        thread::sleep(Duration::from_millis(700));
+        assert!(!marker.exists(), "child survived observer-error cleanup");
+    }
+
+    #[test]
+    fn observer_panic_cleans_child_before_resuming_unwind() {
+        let temp = TempDirectory::new();
+        let marker = temp.0.join("observer-panic-child-survived");
+        let mut command = spec("write_marker_after_delay", &temp.0);
+        command
+            .env
+            .insert("AMI_CAPTURE_MARKER".into(), marker.as_os_str().to_owned());
+        let panic_result = panic::catch_unwind(AssertUnwindSafe(|| {
+            let _ = capture_observed(
+                &command,
+                limits(),
+                || false,
+                |_| panic!("fixture observer panic"),
+            );
+        }));
+        assert!(panic_result.is_err());
+        thread::sleep(Duration::from_millis(700));
+        assert!(!marker.exists(), "child survived observer-panic cleanup");
+    }
+
+    #[test]
+    fn slow_observer_cannot_turn_an_expired_deadline_into_success() {
+        let temp = TempDirectory::new();
+        let mut short = limits();
+        short.timeout = Duration::from_millis(750);
+        let mut delayed = false;
+        let error = capture_observed(
+            &spec("silent", &temp.0),
+            short,
+            || false,
+            |event| {
+                if !delayed && matches!(event.phase, CaptureObservationPhase::Running { .. }) {
+                    delayed = true;
+                    thread::sleep(Duration::from_millis(1_000));
+                }
+                Ok(())
+            },
+        )
+        .unwrap_err();
+
+        assert!(delayed);
+        assert!(matches!(error.cause, CaptureCause::Timeout));
+        assert!(error.status.is_some());
+    }
+
+    #[test]
+    fn slow_before_reap_observer_cannot_accept_late_completion() {
+        let temp = TempDirectory::new();
+        let mut short = limits();
+        short.timeout = Duration::from_millis(750);
+        let mut delayed = false;
+        let error = capture_observed(
+            &spec("silent", &temp.0),
+            short,
+            || false,
+            |event| {
+                if !delayed && event.phase == CaptureObservationPhase::BeforeReap {
+                    delayed = true;
+                    thread::sleep(Duration::from_millis(1_000));
+                }
+                Ok(())
+            },
+        )
+        .unwrap_err();
+
+        assert!(delayed, "completed child did not reach final observation");
+        assert!(matches!(error.cause, CaptureCause::Timeout));
+        assert!(error.status.is_some());
+    }
+
+    #[test]
+    fn exited_leader_with_pipe_holding_descendant_is_refused_and_group_cleaned() {
+        let temp = TempDirectory::new();
+        let marker = temp.0.join("retained-pipe-descendant-survived");
+        let mut command = spec("spawn_descendant", &temp.0);
+        command
+            .env
+            .insert("AMI_CAPTURE_MARKER".into(), marker.as_os_str().to_owned());
+        let mut phases = Vec::new();
+        let error = capture_observed(
+            &command,
+            limits(),
+            || false,
+            |event| {
+                phases.push(event.phase);
+                Ok(())
+            },
+        )
+        .unwrap_err();
+
+        assert!(matches!(error.cause, CaptureCause::DescendantRetainedPipe));
+        assert!(phases.contains(&CaptureObservationPhase::BeforeReap));
+        assert!(error.status.is_some());
+        thread::sleep(Duration::from_millis(700));
+        assert!(!marker.exists(), "same-group descendant escaped cleanup");
+    }
+
+    #[test]
+    fn before_reap_ps_observation_refuses_closed_pipe_live_group_member() {
+        let temp = TempDirectory::new();
+        let marker = temp.0.join("closed-pipe-descendant-survived");
+        let mut command = spec("spawn_closed_descendant", &temp.0);
+        command
+            .env
+            .insert("AMI_CAPTURE_MARKER".into(), marker.as_os_str().to_owned());
+        let ps_command = CommandSpec::new(
+            "/bin/ps",
+            [
+                OsString::from("-A"),
+                OsString::from("-o"),
+                OsString::from("pid="),
+                OsString::from("-o"),
+                OsString::from("ppid="),
+                OsString::from("-o"),
+                OsString::from("pgid="),
+                OsString::from("-o"),
+                OsString::from("stat="),
+            ],
+            &temp.0,
+            BTreeMap::new(),
+        );
+        let ps_limits = CaptureLimits {
+            timeout: Duration::from_secs(2),
+            stdout_bytes: 2 * 1024 * 1024,
+            stderr_bytes: 64 * 1024,
+            termination_grace: Duration::from_millis(100),
+        };
+        let mut saw_final_observation = false;
+        let mut saw_live_member = false;
+        let error = capture_observed(
+            &command,
+            limits(),
+            || false,
+            |event| {
+                if event.phase != CaptureObservationPhase::BeforeReap {
+                    return Ok(());
+                }
+                saw_final_observation = true;
+                let snapshot = capture(&ps_command, ps_limits, || false).map_err(|error| {
+                    io::Error::other(format!("bounded /bin/ps capture failed: {error}"))
+                })?;
+                if !snapshot.status.success() {
+                    return Err(io::Error::other(format!(
+                        "bounded /bin/ps exited unsuccessfully: {:?}",
+                        snapshot.status.code()
+                    )));
+                }
+                saw_live_member =
+                    has_live_nonroot_group_member(&snapshot.stdout, event.direct_pid)?;
+                if saw_live_member {
+                    Err(io::Error::other(
+                        "live same-group descendant remains at direct-child exit",
+                    ))
+                } else {
+                    Err(io::Error::other(
+                        "expected live descendant was absent from process snapshot",
+                    ))
+                }
+            },
+        )
+        .unwrap_err();
+
+        assert!(saw_final_observation);
+        assert!(saw_live_member);
+        assert!(matches!(
+            error.cause,
+            CaptureCause::Observation(ref cause)
+                if cause.to_string() == "live same-group descendant remains at direct-child exit"
+        ));
+        assert!(error.status.as_ref().is_some_and(ExitStatus::success));
+        thread::sleep(Duration::from_millis(700));
+        assert!(
+            !marker.exists(),
+            "closed-pipe descendant escaped group cleanup"
+        );
     }
 
     #[test]

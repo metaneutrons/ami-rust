@@ -71,6 +71,23 @@ fn real_frontend_copies_and_cargo_plugin_have_identical_version_and_refusals() {
         assert_eq!(output.stdout, reference.stdout);
         assert!(output.stderr.is_empty());
     }
+    let help = run(&direct, &["--help"]);
+    assert!(help.status.success());
+    assert!(help.stderr.is_empty());
+    assert!(
+        String::from_utf8_lossy(&help.stdout)
+            .contains("ami-rust verify --bundle PATH --policy EXTERNAL_POLICY")
+    );
+    for (binary, args) in [
+        (&plugin, vec!["--help"]),
+        (&plugin, vec!["ami", "--help"]),
+        (&PathBuf::from(env!("CARGO")), vec!["ami", "--help"]),
+    ] {
+        let output = run(binary, &args);
+        assert!(output.status.success());
+        assert_eq!(output.stdout, help.stdout);
+        assert!(output.stderr.is_empty());
+    }
     for args in [vec!["build"], vec!["--version", "extra"], vec!["unknown"]] {
         let a = run(&direct, &args);
         let mut injected = vec!["ami"];
@@ -85,6 +102,68 @@ fn real_frontend_copies_and_cargo_plugin_have_identical_version_and_refusals() {
         assert_eq!(a.stderr, b.stderr);
         assert_eq!(a.stdout, through_cargo.stdout);
         assert_eq!(a.stderr, through_cargo.stderr);
+    }
+
+    let malformed = [
+        vec!["verify"],
+        vec!["verify", "--bundle"],
+        vec!["verify", "--bundle", "bundle"],
+        vec![
+            "verify", "--bundle", "bundle", "--bundle", "other", "--policy", "policy",
+        ],
+        vec![
+            "verify", "--bundle", "bundle", "--policy", "policy", "--policy", "other",
+        ],
+        vec!["verify", "--bundle", "--policy", "policy"],
+        vec!["verify", "--unknown", "value"],
+        vec!["verify", "--sdk-lock", "lock.json"],
+    ];
+    for args in malformed {
+        let direct_output = run(&direct, &args);
+        let mut plugin_args = vec!["ami"];
+        plugin_args.extend(args.iter().copied());
+        let plugin_output = run(&plugin, &plugin_args);
+        let cargo_output = run(&PathBuf::from(env!("CARGO")), &plugin_args);
+        for output in [&direct_output, &plugin_output, &cargo_output] {
+            assert_eq!(output.status.code(), Some(2), "args={args:?}");
+            assert!(output.stdout.is_empty(), "args={args:?}");
+        }
+        assert_eq!(direct_output.stdout, plugin_output.stdout);
+        assert_eq!(direct_output.stderr, plugin_output.stderr);
+        assert_eq!(direct_output.stdout, cargo_output.stdout);
+        assert_eq!(direct_output.stderr, cargo_output.stderr);
+    }
+
+    // Both option orders reach the real verifier with canonical paths. The
+    // deliberately malformed external policy refuses before any verifier is
+    // launched; this exercises command dispatch without simulating signature
+    // success.
+    let bundle_dir = fixture.0.join("empty-release-bundle");
+    fs::create_dir(&bundle_dir).unwrap();
+    let policy_path = fixture.0.join("malformed-policy.json");
+    fs::write(&policy_path, b"{}\n").unwrap();
+    let bundle_arg = bundle_dir.to_str().unwrap();
+    let policy_arg = policy_path.to_str().unwrap();
+    for args in [
+        vec!["verify", "--bundle", bundle_arg, "--policy", policy_arg],
+        vec!["verify", "--policy", policy_arg, "--bundle", bundle_arg],
+    ] {
+        let direct_output = run(&direct, &args);
+        let mut plugin_args = vec!["ami"];
+        plugin_args.extend(args.iter().copied());
+        let plugin_output = run(&plugin, &plugin_args);
+        let cargo_output = run(&PathBuf::from(env!("CARGO")), &plugin_args);
+        for output in [&direct_output, &plugin_output, &cargo_output] {
+            assert_eq!(output.status.code(), Some(2), "args={args:?}");
+            assert!(output.stdout.is_empty(), "args={args:?}");
+            assert!(
+                String::from_utf8_lossy(&output.stderr).contains("publisher policy"),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+        assert_eq!(direct_output.stderr, plugin_output.stderr);
+        assert_eq!(direct_output.stderr, cargo_output.stderr);
     }
     assert!(!fixture.0.join("build.lock").exists());
 }

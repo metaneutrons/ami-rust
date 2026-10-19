@@ -11,6 +11,8 @@
 
 #![deny(unsafe_code)]
 
+use crate::directory::Directory;
+
 use std::{
     ffi::{CStr, CString, OsString},
     fmt,
@@ -153,12 +155,27 @@ impl EntrySnapshot {
 /// `fstatat` sample and can change before the next walk.
 pub fn scan(root: &Path, limits: ScanLimits) -> Result<Accounting, ScanError> {
     validate_root_spelling(root)?;
-    let mut accounting = Accounting::default();
     let Some(root_file) = open_root(root)
         .map_err(|error| io_error("could not open no-follow accounting root", error))?
     else {
-        return Ok(accounting);
+        return Ok(Accounting::default());
     };
+    scan_owned_root(root_file, limits)
+}
+
+/// Sample the exact directory already retained by the caller. Opening `.`
+/// relative to that descriptor creates an independent enumeration cursor for
+/// every sample; a duplicated descriptor would share the previous cursor.
+/// The caller separately verifies that its required namespace still names this
+/// directory. No pathname is reopened to choose the sampling boundary here.
+pub fn scan_directory(root: &Directory, limits: ScanLimits) -> Result<Accounting, ScanError> {
+    let root_file = open_directory_at(root.raw_fd(), c".")
+        .map_err(|error| io_error("could not open anchored accounting cursor", error))?;
+    scan_owned_root(root_file, limits)
+}
+
+fn scan_owned_root(root_file: File, limits: ScanLimits) -> Result<Accounting, ScanError> {
+    let mut accounting = Accounting::default();
     let root_metadata = root_file
         .metadata()
         .map_err(|error| io_error("could not inspect accounting root", error))?;
@@ -583,6 +600,42 @@ mod tests {
         let second = scan(&tree.0, limits(4, 8)).unwrap();
         assert_eq!(second.regular_file_bytes, 3);
         assert_eq!(second.log_file_bytes, 3);
+    }
+
+    #[test]
+    fn retained_directory_samples_repeat_with_independent_cursors_after_path_replacement() {
+        let tree = Tree::new();
+        let root = tree.0.join("sample root");
+        fs::create_dir(&root).unwrap();
+        fs::write(root.join("build.log"), b"abc").unwrap();
+        let directory = Directory::open(&fs::canonicalize(&root).unwrap()).unwrap();
+        assert_eq!(
+            scan_directory(&directory, limits(4, 8))
+                .unwrap()
+                .log_file_bytes,
+            3
+        );
+        assert_eq!(
+            scan_directory(&directory, limits(4, 8))
+                .unwrap()
+                .log_file_bytes,
+            3
+        );
+
+        let moved = tree.0.join("retained root");
+        fs::rename(&root, &moved).unwrap();
+        fs::create_dir(&root).unwrap();
+        fs::write(root.join("replacement.log"), b"unrelated replacement bytes").unwrap();
+        fs::write(moved.join("build.log"), b"abcde").unwrap();
+        let sample = scan_directory(&directory, limits(4, 8)).unwrap();
+        assert_eq!(sample.regular_file_bytes, 5);
+        assert_eq!(sample.log_file_bytes, 5);
+        // Namespace validation belongs to the observer; the sampler must not
+        // silently switch from the retained handle to the replacement path.
+        assert_ne!(
+            directory.metadata().unwrap().ino(),
+            fs::metadata(&root).unwrap().ino()
+        );
     }
 
     #[test]
