@@ -9,6 +9,8 @@
 //! reaps the direct child; same-group descendants that close or redirect both
 //! output pipes may outlive it.
 
+use crate::process_lease::{self, ChildLease};
+
 use std::{
     collections::BTreeMap,
     error::Error,
@@ -21,7 +23,6 @@ use std::{
     panic::{self, AssertUnwindSafe},
     path::{Path, PathBuf},
     process::{Child, ChildStderr, ChildStdout, Command, ExitStatus, Stdio},
-    thread,
     time::{Duration, Instant},
 };
 
@@ -177,7 +178,7 @@ pub fn capture(
     if let Err(error) = validate_paths(spec) {
         return Err(preflight_error(error, started));
     }
-    if let Err(error) = posix::ensure_waitable_sigchld() {
+    if let Err(error) = process_lease::ensure_waitable_sigchld() {
         return Err(preflight_error(error, started));
     }
     let deadline = started
@@ -213,30 +214,18 @@ pub fn capture(
         elapsed: started.elapsed(),
         cleanup_error: None,
     })?;
-    let group = match i32::try_from(child.id()) {
-        Ok(pid) if pid > 0 => pid,
-        _ => {
-            let mut child = child;
-            let kill_error = child.kill().err();
-            let status = child.wait().ok();
-            return Err(CaptureError {
-                cause: CaptureCause::Io(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "child process id cannot be represented as a POSIX process group",
-                )),
-                stdout: Vec::new(),
-                stderr: Vec::new(),
-                status,
-                elapsed: started.elapsed(),
-                cleanup_error: kill_error,
-            });
-        }
-    };
-
-    let mut running = RunningChild::new(child, group, limits.termination_grace);
+    let mut running =
+        RunningChild::new(child, limits.termination_grace).map_err(|error| CaptureError {
+            cause: CaptureCause::Io(error),
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+            status: None,
+            elapsed: started.elapsed(),
+            cleanup_error: None,
+        })?;
     let mut pipes = Pipes {
-        stdout: running.child.stdout.take(),
-        stderr: running.child.stderr.take(),
+        stdout: running.lease.take_stdout(),
+        stderr: running.lease.take_stderr(),
     };
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
@@ -257,7 +246,7 @@ pub fn capture(
             cause: CaptureCause::Io(error),
             stdout,
             stderr,
-            status: running.status,
+            status: running.lease.status(),
             elapsed: started.elapsed(),
             cleanup_error,
         });
@@ -277,7 +266,7 @@ pub fn capture(
 
     match loop_result {
         Ok(Ok(())) => {
-            let status = running.status.expect("successful loop reaps child");
+            let status = running.lease.status().expect("successful loop reaps child");
             Ok(CapturedProcess {
                 status,
                 stdout,
@@ -297,7 +286,7 @@ pub fn capture(
                 cause,
                 stdout,
                 stderr,
-                status: running.status,
+                status: running.lease.status(),
                 elapsed: started.elapsed(),
                 cleanup_error,
             })
@@ -369,46 +358,24 @@ impl Pipes {
 }
 
 struct RunningChild {
-    child: Child,
-    process_group: libc::pid_t,
+    lease: ChildLease,
     grace: Duration,
-    status: Option<ExitStatus>,
-    reaping_lost: bool,
 }
 
 impl RunningChild {
-    fn new(child: Child, process_group: libc::pid_t, grace: Duration) -> Self {
-        Self {
-            child,
-            process_group,
+    fn new(child: Child, grace: Duration) -> io::Result<Self> {
+        Ok(Self {
+            lease: ChildLease::new(child, grace)?,
             grace,
-            status: None,
-            reaping_lost: false,
-        }
+        })
     }
 
     fn exited_without_reaping(&mut self) -> io::Result<bool> {
-        match posix::child_exited(self.child.id() as libc::pid_t) {
-            Err(error) if error.raw_os_error() == Some(libc::ECHILD) => {
-                self.reaping_lost = true;
-                Err(error)
-            }
-            result => result,
-        }
+        self.lease.observe_exit()
     }
 
     fn reap(&mut self) -> io::Result<()> {
-        if self.status.is_none() {
-            match self.child.wait() {
-                Ok(status) => self.status = Some(status),
-                Err(error) if error.raw_os_error() == Some(libc::ECHILD) => {
-                    self.reaping_lost = true;
-                    return Err(error);
-                }
-                Err(error) => return Err(error),
-            }
-        }
-        Ok(())
+        self.lease.reap()
     }
 
     fn terminate_and_reap(
@@ -419,21 +386,21 @@ impl RunningChild {
         stdout_limit: usize,
         stderr_limit: usize,
     ) -> Option<io::Error> {
-        if self.reaping_lost {
+        if self.lease.reaping_lost() {
             pipes.stdout.take();
             pipes.stderr.take();
             return Some(io::Error::other(
                 "child reaping ownership was lost; refusing to signal a possibly reused process group",
             ));
         }
-        let mut first_error = signal_group(self.process_group, libc::SIGTERM).err();
+        let mut first_error = self.lease.signal_root_group(libc::SIGTERM).err();
         let grace_started = Instant::now();
 
         while grace_started.elapsed() < self.grace {
             drain_during_cleanup(&mut pipes.stdout, stdout, stdout_limit);
             drain_during_cleanup(&mut pipes.stderr, stderr, stderr_limit);
 
-            match group_exists(self.process_group) {
+            match group_exists(self.lease.pid() as libc::pid_t) {
                 Ok(false) => break,
                 Ok(true) => {}
                 Err(error) => save_first_error(&mut first_error, error),
@@ -446,14 +413,43 @@ impl RunningChild {
             }
         }
 
-        if let Err(error) = signal_group(self.process_group, libc::SIGKILL) {
+        if let Err(error) = self.lease.signal_root_group(libc::SIGKILL) {
             save_first_error(&mut first_error, error);
-            // The direct child is still ours even if group signalling failed.
-            if self.status.is_none()
-                && let Err(kill_error) = self.child.kill()
-            {
-                save_first_error(&mut first_error, kill_error);
+        }
+
+        // The group may be empty because the direct child moved out of it.
+        // Always try the lease-guarded direct-child kill after the group
+        // attempt; the lease performs a fresh WNOWAIT check before any PID
+        // signal and refuses if reaping ownership has been lost.
+        let mut direct_child_kill_failed = false;
+        if self.lease.status().is_none()
+            && let Err(kill_error) = self.lease.kill_direct_child()
+        {
+            direct_child_kill_failed = true;
+            save_first_error(&mut first_error, kill_error);
+        }
+
+        // Do not enter Child::wait when direct-child termination failed unless
+        // a fresh WNOWAIT observation confirms the child has already exited.
+        let may_reap = if self.lease.status().is_some() || !direct_child_kill_failed {
+            true
+        } else {
+            match self.lease.observe_exit() {
+                Ok(exited) => exited,
+                Err(error) => {
+                    save_first_error(&mut first_error, error);
+                    false
+                }
             }
+        };
+
+        if !may_reap {
+            save_first_error(
+                &mut first_error,
+                io::Error::other(
+                    "refusing to block while direct child may still be running after cleanup failure",
+                ),
+            );
         }
 
         // One final nonblocking drain preserves available partial diagnostics;
@@ -464,28 +460,10 @@ impl RunningChild {
         pipes.stdout.take();
         pipes.stderr.take();
 
-        if let Err(error) = self.reap() {
+        if may_reap && let Err(error) = self.reap() {
             save_first_error(&mut first_error, error);
         }
         first_error
-    }
-}
-
-impl Drop for RunningChild {
-    fn drop(&mut self) {
-        if self.status.is_some() || self.reaping_lost {
-            return;
-        }
-        // Fallback for unexpected unwinds while the explicit cleanup path is
-        // itself unwinding. Normal errors use terminate_and_reap, which drains
-        // the pipes during the grace interval.
-        let _ = signal_group(self.process_group, libc::SIGTERM);
-        thread::sleep(self.grace);
-        let _ = signal_group(self.process_group, libc::SIGKILL);
-        let _ = self.child.kill();
-        if let Ok(status) = self.child.wait() {
-            self.status = Some(status);
-        }
     }
 }
 
@@ -656,10 +634,6 @@ fn poll_pipes(pipes: &Pipes, remaining: Duration) -> io::Result<()> {
     }
 }
 
-fn signal_group(group: libc::pid_t, signal: libc::c_int) -> io::Result<()> {
-    posix::signal_group(group, signal)
-}
-
 fn group_exists(group: libc::pid_t) -> io::Result<bool> {
     posix::group_exists(group)
 }
@@ -675,25 +649,7 @@ fn save_first_error(first: &mut Option<io::Error>, next: io::Error) {
     reason = "POSIX process groups, poll, nonblocking descriptors, and waitid require libc."
 )]
 mod posix {
-    use std::{io, mem::MaybeUninit, os::unix::io::RawFd, ptr};
-
-    pub(super) fn ensure_waitable_sigchld() -> io::Result<()> {
-        let mut action = MaybeUninit::<libc::sigaction>::uninit();
-        // SAFETY: a null new-action pointer makes sigaction query the current
-        // process disposition; the output pointer is valid for sigaction.
-        if unsafe { libc::sigaction(libc::SIGCHLD, ptr::null(), action.as_mut_ptr()) } == -1 {
-            return Err(io::Error::last_os_error());
-        }
-        // SAFETY: successful sigaction initializes the queried action.
-        let action = unsafe { action.assume_init() };
-        if action.sa_sigaction != libc::SIG_DFL || action.sa_flags & libc::SA_NOCLDWAIT != 0 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "SIGCHLD disposition does not preserve waitable child status",
-            ));
-        }
-        Ok(())
-    }
+    use std::{io, os::unix::io::RawFd};
 
     pub(super) fn set_nonblocking(fd: RawFd) -> io::Result<()> {
         // SAFETY: fcntl with F_GETFL reads flags for this open descriptor.
@@ -727,20 +683,6 @@ mod posix {
         }
     }
 
-    pub(super) fn signal_group(group: libc::pid_t, signal: libc::c_int) -> io::Result<()> {
-        // SAFETY: a negative positive group id targets only the child process
-        // group created for this invocation.
-        if unsafe { libc::kill(-group, signal) } == 0 {
-            return Ok(());
-        }
-        let error = io::Error::last_os_error();
-        if error.raw_os_error() == Some(libc::ESRCH) {
-            Ok(())
-        } else {
-            Err(error)
-        }
-    }
-
     pub(super) fn group_exists(group: libc::pid_t) -> io::Result<bool> {
         // SAFETY: signal zero checks existence/permission and sends no signal.
         if unsafe { libc::kill(-group, 0) } == 0 {
@@ -753,34 +695,6 @@ mod posix {
             _ => Err(error),
         }
     }
-
-    pub(super) fn child_exited(pid: libc::pid_t) -> io::Result<bool> {
-        let mut info = MaybeUninit::<libc::siginfo_t>::zeroed();
-        // SAFETY: waitid writes siginfo on success. WNOWAIT observes the exit
-        // without reaping, keeping the process id reserved until the process
-        // group no longer needs to be signalled.
-        let result = unsafe {
-            libc::waitid(
-                libc::P_PID,
-                pid as libc::id_t,
-                info.as_mut_ptr(),
-                libc::WEXITED | libc::WNOHANG | libc::WNOWAIT,
-            )
-        };
-        if result == -1 {
-            let error = io::Error::last_os_error();
-            if error.kind() == io::ErrorKind::Interrupted {
-                return Ok(false);
-            }
-            return Err(error);
-        }
-        // SAFETY: successful waitid initializes siginfo_t, including when
-        // WNOHANG reports no state change (si_pid is then zero).
-        let info = unsafe { info.assume_init() };
-        // SAFETY: si_pid is defined for the SIGCHLD information returned by a
-        // P_PID waitid request.
-        Ok(unsafe { info.si_pid() } != 0)
-    }
 }
 
 #[cfg(test)]
@@ -790,7 +704,11 @@ mod tests {
         fs,
         io::{Read, Write},
         process::Command as FixtureCommand,
-        sync::atomic::{AtomicU64, Ordering},
+        sync::{
+            Arc,
+            atomic::{AtomicBool, AtomicU64, Ordering},
+        },
+        thread,
     };
 
     static NEXT_DIRECTORY: AtomicU64 = AtomicU64::new(0);
@@ -956,6 +874,23 @@ mod tests {
                     .expect("write readiness marker");
                 std::io::stdout().flush().expect("flush readiness marker");
                 thread::sleep(Duration::from_secs(30));
+            }
+            "move_group_ignore_term" => {
+                let caller_group = std::env::var("AMI_CAPTURE_TARGET_PGID")
+                    .expect("caller process group")
+                    .parse::<libc::pid_t>()
+                    .expect("valid caller process group");
+                // SAFETY: this fixture changes only its own process group to
+                // the caller's group; the supervisor must never signal that
+                // group based on the child's previous group membership.
+                assert_eq!(unsafe { libc::setpgid(0, caller_group) }, 0);
+                // SAFETY: this disposable fixture ignores SIGTERM so the test
+                // exercises the direct-child SIGKILL fallback.
+                let previous = unsafe { libc::signal(libc::SIGTERM, libc::SIG_IGN) };
+                assert_ne!(previous, libc::SIG_ERR, "install SIGTERM ignore handler");
+                let marker = std::env::var_os("AMI_CAPTURE_MARKER").unwrap();
+                fs::write(marker, b"ready").expect("write moved-group readiness marker");
+                thread::sleep(Duration::from_secs(2));
             }
             "silent" => std::process::exit(0),
             "write_marker" => {
@@ -1202,15 +1137,20 @@ mod tests {
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn externally_reaped_child_refuses_further_numeric_group_signalling() {
         let child = FixtureCommand::new("/usr/bin/true")
             .process_group(0)
             .spawn()
             .unwrap();
-        let group = i32::try_from(child.id()).unwrap();
-        let mut running = RunningChild::new(child, group, Duration::ZERO);
+        let mut running = RunningChild::new(child, Duration::ZERO).unwrap();
         // Simulate an unsupported competing reaper, using this actual child.
-        assert!(running.child.wait().unwrap().success());
+        let pid = running.lease.pid() as libc::pid_t;
+        let mut status = 0;
+        // SAFETY: this test consumes only its own known direct child's wait
+        // status to simulate an unsupported competing reaper.
+        assert_eq!(unsafe { libc::waitpid(pid, &mut status, 0) }, pid);
+        assert_eq!(status, 0);
         let error = running.exited_without_reaping().unwrap_err();
         assert_eq!(error.raw_os_error(), Some(libc::ECHILD));
         let cleanup = running
@@ -1226,8 +1166,8 @@ mod tests {
             )
             .expect("lost child ownership must remain an explicit cleanup failure");
         assert!(cleanup.to_string().contains("refusing to signal"));
-        assert!(running.status.is_none());
-        assert!(running.reaping_lost);
+        assert!(running.lease.status().is_none());
+        assert!(running.lease.reaping_lost());
     }
 
     #[test]
@@ -1269,6 +1209,63 @@ mod tests {
             CaptureCause::StderrLimitExceeded
         ));
         assert_eq!(stderr_error.stderr.len(), 128);
+    }
+
+    #[test]
+    #[allow(unsafe_code)]
+    fn cancellation_kills_direct_child_after_it_leaves_supervisor_group() {
+        let temp = TempDirectory::new();
+        let marker = temp.0.join("moved-group-ready");
+        // SAFETY: getpgrp reads the caller's current process group. The child
+        // fixture receives this value only to move itself; this test never
+        // sends a signal to the caller's group.
+        let caller_group = unsafe { libc::getpgrp() };
+        let mut fixture = spec("move_group_ignore_term", &temp.0);
+        fixture.env.insert(
+            "AMI_CAPTURE_TARGET_PGID".into(),
+            caller_group.to_string().into(),
+        );
+        fixture
+            .env
+            .insert("AMI_CAPTURE_MARKER".into(), marker.as_os_str().to_owned());
+
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let child_cancelled = Arc::clone(&cancelled);
+        let mut bounded = limits();
+        bounded.timeout = Duration::from_secs(4);
+        bounded.termination_grace = Duration::from_millis(100);
+        let capture_thread = thread::spawn(move || {
+            capture(&fixture, bounded, move || {
+                child_cancelled.load(Ordering::SeqCst)
+            })
+        });
+
+        let ready_deadline = Instant::now() + Duration::from_secs(2);
+        while !marker.exists() && Instant::now() < ready_deadline {
+            thread::sleep(Duration::from_millis(5));
+        }
+        let ready = marker.exists();
+        cancelled.store(true, Ordering::SeqCst);
+        let result = capture_thread
+            .join()
+            .expect("capture thread must clean up its child");
+        assert!(
+            ready,
+            "child did not join caller group and publish readiness"
+        );
+        let error = result.expect_err("cancelled moved-group child must be terminated");
+        assert!(matches!(error.cause, CaptureCause::Cancelled));
+        assert_eq!(
+            error.status.as_ref().and_then(ExitStatusExt::signal),
+            Some(libc::SIGKILL),
+            "the direct child must receive SIGKILL after leaving its original group"
+        );
+        assert!(error.cleanup_error.is_none());
+        // SAFETY: signal zero checks that the caller's group still exists and
+        // does not send a signal to it.
+        assert_eq!(unsafe { libc::kill(-caller_group, 0) }, 0);
+        // SAFETY: the current process group is unchanged by the child fixture.
+        assert_eq!(unsafe { libc::getpgrp() }, caller_group);
     }
 
     #[test]

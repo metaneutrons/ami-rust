@@ -1,0 +1,44 @@
+{
+  "schema": "ami-rust-rc1-resource-scope-differential-v1",
+  "oracle_commit": "8c5de39f26838d838b41dec5a89c9a888dbc20d5",
+  "oracle_path": "release/ci_sdk.py",
+  "oracle_function": "Supervisor._sample_scope",
+  "oracle_source_sha256": "873ec820c1bb30b3751854b5526741f5d679fd9577c8964dab462ec559e6aee1",
+  "cases": 98,
+  "agreed": 98,
+  "frozen_fixture": "tooling/crates/core/tests/fixtures/process_scope_oracles.json",
+  "frozen_fixture_sha256": "14d867c0f5e6eb760778ce282166a2e99b106be21a668f56370d1ddef3727cb4",
+  "development_counterprobe": {
+    "rust_source_sha256": "84484ae4dc745adfa4f71297c352f31be19c98b8f6f4e64f6028501374861f06",
+    "cases": 98,
+    "agreed": 79,
+    "disagreed": 19,
+    "cause": "Missing previously observed parent linkage during table churn; corrected before public port."
+  },
+  "structural_cost_control": {
+    "scope": "Single-host bounded structural-cost control, not a cross-host release performance claim",
+    "rows": [
+      1024,
+      2048
+    ],
+    "trials_per_variant_per_size": 2,
+    "median_seconds": {
+      "1024": {
+        "fixedpoint": 0.5289075000000001,
+        "indexed": 0.005176
+      },
+      "2048": {
+        "fixedpoint": 2.285036,
+        "indexed": 0.008661499999999999
+      }
+    },
+    "direction_repeated": true,
+    "matched_output_sha256": {
+      "1024": "403e48824f233c42f2f09a4402267411b0e7252011eb17b06eaa80c9c2312250",
+      "2048": "689f2d8403b1f5fbfc7c678c020ce19ed3c28258e7d8766f5e9e494edc847a80"
+    }
+  },
+  "scope": "Pure scope/RSS parity, not command execution, signalling, resource enforcement or no-Python qualification. Internal transitional Python orchestration; frozen public fixture executes as native Rust.",
+  "pre_history_bound_rust_source_sha256": "0a97ccb9acfba7d45c9265f30ecd5823fa22296682e407b9e78cc0b23c12fd9a",
+  "current_source_validation": "The current API adds a required cumulative-history input bound. The native process_scope_oracles integration test runs the same 98 frozen cases against current sources; exact code identity belongs to the local/hosted result."
+}
