@@ -5,13 +5,13 @@
 //! borrow the input archive and are safe to publish only after verification
 //! succeeds for the complete archive.
 //!
-//! TAR headers use the canonical unsigned checksum accepted by `tar` 0.4.46.
-//! Python's historical reader also accepts the legacy signed-checksum variant;
-//! that noncanonical encoding is explicitly refused here.
+//! A bounded raw header walk accepts canonical unsigned and historical signed
+//! checksums. The reviewed TAR library supplies header/path/type interpretation;
+//! no library extraction or hidden extension-body allocation is used.
 
-use std::{io::Cursor, ops::Range};
+use std::ops::Range;
 
-use tar::{Archive, EntryType};
+use tar::{EntryType, Header};
 
 use crate::{Refusal, Result, digest::is_sha256_digest, digest::sha256_bytes};
 
@@ -62,24 +62,31 @@ pub fn verify_publisher_sdk_tar<'a>(
     }
     validate_expected_inventory(expected_files)?;
 
-    let mut archive = Archive::new(Cursor::new(archive_bytes));
-    let entries = archive
-        .entries()
-        .map_err(|error| Refusal::new(format!("invalid SDK TAR archive: {error}")))?;
-    let entries = entries.raw(true);
+    let mut position = 0_usize;
     let mut verified = Vec::new();
     let mut total_file_bytes = 0usize;
     let mut last_end = 0usize;
     let mut pending_long_name: Option<Vec<u8>> = None;
     let mut pending_long_link = false;
 
-    for entry_result in entries {
-        let entry = entry_result
-            .map_err(|error| Refusal::new(format!("invalid SDK TAR entry: {error}")))?;
-        let header = entry.header();
+    while position < archive_bytes.len() {
+        let header_end = position.checked_add(TAR_BLOCK_BYTES)
+            .ok_or_else(|| Refusal::new("SDK TAR header offset overflow"))?;
+        let raw_header = archive_bytes.get(position..header_end)
+            .ok_or_else(|| Refusal::new("truncated SDK TAR header"))?;
+        if raw_header.iter().all(|byte| *byte == 0) {
+            break;
+        }
+        // Header::from_byte_slice requires exactly one checked 512-byte block.
+        let header = Header::from_byte_slice(raw_header);
+        verify_header_checksum(raw_header)?;
         let entry_type = header.entry_type();
-        let range = entry_data_range(archive_bytes, entry.raw_file_position(), entry.size())?;
+        let declared_size = tarfile_number(&raw_header[124..136])?;
+        let declared_size = u64::try_from(declared_size)
+            .map_err(|_| Refusal::new("negative SDK TAR member size"))?;
+        let range = entry_data_range(archive_bytes, header_end as u64, declared_size)?;
         let size = range.len();
+        position = padded_data_end(range.start, size)?;
 
         match entry_type {
             EntryType::GNULongName => {
@@ -157,7 +164,7 @@ pub fn verify_publisher_sdk_tar<'a>(
                     )));
                 }
 
-                let source_mode = tarfile_mode(header)?;
+                let source_mode = tarfile_number(&header.as_bytes()[100..108])?;
                 let mode = if source_mode & 0o111 != 0 {
                     0o755
                 } else {
@@ -335,8 +342,22 @@ fn parse_gnu_long_name(raw: &[u8]) -> Result<Vec<u8>> {
     Ok(path.to_vec())
 }
 
-fn tarfile_mode(header: &tar::Header) -> Result<i64> {
-    let field = &header.as_bytes()[100..108];
+fn verify_header_checksum(header: &[u8]) -> Result<()> {
+    let expected = tarfile_number(&header[148..156])?;
+    // The checksum field itself contributes eight ASCII spaces in both forms.
+    let mut unsigned = 8_i64 * i64::from(b' ');
+    let mut signed = unsigned;
+    for byte in header[..148].iter().chain(&header[156..]) {
+        unsigned += i64::from(*byte);
+        signed += i64::from(*byte as i8);
+    }
+    if expected != unsigned && expected != signed {
+        return Err(Refusal::new("SDK TAR header checksum mismatch"));
+    }
+    Ok(())
+}
+
+fn tarfile_number(field: &[u8]) -> Result<i64> {
     if matches!(field[0], 0o200 | 0o377) {
         let mut value = 0i64;
         for byte in &field[1..] {
@@ -735,14 +756,13 @@ mod tests {
     }
 
     #[test]
-    fn refuses_historical_signed_tar_checksum_variant() {
+    fn accepts_historical_signed_tar_checksum_variant() {
         let bytes = b"signed checksum control";
         let mut archive = archive_with_file("host/file", bytes, 0o755);
         archive[100..108].copy_from_slice(&[0x80, 0, 0, 0, 0, 0, 1, 0xed]);
         fix_header_checksum_signed(&mut archive[..512]);
         let expected = expected_row("host/file", bytes);
-        let error = verify_publisher_sdk_tar(&archive, &expected).unwrap_err();
-        assert!(error.to_string().contains("checksum mismatch"));
+        assert!(verify_publisher_sdk_tar(&archive, &expected).is_ok());
     }
 
     #[test]
