@@ -207,6 +207,16 @@ jobs:
           "$cli_rust/cargo" test --workspace --locked --offline \
             --manifest-path tooling/Cargo.toml \
             --target-dir "$RUNNER_TEMP/ami-rust-host-core"
+      - name: Build and check portable native frontends
+        run: |
+          set -euo pipefail
+          cli_rust="$RUNNER_TEMP/ami-rust-rc0-host/toolchain/bin"
+          export CLI_CARGO="$cli_rust/cargo"
+          export RUSTC="$cli_rust/rustc"
+          export RUSTDOC="$cli_rust/rustdoc"
+          export CARGO_HOME="$RUNNER_TEMP/ami-rust-rc0-cargo-home"
+          export PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin"
+          bash tools/build-native-cli.sh "$RUNNER_TEMP/ami-rust-native-cli"
 
   ci-success:
     name: CI Success

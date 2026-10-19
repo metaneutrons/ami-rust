@@ -21,6 +21,27 @@ use std::{
 
 static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(0);
 
+#[test]
+fn retained_byte_limit_is_selected_only_by_the_explicit_release_route() {
+    use crate::publisher_files::{LEGACY_BUNDLE_BYTE_LIMIT, NATIVE_BUNDLE_BYTE_LIMIT};
+
+    assert!(
+        check_retained_byte_limit(LEGACY_BUNDLE_BYTE_LIMIT, ReleaseFlavor::LegacyInspection)
+            .is_ok()
+    );
+    assert!(
+        check_retained_byte_limit(
+            LEGACY_BUNDLE_BYTE_LIMIT + 1,
+            ReleaseFlavor::LegacyInspection
+        )
+        .is_err()
+    );
+    assert!(check_retained_byte_limit(NATIVE_BUNDLE_BYTE_LIMIT, ReleaseFlavor::Native).is_ok());
+    assert!(
+        check_retained_byte_limit(NATIVE_BUNDLE_BYTE_LIMIT + 1, ReleaseFlavor::Native).is_err()
+    );
+}
+
 struct FixtureDir(PathBuf);
 
 impl FixtureDir {

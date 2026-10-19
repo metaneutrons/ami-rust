@@ -16,7 +16,10 @@ use crate::{
     ownership::protected_regular_file,
     process_capture::{CaptureLimits, CommandSpec},
     publisher_claims::{PublisherClaimContext, check_github_output},
-    publisher_files::{read_bundle_file, read_open_regular, scan_bundle_exact},
+    publisher_files::{
+        BundleMeasurement, LEGACY_BUNDLE_BYTE_LIMIT, NATIVE_BUNDLE_BYTE_LIMIT, read_bundle_file,
+        read_open_regular, scan_bundle_exact, scan_native_bundle_exact,
+    },
     publisher_home::PublisherHome,
     publisher_metadata::{AuthenticationMetadata, parse_authentication_metadata},
     publisher_policy::{
@@ -32,7 +35,7 @@ use crate::{
 };
 use sha2::{Digest, Sha256};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     ffi::OsString,
     fs::{self, Metadata},
     io::{self, Read},
@@ -45,6 +48,8 @@ const TOOL_MAX_BYTES: u64 = 512 * 1024 * 1024;
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(60);
 const TOTAL_TIMEOUT: Duration = Duration::from_secs(300);
 const SUBJECTS: [&str; 3] = ["SHAUTIL", "release.json", "sdk.tar.xz"];
+type BundleScanner =
+    fn(&Directory, &BTreeSet<String>, &BTreeSet<String>) -> Result<BundleMeasurement>;
 
 /// Select the schema explicitly. Legacy inspection never activates a Python
 /// driver or grants permission to install it through a native consumer path.
@@ -275,7 +280,11 @@ fn check_publisher_bundle(
     )?;
     let metadata =
         parse_authentication_metadata(&metadata_raw, &manifest_sha256, manifest.assets(), &policy)?;
-    scan_bundle_exact(
+    let scan_exact: BundleScanner = match flavor {
+        ReleaseFlavor::LegacyInspection => scan_bundle_exact,
+        ReleaseFlavor::Native => scan_native_bundle_exact,
+    };
+    scan_exact(
         &root,
         &metadata.expected_files,
         &metadata.allowed_directories,
@@ -329,11 +338,7 @@ fn check_publisher_bundle(
         .values()
         .try_fold(0_u64, |total, bytes| total.checked_add(bytes.len() as u64))
         .ok_or_else(|| Refusal::new("retained publisher byte count overflow"))?;
-    if retained_bytes > 32 * 1024 * 1024 {
-        return Err(Refusal::new(
-            "retained publisher files exceed the frozen bundle byte profile",
-        ));
-    }
+    check_retained_byte_limit(retained_bytes, flavor)?;
     let home = PublisherHome::new()?;
     let result = (|| {
         // Verifiers reopen these private files, never the untrusted original
@@ -386,7 +391,7 @@ fn check_publisher_bundle(
             )?;
         }
         observer.check()?;
-        scan_bundle_exact(
+        scan_exact(
             &staged_root,
             &metadata.expected_files,
             &metadata.allowed_directories,
@@ -403,7 +408,7 @@ fn check_publisher_bundle(
                 "publisher bundle root changed during verification",
             ));
         }
-        scan_bundle_exact(
+        scan_exact(
             &root,
             &metadata.expected_files,
             &metadata.allowed_directories,
@@ -496,6 +501,19 @@ fn check_publisher_bundle(
             external_policy_sha256: parse_digest(&sha256_bytes(&policy_raw))?,
         },
     })
+}
+
+fn check_retained_byte_limit(total: u64, flavor: ReleaseFlavor) -> Result<()> {
+    let limit = match flavor {
+        ReleaseFlavor::LegacyInspection => LEGACY_BUNDLE_BYTE_LIMIT,
+        ReleaseFlavor::Native => NATIVE_BUNDLE_BYTE_LIMIT,
+    };
+    if total > limit {
+        return Err(Refusal::new(format!(
+            "retained publisher files exceed the {limit}-byte bundle profile"
+        )));
+    }
+    Ok(())
 }
 
 fn completed_resource_summary(reports: &[ResourceReport]) -> String {

@@ -386,7 +386,16 @@
           "host_launchers"
         ],
         "host_launchers_shape": "exact macos-aarch64 and linux-x86_64 entries; each binds path/bytes/sha256 to the release asset inventory",
-        "invariants": "replace v1 host_interpreters with exact native host launcher/core identities; trust policy and verifier/root files remain external"
+        "invariants": "replace v1 host_interpreters with exact native host launcher/core identities; trust policy and verifier/root files remain external",
+        "container_profile": {
+          "asset_rows": 512,
+          "asset_bytes": 16777216,
+          "total_asset_bytes": 67108864,
+          "physical_bundle_files": 512,
+          "total_physical_bundle_bytes": 67108864,
+          "legacy_release_v1_total_bytes": 33554432,
+          "decision": "prospective native format only; see native-installation.md#container-profiles"
+        }
       },
       {
         "schema": "ami-rust-install-receipt-v3",
@@ -402,7 +411,13 @@
           "cli_sha256",
           "core_sha256"
         ],
-        "invariants": "bind release-v2 authentication and host-native CLI/core bytes; exact inventory and external receipt pin semantics continue"
+        "invariants": "bind release-v2 authentication and host-native CLI/core bytes; exact inventory and external receipt pin semantics continue",
+        "container_profile": {
+          "total_inventory_bytes": 134217728,
+          "total_installed_bytes_including_receipt": 134217728,
+          "legacy_v1_v2_total_bytes": 67108864,
+          "decision": "prospective native format only; see native-installation.md#container-profiles"
+        }
       },
       {
         "schema": "ami-rust-native-build-receipt-v1",

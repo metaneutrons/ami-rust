@@ -14,6 +14,7 @@ pub mod host_platform;
 pub mod inventory;
 pub mod json;
 mod mutations;
+pub mod native_install;
 pub mod ownership;
 pub mod package;
 pub mod package_records;

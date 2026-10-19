@@ -1,6 +1,7 @@
 //! The two executable names enter this same parser and dispatcher.
 use crate::{Refusal, Result};
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::{
     ffi::OsString,
     os::unix::ffi::OsStrExt,
@@ -63,7 +64,7 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         name: "install release",
         command: "install",
-        implemented: false,
+        implemented: true,
     },
     Capability {
         name: "lock project",
@@ -73,7 +74,7 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         name: "uninstall",
         command: "uninstall",
-        implemented: false,
+        implemented: true,
     },
     Capability {
         name: "inspect or migrate",
@@ -86,7 +87,34 @@ pub const CAPABILITIES: &[Capability] = &[
 pub enum Invocation {
     Help,
     Version,
-    VerifyRelease { bundle: PathBuf, policy: PathBuf },
+    VerifyRelease {
+        bundle: PathBuf,
+        policy: PathBuf,
+    },
+    InstallRelease {
+        bundle: PathBuf,
+        policy: PathBuf,
+        prefix: PathBuf,
+        receipt_pin: Option<PathBuf>,
+    },
+    Uninstall {
+        prefix: PathBuf,
+        receipt_sha256: String,
+    },
+}
+
+pub struct CommandOutput {
+    pub stdout: Vec<u8>,
+    pub exit_code: u8,
+}
+
+impl CommandOutput {
+    fn success(stdout: Vec<u8>) -> Self {
+        Self {
+            stdout,
+            exit_code: 0,
+        }
+    }
 }
 
 /// Preserve OS path arguments. Cargo injects `ami` only for the plugin name.
@@ -110,6 +138,12 @@ pub fn parse(executable: &Path, arguments: &[OsString]) -> Result<Invocation> {
     if args.first().is_some_and(|arg| arg == "verify") {
         return parse_verify_release(&args[1..]);
     }
+    if args.first().is_some_and(|arg| arg == "install") {
+        return parse_install_release(&args[1..]);
+    }
+    if args.first().is_some_and(|arg| arg == "uninstall") {
+        return parse_uninstall(&args[1..]);
+    }
     if let Some(arg) = args.first()
         && CAPABILITIES.iter().any(|item| {
             !item.implemented
@@ -124,7 +158,7 @@ pub fn parse(executable: &Path, arguments: &[OsString]) -> Result<Invocation> {
         ));
     }
     Err(Refusal::new(
-        "expected --version, --help, or verify --bundle PATH --policy EXTERNAL_POLICY",
+        "expected --version, --help, verify --bundle PATH --policy EXTERNAL_POLICY, install --bundle PATH --policy PATH --prefix FRESH, or uninstall --prefix PATH --receipt-sha256 SHA256",
     ))
 }
 
@@ -134,32 +168,88 @@ fn parse_verify_release(arguments: &[OsString]) -> Result<Invocation> {
             "verify SDK lock is not implemented in this development build",
         ));
     }
-    let mut bundle = None;
-    let mut policy = None;
+    let mut options = parse_path_options(arguments, &["--bundle", "--policy"], "verify")?;
+    let bundle = options
+        .remove("--bundle")
+        .ok_or_else(|| Refusal::new("verify requires --bundle PATH"))?;
+    let policy = options
+        .remove("--policy")
+        .ok_or_else(|| Refusal::new("verify requires --policy PATH"))?;
+    Ok(Invocation::VerifyRelease { bundle, policy })
+}
+
+fn parse_install_release(arguments: &[OsString]) -> Result<Invocation> {
+    let mut options = parse_path_options(
+        arguments,
+        &["--bundle", "--policy", "--prefix", "--receipt-pin"],
+        "install",
+    )?;
+    let bundle = options
+        .remove("--bundle")
+        .ok_or_else(|| Refusal::new("install requires --bundle PATH"))?;
+    let policy = options
+        .remove("--policy")
+        .ok_or_else(|| Refusal::new("install requires --policy PATH"))?;
+    let prefix = options
+        .remove("--prefix")
+        .ok_or_else(|| Refusal::new("install requires --prefix FRESH_PREFIX"))?;
+    let receipt_pin = options.remove("--receipt-pin");
+    Ok(Invocation::InstallRelease {
+        bundle,
+        policy,
+        prefix,
+        receipt_pin,
+    })
+}
+
+fn parse_uninstall(arguments: &[OsString]) -> Result<Invocation> {
+    let mut options =
+        parse_path_options(arguments, &["--prefix", "--receipt-sha256"], "uninstall")?;
+    let prefix = options
+        .remove("--prefix")
+        .ok_or_else(|| Refusal::new("uninstall requires --prefix PATH"))?;
+    let receipt_sha256 = options
+        .remove("--receipt-sha256")
+        .ok_or_else(|| Refusal::new("uninstall requires --receipt-sha256 SHA256"))?;
+    let receipt_sha256 = receipt_sha256
+        .to_str()
+        .filter(|value| crate::digest::is_sha256_digest(value))
+        .ok_or_else(|| Refusal::new("receipt SHA-256 must be 64 lowercase hexadecimal digits"))?
+        .to_owned();
+    Ok(Invocation::Uninstall {
+        prefix,
+        receipt_sha256,
+    })
+}
+
+fn parse_path_options(
+    arguments: &[OsString],
+    accepted: &[&str],
+    command: &str,
+) -> Result<BTreeMap<String, PathBuf>> {
+    let mut options = BTreeMap::new();
     let mut index = 0;
     while index < arguments.len() {
-        let option = &arguments[index];
-        let slot = if option == "--bundle" {
-            &mut bundle
-        } else if option == "--policy" {
-            &mut policy
-        } else {
-            return Err(Refusal::new("verify accepts only --bundle and --policy"));
-        };
-        if slot.is_some() {
-            return Err(Refusal::new("verify options may be supplied only once"));
+        let option = arguments[index]
+            .to_str()
+            .filter(|value| accepted.contains(value))
+            .ok_or_else(|| {
+                Refusal::new(format!("{command} accepts only {}", accepted.join(" and ")))
+            })?;
+        if options.contains_key(option) {
+            return Err(Refusal::new(format!(
+                "{command} options may be supplied only once"
+            )));
         }
         index += 1;
         let value = arguments
             .get(index)
             .filter(|value| !value.as_bytes().starts_with(b"-"))
-            .ok_or_else(|| Refusal::new(format!("{option:?} requires a path argument")))?;
-        *slot = Some(PathBuf::from(value.as_os_str()));
+            .ok_or_else(|| Refusal::new(format!("{option} requires an argument")))?;
+        options.insert(option.to_owned(), PathBuf::from(value.as_os_str()));
         index += 1;
     }
-    let bundle = bundle.ok_or_else(|| Refusal::new("verify requires --bundle PATH"))?;
-    let policy = policy.ok_or_else(|| Refusal::new("verify requires --policy PATH"))?;
-    Ok(Invocation::VerifyRelease { bundle, policy })
+    Ok(options)
 }
 
 #[derive(Serialize)]
@@ -211,9 +301,51 @@ struct AssetSummary<'a> {
     sha256: &'a crate::records::Sha256,
 }
 
-pub fn render(invocation: Invocation) -> Result<Vec<u8>> {
+#[derive(Serialize)]
+#[serde(untagged)]
+enum OutputPath<'a> {
+    Utf8(&'a str),
+    UnixBytes {
+        encoding: &'static str,
+        bytes: &'a [u8],
+    },
+}
+
+impl<'a> OutputPath<'a> {
+    fn from_path(path: &'a Path) -> Self {
+        match path.to_str() {
+            Some(path) => Self::Utf8(path),
+            None => Self::UnixBytes {
+                encoding: "unix-path-bytes-v1",
+                bytes: path.as_os_str().as_bytes(),
+            },
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(deny_unknown_fields)]
+struct InstallResult<'a> {
+    schema: &'static str,
+    status: &'static str,
+    prefix: OutputPath<'a>,
+    receipt_sha256: &'a str,
+    receipt_pin: Option<OutputPath<'a>>,
+    reason: Option<&'a str>,
+}
+
+#[derive(Serialize)]
+#[serde(deny_unknown_fields)]
+struct UninstallResult<'a> {
+    schema: &'static str,
+    status: &'static str,
+    prefix: OutputPath<'a>,
+    receipt_sha256: &'a str,
+}
+
+pub fn render(invocation: Invocation) -> Result<CommandOutput> {
     match invocation {
-        Invocation::Help => Ok(b"ami-rust native host tooling\n\nUsage:\n  ami-rust --version\n  ami-rust --help\n  ami-rust verify --bundle PATH --policy EXTERNAL_POLICY\n\n`verify --sdk-lock FILE` is not implemented. Release verification authenticates the publisher and checks SDK-v2 structure; it does not claim R1 acceptance or native build qualification.\n".to_vec()),
+        Invocation::Help => Ok(CommandOutput::success(b"ami-rust native host tooling\n\nUsage:\n  ami-rust --version\n  ami-rust --help\n  ami-rust verify --bundle PATH --policy EXTERNAL_POLICY\n  ami-rust install --bundle BUNDLE --policy EXTERNAL_POLICY --prefix FRESH_PREFIX [--receipt-pin FRESH_EXTERNAL_FILE]\n  ami-rust uninstall --prefix PREFIX --receipt-sha256 SHA256\n\n`verify --sdk-lock FILE` is not implemented. Release verification authenticates the publisher and checks SDK-v2 structure; it does not claim R1 acceptance or native build qualification.\n".to_vec())),
         Invocation::Version => {
             let mut output = serde_json::to_vec(&Version {
                 schema: "ami-rust-version-v1",
@@ -224,10 +356,115 @@ pub fn render(invocation: Invocation) -> Result<Vec<u8>> {
                 packaging_revision: 0,
             }).map_err(|error| Refusal::new(format!("cannot encode version: {error}")))?;
             output.push(b'\n');
-            Ok(output)
+            Ok(CommandOutput::success(output))
         }
-        Invocation::VerifyRelease { bundle, policy } => render_verify_release(&bundle, &policy),
+        Invocation::VerifyRelease { bundle, policy } => {
+            render_verify_release(&bundle, &policy).map(CommandOutput::success)
+        }
+        Invocation::InstallRelease {
+            bundle,
+            policy,
+            prefix,
+            receipt_pin,
+        } => render_install_release(&bundle, &policy, &prefix, receipt_pin.as_deref()),
+        Invocation::Uninstall {
+            prefix,
+            receipt_sha256,
+        } => render_uninstall(&prefix, &receipt_sha256).map(CommandOutput::success),
     }
+}
+
+fn render_install_release(
+    bundle_path: &Path,
+    policy_path: &Path,
+    prefix: &Path,
+    receipt_pin: Option<&Path>,
+) -> Result<CommandOutput> {
+    let bundle_path = std::fs::canonicalize(bundle_path)
+        .map_err(|error| Refusal::new(format!("could not resolve release bundle: {error}")))?;
+    let policy_path = std::fs::canonicalize(policy_path)
+        .map_err(|error| Refusal::new(format!("could not resolve external policy: {error}")))?;
+    match crate::native_install::install(&bundle_path, &policy_path, prefix, receipt_pin) {
+        Ok(published) => {
+            let receipt_pin = published
+                .receipt_pin
+                .as_ref()
+                .map(|path| OutputPath::from_path(path));
+            let output = InstallResult {
+                schema: "ami-rust-install-result-v1",
+                status: "installed",
+                prefix: OutputPath::from_path(&published.prefix),
+                receipt_sha256: &published.receipt_sha256,
+                receipt_pin,
+                reason: None,
+            };
+            Ok(CommandOutput::success(encode_json_line(&output)?))
+        }
+        Err(failure) => {
+            let crate::native_install::InstallFailure {
+                reason,
+                published,
+                recovery,
+            } = failure;
+            if let Some(published) = published {
+                let receipt_pin = published
+                    .receipt_pin
+                    .as_ref()
+                    .map(|path| OutputPath::from_path(path));
+                let reason = reason.to_string();
+                let output = InstallResult {
+                    schema: "ami-rust-install-result-v1",
+                    status: "installed_with_error",
+                    prefix: OutputPath::from_path(&published.prefix),
+                    receipt_sha256: &published.receipt_sha256,
+                    receipt_pin,
+                    reason: Some(&reason),
+                };
+                Ok(CommandOutput {
+                    stdout: encode_json_line(&output)?,
+                    exit_code: 1,
+                })
+            } else {
+                Err(recovery_refusal(reason, recovery.as_deref(), "staging"))
+            }
+        }
+    }
+}
+
+fn render_uninstall(prefix: &Path, receipt_sha256: &str) -> Result<Vec<u8>> {
+    crate::native_install::uninstall(prefix, receipt_sha256).map_err(|failure| {
+        recovery_refusal(failure.reason, failure.recovery.as_deref(), "tombstone")
+    })?;
+    encode_json_line(&UninstallResult {
+        schema: "ami-rust-uninstall-result-v1",
+        status: "uninstalled",
+        prefix: OutputPath::from_path(prefix),
+        receipt_sha256,
+    })
+}
+
+fn recovery_refusal(
+    reason: impl std::fmt::Display,
+    recovery: Option<&crate::transaction::RecoveryLocation>,
+    label: &str,
+) -> Refusal {
+    match recovery {
+        Some(recovery) => Refusal::new(format!(
+            "{reason}; retained {label} entry {:?} under {:?} (parent identity {:?}, verified path {:?})",
+            recovery.entry_name,
+            recovery.last_known_parent,
+            recovery.parent_identity,
+            recovery.verified_path,
+        )),
+        None => Refusal::new(reason.to_string()),
+    }
+}
+
+fn encode_json_line(value: &impl Serialize) -> Result<Vec<u8>> {
+    let mut output = serde_json::to_vec(value)
+        .map_err(|error| Refusal::new(format!("cannot encode command result: {error}")))?;
+    output.push(b'\n');
+    Ok(output)
 }
 
 fn render_verify_release(bundle_path: &Path, policy_path: &Path) -> Result<Vec<u8>> {
@@ -413,6 +650,166 @@ mod tests {
     }
 
     #[test]
+    fn install_and_uninstall_parse_exact_paths_and_receipt_digest() {
+        let expected = Invocation::InstallRelease {
+            bundle: PathBuf::from("bundle"),
+            policy: PathBuf::from("policy.json"),
+            prefix: PathBuf::from("/opt/ami-rust"),
+            receipt_pin: Some(PathBuf::from("/tmp/receipt.pin")),
+        };
+        for argv in [
+            args(&[
+                "install",
+                "--bundle",
+                "bundle",
+                "--policy",
+                "policy.json",
+                "--prefix",
+                "/opt/ami-rust",
+                "--receipt-pin",
+                "/tmp/receipt.pin",
+            ]),
+            args(&[
+                "install",
+                "--receipt-pin",
+                "/tmp/receipt.pin",
+                "--prefix",
+                "/opt/ami-rust",
+                "--policy",
+                "policy.json",
+                "--bundle",
+                "bundle",
+            ]),
+        ] {
+            assert_eq!(parse(Path::new("ami-rust"), &argv).unwrap(), expected);
+        }
+
+        let digest = "a".repeat(64);
+        let upper_digest = "A".repeat(64);
+        assert_eq!(
+            parse(
+                Path::new("ami-rust"),
+                &args(&[
+                    "uninstall",
+                    "--prefix",
+                    "/opt/ami-rust",
+                    "--receipt-sha256",
+                    &digest,
+                ])
+            )
+            .unwrap(),
+            Invocation::Uninstall {
+                prefix: PathBuf::from("/opt/ami-rust"),
+                receipt_sha256: digest.clone(),
+            }
+        );
+
+        for argv in [
+            args(&["install"]),
+            args(&["install", "--bundle", "bundle", "--policy", "policy.json"]),
+            args(&[
+                "install",
+                "--bundle",
+                "bundle",
+                "--policy",
+                "policy.json",
+                "--prefix",
+                "/opt/ami-rust",
+                "--prefix",
+                "/opt/other",
+            ]),
+            args(&[
+                "install",
+                "--bundle",
+                "bundle",
+                "--policy",
+                "policy.json",
+                "--prefix",
+                "/opt/ami-rust",
+                "--other",
+                "value",
+            ]),
+            args(&[
+                "install",
+                "--bundle",
+                "bundle",
+                "--policy",
+                "policy.json",
+                "--prefix",
+                "/opt/ami-rust",
+                "--receipt-pin",
+                "/tmp/receipt.pin",
+                "--receipt-pin",
+                "/tmp/other.pin",
+            ]),
+            args(&["uninstall", "--prefix", "/opt/ami-rust"]),
+            args(&[
+                "uninstall",
+                "--prefix",
+                "/opt/ami-rust",
+                "--receipt-sha256",
+                upper_digest.as_str(),
+            ]),
+            args(&[
+                "uninstall",
+                "--prefix",
+                "/opt/ami-rust",
+                "--receipt-sha256",
+                digest.as_str(),
+                "--unknown",
+                "value",
+            ]),
+        ] {
+            assert!(parse(Path::new("ami-rust"), &argv).is_err(), "{argv:?}");
+        }
+    }
+
+    #[test]
+    fn result_paths_preserve_non_utf8_unix_bytes_and_keep_utf8_as_strings() {
+        let utf8_path = Path::new("/opt/ami-rust");
+        assert_eq!(
+            serde_json::to_value(OutputPath::from_path(utf8_path)).unwrap(),
+            serde_json::json!("/opt/ami-rust")
+        );
+
+        let raw_prefix = b"/tmp/ami-prefix-\xff";
+        let prefix = PathBuf::from(OsString::from_vec(raw_prefix.to_vec()));
+        assert_eq!(prefix.as_os_str().as_bytes(), raw_prefix);
+        let raw_pin = b"/tmp/ami-pin-\xfe";
+        let pin = PathBuf::from(OsString::from_vec(raw_pin.to_vec()));
+        assert_eq!(pin.as_os_str().as_bytes(), raw_pin);
+
+        let install = InstallResult {
+            schema: "ami-rust-install-result-v1",
+            status: "installed",
+            prefix: OutputPath::from_path(&prefix),
+            receipt_sha256: "aabb",
+            receipt_pin: Some(OutputPath::from_path(&pin)),
+            reason: None,
+        };
+        let install_json = serde_json::to_value(install).unwrap();
+        let expected_prefix = serde_json::json!({
+            "encoding": "unix-path-bytes-v1",
+            "bytes": raw_prefix,
+        });
+        let expected_pin = serde_json::json!({
+            "encoding": "unix-path-bytes-v1",
+            "bytes": raw_pin,
+        });
+        assert_eq!(install_json["prefix"], expected_prefix);
+        assert_eq!(install_json["receipt_pin"], expected_pin);
+
+        let uninstall = UninstallResult {
+            schema: "ami-rust-uninstall-result-v1",
+            status: "uninstalled",
+            prefix: OutputPath::from_path(&prefix),
+            receipt_sha256: "aabb",
+        };
+        let uninstall_json = serde_json::to_value(uninstall).unwrap();
+        assert_eq!(uninstall_json["prefix"], expected_prefix);
+    }
+
+    #[test]
     fn capability_ledger_matches_normative_contract_and_refuses_pending_work() {
         let contract: serde_json::Value = serde_json::from_str(include_str!(
             "../../../../docs/rust-cli-migration/contracts-v1.json"
@@ -429,13 +826,19 @@ mod tests {
         assert_eq!(actual, expected);
         assert_eq!(
             CAPABILITIES.iter().filter(|item| item.implemented).count(),
-            2
+            4
         );
         assert!(CAPABILITIES.iter().any(|item| {
             item.name == "verify release" && item.command == "verify" && item.implemented
         }));
         assert!(CAPABILITIES.iter().any(|item| {
             item.name == "verify SDK lock" && item.command == "verify" && !item.implemented
+        }));
+        assert!(CAPABILITIES.iter().any(|item| {
+            item.name == "install release" && item.command == "install" && item.implemented
+        }));
+        assert!(CAPABILITIES.iter().any(|item| {
+            item.name == "uninstall" && item.command == "uninstall" && item.implemented
         }));
         assert!(
             parse(

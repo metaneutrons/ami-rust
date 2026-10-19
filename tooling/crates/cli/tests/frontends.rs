@@ -78,6 +78,11 @@ fn real_frontend_copies_and_cargo_plugin_have_identical_version_and_refusals() {
         String::from_utf8_lossy(&help.stdout)
             .contains("ami-rust verify --bundle PATH --policy EXTERNAL_POLICY")
     );
+    let help_text = String::from_utf8_lossy(&help.stdout);
+    assert!(help_text.contains(
+        "ami-rust install --bundle BUNDLE --policy EXTERNAL_POLICY --prefix FRESH_PREFIX [--receipt-pin FRESH_EXTERNAL_FILE]"
+    ));
+    assert!(help_text.contains("ami-rust uninstall --prefix PREFIX --receipt-sha256 SHA256"));
     for (binary, args) in [
         (&plugin, vec!["--help"]),
         (&plugin, vec!["ami", "--help"]),
@@ -165,5 +170,169 @@ fn real_frontend_copies_and_cargo_plugin_have_identical_version_and_refusals() {
         assert_eq!(direct_output.stderr, plugin_output.stderr);
         assert_eq!(direct_output.stderr, cargo_output.stderr);
     }
+
+    let malformed_install = [
+        vec!["install"],
+        vec!["install", "--bundle", bundle_arg],
+        vec!["install", "--bundle", bundle_arg, "--policy", policy_arg],
+        vec![
+            "install",
+            "--bundle",
+            bundle_arg,
+            "--policy",
+            policy_arg,
+            "--prefix",
+            "/tmp/ami-rust-prefix",
+            "--prefix",
+            "/tmp/other-prefix",
+        ],
+        vec![
+            "install",
+            "--bundle",
+            bundle_arg,
+            "--policy",
+            policy_arg,
+            "--prefix",
+            "/tmp/ami-rust-prefix",
+            "--unknown",
+            "value",
+        ],
+        vec![
+            "install",
+            "--bundle",
+            bundle_arg,
+            "--policy",
+            policy_arg,
+            "--prefix",
+            "/tmp/ami-rust-prefix",
+            "--receipt-pin",
+        ],
+    ];
+    for args in malformed_install {
+        let direct_output = run(&direct, &args);
+        let mut plugin_args = vec!["ami"];
+        plugin_args.extend(args.iter().copied());
+        let plugin_output = run(&plugin, &plugin_args);
+        let cargo_output = run(&PathBuf::from(env!("CARGO")), &plugin_args);
+        for output in [&direct_output, &plugin_output, &cargo_output] {
+            assert_eq!(output.status.code(), Some(2), "args={args:?}");
+            assert!(output.stdout.is_empty(), "args={args:?}");
+        }
+        assert_eq!(direct_output.stderr, plugin_output.stderr);
+        assert_eq!(direct_output.stderr, cargo_output.stderr);
+    }
+
+    let install_prefix = fixture.0.join("fresh-install-prefix");
+    let pin_path = fixture.0.join("fresh-receipt-pin");
+    let prefix_arg = install_prefix.to_str().unwrap();
+    let pin_arg = pin_path.to_str().unwrap();
+    for args in [
+        vec![
+            "install",
+            "--bundle",
+            bundle_arg,
+            "--policy",
+            policy_arg,
+            "--prefix",
+            prefix_arg,
+            "--receipt-pin",
+            pin_arg,
+        ],
+        vec![
+            "install",
+            "--receipt-pin",
+            pin_arg,
+            "--prefix",
+            prefix_arg,
+            "--policy",
+            policy_arg,
+            "--bundle",
+            bundle_arg,
+        ],
+    ] {
+        let direct_output = run(&direct, &args);
+        let mut plugin_args = vec!["ami"];
+        plugin_args.extend(args.iter().copied());
+        let plugin_output = run(&plugin, &plugin_args);
+        let cargo_output = run(&PathBuf::from(env!("CARGO")), &plugin_args);
+        for output in [&direct_output, &plugin_output, &cargo_output] {
+            assert_eq!(output.status.code(), Some(2), "args={args:?}");
+            assert!(output.stdout.is_empty(), "args={args:?}");
+            assert!(
+                String::from_utf8_lossy(&output.stderr).contains("publisher policy"),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+        assert_eq!(direct_output.stderr, plugin_output.stderr);
+        assert_eq!(direct_output.stderr, cargo_output.stderr);
+        assert!(!install_prefix.exists());
+        assert!(!pin_path.exists());
+    }
+
+    let missing_prefix = fixture.0.join("missing-install-prefix");
+    let missing_prefix_arg = missing_prefix.to_str().unwrap();
+    let receipt_digest = "a".repeat(64);
+    let upper_digest = "A".repeat(64);
+    let invalid_uninstall = [
+        vec!["uninstall"],
+        vec!["uninstall", "--prefix", missing_prefix_arg],
+        vec![
+            "uninstall",
+            "--prefix",
+            missing_prefix_arg,
+            "--receipt-sha256",
+            upper_digest.as_str(),
+        ],
+        vec![
+            "uninstall",
+            "--prefix",
+            missing_prefix_arg,
+            "--receipt-sha256",
+            receipt_digest.as_str(),
+            "--prefix",
+            "/tmp/other-prefix",
+        ],
+    ];
+    for args in invalid_uninstall {
+        let direct_output = run(&direct, &args);
+        let mut plugin_args = vec!["ami"];
+        plugin_args.extend(args.iter().copied());
+        let plugin_output = run(&plugin, &plugin_args);
+        let cargo_output = run(&PathBuf::from(env!("CARGO")), &plugin_args);
+        for output in [&direct_output, &plugin_output, &cargo_output] {
+            assert_eq!(output.status.code(), Some(2), "args={args:?}");
+            assert!(output.stdout.is_empty(), "args={args:?}");
+        }
+        assert_eq!(direct_output.stderr, plugin_output.stderr);
+        assert_eq!(direct_output.stderr, cargo_output.stderr);
+        assert!(!missing_prefix.exists());
+    }
+
+    let valid_digest_uninstall = [
+        "uninstall",
+        "--prefix",
+        missing_prefix_arg,
+        "--receipt-sha256",
+        receipt_digest.as_str(),
+    ];
+    let direct_output = run(&direct, &valid_digest_uninstall);
+    let plugin_args = [
+        "ami",
+        "uninstall",
+        "--prefix",
+        missing_prefix_arg,
+        "--receipt-sha256",
+        receipt_digest.as_str(),
+    ];
+    let plugin_output = run(&plugin, &plugin_args);
+    let cargo_output = run(&PathBuf::from(env!("CARGO")), &plugin_args);
+    for output in [&direct_output, &plugin_output, &cargo_output] {
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+    }
+    assert_eq!(direct_output.stderr, plugin_output.stderr);
+    assert_eq!(direct_output.stderr, cargo_output.stderr);
+    assert!(!missing_prefix.exists());
     assert!(!fixture.0.join("build.lock").exists());
 }

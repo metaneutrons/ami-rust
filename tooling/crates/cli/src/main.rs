@@ -11,8 +11,8 @@ fn main() -> ExitCode {
     let args: Vec<_> = arguments.collect();
     let result = frontend::parse(&executable, &args).and_then(frontend::render);
     match result {
-        Ok(output) => match io::stdout().lock().write_all(&output) {
-            Ok(()) => ExitCode::SUCCESS,
+        Ok(output) => match io::stdout().lock().write_all(&output.stdout) {
+            Ok(()) => ExitCode::from(output.exit_code),
             Err(_) => ExitCode::from(2),
         },
         Err(error) => {

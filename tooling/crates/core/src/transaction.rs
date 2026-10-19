@@ -25,7 +25,31 @@ use std::{
 const RECEIPT: &str = "install-receipt.json";
 const MAX_RECEIPT: usize = 4 * 1024 * 1024;
 const MAX_INSTALLED_BYTES: usize = 64 * 1024 * 1024;
+const MAX_NATIVE_INSTALLED_BYTES: usize = 128 * 1024 * 1024;
 const MAX_FILES: usize = 2002;
+
+fn installation_byte_limit(native_cli_selected: bool) -> u64 {
+    if native_cli_selected {
+        MAX_NATIVE_INSTALLED_BYTES as u64
+    } else {
+        MAX_INSTALLED_BYTES as u64
+    }
+}
+
+fn checked_profile_total(total: u64, additional: u64, limit: u64) -> Option<u64> {
+    total
+        .checked_add(additional)
+        .filter(|total| *total <= limit)
+}
+
+fn removal_byte_limit(receipt: &[u8]) -> u64 {
+    match crate::receipts::parse_install_receipt(receipt) {
+        Ok(parsed) if parsed.kind == crate::receipts::ReceiptKind::NativeV3 => {
+            MAX_NATIVE_INSTALLED_BYTES as u64
+        }
+        _ => MAX_INSTALLED_BYTES as u64,
+    }
+}
 
 /// One immutable, previously authenticated file to place below sdk/ or payload/.
 /// SDK archive modes must already be normalized to 0755 or 0644 by its parser.
@@ -104,8 +128,29 @@ struct Layout {
     cleanup_entries: usize,
 }
 
+struct PreparedInstall {
+    layout: Layout,
+    stage: Stage,
+    pin: Option<FreshTarget>,
+}
+
+struct PublishOutcome {
+    stage: Stage,
+    pin: Option<FreshTarget>,
+    pin_published: bool,
+    result: Result<()>,
+}
+
 impl Layout {
     fn inspect(files: &[InstallFile<'_>], receipt: &[u8]) -> Result<Self> {
+        Self::inspect_for_native_cli(files, receipt, None)
+    }
+
+    fn inspect_for_native_cli(
+        files: &[InstallFile<'_>],
+        receipt: &[u8],
+        native_cli_path: Option<&str>,
+    ) -> Result<Self> {
         if files.len() > MAX_FILES || receipt.len() > MAX_RECEIPT {
             return Err(Refusal::new(
                 "installation exceeds the frozen file/receipt profile",
@@ -115,7 +160,9 @@ impl Layout {
         let mut folded = BTreeMap::new();
         let mut directories = BTreeSet::from(["sdk".to_owned(), "payload".to_owned()]);
         let mut identities = Vec::new();
-        let mut total = receipt.len();
+        let byte_limit = installation_byte_limit(native_cli_path.is_some());
+        let mut total = u64::try_from(receipt.len())
+            .map_err(|_| Refusal::new("installation receipt length overflow"))?;
         for file in files {
             crate::publisher_tar::validate_portable_path(file.path.as_bytes())?;
             for (offset, _) in file
@@ -131,9 +178,12 @@ impl Layout {
                     return Err(Refusal::new("case-colliding installed paths"));
                 }
             }
+            let selected_native_cli = native_cli_path == Some(file.path);
             if !(file.path.starts_with("sdk/") || file.path.starts_with("payload/"))
                 || !matches!(file.mode, 0o644 | 0o755)
-                || (file.path.starts_with("payload/") && file.mode != 0o644)
+                || (file.path.starts_with("payload/") && file.mode != 0o644 && !selected_native_cli)
+                || (selected_native_cli
+                    && (!file.path.starts_with("payload/") || file.mode != 0o755))
             {
                 return Err(Refusal::new(
                     "invalid installed file namespace or normalized mode",
@@ -142,10 +192,13 @@ impl Layout {
             if !paths.insert(file.path) {
                 return Err(Refusal::new("duplicate installed file"));
             }
-            total = total
-                .checked_add(file.contents.len())
-                .filter(|total| *total <= MAX_INSTALLED_BYTES)
-                .ok_or_else(|| Refusal::new("installation exceeds the frozen byte profile"))?;
+            total = checked_profile_total(
+                total,
+                u64::try_from(file.contents.len())
+                    .map_err(|_| Refusal::new("installed file length overflow"))?,
+                byte_limit,
+            )
+            .ok_or_else(|| Refusal::new("installation exceeds the frozen byte profile"))?;
             for (offset, _) in file.path.match_indices('/') {
                 directories.insert(file.path[..offset].to_owned());
             }
@@ -194,6 +247,31 @@ pub fn publish_install(
     publish_with_hook(prefix, bundle, receipt_pin, files, receipt, |_, _| Ok(()))
 }
 
+/// Publish a new native install while the caller retains one SIGTERM guard
+/// across authentication and publication. The caller must finish that guard.
+/// `selected_cli_path` is the full installed payload-relative path already
+/// selected and authenticated against the native release manifest by caller.
+pub(crate) fn publish_native_install_guarded(
+    prefix: &Path,
+    bundle: &Path,
+    receipt_pin: Option<&Path>,
+    files: &[InstallFile<'_>],
+    receipt: &[u8],
+    selected_cli_path: &str,
+    signals: &SigtermGuard,
+) -> std::result::Result<PublishedInstall, InstallFailure> {
+    publish_native_install_with_hook(
+        prefix,
+        bundle,
+        receipt_pin,
+        files,
+        receipt,
+        selected_cli_path,
+        signals,
+        |_, _| Ok(()),
+    )
+}
+
 #[derive(Clone, Copy)]
 enum Boundary {
     Staged,
@@ -212,6 +290,41 @@ fn publish_with_hook(
     mut hook: impl FnMut(Boundary, &Path) -> Result<()>,
 ) -> std::result::Result<PublishedInstall, InstallFailure> {
     let layout = Layout::inspect(files, receipt)?;
+    let prepared = prepare_install(prefix, bundle, receipt_pin, layout)?;
+    let signals = SigtermGuard::acquire()?;
+    let outcome = run_prepared_install(prepared, files, receipt, &signals, &mut hook);
+    finalize_publish(outcome, receipt, signals.finish())
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "The test hook extends the seven explicit native publication inputs without changing their ownership."
+)]
+fn publish_native_install_with_hook(
+    prefix: &Path,
+    bundle: &Path,
+    receipt_pin: Option<&Path>,
+    files: &[InstallFile<'_>],
+    receipt: &[u8],
+    selected_cli_path: &str,
+    signals: &SigtermGuard,
+    mut hook: impl FnMut(Boundary, &Path) -> Result<()>,
+) -> std::result::Result<PublishedInstall, InstallFailure> {
+    signals.check()?;
+    let layout = Layout::inspect_for_native_cli(files, receipt, Some(selected_cli_path))?;
+    validate_native_receipt_binding(receipt, files, &layout, selected_cli_path)?;
+    signals.check()?;
+    let prepared = prepare_install(prefix, bundle, receipt_pin, layout)?;
+    let outcome = run_prepared_install(prepared, files, receipt, signals, &mut hook);
+    finalize_publish(outcome, receipt, Ok(()))
+}
+
+fn prepare_install(
+    prefix: &Path,
+    bundle: &Path,
+    receipt_pin: Option<&Path>,
+    layout: Layout,
+) -> Result<PreparedInstall> {
     let target = ownership::install_target(prefix)?;
     ownership::require_disjoint(
         prefix,
@@ -222,12 +335,26 @@ fn publish_with_hook(
     let pin = receipt_pin
         .map(|pin| ownership::receipt_pin(pin, prefix, bundle))
         .transpose()?;
-    let mut stage = Stage::new(target, layout.cleanup_entries)?;
-    let signals = SigtermGuard::acquire()?;
+    let stage = Stage::new(target, layout.cleanup_entries)?;
+    Ok(PreparedInstall { layout, stage, pin })
+}
+
+fn run_prepared_install(
+    prepared: PreparedInstall,
+    files: &[InstallFile<'_>],
+    receipt: &[u8],
+    signals: &SigtermGuard,
+    hook: &mut impl FnMut(Boundary, &Path) -> Result<()>,
+) -> PublishOutcome {
+    let PreparedInstall {
+        layout,
+        mut stage,
+        pin,
+    } = prepared;
     let mut pin_published = false;
     let result = (|| -> Result<()> {
         signals.check()?;
-        stage.create(&signals)?;
+        stage.create(signals)?;
         hook(Boundary::Staged, &stage.path())?;
         signals.check()?;
         let root = stage
@@ -270,14 +397,31 @@ fn publish_with_hook(
         hook(Boundary::Published, stage.target.path())?;
         signals.check()?;
         if let Some(pin) = &pin {
-            write_pin(pin, &sha256_bytes(receipt), &signals, &mut pin_published)?;
+            write_pin(pin, &sha256_bytes(receipt), signals, &mut pin_published)?;
         }
         hook(Boundary::Pinned, stage.target.path())?;
         signals.check()
     })();
-    // Always restore before returning; a restoration error after publication
-    // is a partial-result failure, never a reason to remove the SDK.
-    let result = match (result, signals.finish()) {
+    PublishOutcome {
+        stage,
+        pin,
+        pin_published,
+        result,
+    }
+}
+
+fn finalize_publish(
+    outcome: PublishOutcome,
+    receipt: &[u8],
+    finish: Result<()>,
+) -> std::result::Result<PublishedInstall, InstallFailure> {
+    let PublishOutcome {
+        mut stage,
+        pin,
+        pin_published,
+        result,
+    } = outcome;
+    let result = match (result, finish) {
         (Err(first), Err(restore)) => Err(Refusal::new(format!("{first}; {restore}"))),
         (Err(error), _) | (_, Err(error)) => Err(error),
         (Ok(()), Ok(())) => Ok(()),
@@ -317,6 +461,84 @@ fn publish_with_hook(
             })
         }
     }
+}
+
+fn validate_native_receipt_binding(
+    raw_receipt: &[u8],
+    files: &[InstallFile<'_>],
+    layout: &Layout,
+    selected_cli_path: &str,
+) -> Result<()> {
+    if !selected_cli_path.starts_with("payload/") {
+        return Err(Refusal::new(
+            "selected native CLI must be an installed payload file",
+        ));
+    }
+    let receipt = crate::receipts::parse_install_receipt(raw_receipt)?;
+    if receipt.kind != crate::receipts::ReceiptKind::NativeV3 {
+        return Err(Refusal::new(
+            "native installation requires an install-receipt-v3 record",
+        ));
+    }
+    let native = receipt
+        .native
+        .as_ref()
+        .ok_or_else(|| Refusal::new("native install receipt omits its CLI identity"))?;
+    let actual_host = crate::host_platform::supported_host()?;
+    if native.host != actual_host {
+        return Err(Refusal::new(
+            "native install receipt host differs from the supported current host",
+        ));
+    }
+
+    let installed_files: BTreeMap<_, _> = layout
+        .files
+        .iter()
+        .filter(|identity| identity.path != RECEIPT)
+        .map(|identity| (identity.path.as_str(), identity))
+        .collect();
+    if receipt.inventory.len() != installed_files.len() {
+        return Err(Refusal::new(
+            "native install receipt inventory differs from staged files",
+        ));
+    }
+    for row in &receipt.inventory {
+        let identity = installed_files
+            .get(row.path.as_str())
+            .ok_or_else(|| Refusal::new("native install receipt has an extra inventory row"))?;
+        if identity.bytes != row.bytes || identity.sha256 != row.sha256.as_str() {
+            return Err(Refusal::new(
+                "native install receipt inventory does not bind staged bytes",
+            ));
+        }
+    }
+
+    let selected_identity = installed_files
+        .get(selected_cli_path)
+        .ok_or_else(|| Refusal::new("selected native CLI is absent from staged files"))?;
+    if selected_identity.mode != Some(0o755)
+        || selected_identity.sha256 != native.cli_sha256.as_str()
+        || native.core_sha256.as_str() != native.cli_sha256.as_str()
+    {
+        return Err(Refusal::new(
+            "selected native CLI mode or digest differs from receipt identity",
+        ));
+    }
+    let executable_payloads = files
+        .iter()
+        .filter(|file| file.path.starts_with("payload/") && file.mode == 0o755)
+        .count();
+    if executable_payloads != 1 {
+        return Err(Refusal::new(
+            "native installation must contain exactly one executable payload file",
+        ));
+    }
+    let cli = files
+        .iter()
+        .find(|file| file.path == selected_cli_path)
+        .ok_or_else(|| Refusal::new("selected native CLI is absent from staged files"))?;
+    crate::package::check_native_header(cli.contents, native.host)?;
+    Ok(())
 }
 
 struct Stage {
@@ -575,7 +797,9 @@ fn removal_layout(
         ));
     }
     let receipt = read_pinned_receipt(root, digest)?;
-    let mut total = receipt.len() as u64;
+    let byte_limit = removal_byte_limit(&receipt);
+    let mut total = u64::try_from(receipt.len())
+        .map_err(|_| Refusal::new("installation receipt length overflow"))?;
     let mut paths = BTreeSet::new();
     let mut folded = BTreeSet::new();
     let mut directories = BTreeSet::new();
@@ -589,9 +813,7 @@ fn removal_layout(
                 "invalid installed inventory namespace or duplicate path",
             ));
         }
-        total = total
-            .checked_add(file.bytes)
-            .filter(|total| *total <= MAX_INSTALLED_BYTES as u64)
+        total = checked_profile_total(total, file.bytes, byte_limit)
             .ok_or_else(|| Refusal::new("installed inventory exceeds frozen byte profile"))?;
         for (offset, _) in file.path.match_indices('/') {
             directories.insert(file.path[..offset].to_owned());
@@ -728,6 +950,8 @@ fn random_bytes() -> Result<[u8; 12]> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::records::Host;
+    use serde_json::{Value, json};
     use std::{
         fs,
         os::unix::fs::{PermissionsExt, symlink},
@@ -789,6 +1013,271 @@ mod tests {
         ]
     }
     const RECEIPT_BYTES: &[u8] = b"{\"fixture\":true}\n";
+    const NATIVE_CLI_PATH: &str = "payload/bin/ami-rust";
+
+    fn native_header(host: Host) -> Vec<u8> {
+        match host {
+            Host::MacosAarch64 => {
+                let mut bytes = vec![0; 64];
+                bytes[..4].copy_from_slice(&[0xcf, 0xfa, 0xed, 0xfe]);
+                bytes[4..8].copy_from_slice(&0x0100_000c_u32.to_le_bytes());
+                bytes[12..16].copy_from_slice(&2_u32.to_le_bytes());
+                bytes
+            }
+            Host::LinuxX86_64 => {
+                let mut bytes = vec![0_u8; 120];
+                bytes[..7].copy_from_slice(&[0x7f, b'E', b'L', b'F', 2, 1, 1]);
+                bytes[16..18].copy_from_slice(&3_u16.to_le_bytes());
+                bytes[18..20].copy_from_slice(&62_u16.to_le_bytes());
+                bytes[20..24].copy_from_slice(&1_u32.to_le_bytes());
+                bytes[24..32].copy_from_slice(&0x400000_u64.to_le_bytes());
+                bytes[32..40].copy_from_slice(&64_u64.to_le_bytes());
+                bytes[52..54].copy_from_slice(&64_u16.to_le_bytes());
+                bytes[54..56].copy_from_slice(&56_u16.to_le_bytes());
+                bytes[56..58].copy_from_slice(&1_u16.to_le_bytes());
+                let header = &mut bytes[64..120];
+                header[0..4].copy_from_slice(&1_u32.to_le_bytes());
+                header[4..8].copy_from_slice(&5_u32.to_le_bytes());
+                header[16..24].copy_from_slice(&0x400000_u64.to_le_bytes());
+                header[24..32].copy_from_slice(&0x400000_u64.to_le_bytes());
+                header[32..40].copy_from_slice(&120_u64.to_le_bytes());
+                header[40..48].copy_from_slice(&120_u64.to_le_bytes());
+                header[48..56].copy_from_slice(&0x1000_u64.to_le_bytes());
+                bytes
+            }
+        }
+    }
+
+    fn native_files<'a>(cli: &'a [u8]) -> [InstallFile<'a>; 4] {
+        [
+            InstallFile {
+                path: NATIVE_CLI_PATH,
+                contents: cli,
+                mode: 0o755,
+            },
+            InstallFile {
+                path: "payload/release.json",
+                contents: b"{}\n",
+                mode: 0o644,
+            },
+            InstallFile {
+                path: "payload/release.json.sig",
+                contents: b"signature\n",
+                mode: 0o644,
+            },
+            InstallFile {
+                path: "sdk/contract/sdk.json",
+                contents: b"{}\n",
+                mode: 0o644,
+            },
+        ]
+    }
+
+    fn native_receipt(host: Host, files: &[InstallFile<'_>]) -> Vec<u8> {
+        let cli = files
+            .iter()
+            .find(|file| file.path == NATIVE_CLI_PATH)
+            .expect("native CLI fixture");
+        let manifest_sha256 = "a".repeat(64);
+        serde_json::to_vec(&json!({
+            "schema": "ami-rust-install-receipt-v3",
+            "publisher": "metaneutrons.ami-rust.github",
+            "release_manifest_sha256": manifest_sha256.clone(),
+            "sdk_manifest_sha256": "b".repeat(64),
+            "version": "0.2.0-dev",
+            "inventory": files.iter().map(|file| json!({
+                "path": file.path,
+                "bytes": file.contents.len(),
+                "sha256": sha256_bytes(file.contents),
+            })).collect::<Vec<_>>(),
+            "authentication": {
+                "external_policy_sha256": "f".repeat(64),
+                "report": {
+                    "schema": "ami-rust-publisher-verification-v2",
+                    "verified": true,
+                    "repository": "metaneutrons/ami-rust",
+                    "workflow": ".github/workflows/sdk-qualify.yml",
+                    "workflowSha": "1".repeat(40),
+                    "sourceSha": "2".repeat(40),
+                    "sourceRef": "refs/heads/main",
+                    "manifestSha256": manifest_sha256,
+                    "workflowRuns": [{
+                        "runId": 39181868987_u64,
+                        "runAttempt": 1,
+                        "hostProfile": host,
+                    }],
+                    "attestedSubjects": ["SHAUTIL", "release.json", "sdk.tar.xz"],
+                    "cosignSubjects": ["SHAUTIL", "release.json", "sdk.tar.xz"],
+                    "manifestBoundAssets": ["SHAUTIL", "sdk.tar.xz"],
+                    "publisherPolicyEvidence": crate::receipts::POLICY_EVIDENCE,
+                    "verificationMode": crate::receipts::VERIFICATION_MODE,
+                    "elapsedSeconds": 0.5,
+                }
+            },
+            "host": host,
+            "cli_sha256": sha256_bytes(cli.contents),
+            "core_sha256": sha256_bytes(cli.contents),
+        }))
+        .expect("serialize native receipt fixture")
+    }
+
+    fn guarded_native_publication_binds_current_host_cli_and_leaves_guard_owned() {
+        let fixture = Fixture::new();
+        let host = crate::host_platform::supported_host().unwrap();
+        let cli = native_header(host);
+        let files = native_files(&cli);
+        let receipt = native_receipt(host, &files);
+        let signals = SigtermGuard::acquire().unwrap();
+        let installed = publish_native_install_guarded(
+            &fixture.prefix(),
+            &fixture.bundle(),
+            Some(&fixture.pin()),
+            &files,
+            &receipt,
+            NATIVE_CLI_PATH,
+            &signals,
+        )
+        .unwrap();
+        assert!(signals.check().is_ok());
+        signals.finish().unwrap();
+        assert_eq!(installed.prefix, fixture.prefix());
+        assert_eq!(
+            fs::read(fixture.prefix().join(NATIVE_CLI_PATH)).unwrap(),
+            cli
+        );
+        assert_eq!(
+            fs::metadata(fixture.prefix().join(NATIVE_CLI_PATH))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o7777,
+            0o755
+        );
+        assert_eq!(
+            fs::read(fixture.pin()).unwrap(),
+            format!("{}\n", installed.receipt_sha256).as_bytes()
+        );
+    }
+
+    fn guarded_native_publication_refuses_cli_digest_mismatch_before_mutation() {
+        let fixture = Fixture::new();
+        let host = crate::host_platform::supported_host().unwrap();
+        let cli = native_header(host);
+        let files = native_files(&cli);
+        let mut receipt: Value = serde_json::from_slice(&native_receipt(host, &files)).unwrap();
+        receipt["cli_sha256"] = json!("0".repeat(64));
+        receipt["core_sha256"] = json!("0".repeat(64));
+        let receipt = serde_json::to_vec(&receipt).unwrap();
+        let signals = SigtermGuard::acquire().unwrap();
+        let failure = publish_native_install_guarded(
+            &fixture.prefix(),
+            &fixture.bundle(),
+            None,
+            &files,
+            &receipt,
+            NATIVE_CLI_PATH,
+            &signals,
+        )
+        .unwrap_err();
+        signals.finish().unwrap();
+        assert_eq!(failure.exit_code(), 2);
+        assert!(failure.published.is_none());
+        assert!(failure.reason.to_string().contains("digest"));
+        assert!(!fixture.prefix().exists());
+        fixture.assert_no_stage();
+    }
+
+    fn guarded_native_postpublication_pin_collision_keeps_installation_result() {
+        let fixture = Fixture::new();
+        let host = crate::host_platform::supported_host().unwrap();
+        let cli = native_header(host);
+        let files = native_files(&cli);
+        let receipt = native_receipt(host, &files);
+        let signals = SigtermGuard::acquire().unwrap();
+        let failure = publish_native_install_with_hook(
+            &fixture.prefix(),
+            &fixture.bundle(),
+            Some(&fixture.pin()),
+            &files,
+            &receipt,
+            NATIVE_CLI_PATH,
+            &signals,
+            |boundary, _| {
+                if matches!(boundary, Boundary::Published) {
+                    symlink("bundle/keep", fixture.pin())?;
+                }
+                Ok(())
+            },
+        )
+        .unwrap_err();
+        signals.finish().unwrap();
+        assert_eq!(failure.exit_code(), 1);
+        let installed = failure
+            .published
+            .expect("postpublication pin failure keeps the installed result");
+        assert_eq!(installed.prefix, fixture.prefix());
+        assert_eq!(installed.receipt_sha256, sha256_bytes(&receipt));
+        assert!(installed.receipt_pin.is_none());
+        assert_eq!(
+            fs::read_link(fixture.pin()).unwrap(),
+            PathBuf::from("bundle/keep")
+        );
+        assert_eq!(
+            fs::read(fixture.prefix().join(NATIVE_CLI_PATH)).unwrap(),
+            cli
+        );
+    }
+
+    #[test]
+    fn generic_publication_still_refuses_executable_payload_files() {
+        let legacy_executable = [InstallFile {
+            path: "payload/bin/legacy-cli",
+            contents: b"not native",
+            mode: 0o755,
+        }];
+        assert!(Layout::inspect(&legacy_executable, RECEIPT_BYTES).is_err());
+    }
+
+    #[test]
+    fn native_byte_profile_is_selected_only_by_native_cli_or_valid_v3_receipt() {
+        assert_eq!(installation_byte_limit(false), 64 * 1024 * 1024);
+        assert_eq!(installation_byte_limit(true), 128 * 1024 * 1024);
+        assert_eq!(
+            checked_profile_total(128 * 1024 * 1024 - 4, 4, 128 * 1024 * 1024),
+            Some(128 * 1024 * 1024)
+        );
+        assert_eq!(
+            checked_profile_total(128 * 1024 * 1024 - 4, 5, 128 * 1024 * 1024),
+            None
+        );
+
+        let host = Host::LinuxX86_64;
+        let cli = native_header(host);
+        let files = native_files(&cli);
+        let native = native_receipt(host, &files);
+        assert_eq!(removal_byte_limit(&native), 128 * 1024 * 1024);
+
+        let mut historical: Value = serde_json::from_slice(&native).unwrap();
+        let object = historical.as_object_mut().unwrap();
+        object.insert("schema".into(), json!("ami-rust-install-receipt-v2"));
+        object.remove("host");
+        object.remove("cli_sha256");
+        object.remove("core_sha256");
+        let historical = serde_json::to_vec(&historical).unwrap();
+        assert_eq!(removal_byte_limit(&historical), 64 * 1024 * 1024);
+
+        let mut qualification: Value = serde_json::from_slice(&native).unwrap();
+        let object = qualification.as_object_mut().unwrap();
+        object.insert("schema".into(), json!("ami-rust-install-receipt-v1"));
+        object.insert("publisher".into(), json!("fixture-publisher"));
+        object.remove("authentication");
+        object.remove("host");
+        object.remove("cli_sha256");
+        object.remove("core_sha256");
+        let qualification = serde_json::to_vec(&qualification).unwrap();
+        assert_eq!(removal_byte_limit(&qualification), 64 * 1024 * 1024);
+        assert_eq!(removal_byte_limit(RECEIPT_BYTES), 64 * 1024 * 1024);
+    }
 
     #[test]
     fn filesystem_transactions_and_real_sigterm_are_isolated_in_a_child() {
@@ -818,6 +1307,9 @@ mod tests {
             Ok("run")
         );
         success_and_exclusive_rerun();
+        guarded_native_publication_binds_current_host_cli_and_leaves_guard_owned();
+        guarded_native_publication_refuses_cli_digest_mismatch_before_mutation();
+        guarded_native_postpublication_pin_collision_keeps_installation_result();
         prepublication_refusals_preserve_other_data();
         tampered_stage_refuses_and_cleanup_recovery_is_explicit();
         parent_path_replacement_refuses_through_retained_handle();

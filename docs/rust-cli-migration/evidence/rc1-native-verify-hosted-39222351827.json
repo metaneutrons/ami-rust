@@ -1,0 +1,92 @@
+{
+  "schema": "ami-rust-native-verify-hosted-v1",
+  "run_id": 39222351827,
+  "candidate": "f9680e88d23bd738c3f3b44ea261acd60271c703",
+  "jobs": [
+    {
+      "id": 117960391481,
+      "name": "Select Rust migration checks",
+      "conclusion": "success"
+    },
+    {
+      "id": 117960391696,
+      "name": "Installer fixtures (macos-26)",
+      "conclusion": "success"
+    },
+    {
+      "id": 117960391710,
+      "name": "Installer fixtures (ubuntu-24.04)",
+      "conclusion": "success"
+    },
+    {
+      "id": 117960391979,
+      "name": "Packaging fixtures (Ubuntu 24.04)",
+      "conclusion": "success"
+    },
+    {
+      "id": 117960444799,
+      "name": "Rust migration fixtures (macos-26)",
+      "conclusion": "success"
+    },
+    {
+      "id": 117960444897,
+      "name": "Rust migration fixtures (ubuntu-24.04)",
+      "conclusion": "success"
+    },
+    {
+      "id": 117961211837,
+      "name": "CI Success",
+      "conclusion": "success"
+    }
+  ],
+  "hosts": [
+    {
+      "job_id": 117960444897,
+      "name": "Rust migration fixtures (ubuntu-24.04)",
+      "log_bytes": 65395,
+      "log_sha256": "da34587e91e72bf47d479b0b88f82aba620020c0a751dd97e8ab0604b81c9b95",
+      "test_result_lines": [
+        "2026-10-19T08:23:22.6362393Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T08:23:23.1230906Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T08:23:31.1892249Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T08:23:31.2102555Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T08:23:49.7592696Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T08:23:49.9693581Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s",
+        "2026-10-19T08:23:50.0150930Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 267 filtered out; finished in 0.00s",
+        "2026-10-19T08:24:01.2448087Z test result: ok. 265 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 11.27s",
+        "2026-10-19T08:24:01.2558705Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "2026-10-19T08:24:01.2686142Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "2026-10-19T08:24:01.4877795Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ],
+      "core_tests": 265,
+      "integration_tests": 3,
+      "total_tests": 268
+    },
+    {
+      "job_id": 117960444799,
+      "name": "Rust migration fixtures (macos-26)",
+      "log_bytes": 71118,
+      "log_sha256": "61453b7bf6a4523e115b95221269ce7690562155a7b03c1d7470ac6f85ef2cd2",
+      "test_result_lines": [
+        "2026-10-19T08:23:42.0746590Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T08:23:43.2427680Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T08:23:55.0979050Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T08:23:55.1959970Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T08:24:22.1158910Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T08:24:22.4859150Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s",
+        "2026-10-19T08:24:22.8509390Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 267 filtered out; finished in 0.00s",
+        "2026-10-19T08:24:57.3314280Z test result: ok. 265 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 34.84s",
+        "2026-10-19T08:24:57.3616320Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "2026-10-19T08:24:57.4220500Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s",
+        "2026-10-19T08:24:58.3560730Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ],
+      "core_tests": 265,
+      "integration_tests": 3,
+      "total_tests": 268
+    }
+  ],
+  "native_signed_candidate_qualified": false,
+  "rc1_accepted": false,
+  "merged_commit": "aae5344867c57c030cc8e12624ea58129dd30984",
+  "merged_tooling_tree_identical": true
+}

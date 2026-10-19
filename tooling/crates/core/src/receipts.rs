@@ -16,6 +16,8 @@ use std::collections::{BTreeMap, BTreeSet};
 pub(crate) const POLICY_EVIDENCE: &str = "environment and runnerEnvironment are signed SLSA predicate claims verified under the exact pinned workflow SHA; they are not independent Fulcio certificate fields";
 pub(crate) const VERIFICATION_MODE: &str =
     "offline pinned GH bundle/custom root and Cosign bundle/trusted root";
+const MAX_LEGACY_INVENTORY_BYTES: u64 = 64 * 1024 * 1024;
+const MAX_NATIVE_INVENTORY_BYTES: u64 = 128 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ReceiptKind {
@@ -241,7 +243,7 @@ pub fn parse_install_receipt(raw: &[u8]) -> Result<InstallReceipt> {
             .ok_or_else(|| Refusal::new("production receipt requires authentication evidence"))?;
         validate_authentication(authentication, &wire.release_manifest_sha256)?;
     }
-    validate_inventory(&wire.inventory)?;
+    validate_inventory(&wire.inventory, kind)?;
     let native = if kind == ReceiptKind::NativeV3 {
         let host = wire
             .host
@@ -284,12 +286,17 @@ fn valid_version(value: &str) -> bool {
             .all(|byte| byte.is_ascii_alphanumeric() || b".+_-".contains(&byte))
 }
 
-fn validate_inventory(files: &[ReceiptFile]) -> Result<()> {
+fn validate_inventory(files: &[ReceiptFile], kind: ReceiptKind) -> Result<()> {
     if files.is_empty() || files.len() > 2002 {
         return Err(Refusal::new("invalid receipt inventory length"));
     }
     let mut paths = BTreeMap::new();
     let mut total = 0_u64;
+    let max_inventory_bytes = if kind == ReceiptKind::NativeV3 {
+        MAX_NATIVE_INVENTORY_BYTES
+    } else {
+        MAX_LEGACY_INVENTORY_BYTES
+    };
     for file in files {
         crate::publisher_tar::validate_portable_path(file.path.as_bytes())?;
         if !(file.path.starts_with("sdk/") || file.path.starts_with("payload/")) {
@@ -303,7 +310,7 @@ fn validate_inventory(files: &[ReceiptFile]) -> Result<()> {
         }
         total = total
             .checked_add(file.bytes)
-            .filter(|total| *total <= 64 * 1024 * 1024)
+            .filter(|total| *total <= max_inventory_bytes)
             .ok_or_else(|| Refusal::new("receipt inventory exceeds its byte profile"))?;
     }
     for file in files {
@@ -656,6 +663,19 @@ mod tests {
         assert!(parse(&value).is_ok());
         value["inventory"][1]["bytes"] = json!(1);
         assert!(parse(&value).is_err());
+
+        let mut historical = fixture(2);
+        historical["inventory"][0]["bytes"] = json!(64 * 1024 * 1024_u64 + 1);
+        assert!(parse(&historical).is_err());
+
+        let mut native = fixture(3);
+        native["inventory"][0]["bytes"] = json!(64 * 1024 * 1024_u64 + 1);
+        assert!(parse(&native).is_ok());
+        native["inventory"][0]["bytes"] = json!(128 * 1024 * 1024_u64);
+        assert!(parse(&native).is_ok());
+        native["inventory"][1]["bytes"] = json!(1);
+        assert!(parse(&native).is_err());
+
         let mut value = fixture(1);
         for index in 3..2002 {
             value["inventory"].as_array_mut().unwrap().push(

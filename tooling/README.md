@@ -51,7 +51,8 @@ compilation detection.
 | Package verification, prepare, project creation, input check | Refused with status 2 | RC1 authenticated lifecycle and retained state |
 | SDK-lock verification/build and package project build | Refused with status 2 | RC1 validation/build behavior, then RC2 normal Cargo integration |
 | Explicit release verification | Implemented for release-v2/SDK-v2 development inputs | Exact signed native candidate and both-host qualification remain open |
-| Release install, project lock, uninstall, migration | Refused with status 2 | RC1 trust, ownership, extraction and migration matrix |
+| Explicit release installation and pinned removal | Implemented for development native-v2 inputs | Exact signed candidate, both-host lifecycle and no-Python qualification remain open |
+| Project lock and migration | Refused with status 2 | RC1 retained state and migration matrix |
 
 Pending commands never fall back to Python or claim success. Passing these
 foundation fixtures does not accept RC1 or establish complete public/producer
@@ -66,8 +67,9 @@ archive. The byte-identical `cargo-ami` frontend exposes the same command as
 for inputs, output scope and remaining qualification. Existing released SDK-v1
 archives are not silently reclassified or executed by this native path.
 
-This command is development functionality. Installation, native builds and
-retained lifecycle commands remain unfinished. Historical signature evidence
+This command is development functionality. The [native installation/removal flow](../docs/rust-cli-migration/native-installation.md)
+now shares this verified payload and a single transaction guard. Preparation,
+native builds and retained lifecycle commands remain unfinished. Historical signature evidence
 and synthetic archive fixtures do not qualify a signed native-v2 release.
 
 ## Input boundaries

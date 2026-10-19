@@ -57,6 +57,58 @@ pub struct VerifiedSdkV2Summary {
     pub component_manifest_files: usize,
 }
 
+/// Retained regular files from a fully verified SDK-v2 archive.
+///
+/// Fields remain private so callers can only obtain this payload through a
+/// verified publisher bundle. File modes are normalized to `0644` or `0755`.
+#[derive(Debug)]
+pub struct VerifiedSdkV2Payload {
+    summary: VerifiedSdkV2Summary,
+    files: Vec<VerifiedSdkV2File>,
+}
+
+impl VerifiedSdkV2Payload {
+    /// Verify and retain the SDK payload from an authenticated publisher
+    /// bundle. No paths are reopened after publisher verification.
+    pub fn from_verified_bundle(bundle: &VerifiedPublisherBundle) -> Result<Self> {
+        validate_retained_parts(bundle.manifest(), bundle.assets())
+    }
+
+    pub fn summary(&self) -> &VerifiedSdkV2Summary {
+        &self.summary
+    }
+
+    /// All regular archive members, including `contract/sdk.json`, in TAR
+    /// order. Contents and normalized modes are the exact verified bytes and
+    /// metadata that downstream installation may publish.
+    pub fn files(&self) -> &[VerifiedSdkV2File] {
+        &self.files
+    }
+}
+
+/// One regular file retained from the verified SDK archive.
+#[derive(Debug)]
+pub struct VerifiedSdkV2File {
+    path: String,
+    contents: Vec<u8>,
+    mode: u32,
+}
+
+impl VerifiedSdkV2File {
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+
+    pub fn contents(&self) -> &[u8] {
+        &self.contents
+    }
+
+    /// Normalized mode: either `0o644` or `0o755`.
+    pub fn mode(&self) -> u32 {
+        self.mode
+    }
+}
+
 /// Compose inner SDK-v2 only from retained bytes produced by successful native
 /// publisher verification. This function does not reopen bundle paths.
 pub fn compose_verified_sdk_v2(bundle: &VerifiedPublisherBundle) -> Result<VerifiedSdkV2Summary> {
@@ -69,6 +121,13 @@ fn compose_retained_parts(
     release: &NativeReleaseManifest,
     assets: &BTreeMap<String, Vec<u8>>,
 ) -> Result<VerifiedSdkV2Summary> {
+    Ok(validate_retained_parts(release, assets)?.summary)
+}
+
+fn validate_retained_parts(
+    release: &NativeReleaseManifest,
+    assets: &BTreeMap<String, Vec<u8>>,
+) -> Result<VerifiedSdkV2Payload> {
     if release.qualification_only {
         return Err(Refusal::new(
             "native SDK production composition refuses qualification-only releases",
@@ -139,13 +198,33 @@ fn compose_retained_parts(
     compare_inner_inventory(&parsed.files, &release.sdk_files)?;
     check_component_manifest_rows(&parsed, &release.sdk_files)?;
 
-    Ok(VerifiedSdkV2Summary {
+    let summary = VerifiedSdkV2Summary {
         version: parsed.version,
         qualification_only: parsed.qualification_only,
         sdk_manifest_sha256: release.sdk_manifest_sha256.as_str().to_owned(),
         archive_files: archive_files.len(),
         component_manifest_files: COMPONENTS.len() * HOSTS.len(),
-    })
+    };
+    let files = archive_files
+        .into_iter()
+        .map(|file| VerifiedSdkV2File {
+            path: file.path,
+            contents: file.contents.to_vec(),
+            mode: file.mode,
+        })
+        .collect();
+    Ok(VerifiedSdkV2Payload { summary, files })
+}
+
+/// Synthetic fixture for sibling-module unit tests only. It does not create an
+/// authenticated publisher capability and is absent from production builds.
+#[cfg(test)]
+pub(crate) fn test_payload_with_manifest_and_assets() -> Result<(
+    VerifiedSdkV2Payload,
+    NativeReleaseManifest,
+    BTreeMap<String, Vec<u8>>,
+)> {
+    tests::test_payload_with_manifest_and_assets()
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -566,8 +645,8 @@ mod tests {
     };
 
     use super::{
-        BUILD_PROFILE, HOST_CAPACITY, SDK_DRIVER, SDK_MANIFEST_PATH, VerifiedSdkV2Summary,
-        compose_retained_parts, parse_sdk_v2,
+        BUILD_PROFILE, HOST_CAPACITY, SDK_DRIVER, SDK_MANIFEST_PATH, VerifiedSdkV2Payload,
+        VerifiedSdkV2Summary, compose_retained_parts, parse_sdk_v2, validate_retained_parts,
     };
 
     const VERSION: &str = "1.2.3";
@@ -712,10 +791,18 @@ mod tests {
             files
         }
 
-        fn rebind_archive(&mut self, mut tar_members: BTreeMap<String, Vec<u8>>) {
+        fn rebind_archive(&mut self, tar_members: BTreeMap<String, Vec<u8>>) {
+            self.rebind_archive_with_modes(tar_members, &[]);
+        }
+
+        fn rebind_archive_with_modes(
+            &mut self,
+            mut tar_members: BTreeMap<String, Vec<u8>>,
+            executable_paths: &[&str],
+        ) {
             let sdk_raw = serde_json::to_vec(&self.sdk_value).unwrap();
             tar_members.insert(SDK_MANIFEST_PATH.to_owned(), sdk_raw.clone());
-            self.archive_uncompressed = make_tar(&tar_members);
+            self.archive_uncompressed = make_tar_with_modes(&tar_members, executable_paths);
             let xz_bytes = make_xz(&self.archive_uncompressed);
             let sdk_files = tar_members
                 .iter()
@@ -832,11 +919,22 @@ mod tests {
     }
 
     fn make_tar(files: &BTreeMap<String, Vec<u8>>) -> Vec<u8> {
+        make_tar_with_modes(files, &[])
+    }
+
+    fn make_tar_with_modes(
+        files: &BTreeMap<String, Vec<u8>>,
+        executable_paths: &[&str],
+    ) -> Vec<u8> {
         let mut builder = Builder::new(Vec::new());
         for (path, contents) in files {
             let mut header = Header::new_gnu();
             header.set_size(contents.len() as u64);
-            header.set_mode(0o644);
+            header.set_mode(if executable_paths.contains(&path.as_str()) {
+                0o755
+            } else {
+                0o644
+            });
             header.set_uid(0);
             header.set_gid(0);
             header.set_mtime(1791936000);
@@ -846,6 +944,16 @@ mod tests {
                 .unwrap();
         }
         builder.into_inner().unwrap()
+    }
+
+    pub(super) fn test_payload_with_manifest_and_assets() -> crate::Result<(
+        VerifiedSdkV2Payload,
+        NativeReleaseManifest,
+        BTreeMap<String, Vec<u8>>,
+    )> {
+        let fixture = Fixture::valid();
+        let payload = validate_retained_parts(&fixture.release, &fixture.assets)?;
+        Ok((payload, fixture.release, fixture.assets))
     }
 
     fn make_tar_with_unsafe_member(files: &BTreeMap<String, Vec<u8>>) -> Vec<u8> {
@@ -895,6 +1003,42 @@ mod tests {
         assert!(!result.qualification_only);
         assert_eq!(result.archive_files, 14);
         assert_eq!(result.component_manifest_files, 12);
+    }
+
+    #[test]
+    fn verified_payload_retains_exact_file_bytes_and_normalized_modes() {
+        let mut fixture = Fixture::valid();
+        let members = fixture.profile_members();
+        fixture.rebind_archive_with_modes(members, &["README.md"]);
+
+        let payload = validate_retained_parts(&fixture.release, &fixture.assets).unwrap();
+        assert_eq!(payload.summary().archive_files, 14);
+        assert_eq!(payload.files().len(), 14);
+
+        let readme = payload
+            .files()
+            .iter()
+            .find(|file| file.path() == "README.md")
+            .unwrap();
+        assert_eq!(readme.contents(), b"candidate SDK\n");
+        assert_eq!(readme.mode(), 0o755);
+
+        let component = payload
+            .files()
+            .iter()
+            .find(|file| file.path() == "host/profiles/linux-x86_64/rust.json")
+            .unwrap();
+        assert_eq!(component.contents(), b"{\"component\":\"rust\"}\n");
+        assert_eq!(component.mode(), 0o644);
+
+        let sdk_manifest = payload
+            .files()
+            .iter()
+            .find(|file| file.path() == SDK_MANIFEST_PATH)
+            .unwrap();
+        let expected_sdk_manifest = serde_json::to_vec(&fixture.sdk_value).unwrap();
+        assert_eq!(sdk_manifest.contents(), expected_sdk_manifest.as_slice());
+        assert_eq!(sdk_manifest.mode(), 0o644);
     }
 
     #[test]
