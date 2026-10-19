@@ -34,6 +34,10 @@ fn name(value: &OsStr) -> Result<CString> {
 pub struct Directory(File);
 
 impl Directory {
+    pub(crate) fn raw_fd(&self) -> std::os::fd::RawFd {
+        self.0.as_raw_fd()
+    }
+
     /// Open each ancestor without following symlinks. Parent traversal refuses.
     #[allow(unsafe_code)]
     pub fn open(path: &Path) -> Result<Self> {

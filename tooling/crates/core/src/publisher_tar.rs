@@ -286,7 +286,7 @@ fn validate_expected_inventory(expected_files: &[ExpectedFile<'_>]) -> Result<()
     Ok(())
 }
 
-fn validate_portable_path(raw: &[u8]) -> Result<String> {
+pub(crate) fn validate_portable_path(raw: &[u8]) -> Result<String> {
     if raw.is_empty()
         || raw.len() > MAX_PATH_BYTES
         || raw[0] == b'/'

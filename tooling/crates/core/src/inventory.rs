@@ -71,6 +71,18 @@ pub fn verify_complete(
     links: &[LinkIdentity],
     limits: InventoryLimits,
 ) -> Result<Measurement> {
+    let directory = Directory::open(root)?;
+    verify_complete_directory(&directory, files, links, limits)
+}
+
+/// Verify through an already-retained root descriptor, including unpublished
+/// transaction staging. Authentication remains the caller's responsibility.
+pub fn verify_complete_directory(
+    root: &Directory,
+    files: &[FileIdentity],
+    links: &[LinkIdentity],
+    limits: InventoryLimits,
+) -> Result<Measurement> {
     let mut expected = BTreeMap::new();
     let mut expected_bytes = 0_u64;
     for file in files {
@@ -110,7 +122,6 @@ pub fn verify_complete(
         }
     }
 
-    let root = Directory::open(root)?;
     let mut actual = BTreeMap::from([(String::new(), Actual::Directory)]);
     let mut visited = BTreeSet::new();
     let mut pending = vec![String::new()];
