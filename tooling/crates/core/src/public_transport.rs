@@ -315,7 +315,13 @@ fn verify_canonical_tar(
     Ok(verified)
 }
 
-fn canonical_header(path: &str, size: u64) -> Result<[u8; TAR_BLOCK_BYTES]> {
+/// Produce the exact native transport USTAR header used by the consumer's
+/// readback validator. This checks path/size shape, not publisher authority.
+pub fn canonical_header(path: &str, size: u64) -> Result<[u8; TAR_BLOCK_BYTES]> {
+    validate_portable_path(path.as_bytes())?;
+    if size > MAX_NATIVE_TRANSPORT_BYTES {
+        return Err(Refusal::new("native transport member exceeds its container profile"));
+    }
     let (prefix, name) = split_ustar_path(path)?;
     let mut header = [0_u8; TAR_BLOCK_BYTES];
     header[..name.len()].copy_from_slice(name.as_bytes());

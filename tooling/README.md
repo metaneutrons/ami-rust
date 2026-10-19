@@ -68,12 +68,17 @@ under that name; the integration test exercises real Cargo with a fresh home.
 The [native producer](../docs/rust-cli-migration/native-producer.md) uses the
 protected existing SDK workflow and unchanged compiler/C-SDK component inputs.
 Its default-off native branch builds both host binaries, composes SDK/release-v2,
-reconstructs source-derived materials on the signers, and exercises real direct
-verification/installation/removal. Internal Python coordinates this transitional
+reconstructs source-derived materials and launcher bytes on the signers, signs
+the complete outer capsule, and exercises native package preparation, project
+creation, offline build and retained replay as well as direct installation/removal. Internal Python coordinates this transitional
 producer/test flow; its retirement remains RC4.
 
-`ami-rust-xtask native-sdk` and `native-release` produce unsigned drafts only.
-They do not authorize signing, accept a milestone or publish an SDK. Existing
+`ami-rust-xtask native-sdk`, `native-release`, `native-package` and `native-outer`
+compose development payloads. `native-outer` first authenticates the inner bundle
+and reads its capsule back through the native consumer. `native-outer-finalize`
+binds the five assets to checksums; `native-package-verify` authenticates outer
+and inner evidence and their binding. Composition/verification does not accept
+a milestone or publish an SDK. Existing
 0.1.0 assets, receipts, source obligations and evidence remain immutable.
 
 ## Contracts and evidence

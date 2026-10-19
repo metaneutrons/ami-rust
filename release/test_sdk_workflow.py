@@ -2,6 +2,8 @@
 import hashlib
 import json
 import os
+import re
+from types import SimpleNamespace
 from pathlib import Path
 import subprocess
 import sys
@@ -410,11 +412,40 @@ class OuterWorkflowTests(unittest.TestCase):
         self.assertIn('96 MiB output', result.stderr)
         self.assertIsNone(receipt)
 
-    def test_outer_signer_depends_on_consumers_and_excludes_proposals(self):
-        self.assertIn('if: ${{ !inputs.reference_proposal && !inputs.native_tooling }}', OUTER)
-        self.assertIn('needs: [consumer]', OUTER)
+    def assert_outer_gate(self, source):
+        outer = source.split("\n  release-candidate:\n", 1)[1].split("\n  assemble:\n", 1)[0]
+        self.assertIn('needs: [consumer, authenticate]', outer)
+        match = re.search(r"^    if: \$\{\{ (.+) \}\}$", outer, re.MULTILINE)
+        self.assertIsNotNone(match)
+        expression = match.group(1).replace('&&', ' and ').replace('||', ' or ').replace('!', ' not ')
+        for native, proposal, auth, consumer, cancelled, expected in (
+            (True, False, 'success', 'skipped', False, True),
+            (True, False, 'failure', 'skipped', False, False),
+            (True, False, 'skipped', 'skipped', False, False),
+            (True, True, 'success', 'skipped', False, False),
+            (False, False, 'success', 'success', False, True),
+            (False, False, 'success', 'failure', False, False),
+            (True, False, 'success', 'skipped', True, False),
+        ):
+            inputs = SimpleNamespace(native_tooling=native, reference_proposal=proposal)
+            needs = SimpleNamespace(authenticate=SimpleNamespace(result=auth), consumer=SimpleNamespace(result=consumer))
+            actual = eval(expression, {'__builtins__': {}}, {'inputs':inputs, 'needs':needs,
+                'always':lambda:True, 'cancelled':lambda:cancelled, 'true':True})
+            self.assertEqual(actual, expected, (native, proposal, auth, consumer, cancelled))
+        native_consumer = source.split("\n  native-consumer:\n", 1)[1].split("\n  consumer:\n", 1)[0]
+        self.assertIn('needs: [authenticate, release-candidate]', native_consumer)
+        self.assertIn('--outer "$RUNNER_TEMP/ami-rust-native-outer-candidate"', native_consumer)
+
+    def test_outer_signer_depends_on_the_selected_successful_path(self):
+        self.assert_outer_gate(SOURCE)
         self.assertNotIn('release upload', OUTER)
         self.assertNotIn('release edit', OUTER)
+
+    def test_failed_authentication_cannot_reach_native_outer_signing(self):
+        broken = SOURCE.replace("needs.authenticate.result == 'success') ||", "true) ||", 1)
+        self.assertNotEqual(broken, SOURCE)
+        with self.assertRaises(AssertionError):
+            self.assert_outer_gate(broken)
 
 
 if __name__ == "__main__":

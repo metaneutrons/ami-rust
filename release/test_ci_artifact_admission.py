@@ -183,7 +183,7 @@ class MainAdmission(unittest.TestCase):
 
     def test_native_workflow_reserves_the_entire_selected_dag(self):
         pending = sum(ci_artifact_admission.NATIVE_ARTIFACT_CEILINGS.values())
-        self.assertEqual(pending, 288 * MIB)
+        self.assertEqual(pending, 384 * MIB)
         page = {'total_count': 1, 'artifacts': [{'id': 1, 'size_in_bytes': POOL - pending}]}
         output, _, _ = self.run_main(['--sdk-candidate', '--native-tooling'], TEST_ENV, page)
         report = json.loads(output)

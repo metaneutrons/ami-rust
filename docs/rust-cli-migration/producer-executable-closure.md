@@ -191,3 +191,16 @@ Helper source hashes that explain indirect rustc calls:
 RC5 supports the existing bounded portable C-SDK derivation only. The full upstream Ninja graph and its 72 Python command records are inert corresponding-source/recipe data, excluded from active execution. Any selected interpreter-dependent edge in the bounded path remains RC4 replacement work and requires actual two-host RC5 qualification. Full Ninja execution is outside the supported producer; adding it requires a separately reviewed executable closure.
 
 The corrected native Ubuntu query in [run 39173711603](https://github.com/metaneutrons/ami-rust/actions/runs/39173711603) passes with 341 selected package identities and 36 custom-build scripts, exactly matching the reviewed native/source identity sets. [Durable graph and result](evidence/native-source-39173711603/result.json) close the source-query task in item 1 above. Actual Cargo/C-SDK producer execution remains RC4/RC5 work.
+
+
+## Subsequent native consumer candidate producer (RC1 development)
+
+The native branch described in [native-producer.md](native-producer.md) adds
+`release/ci_native.py`, `release/ci_native_outer.py` and their tests as temporary
+internal orchestration. Their replacement/removal belongs to RC4-A1/A2/A4 and
+RC5; they are not a public consumer dependency or a permanent exception. The
+native Rust maintainer tasks own SDK, notice/SPDX, transport and package
+composition and share real publisher verification with the consumer core.
+System Python still bootstraps the pinned internal runtime in this branch.
+The frozen survey above and old source capsules remain historical; no complete
+Python-retirement claim follows from adding the native branch.

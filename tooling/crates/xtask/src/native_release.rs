@@ -52,7 +52,7 @@ const HOST_LAUNCHERS: [(&str, &str, Host); 2] = [
 // These are the original fixed legal and corresponding-source assets that
 // remain applicable to the native release. Every `licences/*` member in the
 // accepted legacy manifest is added separately from this list.
-const REQUIRED_LEGAL_ASSETS: [&str; 8] = [
+const REQUIRED_LEGAL_ASSETS: [&str; 9] = [
     "LICENSE-APACHE",
     "LICENSE-MIT",
     "LICENSE.md",
@@ -61,6 +61,7 @@ const REQUIRED_LEGAL_ASSETS: [&str; 8] = [
     "aros-source-inventory.json",
     "cargo-notices-corresponding-source.tar.xz",
     "cargo-source-inventory.json",
+    "sbom.spdx.json",
 ];
 const REQUIRED_UNCHANGED_ASSETS: [&str; 3] = [
     "SHAUTIL",

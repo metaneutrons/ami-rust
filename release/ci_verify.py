@@ -417,8 +417,12 @@ def _verify_tool_receipt(work: Path, output: Path, host: str, manifest: dict) ->
 
 
 def bootstrap_tools(work: Path, output: Path, python_root: Path, *, source_commit: str | None = None,
-                    additional_input_bytes: int = 0) -> dict:
-    """Fetch hash-pinned GH/Cosign tools and trust roots outside any candidate."""
+                    additional_input_bytes: int = 0, additional_log_bytes: int = 0) -> dict:
+    """Fetch pinned verifiers, charging other live input/work roots during bootstrap."""
+    if type(additional_input_bytes) is not int or not 0 <= additional_input_bytes <= ci_sdk.MAX_WORK_BYTES:
+        raise ValueError("invalid external workspace byte charge")
+    if type(additional_log_bytes) is not int or not 0 <= additional_log_bytes <= ci_sdk.MAX_LOG_BYTES:
+        raise ValueError("invalid external log byte charge")
     _managed_roots(work, output, python_root)
     if source_commit is None:
         identity = ci_auth.context(ROOT)
@@ -442,9 +446,9 @@ def bootstrap_tools(work: Path, output: Path, python_root: Path, *, source_commi
     roots = _trust_paths(manifest, work)
     env = _tool_env(work, python)
     supervisor = ci_sdk.Supervisor(work, output, python_root, env)
-    if type(additional_input_bytes) is not int or not 0 <= additional_input_bytes <= MAX_BUNDLE_BYTES:
-        raise ValueError("invalid external candidate byte charge")
     supervisor.checkout_bytes += additional_input_bytes
+    if additional_log_bytes:
+        supervisor.limits["log_bytes"] -= additional_log_bytes
     tool_rows = {}
     for name in ("cosign", "gh"):
         pin = pins[name]
@@ -477,6 +481,8 @@ def bootstrap_tools(work: Path, output: Path, python_root: Path, *, source_commi
     cosign_version = _version_text(supervisor, cosign_path, ["version"], "verify-cosign-version")
     if "gh version 2.102.0" not in gh_version or not re.search(r"\bv?3\.1\.3\b", cosign_version):
         raise ValueError("pinned verifier executables reported an unexpected version")
+    for command in supervisor.commands:
+        command["log_peak_observed_bytes"] += additional_log_bytes
     current = identity["source_sha"]
     receipt = {
         "schema": TOOL_RECEIPT_SCHEMA, "status": "PINNED_VERIFIER_TOOLS_READY",

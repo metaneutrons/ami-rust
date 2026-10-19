@@ -22,6 +22,7 @@ NATIVE_ARTIFACT_CEILINGS = {
     'unsigned-common': 64 * MIB,
     'authenticated-macos': 64 * MIB, 'authenticated-linux': 64 * MIB,
     'consumer-macos': 32 * MIB, 'consumer-linux': 32 * MIB,
+    'release-candidate-and-proofs': 96 * MIB,
 }
 
 
