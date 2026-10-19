@@ -7,6 +7,10 @@ on:
         description: Collect new native references for guest qualification; skip authentication
         type: boolean
         default: false
+      native_tooling:
+        description: Build and authenticate the native Rust SDK generation
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -36,6 +40,16 @@ jobs:
           test "$GITHUB_REPOSITORY" = metaneutrons/ami-rust
           test "$GITHUB_REF" = refs/heads/main
           test "$SOURCE_IS_PROTECTED" = true
+      - name: Reject native tooling reference proposals
+        env:
+          NATIVE_TOOLING: ${{ inputs.native_tooling }}
+          REFERENCE_PROPOSAL: ${{ inputs.reference_proposal }}
+        shell: bash
+        run: |
+          if [ "$NATIVE_TOOLING" = true ] && [ "$REFERENCE_PROPOSAL" = true ]; then
+            echo "Native tooling and reference proposal modes cannot be combined" >&2
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -44,13 +58,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
           REFERENCE_PROPOSAL: ${{ inputs.reference_proposal }}
+          NATIVE_TOOLING: ${{ inputs.native_tooling }}
         shell: bash
         run: |
           proposal_args=()
           if [ "$REFERENCE_PROPOSAL" = true ]; then
             proposal_args+=(--reference-proposal)
           fi
-          python3 -I -B release/ci_artifact_admission.py --sdk-candidate "${proposal_args[@]}"
+          native_args=()
+          if [ "$NATIVE_TOOLING" = true ]; then
+            native_args+=(--native-tooling)
+          fi
+          python3 -I -B release/ci_artifact_admission.py --sdk-candidate "${proposal_args[@]}" "${native_args[@]}"
       - name: Prepare non-SDK provenance ingestion probe
         id: provenance-probe
         if: ${{ !inputs.reference_proposal }}
@@ -97,6 +116,7 @@ jobs:
             --expected-predicate-sha256 "$EXPECTED_PREDICATE_SHA256"
 
   producer:
+    if: ${{ !inputs.native_tooling }}
     needs: admission
     name: SDK producer (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -511,10 +531,142 @@ jobs:
           retention-days: 7
           compression-level: 9
 
+  native-producer:
+    if: ${{ inputs.native_tooling && !inputs.reference_proposal }}
+    needs: admission
+    name: Native tooling producer (${{ matrix.profile }})
+    runs-on: ${{ matrix.os }}
+    environment: release
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            profile: linux-x86_64
+            triple: x86_64-unknown-linux-gnu
+          - os: macos-26
+            profile: macos-aarch64
+            triple: aarch64-apple-darwin
+    steps:
+      - name: Require protected main and the designated repository
+        shell: bash
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+        run: |
+          test "$GITHUB_REPOSITORY" = metaneutrons/ami-rust
+          test "$GITHUB_REF" = refs/heads/main
+          test "$SOURCE_IS_PROTECTED" = true
+      - name: Check out the exact public source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bootstrap the pinned internal Python runtime
+        run: python3 -I -B release/ci_python.py --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" --inputs release/ci-python-inputs.json
+      - name: Bootstrap the pinned host Rust toolchain
+        run: bash tools/bootstrap-host-rust.sh "$RUNNER_TEMP/ami-rust-native-host" '${{ matrix.triple }}'
+      - name: Build native host SDK output
+        id: producer
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+          PUBLISHER_ENVIRONMENT: release
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_native.py host \
+            --host '${{ matrix.profile }}' \
+            --host-rust "$RUNNER_TEMP/ami-rust-native-host" \
+            --work "$RUNNER_TEMP/ami-rust-native-work" \
+            --output "$RUNNER_TEMP/ami-rust-native-output"
+      - name: Validate bounded native host output
+        id: validate-output
+        if: ${{ steps.producer.outcome == 'success' }}
+        run: |
+          python3 -I -B - <<'PY'
+          import json, os, stat
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']).resolve(strict=True) / 'ami-rust-native-output'
+          if root.is_symlink() or not root.is_dir():
+              raise SystemExit('native host output root must be a real directory')
+          expected = {'ami-rust', 'sdk.tar.xz', 'sdk-manifest.json', 'native-host-producer.json'}
+          observed = set()
+          total = 0
+          for path in root.rglob('*'):
+              info = path.lstat()
+              if stat.S_ISDIR(info.st_mode):
+                  continue
+              relative = path.relative_to(root).as_posix()
+              if not stat.S_ISREG(info.st_mode) or relative not in expected:
+                  raise SystemExit('native host output contains an unexpected file')
+              observed.add(relative)
+              total += info.st_size
+          if observed != expected or total > 16 * 1024**2:
+              raise SystemExit('native host output inventory or 16 MiB artifact ceiling failed')
+          print(json.dumps({'schema': 'ami-rust-native-host-output-bound-v1',
+                            'files': len(observed), 'bytes': total}))
+          PY
+      - name: Upload native host output
+        if: ${{ steps.producer.outcome == 'success' && steps.validate-output.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-host-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-native-output
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
+      - name: Emit bounded native producer diagnostics on failure
+        if: failure()
+        run: |
+          python3 -I -B - <<'PY'
+          import json, os, stat
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']).resolve(strict=True)
+          remaining = 48 * 1024
+          for work in (root / 'ami-rust-native-work',):
+              if work.is_symlink() or not work.is_dir():
+                  continue
+              for path in sorted(work.rglob('*.log')):
+                  info = path.lstat()
+                  if not stat.S_ISREG(info.st_mode) or remaining <= 0:
+                      continue
+                  amount = min(12 * 1024, remaining)
+                  with path.open('rb') as stream:
+                      stream.seek(max(0, info.st_size - amount))
+                      raw = stream.read(amount)
+                  remaining -= len(raw)
+                  print(json.dumps({'native_diagnostic': path.name,
+                                    'tail': raw.decode('utf-8', errors='replace')}))
+          PY
+      - name: Retire native producer work roots
+        if: always()
+        env:
+          PRODUCER_RESULT: ${{ steps.producer.outcome }}
+        run: |
+          python3 -I -B - <<'PY'
+          import json, os, shutil
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']).resolve(strict=True)
+          names = ('ami-rust-native-host', 'ami-rust-native-work', 'ami-rust-native-output', 'ami-rust-python-bootstrap')
+          for name in names:
+              path = root / name
+              if path.is_symlink():
+                  raise SystemExit('linked native producer work root')
+              if path.exists():
+                  if not path.is_dir():
+                      raise SystemExit('unexpected native producer work root')
+                  shutil.rmtree(path)
+              if path.exists():
+                  raise SystemExit('native producer work retirement failed')
+          print(json.dumps({'schema': 'ami-rust-native-host-cleanup-v1',
+                            'producer_outcome': os.environ['PRODUCER_RESULT'],
+                            'remaining_bytes': 0}))
+          PY
+
   release-candidate:
     name: Authenticate complete release transport
-    if: ${{ !inputs.reference_proposal }}
-    needs: [consumer]
+    if: ${{ always() && !cancelled() && !inputs.reference_proposal && ((inputs.native_tooling && needs.authenticate.result == 'success') || (!inputs.native_tooling && needs.consumer.result == 'success')) }}
+    needs: [consumer, authenticate]
     runs-on: ubuntu-24.04
     environment: release
     timeout-minutes: 20
@@ -533,7 +685,11 @@ jobs:
         with:
           name: sdk-authenticated-linux-x86_64-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/ami-rust-release-inner
+      - name: Bootstrap native host Rust for the native candidate
+        if: ${{ inputs.native_tooling }}
+        run: bash tools/bootstrap-host-rust.sh "$RUNNER_TEMP/ami-rust-native-host" 'x86_64-unknown-linux-gnu'
       - name: Bootstrap pinned verifier tools and roots
+        if: ${{ !inputs.native_tooling }}
         env:
           SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
           PUBLISHER_ENVIRONMENT: release
@@ -553,6 +709,15 @@ jobs:
           PUBLISHER_ENVIRONMENT: release
           RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: |
+          if [[ '${{ inputs.native_tooling }}' == 'true' ]]; then
+            "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_native_outer.py prepare \
+              --bundle "$RUNNER_TEMP/ami-rust-release-inner" \
+              --output "$RUNNER_TEMP/ami-rust-release-output" \
+              --work "$RUNNER_TEMP/ami-rust-release-native-work" \
+              --host-rust "$RUNNER_TEMP/ami-rust-native-host" \
+              --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap"
+            exit 0
+          fi
           "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/candidate_auth.py prepare \
             --bundle "$RUNNER_TEMP/ami-rust-release-inner" \
             --candidate "$RUNNER_TEMP/ami-rust-release-output/candidate" \
@@ -577,7 +742,19 @@ jobs:
         id: final
         env:
           TAG: ${{ steps.prepare.outputs.tag }}
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+          PUBLISHER_ENVIRONMENT: release
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: |
+          if [[ '${{ inputs.native_tooling }}' == 'true' ]]; then
+            "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_native_outer.py finalize \
+              --bundle "$RUNNER_TEMP/ami-rust-release-inner" \
+              --output "$RUNNER_TEMP/ami-rust-release-output" \
+              --work "$RUNNER_TEMP/ami-rust-release-native-work" \
+              --host-rust "$RUNNER_TEMP/ami-rust-native-host" \
+              --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap"
+            exit 0
+          fi
           "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B - <<'PYCODE'
           import hashlib, json, os, sys
           from pathlib import Path
@@ -658,11 +835,19 @@ jobs:
           TRANSPORT: ${{ steps.prepare.outputs.transport_name }}
           CHECKSUMS: ${{ steps.prepare.outputs.checksums_name }}
         run: |
-          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/candidate_auth.py verify \
+          if [[ '${{ inputs.native_tooling }}' == 'true' ]]; then
+            native_outer=(release/ci_native_outer.py verify
+              --output "$RUNNER_TEMP/ami-rust-release-output"
+              --work "$RUNNER_TEMP/ami-rust-release-native-work"
+              --host-rust "$RUNNER_TEMP/ami-rust-native-host")
+          else
+            native_outer=(release/candidate_auth.py verify
+              --candidate "$RUNNER_TEMP/ami-rust-release-output/candidate"
+              --work "$RUNNER_TEMP/ami-rust-release-work"
+              --metadata "$RUNNER_TEMP/ami-rust-release-output/metadata")
+          fi
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B "${native_outer[@]}" \
             --bundle "$RUNNER_TEMP/ami-rust-release-inner" \
-            --candidate "$RUNNER_TEMP/ami-rust-release-output/candidate" \
-            --work "$RUNNER_TEMP/ami-rust-release-work" \
-            --metadata "$RUNNER_TEMP/ami-rust-release-output/metadata" \
             --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap" \
             --gh "$PAYLOAD=$RUNNER_TEMP/ami-rust-release-attestations/payload.json" \
             --gh "$SBOM=$RUNNER_TEMP/ami-rust-release-attestations/sbom.json" \
@@ -678,7 +863,7 @@ jobs:
           import json, os, shutil, stat
           from pathlib import Path
           root = Path(os.environ['RUNNER_TEMP']).resolve(strict=True)
-          for name in ('ami-rust-release-inner', 'ami-rust-release-work', 'ami-rust-release-bootstrap', 'ami-rust-release-attestations', 'ami-rust-python-bootstrap'):
+          for name in ('ami-rust-release-inner', 'ami-rust-release-work', 'ami-rust-release-bootstrap', 'ami-rust-release-attestations', 'ami-rust-release-native-work', 'ami-rust-native-host', 'ami-rust-python-bootstrap'):
               path = root / name
               if path.is_symlink():
                   raise SystemExit('linked release work root')
@@ -737,7 +922,7 @@ jobs:
           compression-level: 9
 
   assemble:
-    if: ${{ !inputs.reference_proposal }}
+    if: ${{ !inputs.reference_proposal && !inputs.native_tooling }}
     name: Assemble common unsigned candidate
     needs: producer
     runs-on: ubuntu-24.04
@@ -797,12 +982,106 @@ jobs:
           print(json.dumps({'schema':'ami-rust-assembly-cleanup-v1', 'retired':retired, 'remaining_bytes':0}))
           PY
 
+  native-assemble:
+    if: ${{ inputs.native_tooling && !inputs.reference_proposal }}
+    name: Assemble native common candidate
+    needs: native-producer
+    runs-on: ubuntu-24.04
+    environment: release
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bootstrap the pinned internal Python runtime
+        run: python3 -I -B release/ci_python.py --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" --inputs release/ci-python-inputs.json
+      - name: Bootstrap the pinned Linux host Rust toolchain
+        run: bash tools/bootstrap-host-rust.sh "$RUNNER_TEMP/ami-rust-native-host" x86_64-unknown-linux-gnu
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-host-linux-x86_64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-native-payloads/linux-x86_64
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-host-macos-aarch64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-native-payloads/macos-aarch64
+      - name: Assemble the exact native release candidate
+        id: assemble
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+          PUBLISHER_ENVIRONMENT: release
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_native.py assemble \
+            --host-rust "$RUNNER_TEMP/ami-rust-native-host" \
+            --work "$RUNNER_TEMP/ami-rust-native-assembly" \
+            --linux "$RUNNER_TEMP/ami-rust-native-payloads/linux-x86_64" \
+            --macos "$RUNNER_TEMP/ami-rust-native-payloads/macos-aarch64" \
+            --output "$RUNNER_TEMP/ami-rust-common-candidate"
+      - name: Preserve bounded unsigned native candidate
+        if: ${{ steps.assemble.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sdk-common-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-common-candidate
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
+      - name: Emit bounded native assembly diagnostics on failure
+        if: failure()
+        run: |
+          python3 -I -B - <<'PY'
+          import json, os, stat
+          from pathlib import Path
+          work = Path(os.environ['RUNNER_TEMP']).resolve(strict=True) / 'ami-rust-native-assembly'
+          remaining = 48 * 1024
+          if not work.is_symlink() and work.is_dir():
+              for path in sorted(work.rglob('*.log')):
+                  info = path.lstat()
+                  if not stat.S_ISREG(info.st_mode) or remaining <= 0:
+                      continue
+                  amount = min(12 * 1024, remaining)
+                  with path.open('rb') as stream:
+                      stream.seek(max(0, info.st_size - amount))
+                      raw = stream.read(amount)
+                  remaining -= len(raw)
+                  print(json.dumps({'native_diagnostic': path.name,
+                                    'tail': raw.decode('utf-8', errors='replace')}))
+          PY
+      - name: Retire native assembly work roots
+        if: always()
+        env:
+          ASSEMBLY_RESULT: ${{ steps.assemble.outcome }}
+        run: |
+          python3 -I -B - <<'PY'
+          import json, os, shutil
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']).resolve(strict=True)
+          names = ('ami-rust-native-host', 'ami-rust-native-assembly',
+                   'ami-rust-native-payloads', 'ami-rust-common-candidate', 'ami-rust-python-bootstrap')
+          for name in names:
+              path = root / name
+              if path.is_symlink():
+                  raise SystemExit('linked native assembly work root')
+              if path.exists():
+                  if not path.is_dir():
+                      raise SystemExit('unexpected native assembly work root')
+                  shutil.rmtree(path)
+              if path.exists():
+                  raise SystemExit('native assembly work retirement failed')
+          print(json.dumps({'schema': 'ami-rust-native-assembly-cleanup-v1',
+                            'assembly_outcome': os.environ['ASSEMBLY_RESULT'],
+                            'remaining_bytes': 0}))
+          PY
+
   authenticate:
     name: Authenticate candidate (${{ matrix.profile }})
-    needs: assemble
+    if: ${{ always() && !inputs.reference_proposal && (needs.assemble.result == 'success' || needs['native-assemble'].result == 'success') }}
+    needs: [assemble, native-assemble]
     runs-on: ${{ matrix.os }}
     environment: release
-    timeout-minutes: 10
+    timeout-minutes: ${{ inputs.native_tooling && 20 || 10 }}
     permissions:
       contents: read
       actions: read
@@ -815,18 +1094,33 @@ jobs:
         include:
           - os: macos-26
             profile: macos-aarch64
+            triple: aarch64-apple-darwin
           - os: ubuntu-24.04
             profile: linux-x86_64
+            triple: x86_64-unknown-linux-gnu
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Bootstrap the pinned native host Rust toolchain
+        if: ${{ inputs.native_tooling }}
+        run: bash tools/bootstrap-host-rust.sh "$RUNNER_TEMP/ami-rust-native-host" '${{ matrix.triple }}'
       - name: Install pinned Python
         run: python3 -I -B release/ci_python.py --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" --inputs release/ci-python-inputs.json
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: sdk-common-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/ami-rust-auth-candidate
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        if: ${{ inputs.native_tooling }}
+        with:
+          name: native-host-linux-x86_64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-native-payloads/linux-x86_64
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        if: ${{ inputs.native_tooling }}
+        with:
+          name: native-host-macos-aarch64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-native-payloads/macos-aarch64
       - name: Bootstrap pinned authentication tools
         env:
           SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
@@ -842,10 +1136,20 @@ jobs:
           SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
           PUBLISHER_ENVIRONMENT: release
           RUNNER_ENVIRONMENT: ${{ runner.environment }}
+          NATIVE_TOOLING: ${{ inputs.native_tooling }}
         run: |
-          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_auth.py audit \
-            --source "$GITHUB_WORKSPACE" --bundle "$RUNNER_TEMP/ami-rust-auth-candidate" \
-            --work "$RUNNER_TEMP/ami-rust-signer-audit"
+          if [ "$NATIVE_TOOLING" = true ]; then
+            "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_native.py audit \
+              --host-rust "$RUNNER_TEMP/ami-rust-native-host" \
+              --work "$RUNNER_TEMP/ami-rust-signer-audit" \
+              --bundle "$RUNNER_TEMP/ami-rust-auth-candidate" \
+              --linux "$RUNNER_TEMP/ami-rust-native-payloads/linux-x86_64" \
+              --macos "$RUNNER_TEMP/ami-rust-native-payloads/macos-aarch64"
+          else
+            "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_auth.py audit \
+              --source "$GITHUB_WORKSPACE" --bundle "$RUNNER_TEMP/ami-rust-auth-candidate" \
+              --work "$RUNNER_TEMP/ami-rust-signer-audit"
+          fi
           "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_auth.py predicate \
             --bundle "$RUNNER_TEMP/ami-rust-auth-candidate" --host '${{ matrix.profile }}' \
             --source "$GITHUB_WORKSPACE" \
@@ -905,7 +1209,30 @@ jobs:
             --cosign "release.json=$RUNNER_TEMP/ami-rust-cosign-manifest.json" \
             --cosign "sdk.tar.xz=$RUNNER_TEMP/ami-rust-cosign-sdk.json" \
             --cosign "SHAUTIL=$RUNNER_TEMP/ami-rust-cosign-utility.json"
+      - name: Validate bounded native authenticated candidate
+        id: validate-native-auth
+        if: ${{ inputs.native_tooling }}
+        run: |
+          python3 -I -B - <<'PY'
+          import json, os, stat
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']).resolve(strict=True) / 'ami-rust-auth-candidate'
+          if root.is_symlink() or not root.is_dir():
+              raise SystemExit('native authenticated candidate root must be a real directory')
+          total = 0
+          for path in root.rglob('*'):
+              info = path.lstat()
+              if stat.S_ISDIR(info.st_mode):
+                  continue
+              if not stat.S_ISREG(info.st_mode):
+                  raise SystemExit('native authenticated candidate contains a nonregular file')
+              total += info.st_size
+          if total > 64 * 1024**2:
+              raise SystemExit('native authenticated candidate exceeds its 64 MiB artifact ceiling')
+          print(json.dumps({'schema': 'ami-rust-native-authenticated-bound-v1', 'bytes': total}))
+          PY
       - name: Preserve authenticated candidate for independent consumption
+        if: ${{ !inputs.native_tooling || steps.validate-native-auth.outcome == 'success' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sdk-authenticated-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -914,6 +1241,30 @@ jobs:
           if-no-files-found: error
           retention-days: 7
           compression-level: 9
+      - name: Emit bounded signer diagnostics on failure
+        if: failure()
+        run: |
+          python3 -I -B - <<'PY'
+          import json, os, stat
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']).resolve(strict=True)
+          remaining = 48 * 1024
+          for name in ('ami-rust-signer-audit', 'ami-rust-signer-audit-expected'):
+              work = root / name
+              if work.is_symlink() or not work.is_dir():
+                  continue
+              for path in sorted(work.rglob('*.log')):
+                  info = path.lstat()
+                  if not stat.S_ISREG(info.st_mode) or remaining <= 0:
+                      continue
+                  amount = min(12 * 1024, remaining)
+                  with path.open('rb') as stream:
+                      stream.seek(max(0, info.st_size - amount))
+                      raw = stream.read(amount)
+                  remaining -= len(raw)
+                  print(json.dumps({'native_diagnostic': path.name,
+                                    'tail': raw.decode('utf-8', errors='replace')}))
+          PY
       - name: Retire signer inputs, tools and runtime
         if: always()
         run: |
@@ -923,6 +1274,7 @@ jobs:
           root = Path(os.environ['RUNNER_TEMP']).resolve(strict=True)
           names = ('ami-rust-auth-candidate', 'ami-rust-auth-work', 'ami-rust-auth-metadata',
                    'ami-rust-python-bootstrap', 'ami-rust-signer-audit', 'ami-rust-predicate.json',
+                   'ami-rust-signer-audit-expected', 'ami-rust-native-host', 'ami-rust-native-payloads',
                    'ami-rust-gh-manifest.json', 'ami-rust-gh-sdk.json', 'ami-rust-gh-utility.json',
                    'ami-rust-cosign-manifest.json', 'ami-rust-cosign-sdk.json', 'ami-rust-cosign-utility.json')
           for name in names:
@@ -938,7 +1290,138 @@ jobs:
           print(json.dumps({'schema':'ami-rust-authentication-cleanup-v1', 'remaining_bytes':0}))
           PY
 
+  native-consumer:
+    if: ${{ inputs.native_tooling }}
+    name: Native signed lifecycle (${{ matrix.profile }})
+    needs: [authenticate, release-candidate]
+    runs-on: ${{ matrix.os }}
+    environment: release
+    # Cold provisioning and two client builds use the existing full-consumer
+    # job allowance; individual supervised commands retain their own limits.
+    timeout-minutes: 80
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - os: macos-26
+            profile: macos-aarch64
+            triple: aarch64-apple-darwin
+          - os: ubuntu-24.04
+            profile: linux-x86_64
+            triple: x86_64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bootstrap the pinned Python runtime
+        run: python3 -I -B release/ci_python.py --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" --inputs release/ci-python-inputs.json
+      - name: Bootstrap the pinned host Rust toolchain
+        run: bash tools/bootstrap-host-rust.sh "$RUNNER_TEMP/ami-rust-native-host" '${{ matrix.triple }}'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sdk-authenticated-linux-x86_64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-native-consumer-candidate
+      - name: Download the authenticated native outer candidate and proofs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sdk-release-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-native-outer-candidate
+      - name: Verify the signed native SDK lifecycle
+        id: verify
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+          PUBLISHER_ENVIRONMENT: release
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_native.py verify \
+            --host-rust "$RUNNER_TEMP/ami-rust-native-host" \
+            --work "$RUNNER_TEMP/ami-rust-native-consumer-work" \
+            --output "$RUNNER_TEMP/ami-rust-native-consumer-output" \
+            --bundle "$RUNNER_TEMP/ami-rust-native-consumer-candidate" \
+            --outer "$RUNNER_TEMP/ami-rust-native-outer-candidate" \
+            --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap"
+      - name: Emit bounded native consumer diagnostics on failure
+        if: failure()
+        run: |
+          python3 -I -B - <<'PY'
+          import json, os, stat
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']).resolve(strict=True)
+          remaining = 48 * 1024
+          for name in ('ami-rust-native-consumer-work', 'ami-rust-native-verifier-work',
+                       'ami-rust-native-verifier-metadata'):
+              work = root / name
+              if work.is_symlink() or not work.is_dir():
+                  continue
+              for path in sorted(work.rglob('*.log')):
+                  info = path.lstat()
+                  if not stat.S_ISREG(info.st_mode) or remaining <= 0:
+                      continue
+                  amount = min(12 * 1024, remaining)
+                  with path.open('rb') as stream:
+                      stream.seek(max(0, info.st_size - amount))
+                      raw = stream.read(amount)
+                  remaining -= len(raw)
+                  print(json.dumps({'native_diagnostic': path.name,
+                                    'tail': raw.decode('utf-8', errors='replace')}))
+          PY
+      - name: Retire native consumer inputs and bound retained evidence
+        id: cleanup
+        if: always()
+        env:
+          VERIFY_RESULT: ${{ steps.verify.outcome }}
+        run: |
+          python3 -I -B - <<'PY'
+          import json, os, shutil, stat
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']).resolve(strict=True)
+          retired = ('ami-rust-native-host', 'ami-rust-native-consumer-work',
+                     'ami-rust-native-verifier-work', 'ami-rust-native-verifier-metadata',
+                     'ami-rust-native-consumer-candidate', 'ami-rust-native-outer-candidate', 'ami-rust-python-bootstrap')
+          for name in retired:
+              path = root / name
+              if path.is_symlink():
+                  raise SystemExit('linked native consumer work root')
+              if path.exists():
+                  if not path.is_dir():
+                      raise SystemExit('unexpected native consumer work root')
+                  shutil.rmtree(path)
+              if path.exists():
+                  raise SystemExit('native consumer work retirement failed')
+          output = root / 'ami-rust-native-consumer-output'
+          if output.is_symlink():
+              raise SystemExit('linked native consumer output root')
+          output.mkdir(exist_ok=True)
+          total = 0
+          for path in output.rglob('*'):
+              info = path.lstat()
+              if stat.S_ISDIR(info.st_mode):
+                  continue
+              if not stat.S_ISREG(info.st_mode):
+                  raise SystemExit('nonregular native consumer evidence')
+              total += info.st_size
+          if total > 32 * 1024**2 - 4096:
+              raise SystemExit('native consumer evidence exceeds its 32 MiB artifact ceiling')
+          receipt = {'schema': 'ami-rust-native-consumer-cleanup-v1',
+                     'verification_outcome': os.environ['VERIFY_RESULT'],
+                     'output_bytes': total, 'retired': list(retired)}
+          (output / 'cleanup.json').write_text(json.dumps(receipt, sort_keys=True) + '\n')
+          print(json.dumps(receipt))
+          PY
+      - name: Preserve bounded native lifecycle evidence
+        if: always() && steps.cleanup.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sdk-native-consumer-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-native-consumer-output
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
+
   consumer:
+    if: ${{ !inputs.native_tooling }}
     name: Independent consumer (${{ matrix.profile }})
     needs: authenticate
     runs-on: ${{ matrix.os }}

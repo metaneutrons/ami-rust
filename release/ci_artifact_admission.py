@@ -17,6 +17,13 @@ SDK_ARTIFACT_CEILINGS = {
     'consumer-macos': 32 * MIB, 'consumer-linux': 32 * MIB,
     'release-candidate-and-proofs': 96 * MIB,
 }
+NATIVE_ARTIFACT_CEILINGS = {
+    'native-host-macos': 16 * MIB, 'native-host-linux': 16 * MIB,
+    'unsigned-common': 64 * MIB,
+    'authenticated-macos': 64 * MIB, 'authenticated-linux': 64 * MIB,
+    'consumer-macos': 32 * MIB, 'consumer-linux': 32 * MIB,
+    'release-candidate-and-proofs': 96 * MIB,
+}
 
 
 def admit(pages, ceiling, pending_bytes):
@@ -57,13 +64,18 @@ def main():
     parser.add_argument('--sdk-candidate', action='store_true')
     parser.add_argument('--reference-proposal', action='store_true',
                         help='reserve only the two unaccepted host-reference artifacts')
+    parser.add_argument('--native-tooling', action='store_true',
+                        help='reserve the native host/SDK authentication and consumer artifacts')
     args = parser.parse_args()
     if args.reference_proposal and not args.sdk_candidate:
         parser.error('--reference-proposal requires --sdk-candidate')
+    if args.native_tooling and (not args.sdk_candidate or args.reference_proposal):
+        parser.error('--native-tooling requires --sdk-candidate without --reference-proposal')
     policy = json.loads((Path(__file__).parent/'ci-resources.json').read_text())
     ceiling = policy['retention']['CI_artifact_pool_bytes']
     # Admit the entire serialized DAG before either matrix producer uploads:
-    selected = {key:value for key,value in SDK_ARTIFACT_CEILINGS.items()
+    ceilings = NATIVE_ARTIFACT_CEILINGS if args.native_tooling else SDK_ARTIFACT_CEILINGS
+    selected = {key:value for key,value in ceilings.items()
                 if not args.reference_proposal or key.startswith('producer-')}
     pending = sum(selected.values()) if args.sdk_candidate else 2 * 32 * MIB
     if args.sdk_candidate and (os.environ.get('GITHUB_REF') != 'refs/heads/main'

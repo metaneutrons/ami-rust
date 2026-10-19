@@ -2,6 +2,8 @@
 import hashlib
 import json
 import os
+import re
+from types import SimpleNamespace
 from pathlib import Path
 import subprocess
 import sys
@@ -149,9 +151,54 @@ class WorkflowProposalTests(unittest.TestCase):
         self.assertIn("regular file", result.stderr)
 
     def test_assembly_is_explicitly_skipped_for_proposals(self):
-        self.assertIn("  assemble:\n    if: ${{ !inputs.reference_proposal }}", SOURCE)
-        self.assertIn("needs: assemble", SOURCE)
+        self.assertIn("  assemble:\n    if: ${{ !inputs.reference_proposal && !inputs.native_tooling }}", SOURCE)
+        self.assertIn("needs: [assemble, native-assemble]", SOURCE)
         self.assertIn("needs: authenticate", SOURCE)
+
+
+class NativeWorkflowTests(unittest.TestCase):
+    @staticmethod
+    def assert_native_contract(source):
+        def job(name, following):
+            return source.split("\n  " + name + ":\n", 1)[1].split("\n  " + following + ":\n", 1)[0]
+        producer = job("native-producer", "release-candidate")
+        assembler = job("native-assemble", "authenticate")
+        signer = job("authenticate", "native-consumer")
+        consumer = job("native-consumer", "consumer")
+        for block in (producer, assembler):
+            if "if: ${{ inputs.native_tooling && !inputs.reference_proposal }}" not in block:
+                raise AssertionError("native production must exclude reference proposals")
+        if "needs: admission" not in producer or "needs: native-producer" not in assembler:
+            raise AssertionError("native producer dependencies bypass admission")
+        if ("needs: [assemble, native-assemble]" not in signer
+                or "needs['native-assemble'].result == 'success'" not in signer):
+            raise AssertionError("native signing lacks its selected assembly dependency")
+        for block in (producer, signer, consumer):
+            if "profile: linux-x86_64" not in block or "profile: macos-aarch64" not in block:
+                raise AssertionError("native delivery must preserve both supported hosts")
+        for block, command in ((producer, "host"), (assembler, "assemble"), (signer, "audit"), (consumer, "verify")):
+            if ('"$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_native.py ' + command) not in block:
+                raise AssertionError("native producer command must use the pinned internal runtime")
+            if "environment: release" not in block or "SOURCE_IS_PROTECTED: ${{ github.ref_protected }}" not in block:
+                raise AssertionError("native delivery must retain its protected environment")
+        if "--native-tooling" not in source or "Native tooling and reference proposal modes cannot be combined" not in source:
+            raise AssertionError("native workflow lacks mode admission")
+        if "name: sdk-authenticated-linux-x86_64-${{ github.run_id }}-${{ github.run_attempt }}" not in consumer:
+            raise AssertionError("native consumers must share the exact authenticated candidate")
+        if "gh release" in producer + assembler + signer + consumer:
+            raise AssertionError("native qualification must not publish an SDK")
+
+    def test_native_branch_preserves_protected_signing_and_both_hosts(self):
+        self.assert_native_contract(SOURCE)
+
+    def test_native_counterprobes_refuse_missing_dependency_or_host(self):
+        broken = SOURCE.replace("needs: native-producer", "needs: admission", 1)
+        with self.assertRaisesRegex(AssertionError, "dependencies"):
+            self.assert_native_contract(broken)
+        before, after = SOURCE.split("\n  native-consumer:\n", 1)
+        broken = before + "\n  native-consumer:\n" + after.replace("profile: macos-aarch64", "profile: unsupported-host", 1)
+        with self.assertRaisesRegex(AssertionError, "both supported hosts"):
+            self.assert_native_contract(broken)
 
 
 class WorkflowAdmissionTests(unittest.TestCase):
@@ -365,11 +412,40 @@ class OuterWorkflowTests(unittest.TestCase):
         self.assertIn('96 MiB output', result.stderr)
         self.assertIsNone(receipt)
 
-    def test_outer_signer_depends_on_consumers_and_excludes_proposals(self):
-        self.assertIn('if: ${{ !inputs.reference_proposal }}', OUTER)
-        self.assertIn('needs: [consumer]', OUTER)
+    def assert_outer_gate(self, source):
+        outer = source.split("\n  release-candidate:\n", 1)[1].split("\n  assemble:\n", 1)[0]
+        self.assertIn('needs: [consumer, authenticate]', outer)
+        match = re.search(r"^    if: \$\{\{ (.+) \}\}$", outer, re.MULTILINE)
+        self.assertIsNotNone(match)
+        expression = match.group(1).replace('&&', ' and ').replace('||', ' or ').replace('!', ' not ')
+        for native, proposal, auth, consumer, cancelled, expected in (
+            (True, False, 'success', 'skipped', False, True),
+            (True, False, 'failure', 'skipped', False, False),
+            (True, False, 'skipped', 'skipped', False, False),
+            (True, True, 'success', 'skipped', False, False),
+            (False, False, 'success', 'success', False, True),
+            (False, False, 'success', 'failure', False, False),
+            (True, False, 'success', 'skipped', True, False),
+        ):
+            inputs = SimpleNamespace(native_tooling=native, reference_proposal=proposal)
+            needs = SimpleNamespace(authenticate=SimpleNamespace(result=auth), consumer=SimpleNamespace(result=consumer))
+            actual = eval(expression, {'__builtins__': {}}, {'inputs':inputs, 'needs':needs,
+                'always':lambda:True, 'cancelled':lambda:cancelled, 'true':True})
+            self.assertEqual(actual, expected, (native, proposal, auth, consumer, cancelled))
+        native_consumer = source.split("\n  native-consumer:\n", 1)[1].split("\n  consumer:\n", 1)[0]
+        self.assertIn('needs: [authenticate, release-candidate]', native_consumer)
+        self.assertIn('--outer "$RUNNER_TEMP/ami-rust-native-outer-candidate"', native_consumer)
+
+    def test_outer_signer_depends_on_the_selected_successful_path(self):
+        self.assert_outer_gate(SOURCE)
         self.assertNotIn('release upload', OUTER)
         self.assertNotIn('release edit', OUTER)
+
+    def test_failed_authentication_cannot_reach_native_outer_signing(self):
+        broken = SOURCE.replace("needs.authenticate.result == 'success') ||", "true) ||", 1)
+        self.assertNotEqual(broken, SOURCE)
+        with self.assertRaises(AssertionError):
+            self.assert_outer_gate(broken)
 
 
 if __name__ == "__main__":

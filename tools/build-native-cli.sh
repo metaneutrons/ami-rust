@@ -21,6 +21,10 @@ export CARGO_BUILD_JOBS=2
 CARGO_ENCODED_RUSTFLAGS=$(printf '%s\037%s' "--remap-path-prefix=$cli_source=/ami-rust" "--remap-path-prefix=$CARGO_HOME=/cargo")
 export CARGO_ENCODED_RUSTFLAGS
 if [[ "$(uname -s)" == Darwin ]]; then
+  # Remove the per-root Rust sysroot prefix from the linker debug map before
+  # computing its UUID. Keep LC_UUID: macOS 26 requires it at load time.
+  CARGO_ENCODED_RUSTFLAGS+=$(printf '\037%s' "-Clink-arg=-Wl,-oso_prefix,$cli_sysroot/")
+  export CARGO_ENCODED_RUSTFLAGS
   # The pinned macOS rust-objcopy links libLLVM from the toolchain's lib
   # directory, which is outside its embedded runtime search paths.
   DYLD_LIBRARY_PATH="$cli_sysroot/lib" \

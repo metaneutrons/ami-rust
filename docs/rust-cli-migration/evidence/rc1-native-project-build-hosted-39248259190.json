@@ -1,0 +1,56 @@
+{
+  "schema": "ami-rust-rc1-component-ci-evidence-v1",
+  "run_id": 39248259190,
+  "source_sha": "59522da3bc3996ab4852dc1328f01dc706eeb0dd",
+  "status": "PASS_COMPONENT_CI_ONLY",
+  "job_results": [
+    {
+      "job": "Rust migration fixtures (ubuntu-24.04)",
+      "ordinary_workspace_tests": 357,
+      "core_tests": 350,
+      "workspace_test_summaries": [
+        "2026-10-19T11:56:48.0498193Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T11:56:48.5314653Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T11:56:56.6455846Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T11:56:56.6667697Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T11:57:23.9930374Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T11:57:24.3986969Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s",
+        "2026-10-19T11:57:25.6119906Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 358 filtered out; finished in 0.10s",
+        "2026-10-19T11:57:43.6736604Z test result: ok. 350 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 19.27s",
+        "2026-10-19T11:57:43.6847112Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "2026-10-19T11:57:43.6977876Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "2026-10-19T11:57:43.6992482Z test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T11:57:43.7005307Z test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T11:57:43.7886681Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s",
+        "2026-10-19T11:57:44.2076491Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ],
+      "portable_cli_positive_and_counterprobe": "PASS"
+    },
+    {
+      "job": "Rust migration fixtures (macos-26)",
+      "ordinary_workspace_tests": 357,
+      "core_tests": 350,
+      "workspace_test_summaries": [
+        "2026-10-19T11:56:59.0466170Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T11:56:59.6401370Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T11:57:07.9658480Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T11:57:08.0312590Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T11:57:34.6066330Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T11:57:35.0899200Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.48s",
+        "2026-10-19T11:57:35.6096180Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 358 filtered out; finished in 0.00s",
+        "2026-10-19T11:58:07.4130800Z test result: ok. 350 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 32.31s",
+        "2026-10-19T11:58:07.4366880Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "2026-10-19T11:58:07.4868420Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+        "2026-10-19T11:58:07.5045700Z test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T11:58:07.5207410Z test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "2026-10-19T11:58:07.6358520Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s",
+        "2026-10-19T11:58:08.2208490Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ],
+      "portable_cli_positive_and_counterprobe": "PASS"
+    }
+  ],
+  "raw_log_sha256": "d278f1bbf5fa93d3e3977682a49204803237c0c6f692be6cb4255712e967ddd5",
+  "claim": "Exact PR94 component CI after the two review corrections; not complete RC1 acceptance",
+  "merged_commit": "3b065c8fdff8f43669dca3ec734d570c0be547d5",
+  "qualified_and_merged_source_trees_identical": true
+}

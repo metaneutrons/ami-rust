@@ -555,7 +555,8 @@ class HostedConsumerVerifyTests(unittest.TestCase):
             destination.write_bytes(b"g")
             destination.chmod(0o700)
             return {"sha256": sha(b"g")}
-        supervisor = SimpleNamespace(commands=[], checkout_bytes=0, managed_bytes=lambda: 0, check_limits=lambda label: None)
+        supervisor = SimpleNamespace(commands=[], checkout_bytes=0, limits={"log_bytes": ci_verify.ci_sdk.MAX_LOG_BYTES},
+                                     managed_bytes=lambda: 0, check_limits=lambda label: None)
         with ExitStack() as stack:
             stack.enter_context(mock.patch.dict(ci_verify.os.environ, {"GITHUB_OUTPUT": str(export)}))
             for obj, name, value in (
@@ -573,9 +574,23 @@ class HostedConsumerVerifyTests(unittest.TestCase):
             stack.enter_context(mock.patch.object(ci_verify, "_write_archive_member", side_effect=extract))
             stack.enter_context(mock.patch.object(ci_verify, "_version_text", side_effect=
                                                   ("gh version 2.102.0", "v3.1.3")))
-            result = ci_verify.bootstrap_tools(self.work, output, bootstrap, source_commit=source)
+            result = ci_verify.bootstrap_tools(self.work, output, bootstrap, source_commit=source,
+                                               additional_input_bytes=1024**3, additional_log_bytes=123)
+        self.assertEqual(supervisor.checkout_bytes, 1024**3)
+        self.assertEqual(supervisor.limits["log_bytes"], ci_verify.ci_sdk.MAX_LOG_BYTES - 123)
         self.assertEqual(result["status"], "PINNED_VERIFIER_TOOLS_READY")
         self.assertEqual(export.read_bytes(), b"unrelated file\n")
+
+    def test_verifier_bootstrap_refuses_invalid_external_charges_before_mutation(self):
+        for kwargs in ({"additional_input_bytes": -1},
+                       {"additional_input_bytes": ci_verify.ci_sdk.MAX_WORK_BYTES + 1},
+                       {"additional_log_bytes": ci_verify.ci_sdk.MAX_LOG_BYTES + 1},
+                       {"additional_log_bytes": True}):
+            with self.subTest(kwargs=kwargs), mock.patch.object(ci_verify, "_managed_roots") as roots:
+                with self.assertRaisesRegex(ValueError, "invalid external"):
+                    ci_verify.bootstrap_tools(self.work, self.root / "unused-output",
+                                               self.root / "unused-python", **kwargs)
+                roots.assert_not_called()
 
     def test_preparation_recipe_matches_delivered_commands_and_rejects_an_edit(self):
         bundle = self.root / "recipe"

@@ -264,7 +264,7 @@ fn canonical_root(root: &Path) -> Result<()> {
 }
 
 /// Header admission only, not an OS-loader test or proof of runtime closure.
-pub(crate) fn check_native_header(raw: &[u8], host: Host) -> Result<()> {
+pub fn check_native_header(raw: &[u8], host: Host) -> Result<()> {
     if raw.len() < 64 {
         return Err(Refusal::new(
             "native frontend is shorter than its host header",

@@ -1,0 +1,391 @@
+{
+  "schema": "ami-rust-native-lifecycle-development-evidence-v1",
+  "status": "LOCAL_DEVELOPMENT_NOT_PROTECTED_QUALIFICATION",
+  "plan_revision": 2,
+  "milestone": "RC1",
+  "base_commit": "9da31e932366d068401c3c60dd3b863043abe65e",
+  "source_identity_note": "Uncommitted implementation at measurement time; exact changed-file identities below. The commit containing this report binds the delivery. This is not a protected producer identity.",
+  "implementation": "One native producer, independent signer reconstruction, authenticated canonical outer transport, actual native package and signed consumer prepare/project/offline-build/removal/retained-replay workflow. Protected execution remains outstanding.",
+  "changed_file_identities": {
+    ".github/workflows/ci.yml": {
+      "bytes": 10265,
+      "sha256": "c753182ab59ed48eef69744600b7bcad89563f1595f8ed3f81fef012b7dfd4ba"
+    },
+    ".github/workflows/sdk-qualify.yml": {
+      "bytes": 79472,
+      "sha256": "b8d439f97dc02ef71adbbc1f82eeec33b8ba5a87fa000aa83c60ad65f4b7c910"
+    },
+    "docs/rust-cli-migration/native-producer.md": {
+      "bytes": 6926,
+      "sha256": "726fdc317ed10652a36653096e3cad0ca6d7253c0f84ad3242bfaf3c1ec0e8a2"
+    },
+    "docs/rust-cli-migration/producer-executable-closure.md": {
+      "bytes": 26981,
+      "sha256": "124e011bcdb68b1f962946c172461042f31a43893ffbcc1423ba9266a1199563"
+    },
+    "release/ci_artifact_admission.py": {
+      "bytes": 5764,
+      "sha256": "c23afdadd2b09caecbc3b9ababcc61e9a303efbe5e6047d0f086d1542a99c615"
+    },
+    "release/ci_native.py": {
+      "bytes": 39763,
+      "sha256": "f4ee1cbe0ab8638b733bca529f3dd9863c1e89ee05af0c591fb806b92e8e5476"
+    },
+    "release/ci_native_outer.py": {
+      "bytes": 56907,
+      "sha256": "4153311396e278e890180a38956e2826053e4f4d592367d697fe45aeeca7f8e7"
+    },
+    "release/ci_verify.py": {
+      "bytes": 115850,
+      "sha256": "d9ae589523e15d02171adaa7f7ebf4e73e18d51858ae31ec22e993b32c133103"
+    },
+    "release/native-tooling-inputs.json": {
+      "bytes": 28067,
+      "sha256": "dacdc2791835e474bb9e37d2ebe90267aec37ef5f6949000573bca68c7d718dc"
+    },
+    "release/test_ci_artifact_admission.py": {
+      "bytes": 9369,
+      "sha256": "b9553e5833c765e500a1d2be5e94b5e7e5683649ecf7e88cca88b31d14adae95"
+    },
+    "release/test_ci_native.py": {
+      "bytes": 12750,
+      "sha256": "ed8f892051aca489e7cb00630dd707ea5e96f9223ea7fb8044df6d1c4af2f9bc"
+    },
+    "release/test_ci_native_outer.py": {
+      "bytes": 11343,
+      "sha256": "2ef774821e9e468fd97bc55cd1add1c16f2685292754db12c3ba640af96d0443"
+    },
+    "release/test_ci_verify.py": {
+      "bytes": 62910,
+      "sha256": "1d5c299c206ab7d065f8eabc18aa621bc71bdbd7575c0191d67d9ac5ff187cba"
+    },
+    "release/test_sdk_workflow.py": {
+      "bytes": 29397,
+      "sha256": "b477a3acbc8d42e7292502c3f2de6dab1129efd01849fd4f74266fc1ae0a9625"
+    },
+    "tooling/README.md": {
+      "bytes": 6023,
+      "sha256": "2f8cc93042e59c7e8c1e8f75789404ee3609f1987fe4e1c372721502e2cb2b6f"
+    },
+    "tooling/crates/core/src/public_transport.rs": {
+      "bytes": 45078,
+      "sha256": "467929b93bb9342627dd6b36c93c5d3675b45c5872f1646dcb9eed0f575169e9"
+    },
+    "tooling/crates/xtask/src/main.rs": {
+      "bytes": 30865,
+      "sha256": "e548954a8d642fdf84cc4d610f7d516492af9cc6753831639f606f23d9951b58"
+    },
+    "tooling/crates/xtask/src/native_notices.rs": {
+      "bytes": 15623,
+      "sha256": "5da6421107b3a11417354157bedc4acfe2b17ed908496175324b5c852c12bf7d"
+    },
+    "tooling/crates/xtask/src/native_outer.rs": {
+      "bytes": 22302,
+      "sha256": "ebe9d196280c3deaaf35db3212efb79b3e912b09f3c58d06cd872c4401d40eb5"
+    },
+    "tooling/crates/xtask/src/native_package.rs": {
+      "bytes": 22384,
+      "sha256": "0ab677269d22e36c96e64c1bf427155a8a51d1519e305d73a828c5c54e8eac40"
+    },
+    "tooling/crates/xtask/src/native_release.rs": {
+      "bytes": 43696,
+      "sha256": "8863dc15bda108be2831fdbd2a0fa12a23e28182060d7a86fcc2567734e51ef1"
+    },
+    "tooling/third-party/THIRD-PARTY-NOTICES.md": {
+      "bytes": 7272,
+      "sha256": "7ea0393cd24f6e4ecf0d33b71b75566aac5150c14473a6792818f8270cccff49"
+    },
+    "tooling/third-party/inventory.json": {
+      "bytes": 92331,
+      "sha256": "95fd64359966b84c63e4a1a59d31cd6fbfc55e7064430190984abb15b046919b"
+    },
+    "tooling/third-party/licenses/rust-1.98.1-COPYRIGHT-library.html": {
+      "bytes": 1512520,
+      "sha256": "68129500b616d5838629e68f55ff3aed5e096dacf60ce9eb41bbe599a563afa6"
+    },
+    "tooling/third-party/licenses/sha256-01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f.txt": {
+      "bytes": 126,
+      "sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f"
+    },
+    "tooling/third-party/licenses/sha256-025436edff4cfcdde17a5811fdea78892d8482efd1abdec5a17872d07a4f2112.txt": {
+      "bytes": 1062,
+      "sha256": "025436edff4cfcdde17a5811fdea78892d8482efd1abdec5a17872d07a4f2112"
+    },
+    "tooling/third-party/licenses/sha256-0a54e647fe54104658b5e563c04c6f9edf251710e47bce692e0bd990a4ddaa39.txt": {
+      "bytes": 984,
+      "sha256": "0a54e647fe54104658b5e563c04c6f9edf251710e47bce692e0bd990a4ddaa39"
+    },
+    "tooling/third-party/licenses/sha256-0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594.txt": {
+      "bytes": 10174,
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+    },
+    "tooling/third-party/licenses/sha256-0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f.txt": {
+      "bytes": 1081,
+      "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f"
+    },
+    "tooling/third-party/licenses/sha256-123a331b5dbf04c30097fa43b8f858bc85df671fe776de498d01f3d6b7c1f69e.txt": {
+      "bytes": 1066,
+      "sha256": "123a331b5dbf04c30097fa43b8f858bc85df671fe776de498d01f3d6b7c1f69e"
+    },
+    "tooling/third-party/licenses/sha256-23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt": {
+      "bytes": 1023,
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
+    "tooling/third-party/licenses/sha256-378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397.txt": {
+      "bytes": 1057,
+      "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397"
+    },
+    "tooling/third-party/licenses/sha256-4108245a1f2df9d4e94df8abed5b4ba0759bb2f9b40a6b939f1be141077ae50b.txt": {
+      "bytes": 1213,
+      "sha256": "4108245a1f2df9d4e94df8abed5b4ba0759bb2f9b40a6b939f1be141077ae50b"
+    },
+    "tooling/third-party/licenses/sha256-42a35170233e83e18856792e748de4c1ce4a63b2afce9a370c89ef3fe23f9f2d.txt": {
+      "bytes": 1078,
+      "sha256": "42a35170233e83e18856792e748de4c1ce4a63b2afce9a370c89ef3fe23f9f2d"
+    },
+    "tooling/third-party/licenses/sha256-43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1.txt": {
+      "bytes": 11356,
+      "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+    },
+    "tooling/third-party/licenses/sha256-516b24e051bf5630880ebbd55c40a25ce9552ebaf8970a53e8976eb70e522406.txt": {
+      "bytes": 10835,
+      "sha256": "516b24e051bf5630880ebbd55c40a25ce9552ebaf8970a53e8976eb70e522406"
+    },
+    "tooling/third-party/licenses/sha256-61d383b05b87d78f94d2937e2580cce47226d17823c0430fbcad09596537efcf.txt": {
+      "bytes": 1097,
+      "sha256": "61d383b05b87d78f94d2937e2580cce47226d17823c0430fbcad09596537efcf"
+    },
+    "tooling/third-party/licenses/sha256-62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt": {
+      "bytes": 9723,
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+    },
+    "tooling/third-party/licenses/sha256-70c9d40f1f9545c3f133b8a67206e89da850f6468eed072281bb3701514114a9.txt": {
+      "bytes": 1082,
+      "sha256": "70c9d40f1f9545c3f133b8a67206e89da850f6468eed072281bb3701514114a9"
+    },
+    "tooling/third-party/licenses/sha256-73b9dc2e79c7308998dd30296e073aefaefb944a68fb89aa412c23c0edcabcaa.txt": {
+      "bytes": 1082,
+      "sha256": "73b9dc2e79c7308998dd30296e073aefaefb944a68fb89aa412c23c0edcabcaa"
+    },
+    "tooling/third-party/licenses/sha256-799e9ca9d179295ef372f25d3769cdda7d25bb2668add6a6a1e22d1e4c678b8d.txt": {
+      "bytes": 1212,
+      "sha256": "799e9ca9d179295ef372f25d3769cdda7d25bb2668add6a6a1e22d1e4c678b8d"
+    },
+    "tooling/third-party/licenses/sha256-831e0f43ad0bf014c1c4fec5767aae470434c1d66d6e671be2d823e729063e25.txt": {
+      "bytes": 1196,
+      "sha256": "831e0f43ad0bf014c1c4fec5767aae470434c1d66d6e671be2d823e729063e25"
+    },
+    "tooling/third-party/licenses/sha256-861399f8c21c042b110517e76dc6b63a2b334276c8cf17412fc3c8908ca8dc17.txt": {
+      "bytes": 665,
+      "sha256": "861399f8c21c042b110517e76dc6b63a2b334276c8cf17412fc3c8908ca8dc17"
+    },
+    "tooling/third-party/licenses/sha256-8ada45cd9f843acf64e4722ae262c622a2b3b3007c7310ef36ac1061a30f6adb.txt": {
+      "bytes": 10860,
+      "sha256": "8ada45cd9f843acf64e4722ae262c622a2b3b3007c7310ef36ac1061a30f6adb"
+    },
+    "tooling/third-party/licenses/sha256-8ca6b96cea9e67c6c5c63f452c31bd396db8bd2406231fdea5d48ef462b48077.txt": {
+      "bytes": 1070,
+      "sha256": "8ca6b96cea9e67c6c5c63f452c31bd396db8bd2406231fdea5d48ef462b48077"
+    },
+    "tooling/third-party/licenses/sha256-98181e7249d0c01737645ec982499ce99a0f07eb8f7d625b8840d799d10dbc01.txt": {
+      "bytes": 1082,
+      "sha256": "98181e7249d0c01737645ec982499ce99a0f07eb8f7d625b8840d799d10dbc01"
+    },
+    "tooling/third-party/licenses/sha256-a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt": {
+      "bytes": 10847,
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    "tooling/third-party/licenses/sha256-a825bd853ab71619a4923d7b4311221427848070ff44d990da39b0b274c1683f.txt": {
+      "bytes": 1083,
+      "sha256": "a825bd853ab71619a4923d7b4311221427848070ff44d990da39b0b274c1683f"
+    },
+    "tooling/third-party/licenses/sha256-a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5.txt": {
+      "bytes": 10849,
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5"
+    },
+    "tooling/third-party/licenses/sha256-af59cea35d7f5e2777a713b8d155d65efa2c339eb43f3c14e868c6ac8506edad.txt": {
+      "bytes": 1103,
+      "sha256": "af59cea35d7f5e2777a713b8d155d65efa2c339eb43f3c14e868c6ac8506edad"
+    },
+    "tooling/third-party/licenses/sha256-c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08.txt": {
+      "bytes": 11358,
+      "sha256": "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08"
+    },
+    "tooling/third-party/licenses/sha256-c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566.txt": {
+      "bytes": 1338,
+      "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566"
+    },
+    "tooling/third-party/licenses/sha256-d2e7ec5355c96eeade56b09187ceb48a6a30299da3ce7531a66d3d11405ab963.txt": {
+      "bytes": 1070,
+      "sha256": "d2e7ec5355c96eeade56b09187ceb48a6a30299da3ce7531a66d3d11405ab963"
+    },
+    "tooling/third-party/licenses/sha256-db11fec9946737df39ca3898d9cd8c10ec6f6c3a884a6802b0ad0b81b4e8f23a.txt": {
+      "bytes": 17,
+      "sha256": "db11fec9946737df39ca3898d9cd8c10ec6f6c3a884a6802b0ad0b81b4e8f23a"
+    },
+    "tooling/third-party/licenses/sha256-f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1.txt": {
+      "bytes": 1995,
+      "sha256": "f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1"
+    },
+    "tools/build-native-cli.sh": {
+      "bytes": 2858,
+      "sha256": "63545025f3301c1a0f66efda8e6898592fa473738f265f20ffc7233e550e9276"
+    }
+  },
+  "local_checks": {
+    "workspace_before_spdx_only_correction": {
+      "core_passed": 351,
+      "ordinary_integration_passed": 3,
+      "xtask_passed": 15,
+      "raw_log_sha256": "19e4417d290edb5964ce99c519da00bd46d536feeb1540c45babbb3a0a2925dc",
+      "scope": "The subsequent SPDX correction affects xtask only; core/CLI source unchanged."
+    },
+    "final_xtask": {
+      "passed": 16,
+      "raw_log_sha256": "1006450f6a9f74c1fcfbb9a9261d7a88f5457320d24d004244cdd8119a81e59f"
+    },
+    "final_workspace_clippy": {
+      "exit_code": 0,
+      "warnings_denied": true,
+      "raw_log_sha256": "830eacc35fa0e01c29fd437c5282bf9b88dd4d2d3f9a01cdc99089a90bde4e67"
+    },
+    "python_internal_controls": [
+      {
+        "test": "test_ci_native",
+        "passed": 9,
+        "raw_log_sha256": "2fcc83261f3e56907710fcc58d0136f369f4afb59b8b458f5c33de8233c4255b"
+      },
+      {
+        "test": "test_ci_native_outer",
+        "passed": 9,
+        "raw_log_sha256": "ca18ffc8e8fdc6b71e49e9b4fd64e04661daa3243fb767d57a64ce80ea2d7b63"
+      },
+      {
+        "test": "test_ci_verify",
+        "passed": 41,
+        "raw_log_sha256": "2d45e2dca9130555cb6ba13662a8cfd7fe4ae270601ed50044509694d5d30030"
+      },
+      {
+        "test": "test_ci_artifact_admission",
+        "passed": 9,
+        "raw_log_sha256": "5f0635b83af38a6c5d516fcb60dc3fa63c9c6ca4854e51a6a29ca33c92ccef16"
+      },
+      {
+        "test": "test_ci_auth",
+        "passed": 25,
+        "raw_log_sha256": "aa5253b8bf75abace31d911a1bc00c48b35721482a5c3d60d5830d3df7220062"
+      },
+      {
+        "test": "test_native_tooling_materials",
+        "passed": 7,
+        "raw_log_sha256": "55c443882838af1a647fbd8c514e974fa1fc55b0f5546ea5d7e5f0d11fdd0998"
+      },
+      {
+        "test": "test_sdk_workflow",
+        "passed": 22,
+        "raw_log_sha256": "80cf85e23d492e503c82758c12263eefa837ebe61255ce3ea974df852abeb104"
+      }
+    ],
+    "actionlint": "PASS for both changed workflows; rerun after full-consumer timeout selection",
+    "material_parity": {
+      "exit_code": 0,
+      "materials": 332,
+      "reference_bytes": 83591,
+      "reference_sha256": "6b63399371cb5a1b7be1cdb64d16eecbbfa67bbf3dab1a86644621083bb833f5"
+    },
+    "diff_whitespace": {
+      "scope": "Authored source/docs only; exact upstream license files excluded from whitespace lint",
+      "reason": "The original Rust HTML notice contains trailing whitespace and one original crate license ends in a blank line. All upstream notice bytes remain unchanged and hash-checked."
+    }
+  },
+  "independent_macOS_cli_builds": {
+    "host": "macos-aarch64",
+    "same_bytes": true,
+    "bytes": 3210800,
+    "sha256": "d06dd64041793d6386a0a14e89f0d9a754eceb30b63c052fb16cbd0df49b9489",
+    "build_script_sha256": "63545025f3301c1a0f66efda8e6898592fa473738f265f20ffc7233e550e9276",
+    "roots": 2,
+    "compiler_relocation": "Second root uses copied pinned compiler in a path containing spaces",
+    "host_rust": "Existing Rust 1.98.1, commit 48a229ceaefd4985c50990b14116b6d856af0985; executable hashes checked against retained copies; no fresh archive/bootstrap authentication claim",
+    "peak_rss_bytes": 1294024704,
+    "peak_workspace_bytes": 12213759176,
+    "peak_log_bytes": 3964,
+    "claim": "Actual same-host compiler-prefix relocation reproducibility; not Linux, target build-variant, signing or release acceptance evidence"
+  },
+  "package_shape_smoke": {
+    "actual_host_cli_sha256": "76a3c308a097fb9addd776708cc9c56f590bd4d2d7852c250343e641c384e9e8",
+    "claim": "Actual native package composer and both macOS frontend discovery/consistency paths only; outer assets/proofs/source pins are inert synthetic fixtures. No authentication, SDK preparation, both-host or RC1 acceptance claim.",
+    "commands": [
+      {
+        "exit_code": 0,
+        "expected_exit": 0,
+        "label": "01-compose"
+      },
+      {
+        "exit_code": 0,
+        "expected_exit": 0,
+        "label": "02-actual-frontend-consistency"
+      },
+      {
+        "exit_code": 0,
+        "expected_exit": 0,
+        "label": "03-cargo-frontend-consistency"
+      },
+      {
+        "exit_code": 2,
+        "expected_exit": 2,
+        "label": "04-altered-asset-refusal"
+      }
+    ],
+    "notices_unique_crate_texts": 31,
+    "schema": "ami-rust-native-package-composer-development-v1",
+    "status": "PASS_UNSIGNED_INERT_SHAPE_ONLY",
+    "supplemental_std_notice_bytes": 1512520
+  },
+  "independent_review": {
+    "scope": "Workflow dependency branches, native outer/source/run/proof handoff, package commands, removal/replay, notice paths and SPDX generation",
+    "found_and_corrected": "Invalid SPDX crate and launcher IDs and the historical Cargo MIT/Apache-2.0 spelling; stable SPDX-safe IDs and MIT OR Apache-2.0 emission now pass reviewed-inventory tests; original license texts/inventory stay unchanged",
+    "limitation": "Source review and offline tests, not protected hosted execution"
+  },
+  "retained_development_failures": [
+    "Original independent macOS binaries differed in LC_UUID and a dependent ad-hoc signature hash. Source linker debug-map prefix mapping fixes the difference.",
+    "An exploratory -no_uuid failed to load on macOS 26; removed. LC_UUID remains present.",
+    "Initial composer integration had private API/borrow/shadow errors; corrected before successful tests.",
+    "Initial Python test batch named a nonexistent material module; remaining actual modules were run explicitly.",
+    "The new SPDX test also detected underscore-containing launcher IDs; corrected before the final 16-test PASS."
+  ],
+  "environment_incident": {
+    "status": "FAILED_NOT_QUALIFICATION",
+    "operation": "initial xtask unit-test invocation",
+    "cause": "explicit Cargo executable but inherited ambient rustc wrapper/PATH; automatic stable rustup synchronization failed and reported rollback",
+    "global_rustup_state": "No before snapshot; full stable toolchain integrity is not established by this run. No manual stable/default change performed.",
+    "pinned_1_98_1_executables": {
+      "rustc": {
+        "original_sha256": "766eda9d8f53afd6fc7f27b3cd2e444dd22afacb5afa710a5625fc8e45b8c941",
+        "copied_sha256": "766eda9d8f53afd6fc7f27b3cd2e444dd22afacb5afa710a5625fc8e45b8c941"
+      },
+      "cargo": {
+        "original_sha256": "6e17e865f3a20dd55a1d212f849f58b77124179f0de7c52973096d84ba34118d",
+        "copied_sha256": "6e17e865f3a20dd55a1d212f849f58b77124179f0de7c52973096d84ba34118d"
+      },
+      "rustdoc": {
+        "original_sha256": "8ce1ae78157758d4d75eee1355ed333f27e903ab6b0904e09d326009b333c2ee",
+        "copied_sha256": "8ce1ae78157758d4d75eee1355ed333f27e903ab6b0904e09d326009b333c2ee"
+      }
+    },
+    "action": "discard failed invocation; rerun with explicit replacement environment and no wrapper"
+  },
+  "preserved_boundaries": [
+    "Immutable published SDK 0.1.0 and packaging.2 assets",
+    "Target compiler, C-SDK, custom Cargo, qualified x86-64 ABI-v1/QEMU baseline",
+    "Protected AROS-NG, AROS-NX and aros-tools checkouts"
+  ],
+  "remaining": [
+    "Merge component-qualified producer delivery and execute genuine protected native-v2 signing",
+    "Complete both-host observed no-Python and differential/failure/cancellation matrix",
+    "Five target variants in two fresh roots per host; Serde host-metadata qualification",
+    "Complete retained state/migration/upgrade/removal/recovery matrix",
+    "All RC2\u2013RC5 criteria"
+  ],
+  "claim": "No protected native-v2 run, RC1 acceptance, SDK publication or complete Python retirement is established by this report."
+}

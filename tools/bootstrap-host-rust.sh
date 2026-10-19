@@ -3,6 +3,7 @@
 # Install the existing authenticated host bootstrap inputs into a fresh prefix.
 # This does not change rustup defaults or select a new AROS target compiler.
 set -euo pipefail
+unset CARGO_REGISTRY_TOKEN CARGO_REGISTRIES_CRATES_IO_TOKEN
 
 if [ "$#" -ne 2 ]; then
   echo "usage: bootstrap-host-rust.sh FRESH_PREFIX HOST_TRIPLE" >&2

@@ -461,6 +461,31 @@ class PublisherAssemblyTests(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True), self.assertRaises(ValueError):
             auth.context(self.source)
 
+    def test_native_finalization_uses_its_new_profile_without_relaxing_legacy(self):
+        import shutil
+        self.assemble()
+        fake = self.write(self.root, "profile-only-fake.json", b'{"fixture":"not real crypto"}')
+        mapping = {n: fake for n in auth.SUBJECTS}
+        for schema, size, accepted in (("ami-rust-release-v1", 33 * 1024**2, False),
+                                       ("ami-rust-release-v2", 33 * 1024**2, True),
+                                       ("ami-rust-release-v2", 65 * 1024**2, False)):
+            with self.subTest(schema=schema, size=size):
+                case = self.root / (schema + str(size))
+                shutil.copytree(self.output, case)
+                manifest = auth.parsed((case / "release.json").read_bytes())
+                manifest["schema"] = schema
+                (case / "release.json").write_bytes(auth.encoded(manifest))
+                # Sparse test data measures the finalizer's physical-file
+                # length accounting, not a valid distributable asset set.
+                with (case / "profile-counterprobe.bin").open("xb") as stream:
+                    stream.truncate(size)
+                if accepted:
+                    auth.finalize(case, auth.HOSTS[0], mapping, mapping)
+                else:
+                    with self.assertRaisesRegex(ValueError, "retained artifact ceiling"):
+                        auth.finalize(case, auth.HOSTS[0], mapping, mapping)
+                    self.assertFalse((case / ".auth/authentication.json").exists())
+
     def test_context_binds_workflow_dispatch_and_immutable_repository_ids(self):
         env = {"GITHUB_ACTIONS": "true", "GITHUB_REPOSITORY": auth.REPO,
                "GITHUB_REF": "refs/heads/main", "SOURCE_IS_PROTECTED": "true",
