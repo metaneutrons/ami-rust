@@ -10,7 +10,10 @@ use std::{
     io,
     os::{
         fd::{AsRawFd, FromRawFd},
-        unix::ffi::{OsStrExt, OsStringExt},
+        unix::{
+            ffi::{OsStrExt, OsStringExt},
+            fs::MetadataExt,
+        },
     },
     path::{Component, Path},
 };
@@ -32,6 +35,50 @@ fn name(value: &OsStr) -> Result<CString> {
 
 #[derive(Debug)]
 pub struct Directory(File);
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum EntryType {
+    Directory,
+    RegularFile,
+    Symlink,
+    Other,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct EntryIdentity {
+    entry_type: EntryType,
+    device: u64,
+    inode: u64,
+    mode: u32,
+}
+
+impl EntryIdentity {
+    pub(crate) fn entry_type(self) -> EntryType {
+        self.entry_type
+    }
+
+    pub(crate) fn matches_metadata(self, metadata: &Metadata) -> bool {
+        self.device == metadata.dev()
+            && self.inode == metadata.ino()
+            && self.mode == metadata.mode()
+            && self.entry_type == EntryType::from_mode(metadata.mode())
+    }
+}
+
+impl EntryType {
+    #[allow(
+        clippy::unnecessary_cast,
+        reason = "POSIX mode field widths differ between macOS and Linux."
+    )]
+    fn from_mode(mode: u32) -> Self {
+        match mode & libc::S_IFMT as u32 {
+            value if value == libc::S_IFDIR as u32 => Self::Directory,
+            value if value == libc::S_IFREG as u32 => Self::RegularFile,
+            value if value == libc::S_IFLNK as u32 => Self::Symlink,
+            _ => Self::Other,
+        }
+    }
+}
 
 impl Directory {
     pub(crate) fn raw_fd(&self) -> std::os::fd::RawFd {
@@ -65,6 +112,83 @@ impl Directory {
             .map_err(|e| Refusal::new(format!("could not inspect directory: {e}")))
     }
 
+    /// Classify one entry without following a symlink or opening its target.
+    #[allow(unsafe_code)]
+    #[allow(
+        clippy::unnecessary_cast,
+        reason = "POSIX stat field widths differ between macOS and Linux."
+    )]
+    pub(crate) fn classify_entry(&self, entry: &OsStr) -> Result<EntryIdentity> {
+        let entry = name(entry)?;
+        let mut metadata = std::mem::MaybeUninit::<libc::stat>::uninit();
+        // SAFETY: the parent descriptor and basename are valid; successful
+        // fstatat initializes the struct, and AT_SYMLINK_NOFOLLOW classifies a
+        // symlink itself without opening or following its target.
+        let result = unsafe {
+            libc::fstatat(
+                self.0.as_raw_fd(),
+                entry.as_ptr(),
+                metadata.as_mut_ptr(),
+                libc::AT_SYMLINK_NOFOLLOW,
+            )
+        };
+        if result != 0 {
+            return Err(error("could not classify anchored directory entry"));
+        }
+        // SAFETY: successful fstatat initialized the complete stat structure.
+        let metadata = unsafe { metadata.assume_init() };
+        let mode = metadata.st_mode as u32;
+        Ok(EntryIdentity {
+            entry_type: EntryType::from_mode(mode),
+            device: metadata.st_dev as u64,
+            inode: metadata.st_ino as u64,
+            mode,
+        })
+    }
+
+    /// Open a previously classified directory and verify that the descriptor
+    /// still refers to that exact entry identity.
+    pub(crate) fn open_child_matching(
+        &self,
+        entry: &OsStr,
+        expected: EntryIdentity,
+    ) -> Result<Self> {
+        if expected.entry_type != EntryType::Directory {
+            return Err(Refusal::new("classified bundle entry is not a directory"));
+        }
+        let child = self.child(entry)?;
+        if !expected.matches_metadata(&child.metadata()?) {
+            return Err(Refusal::new(
+                "bundle directory changed after no-follow classification",
+            ));
+        }
+        Ok(child)
+    }
+
+    /// Open a previously classified regular file and verify the descriptor's
+    /// identity before any caller reads its contents.
+    pub(crate) fn open_regular_matching(
+        &self,
+        entry: &OsStr,
+        expected: EntryIdentity,
+    ) -> Result<File> {
+        if expected.entry_type != EntryType::RegularFile {
+            return Err(Refusal::new(
+                "classified bundle entry is not a regular file",
+            ));
+        }
+        let file = self.regular(entry)?;
+        let metadata = file.metadata().map_err(|error| {
+            Refusal::new(format!("could not inspect opened bundle entry: {error}"))
+        })?;
+        if !expected.matches_metadata(&metadata) {
+            return Err(Refusal::new(
+                "bundle file changed after no-follow classification",
+            ));
+        }
+        Ok(file)
+    }
+
     pub fn child(&self, entry: &OsStr) -> Result<Self> {
         self.open_entry(entry, FLAGS).map(Self)
     }
@@ -87,16 +211,21 @@ impl Directory {
     }
 
     pub fn regular(&self, entry: &OsStr) -> Result<File> {
+        let expected = self.classify_entry(entry)?;
+        if expected.entry_type() != EntryType::RegularFile {
+            return Err(Refusal::new("inventory entry is not a regular file"));
+        }
         let file = self.open_entry(
             entry,
             libc::O_RDONLY | libc::O_NOFOLLOW | libc::O_CLOEXEC | libc::O_NONBLOCK,
         )?;
-        if !file
+        let metadata = file
             .metadata()
-            .map_err(|e| Refusal::new(format!("could not inspect entry: {e}")))?
-            .is_file()
-        {
-            return Err(Refusal::new("inventory entry is not a regular file"));
+            .map_err(|e| Refusal::new(format!("could not inspect entry: {e}")))?;
+        if !expected.matches_metadata(&metadata) {
+            return Err(Refusal::new(
+                "regular file changed after no-follow classification",
+            ));
         }
         Ok(file)
     }
@@ -279,6 +408,54 @@ mod tests {
         assert!(directory.link_target(OsStr::new("alias"), 3).is_err());
         assert!(directory.child(OsStr::new("..")).is_err());
         assert!(directory.regular(OsStr::new("real/file")).is_err());
+    }
+
+    #[test]
+    fn nofollow_classification_and_open_identity_check_cover_entry_kinds() {
+        let fixture = Fixture::new();
+        fs::create_dir(fixture.0.join("directory")).unwrap();
+        fs::write(fixture.0.join("file"), b"original").unwrap();
+        symlink("file", fixture.0.join("link")).unwrap();
+        let directory = Directory::open(&fixture.0).unwrap();
+
+        let directory_identity = directory.classify_entry(OsStr::new("directory")).unwrap();
+        let file_identity = directory.classify_entry(OsStr::new("file")).unwrap();
+        let link_identity = directory.classify_entry(OsStr::new("link")).unwrap();
+        assert_eq!(directory_identity.entry_type(), EntryType::Directory);
+        assert_eq!(file_identity.entry_type(), EntryType::RegularFile);
+        assert_eq!(link_identity.entry_type(), EntryType::Symlink);
+        assert!(file_identity.matches_metadata(&fs::metadata(fixture.0.join("file")).unwrap()));
+        assert!(
+            directory
+                .open_regular_matching(OsStr::new("directory"), file_identity)
+                .is_err()
+        );
+
+        // Keep the classified inode alive under another name so the replacement
+        // cannot reuse its inode number before the descriptor check.
+        fs::rename(fixture.0.join("file"), fixture.0.join("moved-file")).unwrap();
+        fs::write(fixture.0.join("file"), b"replacement").unwrap();
+        assert!(
+            directory
+                .open_regular_matching(OsStr::new("file"), file_identity)
+                .is_err()
+        );
+        assert!(
+            directory
+                .open_child_matching(OsStr::new("link"), directory_identity)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn nofollow_classification_rejects_device_nodes_without_opening_them() {
+        let dev = Directory::open(Path::new("/dev")).unwrap();
+        let null_identity = dev.classify_entry(OsStr::new("null")).unwrap();
+        assert_eq!(null_identity.entry_type(), EntryType::Other);
+        assert!(
+            dev.open_regular_matching(OsStr::new("null"), null_identity)
+                .is_err()
+        );
     }
 
     #[test]

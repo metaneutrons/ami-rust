@@ -319,38 +319,7 @@ fn parse_release_body(
 /// RawValue pass. Full syntax, duplicate and depth validation follows in
 /// `parse_json` after constructing the temporary validation copy.
 fn check_prepass_depth(raw: &[u8]) -> Result<()> {
-    std::str::from_utf8(raw).map_err(|_| Refusal::new("release manifest is not UTF-8"))?;
-    let (mut quoted, mut escaped, mut depth) = (false, false, 0_usize);
-    for byte in raw {
-        if quoted {
-            if escaped {
-                escaped = false;
-            } else if *byte == b'\\' {
-                escaped = true;
-            } else if *byte == b'"' {
-                quoted = false;
-            }
-            continue;
-        }
-        match byte {
-            b'"' => quoted = true,
-            b'{' | b'[' => {
-                depth += 1;
-                if depth > crate::json::JSON_MAX_CONTAINER_DEPTH {
-                    return Err(Refusal::new(
-                        "release manifest exceeds JSON container depth",
-                    ));
-                }
-            }
-            b'}' | b']' => {
-                depth = depth
-                    .checked_sub(1)
-                    .ok_or_else(|| Refusal::new("unbalanced release manifest container"))?;
-            }
-            _ => {}
-        }
-    }
-    Ok(())
+    crate::json::check_raw_value_prepass(raw, JsonProfile::ReleaseManifestAndInstallReceipt)
 }
 
 /// Build a validation-only document copy. Producer integer tokens become a

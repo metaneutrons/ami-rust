@@ -22,6 +22,8 @@ pub const PUBLISHER_POLICY_AND_AUTHENTICATION_METADATA_MAX_BYTES: usize = 1_048_
 pub const GITHUB_ATTESTATION_BUNDLE_MAX_BYTES: usize = 2_097_152;
 pub const COSIGN_BUNDLE_MAX_BYTES: usize = 1_048_576;
 pub const TRUSTED_ROOT_MAX_BYTES: usize = 16_777_216;
+/// Existing external verifier stdout capture profile (not bundle input size).
+pub const VERIFIER_OUTPUT_MAX_BYTES: usize = 4_194_304;
 
 /// A JSON format whose input byte limit is frozen in `contracts-v1.json`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -34,6 +36,7 @@ pub enum JsonProfile {
     GithubAttestationBundle,
     CosignBundle,
     TrustedRoot,
+    VerifierOutput,
 }
 
 impl JsonProfile {
@@ -51,6 +54,7 @@ impl JsonProfile {
             Self::GithubAttestationBundle => GITHUB_ATTESTATION_BUNDLE_MAX_BYTES,
             Self::CosignBundle => COSIGN_BUNDLE_MAX_BYTES,
             Self::TrustedRoot => TRUSTED_ROOT_MAX_BYTES,
+            Self::VerifierOutput => VERIFIER_OUTPUT_MAX_BYTES,
         }
     }
 }
@@ -112,6 +116,44 @@ pub fn parse_json_value(bytes: &[u8], profile: JsonProfile) -> Result<Value> {
         .map_err(|error| Refusal::new(format!("invalid JSON: {error}")))?;
 
     Ok(value)
+}
+
+/// Guard a borrowed RawValue pass before its syntax parser runs. The full
+/// strict-tree pass must still follow: this only bounds bytes and nesting.
+pub(crate) fn check_raw_value_prepass(raw: &[u8], profile: JsonProfile) -> Result<()> {
+    if raw.len() > profile.max_bytes() {
+        return Err(Refusal::new("raw JSON exceeds its profile byte limit"));
+    }
+    std::str::from_utf8(raw).map_err(|_| Refusal::new("raw JSON is not UTF-8"))?;
+    let (mut quoted, mut escaped, mut depth) = (false, false, 0_usize);
+    for byte in raw {
+        if quoted {
+            if escaped {
+                escaped = false;
+            } else if *byte == b'\\' {
+                escaped = true;
+            } else if *byte == b'"' {
+                quoted = false;
+            }
+            continue;
+        }
+        match byte {
+            b'"' => quoted = true,
+            b'{' | b'[' => {
+                depth += 1;
+                if depth > JSON_MAX_CONTAINER_DEPTH {
+                    return Err(Refusal::new("raw JSON exceeds container depth"));
+                }
+            }
+            b'}' | b']' => {
+                depth = depth
+                    .checked_sub(1)
+                    .ok_or_else(|| Refusal::new("unbalanced raw JSON container"))?;
+            }
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 #[derive(Clone, Copy)]
@@ -442,6 +484,10 @@ mod tests {
             ),
             (JsonProfile::CosignBundle, COSIGN_BUNDLE_MAX_BYTES),
             (JsonProfile::TrustedRoot, TRUSTED_ROOT_MAX_BYTES),
+            (
+                JsonProfile::VerifierOutput,
+                super::VERIFIER_OUTPUT_MAX_BYTES,
+            ),
         ];
 
         for (profile, limit) in profiles_and_limits {

@@ -13,8 +13,8 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
-const POLICY_EVIDENCE: &str = "environment and runnerEnvironment are signed SLSA predicate claims verified under the exact pinned workflow SHA; they are not independent Fulcio certificate fields";
-const VERIFICATION_MODE: &str =
+pub(crate) const POLICY_EVIDENCE: &str = "environment and runnerEnvironment are signed SLSA predicate claims verified under the exact pinned workflow SHA; they are not independent Fulcio certificate fields";
+pub(crate) const VERIFICATION_MODE: &str =
     "offline pinned GH bundle/custom root and Cosign bundle/trusted root";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -73,45 +73,7 @@ pub struct WorkflowRun {
     pub host_profile: Host,
 }
 
-/// Exact positive decimal integer, including historical counters above u64.
-/// The pinned Python 3.12 JSON oracle has its default 4,300-digit integer cap.
-#[derive(Debug)]
-pub struct PositiveCounter(String);
-
-impl PositiveCounter {
-    pub fn as_decimal(&self) -> &str {
-        &self.0
-    }
-    fn parse(raw: &str) -> Result<Self> {
-        if raw.is_empty()
-            || raw.len() > 4300
-            || raw.starts_with('0')
-            || !raw.bytes().all(|byte| byte.is_ascii_digit())
-        {
-            return Err(Refusal::new(
-                "workflow counter must be a positive exact JSON integer",
-            ));
-        }
-        Ok(Self(raw.to_owned()))
-    }
-}
-
-impl<'de> Deserialize<'de> for PositiveCounter {
-    fn deserialize<D: serde::Deserializer<'de>>(input: D) -> std::result::Result<Self, D::Error> {
-        // Large lexemes are replaced only in a temporary validation copy and
-        // restored from their borrowed original tokens before returning.
-        let value = u64::deserialize(input)?;
-        Self::parse(&value.to_string()).map_err(serde::de::Error::custom)
-    }
-}
-
-impl Serialize for PositiveCounter {
-    fn serialize<S: serde::Serializer>(&self, output: S) -> std::result::Result<S::Ok, S::Error> {
-        let raw = serde_json::value::RawValue::from_string(self.0.clone())
-            .map_err(serde::ser::Error::custom)?;
-        raw.serialize(output)
-    }
-}
+pub use crate::workflow_counter::PositiveCounter;
 
 #[derive(Deserialize)]
 struct CounterEnvelope<'a> {
@@ -151,82 +113,26 @@ fn counter_validation_copy(raw: &[u8]) -> Result<(Vec<u8>, Vec<CounterPair>)> {
     // serde_json's global number behavior, unlike arbitrary_precision.
     let envelope: CounterEnvelope<'_> = serde_json::from_slice(raw)
         .map_err(|error| Refusal::new(format!("invalid receipt counter envelope: {error}")))?;
+    let tokens: Vec<_> = envelope
+        .authentication
+        .into_iter()
+        .flat_map(|authentication| authentication.report.workflow_runs)
+        .flat_map(|run| [run.run_id, run.run_attempt])
+        .collect();
+    let (copy, counters) = crate::workflow_counter::validation_copy(raw, &tokens)?;
+    let mut counters = counters.into_iter();
     let mut pairs = Vec::new();
-    let mut replacements = Vec::new();
-    if let Some(authentication) = envelope.authentication {
-        for run in authentication.report.workflow_runs {
-            let id = PositiveCounter::parse(run.run_id.get())?;
-            let attempt = PositiveCounter::parse(run.run_attempt.get())?;
-            for value in [run.run_id, run.run_attempt] {
-                if value.get().parse::<u64>().is_err() {
-                    // RawValue borrows a subslice of `raw` from from_slice.
-                    let start = (value.get().as_ptr() as usize)
-                        .checked_sub(raw.as_ptr() as usize)
-                        .ok_or_else(|| {
-                            Refusal::new("counter token is outside its source record")
-                        })?;
-                    let end = start
-                        .checked_add(value.get().len())
-                        .filter(|end| *end <= raw.len())
-                        .ok_or_else(|| Refusal::new("counter token range overflow"))?;
-                    replacements.push((start, end));
-                }
-            }
-            pairs.push((id, attempt));
-        }
+    while let Some(id) = counters.next() {
+        let attempt = counters
+            .next()
+            .ok_or_else(|| Refusal::new("incomplete workflow counter pair"))?;
+        pairs.push((id, attempt));
     }
-    replacements.sort_unstable();
-    let mut copy = Vec::new();
-    copy.try_reserve_exact(raw.len())
-        .map_err(|_| Refusal::new("could not allocate bounded receipt validation copy"))?;
-    let mut previous = 0;
-    for (start, end) in replacements {
-        if start < previous {
-            return Err(Refusal::new("overlapping workflow counter tokens"));
-        }
-        copy.extend_from_slice(&raw[previous..start]);
-        copy.push(b'1');
-        previous = end;
-    }
-    copy.extend_from_slice(&raw[previous..]);
     Ok((copy, pairs))
 }
 
 fn check_prepass_depth(raw: &[u8]) -> Result<()> {
-    std::str::from_utf8(raw).map_err(|_| Refusal::new("installation receipt is not UTF-8"))?;
-    let (mut quoted, mut escaped, mut depth) = (false, false, 0_usize);
-    for byte in raw {
-        if quoted {
-            if escaped {
-                escaped = false;
-            } else if *byte == b'\\' {
-                escaped = true;
-            } else if *byte == b'"' {
-                quoted = false;
-            }
-            continue;
-        }
-        match byte {
-            b'"' => quoted = true,
-            b'{' | b'[' => {
-                depth += 1;
-                if depth > crate::json::JSON_MAX_CONTAINER_DEPTH {
-                    return Err(Refusal::new(
-                        "installation receipt exceeds JSON container depth",
-                    ));
-                }
-            }
-            b'}' | b']' => {
-                depth = depth
-                    .checked_sub(1)
-                    .ok_or_else(|| Refusal::new("unbalanced receipt container"))?;
-            }
-            _ => {}
-        }
-    }
-    // This is only an early depth guard. The JSON parsers still validate full
-    // string/container syntax, duplicates and the exact record schema.
-    Ok(())
+    crate::json::check_raw_value_prepass(raw, JsonProfile::ReleaseManifestAndInstallReceipt)
 }
 
 #[derive(Debug)]
