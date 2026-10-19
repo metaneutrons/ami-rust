@@ -1,0 +1,149 @@
+{
+  "source_sha256": {
+    "tooling/crates/cli/src/main.rs": "05ec46afc93661ca488cf254b90378868db569934561672864dd844832a57fa8",
+    "tooling/crates/cli/tests/frontends.rs": "87f493311ca640a1cf6246276c03bd938d3a34b59596eab3cdca5a28cdba8c35",
+    "tooling/crates/core/src/compression.rs": "a25f261d6bde6c6b235f4a1ea612255c49c1b98f16a5c8d0982502cdbd0b9e19",
+    "tooling/crates/core/src/digest.rs": "32593f7baf9a52a79f34c7a28d2d0f381913fe568830b6b02628f2d977208f5e",
+    "tooling/crates/core/src/directory.rs": "7f65e70dc83464d4176012ff9064038b6a77d5067b39d1e0003ffae926c1625e",
+    "tooling/crates/core/src/elf.rs": "a7f068fd2b28357abf2bc488a3b655078283dcb399671b96cdfe3d12bf567fb5",
+    "tooling/crates/core/src/error.rs": "54c606fab3b71f70c1fbfc27e41cd69e0c342efebcd435cf8d4530aab37c4b5f",
+    "tooling/crates/core/src/files.rs": "9320b67cb7948811f082122b88626aa31d2a09a2d1fc878e6ff50f85afe346bf",
+    "tooling/crates/core/src/frontend.rs": "17dfefba96b73ecfc163bc7fe84c474ed392f0157c5de14f193e2fdf009e2e2b",
+    "tooling/crates/core/src/host_platform.rs": "d131babff5a50a81ef5057889b7d6c432259e49dbaf0d8f38d6a727af7d2c6ba",
+    "tooling/crates/core/src/inventory.rs": "4a1d9025ba57e35a4c7e162e69c0e3d15105831e6618625bf3fc5d41144a4460",
+    "tooling/crates/core/src/json.rs": "a8d23560d31db57ad2bffb4202d1ae0e87334c8d4f86abec4309a8d8454ab005",
+    "tooling/crates/core/src/lib.rs": "789409cf3dabb10e33ff83f977b76f837e48812c1e714fabef542a357b0141ec",
+    "tooling/crates/core/src/mutations.rs": "9a46e5541322dcdcbdd4ae86dd2634df97ee7334fe73dcfa33093845f862a60f",
+    "tooling/crates/core/src/native_install.rs": "189b08317beeef2172ce29477a251044355eb6e727aa84355da50d3030a53b7a",
+    "tooling/crates/core/src/ownership.rs": "0d5fbc3b32f727d0250534642612e7a01b7df89d7ea6b43e7c18acb3f247a9d8",
+    "tooling/crates/core/src/package.rs": "ddeb43e08801bec4a4d971c476b7e3a9de34a5b0004b52e0ffcd11ff71beed55",
+    "tooling/crates/core/src/package_records.rs": "768f5b1cf879ca0e4056b9c9241684d295d2767668f6fe073c76de704c30980f",
+    "tooling/crates/core/src/package_tests.rs": "aa27fdac4ed8973df0396a247e89f0901a895bf8df2d19ff2c7178ac8f594e99",
+    "tooling/crates/core/src/process_capture.rs": "ccbb5f9f9bb2699bafe6c98b572954c7b9b3c8841e0c16ca24bcb4765aea83c3",
+    "tooling/crates/core/src/process_lease.rs": "60b4696a3bf88d4ef5856495abc7490c445de6bf89935aed1cfcc475e52d9e1c",
+    "tooling/crates/core/src/process_snapshot.rs": "8f2b28478a803622b6a99e21a4784c47951bc5d18a32208e9a35236a8c292ce9",
+    "tooling/crates/core/src/publisher.rs": "c48de9611ea5e6ee030b7eafd2db4af1ab08a723eaf2be524c3b9a9ebeb66819",
+    "tooling/crates/core/src/publisher_claims.rs": "04e54c49f6ee57bf505af9d05d0bcb65ccc28444bb2b4807a1bb3909862e7085",
+    "tooling/crates/core/src/publisher_files.rs": "5d8152cc307aff5a4859b0f94263070dc728e775345f5362423ccbaeb896a841",
+    "tooling/crates/core/src/publisher_home.rs": "6d6855d748d92fe19a983b8569e6426dd475e4e616e885e5d85461d07463af70",
+    "tooling/crates/core/src/publisher_metadata.rs": "5ae76fb3c4c650d33066307db8738abb17fce6165dbcc1157b39d9c08eb37939",
+    "tooling/crates/core/src/publisher_policy.rs": "0ef8109ea9f41726c807ffca7fa2c181a1e73c1fc0a95af973b81237cc3e9ebe",
+    "tooling/crates/core/src/publisher_tar.rs": "827f0303b3a7dda90ac90a72efb736402ac7b5ded652fdcca5ee281be1afb9d8",
+    "tooling/crates/core/src/publisher_tests.rs": "8da195393235410205f21ac67acb928cbf7cb159ca43379be016cf8c67bc142e",
+    "tooling/crates/core/src/receipts.rs": "ae781955c6720650bccf55d940918be8342042864cd410563886f347bd3660ba",
+    "tooling/crates/core/src/records.rs": "377e464a9fd05e3a870875761644d4b8fe4467b3cf30d7ec436064936175608d",
+    "tooling/crates/core/src/release_manifest.rs": "ec8457e4179971871e9b3e3822aa82797ee72b33f5262df6e7224ef4a6bfa87a",
+    "tooling/crates/core/src/resource_capture.rs": "78c3f578179114fcfa266fb294c2792309e28370122f6dd60354f018f6b191a9",
+    "tooling/crates/core/src/sdk.rs": "8998fd79fd404d497a7f8a61fee33618ad9da559ad9653ecfa7d4d36395bbcb1",
+    "tooling/crates/core/src/signals.rs": "db55598d9bd1121946b1bbfbbbd1004f64bc1b8a087cc09d18d97f00925e2513",
+    "tooling/crates/core/src/transaction.rs": "d238e3afa4f688536520759cc9edd757687c5f1875404e3f0ad69635eb170649",
+    "tooling/crates/core/src/workflow_counter.rs": "d435d6eccef0fbd9f3c6710b35e9bda88041f1e5b0b04345fe5e7a0649f358e6",
+    "tooling/crates/core/src/workspace_accounting.rs": "2854ccc9eae0438ce07af7924bd5bc50766cf8059074473e6d00344e03440247",
+    "tooling/crates/core/tests/process_scope_oracles.rs": "bdd3297a59e98a621a35edb1b7f93514dd4c7d6c1eb0b79189b049708b084aeb",
+    "tooling/crates/core/tests/release_manifest_oracles.rs": "8740da45db415168cc776753ea16bd69994c155d085a53c2b909f9790ebe7999",
+    "tooling/Cargo.toml": "626ccaf39620692c0240d5eeb0467ba3ef43e0fe2f7c39d2f13b68b8da473aa3",
+    "tooling/crates/core/Cargo.toml": "05bad1948f4e5c6daf32fb217824dd1be6eacdfd6b4a1e4191d6e6a2e3601491",
+    "tooling/crates/cli/Cargo.toml": "d9a5cc73251d16ec109361a18feb17f0afa967c06048ab24ccdbab1fdc7ab634",
+    "tooling/rust-toolchain.toml": "72da9f9e503464ba7393560f6f51a69fb06be72633d52ae7725fa0ba59dfda22",
+    "tools/build-native-cli.sh": "f672ad9243693bba4797a22fdd55feae6e17ea1b09ea1cb42b09a1dfcc519632",
+    ".github/workflows/ci.yml": "b75d7078b697afc203bf579e5a626bf62281e314e0c47574c4c66e68c865b137"
+  },
+  "cargo_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+  "registry_package_count": 29,
+  "tracked_feature_paths": [
+    ".github/workflows/ci.yml",
+    "docs/rust-cli-migration/contracts-v1.json",
+    "docs/rust-cli-migration/rc1-publisher-verification.md",
+    "docs/rust-cli-migration/rc1-release-manifests.md",
+    "tooling/Cargo.toml",
+    "tooling/README.md",
+    "tooling/crates/cli/src/main.rs",
+    "tooling/crates/cli/tests/frontends.rs",
+    "tooling/crates/core/src/frontend.rs",
+    "tooling/crates/core/src/lib.rs",
+    "tooling/crates/core/src/package.rs",
+    "tooling/crates/core/src/publisher.rs",
+    "tooling/crates/core/src/publisher_files.rs",
+    "tooling/crates/core/src/publisher_tests.rs",
+    "tooling/crates/core/src/receipts.rs",
+    "tooling/crates/core/src/release_manifest.rs",
+    "tooling/crates/core/src/sdk.rs",
+    "tooling/crates/core/src/transaction.rs",
+    "docs/rust-cli-migration/evidence/rc1-native-verify-hosted-39222351827.json",
+    "docs/rust-cli-migration/native-installation.md",
+    "tooling/crates/core/src/native_install.rs",
+    "tools/build-native-cli.sh"
+  ],
+  "checks": [
+    {
+      "name": "16-fmt",
+      "exit_code": 0,
+      "seconds": 0.3
+    },
+    {
+      "name": "17-current-tests",
+      "exit_code": 0,
+      "seconds": 27.688
+    },
+    {
+      "name": "18-current-clippy",
+      "exit_code": 0,
+      "seconds": 1.127
+    }
+  ],
+  "portable_build": {
+    "exit_code": 0,
+    "seconds": 21.594,
+    "bytes": 1455840,
+    "sha256": "21ff1428dd34673379ff17c1b9edf3e30589ed23cf3ab56b85fd78ad727358e2",
+    "local_path_occurrences": {
+      "user_home": 0,
+      "checkout_volume": 0,
+      "cargo_registry": 0
+    },
+    "corrupted_copy_control": "appended exact checkout prefix refused; original built binary preserved"
+  },
+  "core_tests_passed": 274,
+  "integration_tests_passed": 3,
+  "isolated_child_fixtures": 4,
+  "qualification_limits": [
+    "synthetic positive installer fixtures; no signed native-v2 qualification",
+    "macOS local evidence; both-host CI pending",
+    "complete lifecycle, no-Python, five native variants and runtime/memory matrix remain open"
+  ],
+  "code_commit": "03d5468612dfea4e2f19611f2f1904c91b42008c",
+  "rebased_tree": "a031ced7c34cca5ec152c68378308151532e2559",
+  "schema": "ami-rust-rc1-native-install-local-evidence-v1",
+  "date": "2026-10-19",
+  "host": "macos-aarch64",
+  "claim": "Development install/removal integration; RC1 not accepted",
+  "logs": {
+    "16-fmt.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "17-current-tests.log": "2ce8dd7a88986c07b42c7c5e7d0f3028ed87df020d3b310c8f4ed38a88b5669a",
+    "18-current-clippy.log": "7d920c07dc42058895ae6a0d5788ef5252b62860b93b265027a50688af24002f",
+    "19-portable-build.log": "d0564c8a03c5177febd342eb83dcc74e263bb2c38974e58a4d1d51e2b3805ab6",
+    "20-portable-build.log": "6f257d0388258b6890601bba933b9ba7376bf7a1aaef50a9befda721ca09c245"
+  },
+  "review": {
+    "scope": "independent source inspection of native installer/removal and native transaction hooks",
+    "findings": "no actionable defect reported",
+    "limitations": "not runtime race/signal testing; same-UID concurrent mutation boundary remains"
+  },
+  "controls": [
+    "staged synthetic native install, external pin and exact removal",
+    "extra user data preserves installation and refuses removal",
+    "modified SDK/stale pin refuse removal",
+    "malformed external policy creates neither prefix nor pin",
+    "native host/digest/mode binding; post-publication pin conflict retains installation",
+    "both frontend names and real Cargo parsing/refusal parity",
+    "legacy/native aggregate boundary and over-limit controls",
+    "actual portable CLI build; isolated appended-path counterprobe"
+  ],
+  "prospective_profiles": {
+    "native_bundle_bytes": 67108864,
+    "native_install_bytes": 134217728,
+    "legacy_bundle_bytes": 33554432,
+    "legacy_install_bytes": 67108864,
+    "reference": "../native-installation.md#container-profiles"
+  }
+}

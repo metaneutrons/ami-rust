@@ -1,0 +1,36 @@
+{
+  "code_commit": "e1fafdd074b0c2bc45557d3f651b9b1665b69ef5",
+  "exit_code": 0,
+  "seconds": 17.525,
+  "bytes": 1455840,
+  "sha256": "0143e59ab53f539c0b0ad9f99ac796d19e1a28e68481069285d4d970a661373a",
+  "local_path_occurrences": {
+    "user_home": 0,
+    "checkout_volume": 0,
+    "registry": 0
+  },
+  "schema": "ami-rust-rc1-macos-portable-build-fix-v1",
+  "date": "2026-10-19",
+  "original_ci_run": 39227253634,
+  "original_candidate": "8faa0a17e422389208c1797340656668d77ceb46",
+  "original_ci_result": "277 Rust tests per host passed; Linux portable build passed; macOS portable scan failed after rust-objcopy could not load libLLVM.dylib",
+  "root_cause": "Standalone pinned macOS rust-objcopy has no rpath to sysroot/lib; Cargo emits a strip warning and leaves sysroot debug-origin records in the binary",
+  "change": "Only the Darwin Cargo build receives DYLD_LIBRARY_PATH equal to pinned sysroot/lib; no ambient library directories appended",
+  "inputs": "Same hash-pinned host Cargo/rustc 1.98.1 installed with the CI bootstrap recipe and offline registry cache; 29 registry identities unchanged",
+  "code_scope": "Rust sources and lock identical to original CI candidate; build helper and explanation changed",
+  "controls": [
+    "Build without the pinned library directory reproduces the missing libLLVM/strip failure",
+    "Fresh target directory with explicit library directory builds successfully",
+    "Checkout, registry and sysroot prefixes absent; isolated appended-path copy refused"
+  ],
+  "limitations": [
+    "Full both-host CI for corrected candidate remains required",
+    "No signed native-v2 or complete no-Python lifecycle acceptance"
+  ],
+  "logs": {
+    "02-build-baseline.log": "63e87d73b8bb71b4a394a4f45dde83c7f6b67ccc2a4705ee7db6d202f95aa7ba",
+    "03-build-fixed.log": "5740ece15a9849d8c1767ac7637c8995713ebf4d5ceaf2a486f2b9a50bfb7c2d",
+    "04-build-final.log": "aaba9b93786a23e642cc4363622094586ce0920d1223103b60d766020a3f4020"
+  },
+  "build_script_sha256": "a15909955d1e347cdd080d26147fb8eaa361b086b6f463e3965ea9f1a67828bd"
+}

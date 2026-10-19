@@ -51,8 +51,13 @@ decision separately from the new contract decision.
 
 ## Host profile and verification scope
 
-The inherited publisher profile allows 1,000 asset rows, 16 MiB per asset and
-32 MiB total assets; the decoded SDK profile allows 1,000 files and 16 MiB total.
+The legacy manifest reader retains 1,000 asset rows, 16 MiB per asset and
+32 MiB total assets. The prospective native-v2 reader admits at most 512 asset
+rows and 64 MiB total assets, retaining the 16 MiB per-asset limit. Physical
+publisher bundles, including proofs, remain limited to 512 files; therefore a
+manifest at its row ceiling need not fit a physical bundle. Both decoded SDK
+profiles retain 1,000 files and 16 MiB total. See the measured rationale and
+legacy boundary in [native installation](native-installation.md#container-profiles).
 These are release-container parsing profiles, not AROS program quotas. No
 dependency or global JSON number feature is added by these readers.
 

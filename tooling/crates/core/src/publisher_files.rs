@@ -21,7 +21,8 @@ use crate::{
 };
 
 const MAX_BUNDLE_FILES: usize = 512;
-const MAX_BUNDLE_BYTES: u64 = 32 * 1024 * 1024;
+pub(crate) const LEGACY_BUNDLE_BYTE_LIMIT: u64 = 32 * 1024 * 1024;
+pub(crate) const NATIVE_BUNDLE_BYTE_LIMIT: u64 = 64 * 1024 * 1024;
 const MAX_PATH_COMPONENTS: usize = 24;
 const READ_BUFFER_BYTES: usize = 16 * 1024;
 
@@ -79,14 +80,44 @@ pub(crate) fn read_open_regular(mut file: File, limit: usize) -> Result<Vec<u8>>
     Ok(contents)
 }
 
-/// Measure a bundle tree and require exactly the authenticated file and
-/// directory paths. Entries are classified without following links before
-/// opening, then checked against the opened descriptor. File contents are not
-/// re-read here, and concurrent tree changes are not a snapshot guarantee.
+/// Measure a legacy publisher bundle under its fixed 32 MiB aggregate limit
+/// and require exactly the authenticated file and directory paths. Entries are
+/// classified without following links before opening, then checked against the
+/// opened descriptor. File contents are not re-read here, and concurrent tree
+/// changes are not a snapshot guarantee.
 pub fn scan_bundle_exact(
     root: &Directory,
     expected_files: &BTreeSet<String>,
     allowed_directories: &BTreeSet<String>,
+) -> Result<BundleMeasurement> {
+    scan_bundle_exact_with_limit(
+        root,
+        expected_files,
+        allowed_directories,
+        LEGACY_BUNDLE_BYTE_LIMIT,
+    )
+}
+
+/// Measure a native-v2 publisher bundle under its bounded 64 MiB aggregate
+/// profile. Legacy inspection callers keep the public 32 MiB scan.
+pub(crate) fn scan_native_bundle_exact(
+    root: &Directory,
+    expected_files: &BTreeSet<String>,
+    allowed_directories: &BTreeSet<String>,
+) -> Result<BundleMeasurement> {
+    scan_bundle_exact_with_limit(
+        root,
+        expected_files,
+        allowed_directories,
+        NATIVE_BUNDLE_BYTE_LIMIT,
+    )
+}
+
+fn scan_bundle_exact_with_limit(
+    root: &Directory,
+    expected_files: &BTreeSet<String>,
+    allowed_directories: &BTreeSet<String>,
+    byte_limit: u64,
 ) -> Result<BundleMeasurement> {
     let expected_directories = validate_expected_paths(expected_files)?;
     if &expected_directories != allowed_directories {
@@ -102,6 +133,7 @@ pub fn scan_bundle_exact(
         expected_files,
         allowed_directories,
         entry_limit,
+        byte_limit,
         entries_seen: 0,
         files: BTreeSet::new(),
         directories: BTreeSet::new(),
@@ -128,6 +160,7 @@ struct ScanState<'a> {
     expected_files: &'a BTreeSet<String>,
     allowed_directories: &'a BTreeSet<String>,
     entry_limit: usize,
+    byte_limit: u64,
     entries_seen: usize,
     files: BTreeSet<String>,
     directories: BTreeSet<String>,
@@ -186,9 +219,10 @@ fn scan_directory(
                     .total_file_bytes
                     .checked_add(file_metadata.len())
                     .ok_or_else(|| Refusal::new("bundle file byte count overflow"))?;
-                if state.total_file_bytes > MAX_BUNDLE_BYTES {
+                if state.total_file_bytes > state.byte_limit {
                     return Err(Refusal::new(format!(
-                        "bundle files exceed the {MAX_BUNDLE_BYTES}-byte limit"
+                        "bundle files exceed the {}-byte limit",
+                        state.byte_limit
                     )));
                 }
                 if depth + 1 > MAX_PATH_COMPONENTS {
@@ -350,8 +384,8 @@ fn read_file_contents(
 #[cfg(test)]
 mod tests {
     use super::{
-        BundleMeasurement, MAX_BUNDLE_BYTES, read_bundle_file, read_file_contents,
-        scan_bundle_exact,
+        BundleMeasurement, LEGACY_BUNDLE_BYTE_LIMIT, NATIVE_BUNDLE_BYTE_LIMIT, read_bundle_file,
+        read_file_contents, scan_bundle_exact, scan_native_bundle_exact,
     };
     use crate::directory::Directory;
     use std::{
@@ -495,10 +529,44 @@ mod tests {
         create_fifo(&fifo.0.join("pipe"));
         assert!(scan_bundle_exact(&fifo.root(), &paths(&["pipe"]), &paths(&[])).is_err());
 
+        let exact_limit = Fixture::new();
+        let file = File::create(exact_limit.0.join("large")).unwrap();
+        file.set_len(LEGACY_BUNDLE_BYTE_LIMIT).unwrap();
+        assert_eq!(
+            scan_bundle_exact(&exact_limit.root(), &paths(&["large"]), &paths(&[]))
+                .unwrap()
+                .total_file_bytes,
+            LEGACY_BUNDLE_BYTE_LIMIT
+        );
+
         let oversized = Fixture::new();
         let file = File::create(oversized.0.join("large")).unwrap();
-        file.set_len(MAX_BUNDLE_BYTES + 1).unwrap();
+        file.set_len(LEGACY_BUNDLE_BYTE_LIMIT + 1).unwrap();
         assert!(scan_bundle_exact(&oversized.root(), &paths(&["large"]), &paths(&[])).is_err());
+    }
+
+    #[test]
+    fn native_bundle_scan_has_exact_64_mib_aggregate_boundary() {
+        let at_limit = Fixture::new();
+        let file = File::create(at_limit.0.join("large")).unwrap();
+        file.set_len(NATIVE_BUNDLE_BYTE_LIMIT).unwrap();
+        assert_eq!(
+            scan_native_bundle_exact(&at_limit.root(), &paths(&["large"]), &paths(&[]))
+                .unwrap()
+                .total_file_bytes,
+            NATIVE_BUNDLE_BYTE_LIMIT
+        );
+        assert!(
+            scan_bundle_exact(&at_limit.root(), &paths(&["large"]), &paths(&[])).is_err(),
+            "the public legacy scanner must retain its 32 MiB profile"
+        );
+
+        let over_limit = Fixture::new();
+        let file = File::create(over_limit.0.join("large")).unwrap();
+        file.set_len(NATIVE_BUNDLE_BYTE_LIMIT + 1).unwrap();
+        assert!(
+            scan_native_bundle_exact(&over_limit.root(), &paths(&["large"]), &paths(&[])).is_err()
+        );
     }
 
     #[test]

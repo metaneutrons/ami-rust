@@ -81,8 +81,12 @@ candidate.
 
 ## Profiles and remaining qualification
 
-The frozen publisher profile remains 512 bundle files/32 MiB total, 16 MiB per
-asset, 512 input materials, 512 MiB per verifier tool and 16 MiB per trust root.
+Legacy publisher inspection retains 512 bundle files/32 MiB total. Prospective
+native-v2 verification uses 512 bundle files/64 MiB total, selected by the typed
+verification route rather than an input-supplied limit. Source scans, private
+staged scans and retained-byte admission share that route. Both retain 16 MiB
+per asset, 512 input materials, 512 MiB per verifier tool and 16 MiB per trust
+root. See [container profiles](native-installation.md#container-profiles).
 JSON format bounds and 128-container depth remain explicit. Workflow integers
 retain exact decimal lexemes through the historical 4,300-digit limit without
 enabling global arbitrary precision. GH output has its existing 4 MiB capture

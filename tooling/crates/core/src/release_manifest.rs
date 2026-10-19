@@ -32,9 +32,11 @@ const MANIFEST_SCHEMA: &str = "ami-rust-release-v1";
 const NATIVE_MANIFEST_SCHEMA: &str = "ami-rust-release-v2";
 const ASSET_FILE_LIMIT: u64 = 16 * 1024 * 1024;
 const ASSET_TOTAL_LIMIT: u64 = 32 * 1024 * 1024;
+const NATIVE_ASSET_TOTAL_LIMIT: u64 = 64 * 1024 * 1024;
 const SDK_FILE_LIMIT: u64 = 16 * 1024 * 1024;
 const SDK_TOTAL_LIMIT: u64 = 16 * 1024 * 1024;
 const INVENTORY_COUNT_LIMIT: usize = 1_000;
+const NATIVE_ASSET_COUNT_LIMIT: usize = 512;
 const RELEASE_VERSION_MAX_BYTES: usize = 64;
 const PYTHON_MAX_INTEGER_DIGITS: usize = 4_300;
 
@@ -127,7 +129,13 @@ pub struct NativeReleaseManifest {
 /// evidence that the manifest signature, listed bytes, or publisher are trusted.
 pub fn parse_release_manifest(raw: &[u8], production: bool) -> Result<ReleaseManifest> {
     let (manifest, producer) = parse_release_document(raw, MANIFEST_SCHEMA, "host_interpreters")?;
-    let body = parse_release_body(&manifest, producer, production)?;
+    let body = parse_release_body(
+        &manifest,
+        producer,
+        production,
+        ASSET_TOTAL_LIMIT,
+        INVENTORY_COUNT_LIMIT,
+    )?;
     let object = manifest
         .as_object()
         .ok_or_else(|| Refusal::new("release manifest must be an object"))?;
@@ -153,7 +161,13 @@ pub fn parse_native_release_manifest(
 ) -> Result<NativeReleaseManifest> {
     let (manifest, producer) =
         parse_release_document(raw, NATIVE_MANIFEST_SCHEMA, "host_launchers")?;
-    let body = parse_release_body(&manifest, producer, production)?;
+    let body = parse_release_body(
+        &manifest,
+        producer,
+        production,
+        NATIVE_ASSET_TOTAL_LIMIT,
+        NATIVE_ASSET_COUNT_LIMIT,
+    )?;
     let object = manifest
         .as_object()
         .ok_or_else(|| Refusal::new("release manifest must be an object"))?;
@@ -237,6 +251,8 @@ fn parse_release_body(
     manifest: &Value,
     producer: Box<RawValue>,
     production: bool,
+    asset_total_limit: u64,
+    asset_count_limit: usize,
 ) -> Result<ReleaseManifestBody> {
     let object = manifest
         .as_object()
@@ -266,8 +282,9 @@ fn parse_release_body(
     let assets = parse_inventory(
         object.get("assets"),
         "asset",
-        ASSET_TOTAL_LIMIT,
+        asset_total_limit,
         ASSET_FILE_LIMIT,
+        asset_count_limit,
     )?;
     if !assets.iter().any(|entry| entry.path == "sdk.tar.xz") {
         return Err(Refusal::new(
@@ -291,6 +308,7 @@ fn parse_release_body(
         "SDK file",
         SDK_TOTAL_LIMIT,
         SDK_FILE_LIMIT,
+        INVENTORY_COUNT_LIMIT,
     )?;
     let contract = sdk_files
         .iter()
@@ -541,11 +559,12 @@ fn parse_inventory(
     label: &str,
     total_limit: u64,
     file_limit: u64,
+    count_limit: usize,
 ) -> Result<Vec<ReleaseFile>> {
     let rows = value
         .and_then(Value::as_array)
         .ok_or_else(|| Refusal::new(format!("invalid {label} inventory length")))?;
-    if rows.is_empty() || rows.len() > INVENTORY_COUNT_LIMIT {
+    if rows.is_empty() || rows.len() > count_limit {
         return Err(Refusal::new(format!("invalid {label} inventory length")));
     }
 
@@ -947,6 +966,62 @@ mod tests {
         sdk_too_large["sdk_files"][0]["bytes"] = json!(16 * 1024 * 1024_u64);
         sdk_too_large["sdk_files"][1]["bytes"] = json!(1);
         assert!(parse(&sdk_too_large, false).is_err());
+    }
+
+    #[test]
+    fn native_asset_profile_has_64_mib_512_rows_legacy_stays_at_32_mib() {
+        let mut legacy_at_limit = fixture(true);
+        legacy_at_limit["assets"][0]["bytes"] = json!(16 * 1024 * 1024_u64);
+        legacy_at_limit["assets"][1]["bytes"] = json!(16 * 1024 * 1024_u64);
+        assert!(parse(&legacy_at_limit, false).is_ok());
+
+        let mut legacy_over_limit = legacy_at_limit;
+        legacy_over_limit["assets"]
+            .as_array_mut()
+            .expect("legacy assets")
+            .push(json!({"path":"third","bytes":1,"sha256":"0".repeat(64)}));
+        assert!(parse(&legacy_over_limit, false).is_err());
+
+        let mut native_at_limit = native_fixture(true);
+        for index in 0..3 {
+            native_at_limit["assets"][index]["bytes"] = json!(16 * 1024 * 1024_u64);
+        }
+        native_at_limit["host_launchers"]["linux-x86_64"]["bytes"] = json!(16 * 1024 * 1024_u64);
+        native_at_limit["host_launchers"]["macos-aarch64"]["bytes"] = json!(16 * 1024 * 1024_u64);
+        native_at_limit["assets"]
+            .as_array_mut()
+            .expect("native assets")
+            .push(json!({
+                "path":"extra.bin","bytes":16 * 1024 * 1024_u64,"sha256":"e".repeat(64)
+            }));
+        assert!(parse_native(&native_at_limit, false).is_ok());
+
+        let mut native_over_limit = native_at_limit;
+        native_over_limit["assets"]
+            .as_array_mut()
+            .expect("native assets")
+            .push(json!({"path":"extra-small.bin","bytes":1,"sha256":"f".repeat(64)}));
+        assert!(parse_native(&native_over_limit, false).is_err());
+
+        let mut native_at_count_limit = native_fixture(true);
+        for index in 0..509 {
+            native_at_count_limit["assets"]
+                .as_array_mut()
+                .expect("native assets")
+                .push(json!({
+                    "path":format!("extra-{index}.bin"),"bytes":0,"sha256":"0".repeat(64)
+                }));
+        }
+        assert_eq!(
+            native_at_count_limit["assets"].as_array().unwrap().len(),
+            512
+        );
+        assert!(parse_native(&native_at_count_limit, false).is_ok());
+        native_at_count_limit["assets"]
+            .as_array_mut()
+            .expect("native assets")
+            .push(json!({"path":"extra-509.bin","bytes":0,"sha256":"0".repeat(64)}));
+        assert!(parse_native(&native_at_count_limit, false).is_err());
     }
 
     #[test]
