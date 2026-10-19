@@ -108,8 +108,11 @@ pinned Cargo/rustc/rustdoc and an existing registry cache. Compiler prefix maps
 replace checkout and registry paths, including paths with spaces. The release
 profile strips debug-origin records while preserving ordinary symbol names;
 this prevents the macOS linker from retaining absolute prebuilt standard-library
-object paths. No target compiler, `.rlib` metadata or completed distribution
-artifact is patched. The build checks that its checkout, registry and sysroot
+object paths. On macOS the explicit build process also receives the pinned
+sysroot's `lib` directory as its library search path: the pinned `rust-objcopy`
+otherwise cannot load its own `libLLVM.dylib`. The setting is local to that build
+invocation and does not append ambient library search paths. No target compiler,
+`.rlib` metadata or completed distribution artifact is patched. The build checks that its checkout, registry and sysroot
 prefixes are absent, and an isolated corrupted-copy control must fail.
 
 ## Evidence boundary

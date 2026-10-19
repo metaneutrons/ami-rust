@@ -20,14 +20,23 @@ unset CARGO_REGISTRY_TOKEN CARGO_REGISTRIES_CRATES_IO_TOKEN RUSTFLAGS
 export CARGO_BUILD_JOBS=2
 CARGO_ENCODED_RUSTFLAGS=$(printf '%s\037%s' "--remap-path-prefix=$cli_source=/ami-rust" "--remap-path-prefix=$CARGO_HOME=/cargo")
 export CARGO_ENCODED_RUSTFLAGS
-"$CLI_CARGO" build --release --locked --offline --package ami-rust-cli \
-  --manifest-path "$cli_source/tooling/Cargo.toml" --target-dir "$1"
+if [[ "$(uname -s)" == Darwin ]]; then
+  # The pinned macOS rust-objcopy links libLLVM from the toolchain's lib
+  # directory, which is outside its embedded runtime search paths.
+  DYLD_LIBRARY_PATH="$cli_sysroot/lib" \
+    "$CLI_CARGO" build --release --locked --offline --package ami-rust-cli \
+      --manifest-path "$cli_source/tooling/Cargo.toml" --target-dir "$1"
+else
+  "$CLI_CARGO" build --release --locked --offline --package ami-rust-cli \
+    --manifest-path "$cli_source/tooling/Cargo.toml" --target-dir "$1"
+fi
 cli_binary="$1/release/ami-rust"
 
 portable_cli() {
   local cli_scan_status cli_prefix
   for cli_prefix in "$cli_source" "$CARGO_HOME" "$cli_sysroot"; do
     if LC_ALL=C grep -aFq -- "$cli_prefix" "$1"; then
+      printf 'native CLI embeds build path prefix: %s\n' "$cli_prefix" >&2
       return 1
     else
       cli_scan_status=$?
