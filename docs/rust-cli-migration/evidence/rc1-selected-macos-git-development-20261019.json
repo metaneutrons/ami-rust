@@ -1,0 +1,141 @@
+{
+  "schema": "ami-rust-selected-macos-source-git-development-v1",
+  "date": "2026-10-19",
+  "base_commit": "2d7cd850465351958e0268410204ed1f54d5fbb0",
+  "scope": "Local macOS source-checkout component checks and Linux compile/lint only. No complete signed preparation, Linux runtime, RC1 acceptance or release claim.",
+  "status": "PASS_SELECTED_OS_GIT_COMPONENTS_AND_LINUX_COMPILE_ONLY",
+  "private_result_sha256": "16699f931d94d8f135abe3c86b3bf9eb60227706c715f1ef22d9134fbfbd8b1b",
+  "workspace_stdout_sha256": "400b14a85002a3dd321951d49a9e6e390ba2b84d47aa6afb396e7381f2c0cd19",
+  "workspace_summaries": [
+    "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.98s",
+    "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 387 filtered out; finished in 0.01s",
+    "test result: ok. 370 passed; 0 failed; 18 ignored; 0 measured; 0 filtered out; finished in 26.14s",
+    "test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    "test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    "test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+    "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+    "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    "test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s",
+    "test result: ok. 2 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+  ],
+  "source_files": {
+    "tooling/crates/core/src/consumer_source.rs": "b2b9b51c09b55269fc914ae4553e4822bec9b643ef67784aa0aebaf7b20a1016",
+    "tooling/crates/core/src/consumer_session.rs": "2bc308b5d06459432bd0ea4c5755887fb1e5525e0bacf2fd26efe28d644a305d",
+    "tooling/Cargo.lock": "b825f28b7530920b0b8b9d359abad658bc52453ab6ae631b75651162928c7322"
+  },
+  "host_rust": {
+    "rustc_sha256": "766eda9d8f53afd6fc7f27b3cd2e444dd22afacb5afa710a5625fc8e45b8c941",
+    "cargo_sha256": "6e17e865f3a20dd55a1d212f849f58b77124179f0de7c52973096d84ba34118d"
+  },
+  "commands": {
+    "commands": [
+      {
+        "elapsed_seconds": 0.191,
+        "exit_code": 0,
+        "label": "format-changed-integration-source",
+        "log_peak_observed_bytes": 0,
+        "managed_peak_observed_bytes": 1322528529,
+        "rss_peak_observed_bytes": 3604480,
+        "stderr_log": "logs/format-changed-integration-source.stderr.log",
+        "stdout_log": "logs/format-changed-integration-source.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 4.733,
+        "exit_code": 0,
+        "label": "clone-prior-component-cache",
+        "log_peak_observed_bytes": 0,
+        "managed_peak_observed_bytes": 5942614843,
+        "rss_peak_observed_bytes": 9814016,
+        "stderr_log": "logs/clone-prior-component-cache.stderr.log",
+        "stdout_log": "logs/clone-prior-component-cache.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 2.039,
+        "exit_code": 0,
+        "label": "strict-clippy",
+        "log_peak_observed_bytes": 456,
+        "managed_peak_observed_bytes": 5980321994,
+        "rss_peak_observed_bytes": 687833088,
+        "stderr_log": "logs/strict-clippy.stderr.log",
+        "stdout_log": "logs/strict-clippy.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 44.332,
+        "exit_code": 0,
+        "label": "workspace-tests-including-isolated-real-os-git",
+        "log_peak_observed_bytes": 45638,
+        "managed_peak_observed_bytes": 6261376995,
+        "rss_peak_observed_bytes": 1368358912,
+        "stderr_log": "logs/workspace-tests-including-isolated-real-os-git.stderr.log",
+        "stdout_log": "logs/workspace-tests-including-isolated-real-os-git.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.406,
+        "exit_code": 0,
+        "label": "publisher-material-positive-negative-tests",
+        "log_peak_observed_bytes": 45745,
+        "managed_peak_observed_bytes": 6147161340,
+        "rss_peak_observed_bytes": 294912,
+        "stderr_log": "logs/publisher-material-positive-negative-tests.stderr.log",
+        "stdout_log": "logs/publisher-material-positive-negative-tests.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 8.605,
+        "exit_code": 0,
+        "label": "linux-core-cross-check-not-runtime",
+        "log_peak_observed_bytes": 46814,
+        "managed_peak_observed_bytes": 6310709510,
+        "rss_peak_observed_bytes": 955236352,
+        "stderr_log": "logs/linux-core-cross-check-not-runtime.stderr.log",
+        "stdout_log": "logs/linux-core-cross-check-not-runtime.stdout.log",
+        "stop_reason": null
+      }
+    ],
+    "limits": {
+      "log_bytes": 16777216,
+      "rss_bytes": 4294967296,
+      "seconds": 1200,
+      "workspace_bytes": 12884901888
+    },
+    "peak_log_observed_bytes": 46814,
+    "peak_rss_observed_bytes": 1368358912,
+    "peak_workspace_observed_bytes": 6310709510,
+    "schema": "ami-rust-native-supervision-v1",
+    "static_input_root_count": 2,
+    "static_input_roots": [
+      {
+        "label": "selected-host-rust",
+        "log_bytes": 0,
+        "path": "toolchain",
+        "regular_file_bytes": 1051980329
+      },
+      {
+        "label": "reviewed-registry-cache",
+        "log_bytes": 0,
+        "path": "cargo-home",
+        "regular_file_bytes": 20042059
+      }
+    ]
+  },
+  "independent_review": "Separate reviewer found no consequential defect in the privately constructed exact-Git capability, rooted directory checks, unchanged ordinary validation or shared supervision. This is a scoped review, not whole-RC1 acceptance.",
+  "retained_attempts": {
+    "a1": "Test code type error, fixed before further checks.",
+    "a2": "Strict lint refusal, fixed.",
+    "a3": "External-input ancestor rule incorrectly applied above selected installation root.",
+    "a4": "General ConsumerSession executable validation still rejected /Applications; unrelated timing assertion also failed.",
+    "a5": "Strict lint found unused macOS path field after capability integration; removed.",
+    "a6": "Primary stopped the two-minute single-test-thread run after existing GroupHolder readiness parsing blocked; supervisor cleaned the exact owned groups. No acceptance claim. Retry uses two test threads."
+  },
+  "limits": "Per command 4 GiB aggregate RSS, 12 GiB managed workspace, 16 MiB logs, 1200 seconds; pinned inputs and baseline unchanged.",
+  "remaining": "Hosted both-host exact candidate CI and signed lifecycle qualification, including public prepare interruption, retained migration and upgrade/removal effects."
+}
