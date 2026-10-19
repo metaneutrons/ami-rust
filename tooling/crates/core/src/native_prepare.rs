@@ -231,7 +231,7 @@ fn prepare_created(
                     "prepare failed in {phase}: {error}; failure record also failed: {evidence}; private state retained: {}",
                     state_path.display()
                 ),
-            }))
+            }).with_exit_code(error.exit_code()))
         }
     }
 }

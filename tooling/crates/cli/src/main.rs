@@ -17,7 +17,7 @@ fn main() -> ExitCode {
         },
         Err(error) => {
             let _ = writeln!(io::stderr().lock(), "ami-rust: {error}");
-            ExitCode::from(2)
+            ExitCode::from(error.exit_code())
         }
     }
 }

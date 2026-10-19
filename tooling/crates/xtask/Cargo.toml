@@ -1,0 +1,16 @@
+[package]
+name = "ami-rust-xtask"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+ami-rust-core = { path = "../core" }
+serde_json.workspace = true
+tar.workspace = true
+lzma-rust2 = { workspace = true, features = ["encoder"] }
+
+[lints]
+workspace = true
