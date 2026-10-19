@@ -30,6 +30,11 @@ struct ComponentInventory {
     files: Vec<FileIdentity>,
     #[serde(default)]
     symlinks: Vec<LinkIdentity>,
+    // Production Cargo inventories retain this opaque producer record. Its
+    // complete bytes are already bound by the installed SDK profile digest;
+    // component selection neither executes nor re-authenticates the record.
+    #[serde(default, rename = "producer_identity_spec")]
+    _producer_identity_spec: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
 pub struct SelectedComponent {
@@ -265,5 +270,19 @@ mod tests {
         }
         assert!(parse_inventory(br#"{"files":[],"files":[]}"#).is_err());
         assert!(parse_inventory(br#"{"files":[],"driver":"python"}"#).is_err());
+    }
+
+    #[test]
+    fn production_producer_metadata_is_data_not_an_inventory_instruction() {
+        let raw = br#"{"files":[],"symlinks":[],"producer_identity_spec":{"schema":"ami-rust-hosted-cargo-component-producer-v1","record":{"producer_helpers":{"produce.py":"historical identity only"}}}}"#;
+        assert!(parse_inventory(raw).is_ok());
+        assert!(parse_inventory(br#"{"files":[],"producer_identity_spec":"execute"}"#).is_err());
+        assert!(
+            parse_inventory(br#"{"files":[],"producer_identity_spec":{},"driver":"python"}"#)
+                .is_err()
+        );
+        assert!(
+            parse_inventory(br#"{"files":[],"producer_identity_spec":{"x":1,"x":2}}"#).is_err()
+        );
     }
 }

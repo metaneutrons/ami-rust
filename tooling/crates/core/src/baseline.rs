@@ -12,9 +12,11 @@ use serde_json::Value;
 use std::collections::BTreeSet;
 
 const BASELINE: &[u8] = include_bytes!("../../../fixtures/accepted-r1-inputs.json");
+const SUPPORT_INPUTS: &[u8] = include_bytes!("../../../fixtures/accepted-r1-support-inputs.json");
 
 pub struct InitialBaseline {
     data: Value,
+    support: Value,
 }
 
 impl InitialBaseline {
@@ -23,7 +25,14 @@ impl InitialBaseline {
         if data["schema"] != "ami-rust-accepted-r1-inputs-v1" {
             return Err(Refusal::new("unsupported compiled initial baseline record"));
         }
-        Ok(Self { data })
+        let support = parse_json_value(SUPPORT_INPUTS, JsonProfile::SdkComponentManifest)?;
+        if support["schema"] != "ami-rust-accepted-r1-support-inputs-v1"
+            || support["source_sdk_archive_sha256"]
+                != "087f69659f1d0d5136b2c07789488c23dd52ca7b38b21579183620a5fbc61dd4"
+        {
+            return Err(Refusal::new("unsupported compiled baseline support inputs"));
+        }
+        Ok(Self { data, support })
     }
 
     /// Fixed archive/verifier metadata, usable for bootstrap without trusting
@@ -53,6 +62,7 @@ impl InitialBaseline {
         let expected = rows(&self.data["sdk_target_inputs"]["files"])?;
         let paths = expected
             .iter()
+            .chain(rows(&self.support["files"])?.iter())
             .map(|row| string(row, "path"))
             .collect::<Result<BTreeSet<_>>>()?;
         let actual = installation
@@ -66,6 +76,9 @@ impl InitialBaseline {
             ));
         }
         for row in expected {
+            check_file(installation, row)?;
+        }
+        for row in rows(&self.support["files"])? {
             check_file(installation, row)?;
         }
         for row in
@@ -120,6 +133,7 @@ impl InitialBaseline {
 
 fn target_input(path: &str) -> bool {
     matches!(path, "Cargo.toml" | "Cargo.lock")
+        || path == "scripts/measurement/m1_measurement.h"
         || ["native/", "targets/", "crates/", "examples/", "tests/"]
             .iter()
             .any(|prefix| path.starts_with(prefix))

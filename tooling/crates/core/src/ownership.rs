@@ -180,6 +180,12 @@ pub fn fresh_output(path: &Path) -> Result<FreshTarget> {
 /// components. The parent permission policy follows `packaging/cli.py`.
 pub fn fresh_private_state(path: &Path) -> Result<FreshTarget> {
     require_non_root(current_uid())?;
+    fresh_build_output(path)
+}
+
+/// Direct SDK builds historically support root-owned SDKs and outputs. Keep
+/// this separate from the package preparation policy, which requires non-root.
+pub(crate) fn fresh_build_output(path: &Path) -> Result<FreshTarget> {
     validate_normalized_absolute(path, "state")?;
     let parent_path = path
         .parent()
@@ -192,6 +198,10 @@ pub fn fresh_private_state(path: &Path) -> Result<FreshTarget> {
 /// must be a real current-user-owned directory with no group/world permissions.
 pub fn existing_private_state(path: &Path) -> Result<Directory> {
     require_non_root(current_uid())?;
+    existing_private_build_output(path)
+}
+
+pub(crate) fn existing_private_build_output(path: &Path) -> Result<Directory> {
     validate_normalized_absolute(path, "state")?;
     let state = open_directory_chain(path, AncestorPolicy::Unrestricted)?;
     let metadata = state.metadata()?;
@@ -491,7 +501,7 @@ fn require_non_root(uid: u32) -> Result<()> {
 }
 
 #[allow(unsafe_code)]
-fn current_uid() -> u32 {
+pub(crate) fn current_uid() -> u32 {
     // SAFETY: `getuid` takes no pointers and only reads the process credentials.
     unsafe { libc::getuid() }
 }

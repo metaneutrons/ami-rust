@@ -1,0 +1,40 @@
+{
+  "schema": "ami-rust-rc1-prepare-hosted-evidence-v1",
+  "date": "2026-10-19",
+  "criterion_stage": "RC1 partial; all acceptance criteria remain open",
+  "pull_request": 93,
+  "qualified_commit": "32e2cb1339d67026f4b88da449b2f2faaa03c16d",
+  "merged_commit": "c7cd521d998df5fef18c37aa82c13f672c05e884",
+  "compiled_tree_equal": true,
+  "run": {
+    "id": 39237659935,
+    "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39237659935",
+    "conclusion": "success",
+    "all_seven_jobs_passed": true
+  },
+  "hosts": {
+    "ubuntu-24.04": {
+      "core_tests_passed": 324,
+      "integration_tests_passed": 3,
+      "optimized_frontend_build": "PASS",
+      "build_path_check": "PASS",
+      "corrupted_copy_path_counterprobe": "REFUSED",
+      "raw_log": {
+        "bytes": 77836,
+        "sha256": "c40b189041fbabf8463fbc232349a78264172de91e89184779483936ca555e1c"
+      }
+    },
+    "macos-26": {
+      "core_tests_passed": 324,
+      "integration_tests_passed": 3,
+      "optimized_frontend_build": "PASS",
+      "build_path_check": "PASS",
+      "corrupted_copy_path_counterprobe": "REFUSED",
+      "raw_log": {
+        "bytes": 83571,
+        "sha256": "a9b610a49947b67f5be94e77217418cc27af5f9e2e2977a9cbb8689bb46e6b88"
+      }
+    }
+  },
+  "limits": "Component CI and optimized frontend checks only; no positive signed native-v2 preparation, no-Python observation, SDK/native target rebuild or AROS runtime matrix claimed."
+}

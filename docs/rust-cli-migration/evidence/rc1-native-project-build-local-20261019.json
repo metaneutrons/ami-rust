@@ -1,0 +1,256 @@
+{
+  "schema": "ami-rust-rc1-native-project-build-development-v1",
+  "date": "2026-10-19",
+  "implementation_commit": "9d56b9ae8a1732716b11256de49d6dfd66f0e619",
+  "status": "DEVELOPMENT_PROOFS_PASS_RC1_NOT_ACCEPTED",
+  "host": "macos-aarch64",
+  "plan_revision": 2,
+  "milestone": "RC1",
+  "native_variants": {
+    "schema": "ami-rust-native-development-comparison-v1",
+    "status": "PASS",
+    "scope": "macOS local development; unsigned consistency-only install; Python internal orchestration; not publisher/no-Python/RC1 acceptance",
+    "cli_sha256": "b2d657646a35336333c34e8f1788ec525691f3a983dfb8c976e5648486d27b05",
+    "sdk_draft": {
+      "archive": {
+        "bytes": 565688,
+        "path": "sdk.tar.xz",
+        "sha256": "30669120183ef480cfe1f96b45e63c15cb7bacc079c50ffc6bad1dd9ffb7b6cc"
+      },
+      "claim": "Unchanged target/component inputs assembled into SDK-v2; no producer authentication, host launcher binding, native qualification, signing or publication established",
+      "files": 75,
+      "schema": "ami-rust-native-sdk-draft-v1",
+      "sdk_manifest_sha256": "795295b46a2183c42e6b78aa9ca7b8949da9a7720f1835f41ee1907c43f7aa20",
+      "source_identity": "8239bd53d956d94b716feee5aeca1b842e318766",
+      "status": "UNSIGNED_DRAFT",
+      "version": "0.2.0"
+    },
+    "variants": [
+      {
+        "variant": "sha256sum",
+        "artifact_count": 24,
+        "all_canonical_artifacts_equal": true,
+        "native_executable": {
+          "bytes": 928208,
+          "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162"
+        },
+        "receipt_sha256": "7b96a58b487913880b7ee1167ddb3851870cf34e93803706cbec3039caf28b2c",
+        "elapsed_seconds": 16.825572083,
+        "observed_peak_rss_bytes": 1628602368,
+        "observed_peak_workspace_bytes": 179936442,
+        "observed_peak_log_bytes": 157359
+      },
+      {
+        "variant": "minimal-noalloc",
+        "artifact_count": 14,
+        "all_canonical_artifacts_equal": true,
+        "native_executable": {
+          "bytes": 359616,
+          "sha256": "5a932c76d1f791c4ac4cd1dd267506bae3d25d4ea94209356f08a255f3af296e"
+        },
+        "receipt_sha256": "3141b585fb33823f8fe901bbd49e9e9037789814b76c17ef5ac1e6bcb6de14ad",
+        "elapsed_seconds": 15.8787925,
+        "observed_peak_rss_bytes": 1601437696,
+        "observed_peak_workspace_bytes": 165159177,
+        "observed_peak_log_bytes": 77095
+      },
+      {
+        "variant": "minimal-alloc",
+        "artifact_count": 15,
+        "all_canonical_artifacts_equal": true,
+        "native_executable": {
+          "bytes": 885856,
+          "sha256": "5c4749ead23831c357af7826449b5cd29112760ae901240cf4d99bcf85bcff1e"
+        },
+        "receipt_sha256": "0acd1fc4eec02c6e02ca2281278b605281e25d6395f77c0cb50370f02d0cd0ec",
+        "elapsed_seconds": 15.651872666,
+        "observed_peak_rss_bytes": 1629667328,
+        "observed_peak_workspace_bytes": 167865729,
+        "observed_peak_log_bytes": 82958
+      },
+      {
+        "variant": "qualification",
+        "artifact_count": 16,
+        "all_canonical_artifacts_equal": true,
+        "native_executable": {
+          "bytes": 1029880,
+          "sha256": "7299ddb4a2a243a4fdb51c6657aefc02675b5bf6953a38c8d3583fc7f0e06906"
+        },
+        "receipt_sha256": "5d0f56a668571a7f42910b45ba2d03ac7665e86dde054faf0b72adc4a328107a",
+        "elapsed_seconds": 16.383014375,
+        "observed_peak_rss_bytes": 1632256000,
+        "observed_peak_workspace_bytes": 168800279,
+        "observed_peak_log_bytes": 83155
+      },
+      {
+        "variant": "dependencies",
+        "artifact_count": 35,
+        "all_canonical_artifacts_equal": true,
+        "native_executable": {
+          "bytes": 1501568,
+          "sha256": "e9282cb51537e141f22c3e7d22059e64292e79679865d63f9499a63ad0342bb9"
+        },
+        "receipt_sha256": "fcd2cfc47b9126ef06006714871b150b11ae0bb492551242a2a9b60989a1e720",
+        "elapsed_seconds": 20.307476125,
+        "observed_peak_rss_bytes": 1641398272,
+        "observed_peak_workspace_bytes": 235734074,
+        "observed_peak_log_bytes": 339648
+      }
+    ],
+    "canonical_artifacts_compared": 104,
+    "reference_sha256": "93894f48757802841e067fa31d6a1624a3d35a80060d2927670cecfc81c4544e",
+    "target_compiler_changed": false,
+    "resource_limits": {
+      "jobs": 2,
+      "seconds_per_build": 1200,
+      "rss_bytes": 4294967296,
+      "workspace_bytes": 12884901888,
+      "log_bytes": 16777216
+    }
+  },
+  "retained_project_migration": {
+    "schema": "ami-rust-native-migration-development-v1",
+    "status": "PASS",
+    "scope": "Actual retained 0.1.0 project and SDK; new unsigned consistency-only install; internal Python orchestration; not publisher/no-Python/RC1 acceptance",
+    "results": [
+      {
+        "label": "dry-run",
+        "exit": 0,
+        "expected_exit": 0,
+        "elapsed_seconds": 1.977
+      },
+      {
+        "label": "wrong-receipt",
+        "exit": 2,
+        "expected_exit": 2,
+        "elapsed_seconds": 0.708
+      },
+      {
+        "label": "occupied",
+        "exit": 2,
+        "expected_exit": 2,
+        "elapsed_seconds": 2.267
+      },
+      {
+        "label": "changed-cargo",
+        "exit": 2,
+        "expected_exit": 2,
+        "elapsed_seconds": 0.75
+      },
+      {
+        "label": "migrate",
+        "exit": 0,
+        "expected_exit": 0,
+        "elapsed_seconds": 6.477
+      },
+      {
+        "label": "verify-migrated",
+        "exit": 0,
+        "expected_exit": 0,
+        "elapsed_seconds": 2.396
+      },
+      {
+        "label": "build-migrated",
+        "exit": 0,
+        "expected_exit": 0,
+        "elapsed_seconds": 20.919
+      }
+    ],
+    "original_project_and_sdk_unchanged": true,
+    "canonical_artifacts_equal": true,
+    "canonical_count": 15,
+    "differences": [],
+    "native_executable": {
+      "bytes": 342400,
+      "sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69"
+    }
+  },
+  "build_failure_controls": {
+    "scope": "Unsigned development fixture, not authenticated/no-Python/RC1 acceptance",
+    "status": "PASS",
+    "results": [
+      {
+        "label": "changed-cargo",
+        "expected_exit": 2,
+        "exit": 2,
+        "elapsed_seconds": 3.688
+      },
+      {
+        "label": "occupied-output",
+        "expected_exit": 2,
+        "exit": 2,
+        "elapsed_seconds": 5.824
+      },
+      {
+        "label": "cargo-child-failure",
+        "expected_exit": 101,
+        "exit": 101,
+        "elapsed_seconds": 7.017
+      }
+    ],
+    "changed_cargo_output_absent": true,
+    "occupied_user_data_unchanged": true,
+    "cargo_child_exit_preserved": true,
+    "failed_build_has_no_success_receipt_or_executable": true
+  },
+  "current_cli": {
+    "exit": 0,
+    "elapsed_seconds": 25.648,
+    "sha256": "609de6cf84da3f6707c0e3351804b0fdb572c00320f6af1c932698a23493bc53"
+  },
+  "local_checks": {
+    "workspace_at_818a1822e8429a23dfc1903567824f88697cf657": {
+      "ordinary_tests_passed": 355,
+      "core": 348,
+      "integration": 3,
+      "maintainer": 4,
+      "result": [
+        {
+          "label": "61-format",
+          "exit": 0,
+          "elapsed_seconds": 0.303
+        },
+        {
+          "label": "62-workspace",
+          "exit": 0,
+          "elapsed_seconds": 34.355
+        },
+        {
+          "label": "63-clippy",
+          "exit": 0,
+          "elapsed_seconds": 2.161
+        }
+      ]
+    },
+    "post_interpreter_fix": "Focused isolated migration test, formatting and all-targets Clippy pass; real retained migration/rebuild passes. Both-host exact-candidate CI is still required."
+  },
+  "dependency_graph": {
+    "registry_identities": 29,
+    "same_registry_identities_and_checksums_as_main": true,
+    "cargo_lock_sha256": "b825f28b7530920b0b8b9d359abad658bc52453ab6ae631b75651162928c7322",
+    "change": "Local workspace xtask entry and encoder feature for the maintainer task; no new registry packages"
+  },
+  "preserved_failures": [
+    {
+      "stage": "first real lock",
+      "reason": "Generated Cargo inventory contains producer_identity_spec omitted by repository-only profile fixtures; corrected reader admits the known inert object and retains unknown/duplicate rejection."
+    },
+    {
+      "stage": "first qualification variant",
+      "reason": "Draft omitted original scripts/measurement/m1_measurement.h; preserved immutable original and pinned supplemental inventory restores the exact input."
+    },
+    {
+      "stage": "first retained-project dry-run",
+      "reason": "Historical interpreter mode 0775 was incorrectly treated as a new executable trust input; corrected inert-data reader preserves original bytes/mode and never executes it."
+    }
+  ],
+  "limitations": [
+    "Unsigned manually materialized native installation; schema-required synthetic publisher report values are not signature/attestation evidence.",
+    "Internal Python orchestrates these development tests. No complete no-Python observation or offline network-denial claim.",
+    "Five-variant proof identifies its earlier development CLI by digest; final CLI separately proves retained-project migration/build. This is not both-host/two-root exact-release qualification.",
+    "Complete native package preparation/new/upgrade/removal/retained replay, protected native-v2 producer/signing and RC2 ordinary Cargo final linking remain open."
+  ],
+  "baseline_unchanged": true,
+  "protected_checkouts_changed": false,
+  "immutable_release_assets_changed": false
+}
