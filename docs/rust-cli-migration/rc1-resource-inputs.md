@@ -73,6 +73,17 @@ Totals use checked arithmetic. Concurrent mutation is not an atomic snapshot;
 the caller must validate parent namespace/ownership separately. Entry/work
 bounds protect the measurement operation and are not SDK application quotas.
 
+## Local evidence
+
+The [exact-source local result](evidence/rc1-resource-inputs-local-20261019/result.json)
+passes formatting, 233 core unit tests and three integration tests (236 total),
+plus Clippy with warnings denied. Two ignored fixtures are invoked by asserting
+parent tests. The 29 registry identities and production lock are unchanged.
+The [old-fallback counterprobe](evidence/rc1-resource-inputs-local-20261019/direct-child-fallback-counterprobe.json)
+fails as expected: the moved-group child survived until its finite natural
+exit rather than receiving SIGKILL. Restored candidate sources pass the same
+regression. This is local host evidence; both-host CI remains separate.
+
 ## Integration still required
 
 A consumer observer must combine bounded command capture, these samples and

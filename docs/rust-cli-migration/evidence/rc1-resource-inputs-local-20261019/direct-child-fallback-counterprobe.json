@@ -1,0 +1,23 @@
+{
+  "fixed_source_sha256_before_counterprobe": "4f8367b103759381c9e2020ac59e5e62fba46c367156e0fad9fbf86fc23d5026",
+  "counterprobe": "FAIL_AS_EXPECTED",
+  "old_fallback_counterprobe_sha256": "ad88539332e2a5f2960d636262aa8494359f384748565c372db8e5a80c7ebe89",
+  "counterprobe_command": "cargo test --locked --offline -j2 process_capture::tests::cancellation_kills_direct_child_after_it_leaves_supervisor_group -- --exact",
+  "fixed_source_sha256_after_format_and_tests": "b42c96ff3ad4cbdeec73cbe2a2f86562bec06df1cd0fd5154a5136e4e44f0c35",
+  "counterprobe_exit_code": 101,
+  "counterprobe_log_sha256": "b155c21c44137b1ce64ba4a4c95e5c4f62cabf408ec76d999e3fa66e242a2bc4",
+  "counterprobe_observation": "Expected regression: temporary old conditional fallback left the child alive after its original process group became empty; fixture naturally exited after about 2.01s, yielding no signal instead of SIGKILL.",
+  "restored_exact_fixed_source_before_format": "4f8367b103759381c9e2020ac59e5e62fba46c367156e0fad9fbf86fc23d5026",
+  "final_process_test_command": "cargo test --locked --offline -j2 process_",
+  "final_process_test_exit_code": 0,
+  "final_process_test_log_sha256": "7dcaddee7a733ad074489bd237383f6b70291a595d3ba352047be1ad220bc3a6",
+  "final_process_tests_passed": 30,
+  "final_workspace_accounting_test_command": "cargo test --locked --offline -j2 workspace_accounting",
+  "final_workspace_accounting_exit_code": 0,
+  "final_workspace_accounting_test_log_sha256": "4e6a47389f44c85ef23de99a57c076fee623f9a6d2e2632fa11ce943762bab46",
+  "final_workspace_accounting_tests_passed": 9,
+  "rust_toolchain": "1.98.1",
+  "cargo_registry_token_unset": true,
+  "scope": "Only process_capture.rs changed by this task. This fixes direct-child fallback on process-group escape and fails closed rather than blocking in reap after direct-child kill failure. It does not establish process containment.",
+  "source": "tooling/crates/core/src/process_capture.rs"
+}
