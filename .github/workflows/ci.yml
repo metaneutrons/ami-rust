@@ -146,7 +146,7 @@ jobs:
           if ! git cat-file -e "$CLI_BASE^{commit}"; then
             git fetch --no-tags --filter=blob:none --depth=1 origin "$CLI_BASE"
           fi
-          if git diff --quiet "$CLI_BASE" "$GITHUB_SHA" -- tools/ tooling/ host/profiles/ docs/rust-cli-migration/contracts-v1.json .github/workflows/ci.yml release/ci-bootstrap-inputs.json; then
+          if git diff --quiet "$CLI_BASE" "$GITHUB_SHA" -- tools/ tooling/ host/profiles/ docs/rust-cli-migration/contracts-v1.json .github/workflows/ci.yml release/ci-bootstrap-inputs.json release/ci-sdk-inputs.json; then
             printf 'affected=false\n' >> "$GITHUB_OUTPUT"
           else
             cli_diff_status=$?
@@ -180,6 +180,7 @@ jobs:
             host/profiles/
             docs/rust-cli-migration/contracts-v1.json
             release/ci-bootstrap-inputs.json
+            release/ci-sdk-inputs.json
       - name: Install the existing hash-pinned host Rust inputs
         env:
           CLI_HOST_TRIPLE: ${{ matrix.triple }}
