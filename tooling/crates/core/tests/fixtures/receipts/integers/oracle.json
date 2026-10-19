@@ -1,0 +1,82 @@
+{
+  "case_count": 6,
+  "fixture_set": "rc1-receipt-integer-oracle-20261019-a1",
+  "invocation": "python3.12 -I -B run_fixture.py",
+  "results": [
+    {
+      "case": "u64-max",
+      "decision": "accept",
+      "input": "inputs/u64-max.json",
+      "input_bytes": 2060,
+      "input_sha256": "274463a48bb43dbb1b38bf78326fd440fa6aea394954bfc4325bbf27e3b38a2e",
+      "raw_token_digits": 20,
+      "raw_token_kind": "decimal integer"
+    },
+    {
+      "case": "u64-max-plus-one",
+      "decision": "accept",
+      "input": "inputs/u64-max-plus-one.json",
+      "input_bytes": 2060,
+      "input_sha256": "a8846f9b7c4766b01aae683f970d623188cea000fa0406d10ef9bdc60a770fa3",
+      "raw_token_digits": 20,
+      "raw_token_kind": "decimal integer"
+    },
+    {
+      "case": "ten-to-hundred-plus-one",
+      "decision": "accept",
+      "input": "inputs/ten-to-hundred-plus-one.json",
+      "input_bytes": 2142,
+      "input_sha256": "863be5034a8d2ef22abfbc678765dfd0ee136bd716ea81fbaf4ea00474b97fcd",
+      "raw_token_digits": 102,
+      "raw_token_kind": "decimal integer"
+    },
+    {
+      "case": "4300-digit-all-nine",
+      "decision": "accept",
+      "input": "inputs/4300-digit-all-nine.json",
+      "input_bytes": 6340,
+      "input_sha256": "80e5791e0723dab71344f1111bbced96d6946793ba887fbdeedc2d90b022dc42",
+      "raw_token_digits": 4300,
+      "raw_token_kind": "decimal integer"
+    },
+    {
+      "case": "4301-digit-all-nine",
+      "decision": "error",
+      "error_type": "ValueError",
+      "input": "inputs/4301-digit-all-nine.json",
+      "input_bytes": 6341,
+      "input_sha256": "df0af87e87742c7662d306c01825211baa4d42f453e074db788fa6805f35409d",
+      "raw_token_digits": 4301,
+      "raw_token_kind": "decimal integer",
+      "reason": "Exceeds the limit (4300 digits) for integer string conversion: value has 4301 digits; use sys.set_int_max_str_digits() to increase the limit"
+    },
+    {
+      "case": "exponent-one-e100",
+      "decision": "refuse",
+      "error_type": "Refusal",
+      "input": "inputs/exponent-one-e100.json",
+      "input_bytes": 2045,
+      "input_sha256": "7e8b65d45fc8c3b776aa90d37d3518458e315948feae4f675415a5e94bd0d0d2",
+      "raw_token_digits": 1,
+      "raw_token_kind": "exponent-form float",
+      "reason": "invalid publisher report workflow run"
+    }
+  ],
+  "runtime": {
+    "path": "/Volumes/Dev/Source/Amiga/ami-rust/qualification/channels/20261018/local-adapter-a4/consumer/user-home/ami-rust-0.1.0-state/ami-rust-python-bootstrap/runtime/python/bin/python3.12",
+    "sha256": "aed8ed802d0387d6831dead5885840e4e2ff3a7984dd7297e9a5f4466e9cda1d",
+    "sys_get_int_max_str_digits": 4300,
+    "version": "3.12.15 (main, Oct 14 2026, 00:55:37) [Clang 23.1.3 ]"
+  },
+  "source": {
+    "file": "release/install.py",
+    "function": "install._validate_receipt",
+    "git_head": "608ef8a9cdf7f7f6742667449d75dddea28d0343",
+    "repository": "/Volumes/Dev/Source/Amiga/ami-rust/release/public-replay-proof-output-fix-20261018",
+    "sha256": "0e77fa70bcaa69d08de3102e18c102a063b276c654242e676dd20fab6d74e984"
+  },
+  "template": {
+    "fixture": "rc1-receipt-oracle-20261019-a1/inputs/valid-v2.json",
+    "sha256": "6b346c5b30a47368d579dd403ae8e32ccdc475219143182de5d5a2602f58adde"
+  }
+}

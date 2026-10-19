@@ -1,0 +1,226 @@
+{
+  "accepted": 2,
+  "case_count": 14,
+  "cases": [
+    {
+      "case": "valid-v1",
+      "decision": "accept",
+      "input": "inputs/valid-v1.json",
+      "input_sha256": "41750e1ab4f77ab9232c9cc9255d3093b1741c0950ab74066eab0560b9cc9103",
+      "receipt": {
+        "publisher": "fixture.publisher",
+        "release_manifest_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "schema": "ami-rust-install-receipt-v1",
+        "sdk_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "version": "0.1.0"
+      },
+      "typed_inventory": [
+        {
+          "bytes": 4,
+          "path": "payload/SHAUTIL",
+          "sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+        },
+        {
+          "bytes": 17,
+          "path": "payload/release.json",
+          "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+        },
+        {
+          "bytes": 3,
+          "path": "payload/release.json.sig",
+          "sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+        },
+        {
+          "bytes": 11,
+          "path": "sdk/bin/ami-rust",
+          "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+        },
+        {
+          "bytes": 19,
+          "path": "sdk/contract/sdk.json",
+          "sha256": "6666666666666666666666666666666666666666666666666666666666666666"
+        },
+        {
+          "bytes": 7,
+          "path": "sdk/include/stdio.h",
+          "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+        }
+      ]
+    },
+    {
+      "case": "valid-v2",
+      "decision": "accept",
+      "input": "inputs/valid-v2.json",
+      "input_sha256": "6b346c5b30a47368d579dd403ae8e32ccdc475219143182de5d5a2602f58adde",
+      "receipt": {
+        "publisher": "metaneutrons.ami-rust.github",
+        "release_manifest_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "schema": "ami-rust-install-receipt-v2",
+        "sdk_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "version": "0.1.0"
+      },
+      "typed_inventory": [
+        {
+          "bytes": 4,
+          "path": "payload/SHAUTIL",
+          "sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+        },
+        {
+          "bytes": 17,
+          "path": "payload/release.json",
+          "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+        },
+        {
+          "bytes": 3,
+          "path": "payload/release.json.sig",
+          "sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+        },
+        {
+          "bytes": 11,
+          "path": "sdk/bin/ami-rust",
+          "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+        },
+        {
+          "bytes": 19,
+          "path": "sdk/contract/sdk.json",
+          "sha256": "6666666666666666666666666666666666666666666666666666666666666666"
+        },
+        {
+          "bytes": 7,
+          "path": "sdk/include/stdio.h",
+          "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+        }
+      ]
+    },
+    {
+      "case": "wrong-schema-v3",
+      "decision": "refuse",
+      "error_type": "Refusal",
+      "input": "inputs/wrong-schema-v3.json",
+      "input_sha256": "7ea05c15a4f239808f43bc70f8f31e7df2a8fac47264777eca000dbbd3c9be5e",
+      "reason": "incompatible installation receipt"
+    },
+    {
+      "case": "missing-schema",
+      "decision": "refuse",
+      "error_type": "Refusal",
+      "input": "inputs/missing-schema.json",
+      "input_sha256": "2c8a18ad34a5e403e760dbe35ad9f1d6f28b1614df07a8b088cd373878ee40d7",
+      "reason": "incompatible installation receipt"
+    },
+    {
+      "case": "unknown-field",
+      "decision": "refuse",
+      "error_type": "Refusal",
+      "input": "inputs/unknown-field.json",
+      "input_sha256": "21d7a7a087e0d0f1301cbda258aedd6ea26ab8e6cca263e084100a6f071238e9",
+      "reason": "incompatible installation receipt"
+    },
+    {
+      "case": "duplicate-key",
+      "decision": "refuse",
+      "error_type": "Refusal",
+      "input": "inputs/duplicate-key.json",
+      "input_sha256": "5ed6cedaf088f821cf752ca74f812c2892846a2dfe5e3cba086d1ca797df3253",
+      "reason": "duplicate JSON key in installation receipt: publisher"
+    },
+    {
+      "case": "boolean-size",
+      "decision": "refuse",
+      "error_type": "Refusal",
+      "input": "inputs/boolean-size.json",
+      "input_sha256": "9aff4d9ebb1fec65ee4f4e0fb52a29c3cabaf8ddd5a2d94381d85a5f2ae36828",
+      "reason": "invalid receipt file byte length: payload/release.json"
+    },
+    {
+      "case": "case-name-collision",
+      "decision": "refuse",
+      "error_type": "Refusal",
+      "input": "inputs/case-name-collision.json",
+      "input_sha256": "63aaca99c441de8ce42d7bd018631345c64e1b8e5ea107bcd86e901c6dc5ade4",
+      "reason": "duplicate receipt file path: SDK/contract/sdk.json"
+    },
+    {
+      "case": "file-ancestor-collision",
+      "decision": "refuse",
+      "error_type": "Refusal",
+      "input": "inputs/file-ancestor-collision.json",
+      "input_sha256": "567f7b1423bf24266ad35bb3a86d467f00a450a1d434879bb26096bc9d417233",
+      "reason": "file/directory or case-insensitive path conflict: payload/release.json"
+    },
+    {
+      "case": "wrong-v2-publisher",
+      "decision": "refuse",
+      "error_type": "Refusal",
+      "input": "inputs/wrong-v2-publisher.json",
+      "input_sha256": "9e69386d1b438d413b6515221cb593b10ee50d3c4e9d85217b541561329c5317",
+      "reason": "invalid production receipt publisher"
+    },
+    {
+      "case": "wrong-auth-manifest-binding",
+      "decision": "refuse",
+      "error_type": "Refusal",
+      "input": "inputs/wrong-auth-manifest-binding.json",
+      "input_sha256": "be0a49242ae9101abe1af7be8d92b4556593438c5de274f8d32e48c62206632a",
+      "reason": "publisher report does not bind the installed release manifest"
+    },
+    {
+      "case": "extra-authentication-field",
+      "decision": "refuse",
+      "error_type": "Refusal",
+      "input": "inputs/extra-authentication-field.json",
+      "input_sha256": "4086ea43ad4e740b685c3fe48de52a730cb991bc429298a719ad3a86b878923b",
+      "reason": "invalid receipt authentication evidence"
+    },
+    {
+      "case": "boolean-workflow-run-id",
+      "decision": "refuse",
+      "error_type": "Refusal",
+      "input": "inputs/boolean-workflow-run-id.json",
+      "input_sha256": "107592230712e840f499d97d95f8158e6244dfc2dc53efb947e9fd94ae308efa",
+      "reason": "invalid publisher report workflow run"
+    },
+    {
+      "case": "elapsed-over-limit",
+      "decision": "refuse",
+      "error_type": "Refusal",
+      "input": "inputs/elapsed-over-limit.json",
+      "input_sha256": "ef9d3e1bfabdfdcb9a87f5dd28c73222991a5df157bad710475ab2977831661f",
+      "reason": "invalid publisher report elapsed time"
+    }
+  ],
+  "fixture_set": "rc1-receipt-oracle-20261019-a1",
+  "invocation": "python3.12 -I -B run_fixture.py",
+  "refused": 12,
+  "runtime": {
+    "path": "/Volumes/Dev/Source/Amiga/ami-rust/qualification/channels/20261018/local-adapter-a4/consumer/user-home/ami-rust-0.1.0-state/ami-rust-python-bootstrap/runtime/python/bin/python3.12",
+    "sha256": "aed8ed802d0387d6831dead5885840e4e2ff3a7984dd7297e9a5f4466e9cda1d",
+    "version": "3.12.15 (main, Oct 14 2026, 00:55:37) [Clang 23.1.3 ]"
+  },
+  "source": {
+    "file": "release/install.py",
+    "function": "install._validate_receipt",
+    "git_head": "608ef8a9cdf7f7f6742667449d75dddea28d0343",
+    "repository": "/Volumes/Dev/Source/Amiga/ami-rust/release/public-replay-proof-output-fix-20261018",
+    "sha256": "0e77fa70bcaa69d08de3102e18c102a063b276c654242e676dd20fab6d74e984"
+  },
+  "v3_contract_only": {
+    "contract_file": "docs/rust-cli-migration/contracts-v1.json",
+    "contract_sha256": "d3baebdb8d797528dea795360cba5d027e09b7fce8e411327bb1087cec7e1b42",
+    "exact_fields": [
+      "schema",
+      "publisher",
+      "release_manifest_sha256",
+      "sdk_manifest_sha256",
+      "version",
+      "inventory",
+      "authentication",
+      "host",
+      "cli_sha256",
+      "core_sha256"
+    ],
+    "invariants": "bind release-v2 authentication and host-native CLI/core bytes; exact inventory and external receipt pin semantics continue",
+    "oracle_status": "contract-only; current Python _validate_receipt accepts v1/v2 only",
+    "schema": "ami-rust-install-receipt-v3"
+  }
+}
