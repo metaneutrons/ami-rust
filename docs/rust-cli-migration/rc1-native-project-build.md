@@ -37,6 +37,19 @@ qualified Cargo invocation, collector library order and stripping commands.
 artifact, compacts section names and audits the final AROS ELF in Rust, then
 rechecks inputs before writing `ami-rust-native-build-receipt-v1`.
 
+On macOS, native host build scripts and procedural macros use the compiler and
+SDK selected by `/usr/bin/xcode-select -p`. Their canonical identities and SDK
+metadata are recorded and rechecked before a successful receipt is written.
+This host selection leaves the AROS target compiler, flags and link inputs
+unchanged.
+
+The native CLI owns the former direct build-driver boundary. When that driver
+receives SIGTERM, it finishes child-group cleanup and reporting before returning
+143 (`128 + SIGTERM`). A signal delivered only to its supervised Cargo child
+retains the historical status 130. Input/refusal statuses and the separate
+installation publication rules are unchanged; package preparation's own signal
+behaviour still needs its paired lifecycle evidence.
+
 Host remapping and target flags remain separate. The pinned custom Cargo and
 paired rustc are selected explicitly; no ambient compiler fallback is used.
 The compatibility command currently performs final linking after Cargo's
