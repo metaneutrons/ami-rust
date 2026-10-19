@@ -50,25 +50,46 @@ pub fn prepare(package: &CheckedNativePackage, state_path: &Path) -> Result<Prep
     }
     let signals = SigtermGuard::acquire()?;
     let mut created = false;
+    let mut installation_publication_failure = false;
     let state = target
         .parent()
         .mkdir_new_tracked(target.name(), 0o700, || created = true);
     let result = match state {
-        Ok(state) => prepare_created(package, state_path, &state, &signals),
+        Ok(state) => prepare_created(
+            package,
+            state_path,
+            &state,
+            &signals,
+            &mut installation_publication_failure,
+        ),
         Err(error) => Err(Refusal::new(format!(
             "prepare state creation failed: {error}; state_created={created}"
         ))),
     };
-    match (result, signals.finish()) {
-        (Ok(state), Ok(())) => Ok(state),
-        (Err(error), Ok(())) => Err(error),
+    match (result, signals.finish_requested()) {
+        // Only the typed installation failure can retain publication recovery
+        // status 1. An ordinary child exit 1 must not mask our own SIGTERM.
+        (Err(error), Ok(true)) if installation_publication_failure => Err(error),
+        (result, Ok(true)) => {
+            let message = match result {
+                Err(error) => format!("prepare interrupted by SIGTERM: {error}"),
+                Ok(_) => format!(
+                    "SIGTERM requested after preparation; private state retained: {}",
+                    state_path.display()
+                ),
+            };
+            Err(Refusal::new(message).with_exit_code(143))
+        }
+        (Ok(state), Ok(false)) => Ok(state),
+        (Err(error), Ok(false)) => Err(error),
         (Ok(_), Err(error)) => Err(Refusal::new(format!(
             "state was prepared but signal restoration failed: {error}; retained state: {}",
             state_path.display()
         ))),
         (Err(error), Err(restore)) => Err(Refusal::new(format!(
             "{error}; signal restoration also failed: {restore}"
-        ))),
+        ))
+        .with_exit_code(error.exit_code())),
     }
 }
 
@@ -77,6 +98,7 @@ fn prepare_created(
     state_path: &Path,
     state: &Directory,
     signals: &SigtermGuard,
+    installation_publication_failure: &mut bool,
 ) -> Result<PreparedState> {
     let mut phase = "retain-package";
     let result = (|| -> Result<PreparedState> {
@@ -166,7 +188,12 @@ fn prepare_created(
             pins.host,
             signals,
         )
-        .map_err(|error| Refusal::new(format!("native SDK install failed: {error:?}")))?;
+        .map_err(|error| {
+            *installation_publication_failure = error.published.is_some();
+            // InstallFailure::exit_code is defined to return only 1 or 2.
+            Refusal::new(format!("native SDK install failed: {error:?}"))
+                .with_exit_code(error.exit_code() as u8)
+        })?;
         let installation = CheckedNativeInstallation::open(&prefix, &published.receipt_sha256)?;
         phase = "component-provisioning";
         let components = crate::consumer_provision::provision_native_consumer_components(
@@ -528,7 +555,7 @@ mod interruption_tests {
             Err(error) => error,
         };
         assert!(TEST_SIGTERM_OBSERVED.swap(false, Ordering::AcqRel));
-        assert_eq!(error.exit_code(), 2);
+        assert_eq!(error.exit_code(), 143);
         assert!(
             error
                 .to_string()
@@ -602,6 +629,7 @@ mod interruption_tests {
             "status": "PASS_TEST_ONLY_REAL_SIGTERM_BEFORE_SOURCE_CHECKOUT",
             "process_id": std::process::id(),
             "self_sigterm_delivered_to_active_guard": true,
+            "native_prepare_exit_code": error.exit_code(),
             "prepare_error": error.to_string(),
             "failure_record": failure,
             "state_path": state_path.to_string_lossy(),

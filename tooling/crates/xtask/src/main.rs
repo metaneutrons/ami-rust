@@ -6,6 +6,7 @@ mod native_notices;
 mod native_outer;
 mod native_package;
 mod native_release;
+mod prepare_sigterm;
 mod sdk;
 
 use ami_rust_core::{
@@ -47,8 +48,9 @@ fn run() -> Result<()> {
         Some("native-outer-finalize") => run_native_outer_finalize(arguments),
         Some("native-package-verify") => run_native_package_verify(arguments),
         Some("native-consumer-observe") => consumer_observe::run(arguments),
+        Some("native-prepare-interruption") => prepare_sigterm::run(arguments),
         _ => Err(Refusal::new(
-            "usage: ami-rust-xtask {native-sdk|native-release|native-package|native-outer|native-outer-finalize|native-package-verify|native-consumer-observe} OPTIONS; composition does not accept a release",
+            "usage: ami-rust-xtask {native-sdk|native-release|native-package|native-outer|native-outer-finalize|native-package-verify|native-consumer-observe|native-prepare-interruption} OPTIONS; composition does not accept a release",
         )),
     }
 }

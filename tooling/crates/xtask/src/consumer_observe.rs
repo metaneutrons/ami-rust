@@ -442,10 +442,20 @@ fn render_policy(
             ancestors.insert(fs::canonicalize(ancestor)?);
         }
     }
-    // Account-home resolution needs literal directory access, never a home subtree.
+    // Account-home and selected host-input inspection need literal directory
+    // access, never an implicit subtree grant.
     for directory in &spec.read_directories {
         canonical_dir(directory)?;
         ancestors.extend(directory.ancestors().map(Path::to_path_buf));
+    }
+    for directory in &runtime.read_directories {
+        canonical_dir(directory)?;
+        ancestors.extend(directory.ancestors().map(Path::to_path_buf));
+    }
+    for lookup in &runtime.read_lookup_metadata {
+        // Only macOS discovery emits these alias spellings. They authorize
+        // metadata lookup, never data access at a newly resolved target.
+        lines.push(format!("read-lookup-metadata {}", printable(lookup)?));
     }
     for directory in ancestors {
         lines.push(format!("read-directory {}", printable(&directory)?));
@@ -850,6 +860,8 @@ mod tests {
             executables: BTreeSet::new(),
             libraries: BTreeSet::new(),
             read_files: BTreeSet::new(),
+            read_directories: BTreeSet::new(),
+            read_lookup_metadata: BTreeSet::new(),
             read_trees: BTreeSet::new(),
             evidence: Value::Null,
         };
@@ -862,11 +874,25 @@ mod tests {
         .expect("literal directory policy");
         assert!(policy.contains(&format!("read-directory {}\n", fixture.root.display())));
         assert!(!policy.contains("read-tree "));
+        fixture.value["read_directories"] = json!([]);
+        let mut runtime_directory = runtime;
+        runtime_directory
+            .read_directories
+            .insert(fixture.root.clone());
+        let runtime_policy = render_policy(
+            &fixture.parse().expect("spec without explicit directory"),
+            &runtime_directory,
+            BTreeSet::new(),
+            &"a".repeat(64),
+        )
+        .expect("runtime directory policy");
+        assert!(runtime_policy.contains(&format!("read-directory {}\n", fixture.root.display())));
+        assert!(!runtime_policy.contains("read-tree ") && !runtime_policy.contains("exec-hash "));
         fixture.value["read_directories"] = json!([fixture.root.join("not-present")]);
         assert!(
             render_policy(
                 &fixture.parse().expect("syntactic spec"),
-                &runtime,
+                &runtime_directory,
                 BTreeSet::new(),
                 &"a".repeat(64)
             )
@@ -884,6 +910,8 @@ mod tests {
             executables: BTreeSet::new(),
             libraries: BTreeSet::new(),
             read_files: BTreeSet::new(),
+            read_directories: BTreeSet::new(),
+            read_lookup_metadata: BTreeSet::new(),
             read_trees: BTreeSet::new(),
             evidence: Value::Null,
         };

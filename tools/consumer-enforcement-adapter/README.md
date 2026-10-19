@@ -37,6 +37,14 @@ Both hosts additionally reject a directive naming `/dev/zero` before child
 launch. A declared macOS rule adds explicit identity evidence, rather than
 claiming that it introduced the system profile's existing permission.
 
+macOS runtime discovery uses `read-lookup-metadata PATH` for validated selected
+host-tool aliases. This rule grants only literal `file-read-metadata` at the
+unresolved lookup prefixes. It never grants data access or execution at the
+resolved target. Separate exact canonical `read-file` and `read-directory`
+rules retain the original data authority even if an alias changes later.
+This host-specific directive is not emitted for Linux, where Landlock does not
+restrict path metadata lookup. It does not establish atomic identity validation.
+
 On macOS the backend uses `/usr/bin/sandbox-exec`, deny-default execution,
 literal executable paths, and only explicitly declared private derived-output
 subtrees. It grants process-info operations for native resource sampling.

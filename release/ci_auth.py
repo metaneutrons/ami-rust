@@ -473,6 +473,7 @@ def input_manifest_for_sdk(source, sdk_version):
                         "tooling/crates/xtask/src/consumer_observe.rs",
                         "tooling/crates/xtask/src/consumer_report.rs",
                         "tooling/crates/xtask/src/consumer_runtime.rs",
+                        "tooling/crates/xtask/src/prepare_sigterm.rs",
                         "tooling/fixtures/accepted-r1-inputs.json",
                         "tooling/fixtures/accepted-r1-support-inputs.json",
                         "tools/bootstrap-host-rust.sh", "tools/build-native-cli.sh")

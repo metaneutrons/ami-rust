@@ -41,6 +41,8 @@ pub(super) struct RuntimeInputs {
     pub executables: BTreeSet<PathBuf>,
     pub libraries: BTreeSet<PathBuf>,
     pub read_files: BTreeSet<PathBuf>,
+    pub read_directories: BTreeSet<PathBuf>,
+    pub read_lookup_metadata: BTreeSet<PathBuf>,
     pub read_trees: BTreeSet<PathBuf>,
     pub evidence: Value,
 }
@@ -50,6 +52,8 @@ struct Discovery {
     executables: BTreeSet<PathBuf>,
     libraries: BTreeSet<PathBuf>,
     read_files: BTreeSet<PathBuf>,
+    read_directories: BTreeSet<PathBuf>,
+    read_lookup_metadata: BTreeSet<PathBuf>,
     read_trees: BTreeSet<PathBuf>,
     executable_aliases: Vec<Value>,
     library_aliases: Vec<Value>,
@@ -141,6 +145,8 @@ pub(super) fn discover(
         "libraries": library_hashes,
         "loaders": discovery.loader_rows,
         "read_files": path_list(&discovery.read_files)?,
+        "read_directories": path_list(&discovery.read_directories)?,
+        "read_lookup_metadata": path_list(&discovery.read_lookup_metadata)?,
         "read_trees": path_list(&discovery.read_trees)?,
         "queries": discovery.query_rows,
         "runtime_closure": discovery.runtime_rows,
@@ -153,6 +159,8 @@ pub(super) fn discover(
         executables: discovery.executables,
         libraries: discovery.libraries,
         read_files: discovery.read_files,
+        read_directories: discovery.read_directories,
+        read_lookup_metadata: discovery.read_lookup_metadata,
         read_trees: discovery.read_trees,
         evidence,
     })
@@ -1209,6 +1217,46 @@ fn discover_macos_selection(
         "selected Developer metadata read by host tools",
     )?;
     add_executable(discovery, &selector, "macOS developer selection query")?;
+    // Source Git uses the shared host-selection validator before launching any
+    // command. Permit inspection of its exact selected inputs during cold
+    // preparation without granting compiler execution or SDK subtree reads.
+    if cold_prepare {
+        for identity in [
+            &selected.clang,
+            &selected.linker,
+            &selected.sdk_settings_json,
+            &selected.sdk_settings_plist,
+        ] {
+            if identity.requested_path != identity.canonical_path {
+                discovery
+                    .read_lookup_metadata
+                    .insert(identity.requested_path.clone());
+            }
+            discovery.read_files.insert(identity.canonical_path.clone());
+        }
+        for identity in selected.guarded_directories.iter().chain([
+            &selected.installation_root,
+            &selected.developer_directory,
+            &selected.sdk,
+        ]) {
+            if identity.requested_path != identity.canonical_path {
+                discovery
+                    .read_lookup_metadata
+                    .insert(identity.requested_path.clone());
+            }
+            discovery
+                .read_directories
+                .insert(identity.canonical_path.clone());
+        }
+        discovery.cold_rows.push(json!({
+            "kind": "selected_host_inspection",
+            "read_files": path_list(&discovery.read_files)?,
+            "read_directories": path_list(&discovery.read_directories)?,
+        "read_lookup_metadata": path_list(&discovery.read_lookup_metadata)?,
+            "compiler_execution_granted": false,
+            "sdk_subtree_read_granted": false,
+        }));
+    }
     if build {
         add_executable(
             discovery,

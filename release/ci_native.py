@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import itertools
 import json
 import os
 from pathlib import Path
@@ -506,11 +507,12 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
         directory.mkdir(mode=0o700)
     commands = []
 
-    def command(label, arguments, expected=0, *, executable=cli):
+    def command(label, arguments, expected=0, *, executable=cli, disposable_refusal_state=None):
         stdout = output / (label + ".stdout.json")
         stderr = output / (label + ".stderr.log")
         spec = _consumer_observation_spec(work, python_root, executable, arguments, expected,
-            policy_path, closure_path, [ROOT, *[row["resolved_path"] for row in supervisor.native_static_roots]])
+            policy_path, closure_path, [ROOT, *[row["resolved_path"] for row in supervisor.native_static_roots]],
+            disposable_refusal_state=disposable_refusal_state)
         spec_path = output / "observation-specs" / (label + ".json")
         write(spec_path, auth.encoded(spec), 0o600)
         observed = output / "observations" / label
@@ -606,13 +608,14 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
 
 
 def _consumer_observation_spec(work, python_root, executable, arguments, expected,
-                               policy_path, closure_path, readonly_roots):
+                               policy_path, closure_path, readonly_roots, *, disposable_refusal_state=None):
     """Select each command's owned writes; Rust owns policy/runtime/report logic."""
     work = Path(work).resolve(strict=True)
     arguments = list(map(str, arguments))
     verb = arguments[0]
     phase = {"verify-package": "package-consistency", "native-package-verify": "package-authentication",
              "prepare": "prepare-refusal" if expected else "cold-prepare",
+             "native-prepare-interruption": "cold-prepare",
              "new": "new-project"}.get(verb, verb)
     if phase not in {"verify", "install", "uninstall", "package-consistency", "package-authentication",
                      "cold-prepare", "prepare-refusal", "check-inputs", "new-project", "lock", "build"}:
@@ -651,6 +654,18 @@ def _consumer_observation_spec(work, python_root, executable, arguments, expecte
             writes.add(option("--receipt-pin").parent)
     elif phase == "uninstall" and not expected:
         writes.add(option("--prefix").parent)
+    if disposable_refusal_state is not None:
+        disposable = Path(disposable_refusal_state)
+        if (phase != "prepare-refusal" or expected != 2 or state != disposable or record is not None
+                or disposable == work or work not in disposable.parents
+                or disposable.resolve(strict=True) != disposable):
+            raise ValueError("disposable retry grant requires its exact existing partial private state")
+        info = disposable.lstat()
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+            raise ValueError("disposable retry state must be a private current-user directory")
+        # Permit effects on this disposable partial state so an attempted write
+        # cannot be hidden by a sandbox denial and mistaken for a refusal.
+        writes.add(disposable)
     # Keep distinct native operation areas and remove duplicate/nested grants.
     writes = {root for root in writes if not any(root != other and other in root.parents for other in writes)}
     policy = auth.parsed(auth.read(policy_path))
@@ -668,7 +683,9 @@ def _consumer_observation_spec(work, python_root, executable, arguments, expecte
             # The CLI checks account-home ownership independently of sandbox HOME.
             # Grant this directory literally, without reading its contents recursively.
             "read_directories": [str(Path(pwd.getpwuid(os.getuid()).pw_dir).resolve(strict=True))],
-            "executables": [policy[name]["path"] for name in ("gh", "cosign")],
+            "executables": [policy[name]["path"] for name in ("gh", "cosign")]
+                + ([str(option("--frontend").resolve(strict=True))]
+                   if verb == "native-prepare-interruption" else []),
             "libraries": [], "deny_exec": [str(interpreter)], "deny_library": [str(library)],
             "component_record": str(record) if record else None, "derived": derived,
             "bindings": [{"path": str(path), "sha256": auth.sha(auth.read(path))} for path in bindings]}
@@ -990,6 +1007,72 @@ def _qualify_native_build_matrix(work, state, frontend, output, supervisor, conf
     return matrix
 
 
+def _retained_state_snapshot(root):
+    """Include empty directories, ownership and modes as well as file/link bytes."""
+    root = Path(root)
+    metadata = []
+    for path in itertools.chain((root,), root.rglob("*")):
+        if len(metadata) >= 100_000:
+            raise ValueError("retained-state snapshot exceeds its entry limit")
+        info = path.lstat()
+        metadata.append({"path": path.relative_to(root).as_posix(), "uid": info.st_uid,
+                         "gid": info.st_gid, "mode": info.st_mode,
+                         "device": info.st_dev, "inode": info.st_ino,
+                         "mtime_ns": info.st_mtime_ns, "ctime_ns": info.st_ctime_ns})
+    return {"inventory": ci_sdk.component_inventory(root),
+            "metadata": sorted(metadata, key=lambda row: row["path"])}
+
+
+def _qualify_prepare_interruption(work, output, frontend, xtask, command):
+    """Observe an actual public prepare SIGTERM, then verify retained effects."""
+    area = work / "native-interrupted-prepare-area"
+    area.mkdir(mode=0o700)
+    parent = area / "derived"
+    parent.mkdir(mode=0o700)
+    state, driver = parent / "state", area / "driver-output"
+    sibling = area / "unrelated-user-data.bin"
+    sentinel = b"preserve interrupted-prepare sibling\n"
+    write(sibling, sentinel)
+    result = auth.parsed(command("09-public-prepare-sigterm", ["native-prepare-interruption",
+        "--frontend", frontend, "--state", state, "--home", work / "home",
+        "--tmp", work / "tmp", "--output", driver], executable=xtask))
+    report = auth.parsed(auth.read(driver / "report.json"))
+    if (result.get("actual_child_exit_code") != 143 or result.get("helper_exit_code") != 0
+            or report.get("status") != "OBSERVED_EXPECTED_PREPARE_INTERRUPTION"
+            or report.get("capture", {}).get("actual_child_exit_code") != 143
+            or report.get("launcher", {}).get("sha256") != auth.sha(auth.read(frontend))
+            or report.get("signal", {}).get("sent") is not True
+            or (state / "ready.json").exists()):
+        raise ValueError("public prepare interruption omitted its actual status or retained effects")
+    for stream in ("stdout", "stderr"):
+        raw = auth.read(driver / (stream + ".raw"))
+        row = report["capture"][stream]
+        if len(raw) != row["bytes"] or auth.sha(raw) != row["sha256"]:
+            raise ValueError("prepare interruption capture differs from its actual bytes")
+    retained = state / "retained/bin/ami-rust"
+    command("09-interrupted-retained-package-consistency", ["verify-package"], executable=retained)
+    before = _retained_state_snapshot(state)
+    command("09-interrupted-state-retry-refusal", ["prepare", "--state", state], 2,
+        executable=frontend, disposable_refusal_state=state)
+    refusal = auth.read(output / "09-interrupted-state-retry-refusal.stderr.log")
+    if refusal != b"ami-rust: state path must be fresh\n":
+        raise ValueError("interrupted-state retry did not reach the native fresh-state refusal")
+    if _retained_state_snapshot(state) != before or auth.read(sibling) != sentinel:
+        raise ValueError("interrupted prepare retry changed retained ownership, bytes or sibling data")
+    result = {"schema": "ami-rust-public-prepare-interruption-effects-v1",
+        "status": "PASS_ACTUAL_CLI_SIGTERM_RETAINED_STATE_AND_UNCHANGED_RETRY",
+        "driver": report, "state_snapshot": before,
+        "state_snapshot_sha256": auth.sha(auth.encoded(before)),
+        "retry_exit_code": 2, "retained_package_consistent": True,
+        "retry_state_write_authority": "exact disposable partial state; no derived execution",
+        "retry_refusal_sha256": auth.sha(refusal),
+        "unrelated_sibling_sha256": auth.sha(sentinel),
+        "scope": "Source-checkout interruption only; installation publication recovery is a separate case."}
+    write(output / "native-prepare-interruption.json", auth.encoded(result))
+    shutil.copytree(driver, output / "native-prepare-interruption-captures")
+    return result
+
+
 def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor, policy_path, identity, config, command):
     """Exercise the actual packaged frontend and retained replay on signed inputs."""
     metadata = outer / "metadata"
@@ -1032,6 +1115,7 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
         "--work", authentication_area / "work"], executable=xtask))
     if authentication.get("status") != "OUTER_AND_INNER_AUTHENTICATED":
         raise ValueError("native package outer/inner authentication did not complete")
+    interruption = _qualify_prepare_interruption(work, output, frontend, xtask, command)
     state_write_area = work / "native-state-write-area"
     state_write_area.mkdir(mode=0o700)
     state_parent = state_write_area / "derived"
@@ -1083,6 +1167,7 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
         raise ValueError("retained replay changed native output or unrelated user data")
     return {"status": "PASS_SIGNED_PACKAGE_PREPARE_BUILD_AND_RETAINED_REPLAY",
         "package_core_sha256": pins["core_sha256"], "authentication": authentication,
+        "prepare_interruption": interruption,
         "native_executable_sha256": auth.sha(original_elf),
         "native_matrix": native_matrix,
         "ready_sha256": auth.sha(ready),

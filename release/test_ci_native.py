@@ -496,7 +496,9 @@ class NativeMatrixTests(unittest.TestCase):
         (licenses.parent / "THIRD-PARTY-NOTICES.md").write_bytes(b"inert third-party notice fixture\n")
         with patch.object(native, "ROOT", fixture_source), \
                 patch.object(native, "_supervised_run", side_effect=compose), \
-                patch.object(native, "_qualify_native_build_matrix", side_effect=matrix):
+                patch.object(native, "_qualify_native_build_matrix", side_effect=matrix), \
+                patch.object(native, "_qualify_prepare_interruption", return_value={
+                    "status": "SYNTHETIC_MATRIX_ORDER_FIXTURE_NO_SIGTERM_EVIDENCE"}) as interruption_probe:
             if fail_replay:
                 with self.assertRaisesRegex(ValueError, "isolated retained replay refusal"):
                     native._qualify_native_package(
@@ -511,6 +513,7 @@ class NativeMatrixTests(unittest.TestCase):
                 self.assertEqual(report["native_matrix"], {"build_count": 10, "fixture": True})
         self.assertEqual(auth.parsed(auth.read(self.output / "native-build-matrix.json")),
                          {"build_count": 10, "fixture": True})
+        interruption_probe.assert_called_once()
         self.assertEqual(commands[-2:], ["15-retained-input-recheck", "16-retained-offline-replay"])
         self.assertFalse(package.exists())
 
@@ -538,9 +541,9 @@ class NativeObservationSpecTests(unittest.TestCase):
     def tearDown(self):
         self.temporary.cleanup()
 
-    def spec(self, arguments, expected=0):
+    def spec(self, arguments, expected=0, **kwargs):
         return native._consumer_observation_spec(self.work, self.root / "python", self.cli,
-            arguments, expected, self.policy, self.closure, [])
+            arguments, expected, self.policy, self.closure, [], **kwargs)
 
     def ready(self):
         self.state.mkdir(mode=0o700)
@@ -598,6 +601,40 @@ class NativeObservationSpecTests(unittest.TestCase):
         self.assertEqual(spec["phase"], "package-authentication")
         self.assertEqual(spec["write_trees"], [{"role": "work", "path": str(self.work)}])
         self.assertEqual(spec["expected_exit"], 0)
+
+    def test_interruption_driver_binds_only_its_actual_frontend_and_fresh_state_parent(self):
+        spec = self.spec(["native-prepare-interruption", "--frontend", self.cli,
+            "--state", self.state, "--home", self.work / "home", "--tmp", self.work / "tmp",
+            "--output", self.area / "driver"])
+        self.assertEqual(spec["phase"], "cold-prepare")
+        self.assertEqual(spec["derived"]["path"], str(self.derived))
+        self.assertIn(str(self.cli), spec["executables"])
+        self.assertNotIn(str(self.cli.parent), spec["executables"])
+        self.assertNotIn(str(self.work), [row["path"] for row in spec["write_trees"]])
+
+    def test_retained_snapshot_detects_mode_and_empty_directory_changes(self):
+        self.ready()
+        selected = self.state / "selection.json"
+        selected.chmod(0o644)
+        before = native._retained_state_snapshot(self.state)
+        self.assertEqual(before, native._retained_state_snapshot(self.state))
+        selected.chmod(0o600)
+        self.assertNotEqual(before, native._retained_state_snapshot(self.state))
+        selected.chmod(0o644)
+        before = native._retained_state_snapshot(self.state)
+        (self.state / "empty").mkdir()
+        self.assertNotEqual(before, native._retained_state_snapshot(self.state))
+
+    def test_disposable_retry_can_write_only_its_partial_state_to_expose_mutations(self):
+        self.state.mkdir(mode=0o700)
+        args = ["prepare", "--state", self.state]
+        spec = self.spec(args, 2, disposable_refusal_state=self.state)
+        self.assertIn(str(self.state), [row["path"] for row in spec["write_trees"]])
+        self.assertNotIn(str(self.derived), [row["path"] for row in spec["write_trees"]])
+        self.assertIsNone(spec["derived"])
+        (self.state / "selection.json").write_bytes(b"{}")
+        with self.assertRaisesRegex(ValueError, "disposable retry grant"):
+            self.spec(args, 2, disposable_refusal_state=self.state)
 
     def test_unknown_observer_phase_is_refused(self):
         with self.assertRaisesRegex(ValueError, "unsupported observed consumer command"):

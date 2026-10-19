@@ -63,6 +63,7 @@ struct Policy {
     deny_library: Vec<PathBuf>,
     read_files: Vec<PathBuf>,
     read_directories: Vec<PathBuf>,
+    read_lookup_metadata: Vec<PathBuf>,
     read_libraries: Vec<ReadLibraryRule>,
     write_null: Option<WriteNullRule>,
     read_trees: Vec<(String, PathBuf)>,
@@ -492,6 +493,12 @@ fn parse_policy(text: &str) -> Result<Policy, String> {
             "deny-exec" => policy.deny_exec.push(existing_or_future_path(rest)?),
             "deny-library" => policy.deny_library.push(existing_or_future_path(rest)?),
             "read-file" => policy.read_files.push(existing_or_future_path(rest)?),
+            "read-lookup-metadata" => {
+                let lookup = normalized_absolute_lookup_path(rest)?;
+                policy
+                    .read_lookup_metadata
+                    .extend(lookup_metadata_paths(&lookup)?);
+            }
             "write-null" => {
                 if policy.write_null.is_some() {
                     return Err("duplicate write-null directive".to_owned());
@@ -750,6 +757,10 @@ fn parse_policy(text: &str) -> Result<Policy, String> {
     dedup_paths(&mut policy.deny_library)?;
     dedup_paths(&mut policy.read_files)?;
     dedup_paths(&mut policy.read_directories)?;
+    // These are intentionally unresolved aliases. Canonicalizing them here
+    // would erase the metadata allowance required to traverse the lookup.
+    policy.read_lookup_metadata.sort();
+    policy.read_lookup_metadata.dedup();
     for denied in &policy.deny_library {
         let overlaps_mapping = policy.read_libraries.iter().any(|library| {
             paths_overlap(&library.path, denied) || paths_overlap(&library.lookup_path, denied)
@@ -1114,6 +1125,12 @@ fn build_profile(policy: &Policy) -> String {
             scheme_escape(&path.display().to_string())
         ));
     }
+    for path in &policy.read_lookup_metadata {
+        out.push_str(&format!(
+            "(allow file-read-metadata (literal \"{}\"))\n",
+            scheme_escape(&path.display().to_string())
+        ));
+    }
     for path in &policy.read_directories {
         out.push_str(&format!(
             "(allow file-read* (literal \"{}\"))\n",
@@ -1400,7 +1417,7 @@ fn report_json(
         .collect::<Vec<_>>()
         .join(",");
     format!(
-        "{{\n  \"schema\":\"consumer-enforcement-adapter-a1\",\n  \"mechanism\":\"/usr/bin/sandbox-exec, deny default, exact process-exec allowlist plus declared private derived-output subtrees\",\n  \"policy\":{},\n  \"profile\":{},\n  \"command\":[{}],\n  \"started_unix_micros\":{},\n  \"finished_unix_micros\":{},\n  \"exit_code\":{},\n  \"signal\":{},\n  \"stdout\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"stderr\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"network_outbound_allowed\":{},\n  \"exec_allowlist\":[{}],\n  \"read_library_mappings\":[{}],\n  \"exec_derived_trees\":[{}],\n  \"deny_exec\":[{}],\n  \"deny_library\":[{}],\n  \"read_directories\":[{}],\n  \"read_trees\":[{}],\n  \"write_trees\":[{}],\n  \"write_null\":{},\n  \"environment_names\":[{}],\n  \"cwd\":{},\n  \"output_replay_error\":{},\n  \"qualification_evidence_valid\":{},\n  \"evidence_failures\":[{}]\n}}\n",
+        "{{\n  \"schema\":\"consumer-enforcement-adapter-a1\",\n  \"mechanism\":\"/usr/bin/sandbox-exec, deny default, exact process-exec allowlist plus declared private derived-output subtrees\",\n  \"policy\":{},\n  \"profile\":{},\n  \"command\":[{}],\n  \"started_unix_micros\":{},\n  \"finished_unix_micros\":{},\n  \"exit_code\":{},\n  \"signal\":{},\n  \"stdout\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"stderr\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"network_outbound_allowed\":{},\n  \"exec_allowlist\":[{}],\n  \"read_library_mappings\":[{}],\n  \"exec_derived_trees\":[{}],\n  \"deny_exec\":[{}],\n  \"deny_library\":[{}],\n  \"read_directories\":[{}],\n  \"read_lookup_metadata\":[{}],\n  \"read_trees\":[{}],\n  \"write_trees\":[{}],\n  \"write_null\":{},\n  \"environment_names\":[{}],\n  \"cwd\":{},\n  \"output_replay_error\":{},\n  \"qualification_evidence_valid\":{},\n  \"evidence_failures\":[{}]\n}}\n",
         json(&policy_path.display().to_string()),
         json(&profile_path.display().to_string()),
         argv,
@@ -1444,6 +1461,12 @@ fn report_json(
             .collect::<Vec<_>>()
             .join(","),
         read_directories,
+        policy
+            .read_lookup_metadata
+            .iter()
+            .map(|path| json(&path.display().to_string()))
+            .collect::<Vec<_>>()
+            .join(","),
         read_trees,
         write_trees,
         write_null,
@@ -2520,6 +2543,66 @@ mod tests {
             runtime.display()
         )));
         fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn read_aliases_grant_lookup_metadata_without_subtree_or_execution() {
+        let root = private_test_root("read-lookup-alias");
+        let actual = root.join("actual");
+        create_private_directory(&actual);
+        let alias = root.join("alias");
+        std::os::unix::fs::symlink(&actual, &alias).expect("directory alias");
+        let file = actual.join("settings.json");
+        fs::write(&file, b"selected settings").expect("settings fixture");
+        let executable = executable_path();
+        let text = format!(
+            "consumer-policy-v1\nexec {}\nread-directory {}\nread-file {}\nread-lookup-metadata {}\nread-lookup-metadata {}\n",
+            executable.display(),
+            actual.display(),
+            file.display(),
+            alias.display(),
+            alias.join("settings.json").display()
+        );
+        let policy = parse_policy(&text).expect("selected alias read policy");
+        assert_eq!(policy.read_directories, vec![actual.clone()]);
+        assert_eq!(policy.read_files, vec![file.clone()]);
+        let profile = build_profile(&policy);
+        for lookup in [&alias, &alias.join("settings.json")] {
+            assert!(profile.contains(&format!(
+                "(allow file-read-metadata (literal \"{}\"))",
+                lookup.display()
+            )));
+            assert!(!profile.contains(&format!(
+                "(allow file-read* (literal \"{}\"))",
+                lookup.display()
+            )));
+        }
+        assert!(!profile.contains(&format!("(subpath \"{}\")", actual.display())));
+        assert!(!policy.exec.iter().any(|rule| rule.path == file));
+        let elsewhere = root.join("elsewhere");
+        create_private_directory(&elsewhere);
+        fs::write(elsewhere.join("settings.json"), b"other settings").expect("other fixture");
+        fs::remove_file(&alias).expect("remove first alias");
+        std::os::unix::fs::symlink(&elsewhere, &alias).expect("retarget alias");
+        let retargeted = parse_policy(&text).expect("metadata cannot widen data authority");
+        assert_eq!(retargeted.read_files, vec![file.clone()]);
+        assert_eq!(retargeted.read_directories, vec![actual.clone()]);
+        let profile = build_profile(&retargeted);
+        assert!(!profile.contains(&format!(
+            "(allow file-read* (literal \"{}\"))",
+            elsewhere.display()
+        )));
+        assert!(!profile.contains(&format!(
+            "(allow file-read* (literal \"{}\"))",
+            elsewhere.join("settings.json").display()
+        )));
+        let denied = format!("{text}deny-library {}\n", file.display());
+        assert!(
+            parse_policy(&denied)
+                .expect_err("alias cannot mask denied file")
+                .contains("deny-library overlaps")
+        );
+        fs::remove_dir_all(root).expect("remove alias fixture");
     }
 
     #[test]

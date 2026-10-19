@@ -405,6 +405,7 @@
     "tooling/crates/xtask/src/native_outer.rs",
     "tooling/crates/xtask/src/native_package.rs",
     "tooling/crates/xtask/src/native_release.rs",
+    "tooling/crates/xtask/src/prepare_sigterm.rs",
     "tooling/crates/xtask/src/sdk.rs",
     "tooling/fixtures/accepted-r1-inputs.json",
     "tooling/fixtures/accepted-r1-support-inputs.json",
