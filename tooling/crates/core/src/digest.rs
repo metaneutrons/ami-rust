@@ -37,7 +37,7 @@ pub fn sha256_file(path: &Path) -> Result<String> {
     }
 }
 
-fn encode_hex(bytes: &[u8; 32]) -> String {
+pub(crate) fn encode_hex(bytes: &[u8; 32]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let mut output = String::with_capacity(64);
     for byte in bytes {

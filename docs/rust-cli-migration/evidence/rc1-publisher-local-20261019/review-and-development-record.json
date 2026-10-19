@@ -1,0 +1,55 @@
+{
+  "schema": "ami-rust-rc1-publisher-development-record-v1",
+  "status": "DEVELOPMENT_NOT_ACCEPTED",
+  "historical_failures": [
+    {
+      "case": "claims base oracle",
+      "failure": "typed material struct serialization order differed from Value map order",
+      "resolution": "semantic JSON set equality, 70 static decisions pass"
+    },
+    {
+      "case": "metadata duplicate path negative control",
+      "failure": "test changed an already-identical first value",
+      "resolution": "change second row to create actual duplicate"
+    },
+    {
+      "case": "home cleanup failure test",
+      "failure": "Unix socket absolute fixture path exceeded macOS SUN_LEN",
+      "resolution": "FIFO special-file countercontrol removes socket path-length dependence"
+    },
+    {
+      "case": "compiler digest formatting",
+      "failure": "sha2 0.11 output no LowerHex implementation",
+      "resolution": "reuse byte-array hex encoder"
+    },
+    {
+      "case": "Clippy stat casts",
+      "failure": "cross-host libc stat widths make cast redundant on one host",
+      "resolution": "narrow documented cross-host unnecessary_cast allowance"
+    }
+  ],
+  "review_findings": [
+    {
+      "finding": "device open before type rejection",
+      "resolution": "descriptor-relative fstatat classification before regular open and opened identity comparison"
+    },
+    {
+      "finding": "cross-UID source bundle path replacement before verifier reopen",
+      "resolution": "all six commands use private staged copies of retained validated bytes"
+    },
+    {
+      "finding": "historical result could expose production authentication type",
+      "resolution": "distinct historical inspection schema with nativeInstallationAuthorized false, no native receipt or assets"
+    },
+    {
+      "finding": "temporary directory insecure ancestor possibility",
+      "resolution": "full protected ancestor-chain validation before private home creation"
+    }
+  ],
+  "remaining_limitations": [
+    "Trusted root/current UID and trusted verifier processes are not adversarial same-user writers.",
+    "Process group capture is not aggregate host resource containment.",
+    "No public consumer command activated; native signed v2 qualification remains separate."
+  ],
+  "evidence_note": "Some initial compiler/focused-test failures appeared in the interactive tool output only; this record preserves their observed causes and corrections, not byte-exact original logs. Existing captured development log files remain unchanged."
+}

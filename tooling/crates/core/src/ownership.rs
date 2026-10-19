@@ -10,7 +10,7 @@ compile_error!("host path ownership checks are supported on macOS and Linux only
 use crate::{Refusal, Result, directory::Directory};
 use std::{
     ffi::{CStr, CString, OsStr, OsString},
-    fs::{self, Metadata},
+    fs::{self, File, Metadata},
     io,
     mem::MaybeUninit,
     os::unix::{
@@ -270,6 +270,68 @@ fn secure_user_directory(path: &Path, label: &str) -> Result<Directory> {
 enum AncestorPolicy<'a> {
     Unrestricted,
     SecureUserLeaf(&'a str),
+    ProtectedInputAncestors(&'a str),
+}
+
+/// Open an external trust input with the historical protected-input ownership
+/// rules. Every ancestor is retained/opened without symlinks. A root-owned
+/// sticky ancestor is permitted; the regular file itself must be root/current
+/// user owned and not group/world writable. Executables must preserve identity.
+pub fn protected_regular_file(path: &Path, executable: bool) -> Result<File> {
+    validate_normalized_absolute(path, "external trust input")?;
+    let parent_path = path
+        .parent()
+        .ok_or_else(|| Refusal::new("missing trust-input parent"))?;
+    let parent = open_directory_chain(
+        parent_path,
+        AncestorPolicy::ProtectedInputAncestors("external trust input"),
+    )?;
+    let entry = target_name(path, "external trust input")?;
+    let file = parent.regular(&entry)?;
+    let metadata = file
+        .metadata()
+        .map_err(|error| io_refusal("could not inspect trust input", error))?;
+    if ![0, current_uid()].contains(&metadata.uid()) || metadata.mode() & 0o022 != 0 {
+        return Err(Refusal::new(
+            "unsafe ownership/write permissions for external trust input",
+        ));
+    }
+    if executable {
+        if metadata.mode() & 0o111 == 0 || metadata.mode() & 0o6000 != 0 {
+            return Err(Refusal::new(
+                "external verifier must be executable without set-ID bits",
+            ));
+        }
+        can_execute_entry(&parent, &entry)?;
+    }
+    Ok(file)
+}
+
+/// Secure root/current-owner chain, also permitting root-owned sticky
+/// directories. Used for a verifier HOME parent before exclusive creation.
+pub(crate) fn protected_directory(path: &Path) -> Result<Directory> {
+    open_directory_chain(
+        path,
+        AncestorPolicy::ProtectedInputAncestors("protected directory"),
+    )
+}
+
+#[allow(
+    unsafe_code,
+    reason = "Descriptor-relative access check preserves actual caller ACL/permission semantics."
+)]
+fn can_execute_entry(parent: &Directory, entry: &OsStr) -> Result<()> {
+    let name =
+        CString::new(entry.as_bytes()).map_err(|_| Refusal::new("trust input contains NUL"))?;
+    // SAFETY: parent owns an open directory fd; name is a live NUL-terminated
+    // entry. No file is opened/executed or permission changed by faccessat.
+    if unsafe { libc::faccessat(parent.raw_fd(), name.as_ptr(), libc::X_OK, 0) } != 0 {
+        return Err(io_refusal(
+            "external verifier is not executable",
+            io::Error::last_os_error(),
+        ));
+    }
+    Ok(())
 }
 
 fn open_directory_chain(path: &Path, policy: AncestorPolicy<'_>) -> Result<Directory> {
@@ -293,8 +355,15 @@ fn open_directory_chain(path: &Path, policy: AncestorPolicy<'_>) -> Result<Direc
     let mut component_index = 0usize;
     let total_components = components.clone().count();
     let root_metadata = current.metadata()?;
-    if let AncestorPolicy::SecureUserLeaf(label) = policy {
-        validate_directory_metadata(&root_metadata, uid, total_components == 0, label)?;
+    if let AncestorPolicy::SecureUserLeaf(label) | AncestorPolicy::ProtectedInputAncestors(label) =
+        policy
+    {
+        validate_directory_metadata(
+            &root_metadata,
+            uid,
+            total_components == 0 && matches!(policy, AncestorPolicy::SecureUserLeaf(_)),
+            label,
+        )?;
     }
 
     for component in components {
@@ -305,11 +374,14 @@ fn open_directory_chain(path: &Path, policy: AncestorPolicy<'_>) -> Result<Direc
         })?;
         component_index += 1;
         let metadata = child.metadata()?;
-        if let AncestorPolicy::SecureUserLeaf(label) = policy {
+        if let AncestorPolicy::SecureUserLeaf(label)
+        | AncestorPolicy::ProtectedInputAncestors(label) = policy
+        {
             validate_directory_metadata(
                 &metadata,
                 uid,
-                component_index == total_components,
+                component_index == total_components
+                    && matches!(policy, AncestorPolicy::SecureUserLeaf(_)),
                 label,
             )?;
         }
@@ -525,15 +597,15 @@ fn io_refusal(context: &str, error: io::Error) -> Refusal {
 mod tests {
     use super::{
         existing_install_target, existing_private_state, fresh_output, fresh_private_state,
-        home_directory, install_target, receipt_pin, require_disjoint, require_non_root,
-        validate_state_package_separation,
+        home_directory, install_target, protected_regular_file, receipt_pin, require_disjoint,
+        require_non_root, validate_state_package_separation,
     };
     use std::{
         ffi::{OsStr, OsString},
         fs,
         os::unix::{
             ffi::OsStringExt,
-            fs::{MetadataExt, symlink},
+            fs::{MetadataExt, PermissionsExt, symlink},
         },
         path::{Path, PathBuf},
         sync::atomic::{AtomicU64, Ordering},
@@ -570,6 +642,33 @@ mod tests {
 
     fn assert_refused<T>(result: crate::Result<T>) {
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn external_trust_inputs_require_secure_regular_paths_and_executable_access() {
+        let temp = TempDir::new();
+        let file = temp.0.join("trust");
+        fs::write(&file, b"pinned data").unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o600)).unwrap();
+        assert!(protected_regular_file(&file, false).is_ok());
+        assert_refused(protected_regular_file(&file, true));
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o700)).unwrap();
+        assert!(protected_regular_file(&file, true).is_ok());
+        for mode in [0o622, 0o4700, 0o2700] {
+            fs::set_permissions(&file, fs::Permissions::from_mode(mode)).unwrap();
+            assert_refused(protected_regular_file(&file, true));
+        }
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o600)).unwrap();
+        let linked = temp.0.join("linked");
+        symlink(&file, &linked).unwrap();
+        assert_refused(protected_regular_file(&linked, false));
+        let parent_link = temp.0.join("parent-link");
+        symlink(&temp.0, &parent_link).unwrap();
+        assert_refused(protected_regular_file(&parent_link.join("trust"), false));
+        fs::set_permissions(&temp.0, fs::Permissions::from_mode(0o777)).unwrap();
+        assert_refused(protected_regular_file(&file, false));
+        fs::set_permissions(&temp.0, fs::Permissions::from_mode(0o700)).unwrap();
+        assert!(protected_regular_file(&file, false).is_ok());
     }
 
     #[test]

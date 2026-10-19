@@ -1,0 +1,134 @@
+{
+  "schema": "ami-rust-rc1-manifests-hosted-v1",
+  "scope": "Release manifest parsers and strict original record roots only; no consumer activation or complete RC1 acceptance",
+  "candidate_commit": "8a483aff640fb3b085c94a0fa3ca5a0475fa96ed",
+  "base_commit": "a00ec793685ac6798971b6cc779f5cebf19dfa18",
+  "pr": "https://github.com/metaneutrons/ami-rust/pull/87",
+  "run": "https://github.com/metaneutrons/ami-rust/actions/runs/39186122167",
+  "status": "PASS",
+  "core_unit_tests_per_host": 131,
+  "frontend_tests_per_host": 1,
+  "static_oracle_integration_tests_per_host": 1,
+  "total_rust_tests_per_host": 133,
+  "static_historical_cases": 41,
+  "intentional_contract_differences": 2,
+  "ignored_fixtures_executed_by_parent": 2,
+  "host_results": {
+    "linux": {
+      "job": 117848844327,
+      "test_results": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 131,
+          "failed": 0,
+          "ignored": 2
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "log_bytes": 48244,
+      "log_sha256": "68724648d8dd4476d2eaa641755e3ecf0e836a15232414b8bbf50dbebcafda21"
+    },
+    "macos": {
+      "job": 117848844312,
+      "test_results": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 131,
+          "failed": 0,
+          "ignored": 2
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "log_bytes": 47895,
+      "log_sha256": "5eee1d7d9287f16076b65bec167cd28243bccfa2a2f225c040208e38c31df4ab"
+    }
+  },
+  "complete_rc1_accepted": false,
+  "merge_commit": "2f14898a839648b058adadb8be16bcf244024bea"
+}
