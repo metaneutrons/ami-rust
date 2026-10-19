@@ -1,0 +1,7 @@
+{
+  "scope": "Local development attempts before candidate commit; original tool outputs retained in chat history, no byte-exact raw-log claim",
+  "attempts": [
+    {"operation": "initial host-filtered Cargo compilation", "exit": 101, "finding": "ProofIdentityWire map passed to ProofIdentity validator; corrected by one conversion before validation"},
+    {"operation": "initial native record tests", "exit": 101, "passed": 12, "failed": 1, "test": "proof_count_and_distinct_path_byte_limits_accept_exact_boundaries", "finding": "64-row positive fixture also exceeded 64 MiB total; separated independent boundary fixtures without changing production limits"}
+  ]
+}
