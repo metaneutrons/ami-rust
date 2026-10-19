@@ -1,0 +1,166 @@
+{
+  "case_count": 9,
+  "cases": [
+    {
+      "exit_code": 91,
+      "name": "unconfined_direct"
+    },
+    {
+      "exit_code": 92,
+      "name": "unconfined_transitive"
+    },
+    {
+      "exit_code": 93,
+      "name": "unconfined_shebang"
+    },
+    {
+      "exit_code": 0,
+      "name": "unconfined_embedded"
+    },
+    {
+      "adapter_report": {
+        "child_exit_code": 0,
+        "network_outbound_allowed": false,
+        "qualification_evidence_valid": true,
+        "sha256": "ecd17e331ca17a4154b4430789736169824d38e295c1da9184d3842063fb50a7"
+      },
+      "name": "native_positive",
+      "outer_exit_code": 0,
+      "policy_sha256": "071a3eec1c150ea7de104c8fa065a93327fe50cdc0ccea4f17cdb97f95a8f43d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "16cbba7ff1b86dc673d9b13cacf01cec9065fb50729a42f80aa377f7556b1153"
+    },
+    {
+      "adapter_report": {
+        "child_exit_code": 0,
+        "network_outbound_allowed": false,
+        "qualification_evidence_valid": true,
+        "sha256": "774a0c1c7c1ea1aef5edb7559b63cb7750d95bba81b0a3dacc1fd0f415e8ca62"
+      },
+      "name": "restricted_direct",
+      "outer_exit_code": 0,
+      "policy_sha256": "be1505564d61d4ec48bd47cece2dc39988f1420a597811511a7fb6d28a9d26f9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "f25b867b317303f1238f784884bac7c0b7c6e5205976eb1feb42f45890ed0096"
+    },
+    {
+      "adapter_report": {
+        "child_exit_code": 0,
+        "network_outbound_allowed": false,
+        "qualification_evidence_valid": true,
+        "sha256": "3394b558479de3473c5ca44325f4dc182779269b916ec58aada53869ef3f51b4"
+      },
+      "name": "restricted_transitive",
+      "outer_exit_code": 0,
+      "policy_sha256": "be1505564d61d4ec48bd47cece2dc39988f1420a597811511a7fb6d28a9d26f9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "9bc62f05799fb4ffcb604e711de90585f570f367455d0b21ecbaaca6905b3836"
+    },
+    {
+      "adapter_report": {
+        "child_exit_code": 0,
+        "network_outbound_allowed": false,
+        "qualification_evidence_valid": true,
+        "sha256": "a54b57a4e9a5c40f0e390d51810425b9c3b01de0592538505a613f0ff5338b7d"
+      },
+      "name": "restricted_shebang",
+      "outer_exit_code": 0,
+      "policy_sha256": "e288ba255894a919d6c2f52423246da0e765a771ac50225a1312eabf3bfa3c1e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "0a83855fe192602d1a0dfc0eb3f17d1d55c8c38a631e31262d2f1d9f29ea37cc"
+    },
+    {
+      "adapter_report": {
+        "child_exit_code": 77,
+        "network_outbound_allowed": false,
+        "qualification_evidence_valid": true,
+        "sha256": "7e64c66dc69791db36c4e733b714012b9644cef88bc6fac6697ea89f45b83223"
+      },
+      "name": "restricted_embedded",
+      "outer_exit_code": 77,
+      "policy_sha256": "c742cf6e3a98addaabc017c09f88c2774831f6559d2e90cadef6aa0a3616799e",
+      "stderr_sha256": "a7ff26889d79ceff5ab3ad4da4ac9fc18f7b81bd3cbeb293ae39273ed123685b",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "component_checks": [
+    {
+      "elapsed_seconds": 0.174,
+      "exit_code": 0,
+      "label": "check-control-source-format",
+      "log_peak_observed_bytes": 0,
+      "managed_peak_observed_bytes": 1322377441,
+      "rss_peak_observed_bytes": 3604480,
+      "stderr_log": "logs/check-control-source-format.stderr.log",
+      "stdout_log": "logs/check-control-source-format.stdout.log",
+      "stop_reason": null
+    },
+    {
+      "elapsed_seconds": 1.441,
+      "exit_code": 0,
+      "label": "clone-prior-component-cache",
+      "log_peak_observed_bytes": 0,
+      "managed_peak_observed_bytes": 3611919343,
+      "rss_peak_observed_bytes": 3473408,
+      "stderr_log": "logs/clone-prior-component-cache.stderr.log",
+      "stdout_log": "logs/clone-prior-component-cache.stdout.log",
+      "stop_reason": null
+    },
+    {
+      "elapsed_seconds": 1.419,
+      "exit_code": 0,
+      "label": "strict-control-clippy",
+      "log_peak_observed_bytes": 330,
+      "managed_peak_observed_bytes": 3635377380,
+      "rss_peak_observed_bytes": 384499712,
+      "stderr_log": "logs/strict-control-clippy.stderr.log",
+      "stdout_log": "logs/strict-control-clippy.stdout.log",
+      "stop_reason": null
+    },
+    {
+      "elapsed_seconds": 0.26,
+      "exit_code": 0,
+      "label": "workflow-lint",
+      "log_peak_observed_bytes": 330,
+      "managed_peak_observed_bytes": 3611930439,
+      "rss_peak_observed_bytes": 7782400,
+      "stderr_log": "logs/workflow-lint.stderr.log",
+      "stdout_log": "logs/workflow-lint.stdout.log",
+      "stop_reason": null
+    },
+    {
+      "elapsed_seconds": 6.513,
+      "exit_code": 0,
+      "label": "native-enforcement-positive-and-counter-controls",
+      "log_peak_observed_bytes": 1074,
+      "managed_peak_observed_bytes": 3700959964,
+      "rss_peak_observed_bytes": 703365120,
+      "stderr_log": "logs/native-enforcement-positive-and-counter-controls.stderr.log",
+      "stdout_log": "logs/native-enforcement-positive-and-counter-controls.stdout.log",
+      "stop_reason": null
+    }
+  ],
+  "controls_report_sha256": "bc86d4ba4f2a2f654d2fef8cd3812eb389d3e466a9554889ae51e2195aea57a3",
+  "failed_attempts_preserved": [
+    "a1 compiler type errors",
+    "a2 obsolete 127-byte fixture path precondition",
+    "a3 invalid Python path literal in C fixture",
+    "a4 native-positive private-tree read permission missing",
+    "a5 native-positive read permission still missing after ancestor correction"
+  ],
+  "host": "macos-aarch64",
+  "limits": {
+    "log_bytes": 16777216,
+    "rss_bytes": 4294967296,
+    "seconds": 1200,
+    "workspace_bytes": 12884901888
+  },
+  "linux_native_runtime": "not yet run; required on actual hosted runner",
+  "passed_attempt": "a6: corrected fixture, explicit private child read/write scope, marker reset before restrictions; all9 cases pass",
+  "private_gate_report_sha256": "5ef10a493ddf1fe78092f437b263c95639b09bfa04df5017839b6a03f1b9f777",
+  "schema": "ami-rust-native-enforcement-controls-development-v1",
+  "scope": "adapter controls only; not RC1-A2 acceptance and not a full-consumer claim",
+  "status": "PASS_NARROW_NATIVE_INTERPRETER_CONTROLS",
+  "test_source_sha256": "d6418a890ecf30c6c13af889da0cfe97ebc13021869d8962b6f867a56e2360c7",
+  "working_tree_base": "99ab44968f25dc55fa4ffc0dad3aebea0c2301e1"
+}
