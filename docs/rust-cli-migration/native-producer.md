@@ -148,3 +148,30 @@ The preserved old legal assets apply to their unchanged components; they are
 not a claim that the new host binary dependencies have already passed a new
 distribution license audit. Existing published 0.1.0 assets and the qualified
 AROS ABI-v1/QEMU baseline remain unchanged.
+
+### Retained launcher replay and historical comparisons
+
+After the component correction passed both-host component CI and merged, a real
+local current-core preparation completed on the unchanged signed c34 package.
+The subsequent ten-build matrix returned after its strict reference/two-root
+checks, but final replay through `retained/bin/ami-rust` refused a symlink path.
+Invoking the same retained bytes through their resolved file path rebuilt the
+same native executable. macOS can return the invoked alias from `current_exe`;
+the CLI digest check now resolves that OS-provided location before its existing
+no-follow hash and both receipt-identity comparisons. Project/component input
+path restrictions are unchanged. Positive, changed-target, wrong-digest and
+dangling-alias fixtures cover the correction.
+
+The lifecycle coordinator now persists the completed matrix report before
+package removal, including when retained replay later fails. Explicit maintainer
+tests additionally pair the frozen Python functions with current Rust across
+131 parser/claim cases and nine filesystem transaction cases on both CI hosts.
+Ordinary workspace tests leave these historical tests ignored; the named CI
+step supplies the pinned internal Python and records exact counts and source
+identities. Python is outside the consumer process tree and this temporary
+historical comparison is retired with active internal Python in RC4.
+
+[Development evidence](evidence/rc1-retained-launcher-development-20261019.json)
+keeps the actual failure and narrower successful controls distinct. The signed
+new CLI, full both-host no-Python lifecycle and remaining RC1 criteria are still
+unaccepted; no SDK or package channel is published by these tests.

@@ -152,7 +152,7 @@ jobs:
           if ! git cat-file -e "$CLI_BASE^{commit}"; then
             git fetch --no-tags --filter=blob:none --depth=1 origin "$CLI_BASE"
           fi
-          if git diff --quiet "$CLI_BASE" "$GITHUB_SHA" -- tools/ tooling/ host/profiles/ docs/rust-cli-migration/contracts-v1.json .github/workflows/ci.yml release/ci-bootstrap-inputs.json release/ci-sdk-inputs.json release/native-tooling-inputs.json; then
+          if git diff --quiet "$CLI_BASE" "$GITHUB_SHA" -- tools/ tooling/ host/profiles/ docs/rust-cli-migration/contracts-v1.json .github/workflows/ci.yml release/ci-bootstrap-inputs.json release/ci-sdk-inputs.json release/native-tooling-inputs.json release/ci-python-inputs.json release/ci_historical.py release/install.py release/test_install.py release/verify_publisher.py release/ci_native.py release/ci_sdk.py release/ci_auth.py release/ci_cargo.py release/prepare_sdk.py release/ci_python.py; then
             printf 'affected=false\n' >> "$GITHUB_OUTPUT"
           else
             cli_diff_status=$?
@@ -188,6 +188,18 @@ jobs:
             release/ci-bootstrap-inputs.json
             release/ci-sdk-inputs.json
             release/native-tooling-inputs.json
+            release/ci-python-inputs.json
+            release/ci-resources.json
+            release/ci_python.py
+            release/ci_historical.py
+            release/ci_native.py
+            release/ci_auth.py
+            release/ci_sdk.py
+            release/ci_cargo.py
+            release/prepare_sdk.py
+            release/install.py
+            release/test_install.py
+            release/verify_publisher.py
       - name: Install the existing hash-pinned host Rust inputs
         env:
           CLI_HOST_TRIPLE: ${{ matrix.triple }}
@@ -216,6 +228,50 @@ jobs:
           "$cli_rust/cargo" test --workspace --locked --offline \
             --manifest-path tooling/Cargo.toml \
             --target-dir "$RUNNER_TEMP/ami-rust-host-core"
+      - name: Compare current Rust with historical Python (maintainer tests only)
+        run: |
+          set -euo pipefail
+          python3 -I -B release/ci_python.py \
+            --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" \
+            --inputs release/ci-python-inputs.json
+          cli_rust="$RUNNER_TEMP/ami-rust-rc0-host/toolchain/bin"
+          historical_python="$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12"
+          export AMI_RUST_HISTORICAL_PYTHON="$historical_python"
+          "$historical_python" -I -B release/ci_historical.py \
+            --source-root "$GITHUB_WORKSPACE" --source-commit "$GITHUB_SHA" \
+            --rust-bin-dir "$cli_rust" --cargo-home "$RUNNER_TEMP/ami-rust-rc0-cargo-home" \
+            --output-dir "$RUNNER_TEMP/ami-rust-historical-parsers"
+          mkdir -m 700 "$RUNNER_TEMP/ami-rust-historical-home" "$RUNNER_TEMP/ami-rust-historical-tmp"
+          env -i PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin" \
+            HOME="$RUNNER_TEMP/ami-rust-historical-home" TMPDIR="$RUNNER_TEMP/ami-rust-historical-tmp" \
+            RUSTC="$cli_rust/rustc" RUSTDOC="$cli_rust/rustdoc" \
+            RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= CARGO_BUILD_JOBS=2 LC_ALL=C \
+            CARGO_HOME="$RUNNER_TEMP/ami-rust-rc0-cargo-home" \
+            AMI_RUST_HISTORICAL_PYTHON="$historical_python" \
+            AMI_RUST_DIFFERENTIAL_SOURCE="$GITHUB_WORKSPACE" \
+            AMI_RUST_DIFFERENTIAL_WORK="$RUNNER_TEMP/ami-rust-historical-transactions" \
+            "$cli_rust/cargo" test --package ami-rust-core --test historical_transactions \
+            --locked --offline --manifest-path tooling/Cargo.toml \
+            --target-dir "$RUNNER_TEMP/ami-rust-host-core" \
+            -- --ignored --exact paired_historical_transactions
+          test -f "$RUNNER_TEMP/ami-rust-historical-transactions/binding.json"
+      - name: Retain bounded historical comparison results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: historical-comparison-${{ matrix.triple }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/ami-rust-python-bootstrap/bootstrap.json
+            ${{ runner.temp }}/ami-rust-historical-parsers/result.json
+            ${{ runner.temp }}/ami-rust-historical-parsers/failure.json
+            ${{ runner.temp }}/ami-rust-historical-parsers/work/current-rust-result.json
+            ${{ runner.temp }}/ami-rust-historical-parsers/work/logs/*.log
+            ${{ runner.temp }}/ami-rust-historical-transactions/report.json
+            ${{ runner.temp }}/ami-rust-historical-transactions/binding.json
+            ${{ runner.temp }}/ami-rust-historical-transactions/coordinator.*.log
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
       - name: Build and check portable native frontends
         run: |
           set -euo pipefail
