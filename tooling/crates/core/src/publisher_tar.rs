@@ -82,6 +82,11 @@ pub fn verify_publisher_sdk_tar<'a>(
         // Header::from_byte_slice requires exactly one checked 512-byte block.
         let header = Header::from_byte_slice(raw_header);
         verify_header_checksum(raw_header)?;
+        // Python validates numeric syntax even for ownership/timestamp/device
+        // metadata that installation deliberately does not preserve.
+        for range in [100..108, 108..116, 116..124, 136..148, 329..337, 337..345] {
+            tarfile_number(&raw_header[range])?;
+        }
         let entry_type = header.entry_type();
         let declared_size = tarfile_number(&raw_header[124..136])?;
         let declared_size = u64::try_from(declared_size)
@@ -347,11 +352,11 @@ fn parse_gnu_long_name(raw: &[u8]) -> Result<Vec<u8>> {
 fn verify_header_checksum(header: &[u8]) -> Result<()> {
     let expected = tarfile_number(&header[148..156])?;
     // The checksum field itself contributes eight ASCII spaces in both forms.
-    let mut unsigned = 8_i64 * i64::from(b' ');
+    let mut unsigned = 8_i128 * i128::from(b' ');
     let mut signed = unsigned;
     for byte in header[..148].iter().chain(&header[156..]) {
-        unsigned += i64::from(*byte);
-        signed += i64::from(*byte as i8);
+        unsigned += i128::from(*byte);
+        signed += i128::from(*byte as i8);
     }
     if expected != unsigned && expected != signed {
         return Err(Refusal::new("SDK TAR header checksum mismatch"));
@@ -359,17 +364,17 @@ fn verify_header_checksum(header: &[u8]) -> Result<()> {
     Ok(())
 }
 
-fn tarfile_number(field: &[u8]) -> Result<i64> {
+fn tarfile_number(field: &[u8]) -> Result<i128> {
     if matches!(field[0], 0o200 | 0o377) {
-        let mut value = 0i64;
+        let mut value = 0i128;
         for byte in &field[1..] {
             value = value
                 .checked_mul(256)
-                .and_then(|value| value.checked_add(i64::from(*byte)))
+                .and_then(|value| value.checked_add(i128::from(*byte)))
                 .ok_or_else(|| Refusal::new("SDK TAR mode is out of range"))?;
         }
         if field[0] == 0o377 {
-            let sign = 1i64
+            let sign = 1i128
                 .checked_shl(((field.len() - 1) * 8) as u32)
                 .ok_or_else(|| Refusal::new("SDK TAR mode is out of range"))?;
             value = value
@@ -385,9 +390,14 @@ fn tarfile_number(field: &[u8]) -> Result<i64> {
         .iter()
         .position(|byte| *byte == 0)
         .unwrap_or(field.len());
+    if !field[..end].is_ascii() {
+        return Err(Refusal::new("SDK TAR numeric field is not ASCII"));
+    }
     let text = std::str::from_utf8(&field[..end])
         .map_err(|_| Refusal::new("invalid SDK TAR member mode encoding"))?
-        .trim();
+        // Python decodes strict ASCII before str.strip(); its ASCII whitespace
+        // includes vertical tab and the four information separators as well.
+        .trim_matches(|character: char| matches!(character as u32, 9..=13 | 28..=32));
     if text.is_empty() {
         return Ok(0);
     }
@@ -398,8 +408,12 @@ fn tarfile_number(field: &[u8]) -> Result<i64> {
     };
     if digits.starts_with(b"0o") || digits.starts_with(b"0O") {
         digits = &digits[2..];
+        // Python int(text, 8) allows one separator immediately after 0o.
+        if digits.starts_with(b"_") {
+            digits = &digits[1..];
+        }
     }
-    let mut value = 0i64;
+    let mut value = 0i128;
     let mut previous_was_digit = false;
     for (index, byte) in digits.iter().copied().enumerate() {
         if byte == b'_' {
@@ -418,7 +432,7 @@ fn tarfile_number(field: &[u8]) -> Result<i64> {
         }
         value = value
             .checked_mul(8)
-            .and_then(|value| value.checked_add(i64::from(byte - b'0')))
+            .and_then(|value| value.checked_add(i128::from(byte - b'0')))
             .ok_or_else(|| Refusal::new("SDK TAR mode is out of range"))?;
         previous_was_digit = true;
     }
@@ -764,6 +778,58 @@ mod tests {
         archive[100..108].copy_from_slice(&[0x80, 0, 0, 0, 0, 0, 1, 0xed]);
         fix_header_checksum_signed(&mut archive[..512]);
         let expected = expected_row("host/file", bytes);
+        assert!(verify_publisher_sdk_tar(&archive, &expected).is_ok());
+    }
+
+    #[test]
+    fn refuses_non_ascii_whitespace_in_every_numeric_header_field() {
+        let expected = expected_row("host/file", b"");
+        for range in [
+            100..108,
+            108..116,
+            116..124,
+            124..136,
+            136..148,
+            329..337,
+            337..345,
+        ] {
+            let mut archive = archive_with_file("host/file", b"", 0o644);
+            archive[range.clone()].fill(0);
+            archive[range.start..range.start + 2].copy_from_slice(&[0xc2, 0xa0]);
+            fix_header_checksum(&mut archive[..512]);
+            let error = verify_publisher_sdk_tar(&archive, &expected).unwrap_err();
+            assert!(
+                error.to_string().contains("not ASCII"),
+                "{range:?}: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn accepts_python_octal_prefix_separator_and_ascii_strip_rules() {
+        let expected = expected_row("host/file", b"");
+        for mode in [
+            b"0o_7\0\0\0\0".as_slice(),
+            b"\x1c7\x0b\0\0\0\0\0".as_slice(),
+        ] {
+            let mut archive = archive_with_file("host/file", b"", 0o644);
+            archive[100..108].copy_from_slice(mode);
+            fix_header_checksum(&mut archive[..512]);
+            let files = verify_publisher_sdk_tar(&archive, &expected).unwrap();
+            assert_eq!(files[0].mode, 0o755);
+        }
+    }
+
+    #[test]
+    fn validates_full_width_ignored_base256_metadata_without_narrowing_it() {
+        let expected = expected_row("host/file", b"");
+        let mut archive = archive_with_file("host/file", b"", 0o644);
+        archive[136..148].fill(0xff);
+        archive[136] = 0x80; // Maximum positive 88-bit mtime; not installed.
+        fix_header_checksum(&mut archive[..512]);
+        assert!(verify_publisher_sdk_tar(&archive, &expected).is_ok());
+        archive[136] = 0xff; // Full-width negative value is equally ignored.
+        fix_header_checksum(&mut archive[..512]);
         assert!(verify_publisher_sdk_tar(&archive, &expected).is_ok());
     }
 
