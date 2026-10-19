@@ -13,7 +13,7 @@ responsible for selecting and checking the executable's identity, host profile
 and permitted environment. Absolute paths alone do not establish trust.
 Supported verifier tools keep the caller's credentials. The embedding process
 must own this child's reaping and must not change SIGCHLD disposition or install
-a competing reaper during capture. Ignored SIGCHLD and `SA_NOCLDWAIT` are refused
+a competing reaper during capture. Non-default SIGCHLD dispositions and `SA_NOCLDWAIT` are refused
 before spawn. A detected `ECHILD` loses the PID reservation: cleanup reports the
 loss and refrains from signalling that potentially reused numeric group.
 
@@ -66,3 +66,9 @@ panic cleanup, a pipe-retaining same-group descendant and a closed-pipe
 descendant that must survive ordinary completion. The fixture process is the
 native Rust test executable; no interpreter is invoked. Both-host CI and the
 later observed consumer integration remain separate acceptance evidence.
+
+The [exact-source macOS result](evidence/rc1-process-local-20261019/result.json)
+records 113 passing core tests and one real Cargo/frontend case, ten focused
+process tests, formatting and Clippy with warnings denied. The two ignored
+transaction/signal child fixtures are executed by asserting parent tests.
+This local proof does not substitute for both-host CI or RC1 acceptance.
