@@ -460,7 +460,17 @@ class NativeMatrixTests(unittest.TestCase):
             matrix_calls.append(True)
             return {"build_count": 10, "fixture": True}
 
-        with patch.object(native, "_supervised_run", side_effect=compose), \
+        # Composition is a stub in this lifecycle-order fixture. Supply inert
+        # notice data locally so the test also works in the narrow installer
+        # CI checkout; actual legal bytes are checked by package production.
+        fixture_source = self.temporary / "source-fixture"
+        licenses = fixture_source / "tooling/third-party/licenses"
+        licenses.mkdir(parents=True)
+        for name in ("LICENSE-MIT", "LICENSE-APACHE"):
+            (fixture_source / name).write_bytes(b"inert notice fixture\n")
+        (licenses.parent / "THIRD-PARTY-NOTICES.md").write_bytes(b"inert third-party notice fixture\n")
+        with patch.object(native, "ROOT", fixture_source), \
+                patch.object(native, "_supervised_run", side_effect=compose), \
                 patch.object(native, "_supervised_text", return_value='{"status":"OUTER_AND_INNER_AUTHENTICATED"}'), \
                 patch.object(native, "_qualify_native_build_matrix", side_effect=matrix):
             report = native._qualify_native_package(
