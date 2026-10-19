@@ -1,0 +1,83 @@
+{
+  "schema": "ami-rust-rc1-retained-components-v1",
+  "status": "PASS",
+  "scope": "Read-only consistency parity for all six retained macOS components against immutable released SDK inventories; no publisher authentication/full RC1 acceptance",
+  "selection_sha256": "cc072cf9087c828bf0999c2b616da9f385a2f924a0548b5b64b0154bcaca5eeb",
+  "sdk_archive_sha256": "087f69659f1d0d5136b2c07789488c23dd52ca7b38b21579183620a5fbc61dd4",
+  "bridge_sha256": "de7e302c3688b33149fc36606f16082c25401664d7552250c4e512202e55c9e0",
+  "components": [
+    {
+      "name": "cargo",
+      "inventory_sha256": "2f081118d19e93b95304c95440d82d1f3d022fb063e4ae7ad1b89285ceddbe39",
+      "historical_count": 2,
+      "rust_exit": 0,
+      "elapsed_seconds": 0.5068742919247597,
+      "file_bytes": 39352418,
+      "files": 2,
+      "symlinks": 0,
+      "decision_equal": true
+    },
+    {
+      "name": "collector",
+      "inventory_sha256": "34e7e069a72ac84d980f15c797b4250f324eee19088f55d135c9e4eafa0d88de",
+      "historical_count": 1,
+      "rust_exit": 0,
+      "elapsed_seconds": 0.01215708302333951,
+      "file_bytes": 1359984,
+      "files": 1,
+      "symlinks": 0,
+      "decision_equal": true
+    },
+    {
+      "name": "csdk",
+      "inventory_sha256": "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337",
+      "historical_count": 2835,
+      "rust_exit": 0,
+      "elapsed_seconds": 0.4100505420938134,
+      "file_bytes": 51025133,
+      "files": 2835,
+      "symlinks": 0,
+      "decision_equal": true
+    },
+    {
+      "name": "rust",
+      "inventory_sha256": "21d2c186d5ed597f31fed82c306ac790dc11a5cb2f136e52e237bd15f4a55c18",
+      "historical_count": 3882,
+      "rust_exit": 0,
+      "elapsed_seconds": 3.6334283750038594,
+      "file_bytes": 545762587,
+      "files": 3882,
+      "symlinks": 0,
+      "decision_equal": true
+    },
+    {
+      "name": "toolchain",
+      "inventory_sha256": "28237af9576e852451fcdf0470a904edb34a70232feb41d0c56be246313baadf",
+      "historical_count": 2771,
+      "rust_exit": 0,
+      "elapsed_seconds": 1.151454625185579,
+      "file_bytes": 173480083,
+      "files": 2754,
+      "symlinks": 17,
+      "decision_equal": true
+    },
+    {
+      "name": "vendor",
+      "inventory_sha256": "f5fcdd2d3daaae4d2f40d69269c49533fc40adc807c555f2213238b2c3557ad6",
+      "historical_count": 3070,
+      "rust_exit": 0,
+      "elapsed_seconds": 0.3829819159582257,
+      "file_bytes": 39739700,
+      "files": 3070,
+      "symlinks": 0,
+      "decision_equal": true
+    }
+  ],
+  "historical_selection_unchanged": true,
+  "source_sha256": {
+    "host/contracts.py": "6984a7aaa1fbd22ab01877ed4d8cbf88ba1c0dddf46bbc96ea53bedb46fe0176",
+    "tooling/crates/core/src/directory.rs": "0e105f7064acafb351e91fe4b17a5bf9787cce60601d6be9e94aeee072160d8f",
+    "tooling/crates/core/src/inventory.rs": "655ee6a2c5b9849536f2e81396cc21ed6183f6133d58e00cf295020251d6fde1"
+  },
+  "development_source": "Local pre-integration tree; exact tested module hashes below. Final candidate maps these bytes before acceptance."
+}

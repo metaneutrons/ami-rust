@@ -72,6 +72,12 @@ enum SelectionSchema {
     V2,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+enum ProjectLockSchema {
+    #[serde(rename = "ami-rust-project-lock-v2")]
+    V2,
+}
+
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum StateStatus {
@@ -159,9 +165,64 @@ pub struct SelectionV2 {
     pub components: ComponentRoots,
 }
 
-fn decode_schema<T: DeserializeOwned>(bytes: &[u8], expected: &str) -> Result<T> {
-    let document: serde_json::Value =
-        parse_json(bytes, JsonProfile::PackageMetadataStateSelection)?;
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProjectLockSdkV2 {
+    /// Preserved lexically: relative roots are interpreted against the project
+    /// lock's parent by the later filesystem verifier, never by this parser.
+    pub root: PathBuf,
+    /// A portable SDK-relative manifest path, unlike `root`.
+    pub manifest: String,
+    pub manifest_sha256: Sha256,
+    pub install_receipt_sha256: Sha256,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProjectLockHostV2 {
+    pub platform: Host,
+    pub cli_sha256: Sha256,
+    pub core_sha256: Sha256,
+}
+
+/// Component roots are untrusted path claims. Relative values and parent
+/// components are preserved because the legacy selector resolves them against
+/// the project-lock parent; ownership, separation and inventory are later FS
+/// checks and are deliberately absent from this parser.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProjectLockComponentRootsV2 {
+    pub rust: PathBuf,
+    pub cargo: PathBuf,
+    pub toolchain: PathBuf,
+    pub collector: PathBuf,
+    pub csdk: PathBuf,
+    pub vendor: PathBuf,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProjectLockCargoV2 {
+    pub manifest_sha256: Sha256,
+    pub lock_sha256: Sha256,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProjectLockV2 {
+    schema: ProjectLockSchema,
+    pub sdk: ProjectLockSdkV2,
+    pub host: ProjectLockHostV2,
+    pub components: ProjectLockComponentRootsV2,
+    pub cargo: ProjectLockCargoV2,
+}
+
+fn decode_schema<T: DeserializeOwned>(
+    bytes: &[u8],
+    expected: &str,
+    profile: JsonProfile,
+) -> Result<T> {
+    let document: serde_json::Value = parse_json(bytes, profile)?;
     let schema = document
         .as_object()
         .and_then(|object| object.get("schema"))
@@ -177,7 +238,11 @@ fn decode_schema<T: DeserializeOwned>(bytes: &[u8], expected: &str) -> Result<T>
 }
 
 pub fn parse_package_state(bytes: &[u8]) -> Result<PackageStateV2> {
-    let state: PackageStateV2 = decode_schema(bytes, "ami-rust-package-state-v2")?;
+    let state: PackageStateV2 = decode_schema(
+        bytes,
+        "ami-rust-package-state-v2",
+        JsonProfile::PackageMetadataStateSelection,
+    )?;
     if state.cli_sha256 != state.core_sha256 {
         return Err(Refusal::new(
             "CLI/core digests differ for the static-core contract",
@@ -206,9 +271,32 @@ pub fn parse_package_state(bytes: &[u8]) -> Result<PackageStateV2> {
 }
 
 pub fn parse_selection(bytes: &[u8]) -> Result<SelectionV2> {
-    let selection: SelectionV2 = decode_schema(bytes, "ami-rust-selection-v2")?;
+    let selection: SelectionV2 = decode_schema(
+        bytes,
+        "ami-rust-selection-v2",
+        JsonProfile::PackageMetadataStateSelection,
+    )?;
     selection.components.check_shape()?;
     Ok(selection)
+}
+
+/// Parse the closed v2 project lock without resolving paths or trusting any
+/// host, SDK inventory, receipt, or component claim.
+pub fn parse_project_lock(bytes: &[u8]) -> Result<ProjectLockV2> {
+    let project: ProjectLockV2 =
+        decode_schema(bytes, "ami-rust-project-lock-v2", JsonProfile::ProjectLock)?;
+    // Read the private schema marker explicitly; it is kept in the returned
+    // typed record but has exactly one variant after `decode_schema` succeeds.
+    match &project.schema {
+        ProjectLockSchema::V2 => {}
+    }
+    crate::files::validate_relative_inventory_path(&project.sdk.manifest)?;
+    if project.host.cli_sha256 != project.host.core_sha256 {
+        return Err(Refusal::new(
+            "CLI/core digests differ for the static-core contract",
+        ));
+    }
+    Ok(project)
 }
 
 #[cfg(test)]
@@ -226,6 +314,34 @@ mod tests {
         json!({"schema":"ami-rust-selection-v2","host":"linux-x86_64", "install_receipt_sha256":"1".repeat(64),
             "components":{"rust":"/sdk/rust","cargo":"/sdk/cargo","toolchain":"/sdk/toolchain",
                 "collector":"/sdk/collector","csdk":"/sdk/csdk","vendor":"/sdk/vendor"}})
+    }
+    fn project_lock() -> Value {
+        json!({
+            "schema":"ami-rust-project-lock-v2",
+            "sdk":{
+                "root":"../installed sdk",
+                "manifest":"contract/sdk.json",
+                "manifest_sha256":"1".repeat(64),
+                "install_receipt_sha256":"2".repeat(64)
+            },
+            "host":{
+                "platform":"linux-x86_64",
+                "cli_sha256":"3".repeat(64),
+                "core_sha256":"3".repeat(64)
+            },
+            "components":{
+                "rust":"../components/rust",
+                "cargo":"../components/cargo",
+                "toolchain":"../components/toolchain",
+                "collector":"../components/collector",
+                "csdk":"../components/csdk",
+                "vendor":"../components/vendor"
+            },
+            "cargo":{
+                "manifest_sha256":"4".repeat(64),
+                "lock_sha256":"5".repeat(64)
+            }
+        })
     }
     fn bytes(value: &Value) -> Vec<u8> {
         serde_json::to_vec(value).unwrap()
@@ -327,6 +443,162 @@ mod tests {
         value["host"] = json!("macos-aarch64");
         let parsed = parse_selection(&bytes(&value)).unwrap();
         assert_eq!(parsed.host, Host::MacosAarch64);
+    }
+
+    #[test]
+    fn parses_closed_project_lock_v2_and_preserves_relative_root_semantics() {
+        let mut value = project_lock();
+        value["host"]["platform"] = json!("macos-aarch64");
+        let parsed = parse_project_lock(&bytes(&value)).unwrap();
+        assert_eq!(parsed.host.platform, Host::MacosAarch64);
+        assert_eq!(parsed.sdk.root, PathBuf::from("../installed sdk"));
+        assert_eq!(parsed.sdk.manifest, "contract/sdk.json");
+        assert_eq!(parsed.components.rust, PathBuf::from("../components/rust"));
+        assert_eq!(parsed.cargo.manifest_sha256.as_str(), "4".repeat(64));
+        assert_eq!(parsed.cargo.lock_sha256.as_str(), "5".repeat(64));
+        assert_eq!(parsed.sdk.install_receipt_sha256.as_str(), "2".repeat(64));
+    }
+
+    #[test]
+    fn refuses_legacy_future_missing_and_unknown_project_lock_fields() {
+        for schema in [
+            Value::Null,
+            json!("ami-rust-project-lock-v1"),
+            json!("ami-rust-project-lock-v999"),
+        ] {
+            let mut value = project_lock();
+            value["schema"] = schema;
+            value["host"] = json!(false);
+            assert!(
+                parse_project_lock(&bytes(&value))
+                    .unwrap_err()
+                    .to_string()
+                    .contains("schema")
+            );
+        }
+
+        let mut value = project_lock();
+        value.as_object_mut().unwrap().remove("schema");
+        assert!(parse_project_lock(&bytes(&value)).is_err());
+
+        for field in ["sdk", "host", "components", "cargo"] {
+            let mut value = project_lock();
+            value.as_object_mut().unwrap().remove(field);
+            assert!(parse_project_lock(&bytes(&value)).is_err(), "{field}");
+        }
+
+        for (object, field, unexpected) in [
+            ("top", "publisher", json!("untrusted")),
+            ("sdk", "python", json!("/must-not-execute")),
+            ("host", "python", json!("/must-not-execute")),
+            ("components", "python", json!("/must-not-execute")),
+            ("cargo", "path", json!("Cargo.toml")),
+        ] {
+            let mut value = project_lock();
+            if object == "top" {
+                value[field] = unexpected;
+            } else {
+                value[object][field] = unexpected;
+            }
+            assert!(parse_project_lock(&bytes(&value)).is_err());
+        }
+
+        for (object, field) in [
+            ("sdk", "root"),
+            ("sdk", "manifest"),
+            ("sdk", "manifest_sha256"),
+            ("sdk", "install_receipt_sha256"),
+            ("host", "platform"),
+            ("host", "cli_sha256"),
+            ("host", "core_sha256"),
+            ("components", "rust"),
+            ("components", "cargo"),
+            ("components", "toolchain"),
+            ("components", "collector"),
+            ("components", "csdk"),
+            ("components", "vendor"),
+            ("cargo", "manifest_sha256"),
+            ("cargo", "lock_sha256"),
+        ] {
+            let mut value = project_lock();
+            value[object].as_object_mut().unwrap().remove(field);
+            assert!(
+                parse_project_lock(&bytes(&value)).is_err(),
+                "{object}.{field}"
+            );
+        }
+    }
+
+    #[test]
+    fn validates_project_lock_digests_host_binding_and_manifest_path() {
+        for (object, field) in [
+            ("sdk", "manifest_sha256"),
+            ("sdk", "install_receipt_sha256"),
+            ("host", "cli_sha256"),
+            ("host", "core_sha256"),
+            ("cargo", "manifest_sha256"),
+            ("cargo", "lock_sha256"),
+        ] {
+            for bad in [json!("A".repeat(64)), json!("0".repeat(63)), json!(true)] {
+                let mut value = project_lock();
+                value[object][field] = bad;
+                assert!(
+                    parse_project_lock(&bytes(&value)).is_err(),
+                    "{object}.{field}"
+                );
+            }
+        }
+
+        let mut inconsistent = project_lock();
+        inconsistent["host"]["core_sha256"] = json!("6".repeat(64));
+        assert!(parse_project_lock(&bytes(&inconsistent)).is_err());
+
+        let mut unsupported_host = project_lock();
+        unsupported_host["host"]["platform"] = json!("linux-aarch64");
+        assert!(parse_project_lock(&bytes(&unsupported_host)).is_err());
+
+        for bad in [
+            "",
+            ".",
+            "..",
+            "/contract/sdk.json",
+            "contract/../sdk.json",
+            "contract//sdk.json",
+            "contract/./sdk.json",
+            "contract\\sdk.json",
+            "contract:sdk.json",
+            "contract\0sdk.json",
+            "contract\nsdk.json",
+        ] {
+            let mut value = project_lock();
+            value["sdk"]["manifest"] = json!(bad);
+            assert!(parse_project_lock(&bytes(&value)).is_err(), "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn duplicate_project_lock_keys_refuse() {
+        assert!(
+            parse_project_lock(
+                br#"{"schema":"ami-rust-project-lock-v2","schema":"ami-rust-project-lock-v2"}"#
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn project_lock_uses_its_frozen_one_mibibyte_limit() {
+        let base = bytes(&project_lock());
+        let limit = JsonProfile::ProjectLock.max_bytes();
+        assert!(base.len() < limit);
+
+        let mut exact = base.clone();
+        exact.resize(limit, b' ');
+        assert!(parse_project_lock(&exact).is_ok());
+
+        exact.push(b' ');
+        let error = parse_project_lock(&exact).unwrap_err().to_string();
+        assert!(error.contains("exceeds"), "{error}");
     }
 
     #[test]

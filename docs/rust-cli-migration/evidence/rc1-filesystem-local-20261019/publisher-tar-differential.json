@@ -1,0 +1,275 @@
+{
+  "schema": "ami-rust-rc1-publisher-tar-differential-v1",
+  "status": "PASS",
+  "oracle_python_version": "3.12.15 (main, Oct 14 2026, 00:55:37) [Clang 23.1.3 ]",
+  "oracle_tarfile_sha256": "f0891b6936a39e5a41bd857fc149191fbe30ca84e5958f203682e76e218ff2a4",
+  "scope": "Read-only archive/parser parity; no publisher authentication, extraction, installation or full RC1 acceptance",
+  "released_transport_sha256": "f4a8cbc562d3c43c573a5a34ddfa99d74928ded94c47df45f4182fde71567d5c",
+  "release_manifest_sha256": "cd9adcf44264c86eb0bdea35bb16c02529c8ae5b051d4a9dd3aa6007f0972b65",
+  "sdk_archive_sha256": "087f69659f1d0d5136b2c07789488c23dd52ca7b38b21579183620a5fbc61dd4",
+  "decoded_bytes": 5079040,
+  "released_files": 94,
+  "original_unchanged": true,
+  "source_sha256": {
+    "release/install.py": "0e77fa70bcaa69d08de3102e18c102a063b276c654242e676dd20fab6d74e984",
+    "tooling/crates/core/src/compression.rs": "a25f261d6bde6c6b235f4a1ea612255c49c1b98f16a5c8d0982502cdbd0b9e19",
+    "tooling/crates/core/src/publisher_tar.rs": "69fdfb1194d47b08a52e40247edc07dc900451c0d1c6c33b76bb38ecceca4d1c",
+    "tooling/Cargo.lock": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d"
+  },
+  "cases": [
+    {
+      "case": "released-sdk",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "full_report_equal": true,
+      "archive_sha256": "087f69659f1d0d5136b2c07789488c23dd52ca7b38b21579183620a5fbc61dd4"
+    },
+    {
+      "case": "regular",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "full_report_equal": true,
+      "archive_sha256": "59c78ef630d517519cf89b4bcb1e50b77c07d2e61a8613637151cd8a5d86d4b0"
+    },
+    {
+      "case": "gnu-longname",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "full_report_equal": true,
+      "archive_sha256": "91c121281eb0531000468029a734e504a846dd6c2160a77137afc917a4d21116"
+    },
+    {
+      "case": "directory",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "5b7b61d0f4719de64a6f46aaf5dd878688a5196ccf5739e9d162b27bcac6059d"
+    },
+    {
+      "case": "fifo",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "5256b6b6fa6a15f8d8ff8c5a3eea9ff9b46de3842bc5bbe14de2c8ba398d2dc4"
+    },
+    {
+      "case": "symlink",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "3705911dda1c6b70f757536337f1b732944f6d6af1c7f2e2a4fd459b62f81ccd"
+    },
+    {
+      "case": "hardlink",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "41d51c5e2204e9afc80f91d97aab0e8e33c8eeadfcf17cb61831b8ad28c2793f"
+    },
+    {
+      "case": "continuous",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "0fd33c11f170a3c3746bb5edeb0d1b15d970e59c670c2199c3d9a18c6dcb0692"
+    },
+    {
+      "case": "traversal",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "f15e896a2bc75e3679662bfc434db06a1d50b5f1c88957882ae06d8691e7f559"
+    },
+    {
+      "case": "absolute",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "f3218025506a3c2df3c85587994106484057d0d97edf1c113da6a22fd8dd99c0"
+    },
+    {
+      "case": "reserved",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "c48742a53320c8926f30ca66d974b9e18a1f125d83644169426d5743f72ed9f0"
+    },
+    {
+      "case": "backslash",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "31908986693307f9afb0db3be41e30e59ad494c8e9b3b8acf0f553a06a702da3"
+    },
+    {
+      "case": "pax",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "ce5cf16bd6af37543383b226b5754cd0ac587f8ef7b93ccc79433fdf98671bb4"
+    },
+    {
+      "case": "wrong-inventory",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "59c78ef630d517519cf89b4bcb1e50b77c07d2e61a8613637151cd8a5d86d4b0"
+    },
+    {
+      "case": "nonzero-tail",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "a305b0cc9f6bcc33002311e161f558fc81f7e1b9d2d434424c8b8bb70e31ce3a"
+    },
+    {
+      "case": "truncated",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "55ea5e95f7bdb6ef45e4698db7e630c9fa2436154b39f3a6b923a8d6f8b63a91"
+    },
+    {
+      "case": "repeated-gnu-longname",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "full_report_equal": true,
+      "archive_sha256": "af0295a73747c52d59c8b22d5e1d7812b3408759093f15027c6a73688783e768"
+    },
+    {
+      "case": "nongnu-longname-marker",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "full_report_equal": true,
+      "archive_sha256": "b99a1e873dedfb4920c8f13ecad87215de659b4e5d10abd866837557862a098b"
+    },
+    {
+      "case": "gnu-first-nul",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "full_report_equal": true,
+      "archive_sha256": "f72454b5214994c5ac5089d4ad3c7391d9f54d657ec408fa5ac68a41a338c662"
+    },
+    {
+      "case": "empty-parsed-pax",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "full_report_equal": true,
+      "archive_sha256": "5c5dcc8e039cfd0c87f20a9d2596029387284260fe146a128a30184a8f831222"
+    },
+    {
+      "case": "repeated-gnu-longlink",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "full_report_equal": true,
+      "archive_sha256": "018fe1863a8f153949de8d7aeff81ebe61dd888448bdcd98f47463baa9842c79"
+    },
+    {
+      "case": "base256-mode",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "full_report_equal": true,
+      "archive_sha256": "833c713f16227c291ac07a602de734a30aaacb9dc298fa07ffadc72fb36f8d95"
+    },
+    {
+      "case": "ancestor-a",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "88aa9138f07391f38ba9f95108a2d2b56eec49984157fb3f872d67517e15b84a"
+    },
+    {
+      "case": "ancestor-A",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "dd7766f2955bac23ad4f1a872c35a2620ee5ccb9e9045d798b0d1983b726b787"
+    },
+    {
+      "case": "signed-checksum",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "full_report_equal": true,
+      "archive_sha256": "db8ee2f9360e2f1a55f60b27ed2f63f0ae840b0bb9e0b3f0d6fcee607b2d17b0"
+    },
+    {
+      "case": "nonascii-mode",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "773cca9ee9066c5f02d1c1a6cae273559f6d883fa860da8dfa133ca1ecd0c86c"
+    },
+    {
+      "case": "nonascii-uid",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "67273e36d845cd5df5be6bfa0c92a3ab4f5f9ccb8abec2072023b59fe6cfa7ca"
+    },
+    {
+      "case": "nonascii-gid",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "8adb1e07d3515bc6fb24cd5b4462bacbfcc6c9a94f59a7e9c2599d16c82ece8c"
+    },
+    {
+      "case": "nonascii-size",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "587ae534a4a4fdf9b8ab34e22c4f344881fd6321cabbf09df99ad8d51e0d88b6"
+    },
+    {
+      "case": "nonascii-mtime",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "29c6fce0fca9da1304f2c55e4c003d76adcf8cf0b525d50f44e0ce545067b40c"
+    },
+    {
+      "case": "nonascii-devmajor",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "23e50a69bae0ef43cd2064a0fe3ae7dff82cf50b677f6837344210ed0cf1606a"
+    },
+    {
+      "case": "nonascii-devminor",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "full_report_equal": null,
+      "archive_sha256": "f0ea57cd47d4cd9bd3cb97ccfbd1608fb0aad7783c59061a4a2b476bdbf6dddc"
+    },
+    {
+      "case": "octal-prefix-separator",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "full_report_equal": true,
+      "archive_sha256": "af73dfb9697a16519293aa39a2f9587877c392770403571b2102b6957096ca0f"
+    },
+    {
+      "case": "ascii-strip",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "full_report_equal": true,
+      "archive_sha256": "e76898896bcf7d0e639a0e558f53c8ede093510ef9d86127b0b3c4616db24a99"
+    },
+    {
+      "case": "wide-positive-mtime",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "full_report_equal": true,
+      "archive_sha256": "8661d620d6a92db021f009e2d7e6a8c210c0221567073ff5da1d2314d11d6ee9"
+    },
+    {
+      "case": "wide-negative-mtime",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "full_report_equal": true,
+      "archive_sha256": "83bbd9f22662cb0b482edcd35411b009613681d896c8f26130089c8e4f52e0ab"
+    }
+  ],
+  "oracle_python_executable_sha256": "aed8ed802d0387d6831dead5885840e4e2ff3a7984dd7297e9a5f4466e9cda1d",
+  "source_commit": "9c834f9b209b0f1d1d7466f8de386a46ab7400e5"
+}

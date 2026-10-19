@@ -1,0 +1,1022 @@
+{
+  "rc1-archive-differential-20261019-a3/Cargo.lock": {
+    "bytes": 6815,
+    "sha256": "b8a40cec06c5c802b89ba089e6a9acab142a8a9fb64dd00c3953c96f59aa5545"
+  },
+  "rc1-archive-differential-20261019-a3/Cargo.toml": {
+    "bytes": 257,
+    "sha256": "c4c22fd3c6467ba908ac3d8cb752ea8fbc60e3818b664a098f50f15c5d08dfc5"
+  },
+  "rc1-archive-differential-20261019-a3/absolute.inventory.json": {
+    "bytes": 130,
+    "sha256": "725e565a715d8a74bcb3095b7882d4aac1d907b19f2cecec5d1c48ea04328b3a"
+  },
+  "rc1-archive-differential-20261019-a3/absolute.python.stderr": {
+    "bytes": 56,
+    "sha256": "e68e35ddc861f4e994486ba3249e2dd20b535f0168fa326b550ba444afb7cdfa"
+  },
+  "rc1-archive-differential-20261019-a3/absolute.rust.stderr": {
+    "bytes": 55,
+    "sha256": "9b3a4392780ab40cec8174955bcd057b9adbcd04bcb1ceaf1e327c1d8410aa8f"
+  },
+  "rc1-archive-differential-20261019-a3/absolute.tar.xz": {
+    "bytes": 160,
+    "sha256": "f3218025506a3c2df3c85587994106484057d0d97edf1c113da6a22fd8dd99c0"
+  },
+  "rc1-archive-differential-20261019-a3/ancestor-A.inventory.json": {
+    "bytes": 251,
+    "sha256": "48afc435ce815ee856eaa95ed5681ff58e953e39f29218e3a559741b1d08455a"
+  },
+  "rc1-archive-differential-20261019-a3/ancestor-A.python.stderr": {
+    "bytes": 63,
+    "sha256": "f5afbe17f3ff7deb60e0ff03d92384861072091b811967045f962a9a6ec88e12"
+  },
+  "rc1-archive-differential-20261019-a3/ancestor-A.rust.stderr": {
+    "bytes": 68,
+    "sha256": "f3fcc023990f93af6ca228e79154d6ad5e38edb32aee4f442e876b1b0ad6c72d"
+  },
+  "rc1-archive-differential-20261019-a3/ancestor-A.tar.xz": {
+    "bytes": 168,
+    "sha256": "dd7766f2955bac23ad4f1a872c35a2620ee5ccb9e9045d798b0d1983b726b787"
+  },
+  "rc1-archive-differential-20261019-a3/ancestor-a.inventory.json": {
+    "bytes": 251,
+    "sha256": "9f700366c13e588389b61984aa1b59b847d30a6e71191e4e0dba08452cb25b34"
+  },
+  "rc1-archive-differential-20261019-a3/ancestor-a.python.stderr": {
+    "bytes": 63,
+    "sha256": "f5afbe17f3ff7deb60e0ff03d92384861072091b811967045f962a9a6ec88e12"
+  },
+  "rc1-archive-differential-20261019-a3/ancestor-a.rust.stderr": {
+    "bytes": 68,
+    "sha256": "f3fcc023990f93af6ca228e79154d6ad5e38edb32aee4f442e876b1b0ad6c72d"
+  },
+  "rc1-archive-differential-20261019-a3/ancestor-a.tar.xz": {
+    "bytes": 168,
+    "sha256": "88aa9138f07391f38ba9f95108a2d2b56eec49984157fb3f872d67517e15b84a"
+  },
+  "rc1-archive-differential-20261019-a3/ascii-strip.inventory.json": {
+    "bytes": 134,
+    "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+  },
+  "rc1-archive-differential-20261019-a3/ascii-strip.python.json": {
+    "bytes": 139,
+    "sha256": "3b291a6028ec05ecefec752f5bbd9aec2ebf66f238f3a30e3d72e796b5706b7d"
+  },
+  "rc1-archive-differential-20261019-a3/ascii-strip.rust.json": {
+    "bytes": 138,
+    "sha256": "50ae25bd0b959a787bafb8c124126c0b3feb8cee94b72a466f9ad263e9f4e1bb"
+  },
+  "rc1-archive-differential-20261019-a3/ascii-strip.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-archive-differential-20261019-a3/ascii-strip.tar.xz": {
+    "bytes": 148,
+    "sha256": "e76898896bcf7d0e639a0e558f53c8ede093510ef9d86127b0b3c4616db24a99"
+  },
+  "rc1-archive-differential-20261019-a3/backslash.inventory.json": {
+    "bytes": 135,
+    "sha256": "fcc88c73704cdebd2f29f9f0900c9f80dde06004a1d24ff207c75c65eba6db5a"
+  },
+  "rc1-archive-differential-20261019-a3/backslash.python.stderr": {
+    "bytes": 56,
+    "sha256": "e68e35ddc861f4e994486ba3249e2dd20b535f0168fa326b550ba444afb7cdfa"
+  },
+  "rc1-archive-differential-20261019-a3/backslash.rust.stderr": {
+    "bytes": 55,
+    "sha256": "9b3a4392780ab40cec8174955bcd057b9adbcd04bcb1ceaf1e327c1d8410aa8f"
+  },
+  "rc1-archive-differential-20261019-a3/backslash.tar.xz": {
+    "bytes": 164,
+    "sha256": "31908986693307f9afb0db3be41e30e59ad494c8e9b3b8acf0f553a06a702da3"
+  },
+  "rc1-archive-differential-20261019-a3/base256-mode.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/base256-mode.python.json": {
+    "bytes": 139,
+    "sha256": "7eecec1c72e2bc6b2227a4f8b3458f083c4a1670b8657e314e631137bea8279e"
+  },
+  "rc1-archive-differential-20261019-a3/base256-mode.rust.json": {
+    "bytes": 138,
+    "sha256": "f88ef2b39a29dfeea4d4e81ba3591bfda25bef5a589663b7e8b14147c8109d27"
+  },
+  "rc1-archive-differential-20261019-a3/base256-mode.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-archive-differential-20261019-a3/base256-mode.tar.xz": {
+    "bytes": 164,
+    "sha256": "833c713f16227c291ac07a602de734a30aaacb9dc298fa07ffadc72fb36f8d95"
+  },
+  "rc1-archive-differential-20261019-a3/build.log": {
+    "bytes": 351,
+    "sha256": "a4715f1ed6b688043949dffb422fe4d4f8acab0c53aac39e81167d77c95fba24"
+  },
+  "rc1-archive-differential-20261019-a3/continuous.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/continuous.python.stderr": {
+    "bytes": 67,
+    "sha256": "8d5cfc0d4854feac2b9f4e3f59ee5c2df4d71cc2f726d6f333d0074a85ff869d"
+  },
+  "rc1-archive-differential-20261019-a3/continuous.rust.stderr": {
+    "bytes": 54,
+    "sha256": "c7d48b19fe7f80cf4b6f6cd39847008164e20e0f8975baebc34d39d765f8f24a"
+  },
+  "rc1-archive-differential-20261019-a3/continuous.tar.xz": {
+    "bytes": 152,
+    "sha256": "0fd33c11f170a3c3746bb5edeb0d1b15d970e59c670c2199c3d9a18c6dcb0692"
+  },
+  "rc1-archive-differential-20261019-a3/directory.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/directory.python.stderr": {
+    "bytes": 67,
+    "sha256": "8d5cfc0d4854feac2b9f4e3f59ee5c2df4d71cc2f726d6f333d0074a85ff869d"
+  },
+  "rc1-archive-differential-20261019-a3/directory.rust.stderr": {
+    "bytes": 55,
+    "sha256": "ad4701ea8a47c3c1a18c55a9c9d6f349f62d1a4dda4b70b5810de65b59adb111"
+  },
+  "rc1-archive-differential-20261019-a3/directory.tar.xz": {
+    "bytes": 152,
+    "sha256": "5b7b61d0f4719de64a6f46aaf5dd878688a5196ccf5739e9d162b27bcac6059d"
+  },
+  "rc1-archive-differential-20261019-a3/empty-parsed-pax.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/empty-parsed-pax.python.json": {
+    "bytes": 139,
+    "sha256": "7eecec1c72e2bc6b2227a4f8b3458f083c4a1670b8657e314e631137bea8279e"
+  },
+  "rc1-archive-differential-20261019-a3/empty-parsed-pax.rust.json": {
+    "bytes": 138,
+    "sha256": "f88ef2b39a29dfeea4d4e81ba3591bfda25bef5a589663b7e8b14147c8109d27"
+  },
+  "rc1-archive-differential-20261019-a3/empty-parsed-pax.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-archive-differential-20261019-a3/empty-parsed-pax.tar.xz": {
+    "bytes": 200,
+    "sha256": "5c5dcc8e039cfd0c87f20a9d2596029387284260fe146a128a30184a8f831222"
+  },
+  "rc1-archive-differential-20261019-a3/fifo.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/fifo.python.stderr": {
+    "bytes": 67,
+    "sha256": "8d5cfc0d4854feac2b9f4e3f59ee5c2df4d71cc2f726d6f333d0074a85ff869d"
+  },
+  "rc1-archive-differential-20261019-a3/fifo.rust.stderr": {
+    "bytes": 54,
+    "sha256": "c7d48b19fe7f80cf4b6f6cd39847008164e20e0f8975baebc34d39d765f8f24a"
+  },
+  "rc1-archive-differential-20261019-a3/fifo.tar.xz": {
+    "bytes": 152,
+    "sha256": "5256b6b6fa6a15f8d8ff8c5a3eea9ff9b46de3842bc5bbe14de2c8ba398d2dc4"
+  },
+  "rc1-archive-differential-20261019-a3/gnu-first-nul.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/gnu-first-nul.python.json": {
+    "bytes": 139,
+    "sha256": "7eecec1c72e2bc6b2227a4f8b3458f083c4a1670b8657e314e631137bea8279e"
+  },
+  "rc1-archive-differential-20261019-a3/gnu-first-nul.rust.json": {
+    "bytes": 138,
+    "sha256": "f88ef2b39a29dfeea4d4e81ba3591bfda25bef5a589663b7e8b14147c8109d27"
+  },
+  "rc1-archive-differential-20261019-a3/gnu-first-nul.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-archive-differential-20261019-a3/gnu-first-nul.tar.xz": {
+    "bytes": 216,
+    "sha256": "f72454b5214994c5ac5089d4ad3c7391d9f54d657ec408fa5ac68a41a338c662"
+  },
+  "rc1-archive-differential-20261019-a3/gnu-longname.inventory.json": {
+    "bytes": 346,
+    "sha256": "a1a305443b0fea67453a13855ab412e6c722770f64563b96109eae2cee882a27"
+  },
+  "rc1-archive-differential-20261019-a3/gnu-longname.python.json": {
+    "bytes": 351,
+    "sha256": "3457c31b32d4fe53b250a0b8f3b5763f5e6078314bbe863b08d4b96f067479a2"
+  },
+  "rc1-archive-differential-20261019-a3/gnu-longname.rust.json": {
+    "bytes": 350,
+    "sha256": "e60ebf27b5ac1f59b5a259d4969778a95cc618cecb49d9e598c84d5438df954d"
+  },
+  "rc1-archive-differential-20261019-a3/gnu-longname.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-archive-differential-20261019-a3/gnu-longname.tar.xz": {
+    "bytes": 196,
+    "sha256": "91c121281eb0531000468029a734e504a846dd6c2160a77137afc917a4d21116"
+  },
+  "rc1-archive-differential-20261019-a3/hardlink.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/hardlink.python.stderr": {
+    "bytes": 67,
+    "sha256": "8d5cfc0d4854feac2b9f4e3f59ee5c2df4d71cc2f726d6f333d0074a85ff869d"
+  },
+  "rc1-archive-differential-20261019-a3/hardlink.rust.stderr": {
+    "bytes": 54,
+    "sha256": "c7d48b19fe7f80cf4b6f6cd39847008164e20e0f8975baebc34d39d765f8f24a"
+  },
+  "rc1-archive-differential-20261019-a3/hardlink.tar.xz": {
+    "bytes": 152,
+    "sha256": "41d51c5e2204e9afc80f91d97aab0e8e33c8eeadfcf17cb61831b8ad28c2793f"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-devmajor.inventory.json": {
+    "bytes": 134,
+    "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-devmajor.python.stderr": {
+    "bytes": 49,
+    "sha256": "74d8fd93ee629880c22013666e5894cc1f3a0e7f7c9899febafd290d2da65e4e"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-devmajor.rust.stderr": {
+    "bytes": 35,
+    "sha256": "2a047d8e6b4be88900d51a8119ad3a2000d622c09dd51c58bc99d3115ffb0851"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-devmajor.tar.xz": {
+    "bytes": 156,
+    "sha256": "23e50a69bae0ef43cd2064a0fe3ae7dff82cf50b677f6837344210ed0cf1606a"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-devminor.inventory.json": {
+    "bytes": 134,
+    "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-devminor.python.stderr": {
+    "bytes": 49,
+    "sha256": "74d8fd93ee629880c22013666e5894cc1f3a0e7f7c9899febafd290d2da65e4e"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-devminor.rust.stderr": {
+    "bytes": 35,
+    "sha256": "2a047d8e6b4be88900d51a8119ad3a2000d622c09dd51c58bc99d3115ffb0851"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-devminor.tar.xz": {
+    "bytes": 156,
+    "sha256": "f0ea57cd47d4cd9bd3cb97ccfbd1608fb0aad7783c59061a4a2b476bdbf6dddc"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-gid.inventory.json": {
+    "bytes": 134,
+    "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-gid.python.stderr": {
+    "bytes": 49,
+    "sha256": "74d8fd93ee629880c22013666e5894cc1f3a0e7f7c9899febafd290d2da65e4e"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-gid.rust.stderr": {
+    "bytes": 35,
+    "sha256": "2a047d8e6b4be88900d51a8119ad3a2000d622c09dd51c58bc99d3115ffb0851"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-gid.tar.xz": {
+    "bytes": 156,
+    "sha256": "8adb1e07d3515bc6fb24cd5b4462bacbfcc6c9a94f59a7e9c2599d16c82ece8c"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-mode.inventory.json": {
+    "bytes": 134,
+    "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-mode.python.stderr": {
+    "bytes": 49,
+    "sha256": "74d8fd93ee629880c22013666e5894cc1f3a0e7f7c9899febafd290d2da65e4e"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-mode.rust.stderr": {
+    "bytes": 35,
+    "sha256": "2a047d8e6b4be88900d51a8119ad3a2000d622c09dd51c58bc99d3115ffb0851"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-mode.tar.xz": {
+    "bytes": 148,
+    "sha256": "773cca9ee9066c5f02d1c1a6cae273559f6d883fa860da8dfa133ca1ecd0c86c"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-mtime.inventory.json": {
+    "bytes": 134,
+    "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-mtime.python.stderr": {
+    "bytes": 49,
+    "sha256": "74d8fd93ee629880c22013666e5894cc1f3a0e7f7c9899febafd290d2da65e4e"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-mtime.rust.stderr": {
+    "bytes": 35,
+    "sha256": "2a047d8e6b4be88900d51a8119ad3a2000d622c09dd51c58bc99d3115ffb0851"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-mtime.tar.xz": {
+    "bytes": 152,
+    "sha256": "29c6fce0fca9da1304f2c55e4c003d76adcf8cf0b525d50f44e0ce545067b40c"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-size.inventory.json": {
+    "bytes": 134,
+    "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-size.python.stderr": {
+    "bytes": 49,
+    "sha256": "74d8fd93ee629880c22013666e5894cc1f3a0e7f7c9899febafd290d2da65e4e"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-size.rust.stderr": {
+    "bytes": 35,
+    "sha256": "2a047d8e6b4be88900d51a8119ad3a2000d622c09dd51c58bc99d3115ffb0851"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-size.tar.xz": {
+    "bytes": 156,
+    "sha256": "587ae534a4a4fdf9b8ab34e22c4f344881fd6321cabbf09df99ad8d51e0d88b6"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-uid.inventory.json": {
+    "bytes": 134,
+    "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-uid.python.stderr": {
+    "bytes": 49,
+    "sha256": "74d8fd93ee629880c22013666e5894cc1f3a0e7f7c9899febafd290d2da65e4e"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-uid.rust.stderr": {
+    "bytes": 35,
+    "sha256": "2a047d8e6b4be88900d51a8119ad3a2000d622c09dd51c58bc99d3115ffb0851"
+  },
+  "rc1-archive-differential-20261019-a3/nonascii-uid.tar.xz": {
+    "bytes": 156,
+    "sha256": "67273e36d845cd5df5be6bfa0c92a3ab4f5f9ccb8abec2072023b59fe6cfa7ca"
+  },
+  "rc1-archive-differential-20261019-a3/nongnu-longname-marker.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/nongnu-longname-marker.python.json": {
+    "bytes": 139,
+    "sha256": "7eecec1c72e2bc6b2227a4f8b3458f083c4a1670b8657e314e631137bea8279e"
+  },
+  "rc1-archive-differential-20261019-a3/nongnu-longname-marker.rust.json": {
+    "bytes": 138,
+    "sha256": "f88ef2b39a29dfeea4d4e81ba3591bfda25bef5a589663b7e8b14147c8109d27"
+  },
+  "rc1-archive-differential-20261019-a3/nongnu-longname-marker.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-archive-differential-20261019-a3/nongnu-longname-marker.tar.xz": {
+    "bytes": 212,
+    "sha256": "b99a1e873dedfb4920c8f13ecad87215de659b4e5d10abd866837557862a098b"
+  },
+  "rc1-archive-differential-20261019-a3/nonzero-tail.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/nonzero-tail.python.stderr": {
+    "bytes": 74,
+    "sha256": "8f8cbf62ce508f1272e0ec472179b22016a8c947fcee3931e638cfa56ae1294f"
+  },
+  "rc1-archive-differential-20261019-a3/nonzero-tail.rust.stderr": {
+    "bytes": 33,
+    "sha256": "8242bcf10e8d000c52e0dd54ec9d8d58ffb70630321aae9b51c52f5c3efe2e88"
+  },
+  "rc1-archive-differential-20261019-a3/nonzero-tail.tar.xz": {
+    "bytes": 168,
+    "sha256": "a305b0cc9f6bcc33002311e161f558fc81f7e1b9d2d434424c8b8bb70e31ce3a"
+  },
+  "rc1-archive-differential-20261019-a3/octal-prefix-separator.inventory.json": {
+    "bytes": 134,
+    "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+  },
+  "rc1-archive-differential-20261019-a3/octal-prefix-separator.python.json": {
+    "bytes": 139,
+    "sha256": "3b291a6028ec05ecefec752f5bbd9aec2ebf66f238f3a30e3d72e796b5706b7d"
+  },
+  "rc1-archive-differential-20261019-a3/octal-prefix-separator.rust.json": {
+    "bytes": 138,
+    "sha256": "50ae25bd0b959a787bafb8c124126c0b3feb8cee94b72a466f9ad263e9f4e1bb"
+  },
+  "rc1-archive-differential-20261019-a3/octal-prefix-separator.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-archive-differential-20261019-a3/octal-prefix-separator.tar.xz": {
+    "bytes": 148,
+    "sha256": "af73dfb9697a16519293aa39a2f9587877c392770403571b2102b6957096ca0f"
+  },
+  "rc1-archive-differential-20261019-a3/pax.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/pax.python.stderr": {
+    "bytes": 66,
+    "sha256": "ba945c8f4abd52f2c8d9c8fa705b8c7582fd56551848763b1a672bbe9c852de6"
+  },
+  "rc1-archive-differential-20261019-a3/pax.rust.stderr": {
+    "bytes": 46,
+    "sha256": "5017b6b53485dc3273c301478fec90d285b600c0af32812d12be9ab41f435046"
+  },
+  "rc1-archive-differential-20261019-a3/pax.tar.xz": {
+    "bytes": 216,
+    "sha256": "ce5cf16bd6af37543383b226b5754cd0ac587f8ef7b93ccc79433fdf98671bb4"
+  },
+  "rc1-archive-differential-20261019-a3/regular.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/regular.python.json": {
+    "bytes": 139,
+    "sha256": "7eecec1c72e2bc6b2227a4f8b3458f083c4a1670b8657e314e631137bea8279e"
+  },
+  "rc1-archive-differential-20261019-a3/regular.rust.json": {
+    "bytes": 138,
+    "sha256": "f88ef2b39a29dfeea4d4e81ba3591bfda25bef5a589663b7e8b14147c8109d27"
+  },
+  "rc1-archive-differential-20261019-a3/regular.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-archive-differential-20261019-a3/regular.tar.xz": {
+    "bytes": 164,
+    "sha256": "59c78ef630d517519cf89b4bcb1e50b77c07d2e61a8613637151cd8a5d86d4b0"
+  },
+  "rc1-archive-differential-20261019-a3/released-release.json": {
+    "bytes": 33761,
+    "sha256": "cd9adcf44264c86eb0bdea35bb16c02529c8ae5b051d4a9dd3aa6007f0972b65"
+  },
+  "rc1-archive-differential-20261019-a3/released-sdk.inventory.json": {
+    "bytes": 14398,
+    "sha256": "ea36a5bb069b525c80f99f6325e3b59ed965fe9fd712dcbc27f2b2c0cf13708f"
+  },
+  "rc1-archive-differential-20261019-a3/released-sdk.python.json": {
+    "bytes": 14868,
+    "sha256": "176a79597ea0b7c037dda9fe37380c333ad7d0b68d091d8b7d03da54da07fb61"
+  },
+  "rc1-archive-differential-20261019-a3/released-sdk.rust.json": {
+    "bytes": 14867,
+    "sha256": "37150bef762c2ce5289837f28e098dbc35d96b4109c4550f08edf76aee242ad1"
+  },
+  "rc1-archive-differential-20261019-a3/released-sdk.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-archive-differential-20261019-a3/released-sdk.tar.xz": {
+    "bytes": 598584,
+    "sha256": "087f69659f1d0d5136b2c07789488c23dd52ca7b38b21579183620a5fbc61dd4"
+  },
+  "rc1-archive-differential-20261019-a3/repeated-gnu-longlink.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/repeated-gnu-longlink.python.json": {
+    "bytes": 139,
+    "sha256": "7eecec1c72e2bc6b2227a4f8b3458f083c4a1670b8657e314e631137bea8279e"
+  },
+  "rc1-archive-differential-20261019-a3/repeated-gnu-longlink.rust.json": {
+    "bytes": 138,
+    "sha256": "f88ef2b39a29dfeea4d4e81ba3591bfda25bef5a589663b7e8b14147c8109d27"
+  },
+  "rc1-archive-differential-20261019-a3/repeated-gnu-longlink.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-archive-differential-20261019-a3/repeated-gnu-longlink.tar.xz": {
+    "bytes": 224,
+    "sha256": "018fe1863a8f153949de8d7aeff81ebe61dd888448bdcd98f47463baa9842c79"
+  },
+  "rc1-archive-differential-20261019-a3/repeated-gnu-longname.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/repeated-gnu-longname.python.json": {
+    "bytes": 139,
+    "sha256": "7eecec1c72e2bc6b2227a4f8b3458f083c4a1670b8657e314e631137bea8279e"
+  },
+  "rc1-archive-differential-20261019-a3/repeated-gnu-longname.rust.json": {
+    "bytes": 138,
+    "sha256": "f88ef2b39a29dfeea4d4e81ba3591bfda25bef5a589663b7e8b14147c8109d27"
+  },
+  "rc1-archive-differential-20261019-a3/repeated-gnu-longname.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-archive-differential-20261019-a3/repeated-gnu-longname.tar.xz": {
+    "bytes": 224,
+    "sha256": "af0295a73747c52d59c8b22d5e1d7812b3408759093f15027c6a73688783e768"
+  },
+  "rc1-archive-differential-20261019-a3/reserved.inventory.json": {
+    "bytes": 132,
+    "sha256": "f221d3a3ed4dad48059bba09248535665cf1815152eda80660f1d39b85bda508"
+  },
+  "rc1-archive-differential-20261019-a3/reserved.python.stderr": {
+    "bytes": 54,
+    "sha256": "540ef2e06c90834e539efaf4465ccbd7aa3ffc91d8afd8a423fc05e76297113a"
+  },
+  "rc1-archive-differential-20261019-a3/reserved.rust.stderr": {
+    "bytes": 53,
+    "sha256": "e3bceeb45fed1627aa05f25ce6ded916e998095ad4c028627d08058b384bf624"
+  },
+  "rc1-archive-differential-20261019-a3/reserved.tar.xz": {
+    "bytes": 160,
+    "sha256": "c48742a53320c8926f30ca66d974b9e18a1f125d83644169426d5743f72ed9f0"
+  },
+  "rc1-archive-differential-20261019-a3/result.json": {
+    "bytes": 9545,
+    "sha256": "a813a4833f50b9d4f89c046158afab469017cf7169f64fba90c16c2a9ae1e547"
+  },
+  "rc1-archive-differential-20261019-a3/run.log": {
+    "bytes": 9377,
+    "sha256": "5a5a9ef8a3cb4a9c22e6c16e7ae0454e4644590af1c306f16db1760d3be21ded"
+  },
+  "rc1-archive-differential-20261019-a3/run.py": {
+    "bytes": 7419,
+    "sha256": "4c3fc9e6ca50c8cd591cb1514c4c4a1922f97d778f6d5e71b298e6fa6609f6ac"
+  },
+  "rc1-archive-differential-20261019-a3/signed-checksum.inventory.json": {
+    "bytes": 134,
+    "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+  },
+  "rc1-archive-differential-20261019-a3/signed-checksum.python.json": {
+    "bytes": 139,
+    "sha256": "3b291a6028ec05ecefec752f5bbd9aec2ebf66f238f3a30e3d72e796b5706b7d"
+  },
+  "rc1-archive-differential-20261019-a3/signed-checksum.rust.json": {
+    "bytes": 138,
+    "sha256": "50ae25bd0b959a787bafb8c124126c0b3feb8cee94b72a466f9ad263e9f4e1bb"
+  },
+  "rc1-archive-differential-20261019-a3/signed-checksum.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-archive-differential-20261019-a3/signed-checksum.tar.xz": {
+    "bytes": 148,
+    "sha256": "db8ee2f9360e2f1a55f60b27ed2f63f0ae840b0bb9e0b3f0d6fcee607b2d17b0"
+  },
+  "rc1-archive-differential-20261019-a3/src/main.rs": {
+    "bytes": 1205,
+    "sha256": "53be00be3c0438ffe881896a8b07dc993f54d0413d91088167fa4ff1ab053084"
+  },
+  "rc1-archive-differential-20261019-a3/symlink.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/symlink.python.stderr": {
+    "bytes": 67,
+    "sha256": "8d5cfc0d4854feac2b9f4e3f59ee5c2df4d71cc2f726d6f333d0074a85ff869d"
+  },
+  "rc1-archive-differential-20261019-a3/symlink.rust.stderr": {
+    "bytes": 54,
+    "sha256": "c7d48b19fe7f80cf4b6f6cd39847008164e20e0f8975baebc34d39d765f8f24a"
+  },
+  "rc1-archive-differential-20261019-a3/symlink.tar.xz": {
+    "bytes": 152,
+    "sha256": "3705911dda1c6b70f757536337f1b732944f6d6af1c7f2e2a4fd459b62f81ccd"
+  },
+  "rc1-archive-differential-20261019-a3/traversal.inventory.json": {
+    "bytes": 132,
+    "sha256": "5ca400088c1ee956bd94be1cc13e6811792f8c3ec75dc088342f58c6b5a110f0"
+  },
+  "rc1-archive-differential-20261019-a3/traversal.python.stderr": {
+    "bytes": 54,
+    "sha256": "2b3bbd2896b657dbdb3082d47dedde91003ed4c6438504d72952c2732cc46c77"
+  },
+  "rc1-archive-differential-20261019-a3/traversal.rust.stderr": {
+    "bytes": 53,
+    "sha256": "eb4bb4d39bbbfee02ac3bfae590be6c52c4774842005a7b45115192c82aed3d1"
+  },
+  "rc1-archive-differential-20261019-a3/traversal.tar.xz": {
+    "bytes": 160,
+    "sha256": "f15e896a2bc75e3679662bfc434db06a1d50b5f1c88957882ae06d8691e7f559"
+  },
+  "rc1-archive-differential-20261019-a3/truncated.inventory.json": {
+    "bytes": 134,
+    "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+  },
+  "rc1-archive-differential-20261019-a3/truncated.python.stderr": {
+    "bytes": 74,
+    "sha256": "8f8cbf62ce508f1272e0ec472179b22016a8c947fcee3931e638cfa56ae1294f"
+  },
+  "rc1-archive-differential-20261019-a3/truncated.rust.stderr": {
+    "bytes": 64,
+    "sha256": "32e5e1ac8cdc3e50c56430e42985a55726266d92f126a5d2b60a3d237ddd399c"
+  },
+  "rc1-archive-differential-20261019-a3/truncated.tar.xz": {
+    "bytes": 128,
+    "sha256": "55ea5e95f7bdb6ef45e4698db7e630c9fa2436154b39f3a6b923a8d6f8b63a91"
+  },
+  "rc1-archive-differential-20261019-a3/wide-negative-mtime.inventory.json": {
+    "bytes": 134,
+    "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+  },
+  "rc1-archive-differential-20261019-a3/wide-negative-mtime.python.json": {
+    "bytes": 139,
+    "sha256": "3b291a6028ec05ecefec752f5bbd9aec2ebf66f238f3a30e3d72e796b5706b7d"
+  },
+  "rc1-archive-differential-20261019-a3/wide-negative-mtime.rust.json": {
+    "bytes": 138,
+    "sha256": "50ae25bd0b959a787bafb8c124126c0b3feb8cee94b72a466f9ad263e9f4e1bb"
+  },
+  "rc1-archive-differential-20261019-a3/wide-negative-mtime.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-archive-differential-20261019-a3/wide-negative-mtime.tar.xz": {
+    "bytes": 156,
+    "sha256": "83bbd9f22662cb0b482edcd35411b009613681d896c8f26130089c8e4f52e0ab"
+  },
+  "rc1-archive-differential-20261019-a3/wide-positive-mtime.inventory.json": {
+    "bytes": 134,
+    "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+  },
+  "rc1-archive-differential-20261019-a3/wide-positive-mtime.python.json": {
+    "bytes": 139,
+    "sha256": "3b291a6028ec05ecefec752f5bbd9aec2ebf66f238f3a30e3d72e796b5706b7d"
+  },
+  "rc1-archive-differential-20261019-a3/wide-positive-mtime.rust.json": {
+    "bytes": 138,
+    "sha256": "50ae25bd0b959a787bafb8c124126c0b3feb8cee94b72a466f9ad263e9f4e1bb"
+  },
+  "rc1-archive-differential-20261019-a3/wide-positive-mtime.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-archive-differential-20261019-a3/wide-positive-mtime.tar.xz": {
+    "bytes": 156,
+    "sha256": "8661d620d6a92db021f009e2d7e6a8c210c0221567073ff5da1d2314d11d6ee9"
+  },
+  "rc1-archive-differential-20261019-a3/wrong-inventory.inventory.json": {
+    "bytes": 134,
+    "sha256": "231b888f3fd6883542a39fad7cb6bd921e123dce68934e0debed00060cc5ee5c"
+  },
+  "rc1-archive-differential-20261019-a3/wrong-inventory.python.stderr": {
+    "bytes": 55,
+    "sha256": "8c2a9506bbebf549b358aa6e104f72ddf5c1473a858d52450149c38b54b55f43"
+  },
+  "rc1-archive-differential-20261019-a3/wrong-inventory.rust.stderr": {
+    "bytes": 70,
+    "sha256": "f1f0af2cbd96fc262f387d6ead9be6943ea7089dc6b85335de4f6b41663f5980"
+  },
+  "rc1-archive-differential-20261019-a3/wrong-inventory.tar.xz": {
+    "bytes": 164,
+    "sha256": "59c78ef630d517519cf89b4bcb1e50b77c07d2e61a8613637151cd8a5d86d4b0"
+  },
+  "rc1-filesystem-local-20261019-a2/1.log": {
+    "bytes": 7414,
+    "sha256": "5b85d838e4c522893e1f170adc4616060b20b2952d9f94584450a9c0024ca513"
+  },
+  "rc1-filesystem-local-20261019-a2/2.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-filesystem-local-20261019-a2/3.log": {
+    "bytes": 356,
+    "sha256": "c13f2c42e42dbb1bc7737ec6d5e1a91c2a303a2db7a3344853fce0e9578b13c7"
+  },
+  "rc1-filesystem-local-20261019-a2/result.json": {
+    "bytes": 2690,
+    "sha256": "73c229f63230d44208994e46d29ded1a8a5a58c73346b6cdfd0d84c4bfe6750d"
+  },
+  "rc1-inventory-differential-20261019-a2/broken-link root with spaces/dir/file": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/broken-link.inventory.json": {
+    "bytes": 238,
+    "sha256": "4c4d302e39fa010ed4028aeff4184eb4de32f32b2297e3950ddfaea2ae075466"
+  },
+  "rc1-inventory-differential-20261019-a2/broken-link.python.stderr": {
+    "bytes": 49,
+    "sha256": "39f2a9b74512a541b2bbacd0cd158aa59347236fd559b17ca966669dba85db71"
+  },
+  "rc1-inventory-differential-20261019-a2/broken-link.rust.stderr": {
+    "bytes": 54,
+    "sha256": "8217d59b5401df5eb204dde781dcffc4494f871bbb51bd7ffeb7e16ad785e2b2"
+  },
+  "rc1-inventory-differential-20261019-a2/cyclic-link root with spaces/dir/file": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/cyclic-link.inventory.json": {
+    "bytes": 232,
+    "sha256": "d18272668a609f61e27b9b1eeb04466212095b7299aa1af5ef0ab9de646000ee"
+  },
+  "rc1-inventory-differential-20261019-a2/cyclic-link.python.stderr": {
+    "bytes": 49,
+    "sha256": "39f2a9b74512a541b2bbacd0cd158aa59347236fd559b17ca966669dba85db71"
+  },
+  "rc1-inventory-differential-20261019-a2/cyclic-link.rust.stderr": {
+    "bytes": 45,
+    "sha256": "0c3a5c953da99fd2b7dcfa20a5d61b7dfeee7eb88a319c410827b277ac67ec08"
+  },
+  "rc1-inventory-differential-20261019-a2/directory-symlink root with spaces/other/file": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/directory-symlink.inventory.json": {
+    "bytes": 178,
+    "sha256": "31e9b252f1be24e01354269e3c2e925338a831c4fb083f7a3bda4356409a5de3"
+  },
+  "rc1-inventory-differential-20261019-a2/directory-symlink.python.stderr": {
+    "bytes": 52,
+    "sha256": "67cb9b9f88842cb815944fb04f4da7ae3b57e1bc1171471fee57dc1e6227108d"
+  },
+  "rc1-inventory-differential-20261019-a2/directory-symlink.rust.stderr": {
+    "bytes": 71,
+    "sha256": "ec758da9b6c6a1294d8fdeb6715365830d07d5eca4011b7e43b82e7e97ca989b"
+  },
+  "rc1-inventory-differential-20261019-a2/empty-directory root with spaces/dir/file": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/empty-directory.inventory.json": {
+    "bytes": 178,
+    "sha256": "31e9b252f1be24e01354269e3c2e925338a831c4fb083f7a3bda4356409a5de3"
+  },
+  "rc1-inventory-differential-20261019-a2/empty-directory.rust.json": {
+    "bytes": 52,
+    "sha256": "256aa24201dda6b2086cac05f5e47e535495a759635d05ceed63ae62812c522c"
+  },
+  "rc1-inventory-differential-20261019-a2/empty-directory.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-inventory-differential-20261019-a2/escaping-link root with spaces/dir/file": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/escaping-link.inventory.json": {
+    "bytes": 241,
+    "sha256": "4009d6d380e387aa525eb11e50169c6e4bc378af10d70d282e4f2955e23c213c"
+  },
+  "rc1-inventory-differential-20261019-a2/escaping-link.python.stderr": {
+    "bytes": 49,
+    "sha256": "39f2a9b74512a541b2bbacd0cd158aa59347236fd559b17ca966669dba85db71"
+  },
+  "rc1-inventory-differential-20261019-a2/escaping-link.rust.stderr": {
+    "bytes": 28,
+    "sha256": "b5cd9633fada8ab5983fc600f6f36badccfb07f7ff4f4a82b2c10c532f576d41"
+  },
+  "rc1-inventory-differential-20261019-a2/extra-file root with spaces/dir/file": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/extra-file root with spaces/extra": {
+    "bytes": 5,
+    "sha256": "c8dee78f8c7b466c881847accc196998bad00e2b96c5ef913dfbe454d3807c96"
+  },
+  "rc1-inventory-differential-20261019-a2/extra-file.inventory.json": {
+    "bytes": 178,
+    "sha256": "31e9b252f1be24e01354269e3c2e925338a831c4fb083f7a3bda4356409a5de3"
+  },
+  "rc1-inventory-differential-20261019-a2/extra-file.python.stderr": {
+    "bytes": 65,
+    "sha256": "11534052795c28407003b114f2c21fce48167a769a07ed8b58a6dab57e88aafa"
+  },
+  "rc1-inventory-differential-20261019-a2/extra-file.rust.stderr": {
+    "bytes": 71,
+    "sha256": "ec758da9b6c6a1294d8fdeb6715365830d07d5eca4011b7e43b82e7e97ca989b"
+  },
+  "rc1-inventory-differential-20261019-a2/extra-symlink root with spaces/dir/file": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/extra-symlink root with spaces/extra": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/extra-symlink.inventory.json": {
+    "bytes": 178,
+    "sha256": "31e9b252f1be24e01354269e3c2e925338a831c4fb083f7a3bda4356409a5de3"
+  },
+  "rc1-inventory-differential-20261019-a2/extra-symlink.python.stderr": {
+    "bytes": 65,
+    "sha256": "11534052795c28407003b114f2c21fce48167a769a07ed8b58a6dab57e88aafa"
+  },
+  "rc1-inventory-differential-20261019-a2/extra-symlink.rust.stderr": {
+    "bytes": 71,
+    "sha256": "ec758da9b6c6a1294d8fdeb6715365830d07d5eca4011b7e43b82e7e97ca989b"
+  },
+  "rc1-inventory-differential-20261019-a2/fifo root with spaces/dir/file": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/fifo.inventory.json": {
+    "bytes": 178,
+    "sha256": "31e9b252f1be24e01354269e3c2e925338a831c4fb083f7a3bda4356409a5de3"
+  },
+  "rc1-inventory-differential-20261019-a2/fifo.python.stderr": {
+    "bytes": 41,
+    "sha256": "56914b10e8d69723944af0e6e65eaec4a9e45230566e02bbd24a4113d97f24b0"
+  },
+  "rc1-inventory-differential-20261019-a2/fifo.rust.stderr": {
+    "bytes": 71,
+    "sha256": "ec758da9b6c6a1294d8fdeb6715365830d07d5eca4011b7e43b82e7e97ca989b"
+  },
+  "rc1-inventory-differential-20261019-a2/file-change root with spaces/dir/file": {
+    "bytes": 8,
+    "sha256": "9d463bde2a7e62f4cec6f00fd5e1b2511e92b5999abe43bdfba68f355f560099"
+  },
+  "rc1-inventory-differential-20261019-a2/file-change.inventory.json": {
+    "bytes": 178,
+    "sha256": "31e9b252f1be24e01354269e3c2e925338a831c4fb083f7a3bda4356409a5de3"
+  },
+  "rc1-inventory-differential-20261019-a2/file-change.python.stderr": {
+    "bytes": 50,
+    "sha256": "25d79d8a5d19c6a0abc111ec66c8029c38ace2767f6565063c39721f77381f04"
+  },
+  "rc1-inventory-differential-20261019-a2/file-change.rust.stderr": {
+    "bytes": 33,
+    "sha256": "bb8344433dd2167868624829bb17fe1cc519c43615970536bfb03443e9eea9ab"
+  },
+  "rc1-inventory-differential-20261019-a2/file-missing.inventory.json": {
+    "bytes": 178,
+    "sha256": "31e9b252f1be24e01354269e3c2e925338a831c4fb083f7a3bda4356409a5de3"
+  },
+  "rc1-inventory-differential-20261019-a2/file-missing.python.stderr": {
+    "bytes": 51,
+    "sha256": "cad5857ce5de6b3aad6766810374cdc9ac679138a16f7ecc0ab8fa99a51ce6fc"
+  },
+  "rc1-inventory-differential-20261019-a2/file-missing.rust.stderr": {
+    "bytes": 40,
+    "sha256": "27459b5d3e0998a13b55aa44a9853e238ade4daaf46d47a19da68262d7807511"
+  },
+  "rc1-inventory-differential-20261019-a2/file-symlink root with spaces/dir/file": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/file-symlink root with spaces/dir/other": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/file-symlink.inventory.json": {
+    "bytes": 178,
+    "sha256": "31e9b252f1be24e01354269e3c2e925338a831c4fb083f7a3bda4356409a5de3"
+  },
+  "rc1-inventory-differential-20261019-a2/file-symlink.python.stderr": {
+    "bytes": 52,
+    "sha256": "67cb9b9f88842cb815944fb04f4da7ae3b57e1bc1171471fee57dc1e6227108d"
+  },
+  "rc1-inventory-differential-20261019-a2/file-symlink.rust.stderr": {
+    "bytes": 89,
+    "sha256": "cb5ec9d05776d29808e02cfc580aa8493f336d70b0adff0267f67793d7ac23b2"
+  },
+  "rc1-inventory-differential-20261019-a2/link-chain root with spaces/b": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/link-chain root with spaces/dir/file": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/link-chain.inventory.json": {
+    "bytes": 291,
+    "sha256": "d620df6e4272cea7977eec5a1cc7d82d4210c5f406376ef5aee81b59cfac09ba"
+  },
+  "rc1-inventory-differential-20261019-a2/link-chain.rust.json": {
+    "bytes": 52,
+    "sha256": "415ef7c1eb80f8c12e0bd91fb6f729116cc9c6621c236b0859fe4a6d4f407796"
+  },
+  "rc1-inventory-differential-20261019-a2/link-chain.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-inventory-differential-20261019-a2/link-mismatch root with spaces/a": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/link-mismatch root with spaces/dir/file": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/link-mismatch.inventory.json": {
+    "bytes": 240,
+    "sha256": "408c599fe986acc5b1a1cb6ba62d44f6ea089066df1b48e67561d4001713d12e"
+  },
+  "rc1-inventory-differential-20261019-a2/link-mismatch.python.stderr": {
+    "bytes": 42,
+    "sha256": "a8fdfd0683ee84a130f0f689f6cfcdf105b23e705ab9f965adacf438515f5a4a"
+  },
+  "rc1-inventory-differential-20261019-a2/link-mismatch.rust.stderr": {
+    "bytes": 48,
+    "sha256": "9f3caf7191064e1808006abf46c9251be3552b6c180b196356eeaee397fccfc2"
+  },
+  "rc1-inventory-differential-20261019-a2/result.json": {
+    "bytes": 2454,
+    "sha256": "a7cd08e868a531e137350f1c0f642a9cf690fc4c07348343a11f33f7ad2d983d"
+  },
+  "rc1-inventory-differential-20261019-a2/run.log": {
+    "bytes": 2454,
+    "sha256": "a7cd08e868a531e137350f1c0f642a9cf690fc4c07348343a11f33f7ad2d983d"
+  },
+  "rc1-inventory-differential-20261019-a2/run.py": {
+    "bytes": 3328,
+    "sha256": "a354d120db41c8ce12bc165cb2fa4b12848b41d05cf0395f92952aaa1c86d858"
+  },
+  "rc1-inventory-differential-20261019-a2/valid root with spaces/dir/file": {
+    "bytes": 8,
+    "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+  },
+  "rc1-inventory-differential-20261019-a2/valid.inventory.json": {
+    "bytes": 178,
+    "sha256": "31e9b252f1be24e01354269e3c2e925338a831c4fb083f7a3bda4356409a5de3"
+  },
+  "rc1-inventory-differential-20261019-a2/valid.rust.json": {
+    "bytes": 52,
+    "sha256": "256aa24201dda6b2086cac05f5e47e535495a759635d05ceed63ae62812c522c"
+  },
+  "rc1-inventory-differential-20261019-a2/valid.rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-retained-components-20261019-a1/cargo.inventory.json": {
+    "bytes": 5540,
+    "sha256": "2f081118d19e93b95304c95440d82d1f3d022fb063e4ae7ad1b89285ceddbe39"
+  },
+  "rc1-retained-components-20261019-a1/cargo.rust.json": {
+    "bytes": 59,
+    "sha256": "d7a45d36d01476f59af5fdbdb560a3265fe30904f75dba8436125e6789cf6e7e"
+  },
+  "rc1-retained-components-20261019-a1/cargo.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-retained-components-20261019-a1/collector.inventory.json": {
+    "bytes": 192,
+    "sha256": "34e7e069a72ac84d980f15c797b4250f324eee19088f55d135c9e4eafa0d88de"
+  },
+  "rc1-retained-components-20261019-a1/collector.rust.json": {
+    "bytes": 58,
+    "sha256": "50902da380fbf669ef2cde47b642c5d302f66d50a694699907ed62398d6a99c3"
+  },
+  "rc1-retained-components-20261019-a1/collector.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-retained-components-20261019-a1/csdk.inventory.json": {
+    "bytes": 467692,
+    "sha256": "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337"
+  },
+  "rc1-retained-components-20261019-a1/csdk.rust.json": {
+    "bytes": 62,
+    "sha256": "f79610ca05f0cdb9ce30811427fc3f4a9858e24bfb8e69e973579778d7bd6317"
+  },
+  "rc1-retained-components-20261019-a1/csdk.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-retained-components-20261019-a1/result.json": {
+    "bytes": 2899,
+    "sha256": "d2e02cb3c59c3a07bc9d42e523038d5ddbec164675e7a6466d7f51013c071022"
+  },
+  "rc1-retained-components-20261019-a1/rust.inventory.json": {
+    "bytes": 782230,
+    "sha256": "21d2c186d5ed597f31fed82c306ac790dc11a5cb2f136e52e237bd15f4a55c18"
+  },
+  "rc1-retained-components-20261019-a1/rust.rust.json": {
+    "bytes": 63,
+    "sha256": "606b69ba53e0a1c61f63d2d21493f499aa86151390eda77de9fc88bf3cf9b34e"
+  },
+  "rc1-retained-components-20261019-a1/rust.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-retained-components-20261019-a1/toolchain.inventory.json": {
+    "bytes": 477516,
+    "sha256": "28237af9576e852451fcdf0470a904edb34a70232feb41d0c56be246313baadf"
+  },
+  "rc1-retained-components-20261019-a1/toolchain.rust.json": {
+    "bytes": 64,
+    "sha256": "e8c5681c4a21e5d514d583f67ebf5529a73429d8141587e6fb68f547669a9e6a"
+  },
+  "rc1-retained-components-20261019-a1/toolchain.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-retained-components-20261019-a1/vendor.inventory.json": {
+    "bytes": 517214,
+    "sha256": "f5fcdd2d3daaae4d2f40d69269c49533fc40adc807c555f2213238b2c3557ad6"
+  },
+  "rc1-retained-components-20261019-a1/vendor.rust.json": {
+    "bytes": 62,
+    "sha256": "00bab4881967d6b58109aab9286fb3ed5e488cb7284ca5b40c58878d3bd0c198"
+  },
+  "rc1-retained-components-20261019-a1/vendor.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "rc1-retained-components-pinned-oracle-20261019/result.json": {
+    "bytes": 2079,
+    "sha256": "d0a14ef560a9c8d263011f7e12cb5ba48b2e57d9070d54c12f4a57b3d5a9f06f"
+  },
+  "rc1-retained-components-pinned-oracle-20261019/run.log": {
+    "bytes": 2079,
+    "sha256": "d0a14ef560a9c8d263011f7e12cb5ba48b2e57d9070d54c12f4a57b3d5a9f06f"
+  },
+  "rc1-retained-components-pinned-oracle-20261019/run.py": {
+    "bytes": 1593,
+    "sha256": "22cc5976beacd453b85597333e26fbc47e5dbb467408854f93b6861038c75de1"
+  }
+}
