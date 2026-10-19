@@ -6,6 +6,7 @@ import shutil
 import sys
 import tarfile
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -706,6 +707,70 @@ class NativeObservationSpecTests(unittest.TestCase):
     def test_unknown_observer_phase_is_refused(self):
         with self.assertRaisesRegex(ValueError, "unsupported observed consumer command"):
             self.spec(["unsupported-command"])
+
+
+class NativeMigrationPreservationTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="ami-rust-migration-preservation-")
+        self.root = Path(self.temporary.name).resolve()
+        self.work, self.output = self.root / "work", self.root / "output"
+        self.state, self.project = self.work / "state", self.work / "project"
+        self.prefix = self.state / "sdk-fixture"
+        for directory in (self.work, self.output, self.state, self.project, self.prefix):
+            directory.mkdir(mode=0o700)
+        (self.state / "ready.json").write_bytes(auth.encoded({"sdk_version": "fixture"}))
+        self.receipt = b"inert receipt, no authentication claim\n"
+        (self.prefix / "install-receipt.json").write_bytes(self.receipt)
+        self.manifest = self.project / "Cargo.toml"
+        self.manifest.write_bytes(b"# inert preserved project\n")
+        self.manifest.chmod(0o600)
+        self.supervisor = SimpleNamespace(python_root=self.work / "inert-python")
+        self.area = self.work / "native-legacy-migration-fixture"
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def generate(self, *_args, **_kwargs):
+        for directory in (self.area, self.area / "project", self.area / "legacy-sdk", self.area / "output"):
+            directory.mkdir(mode=0o700)
+        fixture = {"status": "SYNTHETIC_BASELINE_COMPATIBLE_FIXTURE_NOT_HISTORICAL_EVIDENCE",
+                   "project": str(self.area / "project"),
+                   "from_lock": str(self.area / "project/ami-rust.lock.json"),
+                   "migration_output": str(self.area / "output/migrated-v2-lock.json"),
+                   "receipt_pin": {"sha256": auth.sha(self.receipt)}}
+        (self.work / "fixture.stdout.json").write_bytes(auth.encoded(fixture))
+        return {"stdout_log": "fixture.stdout.json"}
+
+    def qualify(self, generator, command):
+        with patch.object(native, "_supervised_run", side_effect=generator):
+            return native._qualify_native_migration(self.work, self.output, self.state, self.project,
+                self.work / "inert-cli", self.work / "inert-xtask", self.supervisor, command,
+                b"inert reference", {})
+
+    def test_fixture_generation_cannot_change_original_project_before_baseline(self):
+        def generator(*args, **kwargs):
+            result = self.generate(*args, **kwargs)
+            self.manifest.chmod(0o644)
+            return result
+        with self.assertRaisesRegex(ValueError, "fixture generation changed existing inputs"):
+            self.qualify(generator, lambda *_args, **_kwargs: self.fail("public command ran after mutation"))
+
+    def test_wrong_receipt_cannot_leave_neighboring_temporary_output(self):
+        def command(label, _args, expected, **_kwargs):
+            self.assertEqual((label, expected), ("21-migration-wrong-receipt", 2))
+            (self.output / (label + ".stderr.log")).write_bytes(
+                b"ami-rust: installed receipt differs from the external pin\n")
+            (self.area / "output/leftover-temporary-file").write_bytes(b"unexpected write\n")
+        with self.assertRaisesRegex(ValueError, "refused migration changed its output area"):
+            self.qualify(self.generate, command)
+        self.assertFalse((self.area / "output/migrated-v2-lock.json").exists())
+
+    def test_wrong_receipt_requires_the_actual_receipt_pin_refusal(self):
+        def command(label, _args, expected, **_kwargs):
+            self.assertEqual((label, expected), ("21-migration-wrong-receipt", 2))
+            (self.output / (label + ".stderr.log")).write_bytes(b"unrelated setup refusal\n")
+        with self.assertRaisesRegex(ValueError, "missed the receipt-pin refusal"):
+            self.qualify(self.generate, command)
 
 
 class NativeSupervisorAdditionalTests(unittest.TestCase):

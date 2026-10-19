@@ -1072,10 +1072,14 @@ def _qualify_native_migration(work, output, state, project, frontend, xtask, sup
     pin = auth.sha(auth.read(prefix / "install-receipt.json"))
     python_pin = auth.parsed(auth.read(ROOT / "release/ci-python-inputs.json"))["hosts"][current_host()]
     interpreter = supervisor.python_root / "runtime" / python_pin["runtime_relative_path"]
+    original_protected = {"ready_state": state, "original_project": project, **guards}
+    original_before = _preservation_snapshot(original_protected)
     area = work / "native-legacy-migration-fixture"
     generated = _supervised_run(supervisor, [xtask, "native-legacy-migration-fixture",
         "--install-prefix", prefix, "--selection", state / "selection.json", "--python", interpreter,
         "--project", project, "--output", area], cwd=work, label="20-compose-compatible-legacy-data")
+    if _preservation_snapshot(original_protected) != original_before:
+        raise ValueError("migration fixture generation changed existing inputs or retained data")
     fixture = auth.parsed(auth.read(work / generated["stdout_log"]))
     legacy_project, legacy_sdk = area / "project", area / "legacy-sdk"
     old_lock, migrated = legacy_project / "ami-rust.lock.json", area / "output/migrated-v2-lock.json"
@@ -1085,16 +1089,20 @@ def _qualify_native_migration(work, output, state, project, frontend, xtask, sup
             or fixture.get("migration_output") != str(migrated)
             or fixture.get("receipt_pin", {}).get("sha256") != pin):
         raise ValueError("native migration fixture omitted its exact synthetic input identity")
-    protected = {"ready_state": state, "original_project": project,
-                 "legacy_project": legacy_project, "legacy_sdk": legacy_sdk, **guards}
-    before = _preservation_snapshot(protected)
+    legacy_protected = {"legacy_project": legacy_project, "legacy_sdk": legacy_sdk}
+    protected = {**original_protected, **legacy_protected}
+    before = {**original_before, **_preservation_snapshot(legacy_protected)}
     arguments = ["migrate", "--project", legacy_project, "--from-lock", old_lock,
                  "--install-prefix", prefix, "--receipt-sha256", pin, "--output", migrated]
     wrong = list(arguments)
     wrong[wrong.index("--receipt-sha256") + 1] = "0" * 64
+    refused_before = _preservation_snapshot({"refused_output": migrated.parent})
     command("21-migration-wrong-receipt", wrong, 2, executable=frontend)
-    if migrated.exists() or migrated.is_symlink():
-        raise ValueError("refused migration published a native lock")
+    if (_preservation_snapshot({"refused_output": migrated.parent}) != refused_before
+            or migrated.exists() or migrated.is_symlink()
+            or auth.read(output / "21-migration-wrong-receipt.stderr.log")
+                != b"ami-rust: installed receipt differs from the external pin\n"):
+        raise ValueError("refused migration changed its output area or missed the receipt-pin refusal")
     result = auth.parsed(command("22-public-legacy-migration", arguments, executable=frontend))
     lock_bytes = auth.read(migrated)
     if (result.get("status") != "migrated" or result.get("legacy_lock_sha256") != auth.sha(auth.read(old_lock))
