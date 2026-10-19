@@ -70,9 +70,11 @@ pub fn verify_publisher_sdk_tar<'a>(
     let mut pending_long_link = false;
 
     while position < archive_bytes.len() {
-        let header_end = position.checked_add(TAR_BLOCK_BYTES)
+        let header_end = position
+            .checked_add(TAR_BLOCK_BYTES)
             .ok_or_else(|| Refusal::new("SDK TAR header offset overflow"))?;
-        let raw_header = archive_bytes.get(position..header_end)
+        let raw_header = archive_bytes
+            .get(position..header_end)
             .ok_or_else(|| Refusal::new("truncated SDK TAR header"))?;
         if raw_header.iter().all(|byte| *byte == 0) {
             break;
