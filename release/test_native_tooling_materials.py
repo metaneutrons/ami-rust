@@ -22,6 +22,9 @@ REQUIRED_SOURCES = (
     "tooling/crates/core/build.rs",
     "tooling/crates/core/src/macos_process_snapshot.c",
     "tooling/crates/core/src/macos_process_snapshot.rs",
+    "tooling/crates/xtask/src/consumer_observe.rs",
+    "tooling/crates/xtask/src/consumer_report.rs",
+    "tooling/crates/xtask/src/consumer_runtime.rs",
     "tooling/crates/xtask/src/native_release.rs",
     "tooling/fixtures/accepted-r1-inputs.json",
     "tooling/fixtures/accepted-r1-support-inputs.json",
@@ -196,11 +199,14 @@ class NativeToolingMaterialsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid or unordered native registry crate"):
             auth.input_manifest_for_sdk(self.source, "0.2.0")
 
-    def test_native_process_sampler_sources_are_mandatory_and_digest_bound(self):
+    def test_native_sampler_and_observer_sources_are_mandatory_and_digest_bound(self):
         sampler_sources = (
             "tooling/crates/core/build.rs",
             "tooling/crates/core/src/macos_process_snapshot.c",
             "tooling/crates/core/src/macos_process_snapshot.rs",
+            "tooling/crates/xtask/src/consumer_observe.rs",
+            "tooling/crates/xtask/src/consumer_report.rs",
+            "tooling/crates/xtask/src/consumer_runtime.rs",
         )
         for path in sampler_sources:
             with self.subTest(path=path):

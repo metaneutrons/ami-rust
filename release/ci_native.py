@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import pwd
 import re
 import shutil
 import stat
@@ -442,8 +443,9 @@ def audit(work, bundle, host_rust, payloads, python_root=None):
 def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
     """Real native verification/install/removal, with an independently built CLI.
 
-    Internal Python coordinates this test. The complete consumer observer,
-    package preparation and RC1 lifecycle matrix remain separate open gates.
+    Internal Python coordinates this test. The Rust observer admits each
+    consumer result only after its adapter evidence is complete and valid.
+    Complete RC1 parity, migration and release acceptance remain separate gates.
     """
     import ci_verify
     identity = auth.context(ROOT)
@@ -461,6 +463,10 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
     outer = outer.resolve(strict=True)
     cli, xtask, env, supervisor = build_tools(work, host_rust, output, python_root,
                                           static_roots=[("signed-candidate", bundle), ("outer-candidate", outer)])
+    _supervised_run(supervisor, [Path(host_rust) / "toolchain/bin/cargo", "build", "--release", "--locked", "--offline",
+        "--manifest-path", ROOT / "tools/consumer-enforcement-adapter/Cargo.toml",
+        "--target-dir", work / "consumer-adapter-target"], label="native-build-consumer-adapter")
+    adapter = work / "consumer-adapter-target/release/consumer-enforcement-adapter"
     verifier_work = work.parent / "ami-rust-native-verifier-work"
     verifier_metadata = work.parent / "ami-rust-native-verifier-metadata"
     bootstrap_insert_at = len(supervisor.commands)
@@ -489,20 +495,38 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
     # deliberately admits only path and digest, as its Rust parser requires.
     for name in ("gh_trusted_roots", "cosign_trusted_root"):
         policy[name] = {key: policy[name][key] for key in ("path", "sha256")}
-    policy_path = work / "native-publisher-policy.json"
+    policy_path = output / "native-publisher-policy.json"
     write(policy_path, auth.encoded(policy), 0o600)
+    closure_path = output / "reviewed-consumer-inputs.json"
+    write(closure_path, auth.encoded({"schema": "ami-rust-reviewed-consumer-inputs-v1", "source": identity,
+        "publisher_inputs": auth.input_manifest_for_sdk(ROOT, config["sdk_version"]),
+        "candidate_manifest_sha256": auth.sha(auth.read(bundle / "release.json")),
+        "scope": "Reviewed source/component/vendor/package identities; each Rust observer additionally records exact runtime tools and phase policy."}), 0o600)
+    for directory in (output / "observation-specs", output / "observations"):
+        directory.mkdir(mode=0o700)
     commands = []
 
     def command(label, arguments, expected=0, *, executable=cli):
         stdout = output / (label + ".stdout.json")
         stderr = output / (label + ".stderr.log")
-        record = _supervised_run(supervisor, [executable, *map(str, arguments)], cwd=work,
-                                 label=label, timeout=1200, expected=expected)
+        spec = _consumer_observation_spec(work, python_root, executable, arguments, expected,
+            policy_path, closure_path, [ROOT, *[row["resolved_path"] for row in supervisor.native_static_roots]])
+        spec_path = output / "observation-specs" / (label + ".json")
+        write(spec_path, auth.encoded(spec), 0o600)
+        observed = output / "observations" / label
+        record = _supervised_run(supervisor, [xtask, "native-consumer-observe", "--spec", spec_path,
+            "--adapter", adapter, "--output", observed], cwd=work, label=label, timeout=1200)
+        observation = auth.parsed(auth.read(observed / "observation.json"))
+        if (observation.get("status") != "PASS_EXPECTED_CONSUMER_RESULT_AND_ADAPTER_EVIDENCE"
+                or observation.get("expected_exit") != expected
+                or observation.get("adapter_evidence", {}).get("child_exit_code") != expected):
+            raise ValueError("native consumer result omitted complete admitted adapter evidence: " + label)
         shutil.copyfile(work / record["stdout_log"], stdout)
         shutil.copyfile(work / record["stderr_log"], stderr)
-        commands.append({"label": label, "exit": record["exit_code"], "expected_exit": expected,
+        commands.append({"label": label, "exit": expected, "expected_exit": expected,
                          "stdout_sha256": auth.sha(auth.read(stdout)),
                          "stderr_sha256": auth.sha(auth.read(stderr)),
+                         "observation": observation,
                          "supervision_record": dict(record)})
         write(output / (label + ".result.json"), auth.encoded(commands[-1]))
         _check_limits(supervisor, "native lifecycle command " + label)
@@ -530,7 +554,9 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
         stream.write(b"isolated corruption counterprobe")
     command("04-altered-sdk", ["verify", "--bundle", altered, "--policy", policy_path], 2)
     shutil.rmtree(altered)
-    prefix, pin = work / "native-install", work / "external-receipt.sha256"
+    install_area = work / "native-direct-install-area"
+    install_area.mkdir(mode=0o700)
+    prefix, pin = install_area / "native-install", install_area / "external-receipt.sha256"
     result = auth.parsed(command("05-native-install", ["install", "--bundle", bundle, "--policy", policy_path,
                                                         "--prefix", prefix, "--receipt-pin", pin]))
     receipt = result["receipt_sha256"]
@@ -577,6 +603,75 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
         raise ValueError("native lifecycle output exceeded the 32 MiB consumer artifact ceiling")
     _check_limits(supervisor, "native direct lifecycle report")
     return report
+
+
+def _consumer_observation_spec(work, python_root, executable, arguments, expected,
+                               policy_path, closure_path, readonly_roots):
+    """Select each command's owned writes; Rust owns policy/runtime/report logic."""
+    work = Path(work).resolve(strict=True)
+    arguments = list(map(str, arguments))
+    verb = arguments[0]
+    phase = {"verify-package": "package-consistency", "native-package-verify": "package-authentication",
+             "prepare": "prepare-refusal" if expected else "cold-prepare",
+             "new": "new-project"}.get(verb, verb)
+    if phase not in {"verify", "install", "uninstall", "package-consistency", "package-authentication",
+                     "cold-prepare", "prepare-refusal", "check-inputs", "new-project", "lock", "build"}:
+        raise ValueError("unsupported observed consumer command")
+
+    def option(name):
+        if name not in arguments:
+            return None
+        return Path(arguments[arguments.index(name) + 1]).absolute()
+
+    writes = {work / "home", work / "tmp"}
+    derived = None
+    record = None
+    state = option("--state")
+    if state is not None and (state / "selection.json").is_file():
+        record = state / "selection.json"
+    for key in ("--selection", "--sdk-lock"):
+        if option(key) is not None:
+            record = option(key)
+    if phase == "cold-prepare":
+        derived = {"role": "consumer-state-parent", "path": str(state.parent)}
+        writes.add(state.parent.parent)
+    elif phase == "build":
+        target = option("--output-dir")
+        derived = {"role": "consumer-build-parent", "path": str(target.parent)}
+        writes.add(target.parent.parent)
+    elif phase == "new-project":
+        writes.add(option("--project").parent)
+    elif phase == "lock":
+        writes.add(option("--output").parent)
+    elif phase == "package-authentication":
+        writes.add(option("--work").parent)
+    elif phase == "install" and not expected:
+        writes.add(option("--prefix").parent)
+        if option("--receipt-pin") is not None:
+            writes.add(option("--receipt-pin").parent)
+    elif phase == "uninstall" and not expected:
+        writes.add(option("--prefix").parent)
+    # Keep distinct native operation areas and remove duplicate/nested grants.
+    writes = {root for root in writes if not any(root != other and other in root.parents for other in writes)}
+    policy = auth.parsed(auth.read(policy_path))
+    pin = auth.parsed(auth.read(ROOT / "release/ci-python-inputs.json"))["hosts"][current_host()]
+    interpreter = Path(python_root) / pin["runtime_relative_path"]
+    library_name = "libpython3.12.dylib" if current_host() == "macos-aarch64" else "libpython3.12.so.1.0"
+    library = Path(python_root) / "runtime/python/lib" / library_name
+    bindings = [Path(closure_path), Path(policy_path)] + ([record] if record else [])
+    return {"schema": "ami-rust-consumer-observation-spec-v1", "phase": phase,
+            "command": [str(Path(executable).resolve(strict=True)), *arguments], "expected_exit": expected,
+            "cwd": str(work), "home": str(work / "home"), "tmp": str(work / "tmp"),
+            "read_trees": [{"role": "work", "path": str(root)} for root in sorted({work, *map(Path, readonly_roots)})],
+            "write_trees": [{"role": "work", "path": str(root)} for root in sorted(writes)],
+            "read_files": [],
+            # The CLI checks account-home ownership independently of sandbox HOME.
+            # Grant this directory literally, without reading its contents recursively.
+            "read_directories": [str(Path(pwd.getpwuid(os.getuid()).pw_dir).resolve(strict=True))],
+            "executables": [policy[name]["path"] for name in ("gh", "cosign")],
+            "libraries": [], "deny_exec": [str(interpreter)], "deny_library": [str(library)],
+            "component_record": str(record) if record else None, "derived": derived,
+            "bindings": [{"path": str(path), "sha256": auth.sha(auth.read(path))} for path in bindings]}
 
 
 def _publish_cold_root_diagnostics(work, output):
@@ -930,9 +1025,11 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
         "--notices", notices, "--output", package], label="native-consumer-compose-package")
     frontend = package / "bin/ami-rust"
     command("09-package-consistency", ["verify-package"], executable=frontend)
-    authentication = auth.parsed(_supervised_text(supervisor, [xtask, "native-package-verify", "--package", package,
+    authentication_area = work / "native-package-authentication-area"
+    authentication_area.mkdir(mode=0o700)
+    authentication = auth.parsed(command("09-package-publisher-authentication", ["native-package-verify", "--package", package,
         "--policy", policy_path, "--inputs", bundle / ".auth/inputs.json",
-        "--work", work / "native-package-authentication"], label="native-consumer-package-authentication", timeout=1200).encode())
+        "--work", authentication_area / "work"], executable=xtask))
     if authentication.get("status") != "OUTER_AND_INNER_AUTHENTICATED":
         raise ValueError("native package outer/inner authentication did not complete")
     state_write_area = work / "native-state-write-area"
@@ -948,7 +1045,9 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
     command("12-occupied-state-refusal", ["prepare", "--state", state], 2, executable=frontend)
     if auth.read(state / "ready.json") != ready:
         raise ValueError("occupied-state preparation changed the accepted READY record")
-    project = work / "native-client-project"
+    project_area = work / "native-project-write-area"
+    project_area.mkdir(mode=0o700)
+    project = project_area / "native-client-project"
     command("13-new-client-project", ["new", "--state", state, "--project", project], executable=frontend)
     first_write_area = work / "native-client-build"
     first_write_area.mkdir(mode=0o700)

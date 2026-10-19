@@ -441,6 +441,10 @@ class NativeMatrixTests(unittest.TestCase):
         def command(label, arguments, expected=0, *, executable):
             nonlocal prepared_state
             commands.append(label)
+            if arguments[0] == "native-package-verify":
+                self.assertEqual(label, "09-package-publisher-authentication")
+                self.assertEqual(executable, self.work / "xtask")
+                return auth.encoded({"status": "OUTER_AND_INNER_AUTHENTICATED"})
             if label == "16-retained-offline-replay" and fail_replay:
                 self.assertFalse(package.exists())
                 self.assertEqual(auth.parsed(auth.read(self.output / "native-build-matrix.json")),
@@ -492,7 +496,6 @@ class NativeMatrixTests(unittest.TestCase):
         (licenses.parent / "THIRD-PARTY-NOTICES.md").write_bytes(b"inert third-party notice fixture\n")
         with patch.object(native, "ROOT", fixture_source), \
                 patch.object(native, "_supervised_run", side_effect=compose), \
-                patch.object(native, "_supervised_text", return_value='{"status":"OUTER_AND_INNER_AUTHENTICATED"}'), \
                 patch.object(native, "_qualify_native_build_matrix", side_effect=matrix):
             if fail_replay:
                 with self.assertRaisesRegex(ValueError, "isolated retained replay refusal"):
@@ -510,6 +513,89 @@ class NativeMatrixTests(unittest.TestCase):
                          {"build_count": 10, "fixture": True})
         self.assertEqual(commands[-2:], ["15-retained-input-recheck", "16-retained-offline-replay"])
         self.assertFalse(package.exists())
+
+
+class NativeObservationSpecTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="ami-rust-observed phase ")
+        self.root = Path(self.temporary.name).resolve()
+        self.work = self.root / "work"
+        self.work.mkdir(mode=0o700)
+        for name in ("home", "tmp"):
+            (self.work / name).mkdir(mode=0o700)
+        self.cli = self.work / "cli"
+        self.cli.write_bytes(b"inert frontend, no runtime claim\n")
+        self.policy = self.root / "policy.json"
+        self.policy.write_bytes(auth.encoded({name: {"path": "/usr/bin/true"} for name in ("gh", "cosign")}))
+        self.closure = self.root / "reviewed-inputs.json"
+        self.closure.write_bytes(b'{"fixture":true}\n')
+        self.area = self.work / "state-area"
+        self.area.mkdir(mode=0o700)
+        self.derived = self.area / "derived"
+        self.derived.mkdir(mode=0o700)
+        self.state = self.derived / "state"
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def spec(self, arguments, expected=0):
+        return native._consumer_observation_spec(self.work, self.root / "python", self.cli,
+            arguments, expected, self.policy, self.closure, [])
+
+    def ready(self):
+        self.state.mkdir(mode=0o700)
+        (self.state / "selection.json").write_bytes(b'{"components":{}}\n')
+
+    def test_cold_state_has_one_private_derived_parent_and_explicit_bindings(self):
+        spec = self.spec(["prepare", "--state", self.state])
+        self.assertEqual(spec["phase"], "cold-prepare")
+        self.assertEqual(spec["derived"], {"role": "consumer-state-parent", "path": str(self.derived)})
+        self.assertIsNone(spec["component_record"])
+        self.assertIn(str(self.area), [row["path"] for row in spec["write_trees"]])
+        self.assertEqual(spec["bindings"][0]["sha256"], auth.sha(auth.read(self.closure)))
+
+    def test_account_home_is_only_a_literal_directory_read(self):
+        lock = self.work / "lock.json"
+        lock.write_bytes(b'{"components":{}}\n')
+        spec = self.spec(["verify", "--sdk-lock", lock])
+        account_home = str(Path(native.pwd.getpwuid(native.os.getuid()).pw_dir).resolve(strict=True))
+        self.assertEqual(spec["read_directories"], [account_home])
+        self.assertNotIn(account_home, [row["path"] for row in spec["read_trees"]])
+        self.assertNotIn(account_home, [row["path"] for row in spec["write_trees"]])
+
+    def test_ready_checks_and_expected_prepare_refusals_never_write_state(self):
+        self.ready()
+        for arguments, expected, phase in ((["check-inputs", "--state", self.state], 0, "check-inputs"),
+                (["prepare", "--state", self.state], 2, "prepare-refusal")):
+            spec = self.spec(arguments, expected)
+            self.assertEqual(spec["phase"], phase)
+            self.assertIsNone(spec["derived"])
+            self.assertEqual(spec["component_record"], str(self.state / "selection.json"))
+            self.assertEqual({row["path"] for row in spec["write_trees"]},
+                             {str(self.work / "home"), str(self.work / "tmp")})
+
+    def test_build_writes_its_own_area_and_binds_the_actual_project_lock(self):
+        self.ready()
+        area = self.work / "build-area"
+        parent = area / "derived"
+        parent.mkdir(mode=0o700, parents=True)
+        lock = self.work / "project-lock.json"
+        lock.write_bytes(b'{"components":{}}\n')
+        spec = self.spec(["build", "--sdk-lock", lock, "--output-dir", parent / "build"])
+        self.assertEqual(spec["derived"], {"role": "consumer-build-parent", "path": str(parent)})
+        self.assertEqual(spec["component_record"], str(lock))
+        self.assertIn(str(area), [row["path"] for row in spec["write_trees"]])
+        self.assertNotIn(str(self.work), [row["path"] for row in spec["write_trees"]])
+
+    def test_package_authentication_uses_the_same_observed_command_surface(self):
+        spec = self.spec(["native-package-verify", "--work", self.work / "auth-work"])
+        self.assertEqual(spec["phase"], "package-authentication")
+        self.assertEqual(spec["write_trees"], [{"role": "work", "path": str(self.work)}])
+        self.assertEqual(spec["expected_exit"], 0)
+
+    def test_unknown_observer_phase_is_refused(self):
+        with self.assertRaisesRegex(ValueError, "unsupported observed consumer command"):
+            self.spec(["unsupported-command"])
 
 
 class NativeSupervisorAdditionalTests(unittest.TestCase):
