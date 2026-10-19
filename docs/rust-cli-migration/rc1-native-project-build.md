@@ -69,6 +69,11 @@ not activate it by overwriting the project's conventional lock. It does not
 reauthenticate the publisher or change the selected compiler. Unsupported
 schemas and incompatible or changed inputs refuse.
 
+The historical bootstrap interpreter is read only as pinned data. Its original
+`0775` mode is preserved and accepted for inspection; links, another owner's
+file, world-writable/set-ID files and changed bytes refuse. The strict ownership
+and permission checks for executable inputs of the new tooling remain in force.
+
 ## SDK draft assembly
 
 The internal Rust `native-sdk` maintainer task converts the retained historical

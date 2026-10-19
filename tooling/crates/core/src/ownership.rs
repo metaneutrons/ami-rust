@@ -501,7 +501,7 @@ fn require_non_root(uid: u32) -> Result<()> {
 }
 
 #[allow(unsafe_code)]
-fn current_uid() -> u32 {
+pub(crate) fn current_uid() -> u32 {
     // SAFETY: `getuid` takes no pointers and only reads the process credentials.
     unsafe { libc::getuid() }
 }

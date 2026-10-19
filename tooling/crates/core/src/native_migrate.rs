@@ -611,8 +611,7 @@ fn validate_legacy_project(
         .join(&profile.cargo_binary);
     let _cargo_executable = ownership::protected_regular_file(&cargo_binary, true)?;
     let python_path = canonical_file(&lock.host.python, "legacy Python identity")?;
-    let (_, python_sha256) =
-        hash_protected_file(&python_path, true, None, signals, "legacy Python identity")?;
+    let (_, python_sha256) = hash_legacy_python_identity(&python_path, signals)?;
     if python_sha256 != lock.host.python_sha256.as_str() {
         return Err(Refusal::new("legacy Python identity changed"));
     }
@@ -927,7 +926,7 @@ fn hash_protected_file(
     label: &str,
 ) -> Result<(u64, String)> {
     signals.check()?;
-    let mut file = ownership::protected_regular_file(path, executable)?;
+    let file = ownership::protected_regular_file(path, executable)?;
     let before = file.metadata()?;
     if expected_uid.is_some_and(|uid| before.uid() != uid)
         || before.nlink() != 1
@@ -937,6 +936,41 @@ fn hash_protected_file(
             "{label} has unexpected ownership or permissions"
         )));
     }
+    hash_open_file(file, before, signals, label)
+}
+
+/// Historical bootstrap archives contain a 0775 interpreter. It is inert
+/// migration data, never an executable/trust input of the native tooling.
+/// Preserve its original mode and hash without weakening the ownership policy
+/// for any tool that the new consumer actually executes.
+fn hash_legacy_python_identity(path: &Path, signals: &SigtermGuard) -> Result<(u64, String)> {
+    signals.check()?;
+    let parent = Directory::open(
+        path.parent()
+            .ok_or_else(|| Refusal::new("legacy Python has no parent"))?,
+    )?;
+    let file = parent.regular(
+        path.file_name()
+            .ok_or_else(|| Refusal::new("legacy Python has no filename"))?,
+    )?;
+    let before = file.metadata()?;
+    if ![0, ownership::current_uid()].contains(&before.uid())
+        || before.nlink() != 1
+        || before.mode() & 0o6002 != 0
+    {
+        return Err(Refusal::new(
+            "legacy Python identity has unsafe ownership or mode",
+        ));
+    }
+    hash_open_file(file, before, signals, "inert legacy Python identity")
+}
+
+fn hash_open_file(
+    mut file: File,
+    before: Metadata,
+    signals: &SigtermGuard,
+    label: &str,
+) -> Result<(u64, String)> {
     let mut digest = Sha256::new();
     let mut total = 0_u64;
     let mut buffer = [0_u8; 64 * 1024];
@@ -1292,6 +1326,10 @@ mod tests {
     fn dry_run_validates_legacy_lock_and_reports_embedded_selection() {
         let fixture = Fixture::new();
         let project = fixture.build();
+        let lock: Value =
+            serde_json::from_slice(&fs::read(project.join("ami-rust.lock.json")).unwrap()).unwrap();
+        let python = Path::new(lock["host"]["python"].as_str().unwrap());
+        fs::set_permissions(python, fs::Permissions::from_mode(0o775)).unwrap();
         let signals = SigtermGuard::acquire().expect("signal guard");
         let report = dry_run(&project, &signals).expect("valid migration dry-run");
         assert_eq!(report.status, "migration-required");
@@ -1304,6 +1342,8 @@ mod tests {
             report.cargo.manifest_sha256,
             sha256_bytes(b"[package]\nname = \"fixture\"\nversion = \"0.1.0\"\n")
         );
+        fs::set_permissions(python, fs::Permissions::from_mode(0o777)).unwrap();
+        assert!(dry_run(&project, &signals).is_err());
         signals.finish().expect("restore signal handler");
     }
 
