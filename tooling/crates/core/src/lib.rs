@@ -15,6 +15,7 @@ pub mod json;
 mod mutations;
 pub mod ownership;
 pub mod publisher_tar;
+pub mod receipts;
 pub mod records;
 pub mod signals;
 pub mod transaction;

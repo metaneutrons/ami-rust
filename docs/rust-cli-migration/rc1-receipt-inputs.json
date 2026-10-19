@@ -1,0 +1,24 @@
+{
+  "schema": "ami-rust-host-receipt-feature-review-v1",
+  "scope": "Receipt parsing feature update after the immutable RC1 foundation input selection; not complete RC1 acceptance",
+  "base_selection": "rc1-host-inputs.json",
+  "host_rust_version": "1.98.1",
+  "registry_packages": 29,
+  "registry_identities_and_checksums_unchanged": true,
+  "production_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+  "workspace_manifest_sha256": "3060a439495cf4454afee9b4fb761454449ca165969ba03c931232e753ee4d7e",
+  "serde_json": {
+    "version": "1.0.145",
+    "license": "MIT OR Apache-2.0",
+    "enabled_features": [
+      "default",
+      "raw_value",
+      "std",
+      "unbounded_depth"
+    ],
+    "new_feature": "raw_value",
+    "reason": "Borrow original workflow counter tokens before bounded duplicate/depth/schema validation so historical positive integer IDs above u64 remain exact. Only an internal validation copy uses finite placeholders; returned counters and input record bytes are preserved. No global arbitrary_precision behavior change.",
+    "new_dependencies": false
+  },
+  "tests": "Eleven focused receipt tests include twenty pinned historical oracle cases, integer digit boundary, duplicate-key controls, exact depth and private-number object counterprobes. Full exact-source results are recorded separately."
+}
