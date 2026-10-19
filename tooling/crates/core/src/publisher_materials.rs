@@ -390,6 +390,9 @@ fn append_native_materials(
     for required in [
         "tooling/Cargo.lock",
         "tooling/Cargo.toml",
+        "tooling/crates/core/build.rs",
+        "tooling/crates/core/src/macos_process_snapshot.c",
+        "tooling/crates/core/src/macos_process_snapshot.rs",
         "tooling/crates/xtask/src/native_release.rs",
         "tooling/fixtures/accepted-r1-inputs.json",
         "tooling/fixtures/accepted-r1-support-inputs.json",

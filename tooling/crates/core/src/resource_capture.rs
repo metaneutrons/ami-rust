@@ -7,6 +7,10 @@
 //! them. It relies on `process_capture` to supervise only its leased child and
 //! original process group.
 
+#[cfg(target_os = "macos")]
+#[path = "macos_process_snapshot.rs"]
+mod macos_process_snapshot;
+
 use crate::{
     Refusal,
     directory::Directory,
@@ -19,16 +23,16 @@ use crate::{
     workspace_accounting::{self, Accounting, ScanLimits},
 };
 use serde::Serialize;
+#[cfg(any(not(target_os = "macos"), test))]
+use std::time::Duration;
 use std::{
-    collections::BTreeMap,
     error::Error,
-    ffi::OsString,
     fmt, io,
     os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
-    time::Duration,
 };
 
+#[cfg(not(target_os = "macos"))]
 const PS_CAPTURE_LIMITS: CaptureLimits = CaptureLimits {
     timeout: Duration::from_secs(2),
     stdout_bytes: 2 * 1024 * 1024,
@@ -404,6 +408,9 @@ impl ResourceObserver {
         self.report.current_escaped_process_groups.clear();
         self.report.incomplete_cleanup = false;
 
+        #[cfg(target_os = "macos")]
+        let snapshot = self.query_process_table(event.direct_pid)?;
+        #[cfg(not(target_os = "macos"))]
         let snapshot = self.query_process_table()?;
         let scope = process_snapshot::observe_scope(
             &snapshot,
@@ -497,7 +504,25 @@ impl ResourceObserver {
         Ok(())
     }
 
+    #[cfg(target_os = "macos")]
+    fn query_process_table(
+        &self,
+        target_pid: u32,
+    ) -> io::Result<process_snapshot::ProcessSnapshot> {
+        macos_process_snapshot::query_process_snapshot(
+            target_pid,
+            &self.previous_pids,
+            &self.previous_groups,
+            self.sample_limits.max_ps_bytes,
+            self.sample_limits.max_ps_rows,
+            self.sample_limits.max_history_entries,
+        )
+    }
+
+    #[cfg(not(target_os = "macos"))]
     fn query_process_table(&self) -> io::Result<process_snapshot::ProcessSnapshot> {
+        use std::{collections::BTreeMap, ffi::OsString};
+
         let env = BTreeMap::from([(OsString::from("LC_ALL"), OsString::from("C"))]);
         let spec = CommandSpec::new(
             "/bin/ps",
@@ -679,6 +704,8 @@ mod tests {
     use super::*;
     use crate::process_capture::CaptureCause;
     use std::{
+        collections::BTreeMap,
+        ffi::OsString,
         fs,
         os::unix::{fs::PermissionsExt, process::ExitStatusExt},
         sync::atomic::{AtomicU64, Ordering},
@@ -750,8 +777,8 @@ mod tests {
                 OsString::from("allocate"),
             ),
             (
-                OsString::from("AMI_RUST_RESOURCE_RSS_READY"),
-                root.join("rss-ready").into_os_string(),
+                OsString::from("AMI_RUST_RESOURCE_RSS_STARTED"),
+                root.join("rss-allocation-started").into_os_string(),
             ),
             (
                 OsString::from("AMI_RUST_RESOURCE_RSS_SURVIVED"),
@@ -846,7 +873,7 @@ mod tests {
     #[test]
     fn live_rss_limit_terminates_the_owned_fixture_and_retains_measurement() {
         let directory = TestDirectory::new();
-        let limit = 16 * 1024 * 1024;
+        let limit = 64 * 1024 * 1024;
         let error = capture_rss_fixture(directory.path(), limit).unwrap_err();
         let ResourceCaptureError::Capture { error, report } = error else {
             panic!("RSS refusal should be reported through capture");
@@ -854,7 +881,10 @@ mod tests {
         assert!(matches!(error.cause, CaptureCause::Observation(_)));
         assert!(report.peak_visible_rss_bytes > limit);
         assert!(report.last_sample_complete);
-        assert!(directory.path().join("rss-ready").exists());
+        assert!(
+            directory.path().join("rss-allocation-started").exists(),
+            "fixture must mark allocation start before growing its working set"
+        );
         assert!(
             !directory.path().join("rss-survived").exists(),
             "the fixture reached its post-sleep marker after an RSS refusal"
@@ -889,11 +919,11 @@ mod tests {
     #[test]
     fn generous_live_rss_limit_accepts_the_owned_fixture() {
         let directory = TestDirectory::new();
-        let minimum = 16 * 1024 * 1024;
+        let minimum = 64 * 1024 * 1024;
         let captured = capture_rss_fixture(directory.path(), 256 * 1024 * 1024).unwrap();
         assert!(captured.report.peak_visible_rss_bytes >= minimum);
         assert!(captured.report.last_sample_complete);
-        assert!(directory.path().join("rss-ready").exists());
+        assert!(directory.path().join("rss-allocation-started").exists());
         assert!(directory.path().join("rss-survived").exists());
         assert_eq!(captured.process.exit_code(), Some(0));
     }
@@ -904,16 +934,20 @@ mod tests {
         if std::env::var_os("AMI_RUST_RESOURCE_RSS_FIXTURE").is_none() {
             return;
         }
-        let mut working_set = vec![0_u8; 32 * 1024 * 1024];
+        let started_marker = std::env::var_os("AMI_RUST_RESOURCE_RSS_STARTED")
+            .expect("subprocess fixture receives its allocation-start marker path");
+        let survived_marker = std::env::var_os("AMI_RUST_RESOURCE_RSS_SURVIVED")
+            .expect("subprocess fixture receives its post-sleep marker path");
+        // This marker only records entry into the allocation phase. It must
+        // exist even when the observer terminates the fixture while pages are
+        // still being committed; the separate survived marker is written only
+        // after every page has been touched and the dwell interval completes.
+        fs::write(started_marker, b"allocation-started").unwrap();
+        let mut working_set = vec![0_u8; 96 * 1024 * 1024];
         for page in working_set.chunks_mut(4096) {
             page[0] = 0xa5;
         }
         assert_eq!(std::hint::black_box(&working_set)[0], 0xa5);
-        let ready_marker = std::env::var_os("AMI_RUST_RESOURCE_RSS_READY")
-            .expect("subprocess fixture receives its readiness marker path");
-        let survived_marker = std::env::var_os("AMI_RUST_RESOURCE_RSS_SURVIVED")
-            .expect("subprocess fixture receives its post-sleep marker path");
-        fs::write(ready_marker, b"touched").unwrap();
         std::thread::sleep(Duration::from_millis(800));
         fs::write(survived_marker, b"survived").unwrap();
     }

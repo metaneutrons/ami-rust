@@ -19,6 +19,9 @@ CONFIG_PATH = "release/native-tooling-inputs.json"
 REQUIRED_SOURCES = (
     "tooling/Cargo.lock",
     "tooling/Cargo.toml",
+    "tooling/crates/core/build.rs",
+    "tooling/crates/core/src/macos_process_snapshot.c",
+    "tooling/crates/core/src/macos_process_snapshot.rs",
     "tooling/crates/xtask/src/native_release.rs",
     "tooling/fixtures/accepted-r1-inputs.json",
     "tooling/fixtures/accepted-r1-support-inputs.json",
@@ -178,6 +181,28 @@ class NativeToolingMaterialsTests(unittest.TestCase):
         self._set_config(lambda config: config["registry_crates"][0].update(url="https://example.invalid/crate"))
         with self.assertRaisesRegex(ValueError, "invalid or unordered native registry crate"):
             auth.input_manifest_for_sdk(self.source, "0.2.0")
+
+    def test_native_process_sampler_sources_are_mandatory_and_digest_bound(self):
+        sampler_sources = (
+            "tooling/crates/core/build.rs",
+            "tooling/crates/core/src/macos_process_snapshot.c",
+            "tooling/crates/core/src/macos_process_snapshot.rs",
+        )
+        for path in sampler_sources:
+            with self.subTest(path=path):
+                self._write(CONFIG_PATH, auth.encoded(self.config))
+                self._set_config(lambda config: config.update(
+                    source_files=[entry for entry in REQUIRED_SOURCES if entry != path]))
+                with self.assertRaisesRegex(ValueError, "omits a required input"):
+                    auth.input_manifest_for_sdk(self.source, "0.2.0")
+                self._write(CONFIG_PATH, auth.encoded(self.config))
+                altered = self.source_contents[path] + b"changed sampler source\n"
+                self._write(path, altered)
+                manifest = auth.input_manifest_for_sdk(self.source, "0.2.0")
+                rows = {row["uri"]: row["digest"] for row in manifest["materials"]}
+                self.assertEqual(rows[f"git+https://github.com/{auth.REPO}#{path}"],
+                                 {"sha256": digest(altered)})
+                self._write(path, self.source_contents[path])
 
     def test_rejects_sdk_and_cli_version_disagreement(self):
         self._set_config(lambda config: config.update(sdk_version="0.3.0"))

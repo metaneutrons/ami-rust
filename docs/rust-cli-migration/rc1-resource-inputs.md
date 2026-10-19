@@ -54,6 +54,52 @@ linkage produced agreement on all 98 cases. Native unit controls additionally
 cover 32,768 reversed generations, cycles, group closure and arithmetic failures.
 These cases test sampling semantics, not the stability of numeric process IDs.
 
+### Native macOS collection inside the execution policy
+
+The macOS resource observer collects the same parent/group scope without
+starting `/bin/ps`. macOS rejects that setuid executable inside Seatbelt even
+with an allow-default profile. Exempting it from the policy would leave a gap
+in the observed consumer tree.
+
+`macos_process_snapshot` enumerates bounded PID/child/group lists through
+libproc and obtains RSS only for the selected scope. A small SDK-header C shim
+reads actual PID, PPID, PGID, effective UID and status through
+`sysctl(KERN_PROC_PID)`. The shim avoids duplicating Darwin's private structure
+layout in Rust. It is statically linked into the host CLI; consumers do not need
+a C compiler to use the installed CLI.
+
+This topology query also covers an exited child retained with `WNOWAIT`.
+libproc task/BSD queries and `getpgid` can return `ESRCH` for that child. Only an
+actual `SZOMB` result permits zero RSS; the observer never reconstructs a
+terminal PPID or PGID from the child's original group. A relevant inaccessible
+row, malformed result, overflow, missing root or exhausted bounded retry is an
+observation failure. Previously observed identities grant no signalling rights.
+
+Each sample retains the existing row/history bounds, a bounded PID scratch
+buffer and at most three attempts. Two-second checks surround kernel calls;
+they cannot preempt a single synchronous call. The outer supervisor remains
+responsible for the hard command deadline. These are observations of a changing
+process table, not atomic snapshots or universal descendant containment.
+
+For native macOS Apple Silicon source builds, `core/build.rs` selects the
+installed macOS SDK with `/usr/bin/xcrun`, compiles the shim with the explicit
+Apple `/usr/bin/clang` and archives it with `/usr/bin/ar`. Compiler children
+receive a cleared environment, an explicit arm64 macOS 26 target, SDK sysroot,
+prefix maps and no debug records; archive dates are deterministic. Other targets
+return before invoking C tools. The build script and both sampler sources are
+mandatory SDK producer materials. The supported Xcode/SDK identity and resulting
+CLI must be recorded for each qualified host build. No registry dependency or
+target AROS compiler/ABI input changes.
+
+The small shim compilation reruns on source builds so changing the active Xcode
+or SDK cannot silently reuse an object from the previous SDK. Installed CLI use
+and application Cargo builds do not compile this host shim again.
+
+Live controls compare native topology/RSS with `ps` outside the sandbox and
+include an escaped-group zombie, positive memory use, RSS refusal and terminal
+capture. The separate command-enforcement rehearsal must prove the actual CLI
+build inside the policy; passing these controls alone does not satisfy it.
+
 ## Filesystem samples
 
 `workspace_accounting` iteratively enumerates descriptor-anchored directories.

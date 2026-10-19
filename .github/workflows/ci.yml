@@ -152,7 +152,7 @@ jobs:
           if ! git cat-file -e "$CLI_BASE^{commit}"; then
             git fetch --no-tags --filter=blob:none --depth=1 origin "$CLI_BASE"
           fi
-          if git diff --quiet "$CLI_BASE" "$GITHUB_SHA" -- tools/ tooling/ host/profiles/ docs/rust-cli-migration/contracts-v1.json .github/workflows/ci.yml release/ci-bootstrap-inputs.json release/ci-sdk-inputs.json release/native-tooling-inputs.json release/ci-python-inputs.json release/ci_historical.py release/install.py release/test_install.py release/verify_publisher.py release/ci_native.py release/ci_sdk.py release/ci_auth.py release/ci_cargo.py release/prepare_sdk.py release/ci_python.py; then
+          if git diff --quiet "$CLI_BASE" "$GITHUB_SHA" -- tools/ tooling/ host/profiles/ host/contracts.py docs/rust-cli-migration/contracts-v1.json .github/workflows/ci.yml release/ci-bootstrap-inputs.json release/ci-sdk-inputs.json release/native-tooling-inputs.json release/ci-python-inputs.json release/ci_historical.py release/install.py release/test_install.py release/verify_publisher.py release/ci_native.py release/ci_sdk.py release/ci_auth.py release/ci_cargo.py release/prepare_sdk.py release/ci_python.py; then
             printf 'affected=false\n' >> "$GITHUB_OUTPUT"
           else
             cli_diff_status=$?
@@ -184,6 +184,7 @@ jobs:
             tools/
             tooling/
             host/profiles/
+            host/contracts.py
             docs/rust-cli-migration/contracts-v1.json
             release/ci-bootstrap-inputs.json
             release/ci-sdk-inputs.json
@@ -208,16 +209,23 @@ jobs:
         run: |
           set -euo pipefail
           cli_rust="$RUNNER_TEMP/ami-rust-rc0-host/toolchain/bin"
+          mkdir -m 700 "$RUNNER_TEMP/ami-rust-core-home" "$RUNNER_TEMP/ami-rust-core-tmp"
+          env -i CLI_RUST="$cli_rust" RUNNER_TEMP="$RUNNER_TEMP" \
+            HOME="$RUNNER_TEMP/ami-rust-core-home" TMPDIR="$RUNNER_TEMP/ami-rust-core-tmp" \
+            PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin" LC_ALL=C \
+            /bin/bash -euo pipefail <<'RUST_TESTS'
+          cli_rust="$CLI_RUST"
           export RUSTC="$cli_rust/rustc"
           export RUSTDOC="$cli_rust/rustdoc"
           export CARGO_HOME="$RUNNER_TEMP/ami-rust-rc0-cargo-home"
           export CARGO_BUILD_JOBS=2
           export PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin"
+          export RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER=
           # The separate host-core candidate has a reviewed registry lock. Fetch
           # its authenticated checksum-bound archives before offline execution.
           "$cli_rust/cargo" fetch --locked \
             --manifest-path tools/host-contract-deps/Cargo.toml
-          for cli_probe in cargo-native-spike no-python-probe host-contract-deps; do
+          for cli_probe in cargo-native-spike no-python-probe host-contract-deps consumer-enforcement-adapter; do
             "$cli_rust/cargo" test --locked --offline \
               --manifest-path "tools/$cli_probe/Cargo.toml" \
               --target-dir "$RUNNER_TEMP/ami-rust-rc0-$cli_probe"
@@ -228,9 +236,12 @@ jobs:
           "$cli_rust/cargo" test --workspace --locked --offline \
             --manifest-path tooling/Cargo.toml \
             --target-dir "$RUNNER_TEMP/ami-rust-host-core"
+          RUST_TESTS
       - name: Compare current Rust with historical Python (maintainer tests only)
         run: |
           set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain --untracked-files=all)"
           python3 -I -B release/ci_python.py \
             --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" \
             --inputs release/ci-python-inputs.json
@@ -242,19 +253,23 @@ jobs:
             --rust-bin-dir "$cli_rust" --cargo-home "$RUNNER_TEMP/ami-rust-rc0-cargo-home" \
             --output-dir "$RUNNER_TEMP/ami-rust-historical-parsers"
           mkdir -m 700 "$RUNNER_TEMP/ami-rust-historical-home" "$RUNNER_TEMP/ami-rust-historical-tmp"
-          env -i PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin" \
-            HOME="$RUNNER_TEMP/ami-rust-historical-home" TMPDIR="$RUNNER_TEMP/ami-rust-historical-tmp" \
-            RUSTC="$cli_rust/rustc" RUSTDOC="$cli_rust/rustdoc" \
-            RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= CARGO_BUILD_JOBS=2 LC_ALL=C \
-            CARGO_HOME="$RUNNER_TEMP/ami-rust-rc0-cargo-home" \
-            AMI_RUST_HISTORICAL_PYTHON="$historical_python" \
-            AMI_RUST_DIFFERENTIAL_SOURCE="$GITHUB_WORKSPACE" \
-            AMI_RUST_DIFFERENTIAL_WORK="$RUNNER_TEMP/ami-rust-historical-transactions" \
-            "$cli_rust/cargo" test --package ami-rust-core --test historical_transactions \
-            --locked --offline --manifest-path tooling/Cargo.toml \
-            --target-dir "$RUNNER_TEMP/ami-rust-host-core" \
-            -- --ignored --exact paired_historical_transactions
-          test -f "$RUNNER_TEMP/ami-rust-historical-transactions/binding.json"
+          for historical_test in transactions filesystem; do
+            env -i PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin" \
+              HOME="$RUNNER_TEMP/ami-rust-historical-home" TMPDIR="$RUNNER_TEMP/ami-rust-historical-tmp" \
+              RUSTC="$cli_rust/rustc" RUSTDOC="$cli_rust/rustdoc" \
+              RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= CARGO_BUILD_JOBS=2 LC_ALL=C \
+              CARGO_HOME="$RUNNER_TEMP/ami-rust-rc0-cargo-home" \
+              AMI_RUST_HISTORICAL_PYTHON="$historical_python" \
+              AMI_RUST_DIFFERENTIAL_SOURCE="$GITHUB_WORKSPACE" \
+              AMI_RUST_DIFFERENTIAL_WORK="$RUNNER_TEMP/ami-rust-historical-$historical_test" \
+              "$cli_rust/cargo" test --package ami-rust-core --test "historical_$historical_test" \
+              --locked --offline --manifest-path tooling/Cargo.toml \
+              --target-dir "$RUNNER_TEMP/ami-rust-host-core" \
+              -- --ignored --exact "paired_historical_$historical_test"
+            test -f "$RUNNER_TEMP/ami-rust-historical-$historical_test/binding.json"
+          done
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain --untracked-files=all)"
       - name: Retain bounded historical comparison results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -269,6 +284,9 @@ jobs:
             ${{ runner.temp }}/ami-rust-historical-transactions/report.json
             ${{ runner.temp }}/ami-rust-historical-transactions/binding.json
             ${{ runner.temp }}/ami-rust-historical-transactions/coordinator.*.log
+            ${{ runner.temp }}/ami-rust-historical-filesystem/report.json
+            ${{ runner.temp }}/ami-rust-historical-filesystem/binding.json
+            ${{ runner.temp }}/ami-rust-historical-filesystem/coordinator.*.raw
           if-no-files-found: error
           retention-days: 7
           compression-level: 9
@@ -276,12 +294,12 @@ jobs:
         run: |
           set -euo pipefail
           cli_rust="$RUNNER_TEMP/ami-rust-rc0-host/toolchain/bin"
-          export CLI_CARGO="$cli_rust/cargo"
-          export RUSTC="$cli_rust/rustc"
-          export RUSTDOC="$cli_rust/rustdoc"
-          export CARGO_HOME="$RUNNER_TEMP/ami-rust-rc0-cargo-home"
-          export PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin"
-          bash tools/build-native-cli.sh "$RUNNER_TEMP/ami-rust-native-cli"
+          env -i CLI_CARGO="$cli_rust/cargo" RUSTC="$cli_rust/rustc" RUSTDOC="$cli_rust/rustdoc" \
+            RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= \
+            HOME="$RUNNER_TEMP/ami-rust-core-home" TMPDIR="$RUNNER_TEMP/ami-rust-core-tmp" \
+            CARGO_HOME="$RUNNER_TEMP/ami-rust-rc0-cargo-home" \
+            PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin" LC_ALL=C \
+            /bin/bash tools/build-native-cli.sh "$RUNNER_TEMP/ami-rust-native-cli"
 
   ci-success:
     name: CI Success
