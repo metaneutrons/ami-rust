@@ -24,12 +24,12 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         name: "verify package",
         command: "verify-package",
-        implemented: false,
+        implemented: true,
     },
     Capability {
         name: "prepare",
         command: "prepare",
-        implemented: false,
+        implemented: true,
     },
     Capability {
         name: "new project",
@@ -44,7 +44,7 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         name: "check inputs",
         command: "check-inputs",
-        implemented: false,
+        implemented: true,
     },
     Capability {
         name: "verify SDK lock",
@@ -87,6 +87,13 @@ pub const CAPABILITIES: &[Capability] = &[
 pub enum Invocation {
     Help,
     Version,
+    VerifyPackage,
+    Prepare {
+        state: PathBuf,
+    },
+    CheckInputs {
+        state: PathBuf,
+    },
     VerifyRelease {
         bundle: PathBuf,
         policy: PathBuf,
@@ -135,6 +142,22 @@ pub fn parse(executable: &Path, arguments: &[OsString]) -> Result<Invocation> {
             return Ok(Invocation::Help);
         }
     }
+    if args.len() == 1 && args[0] == "verify-package" {
+        return Ok(Invocation::VerifyPackage);
+    }
+    for (command, prepare) in [("prepare", true), ("check-inputs", false)] {
+        if args.first().is_some_and(|arg| arg == command) {
+            let mut options = parse_path_options(&args[1..], &["--state"], command)?;
+            let state = options
+                .remove("--state")
+                .ok_or_else(|| Refusal::new(format!("{command} requires --state PATH")))?;
+            return Ok(if prepare {
+                Invocation::Prepare { state }
+            } else {
+                Invocation::CheckInputs { state }
+            });
+        }
+    }
     if args.first().is_some_and(|arg| arg == "verify") {
         return parse_verify_release(&args[1..]);
     }
@@ -157,9 +180,7 @@ pub fn parse(executable: &Path, arguments: &[OsString]) -> Result<Invocation> {
             "command is not implemented in this development build",
         ));
     }
-    Err(Refusal::new(
-        "expected --version, --help, verify --bundle PATH --policy EXTERNAL_POLICY, install --bundle PATH --policy PATH --prefix FRESH, or uninstall --prefix PATH --receipt-sha256 SHA256",
-    ))
+    Err(Refusal::new("unsupported command or arguments; see --help"))
 }
 
 fn parse_verify_release(arguments: &[OsString]) -> Result<Invocation> {
@@ -345,18 +366,41 @@ struct UninstallResult<'a> {
 
 pub fn render(invocation: Invocation) -> Result<CommandOutput> {
     match invocation {
-        Invocation::Help => Ok(CommandOutput::success(b"ami-rust native host tooling\n\nUsage:\n  ami-rust --version\n  ami-rust --help\n  ami-rust verify --bundle PATH --policy EXTERNAL_POLICY\n  ami-rust install --bundle BUNDLE --policy EXTERNAL_POLICY --prefix FRESH_PREFIX [--receipt-pin FRESH_EXTERNAL_FILE]\n  ami-rust uninstall --prefix PREFIX --receipt-sha256 SHA256\n\n`verify --sdk-lock FILE` is not implemented. Release verification authenticates the publisher and checks SDK-v2 structure; it does not claim R1 acceptance or native build qualification.\n".to_vec())),
+        Invocation::Help => Ok(CommandOutput::success(b"ami-rust native host tooling\n\nUsage:\n  ami-rust verify-package\n  ami-rust prepare --state FRESH_PRIVATE_PATH\n  ami-rust check-inputs --state PRIVATE_PATH\n  ami-rust --version\n  ami-rust --help\n  ami-rust verify --bundle PATH --policy EXTERNAL_POLICY\n  ami-rust install --bundle BUNDLE --policy EXTERNAL_POLICY --prefix FRESH_PREFIX [--receipt-pin FRESH_EXTERNAL_FILE]\n  ami-rust uninstall --prefix PREFIX --receipt-sha256 SHA256\n\n`verify --sdk-lock FILE` is not implemented. Release verification authenticates the publisher and checks SDK-v2 structure; it does not claim R1 acceptance or native build qualification.\n".to_vec())),
         Invocation::Version => {
+            let package = optional_executing_package()?;
             let mut output = serde_json::to_vec(&Version {
                 schema: "ami-rust-version-v1",
                 cli_version: env!("CARGO_PKG_VERSION"),
                 // This bare development binary references the immutable SDK;
                 // revision zero means no package adapter is installed by it.
-                sdk_version: "0.1.0",
-                packaging_revision: 0,
+                sdk_version: package.as_ref().map_or("0.1.0", |package| package.pins().sdk_version.as_str()),
+                packaging_revision: package.as_ref().map_or(0, |package| package.pins().packaging_revision),
             }).map_err(|error| Refusal::new(format!("cannot encode version: {error}")))?;
             output.push(b'\n');
             Ok(CommandOutput::success(output))
+        }
+        Invocation::VerifyPackage => {
+            let package = executing_package()?;
+            let value = serde_json::json!({"schema":"ami-rust-package-verification-v2", "status":"VERIFIED",
+                "cli_version":package.pins().cli_version,"sdk_version":package.pins().sdk_version,
+                "package_version":package.pins().package_version,"host":package.pins().host,
+                "verified_files":package.measurement().files,"verified_bytes":package.measurement().file_bytes});
+            json_output(&value).map(CommandOutput::success)
+        }
+        Invocation::Prepare { state } => {
+            let package = executing_package()?;
+            let prepared = crate::native_prepare::prepare(&package, &state)?;
+            let value = serde_json::to_value(prepared).map_err(|e| Refusal::new(e.to_string()))?;
+            json_output(&value).map(CommandOutput::success)
+        }
+        Invocation::CheckInputs { state } => {
+            let package = executing_package()?;
+            let inputs = crate::ready_state::ReadyInputs::open(&state, &package)?;
+            let value = serde_json::json!({"schema":"ami-rust-input-verification-v2", "status":"VERIFIED",
+                "host":inputs.state.host,"sdk_version":inputs.state.sdk_version,
+                "package_version":inputs.state.package_version,"components":6});
+            json_output(&value).map(CommandOutput::success)
         }
         Invocation::VerifyRelease { bundle, policy } => {
             render_verify_release(&bundle, &policy).map(CommandOutput::success)
@@ -372,6 +416,44 @@ pub fn render(invocation: Invocation) -> Result<CommandOutput> {
             receipt_sha256,
         } => render_uninstall(&prefix, &receipt_sha256).map(CommandOutput::success),
     }
+}
+
+fn optional_executing_package() -> Result<Option<crate::package::CheckedNativePackage>> {
+    let executable = std::env::current_exe().map_err(|e| Refusal::new(e.to_string()))?;
+    let Some(bin) = executable
+        .parent()
+        .filter(|path| path.file_name() == Some(std::ffi::OsStr::new("bin")))
+    else {
+        return Ok(None);
+    };
+    let Some(root) = bin.parent() else {
+        return Ok(None);
+    };
+    // Standalone development binaries have no package claims. Once either
+    // metadata file is present, incomplete/changed package data must refuse.
+    if root.join("pins.json").try_exists()? || root.join("inventory.json").try_exists()? {
+        executing_package().map(Some)
+    } else {
+        Ok(None)
+    }
+}
+
+fn executing_package() -> Result<crate::package::CheckedNativePackage> {
+    let executable = std::env::current_exe()
+        .map_err(|e| Refusal::new(format!("cannot locate executing native package: {e}")))?;
+    crate::package::package_from_executable(
+        &executable,
+        crate::package::PackageRuntime {
+            host: crate::host_platform::supported_host()?,
+            cli_version: env!("CARGO_PKG_VERSION"),
+        },
+    )
+}
+
+fn json_output(value: &serde_json::Value) -> Result<Vec<u8>> {
+    let mut raw = serde_json::to_vec(value).map_err(|e| Refusal::new(e.to_string()))?;
+    raw.push(b'\n');
+    Ok(raw)
 }
 
 fn render_install_release(
@@ -810,6 +892,42 @@ mod tests {
     }
 
     #[test]
+    fn native_package_commands_share_exact_state_options_on_both_frontends() {
+        for binary in ["ami-rust", "cargo-ami"] {
+            let executable = Path::new(binary);
+            assert_eq!(
+                parse(executable, &args(&["verify-package"])).unwrap(),
+                Invocation::VerifyPackage
+            );
+            assert_eq!(
+                parse(executable, &args(&["prepare", "--state", "/private/state"])).unwrap(),
+                Invocation::Prepare {
+                    state: PathBuf::from("/private/state")
+                }
+            );
+            assert_eq!(
+                parse(
+                    executable,
+                    &args(&["check-inputs", "--state", "/private/state"])
+                )
+                .unwrap(),
+                Invocation::CheckInputs {
+                    state: PathBuf::from("/private/state")
+                }
+            );
+            for invalid in [
+                args(&["prepare"]),
+                args(&["prepare", "--state"]),
+                args(&["prepare", "--state", "/one", "--state", "/two"]),
+                args(&["check-inputs", "--project", "/one"]),
+                args(&["verify-package", "extra"]),
+            ] {
+                assert!(parse(executable, &invalid).is_err());
+            }
+        }
+    }
+
+    #[test]
     fn capability_ledger_matches_normative_contract_and_refuses_pending_work() {
         let contract: serde_json::Value = serde_json::from_str(include_str!(
             "../../../../docs/rust-cli-migration/contracts-v1.json"
@@ -826,7 +944,7 @@ mod tests {
         assert_eq!(actual, expected);
         assert_eq!(
             CAPABILITIES.iter().filter(|item| item.implemented).count(),
-            4
+            7
         );
         assert!(CAPABILITIES.iter().any(|item| {
             item.name == "verify release" && item.command == "verify" && item.implemented

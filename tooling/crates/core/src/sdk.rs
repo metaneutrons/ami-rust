@@ -245,6 +245,49 @@ struct ParsedSdkV2 {
     profiles: HostProfiles,
 }
 
+/// The fixed native recipe read from a fully checked retained installation.
+/// Component inventories remain separately verified before tools execute.
+pub struct InstalledSdkRecipe {
+    pub version: String,
+    pub rust_commit: String,
+    pub rust_llvm: String,
+    pub source_identity: String,
+    pub source_date_epoch: u64,
+    pub component_manifests: BTreeMap<String, (String, String)>,
+}
+
+pub fn installed_recipe(
+    installation: &crate::native_install::CheckedNativeInstallation,
+    host: crate::records::Host,
+) -> Result<InstalledSdkRecipe> {
+    host.ensure_current()?;
+    let raw = installation.read_file("sdk/contract/sdk.json")?;
+    let receipt = installation.receipt();
+    if sha256_bytes(&raw) != receipt.sdk_manifest_sha256.as_str() {
+        return Err(Refusal::new("retained SDK manifest differs from receipt"));
+    }
+    let parsed = parse_sdk_v2(&raw, &receipt.version, false)?;
+    let host_key = match host {
+        crate::records::Host::LinuxX86_64 => "linux-x86_64",
+        crate::records::Host::MacosAarch64 => "macos-aarch64",
+    };
+    let components = parsed
+        .profiles
+        .get(host_key)
+        .ok_or_else(|| Refusal::new("retained SDK omits current host profile"))?
+        .clone();
+    let value = parse_json_value(&raw, JsonProfile::SdkComponentManifest)?;
+    let object = value.as_object().expect("SDK manifest parsed as an object");
+    Ok(InstalledSdkRecipe {
+        version: parsed.version,
+        rust_commit: get_string(object, "rust_commit")?.to_owned(),
+        rust_llvm: get_string(object, "rust_llvm")?.to_owned(),
+        source_identity: get_string(object, "source_identity")?.to_owned(),
+        source_date_epoch: get_counter(object, "source_date_epoch")?,
+        component_manifests: components,
+    })
+}
+
 fn parse_sdk_v2(
     raw: &[u8],
     release_version: &str,
@@ -951,7 +994,34 @@ mod tests {
         NativeReleaseManifest,
         BTreeMap<String, Vec<u8>>,
     )> {
-        let fixture = Fixture::valid();
+        let mut fixture = Fixture::valid();
+        // Sibling integration fixtures need real inventory schemas; the bytes
+        // remain inert synthetic components, never authenticated toolchains.
+        let mut files = fixture.profile_members();
+        let component = b"synthetic component\n";
+        for (path, contents) in &mut files {
+            if path.starts_with("host/profiles/") {
+                *contents = serde_json::to_vec(&json!({
+                    "files":[{"path":"bin/tool","bytes":component.len(),
+                        "sha256":sha256_bytes(component),"mode":493}],
+                    "symlinks":[{"path":"bin/alias","target":"tool"}]
+                }))
+                .unwrap();
+            }
+        }
+        for profile in fixture.sdk_value["profiles"]
+            .as_object_mut()
+            .unwrap()
+            .values_mut()
+        {
+            for row in profile["components"].as_object_mut().unwrap().values_mut() {
+                row["sha256"] = json!(sha256_bytes(&files[row["manifest"].as_str().unwrap()]));
+            }
+        }
+        fixture.sdk_value["files"] = Value::Array(files.iter().map(|(path, bytes)| {
+            json!({"path":path,"bytes":bytes.len(),"sha256":sha256_bytes(bytes)})
+        }).collect());
+        fixture.rebind_archive(files);
         let payload = validate_retained_parts(&fixture.release, &fixture.assets)?;
         Ok((payload, fixture.release, fixture.assets))
     }

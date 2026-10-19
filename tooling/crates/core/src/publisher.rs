@@ -150,6 +150,7 @@ struct Observation<'a, C> {
     started: Instant,
     cancelled: &'a mut C,
     resource_reports: Vec<ResourceReport>,
+    managed_workspace: Option<std::path::PathBuf>,
 }
 impl<C: FnMut() -> bool> Observation<'_, C> {
     fn check(&mut self) -> Result<()> {
@@ -172,7 +173,27 @@ pub fn verify_publisher_bundle(
     policy_path: &Path,
     cancelled: impl FnMut() -> bool,
 ) -> Result<VerifiedPublisherBundle> {
-    let checked = check_publisher_bundle(bundle, policy_path, ReleaseFlavor::Native, cancelled)?;
+    let checked =
+        check_publisher_bundle(bundle, policy_path, ReleaseFlavor::Native, None, cancelled)?;
+    native_bundle(checked)
+}
+
+pub(crate) fn verify_publisher_bundle_in_workspace(
+    bundle: &Path,
+    policy_path: &Path,
+    workspace: &Path,
+    cancelled: impl FnMut() -> bool,
+) -> Result<VerifiedPublisherBundle> {
+    native_bundle(check_publisher_bundle(
+        bundle,
+        policy_path,
+        ReleaseFlavor::Native,
+        Some(workspace),
+        cancelled,
+    )?)
+}
+
+fn native_bundle(checked: CheckedBundle) -> Result<VerifiedPublisherBundle> {
     let ParsedManifest::Native(manifest) = checked.manifest else {
         return Err(Refusal::new(
             "native authentication cannot authorize a legacy release",
@@ -199,6 +220,7 @@ pub fn inspect_legacy_publisher_bundle(
         bundle,
         policy_path,
         ReleaseFlavor::LegacyInspection,
+        None,
         cancelled,
     )?;
     let authentication = checked.authentication;
@@ -226,13 +248,18 @@ fn check_publisher_bundle(
     bundle: &Path,
     policy_path: &Path,
     flavor: ReleaseFlavor,
+    managed_workspace: Option<&Path>,
     mut cancelled: impl FnMut() -> bool,
 ) -> Result<CheckedBundle> {
     let mut observer = Observation {
         started: Instant::now(),
         cancelled: &mut cancelled,
         resource_reports: Vec::new(),
+        managed_workspace: managed_workspace.map(Path::to_path_buf),
     };
+    if let Some(workspace) = managed_workspace {
+        crate::ownership::existing_private_state(workspace)?;
+    }
     observer.check()?;
     let root = bundle_directory(bundle)?;
     if policy_path.starts_with(bundle) {
@@ -702,6 +729,23 @@ fn run_verifier<C: FnMut() -> bool>(
     home: &PublisherHome,
     observer: &mut Observation<'_, C>,
 ) -> Result<Vec<u8>> {
+    let output = run_verifier_attempt(pin, args, home, observer)?;
+    if !output.status.success() {
+        return Err(Refusal::new(format!(
+            "publisher verifier {} failed with {}",
+            Path::new(&pin.path).display(),
+            output.status
+        )));
+    }
+    Ok(output.stdout)
+}
+
+fn run_verifier_attempt<C: FnMut() -> bool>(
+    pin: &PinnedPolicyFile,
+    args: Vec<OsString>,
+    home: &PublisherHome,
+    observer: &mut Observation<'_, C>,
+) -> Result<crate::process_capture::CapturedProcess> {
     observer.check()?;
     let timeout = TOTAL_TIMEOUT
         .saturating_sub(observer.started.elapsed())
@@ -712,6 +756,16 @@ fn run_verifier<C: FnMut() -> bool>(
         home.path(),
         verifier_environment(home.path()),
     );
+    let mut managed_roots = vec![home.path().to_path_buf()];
+    if let Some(workspace) = &observer.managed_workspace {
+        // If TMPDIR already placed HOME under the managed state, its bytes
+        // are included by the state walk; otherwise account for both roots.
+        managed_roots = if home.path().starts_with(workspace) {
+            vec![workspace.clone()]
+        } else {
+            vec![workspace.clone(), home.path().to_path_buf()]
+        };
+    }
     let captured = capture_with_resources(
         &spec,
         CaptureLimits {
@@ -729,10 +783,10 @@ fn run_verifier<C: FnMut() -> bool>(
             max_ps_bytes: 2 * 1024 * 1024,
             max_ps_rows: 32_768,
             max_history_entries: 131_072,
-            max_roots: 1,
+            max_roots: managed_roots.len(),
             scan: ScanLimits { max_entries: 100_000, max_work_units: 200_001 },
         },
-        &[home.path().to_path_buf()],
+        &managed_roots,
         &mut *observer.cancelled,
     )
     .map_err(|error| {
@@ -745,16 +799,8 @@ fn run_verifier<C: FnMut() -> bool>(
         ))
     })?;
     observer.resource_reports.push(captured.report);
-    let output = captured.process;
-    if !output.status.success() {
-        return Err(Refusal::new(format!(
-            "publisher verifier {} failed with {}",
-            Path::new(&pin.path).display(),
-            output.status
-        )));
-    }
     observer.check()?;
-    Ok(output.stdout)
+    Ok(captured.process)
 }
 
 fn gh_arguments(
@@ -831,3 +877,6 @@ fn cosign_arguments(
 #[cfg(test)]
 #[path = "publisher_tests.rs"]
 mod tests;
+
+#[path = "outer_publisher.rs"]
+pub mod outer;

@@ -31,6 +31,103 @@ use crate::{
 use serde::Serialize;
 use std::{collections::BTreeMap, ffi::OsStr, path::Path};
 
+/// A completely checked installation whose removal authority is externally
+/// pinned. This is local retained-state authority, not fresh publisher proof.
+/// Historical installations never produce this native-driver capability.
+pub struct CheckedNativeInstallation {
+    target: ownership::ExistingTarget,
+    files: BTreeMap<String, FileIdentity>,
+    receipt: crate::receipts::InstallReceipt,
+    receipt_digest: String,
+}
+
+impl CheckedNativeInstallation {
+    pub fn open(prefix: &Path, receipt_digest: &str) -> Result<Self> {
+        let files = installed_inventory(prefix, receipt_digest)?;
+        let target = transaction::inspect_verified_installation(prefix, &files, receipt_digest)?;
+        let raw = read_relative(target.root(), "install-receipt.json", 4 * 1024 * 1024)?;
+        if sha256_bytes(&raw) != receipt_digest {
+            return Err(Refusal::new("retained installation receipt changed"));
+        }
+        let receipt = parse_install_receipt(&raw)?;
+        if receipt.kind != ReceiptKind::NativeV3 {
+            return Err(Refusal::new(
+                "historical executable-driver contract requires explicit migration",
+            ));
+        }
+        Ok(Self {
+            target,
+            files: files
+                .into_iter()
+                .map(|file| (file.path.clone(), file))
+                .collect(),
+            receipt,
+            receipt_digest: receipt_digest.to_owned(),
+        })
+    }
+
+    pub fn path(&self) -> &Path {
+        self.target.path()
+    }
+
+    pub fn receipt(&self) -> &crate::receipts::InstallReceipt {
+        &self.receipt
+    }
+
+    pub fn receipt_digest(&self) -> &str {
+        &self.receipt_digest
+    }
+
+    pub fn file_identities(&self) -> impl Iterator<Item = &FileIdentity> {
+        self.files.values()
+    }
+
+    /// Read an inventory-bound file through the retained root. The actual
+    /// descriptor's owner, mode, size and digest must still match. Recheck the
+    /// complete installation before executing a longer consumer operation.
+    pub fn read_file(&self, relative: &str) -> Result<Vec<u8>> {
+        use std::os::unix::fs::MetadataExt;
+        let expected = self.files.get(relative).ok_or_else(|| {
+            Refusal::new("file is absent from the retained installation inventory")
+        })?;
+        let (parent, leaf) = relative.rsplit_once('/').unwrap_or(("", relative));
+        let directory = self.target.root().relative_directory(parent)?;
+        let identity = directory.classify_entry(OsStr::new(leaf))?;
+        if identity.entry_type() != EntryType::RegularFile {
+            return Err(Refusal::new("retained installation file changed type"));
+        }
+        let file = directory.open_regular_matching(OsStr::new(leaf), identity)?;
+        let metadata = file.metadata()?;
+        if metadata.uid() != self.target.root().metadata()?.uid()
+            || Some(metadata.mode() & 0o7777) != expected.mode
+        {
+            return Err(Refusal::new(
+                "retained installation file owner or mode changed",
+            ));
+        }
+        let bytes = read_open_regular(
+            file,
+            usize::try_from(expected.bytes)
+                .map_err(|_| Refusal::new("retained file size is not representable"))?,
+        )?;
+        if bytes.len() as u64 != expected.bytes || sha256_bytes(&bytes) != expected.sha256 {
+            return Err(Refusal::new("retained installation file bytes changed"));
+        }
+        Ok(bytes)
+    }
+
+    pub fn recheck(&self) -> Result<()> {
+        use std::os::unix::fs::MetadataExt;
+        let checked = Self::open(self.path(), &self.receipt_digest)?;
+        let before = self.target.root().metadata()?;
+        let after = checked.target.root().metadata()?;
+        if before.dev() != after.dev() || before.ino() != after.ino() {
+            return Err(Refusal::new("retained installation root identity changed"));
+        }
+        Ok(())
+    }
+}
+
 struct OwnedFile {
     path: String,
     contents: Vec<u8>,
@@ -84,27 +181,7 @@ pub fn install(
         let host = supported_host()?;
         let verified = verify_publisher_bundle(bundle, policy, || signals.requested())?;
         signals.check()?;
-        let sdk = VerifiedSdkV2Payload::from_verified_bundle(&verified)?;
-        let plan = assemble_install(&verified, &sdk, host)?;
-        signals.check()?;
-        let files = plan
-            .files
-            .iter()
-            .map(|file| InstallFile {
-                path: &file.path,
-                contents: &file.contents,
-                mode: file.mode,
-            })
-            .collect::<Vec<_>>();
-        transaction::publish_native_install_guarded(
-            prefix,
-            bundle,
-            receipt_pin,
-            &files,
-            &plan.receipt,
-            &plan.selected_cli,
-            &signals,
-        )
+        install_verified_guarded(&verified, bundle, prefix, receipt_pin, host, &signals)
     })();
     match (result, signals.finish()) {
         (Ok(published), Ok(())) => Ok(published),
@@ -119,6 +196,46 @@ pub fn install(
         }
         (Err(failure), Ok(())) => Err(failure),
     }
+}
+
+/// Internal composition under the caller's existing operation signal guard.
+/// The unforgeable publisher capability still selects all installed bytes.
+pub(crate) fn install_verified_guarded(
+    verified: &VerifiedPublisherBundle,
+    bundle: &Path,
+    prefix: &Path,
+    receipt_pin: Option<&Path>,
+    host: Host,
+    signals: &SigtermGuard,
+) -> std::result::Result<PublishedInstall, InstallFailure> {
+    ownership::install_target(prefix)?;
+    ownership::require_disjoint(prefix, bundle, "installation must be outside the bundle")?;
+    if let Some(pin) = receipt_pin {
+        ownership::receipt_pin(pin, prefix, bundle)?;
+    }
+    host.ensure_current()?;
+    signals.check()?;
+    let sdk = VerifiedSdkV2Payload::from_verified_bundle(verified)?;
+    let plan = assemble_install(verified, &sdk, host)?;
+    signals.check()?;
+    let files = plan
+        .files
+        .iter()
+        .map(|file| InstallFile {
+            path: &file.path,
+            contents: &file.contents,
+            mode: file.mode,
+        })
+        .collect::<Vec<_>>();
+    transaction::publish_native_install_guarded(
+        prefix,
+        bundle,
+        receipt_pin,
+        &files,
+        &plan.receipt,
+        &plan.selected_cli,
+        signals,
+    )
 }
 
 struct InstallSources<'a> {
@@ -481,6 +598,7 @@ mod tests {
         additional_user_file_refuses_uninstall_without_moving_or_deleting_data();
         changed_sdk_bytes_or_stale_receipt_pin_cannot_authorize_removal();
         malformed_external_policy_cannot_create_an_installation_or_pin();
+        retained_component_selection_checks_all_six_roots_and_rechecks_changes();
     }
 
     struct TestRoot(PathBuf);
@@ -656,8 +774,21 @@ mod tests {
             fs::read_to_string(root.0.join("receipt.sha256")).unwrap(),
             format!("{}\n", installed.receipt_sha256)
         );
+        let retained =
+            CheckedNativeInstallation::open(&installed.prefix, &installed.receipt_sha256).unwrap();
+        assert_eq!(retained.receipt_digest(), installed.receipt_sha256);
+        assert_eq!(retained.receipt().kind, ReceiptKind::NativeV3);
+        assert!(
+            !retained
+                .read_file("sdk/contract/sdk.json")
+                .unwrap()
+                .is_empty()
+        );
+        assert!(retained.read_file("sdk/not-listed").is_err());
+        retained.recheck().unwrap();
         uninstall(&installed.prefix, &installed.receipt_sha256).unwrap();
         assert!(!installed.prefix.exists());
+        assert!(retained.recheck().is_err());
         assert_eq!(fs::read(unrelated).unwrap(), b"user configuration");
         assert!(root.0.join("receipt.sha256").is_file());
     }
@@ -667,6 +798,9 @@ mod tests {
         let installed = publish_fixture(&root);
         let user_file = installed.prefix.join("user-notes.txt");
         fs::write(&user_file, b"keep my notes").unwrap();
+        assert!(
+            CheckedNativeInstallation::open(&installed.prefix, &installed.receipt_sha256).is_err()
+        );
         assert!(uninstall(&installed.prefix, &installed.receipt_sha256).is_err());
         assert_eq!(fs::read(user_file).unwrap(), b"keep my notes");
         assert!(installed.prefix.join("sdk/contract/sdk.json").is_file());
@@ -675,8 +809,13 @@ mod tests {
     fn changed_sdk_bytes_or_stale_receipt_pin_cannot_authorize_removal() {
         let root = TestRoot::new();
         let installed = publish_fixture(&root);
+        let retained =
+            CheckedNativeInstallation::open(&installed.prefix, &installed.receipt_sha256).unwrap();
         assert!(uninstall(&installed.prefix, &"0".repeat(64)).is_err());
+        assert!(CheckedNativeInstallation::open(&installed.prefix, &"0".repeat(64)).is_err());
         fs::write(installed.prefix.join("sdk/README.md"), b"user-edited SDK").unwrap();
+        assert!(retained.read_file("sdk/README.md").is_err());
+        assert!(retained.recheck().is_err());
         assert!(uninstall(&installed.prefix, &installed.receipt_sha256).is_err());
         assert_eq!(
             fs::read(installed.prefix.join("sdk/README.md")).unwrap(),
@@ -698,5 +837,61 @@ mod tests {
         assert!(!prefix.exists());
         assert!(!pin.exists());
         assert_eq!(fs::read(policy).unwrap(), b"{}");
+    }
+
+    fn retained_component_selection_checks_all_six_roots_and_rechecks_changes() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = TestRoot::new();
+        let installed = publish_fixture(&root);
+        let installation =
+            CheckedNativeInstallation::open(&installed.prefix, &installed.receipt_sha256).unwrap();
+        let mut roots = serde_json::Map::new();
+        for name in ["rust", "cargo", "toolchain", "collector", "csdk", "vendor"] {
+            let component = root.0.join(format!("component-{name}"));
+            fs::create_dir_all(component.join("bin")).unwrap();
+            let tool = component.join("bin/tool");
+            fs::write(&tool, b"synthetic component\n").unwrap();
+            fs::set_permissions(&tool, fs::Permissions::from_mode(0o755)).unwrap();
+            std::os::unix::fs::symlink("tool", component.join("bin/alias")).unwrap();
+            roots.insert(name.into(), json!(component));
+        }
+        let mut raw_selection = json!({
+            "schema":"ami-rust-selection-v2", "host":Host::current().unwrap(),
+            "install_receipt_sha256":installed.receipt_sha256,
+            "components":roots,
+        });
+        let selection =
+            crate::records::parse_selection(&serde_json::to_vec(&raw_selection).unwrap()).unwrap();
+        let selected = crate::selected_inputs::verify_selection(&installation, &selection).unwrap();
+        for name in ["rust", "cargo", "toolchain", "collector", "csdk", "vendor"] {
+            let component = selected.component(name).unwrap();
+            assert_eq!(component.measurement().files, 1);
+            assert_eq!(
+                component.executable("bin/tool").unwrap(),
+                component.path().join("bin/tool")
+            );
+            assert_eq!(
+                component.executable("bin/alias").unwrap(),
+                component.path().join("bin/alias")
+            );
+            assert!(component.executable("bin/unlisted").is_err());
+        }
+        selected.recheck().unwrap();
+        let tool = root.0.join("component-rust/bin/tool");
+        fs::write(&tool, b"changed").unwrap();
+        assert!(selected.recheck().is_err());
+        fs::write(&tool, b"synthetic component\n").unwrap();
+        selected.recheck().unwrap();
+        fs::write(root.0.join("component-vendor/extra"), b"user data").unwrap();
+        assert!(crate::selected_inputs::verify_selection(&installation, &selection).is_err());
+        assert_eq!(
+            fs::read(root.0.join("component-vendor/extra")).unwrap(),
+            b"user data"
+        );
+        raw_selection["install_receipt_sha256"] = json!("0".repeat(64));
+        let stale =
+            crate::records::parse_selection(&serde_json::to_vec(&raw_selection).unwrap()).unwrap();
+        assert!(crate::selected_inputs::verify_selection(&installation, &stale).is_err());
+        assert!(installed.prefix.is_dir());
     }
 }
