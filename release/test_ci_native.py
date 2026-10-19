@@ -407,6 +407,12 @@ class NativeMatrixTests(unittest.TestCase):
         self.assertFalse((self.work / "cold-root-diagnostics").exists())
 
     def test_signed_package_lifecycle_runs_matrix_before_removal_and_keeps_replay(self):
+        self._run_signed_package_lifecycle_matrix_case()
+
+    def test_completed_matrix_report_survives_later_retained_replay_failure(self):
+        self._run_signed_package_lifecycle_matrix_case(fail_replay=True)
+
+    def _run_signed_package_lifecycle_matrix_case(self, *, fail_replay=False):
         outer = self.work / "outer"
         metadata = outer / "metadata"
         metadata.mkdir(parents=True)
@@ -429,6 +435,11 @@ class NativeMatrixTests(unittest.TestCase):
 
         def command(label, arguments, expected=0, *, executable):
             commands.append(label)
+            if label == "16-retained-offline-replay" and fail_replay:
+                self.assertFalse(package.exists())
+                self.assertEqual(auth.parsed(auth.read(self.output / "native-build-matrix.json")),
+                                 {"build_count": 10, "fixture": True})
+                raise ValueError("isolated retained replay refusal")
             if arguments[0] == "prepare":
                 if expected:
                     return b""
@@ -473,11 +484,20 @@ class NativeMatrixTests(unittest.TestCase):
                 patch.object(native, "_supervised_run", side_effect=compose), \
                 patch.object(native, "_supervised_text", return_value='{"status":"OUTER_AND_INNER_AUTHENTICATED"}'), \
                 patch.object(native, "_qualify_native_build_matrix", side_effect=matrix):
-            report = native._qualify_native_package(
-                self.work, self.output, outer, self.work / "bundle", self.frontend,
-                self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
-                identity, config, command)
-        self.assertEqual(report["native_matrix"], {"build_count": 10, "fixture": True})
+            if fail_replay:
+                with self.assertRaisesRegex(ValueError, "isolated retained replay refusal"):
+                    native._qualify_native_package(
+                        self.work, self.output, outer, self.work / "bundle", self.frontend,
+                        self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
+                        identity, config, command)
+            else:
+                report = native._qualify_native_package(
+                    self.work, self.output, outer, self.work / "bundle", self.frontend,
+                    self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
+                    identity, config, command)
+                self.assertEqual(report["native_matrix"], {"build_count": 10, "fixture": True})
+        self.assertEqual(auth.parsed(auth.read(self.output / "native-build-matrix.json")),
+                         {"build_count": 10, "fixture": True})
         self.assertEqual(commands[-2:], ["15-retained-input-recheck", "16-retained-offline-replay"])
         self.assertFalse(package.exists())
 

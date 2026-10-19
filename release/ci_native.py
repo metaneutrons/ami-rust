@@ -949,6 +949,9 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
         raise ValueError("native packaged build omitted its PASS receipt")
     native_matrix = _qualify_native_build_matrix(
         work, state, frontend, output, supervisor, config, command)
+    # A later retained-launcher failure must not discard the completed matrix.
+    write(output / "native-build-matrix.json", auth.encoded(native_matrix))
+    _check_limits(supervisor, "preserved completed native build matrix")
     original_elf = auth.read(first / "artifacts/AMIRUST")
     marker = work / "unrelated-user-file.txt"
     write(marker, b"preserve across package removal\n")

@@ -1,0 +1,440 @@
+{
+  "RC1_accepted": false,
+  "actual_preparation": {
+    "claim": "Unsigned development helper calling current core prepare on unchanged checked signed c34 package; not a newly signed CLI, protected qualification or no-Python acceptance",
+    "core_source_commit": "4ea4e671a7c8afdb086b02bcd5d346db6351d541",
+    "package_source_commit": "c34adc55b9c4c77ccf1d624eaee13a1f4dfd2671",
+    "status": "PASS_CURRENT_CORE_REAL_PREPARE_MACOS_ONLY_NOT_SIGNED_CLI_ACCEPTANCE",
+    "supervision": {
+      "commands": [
+        {
+          "elapsed_seconds": 0.177,
+          "exit_code": 0,
+          "label": "bridge-lock",
+          "log_peak_observed_bytes": 67,
+          "managed_peak_observed_bytes": 1977778958,
+          "rss_peak_observed_bytes": 131072,
+          "stderr_log": "logs/bridge-lock.stderr.log",
+          "stdout_log": "logs/bridge-lock.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 10.113,
+          "exit_code": 0,
+          "label": "bridge-build",
+          "log_peak_observed_bytes": 1357,
+          "managed_peak_observed_bytes": 2394655032,
+          "rss_peak_observed_bytes": 812580864,
+          "stderr_log": "logs/bridge-build.stderr.log",
+          "stdout_log": "logs/bridge-build.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 209.338,
+          "exit_code": 0,
+          "label": "actual-current-core-prepare",
+          "log_peak_observed_bytes": 6429287,
+          "managed_peak_observed_bytes": 3836002405,
+          "rss_peak_observed_bytes": 889159680,
+          "stderr_log": "logs/actual-current-core-prepare.stderr.log",
+          "stdout_log": "logs/actual-current-core-prepare.stdout.log",
+          "stop_reason": null
+        }
+      ],
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      },
+      "peak_log_observed_bytes": 6429287,
+      "peak_rss_observed_bytes": 889159680,
+      "peak_workspace_observed_bytes": 3836002405,
+      "schema": "ami-rust-native-supervision-v1",
+      "static_input_root_count": 4,
+      "static_input_roots": [
+        {
+          "label": "pinned-host-rust",
+          "log_bytes": 0,
+          "path": "toolchain",
+          "regular_file_bytes": 1051980329
+        },
+        {
+          "label": "reviewed-registry-cache",
+          "log_bytes": 0,
+          "path": "cargo-home",
+          "regular_file_bytes": 20042059
+        },
+        {
+          "label": "current-core-source-snapshot",
+          "log_bytes": 0,
+          "path": "source",
+          "regular_file_bytes": 149473316
+        },
+        {
+          "label": "actual-signed-c34-package",
+          "log_bytes": 0,
+          "path": "native-package",
+          "regular_file_bytes": 36515533
+        }
+      ]
+    }
+  },
+  "actual_realpath_countercontrol": {
+    "alias": "retained/bin/ami-rust",
+    "native_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69",
+    "original_alias_refusal": "prepared-state-matrix-a1: exit2 symlink component while hashing current_exe",
+    "resolved_executable": "retained/libexec/ami-rust/0.2.0-1/bin/ami-rust",
+    "same_cli_sha256": "d06dd64041793d6386a0a14e89f0d9a754eceb30b63c052fb16cbd0df49b9489",
+    "schema": "ami-rust-retained-launcher-realpath-countercontrol-v1",
+    "scope": "Unchanged signed c34 retained frontend, explicit diagnostic control only; no code/policy/baseline changes",
+    "status": "PASS_REALPATH_SAME_BYTES_ALIAS_REFUSED",
+    "supervision": {
+      "commands": [
+        {
+          "elapsed_seconds": 24.64,
+          "exit_code": 0,
+          "label": "realpath-retained-rebuild",
+          "log_peak_observed_bytes": 230016,
+          "managed_peak_observed_bytes": 2322866734,
+          "rss_peak_observed_bytes": 1690763264,
+          "stderr_log": "logs/realpath-retained-rebuild.stderr.log",
+          "stdout_log": "logs/realpath-retained-rebuild.stdout.log",
+          "stop_reason": null
+        }
+      ],
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      },
+      "peak_log_observed_bytes": 230016,
+      "peak_rss_observed_bytes": 1690763264,
+      "peak_workspace_observed_bytes": 2322866734,
+      "schema": "ami-rust-native-supervision-v1",
+      "static_input_root_count": 2,
+      "static_input_roots": [
+        {
+          "label": "prepared-state",
+          "log_bytes": 146167,
+          "path": "fresh-state",
+          "regular_file_bytes": 1432009833
+        },
+        {
+          "label": "original-project",
+          "log_bytes": 0,
+          "path": "native-client-project",
+          "regular_file_bytes": 4844138
+        }
+      ]
+    }
+  },
+  "authority": "Rust CLI Cargo migration plan revision2, RC1-A1-A4 unchanged",
+  "baseline_changed": false,
+  "component_ci": "https://github.com/metaneutrons/ami-rust/actions/runs/39275034665",
+  "component_ci_all_seven_jobs": "SUCCESS",
+  "component_merge": "5d25750e82a3eb741d17a4a7a7b0e95f8b2d0bcf",
+  "corrected_native_project_sha256": "da0c9f684ff8f1249c8f0b806de6f9966dc74f68728526af3429e708eef209a6",
+  "matrix_development": {
+    "builds": 10,
+    "fresh_roots": 2,
+    "original_error": "RuntimeError('22-retained-client-rebuild failed: exit 2; ami-rust: could not open a path component without following links: Too many levels of symbolic links (os error 62)\\n')",
+    "overall_status": "FAIL_AT_RETAINED_ALIAS_REPLAY",
+    "per_build_result_limitation": "The function completed strict reference and cross-root checks, then the caller failed at retained replay before serializing the returned full per-build matrix. Raw command records and five native/three dependency payloads remain retained. This development result is not criterion acceptance. The caller now writes the complete matrix JSON before package removal.",
+    "strict_matrix_function_returned_before_retained_recheck": true,
+    "supervision": {
+      "commands": [
+        {
+          "elapsed_seconds": 4.556,
+          "exit_code": 0,
+          "label": "01-warm-input-recheck",
+          "log_peak_observed_bytes": 146319,
+          "managed_peak_observed_bytes": 2188402454,
+          "rss_peak_observed_bytes": 57294848,
+          "stderr_log": "logs/01-warm-input-recheck.stderr.log",
+          "stdout_log": "logs/01-warm-input-recheck.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 8.165,
+          "exit_code": 0,
+          "label": "02-new-client",
+          "log_peak_observed_bytes": 146859,
+          "managed_peak_observed_bytes": 2193247132,
+          "rss_peak_observed_bytes": 70549504,
+          "stderr_log": "logs/02-new-client.stderr.log",
+          "stdout_log": "logs/02-new-client.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 47.317,
+          "exit_code": 0,
+          "label": "03-client-build",
+          "log_peak_observed_bytes": 231023,
+          "managed_peak_observed_bytes": 2359386262,
+          "rss_peak_observed_bytes": 1682489344,
+          "stderr_log": "logs/03-client-build.stderr.log",
+          "stdout_log": "logs/03-client-build.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 3.431,
+          "exit_code": 0,
+          "label": "17-matrix-lock-sdk-layout-a",
+          "log_peak_observed_bytes": 231577,
+          "managed_peak_observed_bytes": 2283841605,
+          "rss_peak_observed_bytes": 54968320,
+          "stderr_log": "logs/17-matrix-lock-sdk-layout-a.stderr.log",
+          "stdout_log": "logs/17-matrix-lock-sdk-layout-a.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 3.26,
+          "exit_code": 0,
+          "label": "17-matrix-lock-sdk-layout-b-with-spaces",
+          "log_peak_observed_bytes": 232143,
+          "managed_peak_observed_bytes": 2288684724,
+          "rss_peak_observed_bytes": 55066624,
+          "stderr_log": "logs/17-matrix-lock-sdk-layout-b-with-spaces.stderr.log",
+          "stdout_log": "logs/17-matrix-lock-sdk-layout-b-with-spaces.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 21.087,
+          "exit_code": 0,
+          "label": "19-matrix-build-sdk-layout-a-minimal-noalloc",
+          "log_peak_observed_bytes": 316546,
+          "managed_peak_observed_bytes": 2455011918,
+          "rss_peak_observed_bytes": 1696169984,
+          "stderr_log": "logs/19-matrix-build-sdk-layout-a-minimal-noalloc.stderr.log",
+          "stdout_log": "logs/19-matrix-build-sdk-layout-a-minimal-noalloc.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 21.453,
+          "exit_code": 0,
+          "label": "19-matrix-build-sdk-layout-a-minimal-alloc",
+          "log_peak_observed_bytes": 323905,
+          "managed_peak_observed_bytes": 2542186239,
+          "rss_peak_observed_bytes": 1698086912,
+          "stderr_log": "logs/19-matrix-build-sdk-layout-a-minimal-alloc.stderr.log",
+          "stdout_log": "logs/19-matrix-build-sdk-layout-a-minimal-alloc.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 22.839,
+          "exit_code": 0,
+          "label": "19-matrix-build-sdk-layout-a-qualification",
+          "log_peak_observed_bytes": 324607,
+          "managed_peak_observed_bytes": 2627726292,
+          "rss_peak_observed_bytes": 1605189632,
+          "stderr_log": "logs/19-matrix-build-sdk-layout-a-qualification.stderr.log",
+          "stdout_log": "logs/19-matrix-build-sdk-layout-a-qualification.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 24.757,
+          "exit_code": 0,
+          "label": "19-matrix-build-sdk-layout-a-dependencies",
+          "log_peak_observed_bytes": 607367,
+          "managed_peak_observed_bytes": 2780827809,
+          "rss_peak_observed_bytes": 1695465472,
+          "stderr_log": "logs/19-matrix-build-sdk-layout-a-dependencies.stderr.log",
+          "stdout_log": "logs/19-matrix-build-sdk-layout-a-dependencies.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 22.181,
+          "exit_code": 0,
+          "label": "19-matrix-build-sdk-layout-a-sha256sum",
+          "log_peak_observed_bytes": 408893,
+          "managed_peak_observed_bytes": 2827674990,
+          "rss_peak_observed_bytes": 1693859840,
+          "stderr_log": "logs/19-matrix-build-sdk-layout-a-sha256sum.stderr.log",
+          "stdout_log": "logs/19-matrix-build-sdk-layout-a-sha256sum.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 21.007,
+          "exit_code": 0,
+          "label": "19-matrix-build-sdk-layout-b-with-spaces-minimal-noalloc",
+          "log_peak_observed_bytes": 320309,
+          "managed_peak_observed_bytes": 2900289926,
+          "rss_peak_observed_bytes": 1689780224,
+          "stderr_log": "logs/19-matrix-build-sdk-layout-b-with-spaces-minimal-noalloc.stderr.log",
+          "stdout_log": "logs/19-matrix-build-sdk-layout-b-with-spaces-minimal-noalloc.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 21.371,
+          "exit_code": 0,
+          "label": "19-matrix-build-sdk-layout-b-with-spaces-minimal-alloc",
+          "log_peak_observed_bytes": 327932,
+          "managed_peak_observed_bytes": 2822565005,
+          "rss_peak_observed_bytes": 1691123712,
+          "stderr_log": "logs/19-matrix-build-sdk-layout-b-with-spaces-minimal-alloc.stderr.log",
+          "stdout_log": "logs/19-matrix-build-sdk-layout-b-with-spaces-minimal-alloc.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 22.512,
+          "exit_code": 0,
+          "label": "19-matrix-build-sdk-layout-b-with-spaces-qualification",
+          "log_peak_observed_bytes": 328670,
+          "managed_peak_observed_bytes": 2740929742,
+          "rss_peak_observed_bytes": 1689944064,
+          "stderr_log": "logs/19-matrix-build-sdk-layout-b-with-spaces-qualification.stderr.log",
+          "stdout_log": "logs/19-matrix-build-sdk-layout-b-with-spaces-qualification.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 25.066,
+          "exit_code": 0,
+          "label": "19-matrix-build-sdk-layout-b-with-spaces-dependencies",
+          "log_peak_observed_bytes": 616782,
+          "managed_peak_observed_bytes": 2725560432,
+          "rss_peak_observed_bytes": 1691353088,
+          "stderr_log": "logs/19-matrix-build-sdk-layout-b-with-spaces-dependencies.stderr.log",
+          "stdout_log": "logs/19-matrix-build-sdk-layout-b-with-spaces-dependencies.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 24.481,
+          "exit_code": 0,
+          "label": "19-matrix-build-sdk-layout-b-with-spaces-sha256sum",
+          "log_peak_observed_bytes": 414780,
+          "managed_peak_observed_bytes": 2567575361,
+          "rss_peak_observed_bytes": 1693925376,
+          "stderr_log": "logs/19-matrix-build-sdk-layout-b-with-spaces-sha256sum.stderr.log",
+          "stdout_log": "logs/19-matrix-build-sdk-layout-b-with-spaces-sha256sum.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 1.272,
+          "exit_code": 0,
+          "label": "21-retained-input-recheck",
+          "log_peak_observed_bytes": 236893,
+          "managed_peak_observed_bytes": 2249928343,
+          "rss_peak_observed_bytes": 54329344,
+          "stderr_log": "logs/21-retained-input-recheck.stderr.log",
+          "stdout_log": "logs/21-retained-input-recheck.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 1.145,
+          "exit_code": 2,
+          "label": "22-retained-client-rebuild",
+          "log_peak_observed_bytes": 237008,
+          "managed_peak_observed_bytes": 2249928458,
+          "rss_peak_observed_bytes": 55083008,
+          "stderr_log": "logs/22-retained-client-rebuild.stderr.log",
+          "stdout_log": "logs/22-retained-client-rebuild.stdout.log",
+          "stop_reason": null
+        }
+      ],
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      },
+      "peak_log_observed_bytes": 616782,
+      "peak_rss_observed_bytes": 1698086912,
+      "peak_workspace_observed_bytes": 2900289926,
+      "schema": "ami-rust-native-supervision-v1",
+      "static_input_root_count": 1,
+      "static_input_roots": [
+        {
+          "label": "current-core-prepared-historical-package-state",
+          "log_bytes": 146167,
+          "path": "fresh-state",
+          "regular_file_bytes": 1432009833
+        }
+      ]
+    },
+    "variants": 5
+  },
+  "new_tests": {
+    "historical_parsers": "131 portable cases; explicit pinned internal Python coordinator, ignored current-core test; local prior-source proof only until candidate-qualified both-host CI.",
+    "historical_transactions": "Nine portable current-account filesystem comparisons, not v3 receipt or signature qualification.",
+    "retained_alias": "Old no-follow alias read refuses; resolved alias and real path pass both receipt digest checks; wrong CLI/core digest, changed target and dangling alias refuse."
+  },
+  "published_assets_changed": false,
+  "qualified_component_source": "7f9146bc3de21cba117c7353f40a6bf0da58c593",
+  "remaining": [
+    "Exact new-candidate both-host component/historical CI",
+    "Corrected newly signed CLI cold/warm lifecycle and alias replay",
+    "Full supported consumer no-Python enforcement on both hosts",
+    "Remaining interruption, ownership, upgrade/migration and cross-host metadata acceptance"
+  ],
+  "schema": "ami-rust-retained-launcher-development-v1",
+  "status": "LOCAL_DEVELOPMENT_PARTIAL_NOT_RC1_ACCEPTANCE",
+  "unit_validation": {
+    "native_project_sha256": "da0c9f684ff8f1249c8f0b806de6f9966dc74f68728526af3429e708eef209a6",
+    "schema": "ami-rust-retained-launcher-development-check-v1",
+    "status": "PASS_WORKSPACE_AND_CLIPPY",
+    "supervision": {
+      "commands": [
+        {
+          "elapsed_seconds": 0.183,
+          "exit_code": 0,
+          "label": "rustfmt",
+          "log_peak_observed_bytes": 0,
+          "managed_peak_observed_bytes": 1791901500,
+          "rss_peak_observed_bytes": 163840,
+          "stderr_log": "logs/rustfmt.stderr.log",
+          "stdout_log": "logs/rustfmt.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 44.813,
+          "exit_code": 0,
+          "label": "workspace-tests",
+          "log_peak_observed_bytes": 40265,
+          "managed_peak_observed_bytes": 2702588088,
+          "rss_peak_observed_bytes": 1611153408,
+          "stderr_log": "logs/workspace-tests.stderr.log",
+          "stdout_log": "logs/workspace-tests.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 5.423,
+          "exit_code": 0,
+          "label": "clippy",
+          "log_peak_observed_bytes": 41478,
+          "managed_peak_observed_bytes": 2752965932,
+          "rss_peak_observed_bytes": 990429184,
+          "stderr_log": "logs/clippy.stderr.log",
+          "stdout_log": "logs/clippy.stdout.log",
+          "stop_reason": null
+        }
+      ],
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      },
+      "peak_log_observed_bytes": 41478,
+      "peak_rss_observed_bytes": 1611153408,
+      "peak_workspace_observed_bytes": 2752965932,
+      "schema": "ami-rust-native-supervision-v1",
+      "static_input_root_count": 2,
+      "static_input_roots": [
+        {
+          "label": "pinned-host-rust",
+          "log_bytes": 0,
+          "path": "toolchain",
+          "regular_file_bytes": 1051980329
+        },
+        {
+          "label": "reviewed-registry-cache",
+          "log_bytes": 0,
+          "path": "cargo-home",
+          "regular_file_bytes": 20042059
+        }
+      ]
+    }
+  }
+}

@@ -593,8 +593,21 @@ fn native_cli_digest(installation: &CheckedNativeInstallation, host: Host) -> Re
     }
     let path = std::env::current_exe()
         .map_err(|error| Refusal::new(format!("cannot identify the running CLI: {error}")))?;
-    let digest = sha256_file(&path)?;
-    if digest != native.cli_sha256.as_str() || digest != native.core_sha256.as_str() {
+    native_cli_digest_at(
+        &path,
+        native.cli_sha256.as_str(),
+        native.core_sha256.as_str(),
+    )
+}
+
+fn native_cli_digest_at(path: &Path, cli_sha256: &str, core_sha256: &str) -> Result<String> {
+    // macOS may report the invoked retained/bin symlink from current_exe.
+    // Resolve only that OS-provided executable location, then retain the
+    // no-follow regular-file read and both receipt-bound identity checks.
+    let resolved = fs::canonicalize(path)
+        .map_err(|error| Refusal::new(format!("cannot resolve the running CLI: {error}")))?;
+    let digest = sha256_file(&resolved)?;
+    if digest != cli_sha256 || digest != core_sha256 {
         return Err(Refusal::new(
             "running CLI bytes differ from the receipt-bound CLI/core identity",
         ));
@@ -1351,6 +1364,46 @@ fn random_entry_name(prefix: &str) -> Result<OsString> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn retained_launcher_alias_resolves_without_weakening_receipt_identity() {
+        let root = fs::canonicalize(std::env::temp_dir())
+            .unwrap()
+            .join(format!(
+                "ami-rust-retained-cli-{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+        fs::create_dir_all(root.join("retained/bin")).unwrap();
+        fs::create_dir_all(root.join("retained/libexec/version/bin")).unwrap();
+        let target = root.join("retained/libexec/version/bin/ami-rust");
+        let alias = root.join("retained/bin/ami-rust");
+        fs::write(&target, b"receipt-bound native frontend fixture").unwrap();
+        std::os::unix::fs::symlink("../libexec/version/bin/ami-rust", &alias).unwrap();
+        let expected = sha256_file(&target).unwrap();
+        assert!(
+            sha256_file(&alias).is_err(),
+            "old no-follow route must refuse the alias"
+        );
+        assert_eq!(
+            native_cli_digest_at(&target, &expected, &expected).unwrap(),
+            expected
+        );
+        assert_eq!(
+            native_cli_digest_at(&alias, &expected, &expected).unwrap(),
+            expected
+        );
+        assert!(native_cli_digest_at(&alias, &"0".repeat(64), &expected).is_err());
+        assert!(native_cli_digest_at(&alias, &expected, &"0".repeat(64)).is_err());
+        fs::write(&target, b"changed frontend bytes").unwrap();
+        assert!(native_cli_digest_at(&alias, &expected, &expected).is_err());
+        fs::remove_file(&target).unwrap();
+        assert!(native_cli_digest_at(&alias, &expected, &expected).is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn starter_files_match_the_fixed_static_library_recipe() {
