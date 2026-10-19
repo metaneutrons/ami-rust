@@ -103,3 +103,22 @@ staging and cleanup have separate controls. Real GH/Cosign execution, negative
 signature controls and exact host/source identities are recorded separately from
 synthetic parser tests. Both-host qualification and all RC1-A1–A4 criteria remain
 open until their complete evidence is available.
+
+The [exact-source local result](evidence/rc1-publisher-local-20261019/result.json)
+passes 172 core unit tests, one actual Cargo/frontend test and one manifest
+oracle integration test (174 total), formatting and Clippy with warnings denied.
+The [macOS cryptographic evidence](evidence/rc1-publisher-local-20261019/crypto-verification.json)
+records the unchanged released manifest, external policy, verifier/root digests,
+bridge/source identities and actual exits. All six genuine signature calls pass
+in the positive inspection. Independently altered GH and Cosign signatures fail
+in their respective real verifiers; changed payload, inputs, tool pin and a
+legacy manifest presented to native verification also refuse. Only isolated
+copies were corrupted. Original release/baseline inputs remain unchanged.
+
+The bridge uses the same 29 registry package identities as the production lock.
+Its historical inspection report explicitly refuses native installation
+authorization. This local proof uses transitional internal Python orchestration;
+it is neither the complete consumer no-Python observation nor a network-denial
+qualification. A protected signed native-v2 candidate and the Linux real-verifier
+path still need their own evidence. The [development/review record](evidence/rc1-publisher-local-20261019/review-and-development-record.json)
+retains resolved failures and the changes required by independent review.

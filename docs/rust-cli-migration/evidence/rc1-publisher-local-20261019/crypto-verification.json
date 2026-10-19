@@ -1,0 +1,287 @@
+{
+  "schema": "ami-rust-rc1-publisher-crypto-v1",
+  "status": "PASS",
+  "source_commit": "9ed0917674dbed2bd9a9b08cc7883a1450699ddd",
+  "started_utc": "2026-10-19T05:50:20.221749+00:00",
+  "cases": [
+    {
+      "name": "bridge-build",
+      "exit": 0,
+      "expected_exit": 0,
+      "elapsed_seconds": 1.418,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "file": "bridge-build.stdout"
+      },
+      "stderr": {
+        "bytes": 349,
+        "sha256": "7ebf7df6cbf2a07939f4c225a95d47b72e57a81bcc08dcc8d43c7c979a3a2bf0",
+        "file": "bridge-build.stderr"
+      },
+      "pass": true,
+      "original_argv_sha256": "a49a88f19f6a1642535a66215f19da1ac29b86b37cf78f9efc8f5cb477463692",
+      "execution": "Pinned Cargo bridge build"
+    },
+    {
+      "name": "positive-staged-legacy",
+      "exit": 0,
+      "expected_exit": 0,
+      "elapsed_seconds": 6.571,
+      "stdout": {
+        "bytes": 834,
+        "sha256": "8e696e056b39bb5df4b9c0abb4ce3462f27b18c24b8c68abd7a45f443e02986a",
+        "file": "positive-staged-legacy.stdout"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "file": "positive-staged-legacy.stderr"
+      },
+      "pass": true,
+      "original_argv_sha256": "1cbd9466dead75e7f68d70a3e887b2afbd2c838f4e00dfb4d6c357712bd9cdd5",
+      "execution": "Native Rust core bridge with explicit schema, isolated/original bundle and external policy"
+    },
+    {
+      "name": "native-refuses-legacy",
+      "exit": 2,
+      "expected_exit": 2,
+      "elapsed_seconds": 1.15,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "file": "native-refuses-legacy.stdout"
+      },
+      "stderr": {
+        "bytes": 37,
+        "sha256": "0f6e08afd621408b2b7e45c0674919e12c762421943b9b6348739eb6ccc6d4c6",
+        "file": "native-refuses-legacy.stderr"
+      },
+      "pass": true,
+      "expected_refusal_fragment": "schema",
+      "original_argv_sha256": "627418ebcc52fd64a1249cf6103c3b3c1ea86c91ba3993a8e341a73b220d0846",
+      "execution": "Native Rust core bridge with explicit schema, isolated/original bundle and external policy"
+    },
+    {
+      "name": "altered-gh-signature",
+      "exit": 2,
+      "expected_exit": 2,
+      "elapsed_seconds": 1.699,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "file": "altered-gh-signature.stdout"
+      },
+      "stderr": {
+        "bytes": 191,
+        "sha256": "5738221e901e899b1823e1bb075c2d86cad14de5fff33d35d35a71849b0ba83b",
+        "file": "altered-gh-signature.stderr"
+      },
+      "pass": true,
+      "expected_refusal_fragment": "/gh failed with exit status: 1",
+      "original_argv_sha256": "12a991997c30dccad6dbfbc78916ae46c75baacaa3fb71c871e64f4ac21e0cbe",
+      "execution": "Native Rust core bridge with explicit schema, isolated/original bundle and external policy"
+    },
+    {
+      "name": "altered-cosign-signature",
+      "exit": 2,
+      "expected_exit": 2,
+      "elapsed_seconds": 3.238,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "file": "altered-cosign-signature.stdout"
+      },
+      "stderr": {
+        "bytes": 195,
+        "sha256": "da6c99ab6f6a695b869f04221e6520131cdab5edf6df50f8e5eaffbe42e2953e",
+        "file": "altered-cosign-signature.stderr"
+      },
+      "pass": true,
+      "expected_refusal_fragment": "/cosign failed with exit status: 1",
+      "original_argv_sha256": "ec2195c55f51e564c5b46578a068e57c28105ddf5419786aa78981eff7a85954",
+      "execution": "Native Rust core bridge with explicit schema, isolated/original bundle and external policy"
+    },
+    {
+      "name": "altered-asset",
+      "exit": 2,
+      "expected_exit": 2,
+      "elapsed_seconds": 1.14,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "file": "altered-asset.stdout"
+      },
+      "stderr": {
+        "bytes": 37,
+        "sha256": "7525bf5be5c2cc843cbd6c6e0f39bb2cfc9bf0e39f61df4f5848d70904788b77",
+        "file": "altered-asset.stderr"
+      },
+      "pass": true,
+      "expected_refusal_fragment": "manifest asset bytes differ",
+      "original_argv_sha256": "163abd6f44815bb024850c667a948aa28e34766840b870f83b8142afca429deb",
+      "execution": "Native Rust core bridge with explicit schema, isolated/original bundle and external policy"
+    },
+    {
+      "name": "altered-inputs",
+      "exit": 2,
+      "expected_exit": 2,
+      "elapsed_seconds": 1.152,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "file": "altered-inputs.stdout"
+      },
+      "stderr": {
+        "bytes": 53,
+        "sha256": "1479fd8b5479952d861da48e67ef810536a4bcf9ef7c94b77e218735aaeccb86",
+        "file": "altered-inputs.stderr"
+      },
+      "pass": true,
+      "expected_refusal_fragment": "inputs manifest digest",
+      "original_argv_sha256": "240ce529522621310d5f4e618c20123c1f0ef05631fdc0118ada36d26e501b73",
+      "execution": "Native Rust core bridge with explicit schema, isolated/original bundle and external policy"
+    },
+    {
+      "name": "wrong-tool-pin",
+      "exit": 2,
+      "expected_exit": 2,
+      "elapsed_seconds": 0.254,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "file": "wrong-tool-pin.stdout"
+      },
+      "stderr": {
+        "bytes": 192,
+        "sha256": "ade06e9152b2f4d8209cc93ac917049ad1daefed57a218ad07fd2f20dbfcf018",
+        "file": "wrong-tool-pin.stderr"
+      },
+      "pass": true,
+      "expected_refusal_fragment": "digest mismatch",
+      "original_argv_sha256": "90d9923c510af2d3a673edc497928e95267061113e4325ef8a3e06522dfbcc25",
+      "execution": "Native Rust core bridge with explicit schema, isolated/original bundle and external policy"
+    }
+  ],
+  "qualification_scope": "Real macOS pinned external verifier execution on immutable release-v1 compatibility inputs; not native-v2 release or full RC1 acceptance.",
+  "consumer_no_python_observation": "not run; transitional internal Python orchestration",
+  "network_denial_observation": "not run",
+  "native_v2_signed_candidate_qualified": false,
+  "public_commands_activated": false,
+  "r1_baseline_modified": false,
+  "registry_identities_equal": true,
+  "registry_identity_count": 29,
+  "bridge_sha256": "ce5aeb15c43d4ebd1d3582a539964231f98d9f4f9bad4648df0cca579e7ed8b9",
+  "production_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+  "bridge_lock_sha256": "674b6f797b5c5f679b2bf06d2031f056193123eff11d65ec7a0e916b96410bbd",
+  "core_source_sha256": {
+    "tooling/crates/core/src/compression.rs": "a25f261d6bde6c6b235f4a1ea612255c49c1b98f16a5c8d0982502cdbd0b9e19",
+    "tooling/crates/core/src/digest.rs": "32593f7baf9a52a79f34c7a28d2d0f381913fe568830b6b02628f2d977208f5e",
+    "tooling/crates/core/src/directory.rs": "7f65e70dc83464d4176012ff9064038b6a77d5067b39d1e0003ffae926c1625e",
+    "tooling/crates/core/src/elf.rs": "a7f068fd2b28357abf2bc488a3b655078283dcb399671b96cdfe3d12bf567fb5",
+    "tooling/crates/core/src/error.rs": "54c606fab3b71f70c1fbfc27e41cd69e0c342efebcd435cf8d4530aab37c4b5f",
+    "tooling/crates/core/src/files.rs": "9320b67cb7948811f082122b88626aa31d2a09a2d1fc878e6ff50f85afe346bf",
+    "tooling/crates/core/src/frontend.rs": "59c8d6b20ea96d17dc22f8cf6875e224206053cbd5dc4332b864254bc5b372cb",
+    "tooling/crates/core/src/inventory.rs": "4a1d9025ba57e35a4c7e162e69c0e3d15105831e6618625bf3fc5d41144a4460",
+    "tooling/crates/core/src/json.rs": "a8d23560d31db57ad2bffb4202d1ae0e87334c8d4f86abec4309a8d8454ab005",
+    "tooling/crates/core/src/lib.rs": "d0385bddb767b0ce572e1eef858813b8c47a7fb1259246c59d1ea9518a287ca3",
+    "tooling/crates/core/src/mutations.rs": "9a46e5541322dcdcbdd4ae86dd2634df97ee7334fe73dcfa33093845f862a60f",
+    "tooling/crates/core/src/ownership.rs": "0d5fbc3b32f727d0250534642612e7a01b7df89d7ea6b43e7c18acb3f247a9d8",
+    "tooling/crates/core/src/process_capture.rs": "0a3e43679d8a73a4de299bf5a133a6a2542eb0fc171c58df60b483640058bb95",
+    "tooling/crates/core/src/publisher.rs": "41c13c326fdaba70e666640de2688caadc7422a82e3e20088cf9f7a5135dc6d9",
+    "tooling/crates/core/src/publisher_claims.rs": "04e54c49f6ee57bf505af9d05d0bcb65ccc28444bb2b4807a1bb3909862e7085",
+    "tooling/crates/core/src/publisher_files.rs": "448cfc1ae61bb8997463fb4d5fab82d3b0b1615fd70e349cc1d4ae4e5ddc92b7",
+    "tooling/crates/core/src/publisher_home.rs": "6d6855d748d92fe19a983b8569e6426dd475e4e616e885e5d85461d07463af70",
+    "tooling/crates/core/src/publisher_metadata.rs": "5ae76fb3c4c650d33066307db8738abb17fce6165dbcc1157b39d9c08eb37939",
+    "tooling/crates/core/src/publisher_policy.rs": "0ef8109ea9f41726c807ffca7fa2c181a1e73c1fc0a95af973b81237cc3e9ebe",
+    "tooling/crates/core/src/publisher_tar.rs": "827f0303b3a7dda90ac90a72efb736402ac7b5ded652fdcca5ee281be1afb9d8",
+    "tooling/crates/core/src/publisher_tests.rs": "17bcf040bfebe780c28c5a34d840d90831069e5056da38592768a190b92f75bc",
+    "tooling/crates/core/src/receipts.rs": "91ecd35e9b47028f33f4e3b454a8b7a5ee0d52f14e765ce4ad28e60674342feb",
+    "tooling/crates/core/src/records.rs": "377e464a9fd05e3a870875761644d4b8fe4467b3cf30d7ec436064936175608d",
+    "tooling/crates/core/src/release_manifest.rs": "034d655230e35675238b2619d619d681bdf35b267016e1c302592a726a154c7a",
+    "tooling/crates/core/src/signals.rs": "db55598d9bd1121946b1bbfbbbd1004f64bc1b8a087cc09d18d97f00925e2513",
+    "tooling/crates/core/src/transaction.rs": "fc7c8b34254cd75b533a1994fe71fe2da98df2c58619d68260b4b39f19a3214c",
+    "tooling/crates/core/src/workflow_counter.rs": "d435d6eccef0fbd9f3c6710b35e9bda88041f1e5b0b04345fe5e7a0649f358e6"
+  },
+  "manifest_sha256": "cd9adcf44264c86eb0bdea35bb16c02529c8ae5b051d4a9dd3aa6007f0972b65",
+  "external_policy_sha256": "c2098eef7908157d8bb64ee2f8bee10cd0478dbdcf92725c6ccd68d35f9d561b",
+  "tool_and_root_identities": [
+    {
+      "name": "cosign",
+      "sha256": "5cf948c2f4dfe59687bdd0b8523709067383e03982cc543475c8a7dc70e92a76"
+    },
+    {
+      "name": "gh",
+      "sha256": "8a4258433c81106343144857750316241759d06dcf16265cf3c4864a8f2f2ad6"
+    },
+    {
+      "name": "sigstore",
+      "sha256": "05a094edfa2e8eb7d1b4b37244e28ffb6d86b8b86ce3eb122b644b4335ae4dc1"
+    },
+    {
+      "name": "github-attestations",
+      "sha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c"
+    }
+  ],
+  "legacy_inspection_report": {
+    "schema": "ami-rust-legacy-publisher-inspection-v1",
+    "signaturesVerified": true,
+    "nativeInstallationAuthorized": false,
+    "externalPolicySha256": "c2098eef7908157d8bb64ee2f8bee10cd0478dbdcf92725c6ccd68d35f9d561b",
+    "releaseManifestSha256": "cd9adcf44264c86eb0bdea35bb16c02529c8ae5b051d4a9dd3aa6007f0972b65",
+    "repository": "metaneutrons/ami-rust",
+    "workflow": ".github/workflows/sdk-qualify.yml",
+    "workflowSha": "b4ebb9cce5decd01616b75acf451d0eba9995ee3",
+    "sourceSha": "b4ebb9cce5decd01616b75acf451d0eba9995ee3",
+    "sourceRef": "refs/heads/main",
+    "workflowRuns": [
+      {
+        "runId": 39121017959,
+        "runAttempt": 1,
+        "hostProfile": "linux-x86_64"
+      }
+    ],
+    "attestedSubjects": [
+      "SHAUTIL",
+      "release.json",
+      "sdk.tar.xz"
+    ],
+    "cosignSubjects": [
+      "SHAUTIL",
+      "release.json",
+      "sdk.tar.xz"
+    ],
+    "verificationMode": "offline pinned GH bundle/custom root and Cosign bundle/trusted root",
+    "elapsedSeconds": 6.296
+  },
+  "mutations": [
+    {
+      "case": "altered-gh-signature",
+      "file": ".auth/gh/SHAUTIL.json",
+      "before_sha256": "3b5857421db20b61c98242590f14ee70b817c11c47b991e3a2a282d5cbaad693",
+      "after_sha256": "9522ac20ad25636045d8b7754cc15862934ab504731062b87c0b32c5ad463902",
+      "changed_field": [
+        "dsseEnvelope",
+        "signatures",
+        0,
+        "sig"
+      ],
+      "source_unchanged": true
+    },
+    {
+      "case": "altered-cosign-signature",
+      "file": ".auth/cosign/release.json.json",
+      "before_sha256": "083717e4e3448daa68a51fbbbd73282fc295319ebba33fffd7a1668ac0456294",
+      "after_sha256": "b6cf90d5a8ddc944fcf424a5a2dc99303d8d6cb031e1c937164b9c3ba0be0cc9",
+      "changed_field": [
+        "messageSignature",
+        "signature"
+      ],
+      "source_unchanged": true
+    }
+  ],
+  "finished_utc": "2026-10-19T05:50:36.968958+00:00",
+  "actual_command_vectors": "Preserved in local evidence. Public records hash the original JSON argv and name the native bridge invocation; no command has been rewritten and claimed executed.",
+  "bridge_source_file": "crypto-bridge.rs",
+  "bridge_source_sha256": "bb51f8e4143ec6902bb737d68bef9b3b89e8f9d256e31abe36e787402f22cf9e"
+}
