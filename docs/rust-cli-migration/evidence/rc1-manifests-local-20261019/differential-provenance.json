@@ -1,0 +1,225 @@
+{
+  "artifact_sha256": {
+    "bridge-build.log": "f8214e127456cc2c85d6b86e666432554e2a4b67138a468de93f904de8d3e15d",
+    "bridge-final/Cargo.lock": "91903eee8ed8ff532186d12b7a1353b6f5edaea9bbbe764854cf7d4895808875",
+    "bridge-final/Cargo.toml": "38a57223d34352692ab9307b6985ecbf4e2765b7983e035ab364a713c7f3269c",
+    "bridge-final/src/main.rs": "34a0d52261d63d44c6efc34c1f5a534f67867a8be65b7854ab2667b3e2e19e34",
+    "bridge-target-final/debug/release-manifest-differential": "1ff2f42b4554d9e5b74c65b8dc1f4c0a81077b57a913db34107fa4db2034aa99",
+    "core-source-hashes-after.json": "aa832a6a1dededd9e001c9cf6c37aa064753d1853d67ac6f985674c5a0d28a09",
+    "core-source-hashes-before.json": "a7b162e7ac7c4d1e0fe9659b67b67f29496eaa5f240d924fe4ac5a4e32987fcb",
+    "final-source-report.json": "44376259a6f99e4bfdd90df6e5ce1ecfe62db33e937a2a78aa3cf996fc894ac6",
+    "lock-identity-comparison.json": "8bad2305a45b279e6f7cbefa35e4c11c3fb2fbe62813b111b9bbb4eb6e8e62a9",
+    "primary-execution.log": "edea1093620f8046665e4b1c02418eaf6085dec2f84c65775ef15355b36e9d21",
+    "rust-report.json": "710fd29836982fc1719c389098755bf14981bb23d49cbc4163f4c766e6d6750c",
+    "rust-supplemental-report.json": "900595c751b61d4a4e0eabdae24c7d41ee58d009a1a520df1f756164ea9f9d07",
+    "supplemental-float-execution.log": "b0ced18cbbb29ed243dda30abaccfc2a68c9ef423f3d23004a65a868c1e3e322"
+  },
+  "build_command": "cargo +1.98.1 build --locked --offline --manifest-path <private>/bridge-final/Cargo.toml",
+  "build_environment": {
+    "CARGO_BUILD_JOBS": 2,
+    "CARGO_REGISTRY_TOKEN_removed": true,
+    "CARGO_TARGET_DIR": "<private>/bridge-target-final",
+    "offline": true
+  },
+  "build_exit_status": 0,
+  "core_source_binding": {
+    "after_inventory_sha256": "aa832a6a1dededd9e001c9cf6c37aa064753d1853d67ac6f985674c5a0d28a09",
+    "all_worktree_files_match_git_head_after_build": true,
+    "all_worktree_files_match_git_head_before_build": true,
+    "before_inventory_sha256": "a7b162e7ac7c4d1e0fe9659b67b67f29496eaa5f240d924fe4ac5a4e32987fcb",
+    "hashes_unchanged_across_build": true,
+    "tracked_source_count": 19
+  },
+  "dependency_lock": {
+    "extra_in_bridge": [],
+    "final_bridge_lock_sha256": "91903eee8ed8ff532186d12b7a1353b6f5edaea9bbbe764854cf7d4895808875",
+    "final_bridge_registry_identity_count": 29,
+    "identities": [
+      {
+        "checksum": "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa",
+        "name": "adler2",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.0.1"
+      },
+      {
+        "checksum": "d2f6c7dbe95a6ed67ad9f18e57daf93a2f034c524b99fd2b76d18fdfeb6660aa",
+        "name": "block-buffer",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.12.1"
+      },
+      {
+        "checksum": "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600",
+        "name": "cfg-if",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.5"
+      },
+      {
+        "checksum": "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c",
+        "name": "const-oid",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.10.2"
+      },
+      {
+        "checksum": "5ca28b0ae3115b884660db4118d803791fd6756b6e88f39c0f3f7859060d7566",
+        "name": "cpufeatures",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.1"
+      },
+      {
+        "checksum": "01a7799fd6b852db0e61728dde9a204c423b44d689dbd432522543614b490e78",
+        "name": "crc32fast",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.5.2"
+      },
+      {
+        "checksum": "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453",
+        "name": "crypto-common",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.2"
+      },
+      {
+        "checksum": "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2",
+        "name": "digest",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.11.3"
+      },
+      {
+        "checksum": "5c287a33c7f0a620c38e641e7f60827713987b3c0f26e8ddc9462cc69cf75759",
+        "name": "filetime",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.29"
+      },
+      {
+        "checksum": "6e634e2e0ebac1ee034020da1ca582e17ffe4e0f5e985823721e168928136dcb",
+        "name": "flate2",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.1.10"
+      },
+      {
+        "checksum": "27f864f10dfb56725ce5ce5472bc52252c8f93a4ab86327122cebf62c5f59a17",
+        "name": "hybrid-array",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.15"
+      },
+      {
+        "checksum": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682",
+        "name": "itoa",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.18"
+      },
+      {
+        "checksum": "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a",
+        "name": "libc",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.191"
+      },
+      {
+        "checksum": "7277c9742229dc25243236d578b6471a798c554512c6f6a04365ec2e87c2a3bb",
+        "name": "lzma-rust2",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.22.0"
+      },
+      {
+        "checksum": "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98",
+        "name": "memchr",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.8.3"
+      },
+      {
+        "checksum": "b63fbc4a50860e98e7b2aa7804ded1db5cbc3aff9193adaff57a6931bf7c4b4c",
+        "name": "miniz_oxide",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.9.1"
+      },
+      {
+        "checksum": "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9",
+        "name": "proc-macro2",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.107"
+      },
+      {
+        "checksum": "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001",
+        "name": "quote",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.47"
+      },
+      {
+        "checksum": "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f",
+        "name": "ryu",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.23"
+      },
+      {
+        "checksum": "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e",
+        "name": "serde",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.228"
+      },
+      {
+        "checksum": "41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad",
+        "name": "serde_core",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.228"
+      },
+      {
+        "checksum": "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79",
+        "name": "serde_derive",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.228"
+      },
+      {
+        "checksum": "402a6f66d8c709116cf22f558eab210f5a50187f702eb4d7e5ef38d9a7f1c79c",
+        "name": "serde_json",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.145"
+      },
+      {
+        "checksum": "47d7069beb7d6ac7b9acd1039986e73443f24234f41074da099d6f994ac9ad19",
+        "name": "sha2",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.11.1"
+      },
+      {
+        "checksum": "3a219298ac11a56ea9a6d2120044824d6f01aeb034955e7af7bc16858527deea",
+        "name": "simd-adler32",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.10"
+      },
+      {
+        "checksum": "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297",
+        "name": "syn",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.0.119"
+      },
+      {
+        "checksum": "3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840",
+        "name": "tar",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.46"
+      },
+      {
+        "checksum": "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20",
+        "name": "typenum",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.20.1"
+      },
+      {
+        "checksum": "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563",
+        "name": "unicode-ident",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.27"
+      }
+    ],
+    "identities_match": true,
+    "missing_from_bridge": [],
+    "production_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+    "production_registry_identity_count": 29
+  },
+  "release_manifest_sha256": "c999e72d2baaa3cc489ad44da254850c643a076f350cce9a015872acc84636e7",
+  "source_commit": "c40a0060b3003e3bda57c9014bf9a17bb621b186",
+  "toolchain": {
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "target": "aarch64-apple-darwin"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "before": "0eb24cf4bf0030a922336b3207fdda71d5f7786e",
+  "after": "0bac5395dbd214bd14aed62199d8915afea73328",
+  "tooling_tree": "b24602763fb9343e36b32b585e9b88dc86633f27",
+  "tooling_tree_identical": true,
+  "base_commit": "a00ec793685ac6798971b6cc779f5cebf19dfa18",
+  "preserved_ref": "fix/evidence-rc1-release-manifests-pre-rebase",
+  "qualified_differential_commit": "c40a0060b3003e3bda57c9014bf9a17bb621b186",
+  "all_19_core_sources_equal_differential_source": true,
+  "new_integration_test_covered_by_current_local_suite": true
+}

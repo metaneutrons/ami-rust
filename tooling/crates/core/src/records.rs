@@ -5,7 +5,7 @@
 use crate::{
     Refusal, Result,
     digest::is_sha256_digest,
-    json::{JsonProfile, parse_json},
+    json::{JsonProfile, parse_json_value},
 };
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{
@@ -222,7 +222,7 @@ fn decode_schema<T: DeserializeOwned>(
     expected: &str,
     profile: JsonProfile,
 ) -> Result<T> {
-    let document: serde_json::Value = parse_json(bytes, profile)?;
+    let document = parse_json_value(bytes, profile)?;
     let schema = document
         .as_object()
         .and_then(|object| object.get("schema"))
@@ -360,6 +360,15 @@ mod tests {
                 .len(),
             6
         );
+    }
+
+    #[test]
+    fn raw_value_wrapper_cannot_replace_the_actual_record_root() {
+        let wrap =
+            |value: Value| bytes(&json!({"$serde_json::private::RawValue": value.to_string()}));
+        assert!(parse_package_state(&wrap(state())).is_err());
+        assert!(parse_selection(&wrap(selection())).is_err());
+        assert!(parse_project_lock(&wrap(project_lock())).is_err());
     }
 
     #[test]

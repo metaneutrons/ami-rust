@@ -1,0 +1,378 @@
+{
+  "schema": "ami-rust-release-manifest-static-oracles-v1",
+  "scope": "Inert pinned historical fixture results with explicit prospective contract differences; tests execute Rust only",
+  "historical_python_version": "3.12.15",
+  "historical_python_sha256": "aed8ed802d0387d6831dead5885840e4e2ff3a7984dd7297e9a5f4466e9cda1d",
+  "historical_source_sha256": "0e77fa70bcaa69d08de3102e18c102a063b276c654242e676dd20fab6d74e984",
+  "cases": [
+    {
+      "name": "valid-qualification-route",
+      "input": "inputs/valid-qualification-route.json",
+      "input_sha256": "54298e1f8b077bdc8190e388340382bf2696bece2e0b73b5ff506e893404701f",
+      "production": false,
+      "historical_acceptance": true,
+      "native_acceptance": true,
+      "intentional_difference": null
+    },
+    {
+      "name": "qualification-via-production-route",
+      "input": "inputs/qualification-via-production-route.json",
+      "input_sha256": "54298e1f8b077bdc8190e388340382bf2696bece2e0b73b5ff506e893404701f",
+      "production": true,
+      "historical_acceptance": true,
+      "native_acceptance": true,
+      "intentional_difference": null
+    },
+    {
+      "name": "actual-published-production-route",
+      "input": "inputs/actual-published-production-route.json",
+      "input_sha256": "cd9adcf44264c86eb0bdea35bb16c02529c8ae5b051d4a9dd3aa6007f0972b65",
+      "production": true,
+      "historical_acceptance": true,
+      "native_acceptance": true,
+      "intentional_difference": null
+    },
+    {
+      "name": "actual-published-qualification-route",
+      "input": "inputs/actual-published-qualification-route.json",
+      "input_sha256": "cd9adcf44264c86eb0bdea35bb16c02529c8ae5b051d4a9dd3aa6007f0972b65",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "duplicate-top-level-schema",
+      "input": "inputs/duplicate-top-level-schema.json",
+      "input_sha256": "816a876b251aa96e82b4f4643201f5174aea4ca2a5a4f7bc86729bb4790d738e",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "duplicate-nested-producer-key",
+      "input": "inputs/duplicate-nested-producer-key.json",
+      "input_sha256": "dc6d0fa58fd5228c411280beaaf53054e516c849f14189273a6f9a2d7efa6cd9",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "wrong-schema-discriminator",
+      "input": "inputs/wrong-schema-discriminator.json",
+      "input_sha256": "8df32ef6eba79a04012a88f86ef0c72f07dff06e94d83738f6a3905bdcba3c71",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "missing-required-field",
+      "input": "inputs/missing-required-field.json",
+      "input_sha256": "66822b48129198a779d137a6383ca7cf1c67386943c5e3a98bffd3df0b664fdf",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "unknown-top-level-field",
+      "input": "inputs/unknown-top-level-field.json",
+      "input_sha256": "61386174ad4b0d7e1ffe126344a7d01e36d495e5c1b269fea720e5007c458b15",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "empty-producer-object",
+      "input": "inputs/empty-producer-object.json",
+      "input_sha256": "ab74469a44714074dfd785f5d2482d656a5f778e1a057f2916769a9f07f9e9fc",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "host-map-missing-linux",
+      "input": "inputs/host-map-missing-linux.json",
+      "input_sha256": "3951290d7c3209f79a5cad7bf1ad10223b8f2ef6911ac8bf62b696e3ec157a76",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "host-map-extra-host",
+      "input": "inputs/host-map-extra-host.json",
+      "input_sha256": "04a762e26f399503924ba399384ef791efaaf6fd4245c0d1e10d80025447a765",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "host-map-invalid-digest",
+      "input": "inputs/host-map-invalid-digest.json",
+      "input_sha256": "73098f5e783254f0052516c94c38e3b909221663d6d016bd21f122e2ebe094f3",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "assets-missing-sdk-archive",
+      "input": "inputs/assets-missing-sdk-archive.json",
+      "input_sha256": "d51d0e1d63dfdfc38a43388eb946a9725baa1b9833b6e8b178426c1ba0e06162",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "assets-reserved-release-json",
+      "input": "inputs/assets-reserved-release-json.json",
+      "input_sha256": "db3200eac7c7d3c38f8eb48c73832a1bda242e4a9104231e0745ed96ae314c97",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "assets-reserved-release-json-prefix",
+      "input": "inputs/assets-reserved-release-json-prefix.json",
+      "input_sha256": "034205ac5ce391c59300b8dfc480dd3a27637cbc86b25dede676af957aff596d",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "assets-casefold-duplicate",
+      "input": "inputs/assets-casefold-duplicate.json",
+      "input_sha256": "983f01c86567851e0c90d06fb75265b660883421a976c9621c8ec2d3e58a586d",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "assets-file-directory-prefix-conflict",
+      "input": "inputs/assets-file-directory-prefix-conflict.json",
+      "input_sha256": "b70ddef38d40eea5dd48fdeeeee15b5457452842df71b28f91965929e6e64521",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "assets-nonportable-parent-path",
+      "input": "inputs/assets-nonportable-parent-path.json",
+      "input_sha256": "c6ef49e817dbbf6f1453f86eb3841f65cedaae2aae020b23e56e243ad0c9388e",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "sdk-inventory-missing-contract",
+      "input": "inputs/sdk-inventory-missing-contract.json",
+      "input_sha256": "0cc003f8d22be6a1927fd5ee288d015f106f40cc549f463eb78e23bae717b64a",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "sdk-contract-digest-mismatch",
+      "input": "inputs/sdk-contract-digest-mismatch.json",
+      "input_sha256": "4ae7df56f6be2bb77ebf2912ad1219f4205f3014fafb8a2ec585a146700e9d31",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "asset-size-boolean",
+      "input": "inputs/asset-size-boolean.json",
+      "input_sha256": "bd52fdc387f731ba18b619ea50367dde421ea16138f64fe987ae7e2f14b807f5",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "asset-size-float-one",
+      "input": "inputs/asset-size-float-one.json",
+      "input_sha256": "80f3de85b554908aeaae3023390bd69a9c0bf800f66b1adf5a2dbe88da9ec4be",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "asset-size-negative-one",
+      "input": "inputs/asset-size-negative-one.json",
+      "input_sha256": "b1affc008e3d3027e15070b3772d8a2fadf8c2f41d7cd007979058d1f6b9da96",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "asset-size-zero-integer",
+      "input": "inputs/asset-size-zero-integer.json",
+      "input_sha256": "54298e1f8b077bdc8190e388340382bf2696bece2e0b73b5ff506e893404701f",
+      "production": false,
+      "historical_acceptance": true,
+      "native_acceptance": true,
+      "intentional_difference": null
+    },
+    {
+      "name": "asset-size-negative-zero-integer",
+      "input": "inputs/asset-size-negative-zero-integer.json",
+      "input_sha256": "8bd9b5573dda447a5b291b822b755c685d512bf1e36726a029dd8cedf1474231",
+      "production": false,
+      "historical_acceptance": true,
+      "native_acceptance": true,
+      "intentional_difference": null
+    },
+    {
+      "name": "asset-size-negative-zero-float",
+      "input": "inputs/asset-size-negative-zero-float.json",
+      "input_sha256": "b75a7d7ebf0605e8e2140a04fc610379dff2db6736f1ba65b1e79d6d9adee069",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "asset-size-negative-zero-exponent",
+      "input": "inputs/asset-size-negative-zero-exponent.json",
+      "input_sha256": "009889c7d5015106a196a77fe3e65aff9b6835ae5227fd3e0961f99f812f6781",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "asset-size-over-file-bound",
+      "input": "inputs/asset-size-over-file-bound.json",
+      "input_sha256": "dfadc85afd30722281d7337101841f2e8fe5f8c033443c4e4ed4007a78bd9a24",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "asset-total-over-bound",
+      "input": "inputs/asset-total-over-bound.json",
+      "input_sha256": "3f4fc3c47f3e7a06b9abe5f7c0e835a0b1f0a04948e1472d72b7538038977665",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "sdk-size-over-file-bound",
+      "input": "inputs/sdk-size-over-file-bound.json",
+      "input_sha256": "00ebac74aafc96bfff551eb19d79a6d8f4001fd65a8a6c2a4b2b0a188fee0a8c",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "sdk-total-over-bound",
+      "input": "inputs/sdk-total-over-bound.json",
+      "input_sha256": "77301b1ff2fdf6c8e8b1c7cbce9f987add17106cc68793929d86d7069bf88042",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "producer-positive-4300-digit-integer",
+      "input": "inputs/producer-positive-4300-digit-integer.json",
+      "input_sha256": "ad1b21abdcef3494382feef89f8652e5c70fbf8cef1c6578a7fc76bf0500e0bb",
+      "production": false,
+      "historical_acceptance": true,
+      "native_acceptance": true,
+      "intentional_difference": null
+    },
+    {
+      "name": "producer-positive-4301-digit-integer",
+      "input": "inputs/producer-positive-4301-digit-integer.json",
+      "input_sha256": "9dbb34b4ca259b74c5cf9a86864d830ae66c6b41c5478aa3696b03b79a767ceb",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "producer-negative-4300-digit-integer",
+      "input": "inputs/producer-negative-4300-digit-integer.json",
+      "input_sha256": "16d439ad6a86092024b638423f1291f8068becb117558a7e9960215e650e11fc",
+      "production": false,
+      "historical_acceptance": true,
+      "native_acceptance": true,
+      "intentional_difference": null
+    },
+    {
+      "name": "producer-negative-4301-digit-integer",
+      "input": "inputs/producer-negative-4301-digit-integer.json",
+      "input_sha256": "7f37f1233c1576a251cfd8cb7d1cae2b51c11b96623fa90d99d6eaf22f34bf2a",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "producer-private-rawvalue-key",
+      "input": "inputs/producer-private-rawvalue-key.json",
+      "input_sha256": "7d2845a08e19aff6a1320863164abc5cf3dc8c49b62a8fb13cbb711edda57ff1",
+      "production": false,
+      "historical_acceptance": true,
+      "native_acceptance": true,
+      "intentional_difference": null
+    },
+    {
+      "name": "producer-nonfinite-nan",
+      "input": "inputs/producer-nonfinite-nan.json",
+      "input_sha256": "ab2ed35c49bff7a9c19994e8fea812bba4a0a28b215a587589c99b30d3e4fb0b",
+      "production": false,
+      "historical_acceptance": false,
+      "native_acceptance": false,
+      "intentional_difference": null
+    },
+    {
+      "name": "producer-container-depth-128",
+      "input": "inputs/producer-container-depth-128.json",
+      "input_sha256": "b109b50b9e0e2e89a225ce6c0cf1fdd5d5ce70aabab99d7c2e4fa6f3d416c194",
+      "production": false,
+      "historical_acceptance": true,
+      "native_acceptance": true,
+      "intentional_difference": null
+    },
+    {
+      "name": "producer-container-depth-129",
+      "input": "inputs/producer-container-depth-129.json",
+      "input_sha256": "4bbfecfc6b3de2a43ffd8c7e29406207dbd35a83f007472f202b96849e5e9a3c",
+      "production": false,
+      "historical_acceptance": true,
+      "native_acceptance": false,
+      "intentional_difference": "Frozen maximum of 128 JSON containers; historical Python accepts 129."
+    },
+    {
+      "name": "producer-overflow-float-1e400",
+      "input": "inputs/producer-overflow-float-1e400.json",
+      "input_sha256": "c3acb8bd07e4d123a4509d533fc71969a194cea23ff483536342b369336a9085",
+      "production": false,
+      "historical_acceptance": true,
+      "native_acceptance": false,
+      "intentional_difference": "Frozen finite-number rule; historical Python accepts an overflowing producer float."
+    }
+  ]
+}

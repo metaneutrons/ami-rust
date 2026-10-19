@@ -69,7 +69,20 @@ pub fn read_json<T: DeserializeOwned>(path: &Path, profile: JsonProfile) -> Resu
 /// JSON numbers retain `serde_json::Number` semantics (`i64`, `u64`, or finite
 /// `f64`). After the structural pass, `T` is deserialized from that value, so
 /// scalar roots and the exact schema remain the typed caller's responsibility.
+/// For an opaque `serde_json::Value` tree, use [`parse_json_value`] directly:
+/// its `Deserialize` implementation otherwise recognizes private marker keys.
 pub fn parse_json<T: DeserializeOwned>(bytes: &[u8], profile: JsonProfile) -> Result<T> {
+    let value = parse_json_value(bytes, profile)?;
+    T::deserialize(value)
+        .map_err(|error| Refusal::new(format!("JSON value does not match requested type: {error}")))
+}
+
+/// Parse a bounded JSON tree without deserializing it a second time.
+///
+/// Opaque diagnostic objects can contain serde's private marker-like keys.
+/// Returning the strict visitor's tree directly preserves those as ordinary
+/// map entries instead of interpreting them as a serialization envelope.
+pub fn parse_json_value(bytes: &[u8], profile: JsonProfile) -> Result<Value> {
     let limit = profile.max_bytes();
     if bytes.len() > limit {
         return Err(Refusal::new(format!(
@@ -98,8 +111,7 @@ pub fn parse_json<T: DeserializeOwned>(bytes: &[u8], profile: JsonProfile) -> Re
         .end()
         .map_err(|error| Refusal::new(format!("invalid JSON: {error}")))?;
 
-    T::deserialize(value)
-        .map_err(|error| Refusal::new(format!("JSON value does not match requested type: {error}")))
+    Ok(value)
 }
 
 #[derive(Clone, Copy)]
@@ -249,7 +261,7 @@ mod tests {
         JsonProfile, PACKAGE_METADATA_STATE_SELECTION_MAX_BYTES, PROJECT_LOCK_MAX_BYTES,
         PUBLISHER_POLICY_AND_AUTHENTICATION_METADATA_MAX_BYTES,
         RELEASE_MANIFEST_AND_INSTALL_RECEIPT_MAX_BYTES, SDK_COMPONENT_MANIFEST_MAX_BYTES,
-        TRUSTED_ROOT_MAX_BYTES, parse_json,
+        TRUSTED_ROOT_MAX_BYTES, parse_json, parse_json_value,
     };
     use serde_json::Value;
 
@@ -337,6 +349,31 @@ mod tests {
             let error = parse_json::<Value>(input, PROFILE).unwrap_err();
             assert!(error.to_string().contains("duplicate JSON object key"));
         }
+    }
+
+    #[test]
+    fn direct_tree_preserves_private_marker_like_keys_as_ordinary_data() {
+        let tree = parse_json_value(
+            br#"{"nested":{"$serde_json::private::RawValue":"{\"changed\":true}"},"$serde_json::private::Number":"123"}"#,
+            PROFILE,
+        )
+        .unwrap();
+        assert_eq!(
+            tree["nested"]["$serde_json::private::RawValue"],
+            Value::String("{\"changed\":true}".into())
+        );
+        assert_eq!(
+            tree["$serde_json::private::Number"],
+            Value::String("123".into())
+        );
+        assert!(tree["nested"].get("changed").is_none());
+        assert!(
+            parse_json_value(
+                br#"{"$serde_json::private::RawValue":"1","$serde_json::private::RawValue":"2"}"#,
+                PROFILE,
+            )
+            .is_err()
+        );
     }
 
     #[test]

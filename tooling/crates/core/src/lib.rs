@@ -18,5 +18,6 @@ pub mod process_capture;
 pub mod publisher_tar;
 pub mod receipts;
 pub mod records;
+pub mod release_manifest;
 pub mod signals;
 pub mod transaction;
