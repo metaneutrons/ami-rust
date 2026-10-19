@@ -117,6 +117,26 @@ or retained replay. The corrected consumer condition explicitly evaluates
 transport dependencies. Positive and deliberately broken-condition fixtures
 check this branch, but only a new real run can prove its hosted execution.
 
+A subsequent local execution of the actual signed `c34adc55` package passed
+package consistency and complete outer/inner publisher authentication, then
+failed cold preparation while publishing an extracted component: the
+sibling-only atomic rename helper correctly refused different parent
+directories. Component provisioning now uses a separate directory-only,
+same-filesystem, descriptor-relative no-replace move; transaction/receipt
+publication retains its original sibling-only restriction. No copy fallback
+or overwrite is permitted.
+
+The [real-input regression](evidence/rc1-component-publication-development-20261019.json)
+then provisioned and checked all six component inventories on macOS using the
+retained authenticated installation and copied checked source inputs. It took
+165.039 seconds, with observed peaks of 1,625,800,704 bytes RSS and
+3,607,935,297 bytes managed workspace. An earlier attempt was stopped by the
+unchanged workspace monitor because an inactive local build cache was still
+inside the checkout; that cache was moved intact to historical working storage.
+This proves the component correction on real inputs, not complete corrected-CLI
+preparation, READY, both-host qualification or no-Python acceptance. The next
+protected campaign must contain the corrected newly signed CLI.
+
 Even a passing direct lifecycle report does not close RC1-A1–A4:
 complete package preparation, cold/warm acquisition, no-Python observation,
 differential decisions, five variants in two fresh roots per host, cancellation,

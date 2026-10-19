@@ -1,0 +1,132 @@
+{
+  "schema": "ami-rust-component-publication-development-v1",
+  "status": "PASS_REAL_COMPONENT_REGRESSION_NOT_RC1_ACCEPTANCE",
+  "base_commit": "c31a28b1a38729a59a10cf97b836b160e170568d",
+  "source_files": {
+    "tooling/crates/core/src/consumer_provision.rs": "0ecbd817a90bf82f94b235695df3bdbefe692cf987e2266f1b11177cadd4ef8f",
+    "tooling/crates/core/src/mutations.rs": "2ff3d2e91e38c7e0527ec7dd7892a6ce68fca54f2c8689ed2de531a0e057b479"
+  },
+  "failed_signed_candidate": {
+    "source_commit": "c34adc55b9c4c77ccf1d624eaee13a1f4dfd2671",
+    "run_id": 39263593629,
+    "run_attempt": 2,
+    "host": "macos-aarch64",
+    "launcher_sha256": "d06dd64041793d6386a0a14e89f0d9a754eceb30b63c052fb16cbd0df49b9489",
+    "maintainer_sha256": "5555731b7bed9fdc5fc26db21dea44cd7f5aae44af9a8a0c37aeb25e0e2b1e53",
+    "package_consistency": "PASS",
+    "actual_outer_inner_authentication": "PASS",
+    "cold_prepare": "FAIL_COMPONENT_PROVISIONING_SHARED_PARENT_RENAME",
+    "consumer_stderr_sha256": "f9bcdaa6d593fc49c19c1656165a14d10343d83fdb8f576c9245013fab3a8e20",
+    "ready_produced": false
+  },
+  "fix": "Keep sibling-only transaction publication unchanged; move extracted component directories atomically between retained same-filesystem parents with no-replace flags, no copy fallback, and complete downstream inventory recheck.",
+  "regression_scope": {
+    "positive": "actual six-component provisioning from the retained checked native SDK and its pinned source inputs",
+    "component_result": {
+      "claim": "Retained-input provisioning regression only; no complete package, READY or no-Python acceptance",
+      "components": {
+        "cargo": {
+          "files": 2,
+          "regular_file_bytes": 39352418,
+          "symlinks": 0
+        },
+        "collector": {
+          "files": 1,
+          "regular_file_bytes": 1359984,
+          "symlinks": 0
+        },
+        "csdk": {
+          "files": 2835,
+          "regular_file_bytes": 51025133,
+          "symlinks": 0
+        },
+        "rust": {
+          "files": 3882,
+          "regular_file_bytes": 545762587,
+          "symlinks": 0
+        },
+        "toolchain": {
+          "files": 2754,
+          "regular_file_bytes": 173480083,
+          "symlinks": 17
+        },
+        "vendor": {
+          "files": 3070,
+          "regular_file_bytes": 39739700,
+          "symlinks": 0
+        }
+      },
+      "host": "macos-aarch64",
+      "installation_receipt_sha256": "0d761fef8f7309c16348496640797b3c349cfd03a5b4f64d1b757e27bbcd47a3",
+      "status": "PASS_SIX_COMPONENT_INVENTORIES_NOT_PREPARE_ACCEPTANCE"
+    },
+    "supervision": {
+      "commands": [
+        {
+          "elapsed_seconds": 165.039,
+          "exit_code": 0,
+          "label": "real-component-provision",
+          "log_peak_observed_bytes": 6611754,
+          "managed_peak_observed_bytes": 3607935297,
+          "rss_peak_observed_bytes": 1625800704,
+          "stderr_log": "logs/real-component-provision.stderr.log",
+          "stdout_log": "logs/real-component-provision.stdout.log",
+          "stop_reason": null
+        }
+      ],
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      },
+      "peak_log_observed_bytes": 6611754,
+      "peak_rss_observed_bytes": 1625800704,
+      "peak_workspace_observed_bytes": 3607935297,
+      "schema": "ami-rust-native-supervision-v1",
+      "static_input_root_count": 3,
+      "static_input_roots": [
+        {
+          "label": "pinned-host-rust",
+          "log_bytes": 0,
+          "path": "toolchain",
+          "regular_file_bytes": 1051980329
+        },
+        {
+          "label": "reviewed-registry-cache",
+          "log_bytes": 0,
+          "path": "cargo-home",
+          "regular_file_bytes": 20042059
+        },
+        {
+          "label": "retained-checked-sdk",
+          "log_bytes": 0,
+          "path": "sdk-0.2.0",
+          "regular_file_bytes": 44114778
+        }
+      ]
+    },
+    "limitations": [
+      "Current library used retained signed c34 installation and checked source data; this is not execution of a newly signed corrected CLI",
+      "No complete READY, package build, both-host or no-Python acceptance is claimed"
+    ]
+  },
+  "preserved_attempts": [
+    {
+      "name": "first component regression",
+      "status": "FAIL_WORKSPACE_CEILING",
+      "reason": "Inactive local tooling cache contributed over 10GB to checkout accounting; monitor stopped the compile. Cache moved intact outside active checkout, not deleted or excluded while still an active input."
+    },
+    {
+      "name": "second component regression",
+      "status": "PASS_ACTUAL_SIX_COMPONENT_INVENTORIES_NOT_RC1_ACCEPTANCE"
+    }
+  ],
+  "remaining": [
+    "Both-host component CI on the exact integrated correction",
+    "New protected signed CLI cold/warm lifecycle and two-root five-variant builds",
+    "Remaining RC1-A1-A4 criteria"
+  ],
+  "publication_authorized": false,
+  "RC1_accepted": false
+}
