@@ -1,0 +1,29 @@
+   Compiling ami-rust-core v0.2.0-dev (/Volumes/Dev/Source/Amiga/ami-rust/release/public-replay-proof-output-fix-20261018/tooling/crates/core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.82s
+     Running unittests src/lib.rs (tooling/target/debug/deps/ami_rust_core-a863b266ca0936fd)
+
+running 2 tests
+test records::tests::raw_value_wrapper_cannot_replace_the_actual_record_root ... FAILED
+test receipts::tests::raw_value_wrapper_cannot_replace_the_actual_receipt_root ... FAILED
+
+failures:
+
+---- records::tests::raw_value_wrapper_cannot_replace_the_actual_record_root stdout ----
+
+thread 'records::tests::raw_value_wrapper_cannot_replace_the_actual_record_root' (210977365) panicked at crates/core/src/records.rs:370:9:
+assertion failed: parse_package_state(&wrap(state())).is_err()
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- receipts::tests::raw_value_wrapper_cannot_replace_the_actual_receipt_root stdout ----
+
+thread 'receipts::tests::raw_value_wrapper_cannot_replace_the_actual_receipt_root' (210977364) panicked at crates/core/src/receipts.rs:520:13:
+accepted wrapped receipt v1
+
+
+failures:
+    receipts::tests::raw_value_wrapper_cannot_replace_the_actual_receipt_root
+    records::tests::raw_value_wrapper_cannot_replace_the_actual_record_root
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 131 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p ami-rust-core --lib`

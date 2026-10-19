@@ -1,0 +1,132 @@
+{
+  "schema": "ami-rust-rc1-manifests-local-v1",
+  "status": "PASS",
+  "scope": "Legacy/native release parsing and prior core only; no consumer activation or complete RC1 acceptance",
+  "commit": "0bac5395dbd214bd14aed62199d8915afea73328",
+  "platform": "Darwin arm64",
+  "commands": [
+    {
+      "command": [
+        "cargo",
+        "+1.98.1",
+        "fmt",
+        "--manifest-path",
+        "tooling/Cargo.toml",
+        "--all",
+        "--check"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 0.099,
+      "log": "1.log",
+      "log_bytes": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "cargo",
+        "+1.98.1",
+        "test",
+        "--manifest-path",
+        "tooling/Cargo.toml",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 24.364,
+      "log": "2.log",
+      "log_bytes": 13237,
+      "log_sha256": "3b32e23d301b73ed1523bbf54f6ff9db1ac297f6c7a9f2e6791428782b5066c9"
+    },
+    {
+      "command": [
+        "cargo",
+        "+1.98.1",
+        "clippy",
+        "--manifest-path",
+        "tooling/Cargo.toml",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 0.453,
+      "log": "3.log",
+      "log_bytes": 356,
+      "log_sha256": "2f936e7fa2972648c701f82468eccab174b60e123cc5d8498128b72f7e67b67c"
+    }
+  ],
+  "source_sha256": {
+    "tooling/crates/cli/src/main.rs": "50552bf5691718f6c5f1fdb9d36d4fac11823bc4fda0ab69e278cb2770ad1e9d",
+    "tooling/crates/cli/tests/frontends.rs": "e295a8d4c042994f92629db39429ba07dfecec0b79d61a9d5de6d9a927278bc0",
+    "tooling/crates/core/src/compression.rs": "a25f261d6bde6c6b235f4a1ea612255c49c1b98f16a5c8d0982502cdbd0b9e19",
+    "tooling/crates/core/src/digest.rs": "37a274cf539531f18fe4a08e0b599fbcaa9ab1f1762a8b665b39a8daf0361898",
+    "tooling/crates/core/src/directory.rs": "0f789a9dfe8709548ac79072dc13e55d54ba2b435e612a906712e3da0286c381",
+    "tooling/crates/core/src/elf.rs": "a7f068fd2b28357abf2bc488a3b655078283dcb399671b96cdfe3d12bf567fb5",
+    "tooling/crates/core/src/error.rs": "54c606fab3b71f70c1fbfc27e41cd69e0c342efebcd435cf8d4530aab37c4b5f",
+    "tooling/crates/core/src/files.rs": "9320b67cb7948811f082122b88626aa31d2a09a2d1fc878e6ff50f85afe346bf",
+    "tooling/crates/core/src/frontend.rs": "59c8d6b20ea96d17dc22f8cf6875e224206053cbd5dc4332b864254bc5b372cb",
+    "tooling/crates/core/src/inventory.rs": "4a1d9025ba57e35a4c7e162e69c0e3d15105831e6618625bf3fc5d41144a4460",
+    "tooling/crates/core/src/json.rs": "fa78f326bbf638fab8ba9c1f240fb5fe5d0c7ad7cec82e976147f6821868a705",
+    "tooling/crates/core/src/lib.rs": "f8504294c9ff921af01380c44c45c6c9b1433c933e3646db497de3c45cb8f681",
+    "tooling/crates/core/src/mutations.rs": "9a46e5541322dcdcbdd4ae86dd2634df97ee7334fe73dcfa33093845f862a60f",
+    "tooling/crates/core/src/ownership.rs": "483a4b18d9b684bd55ff241d1cedea26063928a3b002080983e7cc3936d25f29",
+    "tooling/crates/core/src/process_capture.rs": "0a3e43679d8a73a4de299bf5a133a6a2542eb0fc171c58df60b483640058bb95",
+    "tooling/crates/core/src/publisher_tar.rs": "827f0303b3a7dda90ac90a72efb736402ac7b5ded652fdcca5ee281be1afb9d8",
+    "tooling/crates/core/src/receipts.rs": "68fd1602206e4b8ce98d5e8676dcc3ec8aaa9a9feace3e50a7a608a9dffb7f0c",
+    "tooling/crates/core/src/records.rs": "377e464a9fd05e3a870875761644d4b8fe4467b3cf30d7ec436064936175608d",
+    "tooling/crates/core/src/release_manifest.rs": "c999e72d2baaa3cc489ad44da254850c643a076f350cce9a015872acc84636e7",
+    "tooling/crates/core/src/signals.rs": "db55598d9bd1121946b1bbfbbbd1004f64bc1b8a087cc09d18d97f00925e2513",
+    "tooling/crates/core/src/transaction.rs": "fc7c8b34254cd75b533a1994fe71fe2da98df2c58619d68260b4b39f19a3214c",
+    "tooling/crates/core/tests/release_manifest_oracles.rs": "8740da45db415168cc776753ea16bd69994c155d085a53c2b909f9790ebe7999"
+  },
+  "manifest_sha256": "3060a439495cf4454afee9b4fb761454449ca165969ba03c931232e753ee4d7e",
+  "production_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+  "complete_rc1_accepted": false,
+  "consumer_no_python_qualification": "not run; no consumer command activated",
+  "focused_manifest_tests": 15,
+  "test_results": [
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 131,
+      "failed": 0,
+      "ignored": 2
+    },
+    {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    }
+  ],
+  "wrapper_regression_tests": 2,
+  "static_historical_cases": 41,
+  "intentional_contract_differences": 2,
+  "manifest_oracle_integration_tests": 1,
+  "core_unit_tests": 131,
+  "frontend_tests": 1,
+  "total_rust_tests": 133,
+  "ignored_fixtures_executed_by_parent": 2
+}

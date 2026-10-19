@@ -1,0 +1,22 @@
+{
+  "base_commit": "42626103e98c05ded068f6796546a23feb2168e7",
+  "purpose": "Negative regression demonstration before routing intermediate Value consumers through strict direct-tree parser",
+  "command": [
+    "cargo",
+    "+1.98.1",
+    "test",
+    "--manifest-path",
+    "tooling/Cargo.toml",
+    "--locked",
+    "--offline",
+    "-p",
+    "ami-rust-core",
+    "raw_value_wrapper"
+  ],
+  "exit": 101,
+  "files": {
+    "pre-fix-records.rs": "b7f86b90a88e24c90c0ecee6a7d67da82c91a1e30852820a80fbe0374afcdf69",
+    "pre-fix-receipts.rs": "1a6cbd483442b843f4e772451fdf66290f649313886d64173e751651a57ee900",
+    "pre-fix.log": "084ff3ed0c37878e8cecb78576a7192973cbbca09cc537a5750b58a84536e992"
+  }
+}

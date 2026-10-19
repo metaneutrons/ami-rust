@@ -62,3 +62,25 @@ objects, exact nesting and integer boundaries. Internal historical Python may
 serve as an isolated oracle during RC1; it is not a consumer execution path.
 Both-host integration and the later complete observed consumer/build matrix
 remain separate acceptance requirements.
+
+
+Independent review also found that two earlier intermediate-tree readers could
+interpret a private raw-value wrapper as a valid inner state/receipt. The
+[pre-fix counterprobe](evidence/rc1-manifests-local-20261019/pre-fix-wrapper-control.json)
+reproduces both failures. Both readers now use the direct strict tree, and
+regressions reject wrapped state, selection, project-lock and receipt roots.
+These development-only library readers have not activated a public consumer
+command; released 0.1.0 assets are unchanged.
+
+The [exact-source macOS proof](evidence/rc1-manifests-local-20261019/result.json)
+passes 131 core unit tests, one real Cargo/frontend case and one manifest
+integration test (133 total), formatting and Clippy with warnings denied. The
+integration case consumes 41 inert historical fixtures directly in Rust. The
+[dynamic historical comparison](evidence/rc1-manifests-local-20261019/legacy-parser-differential.json)
+uses pinned Python 3.12.15 and a native Rust bridge with all 29 registry
+identities equal to the production lock. The 40 original decisions agree in 39
+cases; depth 129 is the declared stricter refusal. The supplemental overflowing
+float is the other explicit contract difference. Accepted semantic fields agree.
+All 19 compiled core sources remain byte-identical after serial integration;
+the added fixture integration test has its own current full-suite result.
+Both-host CI and complete RC1 acceptance remain separate gates.

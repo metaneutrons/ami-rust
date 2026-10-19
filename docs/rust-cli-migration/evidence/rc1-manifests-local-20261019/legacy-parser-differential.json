@@ -1,0 +1,746 @@
+{
+  "bridge": {
+    "binary_bytes": 1850800,
+    "binary_sha256": "1ff2f42b4554d9e5b74c65b8dc1f4c0a81077b57a913db34107fa4db2034aa99",
+    "build": {
+      "CARGO_BUILD_JOBS": 2,
+      "CARGO_REGISTRY_TOKEN_removed": true,
+      "command": "cargo +1.98.1 build --locked --offline --manifest-path <private>/bridge-final/Cargo.toml",
+      "exit_status": 0,
+      "log_sha256": "f8214e127456cc2c85d6b86e666432554e2a4b67138a468de93f904de8d3e15d",
+      "offline": true
+    },
+    "lock_sha256": "91903eee8ed8ff532186d12b7a1353b6f5edaea9bbbe764854cf7d4895808875",
+    "manifest_sha256": "38a57223d34352692ab9307b6985ecbf4e2765b7983e035ab364a713c7f3269c",
+    "registry_lock_identity_comparison": {
+      "extra_in_bridge": [],
+      "final_bridge_lock_sha256": "91903eee8ed8ff532186d12b7a1353b6f5edaea9bbbe764854cf7d4895808875",
+      "final_bridge_registry_identity_count": 29,
+      "identities": [
+        {
+          "checksum": "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa",
+          "name": "adler2",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "2.0.1"
+        },
+        {
+          "checksum": "d2f6c7dbe95a6ed67ad9f18e57daf93a2f034c524b99fd2b76d18fdfeb6660aa",
+          "name": "block-buffer",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "0.12.1"
+        },
+        {
+          "checksum": "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600",
+          "name": "cfg-if",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "1.0.5"
+        },
+        {
+          "checksum": "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c",
+          "name": "const-oid",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "0.10.2"
+        },
+        {
+          "checksum": "5ca28b0ae3115b884660db4118d803791fd6756b6e88f39c0f3f7859060d7566",
+          "name": "cpufeatures",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "0.3.1"
+        },
+        {
+          "checksum": "01a7799fd6b852db0e61728dde9a204c423b44d689dbd432522543614b490e78",
+          "name": "crc32fast",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "1.5.2"
+        },
+        {
+          "checksum": "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453",
+          "name": "crypto-common",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "0.2.2"
+        },
+        {
+          "checksum": "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2",
+          "name": "digest",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "0.11.3"
+        },
+        {
+          "checksum": "5c287a33c7f0a620c38e641e7f60827713987b3c0f26e8ddc9462cc69cf75759",
+          "name": "filetime",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "0.2.29"
+        },
+        {
+          "checksum": "6e634e2e0ebac1ee034020da1ca582e17ffe4e0f5e985823721e168928136dcb",
+          "name": "flate2",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "1.1.10"
+        },
+        {
+          "checksum": "27f864f10dfb56725ce5ce5472bc52252c8f93a4ab86327122cebf62c5f59a17",
+          "name": "hybrid-array",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "0.4.15"
+        },
+        {
+          "checksum": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682",
+          "name": "itoa",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "1.0.18"
+        },
+        {
+          "checksum": "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a",
+          "name": "libc",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "0.2.191"
+        },
+        {
+          "checksum": "7277c9742229dc25243236d578b6471a798c554512c6f6a04365ec2e87c2a3bb",
+          "name": "lzma-rust2",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "0.22.0"
+        },
+        {
+          "checksum": "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98",
+          "name": "memchr",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "2.8.3"
+        },
+        {
+          "checksum": "b63fbc4a50860e98e7b2aa7804ded1db5cbc3aff9193adaff57a6931bf7c4b4c",
+          "name": "miniz_oxide",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "0.9.1"
+        },
+        {
+          "checksum": "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9",
+          "name": "proc-macro2",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "1.0.107"
+        },
+        {
+          "checksum": "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001",
+          "name": "quote",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "1.0.47"
+        },
+        {
+          "checksum": "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f",
+          "name": "ryu",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "1.0.23"
+        },
+        {
+          "checksum": "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e",
+          "name": "serde",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "1.0.228"
+        },
+        {
+          "checksum": "41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad",
+          "name": "serde_core",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "1.0.228"
+        },
+        {
+          "checksum": "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79",
+          "name": "serde_derive",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "1.0.228"
+        },
+        {
+          "checksum": "402a6f66d8c709116cf22f558eab210f5a50187f702eb4d7e5ef38d9a7f1c79c",
+          "name": "serde_json",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "1.0.145"
+        },
+        {
+          "checksum": "47d7069beb7d6ac7b9acd1039986e73443f24234f41074da099d6f994ac9ad19",
+          "name": "sha2",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "0.11.1"
+        },
+        {
+          "checksum": "3a219298ac11a56ea9a6d2120044824d6f01aeb034955e7af7bc16858527deea",
+          "name": "simd-adler32",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "0.3.10"
+        },
+        {
+          "checksum": "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297",
+          "name": "syn",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "2.0.119"
+        },
+        {
+          "checksum": "3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840",
+          "name": "tar",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "0.4.46"
+        },
+        {
+          "checksum": "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20",
+          "name": "typenum",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "1.20.1"
+        },
+        {
+          "checksum": "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563",
+          "name": "unicode-ident",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "version": "1.0.27"
+        }
+      ],
+      "identities_match": true,
+      "missing_from_bridge": [],
+      "production_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+      "production_registry_identity_count": 29
+    },
+    "source_sha256": "34a0d52261d63d44c6efc34c1f5a534f67867a8be65b7854ab2667b3e2e19e34",
+    "toolchain": {
+      "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+      "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "target": "aarch64-apple-darwin"
+    }
+  },
+  "expected_difference_assessment": "The only primary decision difference remains producer-container-depth-129: Python accepts it, while the frozen Rust JSON profile refuses nesting above 128. Depth 128 is accepted. This is the previously documented policy tightening; it does not affect the wrapper-validation correction in c40a006.",
+  "primary_result": {
+    "accepted_value_differences": [],
+    "case_count": 40,
+    "decision_differences": [
+      {
+        "name": "producer-container-depth-129",
+        "python": "accepted",
+        "python_exception": null,
+        "rust": "refused",
+        "rust_refusal": "release manifest exceeds JSON container depth"
+      }
+    ],
+    "input_identities": [
+      {
+        "input_bytes": 686,
+        "input_sha256": "54298e1f8b077bdc8190e388340382bf2696bece2e0b73b5ff506e893404701f",
+        "name": "valid-qualification-route",
+        "production": false
+      },
+      {
+        "input_bytes": 686,
+        "input_sha256": "54298e1f8b077bdc8190e388340382bf2696bece2e0b73b5ff506e893404701f",
+        "name": "qualification-via-production-route",
+        "production": true
+      },
+      {
+        "input_bytes": 33761,
+        "input_sha256": "cd9adcf44264c86eb0bdea35bb16c02529c8ae5b051d4a9dd3aa6007f0972b65",
+        "name": "actual-published-production-route",
+        "production": true
+      },
+      {
+        "input_bytes": 33761,
+        "input_sha256": "cd9adcf44264c86eb0bdea35bb16c02529c8ae5b051d4a9dd3aa6007f0972b65",
+        "name": "actual-published-qualification-route",
+        "production": false
+      },
+      {
+        "input_bytes": 717,
+        "input_sha256": "816a876b251aa96e82b4f4643201f5174aea4ca2a5a4f7bc86729bb4790d738e",
+        "name": "duplicate-top-level-schema",
+        "production": false
+      },
+      {
+        "input_bytes": 688,
+        "input_sha256": "dc6d0fa58fd5228c411280beaaf53054e516c849f14189273a6f9a2d7efa6cd9",
+        "name": "duplicate-nested-producer-key",
+        "production": false
+      },
+      {
+        "input_bytes": 686,
+        "input_sha256": "8df32ef6eba79a04012a88f86ef0c72f07dff06e94d83738f6a3905bdcba3c71",
+        "name": "wrong-schema-discriminator",
+        "production": false
+      },
+      {
+        "input_bytes": 477,
+        "input_sha256": "66822b48129198a779d137a6383ca7cf1c67386943c5e3a98bffd3df0b664fdf",
+        "name": "missing-required-field",
+        "production": false
+      },
+      {
+        "input_bytes": 714,
+        "input_sha256": "61386174ad4b0d7e1ffe126344a7d01e36d495e5c1b269fea720e5007c458b15",
+        "name": "unknown-top-level-field",
+        "production": false
+      },
+      {
+        "input_bytes": 663,
+        "input_sha256": "ab74469a44714074dfd785f5d2482d656a5f778e1a057f2916769a9f07f9e9fc",
+        "name": "empty-producer-object",
+        "production": false
+      },
+      {
+        "input_bytes": 593,
+        "input_sha256": "3951290d7c3209f79a5cad7bf1ad10223b8f2ef6911ac8bf62b696e3ec157a76",
+        "name": "host-map-missing-linux",
+        "production": false
+      },
+      {
+        "input_bytes": 781,
+        "input_sha256": "04a762e26f399503924ba399384ef791efaaf6fd4245c0d1e10d80025447a765",
+        "name": "host-map-extra-host",
+        "production": false
+      },
+      {
+        "input_bytes": 634,
+        "input_sha256": "73098f5e783254f0052516c94c38e3b909221663d6d016bd21f122e2ebe094f3",
+        "name": "host-map-invalid-digest",
+        "production": false
+      },
+      {
+        "input_bytes": 685,
+        "input_sha256": "d51d0e1d63dfdfc38a43388eb946a9725baa1b9833b6e8b178426c1ba0e06162",
+        "name": "assets-missing-sdk-archive",
+        "production": false
+      },
+      {
+        "input_bytes": 796,
+        "input_sha256": "db3200eac7c7d3c38f8eb48c73832a1bda242e4a9104231e0745ed96ae314c97",
+        "name": "assets-reserved-release-json",
+        "production": false
+      },
+      {
+        "input_bytes": 802,
+        "input_sha256": "034205ac5ce391c59300b8dfc480dd3a27637cbc86b25dede676af957aff596d",
+        "name": "assets-reserved-release-json-prefix",
+        "production": false
+      },
+      {
+        "input_bytes": 794,
+        "input_sha256": "983f01c86567851e0c90d06fb75265b660883421a976c9621c8ec2d3e58a586d",
+        "name": "assets-casefold-duplicate",
+        "production": false
+      },
+      {
+        "input_bytes": 899,
+        "input_sha256": "b70ddef38d40eea5dd48fdeeeee15b5457452842df71b28f91965929e6e64521",
+        "name": "assets-file-directory-prefix-conflict",
+        "production": false
+      },
+      {
+        "input_bytes": 793,
+        "input_sha256": "c6ef49e817dbbf6f1453f86eb3841f65cedaae2aae020b23e56e243ad0c9388e",
+        "name": "assets-nonportable-parent-path",
+        "production": false
+      },
+      {
+        "input_bytes": 679,
+        "input_sha256": "0cc003f8d22be6a1927fd5ee288d015f106f40cc549f463eb78e23bae717b64a",
+        "name": "sdk-inventory-missing-contract",
+        "production": false
+      },
+      {
+        "input_bytes": 686,
+        "input_sha256": "4ae7df56f6be2bb77ebf2912ad1219f4205f3014fafb8a2ec585a146700e9d31",
+        "name": "sdk-contract-digest-mismatch",
+        "production": false
+      },
+      {
+        "input_bytes": 689,
+        "input_sha256": "bd52fdc387f731ba18b619ea50367dde421ea16138f64fe987ae7e2f14b807f5",
+        "name": "asset-size-boolean",
+        "production": false
+      },
+      {
+        "input_bytes": 688,
+        "input_sha256": "80f3de85b554908aeaae3023390bd69a9c0bf800f66b1adf5a2dbe88da9ec4be",
+        "name": "asset-size-float-one",
+        "production": false
+      },
+      {
+        "input_bytes": 687,
+        "input_sha256": "b1affc008e3d3027e15070b3772d8a2fadf8c2f41d7cd007979058d1f6b9da96",
+        "name": "asset-size-negative-one",
+        "production": false
+      },
+      {
+        "input_bytes": 686,
+        "input_sha256": "54298e1f8b077bdc8190e388340382bf2696bece2e0b73b5ff506e893404701f",
+        "name": "asset-size-zero-integer",
+        "production": false
+      },
+      {
+        "input_bytes": 687,
+        "input_sha256": "8bd9b5573dda447a5b291b822b755c685d512bf1e36726a029dd8cedf1474231",
+        "name": "asset-size-negative-zero-integer",
+        "production": false
+      },
+      {
+        "input_bytes": 689,
+        "input_sha256": "b75a7d7ebf0605e8e2140a04fc610379dff2db6736f1ba65b1e79d6d9adee069",
+        "name": "asset-size-negative-zero-float",
+        "production": false
+      },
+      {
+        "input_bytes": 689,
+        "input_sha256": "009889c7d5015106a196a77fe3e65aff9b6835ae5227fd3e0961f99f812f6781",
+        "name": "asset-size-negative-zero-exponent",
+        "production": false
+      },
+      {
+        "input_bytes": 693,
+        "input_sha256": "dfadc85afd30722281d7337101841f2e8fe5f8c033443c4e4ed4007a78bd9a24",
+        "name": "asset-size-over-file-bound",
+        "production": false
+      },
+      {
+        "input_bytes": 918,
+        "input_sha256": "3f4fc3c47f3e7a06b9abe5f7c0e835a0b1f0a04948e1472d72b7538038977665",
+        "name": "asset-total-over-bound",
+        "production": false
+      },
+      {
+        "input_bytes": 693,
+        "input_sha256": "00ebac74aafc96bfff551eb19d79a6d8f4001fd65a8a6c2a4b2b0a188fee0a8c",
+        "name": "sdk-size-over-file-bound",
+        "production": false
+      },
+      {
+        "input_bytes": 800,
+        "input_sha256": "77301b1ff2fdf6c8e8b1c7cbce9f987add17106cc68793929d86d7069bf88042",
+        "name": "sdk-total-over-bound",
+        "production": false
+      },
+      {
+        "input_bytes": 4973,
+        "input_sha256": "ad1b21abdcef3494382feef89f8652e5c70fbf8cef1c6578a7fc76bf0500e0bb",
+        "name": "producer-positive-4300-digit-integer",
+        "production": false
+      },
+      {
+        "input_bytes": 4974,
+        "input_sha256": "9dbb34b4ca259b74c5cf9a86864d830ae66c6b41c5478aa3696b03b79a767ceb",
+        "name": "producer-positive-4301-digit-integer",
+        "production": false
+      },
+      {
+        "input_bytes": 4974,
+        "input_sha256": "16d439ad6a86092024b638423f1291f8068becb117558a7e9960215e650e11fc",
+        "name": "producer-negative-4300-digit-integer",
+        "production": false
+      },
+      {
+        "input_bytes": 4975,
+        "input_sha256": "7f37f1233c1576a251cfd8cb7d1cae2b51c11b96623fa90d99d6eaf22f34bf2a",
+        "name": "producer-negative-4301-digit-integer",
+        "production": false
+      },
+      {
+        "input_bytes": 754,
+        "input_sha256": "7d2845a08e19aff6a1320863164abc5cf3dc8c49b62a8fb13cbb711edda57ff1",
+        "name": "producer-private-rawvalue-key",
+        "production": false
+      },
+      {
+        "input_bytes": 680,
+        "input_sha256": "ab2ed35c49bff7a9c19994e8fea812bba4a0a28b215a587589c99b30d3e4fb0b",
+        "name": "producer-nonfinite-nan",
+        "production": false
+      },
+      {
+        "input_bytes": 1429,
+        "input_sha256": "b109b50b9e0e2e89a225ce6c0cf1fdd5d5ce70aabab99d7c2e4fa6f3d416c194",
+        "name": "producer-container-depth-128",
+        "production": false
+      },
+      {
+        "input_bytes": 1435,
+        "input_sha256": "4bbfecfc6b3de2a43ffd8c7e29406207dbd35a83f007472f202b96849e5e9a3c",
+        "name": "producer-container-depth-129",
+        "production": false
+      }
+    ],
+    "native_report_sha256": "710fd29836982fc1719c389098755bf14981bb23d49cbc4163f4c766e6d6750c",
+    "python_accepted": 10,
+    "python_refused": 30,
+    "refusal_message_differences": [
+      {
+        "name": "duplicate-top-level-schema",
+        "python_exception_type": "pinned_release_install.Refusal",
+        "python_refusal": "duplicate JSON key in release manifest: schema",
+        "rust_refusal": "invalid JSON: duplicate JSON object key \"schema\" at line 1 column 40"
+      },
+      {
+        "name": "duplicate-nested-producer-key",
+        "python_exception_type": "pinned_release_install.Refusal",
+        "python_refusal": "duplicate JSON key in release manifest: dup",
+        "rust_refusal": "invalid JSON: duplicate JSON object key \"dup\" at line 1 column 474"
+      },
+      {
+        "name": "assets-nonportable-parent-path",
+        "python_exception_type": "pinned_release_install.Refusal",
+        "python_refusal": "nonportable or unsafe asset path: ../escape",
+        "rust_refusal": "SDK member path contains a nonportable component: .."
+      },
+      {
+        "name": "producer-positive-4301-digit-integer",
+        "python_exception_type": "builtins.ValueError",
+        "python_refusal": "Exceeds the limit (4300 digits) for integer string conversion: value has 4301 digits; use sys.set_int_max_str_digits() to increase the limit",
+        "rust_refusal": "producer integer exceeds Python's 4,300 digit limit"
+      },
+      {
+        "name": "producer-negative-4301-digit-integer",
+        "python_exception_type": "builtins.ValueError",
+        "python_refusal": "Exceeds the limit (4300 digits) for integer string conversion: value has 4301 digits; use sys.set_int_max_str_digits() to increase the limit",
+        "rust_refusal": "producer integer exceeds Python's 4,300 digit limit"
+      },
+      {
+        "name": "producer-nonfinite-nan",
+        "python_exception_type": "pinned_release_install.Refusal",
+        "python_refusal": "invalid JSON constant in release manifest: NaN",
+        "rust_refusal": "invalid release manifest: expected value at line 1 column 467"
+      }
+    ],
+    "rust_accepted": 9,
+    "rust_refused": 31,
+    "same_decision_count": 39
+  },
+  "python_oracle": {
+    "case_index_sha256": "33f54cf8ffa43d5aea3473df576566c0774ead4a2b19ef805a6a50d35e86d9d3",
+    "implementation": "release/install.py:_release_manifest",
+    "install_source_sha256": "0e77fa70bcaa69d08de3102e18c102a063b276c654242e676dd20fab6d74e984",
+    "python_executable_sha256": "aed8ed802d0387d6831dead5885840e4e2ff3a7984dd7297e9a5f4466e9cda1d",
+    "python_version": "3.12.15 (main, Oct 14 2026, 00:55:37) [Clang 23.1.3 ]",
+    "report_sha256": "6deda27b7e6300b1f455dde80c8154223f983e0949bd14ef31c3f3b3935c4480"
+  },
+  "scope": "Pure release-manifest parser differential only. No signature/authentication, asset-byte verification, filesystem transaction, or installation behavior.",
+  "source": {
+    "commit": "c40a0060b3003e3bda57c9014bf9a17bb621b186",
+    "core_tracked_rs_files_after_build": [
+      {
+        "path": "tooling/crates/core/src/compression.rs",
+        "sha256_git_head": "a25f261d6bde6c6b235f4a1ea612255c49c1b98f16a5c8d0982502cdbd0b9e19",
+        "sha256_worktree": "a25f261d6bde6c6b235f4a1ea612255c49c1b98f16a5c8d0982502cdbd0b9e19",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/digest.rs",
+        "sha256_git_head": "37a274cf539531f18fe4a08e0b599fbcaa9ab1f1762a8b665b39a8daf0361898",
+        "sha256_worktree": "37a274cf539531f18fe4a08e0b599fbcaa9ab1f1762a8b665b39a8daf0361898",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/directory.rs",
+        "sha256_git_head": "0f789a9dfe8709548ac79072dc13e55d54ba2b435e612a906712e3da0286c381",
+        "sha256_worktree": "0f789a9dfe8709548ac79072dc13e55d54ba2b435e612a906712e3da0286c381",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/elf.rs",
+        "sha256_git_head": "a7f068fd2b28357abf2bc488a3b655078283dcb399671b96cdfe3d12bf567fb5",
+        "sha256_worktree": "a7f068fd2b28357abf2bc488a3b655078283dcb399671b96cdfe3d12bf567fb5",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/error.rs",
+        "sha256_git_head": "54c606fab3b71f70c1fbfc27e41cd69e0c342efebcd435cf8d4530aab37c4b5f",
+        "sha256_worktree": "54c606fab3b71f70c1fbfc27e41cd69e0c342efebcd435cf8d4530aab37c4b5f",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/files.rs",
+        "sha256_git_head": "9320b67cb7948811f082122b88626aa31d2a09a2d1fc878e6ff50f85afe346bf",
+        "sha256_worktree": "9320b67cb7948811f082122b88626aa31d2a09a2d1fc878e6ff50f85afe346bf",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/frontend.rs",
+        "sha256_git_head": "59c8d6b20ea96d17dc22f8cf6875e224206053cbd5dc4332b864254bc5b372cb",
+        "sha256_worktree": "59c8d6b20ea96d17dc22f8cf6875e224206053cbd5dc4332b864254bc5b372cb",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/inventory.rs",
+        "sha256_git_head": "4a1d9025ba57e35a4c7e162e69c0e3d15105831e6618625bf3fc5d41144a4460",
+        "sha256_worktree": "4a1d9025ba57e35a4c7e162e69c0e3d15105831e6618625bf3fc5d41144a4460",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/json.rs",
+        "sha256_git_head": "fa78f326bbf638fab8ba9c1f240fb5fe5d0c7ad7cec82e976147f6821868a705",
+        "sha256_worktree": "fa78f326bbf638fab8ba9c1f240fb5fe5d0c7ad7cec82e976147f6821868a705",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/lib.rs",
+        "sha256_git_head": "f8504294c9ff921af01380c44c45c6c9b1433c933e3646db497de3c45cb8f681",
+        "sha256_worktree": "f8504294c9ff921af01380c44c45c6c9b1433c933e3646db497de3c45cb8f681",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/mutations.rs",
+        "sha256_git_head": "9a46e5541322dcdcbdd4ae86dd2634df97ee7334fe73dcfa33093845f862a60f",
+        "sha256_worktree": "9a46e5541322dcdcbdd4ae86dd2634df97ee7334fe73dcfa33093845f862a60f",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/ownership.rs",
+        "sha256_git_head": "483a4b18d9b684bd55ff241d1cedea26063928a3b002080983e7cc3936d25f29",
+        "sha256_worktree": "483a4b18d9b684bd55ff241d1cedea26063928a3b002080983e7cc3936d25f29",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/process_capture.rs",
+        "sha256_git_head": "0a3e43679d8a73a4de299bf5a133a6a2542eb0fc171c58df60b483640058bb95",
+        "sha256_worktree": "0a3e43679d8a73a4de299bf5a133a6a2542eb0fc171c58df60b483640058bb95",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/publisher_tar.rs",
+        "sha256_git_head": "827f0303b3a7dda90ac90a72efb736402ac7b5ded652fdcca5ee281be1afb9d8",
+        "sha256_worktree": "827f0303b3a7dda90ac90a72efb736402ac7b5ded652fdcca5ee281be1afb9d8",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/receipts.rs",
+        "sha256_git_head": "68fd1602206e4b8ce98d5e8676dcc3ec8aaa9a9feace3e50a7a608a9dffb7f0c",
+        "sha256_worktree": "68fd1602206e4b8ce98d5e8676dcc3ec8aaa9a9feace3e50a7a608a9dffb7f0c",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/records.rs",
+        "sha256_git_head": "377e464a9fd05e3a870875761644d4b8fe4467b3cf30d7ec436064936175608d",
+        "sha256_worktree": "377e464a9fd05e3a870875761644d4b8fe4467b3cf30d7ec436064936175608d",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/release_manifest.rs",
+        "sha256_git_head": "c999e72d2baaa3cc489ad44da254850c643a076f350cce9a015872acc84636e7",
+        "sha256_worktree": "c999e72d2baaa3cc489ad44da254850c643a076f350cce9a015872acc84636e7",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/signals.rs",
+        "sha256_git_head": "db55598d9bd1121946b1bbfbbbd1004f64bc1b8a087cc09d18d97f00925e2513",
+        "sha256_worktree": "db55598d9bd1121946b1bbfbbbd1004f64bc1b8a087cc09d18d97f00925e2513",
+        "worktree_matches_head": true
+      },
+      {
+        "path": "tooling/crates/core/src/transaction.rs",
+        "sha256_git_head": "fc7c8b34254cd75b533a1994fe71fe2da98df2c58619d68260b4b39f19a3214c",
+        "sha256_worktree": "fc7c8b34254cd75b533a1994fe71fe2da98df2c58619d68260b4b39f19a3214c",
+        "worktree_matches_head": true
+      }
+    ],
+    "core_tracked_rs_files_before_build": [
+      {
+        "bytes": 13814,
+        "path": "tooling/crates/core/src/compression.rs",
+        "sha256": "a25f261d6bde6c6b235f4a1ea612255c49c1b98f16a5c8d0982502cdbd0b9e19"
+      },
+      {
+        "bytes": 4124,
+        "path": "tooling/crates/core/src/digest.rs",
+        "sha256": "37a274cf539531f18fe4a08e0b599fbcaa9ab1f1762a8b665b39a8daf0361898"
+      },
+      {
+        "bytes": 11165,
+        "path": "tooling/crates/core/src/directory.rs",
+        "sha256": "0f789a9dfe8709548ac79072dc13e55d54ba2b435e612a906712e3da0286c381"
+      },
+      {
+        "bytes": 40012,
+        "path": "tooling/crates/core/src/elf.rs",
+        "sha256": "a7f068fd2b28357abf2bc488a3b655078283dcb399671b96cdfe3d12bf567fb5"
+      },
+      {
+        "bytes": 615,
+        "path": "tooling/crates/core/src/error.rs",
+        "sha256": "54c606fab3b71f70c1fbfc27e41cd69e0c342efebcd435cf8d4530aab37c4b5f"
+      },
+      {
+        "bytes": 14296,
+        "path": "tooling/crates/core/src/files.rs",
+        "sha256": "9320b67cb7948811f082122b88626aa31d2a09a2d1fc878e6ff50f85afe346bf"
+      },
+      {
+        "bytes": 6258,
+        "path": "tooling/crates/core/src/frontend.rs",
+        "sha256": "59c8d6b20ea96d17dc22f8cf6875e224206053cbd5dc4332b864254bc5b372cb"
+      },
+      {
+        "bytes": 16297,
+        "path": "tooling/crates/core/src/inventory.rs",
+        "sha256": "4a1d9025ba57e35a4c7e162e69c0e3d15105831e6618625bf3fc5d41144a4460"
+      },
+      {
+        "bytes": 16339,
+        "path": "tooling/crates/core/src/json.rs",
+        "sha256": "fa78f326bbf638fab8ba9c1f240fb5fe5d0c7ad7cec82e976147f6821868a705"
+      },
+      {
+        "bytes": 477,
+        "path": "tooling/crates/core/src/lib.rs",
+        "sha256": "f8504294c9ff921af01380c44c45c6c9b1433c933e3646db497de3c45cb8f681"
+      },
+      {
+        "bytes": 31653,
+        "path": "tooling/crates/core/src/mutations.rs",
+        "sha256": "9a46e5541322dcdcbdd4ae86dd2634df97ee7334fe73dcfa33093845f862a60f"
+      },
+      {
+        "bytes": 27149,
+        "path": "tooling/crates/core/src/ownership.rs",
+        "sha256": "483a4b18d9b684bd55ff241d1cedea26063928a3b002080983e7cc3936d25f29"
+      },
+      {
+        "bytes": 49191,
+        "path": "tooling/crates/core/src/process_capture.rs",
+        "sha256": "0a3e43679d8a73a4de299bf5a133a6a2542eb0fc171c58df60b483640058bb95"
+      },
+      {
+        "bytes": 35339,
+        "path": "tooling/crates/core/src/publisher_tar.rs",
+        "sha256": "827f0303b3a7dda90ac90a72efb736402ac7b5ded652fdcca5ee281be1afb9d8"
+      },
+      {
+        "bytes": 31373,
+        "path": "tooling/crates/core/src/receipts.rs",
+        "sha256": "68fd1602206e4b8ce98d5e8676dcc3ec8aaa9a9feace3e50a7a608a9dffb7f0c"
+      },
+      {
+        "bytes": 21239,
+        "path": "tooling/crates/core/src/records.rs",
+        "sha256": "377e464a9fd05e3a870875761644d4b8fe4467b3cf30d7ec436064936175608d"
+      },
+      {
+        "bytes": 40609,
+        "path": "tooling/crates/core/src/release_manifest.rs",
+        "sha256": "c999e72d2baaa3cc489ad44da254850c643a076f350cce9a015872acc84636e7"
+      },
+      {
+        "bytes": 15235,
+        "path": "tooling/crates/core/src/signals.rs",
+        "sha256": "db55598d9bd1121946b1bbfbbbd1004f64bc1b8a087cc09d18d97f00925e2513"
+      },
+      {
+        "bytes": 43420,
+        "path": "tooling/crates/core/src/transaction.rs",
+        "sha256": "fc7c8b34254cd75b533a1994fe71fe2da98df2c58619d68260b4b39f19a3214c"
+      }
+    ],
+    "production_cargo_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+    "release_manifest_sha256": "c999e72d2baaa3cc489ad44da254850c643a076f350cce9a015872acc84636e7",
+    "repository": "/Volumes/Dev/Source/Amiga/ami-rust/release/public-replay-proof-output-fix-20261018",
+    "tracked_core_sources_match_head_before_and_after": true
+  },
+  "supplemental_overflow_float": {
+    "assessment": "Pinned Python accepts 1e400 as an opaque producer float; Rust refuses the out-of-range JSON number, as previously documented.",
+    "bytes": 682,
+    "case": "producer-overflow-float-1e400",
+    "input_sha256": "c3acb8bd07e4d123a4509d533fc71969a194cea23ff483536342b369336a9085",
+    "native_report_sha256": "900595c751b61d4a4e0eabdae24c7d41ee58d009a1a520df1f756164ea9f9d07",
+    "python_decision": "accepted",
+    "rust_decision": "refused",
+    "rust_refusal": "invalid JSON: number out of range at line 1 column 471"
+  }
+}
