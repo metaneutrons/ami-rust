@@ -21,6 +21,22 @@ Evidence failures return 125 and preserve the original child status where a
 report can be written. The existing outer Supervisor must enforce deadlines,
 process cleanup and resource limits; this tool cannot attest to its caller.
 
+Use `write-null /dev/null` only when the reviewed command needs shell redirection
+to the null device, such as the cold upstream installer. The parser accepts only
+that exact canonical character device, checks its OS device identity before
+launch and after completion, and records both identities without hashing device
+contents. Linux binds only `WRITE_FILE` and, on Landlock ABI 3 or later,
+`TRUNCATE` to the opened null-device inode. macOS adds `file-write*` for the
+literal `/dev/null` path. The rule is rejected when a broader writable tree
+would already cover the device.
+
+The imported macOS `system.sb` already permits null-device writes. Omitting
+this directive does not revoke that operating-system allowance; the native
+omission probe records successful writing on macOS and refusal on Linux.
+Both hosts additionally reject a directive naming `/dev/zero` before child
+launch. A declared macOS rule adds explicit identity evidence, rather than
+claiming that it introduced the system profile's existing permission.
+
 On macOS the backend uses `/usr/bin/sandbox-exec`, deny-default execution,
 literal executable paths, and only explicitly declared private derived-output
 subtrees. It grants process-info operations for native resource sampling.

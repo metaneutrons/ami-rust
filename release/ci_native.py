@@ -655,7 +655,7 @@ def _consumer_observation_spec(work, python_root, executable, arguments, expecte
     writes = {root for root in writes if not any(root != other and other in root.parents for other in writes)}
     policy = auth.parsed(auth.read(policy_path))
     pin = auth.parsed(auth.read(ROOT / "release/ci-python-inputs.json"))["hosts"][current_host()]
-    interpreter = Path(python_root) / pin["runtime_relative_path"]
+    interpreter = Path(python_root) / "runtime" / pin["runtime_relative_path"]
     library_name = "libpython3.12.dylib" if current_host() == "macos-aarch64" else "libpython3.12.so.1.0"
     library = Path(python_root) / "runtime/python/lib" / library_name
     bindings = [Path(closure_path), Path(policy_path)] + ([record] if record else [])

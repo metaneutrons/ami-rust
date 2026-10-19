@@ -4,7 +4,7 @@ use std::env;
 use std::ffi::OsString;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
-use std::os::unix::fs::{MetadataExt, PermissionsExt};
+use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
 use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command, Stdio};
@@ -40,6 +40,21 @@ struct ReadLibraryRule {
     pre_run_target_ino: u64,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct DeviceIdentity {
+    device: u64,
+    inode: u64,
+    rdev: u64,
+}
+
+#[derive(Debug)]
+struct WriteNullRule {
+    pre_run_identity: DeviceIdentity,
+    post_run_identity: Option<DeviceIdentity>,
+    post_run_identity_matches: Option<bool>,
+    post_run_error: Option<String>,
+}
+
 #[derive(Debug, Default)]
 struct Policy {
     exec: Vec<ExecRule>,
@@ -49,6 +64,7 @@ struct Policy {
     read_files: Vec<PathBuf>,
     read_directories: Vec<PathBuf>,
     read_libraries: Vec<ReadLibraryRule>,
+    write_null: Option<WriteNullRule>,
     read_trees: Vec<(String, PathBuf)>,
     write_trees: Vec<(String, PathBuf)>,
     env: BTreeMap<String, String>,
@@ -94,6 +110,80 @@ struct ReadLibraryHashCheck {
 
 unsafe extern "C" {
     fn geteuid() -> u32;
+}
+
+const MACOS_NULL_RDEV: u64 = 0x0300_0002; // macOS character device 3:2.
+
+fn validated_null_identity(
+    policy_path: &str,
+    canonical_path: &Path,
+    metadata: &fs::Metadata,
+) -> Result<DeviceIdentity, String> {
+    if policy_path != "/dev/null" || canonical_path != Path::new("/dev/null") {
+        return Err("write-null must name the exact canonical path /dev/null".to_owned());
+    }
+    if !metadata.file_type().is_char_device() {
+        return Err("write-null /dev/null is not a character device".to_owned());
+    }
+    if metadata.rdev() != MACOS_NULL_RDEV {
+        return Err(format!(
+            "write-null /dev/null has unexpected character-device number {}",
+            metadata.rdev()
+        ));
+    }
+    Ok(DeviceIdentity {
+        device: metadata.dev(),
+        inode: metadata.ino(),
+        rdev: metadata.rdev(),
+    })
+}
+
+fn inspect_write_null_policy_path(policy_path: &str) -> Result<DeviceIdentity, String> {
+    if policy_path != "/dev/null" {
+        return Err("write-null only accepts the exact path /dev/null".to_owned());
+    }
+    let path = Path::new(policy_path);
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|error| format!("inspect write-null path {policy_path}: {error}"))?;
+    let canonical = fs::canonicalize(path)
+        .map_err(|error| format!("canonicalize write-null path {policy_path}: {error}"))?;
+    validated_null_identity(policy_path, &canonical, &metadata)
+}
+
+fn verify_write_null_before_run(policy: &Policy) -> Result<(), String> {
+    if let Some(rule) = &policy.write_null {
+        let current = inspect_write_null_policy_path("/dev/null")?;
+        if current != rule.pre_run_identity {
+            return Err(
+                "/dev/null device identity changed before the sandboxed command started".to_owned(),
+            );
+        }
+    }
+    Ok(())
+}
+
+fn record_write_null_after_run(policy: &mut Policy) -> Option<String> {
+    let rule = policy.write_null.as_mut()?;
+    match inspect_write_null_policy_path("/dev/null") {
+        Ok(identity) => {
+            let matches = identity == rule.pre_run_identity;
+            rule.post_run_identity = Some(identity);
+            rule.post_run_identity_matches = Some(matches);
+            rule.post_run_error = None;
+            (!matches).then(|| {
+                "declared /dev/null character-device identity changed after the run".to_owned()
+            })
+        }
+        Err(error) => {
+            rule.post_run_identity = None;
+            rule.post_run_identity_matches = Some(false);
+            rule.post_run_error = Some(error);
+            Some(
+                "declared /dev/null character device could not be verified after the run"
+                    .to_owned(),
+            )
+        }
+    }
 }
 
 pub(crate) fn main() {
@@ -142,7 +232,7 @@ fn run(args: &[String]) -> Result<i32, String> {
         fs::canonicalize(&report_dir_arg).map_err(|e| format!("resolve report directory: {e}"))?;
     let policy_path = existing_file(policy_path)?;
     let policy_text = fs::read_to_string(&policy_path).map_err(|e| format!("read policy: {e}"))?;
-    let policy = parse_policy(&policy_text)?;
+    let mut policy = parse_policy(&policy_text)?;
     validate_report_isolation(&report_dir, &policy)?;
     let command_path = existing_executable(&args[sep + 1])?;
     if !policy.exec.iter().any(|item| item.path == command_path) {
@@ -193,6 +283,7 @@ fn run(args: &[String]) -> Result<i32, String> {
         child_command.current_dir(cwd);
     }
 
+    verify_write_null_before_run(&policy)?;
     let launch = child_command.spawn();
     let (status, out_capture, err_capture) = match launch {
         Ok(mut child) => {
@@ -224,6 +315,9 @@ fn run(args: &[String]) -> Result<i32, String> {
             drop(stderr_file);
             let _ = fs::remove_file(&stdout_path);
             let _ = fs::remove_file(&stderr_path);
+            if let Some(failure) = record_write_null_after_run(&mut policy) {
+                eprintln!("consumer-enforcement-adapter qualification evidence failed: {failure}");
+            }
             return Err(format!("launch /usr/bin/sandbox-exec: {error}"));
         }
     };
@@ -235,6 +329,9 @@ fn run(args: &[String]) -> Result<i32, String> {
     let hash_checks = verify_exec_hashes(&policy);
     let library_hash_checks = verify_read_library_hashes(&policy);
     let mut evidence_failures = Vec::new();
+    if let Some(failure) = record_write_null_after_run(&mut policy) {
+        evidence_failures.push(failure);
+    }
     for check in &hash_checks {
         if check.expected_sha256.is_some() && check.post_run_hash_matches != Some(true) {
             evidence_failures.push(format!(
@@ -395,6 +492,17 @@ fn parse_policy(text: &str) -> Result<Policy, String> {
             "deny-exec" => policy.deny_exec.push(existing_or_future_path(rest)?),
             "deny-library" => policy.deny_library.push(existing_or_future_path(rest)?),
             "read-file" => policy.read_files.push(existing_or_future_path(rest)?),
+            "write-null" => {
+                if policy.write_null.is_some() {
+                    return Err("duplicate write-null directive".to_owned());
+                }
+                policy.write_null = Some(WriteNullRule {
+                    pre_run_identity: inspect_write_null_policy_path(rest)?,
+                    post_run_identity: None,
+                    post_run_identity_matches: None,
+                    post_run_error: None,
+                });
+            }
             "read-directory" => policy.read_directories.push(existing_directory(rest)?),
             "read-library" => {
                 let (path_text, hash) = rest
@@ -706,6 +814,18 @@ fn parse_policy(text: &str) -> Result<Policy, String> {
             ));
         }
     }
+    if policy.write_null.is_some() {
+        if let Some((role, root)) = policy
+            .write_trees
+            .iter()
+            .find(|(_, root)| paths_overlap(root, Path::new("/dev/null")))
+        {
+            return Err(format!(
+                "write-null cannot be combined with broader write-tree role {role:?}: {}",
+                root.display()
+            ));
+        }
+    }
     Ok(policy)
 }
 
@@ -1012,6 +1132,9 @@ fn build_profile(policy: &Policy) -> String {
             scheme_escape(&path.display().to_string())
         ));
     }
+    if policy.write_null.is_some() {
+        out.push_str("(allow file-write* (literal \"/dev/null\"))\n");
+    }
     for tree in &policy.exec_derived_trees {
         out.push_str(&format!(
             "(allow file-read* file-map-executable (subpath \"{}\"))\n",
@@ -1245,13 +1368,39 @@ fn report_json(
         })
         .collect::<Vec<_>>()
         .join(",");
+    let write_null = policy
+        .write_null
+        .as_ref()
+        .map(|rule| {
+            let post_identity = rule
+                .post_run_identity
+                .as_ref()
+                .map(|identity| {
+                    format!(
+                        "{{\"device\":{},\"inode\":{},\"rdev\":{}}}",
+                        identity.device, identity.inode, identity.rdev
+                    )
+                })
+                .unwrap_or_else(|| "null".to_owned());
+            format!(
+                "{{\"path\":{},\"device_type\":\"character-device\",\"permissions\":[\"file-write*\"],\"pre_run_identity\":{{\"device\":{},\"inode\":{},\"rdev\":{}}},\"post_run_identity\":{},\"post_run_identity_matches\":{},\"post_run_error\":{},\"content_sha256\":null}}",
+                json("/dev/null"),
+                rule.pre_run_identity.device,
+                rule.pre_run_identity.inode,
+                rule.pre_run_identity.rdev,
+                post_identity,
+                rule.post_run_identity_matches.map(|matches| matches.to_string()).unwrap_or_else(|| "null".to_owned()),
+                rule.post_run_error.as_ref().map(|error| json(error)).unwrap_or_else(|| "null".to_owned())
+            )
+        })
+        .unwrap_or_else(|| "null".to_owned());
     let evidence = evidence_failures
         .iter()
         .map(|failure| json(failure))
         .collect::<Vec<_>>()
         .join(",");
     format!(
-        "{{\n  \"schema\":\"consumer-enforcement-adapter-a1\",\n  \"mechanism\":\"/usr/bin/sandbox-exec, deny default, exact process-exec allowlist plus declared private derived-output subtrees\",\n  \"policy\":{},\n  \"profile\":{},\n  \"command\":[{}],\n  \"started_unix_micros\":{},\n  \"finished_unix_micros\":{},\n  \"exit_code\":{},\n  \"signal\":{},\n  \"stdout\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"stderr\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"network_outbound_allowed\":{},\n  \"exec_allowlist\":[{}],\n  \"read_library_mappings\":[{}],\n  \"exec_derived_trees\":[{}],\n  \"deny_exec\":[{}],\n  \"deny_library\":[{}],\n  \"read_directories\":[{}],\n  \"read_trees\":[{}],\n  \"write_trees\":[{}],\n  \"environment_names\":[{}],\n  \"cwd\":{},\n  \"output_replay_error\":{},\n  \"qualification_evidence_valid\":{},\n  \"evidence_failures\":[{}]\n}}\n",
+        "{{\n  \"schema\":\"consumer-enforcement-adapter-a1\",\n  \"mechanism\":\"/usr/bin/sandbox-exec, deny default, exact process-exec allowlist plus declared private derived-output subtrees\",\n  \"policy\":{},\n  \"profile\":{},\n  \"command\":[{}],\n  \"started_unix_micros\":{},\n  \"finished_unix_micros\":{},\n  \"exit_code\":{},\n  \"signal\":{},\n  \"stdout\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"stderr\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"network_outbound_allowed\":{},\n  \"exec_allowlist\":[{}],\n  \"read_library_mappings\":[{}],\n  \"exec_derived_trees\":[{}],\n  \"deny_exec\":[{}],\n  \"deny_library\":[{}],\n  \"read_directories\":[{}],\n  \"read_trees\":[{}],\n  \"write_trees\":[{}],\n  \"write_null\":{},\n  \"environment_names\":[{}],\n  \"cwd\":{},\n  \"output_replay_error\":{},\n  \"qualification_evidence_valid\":{},\n  \"evidence_failures\":[{}]\n}}\n",
         json(&policy_path.display().to_string()),
         json(&profile_path.display().to_string()),
         argv,
@@ -1297,6 +1446,7 @@ fn report_json(
         read_directories,
         read_trees,
         write_trees,
+        write_null,
         policy
             .env
             .keys()
@@ -1411,6 +1561,26 @@ fn read_library_evidence_failures(check: &ReadLibraryHashCheck) -> Vec<String> {
 fn control(args: &[String]) -> Result<(), String> {
     let mode = args.first().map(String::as_str).unwrap_or_default();
     match mode {
+        "write-null-probe" => {
+            match OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .open("/dev/null")
+            {
+                Ok(mut null) => {
+                    null.write_all(b"consumer-enforcement-null-write-probe\n")
+                        .map_err(|error| format!("write /dev/null probe: {error}"))?;
+                    println!("WRITE_NULL_ALLOWED");
+                }
+                Err(error) if matches!(error.raw_os_error(), Some(1) | Some(13)) => {
+                    println!(
+                        "WRITE_NULL_REFUSED errno={}",
+                        error.raw_os_error().unwrap_or_default()
+                    );
+                }
+                Err(error) => return Err(format!("open /dev/null write probe: {error}")),
+            }
+        }
         "direct" => {
             let python = required(args, "--python")?;
             match Command::new(python)
@@ -1753,6 +1923,108 @@ mod tests {
             hex(&sha256(b"abc")),
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
         );
+    }
+
+    #[test]
+    fn write_null_is_an_exact_literal_character_device_grant() {
+        let executable = executable_path();
+        let policy_text = format!(
+            "consumer-policy-v1\nexec {}\nwrite-null /dev/null\n",
+            executable.display()
+        );
+        let mut policy = parse_policy(&policy_text).expect("accept the exact native null device");
+        let rule = policy.write_null.as_ref().expect("write-null rule");
+        assert_eq!(rule.pre_run_identity.rdev, MACOS_NULL_RDEV);
+        verify_write_null_before_run(&policy).expect("identity remains stable before run");
+
+        let profile = build_profile(&policy);
+        assert!(profile.contains("(allow file-write* (literal \"/dev/null\"))"));
+        assert!(!profile.contains("(allow file-write* (subpath \"/dev\"))"));
+        let without_grant = parse_policy(&format!(
+            "consumer-policy-v1\nexec {}\n",
+            executable.display()
+        ))
+        .expect("parse policy without write-null");
+        assert!(
+            !build_profile(&without_grant).contains("(allow file-write* (literal \"/dev/null\"))")
+        );
+
+        for invalid in ["/dev/zero", "/dev//null", "/dev/../dev/null"] {
+            assert!(inspect_write_null_policy_path(invalid).is_err());
+            assert!(
+                parse_policy(&format!(
+                    "consumer-policy-v1\nexec {}\nwrite-null {invalid}\n",
+                    executable.display()
+                ))
+                .is_err()
+            );
+        }
+        assert!(
+            parse_policy(&format!(
+                "consumer-policy-v1\nexec {}\nwrite-null /dev/null\nwrite-null /dev/null\n",
+                executable.display()
+            ))
+            .is_err()
+        );
+        assert!(
+            parse_policy(&format!(
+                "consumer-policy-v1\nexec {}\nwrite-tree work /\nwrite-null /dev/null\n",
+                executable.display()
+            ))
+            .is_err()
+        );
+
+        let root = private_test_root("write-null-invalid-targets");
+        let regular = root.join("regular-null");
+        fs::write(&regular, b"not a device").expect("write regular-file fixture");
+        let regular_metadata = fs::symlink_metadata(&regular).expect("stat regular fixture");
+        assert!(
+            validated_null_identity("/dev/null", Path::new("/dev/null"), &regular_metadata)
+                .expect_err("reject regular replacement")
+                .contains("not a character device")
+        );
+        let symlink = root.join("null-link");
+        std::os::unix::fs::symlink("/dev/null", &symlink).expect("create null symlink");
+        let symlink_metadata = fs::symlink_metadata(&symlink).expect("lstat null symlink");
+        assert!(
+            validated_null_identity("/dev/null", Path::new("/dev/null"), &symlink_metadata)
+                .expect_err("reject symlink replacement")
+                .contains("not a character device")
+        );
+        assert!(inspect_write_null_policy_path(&symlink.to_string_lossy()).is_err());
+        assert!(
+            parse_policy(&format!(
+                "consumer-policy-v1\nexec {}\nwrite-null {}\n",
+                executable.display(),
+                symlink.display()
+            ))
+            .is_err()
+        );
+        fs::remove_dir_all(root).expect("remove private test root");
+
+        assert!(record_write_null_after_run(&mut policy).is_none());
+        let report = report_json(
+            Path::new("/policy"),
+            Path::new("/profile"),
+            &executable,
+            &[],
+            1,
+            2,
+            Some(0),
+            None,
+            Path::new("/stdout"),
+            Path::new("/stderr"),
+            &test_capture(),
+            &test_capture(),
+            None,
+            &[],
+            &verify_exec_hashes(&policy),
+            &[],
+            &policy,
+        );
+        assert!(report.contains("\"post_run_identity_matches\":true"));
+        assert!(report.contains("\"permissions\":[\"file-write*\"]"));
+        assert!(report.contains("\"content_sha256\":null"));
     }
 
     #[test]

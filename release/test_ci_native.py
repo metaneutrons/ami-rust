@@ -563,6 +563,12 @@ class NativeObservationSpecTests(unittest.TestCase):
         self.assertNotIn(account_home, [row["path"] for row in spec["read_trees"]])
         self.assertNotIn(account_home, [row["path"] for row in spec["write_trees"]])
 
+    def test_denied_interpreter_uses_the_actual_bootstrap_runtime_layout(self):
+        spec = self.spec(["verify-package"])
+        self.assertEqual(spec["deny_exec"],
+                         [str(self.root / "python/runtime/python/bin/python3.12")])
+        self.assertTrue(spec["deny_library"][0].startswith(str(self.root / "python/runtime/python/lib")))
+
     def test_ready_checks_and_expected_prepare_refusals_never_write_state(self):
         self.ready()
         for arguments, expected, phase in ((["check-inputs", "--state", self.state], 0, "check-inputs"),

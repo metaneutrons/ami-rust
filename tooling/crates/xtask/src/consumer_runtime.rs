@@ -105,6 +105,13 @@ pub(super) fn discover(
 
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     {
+        // Every nested verifier/tool opens null stdin, including warm install
+        // authentication before compiler or network preparation is needed.
+        add_read_device(
+            &mut discovery,
+            Path::new("/dev/null"),
+            "nested command stdin",
+        )?;
         if build || cold_prepare {
             discover_macos_selection(&mut discovery, &work, build, cold_prepare)?;
         }
@@ -519,32 +526,16 @@ fn add_git_transport_helpers(
         )));
     }
     let directory = canonical_directory(directory)?;
+    #[cfg(target_os = "macos")]
+    add_read_tree(
+        discovery,
+        &directory,
+        "selected OS Git helper lookup, including HTTPS helper aliases; execution remains exact and hash-bound",
+    )?;
     for helper in ["git-remote-http", "git-remote-https"] {
         let requested = directory.join(helper);
         add_executable(discovery, &requested, "git HTTPS transport helper")?;
     }
-    Ok(())
-}
-
-fn add_git_template_tree(
-    discovery: &mut Discovery,
-    git: &Path,
-    work: &Path,
-    label: &str,
-) -> Result<()> {
-    let raw = bounded_single_query(discovery, git, &["var", "GIT_TEMPLATE_DIR"], work, label)?;
-    let directory = Path::new(&raw);
-    if !directory.is_absolute() {
-        return Err(Refusal::new(format!(
-            "{label} returned a nonabsolute Git template directory"
-        )));
-    }
-    let directory = add_read_tree(discovery, directory, "Git init template files")?;
-    discovery.cold_rows.push(json!({
-        "kind": "git_template_directory",
-        "source": label,
-        "canonical_path": path_text(&directory)?,
-    }));
     Ok(())
 }
 
@@ -592,7 +583,6 @@ fn discover_cold_commands(
             "cold preparation system git",
         )?;
         add_git_transport_helpers(discovery, &git, work, "system git --exec-path")?;
-        add_git_template_tree(discovery, &git, work, "system git var GIT_TEMPLATE_DIR")?;
     }
     for name in ["curl", "env", "bash"] {
         let path = add_path_command(discovery, name, "cold preparation command")?;
@@ -618,6 +608,11 @@ fn discover_cold_commands(
             "canonical_path": path_text(&path)?,
         }));
     }
+    discovery.cold_rows.push(json!({
+        "kind":"source_checkout_recipe",
+        "git_templates":"disabled by the consumer's explicit init --template= argument",
+        "hooks":"disabled by core.hooksPath=/dev/null",
+    }));
     add_cold_network_inputs(discovery)?;
     if discovery.query_rows.len() == start {
         return Err(Refusal::new("cold preparation command closure was empty"));
@@ -631,7 +626,7 @@ fn discover_macos_cold_prepare(
     work: &Path,
     selection: &macos_host_selection::HostSelection,
 ) -> Result<()> {
-    discover_cold_commands(discovery, work, true)?;
+    discover_cold_commands(discovery, work, false)?;
     let developer_git = selection
         .developer_directory
         .canonical_path
@@ -642,12 +637,6 @@ fn discover_macos_cold_prepare(
         &developer_git,
         work,
         "selected Developer git --exec-path",
-    )?;
-    add_git_template_tree(
-        discovery,
-        &developer_git,
-        work,
-        "selected Developer git var GIT_TEMPLATE_DIR",
     )?;
     let root_keychain = Path::new("/System/Library/Keychains/SystemRootCertificates.keychain");
     if root_keychain.exists() {
@@ -1219,9 +1208,8 @@ fn discover_macos_selection(
         Path::new("/private/var/select"),
         "selected Developer metadata read by host tools",
     )?;
-    add_read_device(discovery, Path::new("/dev/null"), "nested command stdin")?;
+    add_executable(discovery, &selector, "macOS developer selection query")?;
     if build {
-        add_executable(discovery, &selector, "macOS developer selection query")?;
         add_executable(
             discovery,
             &selected.clang.canonical_path,

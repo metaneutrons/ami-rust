@@ -435,6 +435,116 @@ fn native_interpreter_controls_are_refused_under_the_adapter_policy() -> Result<
     cases.push(positive.case);
     save_progress(&result_path, &mut result, &inputs, &cases, "RUNNING")?;
 
+    let null_probe_args = strings(["--control", "write-null-probe"]);
+    let null_probe_execs = vec![adapter.clone()];
+    let no_null_write_policy = policy_text(&null_probe_execs, &context)?;
+    let with_null_write_policy =
+        no_null_write_policy.replace("network deny\n", "write-null /dev/null\nnetwork deny\n");
+    if with_null_write_policy == no_null_write_policy
+        || with_null_write_policy.replace("write-null /dev/null\n", "") != no_null_write_policy
+    {
+        return Err("could not construct the isolated write-null policy pair".to_owned());
+    }
+    let refused_null_write = run_restricted(
+        "null_write_omitted",
+        &context,
+        &adapter,
+        &null_probe_args,
+        &policy_path(&input_dir, "null-write-omitted", &no_null_write_policy)?,
+        0,
+    )?;
+    // Imported macOS system.sb already allows null writes. Record that OS
+    // allowance honestly; Linux requires the explicit Landlock write rule.
+    let omitted_result = if platform == Platform::Macos {
+        "WRITE_NULL_ALLOWED"
+    } else {
+        "WRITE_NULL_REFUSED errno=13"
+    };
+    require_text(
+        refused_null_write.stdout.as_bytes(),
+        omitted_result,
+        "native /dev/null write omission counterprobe",
+    )?;
+    cases.push(refused_null_write.case);
+    save_progress(&result_path, &mut result, &inputs, &cases, "RUNNING")?;
+
+    let allowed_null_write = run_restricted(
+        "null_write_allowed",
+        &context,
+        &adapter,
+        &null_probe_args,
+        &policy_path(&input_dir, "null-write-allowed", &with_null_write_policy)?,
+        0,
+    )?;
+    require_text(
+        allowed_null_write.stdout.as_bytes(),
+        "WRITE_NULL_ALLOWED",
+        "native /dev/null write positive control",
+    )?;
+    let null_report_path = context.reports.join("null_write_allowed/report.json");
+    let null_report: Value =
+        serde_json::from_slice(&fs::read(&null_report_path).map_err(display_error)?)
+            .map_err(display_error)?;
+    let null_evidence = null_report
+        .get("write_null")
+        .ok_or_else(|| "write-null report evidence is missing".to_owned())?;
+    if null_evidence.get("path").and_then(Value::as_str) != Some("/dev/null")
+        || null_evidence.get("device_type").and_then(Value::as_str) != Some("character-device")
+        || null_evidence
+            .get("post_run_identity_matches")
+            .and_then(Value::as_bool)
+            != Some(true)
+        || null_evidence.get("pre_run_identity") != null_evidence.get("post_run_identity")
+        || !null_evidence
+            .get("content_sha256")
+            .is_some_and(Value::is_null)
+    {
+        return Err(
+            "write-null report did not preserve exact character-device identity evidence"
+                .to_owned(),
+        );
+    }
+    cases.push(allowed_null_write.case);
+    save_progress(&result_path, &mut result, &inputs, &cases, "RUNNING")?;
+
+    let invalid_null_policy =
+        with_null_write_policy.replace("write-null /dev/null", "write-null /dev/zero");
+    let invalid_null_path = policy_path(&input_dir, "null-write-invalid", &invalid_null_policy)?;
+    let invalid_null_report = context.reports.join("null_write_invalid");
+    let invalid = runner.run(
+        &adapter,
+        vec![
+            "--policy".into(),
+            invalid_null_path.into_os_string(),
+            "--report-dir".into(),
+            invalid_null_report.clone().into_os_string(),
+            "--run".into(),
+            "--".into(),
+            adapter.clone().into_os_string(),
+            "--control".into(),
+            "write-null-probe".into(),
+        ],
+    )?;
+    require_status(&invalid, 2, "invalid write-null directive setup refusal")?;
+    require_text(
+        &invalid.stderr,
+        "write-null only accepts the exact path /dev/null",
+        "invalid write-null diagnostic",
+    )?;
+    require_no_text(
+        &invalid.stdout,
+        "WRITE_NULL_",
+        "invalid write-null must not execute the child",
+    )?;
+    if invalid_null_report.join("report.json").exists() {
+        return Err("invalid write-null directive unexpectedly ran a child".to_owned());
+    }
+    let mut invalid_case = unconfined_case("invalid_null_write_directive", &invalid);
+    invalid_case["scope"] =
+        json!("Adapter setup refusal before child launch; not an interpreter refusal");
+    cases.push(invalid_case);
+    save_progress(&result_path, &mut result, &inputs, &cases, "RUNNING")?;
+
     for (name, mode, option, argument, refusal, marker, stale_marker) in [
         (
             "restricted_direct",

@@ -374,6 +374,11 @@ fn render_policy(
     closure_sha: &str,
 ) -> Result<String> {
     let mut lines = vec!["consumer-policy-v1".to_owned()];
+    // Upstream Rust install.sh redirects to this exact OS character device.
+    // Warm commands and ordinary native builds need no device-write grant.
+    if spec.phase == "cold-prepare" {
+        lines.push("write-null /dev/null".to_owned());
+    }
     let mut ancestors = BTreeSet::new();
     for executable in &runtime.executables {
         lines.push(format!(
@@ -885,6 +890,7 @@ mod tests {
         let policy =
             render_policy(&spec, &runtime, BTreeSet::new(), &"a".repeat(64)).expect("policy");
         assert!(policy.contains("network outbound\n"));
+        assert!(policy.contains("write-null /dev/null\n"));
         assert!(policy.contains("exec-derived-tree consumer-state-parent "));
         assert!(!policy.contains("env DYLD_") && !policy.contains("env LD_"));
         let fixture = Fixture::new();
@@ -896,5 +902,6 @@ mod tests {
         )
         .expect("policy");
         assert!(policy.contains("network deny\n") && !policy.contains("exec-derived-tree "));
+        assert!(!policy.contains("write-null "));
     }
 }

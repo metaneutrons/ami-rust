@@ -11,7 +11,7 @@ use std::env;
 use std::ffi::{CString, OsString};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
-use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
+use std::os::unix::fs::{FileTypeExt, MetadataExt, OpenOptionsExt, PermissionsExt};
 use std::os::unix::process::{CommandExt, ExitStatusExt};
 use std::path::{Path, PathBuf};
 use std::process::{self, Command, Stdio};
@@ -48,6 +48,21 @@ struct ReadLibraryRule {
     pre_run_sha256: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct DeviceIdentity {
+    device: u64,
+    inode: u64,
+    rdev: u64,
+}
+
+#[derive(Debug)]
+struct WriteNullRule {
+    pre_run_identity: DeviceIdentity,
+    post_run_identity: Option<DeviceIdentity>,
+    post_run_identity_matches: Option<bool>,
+    post_run_error: Option<String>,
+}
+
 #[derive(Debug, Default)]
 struct Policy {
     exec: Vec<ExecRule>,
@@ -58,6 +73,7 @@ struct Policy {
     read_files: Vec<PathBuf>,
     read_directories: Vec<PathBuf>,
     read_libraries: Vec<ReadLibraryRule>,
+    write_null: Option<WriteNullRule>,
     read_trees: Vec<(String, PathBuf)>,
     write_trees: Vec<(String, PathBuf)>,
     env: BTreeMap<String, String>,
@@ -164,6 +180,7 @@ mod linux {
     const BPF_RET_K: u16 = 0x06;
     const O_PATH: i32 = 0x0020_0000;
     const O_CLOEXEC: i32 = 0x0008_0000;
+    const O_NOFOLLOW: i32 = 0x0002_0000;
     const AT_EMPTY_PATH: i32 = 0x1000;
     const MFD_CLOEXEC: u32 = 1;
 
@@ -220,6 +237,85 @@ mod linux {
         handled_fs: u64,
     }
 
+    const LINUX_NULL_RDEV: u64 = 0x103; // Linux character device 1:3.
+
+    fn validated_null_identity(
+        policy_path: &str,
+        canonical_path: &Path,
+        metadata: &fs::Metadata,
+    ) -> Result<DeviceIdentity, String> {
+        if policy_path != "/dev/null" || canonical_path != Path::new("/dev/null") {
+            return Err("write-null must name the exact canonical path /dev/null".to_owned());
+        }
+        if !metadata.file_type().is_char_device() {
+            return Err("write-null /dev/null is not a character device".to_owned());
+        }
+        if metadata.rdev() != LINUX_NULL_RDEV {
+            return Err(format!(
+                "write-null /dev/null has unexpected character-device number {}",
+                metadata.rdev()
+            ));
+        }
+        Ok(DeviceIdentity {
+            device: metadata.dev(),
+            inode: metadata.ino(),
+            rdev: metadata.rdev(),
+        })
+    }
+
+    fn inspect_null_device() -> Result<DeviceIdentity, String> {
+        inspect_write_null_policy_path("/dev/null")
+    }
+
+    fn inspect_write_null_policy_path(policy_path: &str) -> Result<DeviceIdentity, String> {
+        if policy_path != "/dev/null" {
+            return Err("write-null only accepts the exact path /dev/null".to_owned());
+        }
+        let path = Path::new(policy_path);
+        let metadata = fs::symlink_metadata(path)
+            .map_err(|error| format!("inspect write-null path {policy_path}: {error}"))?;
+        let canonical = fs::canonicalize(path)
+            .map_err(|error| format!("canonicalize write-null path {policy_path}: {error}"))?;
+        validated_null_identity(policy_path, &canonical, &metadata)
+    }
+
+    fn verify_write_null_before_run(policy: &Policy) -> Result<(), String> {
+        if let Some(rule) = &policy.write_null {
+            let current = inspect_null_device()?;
+            if current != rule.pre_run_identity {
+                return Err(
+                    "/dev/null device identity changed before the sandboxed command started"
+                        .to_owned(),
+                );
+            }
+        }
+        Ok(())
+    }
+
+    fn record_write_null_after_run(policy: &mut Policy) -> Option<String> {
+        let rule = policy.write_null.as_mut()?;
+        match inspect_null_device() {
+            Ok(identity) => {
+                let matches = identity == rule.pre_run_identity;
+                rule.post_run_identity = Some(identity);
+                rule.post_run_identity_matches = Some(matches);
+                rule.post_run_error = None;
+                (!matches).then(|| {
+                    "declared /dev/null character-device identity changed after the run".to_owned()
+                })
+            }
+            Err(error) => {
+                rule.post_run_identity = None;
+                rule.post_run_identity_matches = Some(false);
+                rule.post_run_error = Some(error);
+                Some(
+                    "declared /dev/null character device could not be verified after the run"
+                        .to_owned(),
+                )
+            }
+        }
+    }
+
     impl OpenRule {
         fn new(path: &Path, allowed_access: u64) -> Result<Self, String> {
             let canonical = fs::canonicalize(path).map_err(|error| {
@@ -257,6 +353,53 @@ mod linux {
                 fd,
             })
         }
+
+        fn new_write_null(expected: &DeviceIdentity, allowed_access: u64) -> Result<Self, String> {
+            let path = Path::new("/dev/null");
+            let canonical = fs::canonicalize(path)
+                .map_err(|error| format!("canonicalize /dev/null for Landlock: {error}"))?;
+            if canonical != path {
+                return Err(
+                    "write-null path no longer resolves canonically to /dev/null".to_owned(),
+                );
+            }
+            let cpath = CString::new("/dev/null").expect("literal path contains no NUL");
+            // O_NOFOLLOW makes a last-component symlink substitution fail
+            // closed. The descriptor then anchors the Landlock exception to
+            // the already-validated character device inode.
+            // SAFETY: cpath is NUL-terminated, O_PATH does not dereference a
+            // user pointer beyond the path, and the returned descriptor is
+            // owned below.
+            let raw_fd = unsafe { open(cpath.as_ptr(), O_PATH | O_NOFOLLOW | O_CLOEXEC) };
+            if raw_fd < 0 {
+                return Err(format!(
+                    "open O_PATH /dev/null: {}",
+                    io::Error::last_os_error()
+                ));
+            }
+            // SAFETY: raw_fd is a newly opened descriptor.
+            let fd = unsafe { File::from_raw_fd(raw_fd) };
+            let opened = fd
+                .metadata()
+                .map_err(|error| format!("fstat /dev/null: {error}"))?;
+            let opened_identity = validated_null_identity("/dev/null", path, &opened)?;
+            let named =
+                fs::symlink_metadata(path).map_err(|error| format!("lstat /dev/null: {error}"))?;
+            let named_identity = validated_null_identity("/dev/null", path, &named)?;
+            if opened_identity != *expected
+                || named_identity != *expected
+                || opened_identity != named_identity
+            {
+                return Err(
+                    "/dev/null device identity changed while opening Landlock rule".to_owned(),
+                );
+            }
+            Ok(Self {
+                path: path.to_path_buf(),
+                allowed_access,
+                fd,
+            })
+        }
     }
 
     pub(super) fn run(args: &[String]) -> Result<i32, String> {
@@ -290,7 +433,7 @@ mod linux {
             .map_err(|error| format!("resolve report directory: {error}"))?;
         let policy_text =
             fs::read_to_string(&policy_path).map_err(|error| format!("read policy: {error}"))?;
-        let policy = parse_policy(&policy_text)?;
+        let mut policy = parse_policy(&policy_text)?;
         validate_report_directory_disjoint(&report_dir, &policy.write_trees)?;
 
         let command_path = existing_executable(&args[separator + 1])?;
@@ -319,6 +462,7 @@ mod linux {
             ));
         }
         let landlock = prepare_landlock(&policy, abi)?;
+        verify_write_null_before_run(&policy)?;
         let seccomp_filter = seccomp_filter(policy.network_outbound);
         let stdout_path = report_dir.join("stdout.raw");
         let stderr_path = report_dir.join("stderr.raw");
@@ -366,6 +510,9 @@ mod linux {
                 let mut evidence_failures = vec![format!(
                     "sandboxed consumer command did not launch: {launch_error}"
                 )];
+                if let Some(failure) = record_write_null_after_run(&mut policy) {
+                    evidence_failures.push(failure);
+                }
                 for check in &library_hash_checks {
                     if !check.post_run_hash_matches {
                         evidence_failures.push(format!(
@@ -446,6 +593,9 @@ mod linux {
         let hash_checks = verify_exec_hashes(&policy);
         let library_hash_checks = verify_read_library_hashes(&policy);
         let mut evidence_failures = Vec::new();
+        if let Some(failure) = record_write_null_after_run(&mut policy) {
+            evidence_failures.push(failure);
+        }
         for check in &hash_checks {
             if check.expected_sha256.is_some() && check.post_run_hash_matches != Some(true) {
                 evidence_failures.push(format!(
@@ -623,6 +773,17 @@ mod linux {
                 "deny-exec" => policy.deny_exec.push(existing_or_future_path(rest)?),
                 "deny-library" => policy.deny_library.push(existing_or_future_path(rest)?),
                 "read-file" => policy.read_files.push(existing_or_future_path(rest)?),
+                "write-null" => {
+                    if policy.write_null.is_some() {
+                        return Err("duplicate write-null directive".to_owned());
+                    }
+                    policy.write_null = Some(WriteNullRule {
+                        pre_run_identity: inspect_write_null_policy_path(rest)?,
+                        post_run_identity: None,
+                        post_run_identity_matches: None,
+                        post_run_error: None,
+                    });
+                }
                 "read-directory" => policy.read_directories.push(existing_directory(rest)?),
                 "read-library" => {
                     let (path_text, hash) = rest
@@ -866,6 +1027,19 @@ mod linux {
                 expected_closure_sha256: Some(closure_hash),
                 deferred,
             });
+        }
+
+        if policy.write_null.is_some() {
+            if let Some((role, root)) = policy
+                .write_trees
+                .iter()
+                .find(|(_, root)| paths_overlap(root, Path::new("/dev/null")))
+            {
+                return Err(format!(
+                    "write-null cannot be combined with broader write-tree role {role:?}: {}",
+                    root.display()
+                ));
+            }
         }
 
         if policy.exec.is_empty()
@@ -1387,6 +1561,18 @@ mod linux {
                 .and_modify(|rights| *rights |= write_rights)
                 .or_insert(write_rights);
         }
+        if policy.write_null.is_some() {
+            let null_write_rights = LANDLOCK_ACCESS_FS_WRITE_FILE
+                | if abi >= 3 {
+                    LANDLOCK_ACCESS_FS_TRUNCATE
+                } else {
+                    0
+                };
+            rights_by_path
+                .entry(PathBuf::from("/dev/null"))
+                .and_modify(|rights| *rights |= null_write_rights)
+                .or_insert(null_write_rights);
+        }
         if rights_by_path.is_empty() {
             return Err("empty Landlock path rule set".to_owned());
         }
@@ -1413,7 +1599,15 @@ mod linux {
         let ruleset = unsafe { File::from_raw_fd(raw_ruleset as i32) };
         let mut rules = Vec::with_capacity(rights_by_path.len());
         for (path, rights) in rights_by_path {
-            let rule = OpenRule::new(&path, rights)?;
+            let rule = if path == Path::new("/dev/null") {
+                if let Some(write_null) = &policy.write_null {
+                    OpenRule::new_write_null(&write_null.pre_run_identity, rights)?
+                } else {
+                    OpenRule::new(&path, rights)?
+                }
+            } else {
+                OpenRule::new(&path, rights)?
+            };
             let attr = LandlockPathBeneathAttr {
                 allowed_access: rule.allowed_access,
                 parent_fd: rule.fd.as_raw_fd(),
@@ -1762,6 +1956,37 @@ mod linux {
             })
             .collect::<Vec<_>>()
             .join(",");
+        let write_null = policy
+            .write_null
+            .as_ref()
+            .map(|rule| {
+                let mut permissions = vec![json("WRITE_FILE")];
+                if abi >= 3 {
+                    permissions.push(json("TRUNCATE"));
+                }
+                let post_identity = rule
+                    .post_run_identity
+                    .as_ref()
+                    .map(|identity| {
+                        format!(
+                            "{{\"device\":{},\"inode\":{},\"rdev\":{}}}",
+                            identity.device, identity.inode, identity.rdev
+                        )
+                    })
+                    .unwrap_or_else(|| "null".to_owned());
+                format!(
+                    "{{\"path\":{},\"device_type\":\"character-device\",\"permissions\":[{}],\"pre_run_identity\":{{\"device\":{},\"inode\":{},\"rdev\":{}}},\"post_run_identity\":{},\"post_run_identity_matches\":{},\"post_run_error\":{},\"content_sha256\":null}}",
+                    json("/dev/null"),
+                    permissions.join(","),
+                    rule.pre_run_identity.device,
+                    rule.pre_run_identity.inode,
+                    rule.pre_run_identity.rdev,
+                    post_identity,
+                    rule.post_run_identity_matches.map(|matches| matches.to_string()).unwrap_or_else(|| "null".to_owned()),
+                    rule.post_run_error.as_ref().map(|error| json(error)).unwrap_or_else(|| "null".to_owned())
+                )
+            })
+            .unwrap_or_else(|| "null".to_owned());
         let evidence = evidence_failures
             .iter()
             .map(|failure| json(failure))
@@ -1798,7 +2023,7 @@ mod linux {
             .collect::<Vec<_>>()
             .join(",");
         format!(
-            "{{\n  \"schema\":\"consumer-enforcement-adapter-a1\",\n  \"backend\":\"Landlock path-beneath allow rules and seccomp-BPF on Linux x86-64\",\n  \"policy\":{},\n  \"report_directory\":{},\n  \"landlock_abi\":{},\n  \"landlock_fs_rights_reviewed_through_abi\":5,\n  \"landlock_handled_fs_rights_mask\":{},\n  \"seccomp\":{{\"tsync\":true,\"execveat_denied\":true,\"memfd_create_denied\":true,\"x32_syscalls_denied\":true,\"network_denied\":{}}},\n  \"command\":[{}],\n  \"started_unix_micros\":{},\n  \"finished_unix_micros\":{},\n  \"elapsed_millis\":{},\n  \"pid\":{},\n  \"launch_error\":{},\n  \"child_exit_code\":{},\n  \"child_signal\":{},\n  \"stdout\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"stderr\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"network_outbound_allowed\":{},\n  \"exec_allowlist\":[{}],\n  \"exec_identity_checks\":[{}],\n  \"read_library_mappings\":[{}],\n  \"exec_trees\":[{}],\n  \"exec_derived_trees\":[{}],\n  \"deny_exec\":[{}],\n  \"deny_library\":{{\"paths\":[{}],\"enforcement\":\"no overlapping Landlock READ_FILE/EXECUTE allowance\"}},\n  \"read_files\":[{}],\n  \"read_directories\":[{}],\n  \"read_trees\":[{}],\n  \"write_trees\":[{}],\n  \"environment_names\":[{}],\n  \"cwd\":{},\n  \"output_replay_error\":{},\n  \"qualification_evidence_valid\":{},\n  \"evidence_failures\":[{}],\n  \"outer_supervisor_timeout_cleanup_required\":true,\n  \"outer_supervisor_timeout_cleanup_verified_by_adapter\":false\n}}\n",
+            "{{\n  \"schema\":\"consumer-enforcement-adapter-a1\",\n  \"backend\":\"Landlock path-beneath allow rules and seccomp-BPF on Linux x86-64\",\n  \"policy\":{},\n  \"report_directory\":{},\n  \"landlock_abi\":{},\n  \"landlock_fs_rights_reviewed_through_abi\":5,\n  \"landlock_handled_fs_rights_mask\":{},\n  \"seccomp\":{{\"tsync\":true,\"execveat_denied\":true,\"memfd_create_denied\":true,\"x32_syscalls_denied\":true,\"network_denied\":{}}},\n  \"command\":[{}],\n  \"started_unix_micros\":{},\n  \"finished_unix_micros\":{},\n  \"elapsed_millis\":{},\n  \"pid\":{},\n  \"launch_error\":{},\n  \"child_exit_code\":{},\n  \"child_signal\":{},\n  \"stdout\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"stderr\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"network_outbound_allowed\":{},\n  \"exec_allowlist\":[{}],\n  \"exec_identity_checks\":[{}],\n  \"read_library_mappings\":[{}],\n  \"exec_trees\":[{}],\n  \"exec_derived_trees\":[{}],\n  \"deny_exec\":[{}],\n  \"deny_library\":{{\"paths\":[{}],\"enforcement\":\"no overlapping Landlock READ_FILE/EXECUTE allowance\"}},\n  \"read_files\":[{}],\n  \"read_directories\":[{}],\n  \"read_trees\":[{}],\n  \"write_trees\":[{}],\n  \"write_null\":{},\n  \"environment_names\":[{}],\n  \"cwd\":{},\n  \"output_replay_error\":{},\n  \"qualification_evidence_valid\":{},\n  \"evidence_failures\":[{}],\n  \"outer_supervisor_timeout_cleanup_required\":true,\n  \"outer_supervisor_timeout_cleanup_verified_by_adapter\":false\n}}\n",
             json(&policy_path.display().to_string()),
             json(&report_dir.display().to_string()),
             abi,
@@ -1845,6 +2070,7 @@ mod linux {
             read_directories,
             read_trees,
             write_trees,
+            write_null,
             env_names,
             policy
                 .cwd
@@ -1921,6 +2147,26 @@ mod linux {
                         .map_err(|error| format!("write positive-control output: {error}"))?;
                 }
                 println!("ADAPTER_NATIVE_POSITIVE");
+            }
+            "write-null-probe" => {
+                match OpenOptions::new()
+                    .write(true)
+                    .truncate(true)
+                    .open("/dev/null")
+                {
+                    Ok(mut null) => {
+                        null.write_all(b"consumer-enforcement-null-write-probe\n")
+                            .map_err(|error| format!("write /dev/null probe: {error}"))?;
+                        println!("WRITE_NULL_ALLOWED");
+                    }
+                    Err(error) if matches!(error.raw_os_error(), Some(EACCES) | Some(1)) => {
+                        println!(
+                            "WRITE_NULL_REFUSED errno={}",
+                            error.raw_os_error().unwrap_or_default()
+                        );
+                    }
+                    Err(error) => return Err(format!("open /dev/null write probe: {error}")),
+                }
             }
             "positive-spawn" => {
                 let path = required(args, "--path")?;
@@ -2197,6 +2443,109 @@ mod linux {
                 newer, abi5,
                 "new unrelated ABI rights remain outside this reviewed mask"
             );
+        }
+
+        #[test]
+        fn write_null_accepts_only_the_real_device_and_grants_narrow_abi_rights() {
+            let mut policy =
+                parse_policy("consumer-policy-v1\nexec /bin/true\nwrite-null /dev/null\n")
+                    .expect("accept the exact native null device");
+            let identity = &policy
+                .write_null
+                .as_ref()
+                .expect("write-null rule")
+                .pre_run_identity;
+            assert_eq!(identity.rdev, LINUX_NULL_RDEV);
+            verify_write_null_before_run(&policy).expect("identity remains stable before run");
+
+            let available_abi = query_landlock_abi().expect("query native Landlock ABI");
+            assert!(
+                available_abi >= 2,
+                "unexpected Landlock ABI {available_abi}"
+            );
+            for abi in [2, 3].into_iter().filter(|abi| *abi <= available_abi) {
+                let plan = prepare_landlock(&policy, abi).expect("prepare exact null rule");
+                let rule = plan
+                    ._rules
+                    .iter()
+                    .find(|rule| rule.path == Path::new("/dev/null"))
+                    .expect("exact Landlock rule for /dev/null");
+                let expected = LANDLOCK_ACCESS_FS_WRITE_FILE
+                    | if abi >= 3 {
+                        LANDLOCK_ACCESS_FS_TRUNCATE
+                    } else {
+                        0
+                    };
+                assert_eq!(rule.allowed_access, expected);
+            }
+            assert!(record_write_null_after_run(&mut policy).is_none());
+            let report = report_json(
+                Path::new("/policy"),
+                Path::new("/reports"),
+                Path::new("/bin/true"),
+                &[],
+                1,
+                2,
+                1,
+                None,
+                None,
+                Some(0),
+                None,
+                Path::new("/stdout"),
+                Path::new("/stderr"),
+                &test_capture(),
+                &test_capture(),
+                None,
+                &[],
+                &verify_exec_hashes(&policy),
+                &verify_read_library_hashes(&policy),
+                &policy,
+                available_abi,
+                handled_access_fs(available_abi),
+            );
+            assert!(report.contains("\"post_run_identity_matches\":true"));
+            assert!(report.contains("\"content_sha256\":null"));
+            assert!(
+                report.contains("\"permissions\":[\"WRITE_FILE\"")
+                    || report.contains("\"permissions\":[\"WRITE_FILE\",\"TRUNCATE\"]")
+            );
+            drop(policy);
+
+            for invalid in ["/dev/zero", "/dev//null", "/dev/../dev/null"] {
+                assert!(
+                    inspect_write_null_policy_path(invalid).is_err(),
+                    "reject noncanonical policy spelling {invalid}"
+                );
+                let invalid_policy =
+                    format!("consumer-policy-v1\nexec /bin/true\nwrite-null {invalid}\n");
+                assert!(parse_policy(&invalid_policy).is_err());
+            }
+            let root = private_test_root("write-null-invalid-targets");
+            let regular = root.join("regular-null");
+            fs::write(&regular, b"not a device").expect("write regular-file fixture");
+            let regular_metadata = fs::symlink_metadata(&regular).expect("stat regular fixture");
+            assert!(
+                validated_null_identity("/dev/null", Path::new("/dev/null"), &regular_metadata)
+                    .expect_err("reject regular replacement")
+                    .contains("not a character device")
+            );
+            let symlink = root.join("null-link");
+            std::os::unix::fs::symlink("/dev/null", &symlink).expect("create null symlink");
+            let symlink_metadata = fs::symlink_metadata(&symlink).expect("lstat null symlink");
+            assert!(
+                validated_null_identity("/dev/null", Path::new("/dev/null"), &symlink_metadata)
+                    .expect_err("reject symlink replacement")
+                    .contains("not a character device")
+            );
+            assert!(inspect_write_null_policy_path(&symlink.to_string_lossy()).is_err());
+            assert!(
+                parse_policy(&format!(
+                    "consumer-policy-v1\nexec /bin/true\nwrite-null {}\n",
+                    symlink.display()
+                ))
+                .is_err()
+            );
+            fs::remove_dir_all(root).expect("remove private test root");
         }
 
         #[test]
