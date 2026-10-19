@@ -122,3 +122,10 @@ it is neither the complete consumer no-Python observation nor a network-denial
 qualification. A protected signed native-v2 candidate and the Linux real-verifier
 path still need their own evidence. The [development/review record](evidence/rc1-publisher-local-20261019/review-and-development-record.json)
 retains resolved failures and the changes required by independent review.
+
+[Both-host CI 39206729340](evidence/rc1-publisher-hosted-39206729340.json)
+passes the same 172 core + one frontend + one manifest integration test on
+Ubuntu 24.04 x86-64 and macOS 26 Apple Silicon (174 per host), formatting and
+Clippy. PR #88 merged the exact candidate with unchanged compiled tooling.
+Hosted checks cover deterministic fixtures, not real hosted cryptography or a
+signed native-v2 release; those remaining gates are unchanged.

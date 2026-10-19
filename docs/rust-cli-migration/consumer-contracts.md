@@ -118,3 +118,11 @@ Open RC0 decisions:
 ## Verification
 
 The JSON parses and contains 104 unique entries matching tracked Python paths. Counts are 26 RC1 and 78 RC4 primary milestones; all entries have RC5 closure and removal conditions, and every listed path exists. No build, test, qualification, or publication was performed for this static inventory.
+
+## Native package implementation addendum
+
+The [native package v2 contract](native-package-v2.md) defines separate native
+inputs, inventory and proof-index records plus owned-root discovery. Its
+consistency result does not authorize publisher trust or consumer activation;
+all revision-2 acceptance criteria remain required. Historical v1 packages
+remain immutable compatibility evidence and are never a Python fallback.

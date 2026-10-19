@@ -1,0 +1,68 @@
+{
+  "schema": "ami-rust-native-package-contract-v2",
+  "scope": "RC1 native package consistency and root discovery; no publisher authentication or complete RC1 acceptance",
+  "records": {
+    "ami-rust-package-inputs-v2": {
+      "exact_fields": ["schema", "cli_version", "sdk_version", "packaging_revision", "package_version", "packaging_tag", "sdk_tag", "repository", "source_commit", "source_tree", "sdk_run_id", "sdk_run_attempt", "manifest_sha256", "transport_sha256", "assets", "hosts", "maintainer", "publisher_proofs", "host", "launchers", "core_sha256"],
+      "repository": "metaneutrons/ami-rust",
+      "launchers": {
+        "ami-rust": "bin/ami-rust",
+        "cargo-ami": "bin/cargo-ami"
+      },
+      "launcher_row_fields": ["path", "bytes", "sha256"],
+      "launcher_binding": "Both rows have identical nonzero byte lengths/digests; core_sha256 equals that digest because both frontends contain the same statically linked core",
+      "asset_row_fields": ["path", "bytes", "sha256"],
+      "assets": "Exactly SHA256SUMS and the versioned release archive, archive Sigstore bundle, archive SPDX, transport and transport Sigstore bundle",
+      "publisher_proofs": "Exactly the checksum, archive, SPDX and transport subject names; each has 1 to 64 exact bytes/sha256 rows",
+      "workflow_counters": "Exact positive decimal integers, no leading zero, through 4300 digits",
+      "hosts": {"apt": "linux-x86_64", "homebrew": "macos-aarch64"},
+      "host": "Selected package host; producer host in authenticated provenance remains separate"
+    },
+    "ami-rust-package-inventory-v2": {
+      "exact_fields": ["schema", "cli_version", "sdk_version", "package_version", "host", "files"],
+      "file_row_fields": ["path", "bytes", "sha256", "mode"],
+      "excluded_self": "inventory.json",
+      "binding": "Version/host fields match pins; exact owned regular-file set, modes, sizes and digests; self inventory bytes are retained and checked separately"
+    },
+    "ami-rust-package-proofs-v2": {
+      "exact_fields": ["schema", "subjects"],
+      "proof_row_fields": ["path", "bytes", "sha256"],
+      "binding": "Exactly the four pinned subjects; each identity set matches publisher_proofs; a shared proof path has one identity and case aliases refuse"
+    }
+  },
+  "payload": {
+    "required_files": ["bin/ami-rust", "bin/cargo-ami", "pins.json", "proofs.json", "LICENSE-MIT", "LICENSE-APACHE", "THIRD-PARTY-NOTICES.md"],
+    "additional_files": "Only the pinned assets/, indexed proofs/, optional README.md, and nonempty portable licenses/ data files",
+    "binary_mode": 493,
+    "data_mode": 420,
+    "requires_license_text_directory": true,
+    "self_inventory_mode": 420,
+    "links": "No link inside the owned inventory root. Public package-manager/retained entrypoint links may resolve to an owned binary outside that root.",
+    "directories": "Empty extra real directories preserve historical acceptance, within the host tree-work bound"
+  },
+  "profiles": {
+    "metadata_bytes": 2097152,
+    "asset_file_bytes": 134217728,
+    "asset_total_bytes": 268435456,
+    "launcher_file_bytes": 134217728,
+    "proof_file_bytes": 16777216,
+    "proof_total_distinct_path_bytes": 67108864,
+    "package_total_bytes": 536870912,
+    "tree_entries": 16384,
+    "meaning": "Host package-container and traversal profiles; not AROS application quotas. The measured packaging.2 assets are about 27 MiB; the native total profile leaves room for both frontends, notices and future artifact growth. Large prerequisite trees are acquired into private state, not bundled here."
+  },
+  "root_discovery": {
+    "source": "Actual executable path supplied by the operating system, separately from argv[0] used for Cargo dispatch",
+    "owned_path": "PACKAGE_ROOT/bin/ami-rust or PACKAGE_ROOT/bin/cargo-ami",
+    "identity": "Canonical existing payload path without linked components; executable bytes, package host and compiled CLI version match pins and inventory",
+    "apt_example": "PREFIX/libexec/ami-rust/PACKAGE_VERSION/bin/ami-rust",
+    "homebrew_example": "CELLAR/FORMULA/VERSION/libexec/ami-rust/PACKAGE_VERSION/bin/ami-rust",
+    "retained_example": "STATE/retained/libexec/ami-rust/PACKAGE_VERSION/bin/ami-rust",
+    "relocation": "All inventory/pin paths are relative; no activation path is serialized into these portable records"
+  },
+  "compatibility": {
+    "v1_packages": "Read-only historical evidence/migration inputs; never native package authorization or an executable Python fallback",
+    "bare_development_binary": "Existing help/version remain development-only. Package discovery does not silently fall back to an ambient installation or an unverified metadata root.",
+    "public_activation": "Remain disabled until integrated supported-host, no-Python and complete consumer-path checks pass. No new distribution or SDK publication is authorized by a parser result."
+  }
+}
