@@ -1,0 +1,166 @@
+{
+  "scope": "Retained private raw filesystem proof and reviewed source identities; no public command or publisher authentication qualification",
+  "source_commit": "0b8c5489e403752e7da9e6bd771c7789a057f4bb",
+  "oracle_source_sha256": {
+    "release/install.py": "0e77fa70bcaa69d08de3102e18c102a063b276c654242e676dd20fab6d74e984",
+    "release/test_install.py": "379ba1ab0f3795dd880c17ec46705bf976da9b21bc9a57f7884c573e73bcd64c"
+  },
+  "raw_evidence": {
+    "Cargo.lock": {
+      "bytes": 6821,
+      "sha256": "567241d13921ced87bde4c469c968eba4ad2c87a08c91ecdcc7acdd1820d7e34"
+    },
+    "Cargo.toml": {
+      "bytes": 324,
+      "sha256": "48d52f0fc4c163d251bfaf6606cb12bb8ce88b38c8fc17555a67bddbcdb131d8"
+    },
+    "bridge-generated-lock-before-public-copy.Cargo.lock": {
+      "bytes": 6821,
+      "sha256": "567241d13921ced87bde4c469c968eba4ad2c87a08c91ecdcc7acdd1820d7e34"
+    },
+    "build-log.json": {
+      "bytes": 707,
+      "sha256": "0b069aa39a816f57667898c02c299b03da35f157e671e59747d921f46ce54080"
+    },
+    "driver.py": {
+      "bytes": 19365,
+      "sha256": "2ad4306e9885fb69437c55b84a28cae32e541cecec7c2c1e076d170144a314af"
+    },
+    "failure-report-attempt-01.json": {
+      "bytes": 2672,
+      "sha256": "7d999540efeafaf799c4ac183a4020d3d75c40b39524294a5e7891a3646a27f9"
+    },
+    "failure-report.json": {
+      "bytes": 2672,
+      "sha256": "7d999540efeafaf799c4ac183a4020d3d75c40b39524294a5e7891a3646a27f9"
+    },
+    "lock-resolution-log.json": {
+      "bytes": 1423,
+      "sha256": "106de22eefb2330f1dd46cbf89435c3882b10fcd012f332eb89cffd693f9a0e4"
+    },
+    "lock-review.json": {
+      "bytes": 505,
+      "sha256": "b9b6fdda29b6143a9439c563e6c98359a6ef28becceb1c72cb742a4759db65c4"
+    },
+    "provenance.json": {
+      "bytes": 2090,
+      "sha256": "490d0155ca4ed87777c987b7df684316972beb8865c1ef8191130f071bd77341"
+    },
+    "public-workspace.Cargo.lock": {
+      "bytes": 6799,
+      "sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d"
+    },
+    "report.json": {
+      "bytes": 5375,
+      "sha256": "72dbc5fcc20c8b36d3fa79e9d1454de57a4ebca85343ef6792e89c01e0cd873f"
+    },
+    "resolved-bridge.Cargo.lock": {
+      "bytes": 6821,
+      "sha256": "567241d13921ced87bde4c469c968eba4ad2c87a08c91ecdcc7acdd1820d7e34"
+    },
+    "runs/extra-directory-uninstall-setup-install.plan.json": {
+      "bytes": 2381,
+      "sha256": "a3009717185aff7934cfbf6585ae9ea64f05eb4968c28d34fa62cb80bfaa08c3"
+    },
+    "runs/extra-directory-uninstall-setup-install.python.json": {
+      "bytes": 1985,
+      "sha256": "deeb49bf463bf356c52119ac34224fb1dafc8bffc4fd98d06d3df94ddf3a3431"
+    },
+    "runs/extra-directory-uninstall-setup-install.rust.json": {
+      "bytes": 1447,
+      "sha256": "d8efb6b4ba8a37b69ac3062599980afc0cf96269a46a970354e5ded96964648e"
+    },
+    "runs/extra-directory-uninstall.plan.json": {
+      "bytes": 1272,
+      "sha256": "0485f8b42170ab6f6a6179a90f01ec172784510187467b1d21030c2732c05251"
+    },
+    "runs/extra-directory-uninstall.python.json": {
+      "bytes": 150,
+      "sha256": "76a917a3c8772d2047648170c7e6a38a2221f6c36da4489b1d359da51c1c3ff1"
+    },
+    "runs/extra-directory-uninstall.rust.json": {
+      "bytes": 575,
+      "sha256": "d6661195849bcc6f87e6c0cc0f4a1df33fd396bca5beace0405d9b3e6dbad59d"
+    },
+    "runs/occupied-pin.plan.json": {
+      "bytes": 2355,
+      "sha256": "602b1aed48adbcfe9f9ab2b10c628e5da2a086c666ddcdda99bda458cba6e628"
+    },
+    "runs/occupied-pin.python.json": {
+      "bytes": 124,
+      "sha256": "eb39fbd7ff34023c80f3a41e4c1e127ae1fd60e45ee6e0454cf726f0b2d3fb15"
+    },
+    "runs/occupied-pin.rust.json": {
+      "bytes": 610,
+      "sha256": "763ec3b000d3af4c4a4869fef62d1e5f3f2a79241184b42f8b2db2441f8058b6"
+    },
+    "runs/occupied-prefix.plan.json": {
+      "bytes": 2182,
+      "sha256": "ec500da24616513a7c01304765d501546422866814ff5a9594a4c4365c27a48c"
+    },
+    "runs/occupied-prefix.python.json": {
+      "bytes": 127,
+      "sha256": "ec47dcbd6834d1c1f0989d4719c45750047534b47e1f7de0d425b5e083d6bd2b"
+    },
+    "runs/occupied-prefix.rust.json": {
+      "bytes": 619,
+      "sha256": "7a3e136817115523a399e50ac91baa9787d86c48a6a6b0bdc77b26e0058330f6"
+    },
+    "runs/positive-install.plan.json": {
+      "bytes": 2347,
+      "sha256": "e730f2b64b1f39280ca4d98e0fda1990cac1a5cc0b3bd52562fa4cf91d0e30b5"
+    },
+    "runs/positive-install.python.json": {
+      "bytes": 1917,
+      "sha256": "9272e6fa7a4aee55d45fe7518fcaabb0558cad4bca2e65ad343a07254693d590"
+    },
+    "runs/positive-install.rust.json": {
+      "bytes": 1356,
+      "sha256": "bc18bb52e37cf4a1817cbdfcad8f5587dd1b3e1c2b69a3894a4ea125fe2b0c2e"
+    },
+    "runs/positive-uninstall.plan.json": {
+      "bytes": 1255,
+      "sha256": "daf90bb49f19090dc95faa7399da1e8da7653a0d88cb4fa8816f1b10b0fa07e0"
+    },
+    "runs/positive-uninstall.python.json": {
+      "bytes": 775,
+      "sha256": "d9cf68a23d9dbafb8baa19a84f50f7daff3a1d930a475b7c3e7506919c5a56bc"
+    },
+    "runs/positive-uninstall.rust.json": {
+      "bytes": 394,
+      "sha256": "216c9e94da89d662e69261bcc97d1189235ce4458cf8711604ec820883480d33"
+    },
+    "runs/tampered-uninstall-setup-install.plan.json": {
+      "bytes": 2367,
+      "sha256": "241b977864cfada9756ae1ed6cce4abf8f59bc34199757b12d3f39c56052c287"
+    },
+    "runs/tampered-uninstall-setup-install.python.json": {
+      "bytes": 1957,
+      "sha256": "a262073ec76d61a646b92120a87f3ca1c58d487d1765aa34f5bc36c68350039e"
+    },
+    "runs/tampered-uninstall-setup-install.rust.json": {
+      "bytes": 1412,
+      "sha256": "90cf360beeecfea968f26085a5cf1f82f5ab1b6121f32cfd2b14ed70c3b69063"
+    },
+    "runs/tampered-uninstall.plan.json": {
+      "bytes": 1265,
+      "sha256": "c98aa3e6ef776a6e60195db457e608dc69e315d4d78f6ee58c261711d66edd97"
+    },
+    "runs/tampered-uninstall.python.json": {
+      "bytes": 150,
+      "sha256": "25b747cb3b87e0ee9feb1efb08be1a495997326f4110c4244844146839453240"
+    },
+    "runs/tampered-uninstall.rust.json": {
+      "bytes": 568,
+      "sha256": "987d76a76b045cd1bca77b63a5681c03cf989e7da06f3b623452575b229b0fc6"
+    },
+    "source-before-build.json": {
+      "bytes": 1738,
+      "sha256": "b7d9ea2a3d972f7bcb2f17409758eed95d617e949089285daa5e5c6fb7428315"
+    },
+    "src/main.rs": {
+      "bytes": 4480,
+      "sha256": "c7c5564542dc6247bca67e112421883272b1c0c4a4201deb9c20c38842c36369"
+    }
+  }
+}

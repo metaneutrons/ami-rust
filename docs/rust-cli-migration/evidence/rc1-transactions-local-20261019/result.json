@@ -1,0 +1,89 @@
+{
+  "schema": "ami-rust-rc1-transactions-local-v1",
+  "status": "PASS",
+  "scope": "Host filesystem transactions only; no public command activation or complete RC1 acceptance",
+  "commit": "0b8c5489e403752e7da9e6bd771c7789a057f4bb",
+  "platform": "Darwin arm64",
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: aarch64-apple-darwin\nrelease: 1.98.1\nLLVM version: 22.1.8\n",
+  "commands": [
+    {
+      "command": [
+        "cargo",
+        "+1.98.1",
+        "fmt",
+        "--manifest-path",
+        "tooling/Cargo.toml",
+        "--all",
+        "--check"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 0.092,
+      "log": "1.log",
+      "log_bytes": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "cargo",
+        "+1.98.1",
+        "test",
+        "--manifest-path",
+        "tooling/Cargo.toml",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 23.911,
+      "log": "2.log",
+      "log_bytes": 9286,
+      "log_sha256": "60f63b6567f7738a54b1d7a7e67ba0b0fedd9e9611701e30d484e1c17cafa49f"
+    },
+    {
+      "command": [
+        "cargo",
+        "+1.98.1",
+        "clippy",
+        "--manifest-path",
+        "tooling/Cargo.toml",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 0.372,
+      "log": "3.log",
+      "log_bytes": 356,
+      "log_sha256": "1130c59acc908ea3e90a501b8a027eb9014727e5f4b956ad1d3427c7910e7029"
+    }
+  ],
+  "source_sha256": {
+    "tooling/crates/core/src/compression.rs": "a25f261d6bde6c6b235f4a1ea612255c49c1b98f16a5c8d0982502cdbd0b9e19",
+    "tooling/crates/core/src/digest.rs": "37a274cf539531f18fe4a08e0b599fbcaa9ab1f1762a8b665b39a8daf0361898",
+    "tooling/crates/core/src/directory.rs": "0f789a9dfe8709548ac79072dc13e55d54ba2b435e612a906712e3da0286c381",
+    "tooling/crates/core/src/elf.rs": "a7f068fd2b28357abf2bc488a3b655078283dcb399671b96cdfe3d12bf567fb5",
+    "tooling/crates/core/src/error.rs": "54c606fab3b71f70c1fbfc27e41cd69e0c342efebcd435cf8d4530aab37c4b5f",
+    "tooling/crates/core/src/files.rs": "9320b67cb7948811f082122b88626aa31d2a09a2d1fc878e6ff50f85afe346bf",
+    "tooling/crates/core/src/frontend.rs": "59c8d6b20ea96d17dc22f8cf6875e224206053cbd5dc4332b864254bc5b372cb",
+    "tooling/crates/core/src/inventory.rs": "4a1d9025ba57e35a4c7e162e69c0e3d15105831e6618625bf3fc5d41144a4460",
+    "tooling/crates/core/src/json.rs": "fa98d69049d72176b46369de60541467b5774550fd18e6686fb1341475441ffe",
+    "tooling/crates/core/src/lib.rs": "5c1fceea6e548d6e347735cf37e11aa7bcb2295e5e2952f0be6b105563b66cfe",
+    "tooling/crates/core/src/mutations.rs": "9a46e5541322dcdcbdd4ae86dd2634df97ee7334fe73dcfa33093845f862a60f",
+    "tooling/crates/core/src/ownership.rs": "483a4b18d9b684bd55ff241d1cedea26063928a3b002080983e7cc3936d25f29",
+    "tooling/crates/core/src/publisher_tar.rs": "827f0303b3a7dda90ac90a72efb736402ac7b5ded652fdcca5ee281be1afb9d8",
+    "tooling/crates/core/src/records.rs": "693b1262ab6140ea9b65e69b30ba0d02a7877b30fe5eabb0e0ea41582e10c867",
+    "tooling/crates/core/src/signals.rs": "db55598d9bd1121946b1bbfbbbd1004f64bc1b8a087cc09d18d97f00925e2513",
+    "tooling/crates/core/src/transaction.rs": "fc7c8b34254cd75b533a1994fe71fe2da98df2c58619d68260b4b39f19a3214c"
+  },
+  "production_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+  "consumer_no_python_qualification": "not run; no consumer command activated",
+  "core_tests": 92,
+  "frontend_tests": 1,
+  "complete_rc1_accepted": false,
+  "isolated_child_test_fixtures": 3,
+  "ignored_fixtures_executed_by_parent": 2
+}
