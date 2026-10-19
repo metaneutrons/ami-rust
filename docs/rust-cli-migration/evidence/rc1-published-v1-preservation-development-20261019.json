@@ -1,0 +1,101 @@
+{
+  "schema": "ami-rust-published-v1-preservation-development-v1",
+  "status": "PASS_MACOS_PUBLISHED_V1_MIGRATION_AND_FAIL_CLOSED_PRESERVATION",
+  "scope": "Actual published0.1.0-2 setup precedes observed current Rust migration/verify/offlinebuild. Current native installation is a synthetic consistency fixture; not new publisher authentication, full native cold preparation, Linux runtime or RC1 acceptance.",
+  "source_files": {
+    "release/ci_native.py": "6f864ab0d225cbbd4c669119ba8731b9049e9ceb02f567a90a7b491420229a56",
+    "release/test_ci_native.py": "ad2015ea5925be91610f39abea2c17f67d6d0d1e6c0d6e7af8ee757205fba698"
+  },
+  "historical_setup": {
+    "sha256": "5e90b6b3cb891ce1f51d84670d1914ade65446781c83133109eb50a43334d60b",
+    "status": "PASS_ACTUAL_PUBLISHED_V1_PREPARE_PROJECT_AND_BUILD",
+    "limits": {
+      "log_bytes": 16777216,
+      "rss_bytes": 4294967296,
+      "seconds": 1200,
+      "workspace_bytes": 12884901888
+    },
+    "peak_rss_bytes": 1714618368,
+    "peak_workspace_bytes": 2470745433,
+    "peak_log_bytes": 6738614
+  },
+  "observed_migration": {
+    "sha256": "4ce8e31fcb5143c6ed42bb3227a4262cd699c449d76fb616789ae656f5f0a25c",
+    "status": "PASS_ACTUAL_PUBLISHED_V1_TO_V2_MIGRATION_BUILD_AND_COMPLETE_OLD_HOME_PRESERVATION",
+    "limits": {
+      "log_bytes": 16777216,
+      "rss_bytes": 4294967296,
+      "seconds": 1200,
+      "workspace_bytes": 12884901888
+    },
+    "peak_rss_bytes": 2404990976,
+    "peak_workspace_bytes": 2907001423,
+    "peak_log_bytes": 186439
+  },
+  "internal_fixtures": {
+    "sha256": "0ca10f0824049c577dcf5e68a9f09823a7b290fdfc98e084cd9181ce20d116b0",
+    "status": "PASS_INTERNAL_LIFECYCLE_FIXTURES_ONLY",
+    "limits": {
+      "log_bytes": 16777216,
+      "rss_bytes": 4294967296,
+      "seconds": 1200,
+      "workspace_bytes": 12884901888
+    },
+    "peak_rss_bytes": 62291968,
+    "peak_workspace_bytes": 724525353,
+    "peak_log_bytes": 750
+  },
+  "measurement_counter": {
+    "sha256": "1965359bd07ade69510e11a12cff7596d40ef316961e046279400512a75b14e5",
+    "status": "PASS_ORIGINAL_FALSE_PASS_DEMONSTRATED_AND_CURRENT_FAIL_CLOSED",
+    "limits": {
+      "log_bytes": 16777216,
+      "rss_bytes": 4294967296,
+      "seconds": 1200,
+      "workspace_bytes": 12884901888
+    },
+    "peak_rss_bytes": 3293184,
+    "peak_workspace_bytes": 724525912,
+    "peak_log_bytes": 258
+  },
+  "published_old_package": {
+    "tag": "v0.1.0+packaging.2",
+    "archive_bytes": 26044756,
+    "archive_sha256": "6567abfb4e36a2bf82816f51512343f4d1232c97c866e648fdf68ab4cf7f2448",
+    "historical_oracle": "Original Python package actually verified its inventory, prepared/authenticated its SDK, generated the project and built the native executable. This setup is outside the new consumer no-Python claim."
+  },
+  "new_consumer_checks": [
+    "Explicit v1 state refusal returns2 with exact expected-v2-schema diagnostic",
+    "Wrong receipt returns2 with exact diagnostic and unchanged complete output parent",
+    "Actual public migration creates separate v2 lock",
+    "Occupied output returns2 without replacing lock or changing full output parent",
+    "Native lock verification",
+    "Offline migrated build reproduces published v1 executable",
+    "Complete old home, original package, global Rust configuration and new installation snapshots unchanged; original roots captured before consistency-fixture generation"
+  ],
+  "native_replay": {
+    "build_receipt_sha256": "5c9648e3b6376d1d1e4cc13649016cb67f6d50a2813fea53c428843affe21486",
+    "native_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69",
+    "reference_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69",
+    "status": "PASS_BYTE_EQUAL_TO_RETAINED_V1_NATIVE_EXECUTABLE"
+  },
+  "preserved_entries": 17956,
+  "measurement_correction": {
+    "problem": "Path.rglob can silently omit unreadable directories; a mode0300 directory permits known-child writes while its parent timestamps stay unchanged. Actual counter demonstrates the old snapshot can remain equal despite changed file bytes.",
+    "solution": "Descriptor-relative explicit scandir/stat/open traversal propagates enumeration failures, records literal link text without resolving targets, rejects non-directory roots, and checks file/directory identities around reads. Component validation and archive policies are unchanged.",
+    "tests": [
+      "Readable file/metadata/empty-directory mutation detected",
+      "Absolute/dangling/directory links recorded literally; external target mutation excluded",
+      "Unlistable writable directory rejected",
+      "Symlink root rejected",
+      "Actual original false-PASS reproduced; current code rejects the same input"
+    ]
+  },
+  "independent_review": "Independent read-only review found no remaining concrete false-PASS or Mac/Linux portability issue in the new snapshot walk and tests.",
+  "history": "Initial package setup used the SDK capsule64MiB XZ decoder and failed on the published package dictionary; a separate bounded256MiB decoder then succeeded without changing assets. Initial whole-home snapshot refused the old build absolute linker symlink. The first private literal-link proposal passed its runtime but retained rglob omission risk; final a3 uses corrected current-source traversal. All attempts remain retained with original scope.",
+  "remaining": [
+    "Both-host signed full lifecycle and actual published-v1 transition in CI",
+    "Complete two-root/five-variant and canonical/native/host-metadata/Serde comparison",
+    "RC1 acceptance followed by unchanged RC2-RC5"
+  ]
+}

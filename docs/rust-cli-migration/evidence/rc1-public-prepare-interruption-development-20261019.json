@@ -1,0 +1,88 @@
+{
+  "schema": "ami-rust-public-prepare-interruption-development-v1",
+  "recorded_utc": "2026-10-19T22:35:36.980553+00:00",
+  "scope": "Local macOS public frontend source-fetch-boundary SIGTERM, retained tooling consistency and unchanged retry under the native observer. Derived consistency fixture only; no current publisher authentication, Linux runtime, complete signed preparation or RC1 acceptance.",
+  "source_files": {
+    "release/ci_auth.py": "8157207858d843ffcd1e7279c66f1e59fa5d42c800d7f39a8048b8428e003237",
+    "release/ci_native.py": "808d00e5fbdbfbed43b1b9082c4bb5862554d2968531e5891d21b20cd85e15cf",
+    "release/native-tooling-inputs.json": "04d6894bd971ee32582982ae0908dcccb6b7cea73c9c9830bef205c6bcb304dc",
+    "release/test_ci_native.py": "cc4e22a363360160f9ab234fc01929bf316c8b77f7f758f9874aaf850f46adc6",
+    "release/test_native_tooling_materials.py": "8983b3fbe138eb78cce4f8b841b7132a912c45acbaa5ea6e36e76b144e5d90b1",
+    "tooling/crates/core/src/native_prepare.rs": "c4284795491b1b05ce94fa21e1d0f79be45bb224c1a7952af9c9b0d369b0efdb",
+    "tooling/crates/xtask/src/consumer_observe.rs": "fc88eb70e6f0acd72c0690d0c925efe523cba53a78d6465f121bfc68d796b315",
+    "tooling/crates/xtask/src/consumer_runtime.rs": "fa6c438e02d9aaf8453a91fa0c0b252d4f18c6a2cd008a7d21f5e54de7217ef6",
+    "tooling/crates/xtask/src/main.rs": "9dca376d20b61a6bf9e610ac7ef4c3f9ae3087916f7bc355b5ef53ddc9c7e5f8",
+    "tooling/crates/xtask/src/prepare_sigterm.rs": "0b3e5cc5702ed65b1328c19702a270d5269fc96ee7b412ca0c466e4bd9457934",
+    "tools/consumer-enforcement-adapter/README.md": "99b47cbffe97af7f9083a160d9251f93c4ba140fc3da7dbe94bf7b0c12150817",
+    "tools/consumer-enforcement-adapter/src/macos.rs": "9fcc781af1077012a9e0b153031d92e4892936dc5fca7c971ef6b6925548c27d"
+  },
+  "public_cli_sha256": "74a54bd07618b21692c2fac0326a965db39297a1d8ef2004916cbf100702bd7f",
+  "maintainer_xtask_sha256": "2aefa72ddc737cde383871023f077712e42bd00e14e148c70e21e47646387171",
+  "adapter_sha256": "75aaeea307ff436d20bde0a731418d82408699187556ffa09903e6ceab4bfd13",
+  "component_gate": {
+    "status": "PASS_MACOS_OBSERVER_AND_NULL_CONTROLS_LINUX_COMPILE_ONLY",
+    "report_sha256": "2b23e5d714d8ce30964b37b46851b5f7cf20e2281d72637c605fca2b3c8e8c07",
+    "checks": [
+      "strict workspace Clippy",
+      "xtask tests",
+      "current publisher material bindings positive/counter",
+      "25 native lifecycle/spec fixtures",
+      "9 material fixtures",
+      "Linux xtask compile/lint only",
+      "11 macOS adapter tests including isolated alias retarget counter",
+      "actual interpreter and null-device controls"
+    ]
+  },
+  "actual_public_frontend": {
+    "status": "PASS_ACTUAL_MACOS_PUBLIC_PREPARE_SIGTERM_AND_UNCHANGED_RETRY",
+    "report_sha256": "a7e01c88ae9a3c35ff0cefe39a62d233ffd9b4ed3ea0bf18fb30799123cdb3dc",
+    "effects_report_sha256": "c5189209b3fe124ad491b0342c181942d7dd35b43f9e08093fb83753030ddf82",
+    "actual_child_exit_code": 143,
+    "helper_exit_code": 0,
+    "signal_sent_to_owned_direct_child": true,
+    "ready_present": false,
+    "failure_phase": "source-checkout",
+    "retained_package_consistent": true,
+    "retry_exit_code": 2,
+    "retry_exact_native_fresh_state_diagnostic": true,
+    "retry_state_writable": true,
+    "state_snapshot_unchanged": true,
+    "sibling_unchanged": true
+  },
+  "counter": {
+    "actual_child_exit_code": 130,
+    "helper_exit_code": 2,
+    "report_sha256": "763743003056b324cc36af881b81cbed932ea3a3003bc726300ac77986e015d1",
+    "scope": "Unconfined counter for the driver status gate; not a no-Python enforcement proof.",
+    "status": "PASS_OLDER_ACTUAL_CLI_STATUS_REJECTED"
+  },
+  "read_permissions": "Cold inspection reads exact canonical selected compiler/linker/SDKSettings files and literal selected directories. Requested aliases receive metadata-only lookup permission; retargeting cannot redirect data authority. No compiler execution or SDK subtree grant is added.",
+  "signal_semantics": "An observed own pre-publication SIGTERM maps to shell-compatible 143 after cleanup. Typed post-publication installation failures preserve their recovery status. Historical prepare default SIGTERM was raw signal -15; no claim of identical raw wait status. Build child-only signal status is separate.",
+  "review": {
+    "result": "NO_REMAINING_CONCRETE_ISSUE_WITHIN_SCOPED_INDEPENDENT_REVIEW",
+    "report_sha256": "61ff0328f66339d91438abada8321db9cf5f748704b6ac684de3bfdf1482746b"
+  },
+  "resource_limits": {
+    "log_bytes": 16777216,
+    "rss_bytes": 4294967296,
+    "seconds": 1200,
+    "workspace_bytes": 12884901888
+  },
+  "resource_peak": {
+    "components": {
+      "rss_bytes": 1315487744,
+      "managed_workspace_bytes": 8313468260
+    },
+    "actual_probe": {
+      "rss_bytes": 63488000,
+      "managed_workspace_bytes": 965877984
+    }
+  },
+  "remaining": [
+    "Linux actual public interruption and signed both-host full lifecycle",
+    "retained migration producing a new lock",
+    "cross-version upgrade/removal preservation",
+    "complete five-variant two-root build/replay matrix"
+  ],
+  "history": "Failed a12/a13 and earlier actual-probe a1 are retained separately; a14/a2 passed the earlier alias policy and do not replace this final a15/a3 source binding."
+}

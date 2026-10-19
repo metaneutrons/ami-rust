@@ -1,0 +1,240 @@
+{
+  "schema": "ami-rust-migration-preservation-corrections-development-v1",
+  "status": "PASS_LOCAL_CORRECTED_COORDINATOR_AND_MUTATION_CONTROLS",
+  "scope": "macOS actual public migration/verification/build under observer using synthetic consistency-only installation and READY wrapper. No publisher authentication, Linux runtime, cross-version upgrade or RC1 acceptance.",
+  "source_files": {
+    "release/ci_native.py": "d372bc0b0049fbc73dd1dd54b24c1011fce9e9af8eab6c7487e6d1d803c6b48c",
+    "release/test_ci_native.py": "6e4e981f41e42d791fd5746c69fa32d1ebe743dfc98fcc61146c48551e298a0d"
+  },
+  "corrections": [
+    "Snapshot original ready state, project and preservation guards before fixture generation; reject immediate changes and retain that original baseline for final comparison.",
+    "Compare complete writable output-parent identity on wrong-receipt refusal and require its exact native diagnostic."
+  ],
+  "counter_probes": [
+    "Generator changes preserved project mode: rejected before any public command.",
+    "Receipt refusal leaves neighboring temporary file with requested lock absent: rejected.",
+    "Receipt refusal returns unrelated setup diagnostic: rejected."
+  ],
+  "internal_tests": {
+    "report_sha256": "dd8535a9b91a39e1b0b58527e83df0ea713fa4146b28a9bbf96469475b45730a",
+    "status": "PASS_INTERNAL_LIFECYCLE_FIXTURES_ONLY",
+    "resources": {
+      "commands": [
+        {
+          "elapsed_seconds": 0.884,
+          "exit_code": 0,
+          "label": "native-lifecycle-fixtures-with-preservation-counter",
+          "log_peak_observed_bytes": 640,
+          "managed_peak_observed_bytes": 755853928,
+          "rss_peak_observed_bytes": 62308352,
+          "stderr_log": "logs/native-lifecycle-fixtures-with-preservation-counter.stderr.log",
+          "stdout_log": "logs/native-lifecycle-fixtures-with-preservation-counter.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 0.338,
+          "exit_code": 0,
+          "label": "current-publisher-material-bindings",
+          "log_peak_observed_bytes": 747,
+          "managed_peak_observed_bytes": 724461118,
+          "rss_peak_observed_bytes": 38846464,
+          "stderr_log": "logs/current-publisher-material-bindings.stderr.log",
+          "stdout_log": "logs/current-publisher-material-bindings.stdout.log",
+          "stop_reason": null
+        }
+      ],
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      },
+      "peak_log_observed_bytes": 747,
+      "peak_rss_observed_bytes": 62308352,
+      "peak_workspace_observed_bytes": 755853928,
+      "schema": "ami-rust-native-supervision-v1",
+      "static_input_root_count": 0,
+      "static_input_roots": []
+    }
+  },
+  "actual_positive_path": {
+    "report_sha256": "6bda1629b764cd8a88b2a4c2fd7de826b7b4788c0ded20bc1742fe32e58c8e2b",
+    "status": "PASS_COMPLETE_LOCAL_PUBLIC_MIGRATION_COORDINATOR_PATH",
+    "resources": {
+      "commands": [
+        {
+          "elapsed_seconds": 0.192,
+          "exit_code": 0,
+          "label": "clone-consistency-only-installation",
+          "log_peak_observed_bytes": 0,
+          "managed_peak_observed_bytes": 1819470590,
+          "rss_peak_observed_bytes": 1359872,
+          "stderr_log": "logs/clone-consistency-only-installation.stderr.log",
+          "stdout_log": "logs/clone-consistency-only-installation.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 3.055,
+          "exit_code": 0,
+          "label": "20-compose-compatible-legacy-data",
+          "log_peak_observed_bytes": 2908,
+          "managed_peak_observed_bytes": 1826753019,
+          "rss_peak_observed_bytes": 75415552,
+          "stderr_log": "logs/20-compose-compatible-legacy-data.stderr.log",
+          "stdout_log": "logs/20-compose-compatible-legacy-data.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 3.922,
+          "exit_code": 0,
+          "label": "21-migration-wrong-receipt",
+          "log_peak_observed_bytes": 2966,
+          "managed_peak_observed_bytes": 1827250044,
+          "rss_peak_observed_bytes": 784056320,
+          "stderr_log": "logs/21-migration-wrong-receipt.stderr.log",
+          "stdout_log": "logs/21-migration-wrong-receipt.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 9.65,
+          "exit_code": 0,
+          "label": "22-public-legacy-migration",
+          "log_peak_observed_bytes": 4743,
+          "managed_peak_observed_bytes": 1827754088,
+          "rss_peak_observed_bytes": 781189120,
+          "stderr_log": "logs/22-public-legacy-migration.stderr.log",
+          "stdout_log": "logs/22-public-legacy-migration.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 5.444,
+          "exit_code": 0,
+          "label": "23-migration-occupied-output",
+          "log_peak_observed_bytes": 4784,
+          "managed_peak_observed_bytes": 1828252799,
+          "rss_peak_observed_bytes": 777601024,
+          "stderr_log": "logs/23-migration-occupied-output.stderr.log",
+          "stdout_log": "logs/23-migration-occupied-output.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 6.097,
+          "exit_code": 0,
+          "label": "24-verify-migrated-lock",
+          "log_peak_observed_bytes": 5250,
+          "managed_peak_observed_bytes": 1828745111,
+          "rss_peak_observed_bytes": 781762560,
+          "stderr_log": "logs/24-verify-migrated-lock.stderr.log",
+          "stdout_log": "logs/24-verify-migrated-lock.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 26.908,
+          "exit_code": 0,
+          "label": "25-build-migrated-project",
+          "log_peak_observed_bytes": 95679,
+          "managed_peak_observed_bytes": 1995187847,
+          "rss_peak_observed_bytes": 2416279552,
+          "stderr_log": "logs/25-build-migrated-project.stderr.log",
+          "stdout_log": "logs/25-build-migrated-project.stdout.log",
+          "stop_reason": null
+        }
+      ],
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      },
+      "peak_log_observed_bytes": 95679,
+      "peak_rss_observed_bytes": 2416279552,
+      "peak_workspace_observed_bytes": 1995187847,
+      "schema": "ami-rust-native-supervision-v1",
+      "static_input_root_count": 11,
+      "static_input_roots": [
+        {
+          "label": "current-consistency-installation",
+          "log_bytes": 0,
+          "path": "synthetic-current-installation",
+          "regular_file_bytes": 30046458
+        },
+        {
+          "label": "retained-project",
+          "log_bytes": 0,
+          "path": "hello-aros",
+          "regular_file_bytes": 5008585
+        },
+        {
+          "label": "old-reference",
+          "log_bytes": 0,
+          "path": "artifacts",
+          "regular_file_bytes": 83449629
+        },
+        {
+          "label": "cargo",
+          "log_bytes": 0,
+          "path": "cargo",
+          "regular_file_bytes": 39352418
+        },
+        {
+          "label": "collector",
+          "log_bytes": 0,
+          "path": "collector",
+          "regular_file_bytes": 1359984
+        },
+        {
+          "label": "csdk",
+          "log_bytes": 0,
+          "path": "csdk",
+          "regular_file_bytes": 51025133
+        },
+        {
+          "label": "rust",
+          "log_bytes": 0,
+          "path": "rust",
+          "regular_file_bytes": 545762587
+        },
+        {
+          "label": "toolchain",
+          "log_bytes": 0,
+          "path": "toolchain",
+          "regular_file_bytes": 173480083
+        },
+        {
+          "label": "vendor",
+          "log_bytes": 0,
+          "path": "vendor",
+          "regular_file_bytes": 39739700
+        },
+        {
+          "label": "current-xtask",
+          "log_bytes": 0,
+          "path": "release",
+          "regular_file_bytes": 94215968
+        },
+        {
+          "label": "unchanged-adapter",
+          "log_bytes": 0,
+          "path": "release",
+          "regular_file_bytes": 1525430
+        }
+      ]
+    }
+  },
+  "unchanged_rust_and_adapter_reuse": {
+    "changed_python_coordinator_files": [
+      "release/ci_native.py",
+      "release/test_ci_native.py"
+    ],
+    "prior_gate_sha256": "a428cc6ba906bc71862a9df690073f70c82aabfcfb16dfa88f2f5a7cf24f223b",
+    "scope": "All Rust/adapter/tooling manifest sources are byte-identical to a20; affected Python coordinator is rerun here."
+  },
+  "public_cli_sha256": "74a54bd07618b21692c2fac0326a965db39297a1d8ef2004916cbf100702bd7f",
+  "native_effects_sha256": "421b8714d3c0a9d633054f16e07038b6b6bc95396af97aebaf4019d3da9d28f4",
+  "independent_review": "Scoped read-only review of the two Python files found no remaining concrete false-PASS or accidental rejection. The reviewer did not author these changes.",
+  "remaining": [
+    "Signed full lifecycle on both supported hosts",
+    "Actual side-by-side upgrade/state preservation",
+    "Complete RC1 native matrix and metadata/Serde equivalence"
+  ]
+}

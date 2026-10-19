@@ -9,10 +9,12 @@ from __future__ import annotations
 
 import argparse
 import io
+import hashlib
 import json
 import os
 from pathlib import Path
 import platform
+import pwd
 import re
 import shutil
 import stat
@@ -442,8 +444,9 @@ def audit(work, bundle, host_rust, payloads, python_root=None):
 def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
     """Real native verification/install/removal, with an independently built CLI.
 
-    Internal Python coordinates this test. The complete consumer observer,
-    package preparation and RC1 lifecycle matrix remain separate open gates.
+    Internal Python coordinates this test. The Rust observer admits each
+    consumer result only after its adapter evidence is complete and valid.
+    Complete RC1 parity, migration and release acceptance remain separate gates.
     """
     import ci_verify
     identity = auth.context(ROOT)
@@ -461,6 +464,10 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
     outer = outer.resolve(strict=True)
     cli, xtask, env, supervisor = build_tools(work, host_rust, output, python_root,
                                           static_roots=[("signed-candidate", bundle), ("outer-candidate", outer)])
+    _supervised_run(supervisor, [Path(host_rust) / "toolchain/bin/cargo", "build", "--release", "--locked", "--offline",
+        "--manifest-path", ROOT / "tools/consumer-enforcement-adapter/Cargo.toml",
+        "--target-dir", work / "consumer-adapter-target"], label="native-build-consumer-adapter")
+    adapter = work / "consumer-adapter-target/release/consumer-enforcement-adapter"
     verifier_work = work.parent / "ami-rust-native-verifier-work"
     verifier_metadata = work.parent / "ami-rust-native-verifier-metadata"
     bootstrap_insert_at = len(supervisor.commands)
@@ -489,20 +496,39 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
     # deliberately admits only path and digest, as its Rust parser requires.
     for name in ("gh_trusted_roots", "cosign_trusted_root"):
         policy[name] = {key: policy[name][key] for key in ("path", "sha256")}
-    policy_path = work / "native-publisher-policy.json"
+    policy_path = output / "native-publisher-policy.json"
     write(policy_path, auth.encoded(policy), 0o600)
+    closure_path = output / "reviewed-consumer-inputs.json"
+    write(closure_path, auth.encoded({"schema": "ami-rust-reviewed-consumer-inputs-v1", "source": identity,
+        "publisher_inputs": auth.input_manifest_for_sdk(ROOT, config["sdk_version"]),
+        "candidate_manifest_sha256": auth.sha(auth.read(bundle / "release.json")),
+        "scope": "Reviewed source/component/vendor/package identities; each Rust observer additionally records exact runtime tools and phase policy."}), 0o600)
+    for directory in (output / "observation-specs", output / "observations"):
+        directory.mkdir(mode=0o700)
     commands = []
 
-    def command(label, arguments, expected=0, *, executable=cli):
+    def command(label, arguments, expected=0, *, executable=cli, disposable_refusal_state=None):
         stdout = output / (label + ".stdout.json")
         stderr = output / (label + ".stderr.log")
-        record = _supervised_run(supervisor, [executable, *map(str, arguments)], cwd=work,
-                                 label=label, timeout=1200, expected=expected)
+        spec = _consumer_observation_spec(work, python_root, executable, arguments, expected,
+            policy_path, closure_path, [ROOT, *[row["resolved_path"] for row in supervisor.native_static_roots]],
+            disposable_refusal_state=disposable_refusal_state)
+        spec_path = output / "observation-specs" / (label + ".json")
+        write(spec_path, auth.encoded(spec), 0o600)
+        observed = output / "observations" / label
+        record = _supervised_run(supervisor, [xtask, "native-consumer-observe", "--spec", spec_path,
+            "--adapter", adapter, "--output", observed], cwd=work, label=label, timeout=1200)
+        observation = auth.parsed(auth.read(observed / "observation.json"))
+        if (observation.get("status") != "PASS_EXPECTED_CONSUMER_RESULT_AND_ADAPTER_EVIDENCE"
+                or observation.get("expected_exit") != expected
+                or observation.get("adapter_evidence", {}).get("child_exit_code") != expected):
+            raise ValueError("native consumer result omitted complete admitted adapter evidence: " + label)
         shutil.copyfile(work / record["stdout_log"], stdout)
         shutil.copyfile(work / record["stderr_log"], stderr)
-        commands.append({"label": label, "exit": record["exit_code"], "expected_exit": expected,
+        commands.append({"label": label, "exit": expected, "expected_exit": expected,
                          "stdout_sha256": auth.sha(auth.read(stdout)),
                          "stderr_sha256": auth.sha(auth.read(stderr)),
+                         "observation": observation,
                          "supervision_record": dict(record)})
         write(output / (label + ".result.json"), auth.encoded(commands[-1]))
         _check_limits(supervisor, "native lifecycle command " + label)
@@ -530,7 +556,9 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
         stream.write(b"isolated corruption counterprobe")
     command("04-altered-sdk", ["verify", "--bundle", altered, "--policy", policy_path], 2)
     shutil.rmtree(altered)
-    prefix, pin = work / "native-install", work / "external-receipt.sha256"
+    install_area = work / "native-direct-install-area"
+    install_area.mkdir(mode=0o700)
+    prefix, pin = install_area / "native-install", install_area / "external-receipt.sha256"
     result = auth.parsed(command("05-native-install", ["install", "--bundle", bundle, "--policy", policy_path,
                                                         "--prefix", prefix, "--receipt-pin", pin]))
     receipt = result["receipt_sha256"]
@@ -577,6 +605,102 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
         raise ValueError("native lifecycle output exceeded the 32 MiB consumer artifact ceiling")
     _check_limits(supervisor, "native direct lifecycle report")
     return report
+
+
+def _consumer_observation_spec(work, python_root, executable, arguments, expected,
+                               policy_path, closure_path, readonly_roots, *, disposable_refusal_state=None):
+    """Select each command's owned writes; Rust owns policy/runtime/report logic."""
+    work = Path(work).resolve(strict=True)
+    arguments = list(map(str, arguments))
+    verb = arguments[0]
+    phase = {"verify-package": "package-consistency", "native-package-verify": "package-authentication",
+             "prepare": "prepare-refusal" if expected else "cold-prepare",
+             "native-prepare-interruption": "cold-prepare",
+             "new": "new-project", "migrate": "lock"}.get(verb, verb)
+    if phase not in {"verify", "install", "uninstall", "package-consistency", "package-authentication",
+                     "cold-prepare", "prepare-refusal", "check-inputs", "new-project", "lock", "build"}:
+        raise ValueError("unsupported observed consumer command")
+
+    def option(name):
+        if name not in arguments:
+            return None
+        return Path(arguments[arguments.index(name) + 1]).absolute()
+
+    writes = {work / "home", work / "tmp"}
+    derived = None
+    record = None
+    state = option("--state")
+    if state is not None and (state / "selection.json").is_file():
+        record = state / "selection.json"
+    for key in ("--selection", "--sdk-lock"):
+        if option(key) is not None:
+            record = option(key)
+    legacy_python = None
+    if verb == "migrate":
+        record = option("--from-lock")
+        if record is None or option("--output") is None:
+            raise ValueError("observed migration requires an explicit legacy lock and output")
+        legacy = auth.parsed(auth.read(record))
+        if legacy.get("schema") != "ami-rust-project-lock-v1":
+            raise ValueError("observed migration requires the inert legacy v1 record")
+        legacy_python = Path(legacy["host"]["python"]).resolve(strict=True)
+        if not legacy_python.is_file():
+            raise ValueError("legacy Python identity is not a regular file")
+    if phase == "cold-prepare":
+        derived = {"role": "consumer-state-parent", "path": str(state.parent)}
+        writes.add(state.parent.parent)
+    elif phase == "build":
+        target = option("--output-dir")
+        derived = {"role": "consumer-build-parent", "path": str(target.parent)}
+        writes.add(target.parent.parent)
+    elif phase == "new-project":
+        writes.add(option("--project").parent)
+    elif phase == "lock":
+        writes.add(option("--output").parent)
+    elif phase == "package-authentication":
+        writes.add(option("--work").parent)
+    elif phase == "install" and not expected:
+        writes.add(option("--prefix").parent)
+        if option("--receipt-pin") is not None:
+            writes.add(option("--receipt-pin").parent)
+    elif phase == "uninstall" and not expected:
+        writes.add(option("--prefix").parent)
+    if disposable_refusal_state is not None:
+        disposable = Path(disposable_refusal_state)
+        if (phase != "prepare-refusal" or expected != 2 or state != disposable or record is not None
+                or disposable == work or work not in disposable.parents
+                or disposable.resolve(strict=True) != disposable):
+            raise ValueError("disposable retry grant requires its exact existing partial private state")
+        info = disposable.lstat()
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+            raise ValueError("disposable retry state must be a private current-user directory")
+        # Permit effects on this disposable partial state so an attempted write
+        # cannot be hidden by a sandbox denial and mistaken for a refusal.
+        writes.add(disposable)
+    # Keep distinct native operation areas and remove duplicate/nested grants.
+    writes = {root for root in writes if not any(root != other and other in root.parents for other in writes)}
+    policy = auth.parsed(auth.read(policy_path))
+    pin = auth.parsed(auth.read(ROOT / "release/ci-python-inputs.json"))["hosts"][current_host()]
+    interpreter = Path(python_root) / "runtime" / pin["runtime_relative_path"]
+    library_name = "libpython3.12.dylib" if current_host() == "macos-aarch64" else "libpython3.12.so.1.0"
+    library = Path(python_root) / "runtime/python/lib" / library_name
+    bindings = [Path(closure_path), Path(policy_path)] + ([record] if record else [])
+    return {"schema": "ami-rust-consumer-observation-spec-v1", "phase": phase,
+            "command": [str(Path(executable).resolve(strict=True)), *arguments], "expected_exit": expected,
+            "cwd": str(work), "home": str(work / "home"), "tmp": str(work / "tmp"),
+            "read_trees": [{"role": "work", "path": str(root)} for root in sorted({work, *map(Path, readonly_roots)})],
+            "write_trees": [{"role": "work", "path": str(root)} for root in sorted(writes)],
+            "read_files": [str(legacy_python)] if legacy_python else [],
+            # The CLI checks account-home ownership independently of sandbox HOME.
+            # Grant this directory literally, without reading its contents recursively.
+            "read_directories": [str(Path(pwd.getpwuid(os.getuid()).pw_dir).resolve(strict=True))],
+            "executables": [policy[name]["path"] for name in ("gh", "cosign")]
+                + ([str(option("--frontend").resolve(strict=True))]
+                   if verb == "native-prepare-interruption" else []),
+            "libraries": [], "deny_exec": sorted({str(interpreter), *([str(legacy_python)] if legacy_python else [])}),
+            "deny_library": [str(library)],
+            "component_record": str(record) if record else None, "derived": derived,
+            "bindings": [{"path": str(path), "sha256": auth.sha(auth.read(path))} for path in bindings]}
 
 
 def _publish_cold_root_diagnostics(work, output):
@@ -717,7 +841,11 @@ def _qualify_native_build_matrix(work, state, frontend, output, supervisor, conf
         build_parent = layout["root"] / "build outputs"
         build_parent.mkdir(mode=0o700)
         for variant, (package, feature_args) in ci_sdk.VARIANTS.items():
-            build_output = build_parent / variant
+            # Each command starts with its own empty derived-executable parent.
+            # Reusing build_parent would include the preceding variant's tools.
+            derived_parent = build_parent / (variant + "-derived")
+            derived_parent.mkdir(mode=0o700)
+            build_output = derived_parent / "build"
             label = f"{layout['name']}/{variant}"
             build_label = "19-matrix-build-" + layout["name"] + "-" + variant
             arguments = ["build", "--sdk-lock", layout["lock"], "--output-dir", build_output,
@@ -891,6 +1019,219 @@ def _qualify_native_build_matrix(work, state, frontend, output, supervisor, conf
     return matrix
 
 
+def _retained_state_snapshot(root, *, entry_limit=100_000):
+    root=Path(root)
+    metadata,files,symlinks=[],[],[]
+    def identity(info):
+        return (info.st_uid,info.st_gid,info.st_mode,info.st_dev,info.st_ino,
+                info.st_size,info.st_mtime_ns,info.st_ctime_ns)
+    def record(relative,info):
+        if len(metadata)>=entry_limit:
+            raise ValueError('retained-state snapshot exceeds its entry limit')
+        metadata.append({'path':relative,'uid':info.st_uid,'gid':info.st_gid,'mode':info.st_mode,
+                         'device':info.st_dev,'inode':info.st_ino,'mtime_ns':info.st_mtime_ns,'ctime_ns':info.st_ctime_ns})
+    def walk(fd,relative,expected):
+        before=os.fstat(fd)
+        if not stat.S_ISDIR(before.st_mode) or identity(before)!=identity(expected):
+            raise ValueError('retained directory changed before enumeration: '+relative)
+        record(relative,before)
+        # scandir errors propagate; Path.rglob silently skips unreadable subtrees.
+        with os.scandir(fd) as entries:
+            for entry in entries:
+                name=entry.name
+                child=name if relative=='.' else relative+'/'+name
+                info=os.stat(name,dir_fd=fd,follow_symlinks=False)
+                if stat.S_ISDIR(info.st_mode):
+                    child_fd=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)
+                    try:walk(child_fd,child,info)
+                    finally:os.close(child_fd)
+                elif stat.S_ISLNK(info.st_mode):
+                    record(child,info)
+                    target=os.readlink(name,dir_fd=fd)
+                    if identity(os.stat(name,dir_fd=fd,follow_symlinks=False))!=identity(info):
+                        raise ValueError('retained link changed during snapshot: '+child)
+                    symlinks.append({'path':child,'target':target})
+                elif stat.S_ISREG(info.st_mode):
+                    record(child,info)
+                    child_fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=fd)
+                    with os.fdopen(child_fd,'rb') as stream:
+                        if identity(os.fstat(stream.fileno()))!=identity(info):
+                            raise ValueError('retained file changed before snapshot read: '+child)
+                        digest=hashlib.sha256();size=0
+                        for block in iter(lambda:stream.read(1024*1024),b''):
+                            digest.update(block);size+=len(block)
+                        if size!=info.st_size or identity(os.fstat(stream.fileno()))!=identity(info):
+                            raise ValueError('retained file changed during snapshot read: '+child)
+                    files.append({'path':child,'bytes':size,'sha256':digest.hexdigest()})
+                else:
+                    raise ValueError('unsupported file type in retained-state snapshot: '+child)
+        if identity(os.fstat(fd))!=identity(before):
+            raise ValueError('retained directory changed during snapshot: '+relative)
+    expected=root.lstat()
+    if not stat.S_ISDIR(expected.st_mode):
+        raise ValueError('retained-state snapshot root must be a real directory')
+    fd=os.open(root,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+    try:walk(fd,'.',expected)
+    finally:os.close(fd)
+    key=lambda row:row['path']
+    return {'inventory':{'files':sorted(files,key=key),'symlinks':sorted(symlinks,key=key)},'metadata':sorted(metadata,key=key)}
+
+
+def _preservation_snapshot(roots):
+    """Hash complete byte/link/metadata inventories without duplicating them in artifacts."""
+    result = {}
+    for label, root in sorted(roots.items()):
+        # Six independently bounded component trees plus the state wrapper.
+        snapshot = _retained_state_snapshot(root, entry_limit=7 * 100_000)
+        result[label] = {"root": str(root), "sha256": auth.sha(auth.encoded(snapshot)),
+                         "entries": len(snapshot["metadata"]),
+                         "file_bytes": sum(row["bytes"] for row in snapshot["inventory"]["files"])}
+    return result
+
+
+def _retained_preservation_guards(work):
+    """Populate only isolated qualification HOME and disposable unrelated data."""
+    roots = {"global_cargo_config": work / "home/.cargo",
+             "global_rustup_config": work / "home/.rustup",
+             "unrelated_sdk": work / "unrelated-sdk",
+             "user_data": work / "unrelated-user-data"}
+    payloads = {"global_cargo_config": ("config.toml", b"[net]\noffline = true\n"),
+                "global_rustup_config": ("settings.toml", b'version = "12"\n'),
+                "unrelated_sdk": ("owner.txt", b"unrelated SDK, preserve all files and modes\n"),
+                "user_data": ("notes.txt", b"unrelated user data, preserve all files and modes\n")}
+    for label, root in roots.items():
+        root.mkdir(mode=0o700)
+        name, raw = payloads[label]
+        write(root / name, raw, 0o600)
+        (root / "empty-preservation-canary").mkdir(mode=0o700)
+    return roots
+
+
+def _qualify_native_migration(work, output, state, project, frontend, xtask, supervisor, command, original_elf, guards):
+    """Exercise public migration with real installed inputs and explicit synthetic v1 data."""
+    ready = auth.parsed(auth.read(state / "ready.json"))
+    prefix = state / ("sdk-" + ready["sdk_version"])
+    pin = auth.sha(auth.read(prefix / "install-receipt.json"))
+    python_pin = auth.parsed(auth.read(ROOT / "release/ci-python-inputs.json"))["hosts"][current_host()]
+    interpreter = supervisor.python_root / "runtime" / python_pin["runtime_relative_path"]
+    original_protected = {"ready_state": state, "original_project": project, **guards}
+    original_before = _preservation_snapshot(original_protected)
+    area = work / "native-legacy-migration-fixture"
+    generated = _supervised_run(supervisor, [xtask, "native-legacy-migration-fixture",
+        "--install-prefix", prefix, "--selection", state / "selection.json", "--python", interpreter,
+        "--project", project, "--output", area], cwd=work, label="20-compose-compatible-legacy-data")
+    if _preservation_snapshot(original_protected) != original_before:
+        raise ValueError("migration fixture generation changed existing inputs or retained data")
+    fixture = auth.parsed(auth.read(work / generated["stdout_log"]))
+    legacy_project, legacy_sdk = area / "project", area / "legacy-sdk"
+    old_lock, migrated = legacy_project / "ami-rust.lock.json", area / "output/migrated-v2-lock.json"
+    if (fixture.get("status") != "SYNTHETIC_BASELINE_COMPATIBLE_FIXTURE_NOT_HISTORICAL_EVIDENCE"
+            or fixture.get("project") != str(legacy_project)
+            or fixture.get("from_lock") != str(old_lock)
+            or fixture.get("migration_output") != str(migrated)
+            or fixture.get("receipt_pin", {}).get("sha256") != pin):
+        raise ValueError("native migration fixture omitted its exact synthetic input identity")
+    legacy_protected = {"legacy_project": legacy_project, "legacy_sdk": legacy_sdk}
+    protected = {**original_protected, **legacy_protected}
+    before = {**original_before, **_preservation_snapshot(legacy_protected)}
+    arguments = ["migrate", "--project", legacy_project, "--from-lock", old_lock,
+                 "--install-prefix", prefix, "--receipt-sha256", pin, "--output", migrated]
+    wrong = list(arguments)
+    wrong[wrong.index("--receipt-sha256") + 1] = "0" * 64
+    refused_before = _preservation_snapshot({"refused_output": migrated.parent})
+    command("21-migration-wrong-receipt", wrong, 2, executable=frontend)
+    if (_preservation_snapshot({"refused_output": migrated.parent}) != refused_before
+            or migrated.exists() or migrated.is_symlink()
+            or auth.read(output / "21-migration-wrong-receipt.stderr.log")
+                != b"ami-rust: installed receipt differs from the external pin\n"):
+        raise ValueError("refused migration changed its output area or missed the receipt-pin refusal")
+    result = auth.parsed(command("22-public-legacy-migration", arguments, executable=frontend))
+    lock_bytes = auth.read(migrated)
+    if (result.get("status") != "migrated" or result.get("legacy_lock_sha256") != auth.sha(auth.read(old_lock))
+            or result.get("receipt_sha256") != pin
+            or auth.parsed(lock_bytes).get("schema") != "ami-rust-project-lock-v2"):
+        raise ValueError("public migration did not publish the selected separate native v2 lock")
+    occupied_before = _preservation_snapshot({"existing_output": migrated.parent})
+    command("23-migration-occupied-output", arguments, 2, executable=frontend)
+    if (_preservation_snapshot({"existing_output": migrated.parent}) != occupied_before
+            or auth.read(migrated) != lock_bytes
+            or auth.read(output / "23-migration-occupied-output.stderr.log")
+                != b"ami-rust: output JSON path must be fresh\n"):
+        raise ValueError("refused migration changed the existing native lock")
+    command("24-verify-migrated-lock", ["verify", "--sdk-lock", migrated], executable=frontend)
+    build_area = work / "native-migration-build"
+    build_area.mkdir(mode=0o700)
+    build_parent = build_area / "derived"
+    build_parent.mkdir(mode=0o700)
+    build = build_parent / "build"
+    built = auth.parsed(command("25-build-migrated-project", ["build", "--sdk-lock", migrated,
+        "--output-dir", build, "--", "build", "--manifest-path", legacy_project / "Cargo.toml",
+        "--package", "hello-aros", "--release", "--locked", "--offline"], executable=frontend))
+    if (built.get("status") != "PASS" or not (build / "build-receipt.json").is_file()
+            or auth.read(build / "artifacts/AMIRUST") != original_elf):
+        raise ValueError("migrated project did not reproduce the original native executable")
+    after = _preservation_snapshot(protected)
+    if before != after:
+        raise ValueError("migration or migrated build changed old inputs or the current ready installation")
+    report = {"schema": "ami-rust-public-native-migration-effects-v1",
+              "status": "PASS_PUBLIC_MIGRATION_AND_EQUIVALENT_BUILD",
+              "fixture": fixture, "before": before, "after": after,
+              "migrated_lock_sha256": auth.sha(lock_bytes), "native_executable_sha256": auth.sha(original_elf),
+              "scope": "Actual public Rust commands under observation; legacy metadata is synthetic compatibility data against real installed baseline inputs. Historical release migration remains separate."}
+    write(output / "native-public-migration.json", auth.encoded(report))
+    return report
+
+
+def _qualify_prepare_interruption(work, output, frontend, xtask, command):
+    """Observe an actual public prepare SIGTERM, then verify retained effects."""
+    area = work / "native-interrupted-prepare-area"
+    area.mkdir(mode=0o700)
+    parent = area / "derived"
+    parent.mkdir(mode=0o700)
+    state, driver = parent / "state", area / "driver-output"
+    sibling = area / "unrelated-user-data.bin"
+    sentinel = b"preserve interrupted-prepare sibling\n"
+    write(sibling, sentinel)
+    result = auth.parsed(command("09-public-prepare-sigterm", ["native-prepare-interruption",
+        "--frontend", frontend, "--state", state, "--home", work / "home",
+        "--tmp", work / "tmp", "--output", driver], executable=xtask))
+    report = auth.parsed(auth.read(driver / "report.json"))
+    if (result.get("actual_child_exit_code") != 143 or result.get("helper_exit_code") != 0
+            or report.get("status") != "OBSERVED_EXPECTED_PREPARE_INTERRUPTION"
+            or report.get("capture", {}).get("actual_child_exit_code") != 143
+            or report.get("launcher", {}).get("sha256") != auth.sha(auth.read(frontend))
+            or report.get("signal", {}).get("sent") is not True
+            or (state / "ready.json").exists()):
+        raise ValueError("public prepare interruption omitted its actual status or retained effects")
+    for stream in ("stdout", "stderr"):
+        raw = auth.read(driver / (stream + ".raw"))
+        row = report["capture"][stream]
+        if len(raw) != row["bytes"] or auth.sha(raw) != row["sha256"]:
+            raise ValueError("prepare interruption capture differs from its actual bytes")
+    retained = state / "retained/bin/ami-rust"
+    command("09-interrupted-retained-package-consistency", ["verify-package"], executable=retained)
+    before = _retained_state_snapshot(state)
+    command("09-interrupted-state-retry-refusal", ["prepare", "--state", state], 2,
+        executable=frontend, disposable_refusal_state=state)
+    refusal = auth.read(output / "09-interrupted-state-retry-refusal.stderr.log")
+    if refusal != b"ami-rust: state path must be fresh\n":
+        raise ValueError("interrupted-state retry did not reach the native fresh-state refusal")
+    if _retained_state_snapshot(state) != before or auth.read(sibling) != sentinel:
+        raise ValueError("interrupted prepare retry changed retained ownership, bytes or sibling data")
+    result = {"schema": "ami-rust-public-prepare-interruption-effects-v1",
+        "status": "PASS_ACTUAL_CLI_SIGTERM_RETAINED_STATE_AND_UNCHANGED_RETRY",
+        "driver": report, "state_snapshot": before,
+        "state_snapshot_sha256": auth.sha(auth.encoded(before)),
+        "retry_exit_code": 2, "retained_package_consistent": True,
+        "retry_state_write_authority": "exact disposable partial state; no derived execution",
+        "retry_refusal_sha256": auth.sha(refusal),
+        "unrelated_sibling_sha256": auth.sha(sentinel),
+        "scope": "Source-checkout interruption only; installation publication recovery is a separate case."}
+    write(output / "native-prepare-interruption.json", auth.encoded(result))
+    shutil.copytree(driver, output / "native-prepare-interruption-captures")
+    return result
+
+
 def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor, policy_path, identity, config, command):
     """Exercise the actual packaged frontend and retained replay on signed inputs."""
     metadata = outer / "metadata"
@@ -926,12 +1267,19 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
         "--notices", notices, "--output", package], label="native-consumer-compose-package")
     frontend = package / "bin/ami-rust"
     command("09-package-consistency", ["verify-package"], executable=frontend)
-    authentication = auth.parsed(_supervised_text(supervisor, [xtask, "native-package-verify", "--package", package,
+    authentication_area = work / "native-package-authentication-area"
+    authentication_area.mkdir(mode=0o700)
+    authentication = auth.parsed(command("09-package-publisher-authentication", ["native-package-verify", "--package", package,
         "--policy", policy_path, "--inputs", bundle / ".auth/inputs.json",
-        "--work", work / "native-package-authentication"], label="native-consumer-package-authentication", timeout=1200).encode())
+        "--work", authentication_area / "work"], executable=xtask))
     if authentication.get("status") != "OUTER_AND_INNER_AUTHENTICATED":
         raise ValueError("native package outer/inner authentication did not complete")
-    state = work / "native-ready-state"
+    interruption = _qualify_prepare_interruption(work, output, frontend, xtask, command)
+    state_write_area = work / "native-state-write-area"
+    state_write_area.mkdir(mode=0o700)
+    state_parent = state_write_area / "derived"
+    state_parent.mkdir(mode=0o700)
+    state = state_parent / "native-ready-state"
     prepared = auth.parsed(command("10-package-cold-prepare", ["prepare", "--state", state], executable=frontend))
     if prepared.get("status") != "READY":
         raise ValueError("native package preparation did not produce READY")
@@ -940,9 +1288,15 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
     command("12-occupied-state-refusal", ["prepare", "--state", state], 2, executable=frontend)
     if auth.read(state / "ready.json") != ready:
         raise ValueError("occupied-state preparation changed the accepted READY record")
-    project = work / "native-client-project"
+    project_area = work / "native-project-write-area"
+    project_area.mkdir(mode=0o700)
+    project = project_area / "native-client-project"
     command("13-new-client-project", ["new", "--state", state, "--project", project], executable=frontend)
-    first = work / "native-client-build"
+    first_write_area = work / "native-client-build"
+    first_write_area.mkdir(mode=0o700)
+    first_parent = first_write_area / "derived"
+    first_parent.mkdir(mode=0o700)
+    first = first_parent / "build"
     built = auth.parsed(command("14-package-offline-build", ["build", "--state", state,
         "--project", project, "--output-dir", first], executable=frontend))
     if built.get("status") != "PASS" or not (first / "build-receipt.json").is_file():
@@ -953,23 +1307,47 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
     write(output / "native-build-matrix.json", auth.encoded(native_matrix))
     _check_limits(supervisor, "preserved completed native build matrix")
     original_elf = auth.read(first / "artifacts/AMIRUST")
+    guards = _retained_preservation_guards(work)
+    migration = _qualify_native_migration(
+        work, output, state, project, frontend, xtask, supervisor, command, original_elf, guards)
     marker = work / "unrelated-user-file.txt"
     write(marker, b"preserve across package removal\n")
+    protected = {"ready_state_and_retained_tooling": state, "old_project": project,
+                 **guards}
+    migration_area = work / "native-legacy-migration-fixture"
+    for name in ("project", "legacy-sdk", "output"):
+        protected["migration_" + name] = migration_area / name
+    before_removal = _preservation_snapshot(protected)
     shutil.rmtree(package)
     retained = state / "retained/bin/ami-rust"
     if not retained.is_file() or auth.read(state / "ready.json") != ready:
         raise ValueError("native package removal did not preserve retained tooling and state")
     command("15-retained-input-recheck", ["check-inputs", "--state", state], executable=retained)
-    replay = work / "native-retained-build"
+    replay_write_area = work / "native-retained-build"
+    replay_write_area.mkdir(mode=0o700)
+    replay_parent = replay_write_area / "derived"
+    replay_parent.mkdir(mode=0o700)
+    replay = replay_parent / "build"
     repeated = auth.parsed(command("16-retained-offline-replay", ["build", "--state", state,
         "--project", project, "--output-dir", replay], executable=retained))
     if (repeated.get("status") != "PASS" or auth.read(replay / "artifacts/AMIRUST") != original_elf
             or auth.read(marker) != b"preserve across package removal\n"):
         raise ValueError("retained replay changed native output or unrelated user data")
+    after_removal = _preservation_snapshot(protected)
+    if after_removal != before_removal:
+        raise ValueError("package removal or retained replay changed protected state/project/global config/SDK/user data")
+    preservation = {"schema": "ami-rust-retained-removal-preservation-v1",
+                    "status": "PASS_COMPLETE_RETAINED_REMOVAL_PRESERVATION",
+                    "before": before_removal, "after": after_removal,
+                    "scope": "Owned package directory removal plus actual retained input recheck/offline build. This is not a cross-version upgrade or package-manager transaction."}
+    write(output / "native-retained-removal-preservation.json", auth.encoded(preservation))
     return {"status": "PASS_SIGNED_PACKAGE_PREPARE_BUILD_AND_RETAINED_REPLAY",
         "package_core_sha256": pins["core_sha256"], "authentication": authentication,
+        "prepare_interruption": interruption,
+        "public_migration": migration,
         "native_executable_sha256": auth.sha(original_elf),
         "native_matrix": native_matrix,
+        "retained_removal_preservation": preservation,
         "ready_sha256": auth.sha(ready),
         "removal": "private owned package root removed; state, project and unrelated marker preserved",
         "limitation": "Cargo offline mode exercised; OS network denial and complete no-Python observation remain unqualified"}

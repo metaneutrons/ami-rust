@@ -470,6 +470,11 @@ def input_manifest_for_sdk(source, sdk_version):
                         "tooling/crates/core/src/macos_process_snapshot.c",
                         "tooling/crates/core/src/macos_process_snapshot.rs",
                         "tooling/crates/xtask/src/native_release.rs",
+                        "tooling/crates/xtask/src/consumer_observe.rs",
+                        "tooling/crates/xtask/src/consumer_report.rs",
+                        "tooling/crates/xtask/src/consumer_runtime.rs",
+                        "tooling/crates/xtask/src/legacy_migration_fixture.rs",
+                        "tooling/crates/xtask/src/prepare_sigterm.rs",
                         "tooling/fixtures/accepted-r1-inputs.json",
                         "tooling/fixtures/accepted-r1-support-inputs.json",
                         "tools/bootstrap-host-rust.sh", "tools/build-native-cli.sh")
