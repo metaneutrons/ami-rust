@@ -200,6 +200,12 @@ def make_inventory_cases(root: Path, digest_manifest: dict) -> list[dict]:
     return cases
 
 
+def archive_storage_name(name: str) -> str:
+    # Keep the historical case IDs and archive bytes, but make their storage
+    # names distinct on the default case-insensitive macOS filesystem.
+    return {"ancestor-A": "ancestor-uppercase", "ancestor-a": "ancestor-lowercase"}.get(name, name)
+
+
 def historical_python(case: dict, contracts, installer) -> dict:
     try:
         if case["kind"] == "inventory":
@@ -256,13 +262,15 @@ def run() -> None:
          "fixture case counts changed")
     expected_files = {"fixture-digests.json"}
     for name in fixture_manifest["archive_cases"]:
-        expected_files.update({f"{name}.tar.xz", f"{name}.inventory.json"})
+        stem = archive_storage_name(name)
+        expected_files.update({f"{stem}.tar.xz", f"{stem}.inventory.json"})
     fixture_root = fixture_manifest_path.parent
     need({path.name for path in fixture_root.iterdir()} == expected_files, "unexpected or missing TAR fixture file")
     archive_cases = []
     for name, pins in fixture_manifest["archive_cases"].items():
-        archive = fixture_root / f"{name}.tar.xz"
-        inventory = fixture_root / f"{name}.inventory.json"
+        stem = archive_storage_name(name)
+        archive = fixture_root / f"{stem}.tar.xz"
+        inventory = fixture_root / f"{stem}.inventory.json"
         need(file_identity(archive)["sha256"] == pins["archive_sha256"], f"TAR fixture digest changed: {name}")
         need(file_identity(inventory)["sha256"] == pins["inventory_sha256"], f"TAR inventory digest changed: {name}")
         archive_cases.append({"kind": "archive", "case": name, "archive": str(archive), "inventory": str(inventory)})
