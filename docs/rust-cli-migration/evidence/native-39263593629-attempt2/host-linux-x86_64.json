@@ -1,0 +1,131 @@
+{
+  "cargo_lock": {
+    "bytes": 6933,
+    "path": "tooling/Cargo.lock",
+    "sha256": "b825f28b7530920b0b8b9d359abad658bc52453ab6ae631b75651162928c7322"
+  },
+  "claim": "Native host output only; signatures, consumer qualification and release acceptance remain separate",
+  "cli_identity": {
+    "cli_version": "0.2.0-dev",
+    "packaging_revision": 0,
+    "schema": "ami-rust-version-v1",
+    "sdk_version": "0.1.0"
+  },
+  "cli_version": "0.2.0-dev",
+  "files": [
+    {
+      "bytes": 3866336,
+      "path": "ami-rust",
+      "sha256": "416f919cb4fe6a83b57be407787edf08319b1773c950d03416364d29919f02f7"
+    },
+    {
+      "bytes": 12304,
+      "path": "sdk-manifest.json",
+      "sha256": "bdbe4a2d88b29959427d3026bd8379ba186098633500b5fad11ab9e5d1a9f8c0"
+    },
+    {
+      "bytes": 565844,
+      "path": "sdk.tar.xz",
+      "sha256": "27acd7f53e7bcfb099162afc2df4fdbf47cc00ed3a0d5a5872d530655a1dfc76"
+    }
+  ],
+  "host": "linux-x86_64",
+  "schema": "ami-rust-native-host-producer-v1",
+  "sdk_version": "0.2.0",
+  "source": {
+    "run_attempt": 2,
+    "run_id": 39263593629,
+    "source_sha": "c34adc55b9c4c77ccf1d624eaee13a1f4dfd2671",
+    "workflow_sha": "c34adc55b9c4c77ccf1d624eaee13a1f4dfd2671"
+  },
+  "status": "UNSIGNED_HOST_OUTPUT",
+  "supervision": {
+    "commands": [
+      {
+        "elapsed_seconds": 0.157,
+        "exit_code": 0,
+        "label": "native-rustc-identity",
+        "log_peak_observed_bytes": 64278,
+        "managed_peak_observed_bytes": 1900075083,
+        "rss_peak_observed_bytes": 39399424,
+        "stderr_log": "logs/native-rustc-identity.stderr.log",
+        "stdout_log": "logs/native-rustc-identity.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 1.286,
+        "exit_code": 0,
+        "label": "native-cargo-fetch",
+        "log_peak_observed_bytes": 65200,
+        "managed_peak_observed_bytes": 1920139096,
+        "rss_peak_observed_bytes": 45662208,
+        "stderr_log": "logs/native-cargo-fetch.stderr.log",
+        "stdout_log": "logs/native-cargo-fetch.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 41.866,
+        "exit_code": 0,
+        "label": "native-build-cli",
+        "log_peak_observed_bytes": 66584,
+        "managed_peak_observed_bytes": 2020305994,
+        "rss_peak_observed_bytes": 943616000,
+        "stderr_log": "logs/native-build-cli.stderr.log",
+        "stdout_log": "logs/native-build-cli.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 42.264,
+        "exit_code": 0,
+        "label": "native-build-xtask",
+        "log_peak_observed_bytes": 66873,
+        "managed_peak_observed_bytes": 2049661164,
+        "rss_peak_observed_bytes": 957726720,
+        "stderr_log": "logs/native-build-xtask.stderr.log",
+        "stdout_log": "logs/native-build-xtask.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.19,
+        "exit_code": 0,
+        "label": "native-cli-identity",
+        "log_peak_observed_bytes": 66977,
+        "managed_peak_observed_bytes": 2049661268,
+        "rss_peak_observed_bytes": 0,
+        "stderr_log": "logs/native-cli-identity.stderr.log",
+        "stdout_log": "logs/native-cli-identity.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 1.27,
+        "exit_code": 0,
+        "label": "native-compose-sdk",
+        "log_peak_observed_bytes": 67522,
+        "managed_peak_observed_bytes": 2081005284,
+        "rss_peak_observed_bytes": 81723392,
+        "stderr_log": "logs/native-compose-sdk.stderr.log",
+        "stdout_log": "logs/native-compose-sdk.stdout.log",
+        "stop_reason": null
+      }
+    ],
+    "limits": {
+      "log_bytes": 16777216,
+      "rss_bytes": 4294967296,
+      "seconds": 1200,
+      "workspace_bytes": 12884901888
+    },
+    "peak_log_observed_bytes": 67522,
+    "peak_rss_observed_bytes": 957726720,
+    "peak_workspace_observed_bytes": 2085454005,
+    "schema": "ami-rust-native-supervision-v1",
+    "static_input_root_count": 1,
+    "static_input_roots": [
+      {
+        "label": "host-rust",
+        "log_bytes": 64082,
+        "path": "ami-rust-native-host",
+        "regular_file_bytes": 1329477437
+      }
+    ]
+  }
+}

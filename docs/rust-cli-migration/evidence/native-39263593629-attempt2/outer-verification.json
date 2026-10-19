@@ -1,0 +1,377 @@
+{
+  "assets": [
+    {
+      "bytes": 518,
+      "path": "SHA256SUMS",
+      "sha256": "6c0f5921dee263c15f42abd382d437c2f40256467af3186ecfe8bc75a3370aed"
+    },
+    {
+      "bytes": 27941640,
+      "path": "ami-rust-0.2.0-release.tar.xz",
+      "sha256": "45c1c945465170abbb54e0892336b60f120458557a5f7a1f0178e4e46972f59e"
+    },
+    {
+      "bytes": 10767,
+      "path": "ami-rust-0.2.0-release.tar.xz.sigstore.json",
+      "sha256": "0668ccd6cf616128e3d1183f1a7445faf1d3b95ab71ff1f791b0cac9afed3759"
+    },
+    {
+      "bytes": 32417,
+      "path": "ami-rust-0.2.0-release.tar.xz.spdx.json",
+      "sha256": "54d0b2788e3d3346840474b23eb65f5b14c54453850fa059ccff85745a4481ae"
+    },
+    {
+      "bytes": 25890,
+      "path": "ami-rust-0.2.0-transport.json",
+      "sha256": "0d87c731070b547a3b5bf218c2e215c7cf73a36f01950469d88ed0c89b0e2f75"
+    },
+    {
+      "bytes": 10767,
+      "path": "ami-rust-0.2.0-transport.json.sigstore.json",
+      "sha256": "859f71d384758728b024f39f415e56d0e25169e974cd44a4b15b2a51fdbe1234"
+    }
+  ],
+  "claim": "Native outer and inner cryptographic verification only; full release qualification and R1 acceptance remain separate.",
+  "gh_bundles": {
+    "SHA256SUMS": {
+      "bytes": 104167,
+      "path": "SHA256SUMS.json",
+      "sha256": "43704c927c770d0c532716e9b426b878af4589028f09a15f546c5258820a53c6"
+    },
+    "ami-rust-0.2.0-release.tar.xz": {
+      "bytes": 104195,
+      "path": "ami-rust-0.2.0-release.tar.xz.json",
+      "sha256": "a937a4a44c085b28bd2906a074d960579a146ba06798f1b488d7570355d035db"
+    },
+    "ami-rust-0.2.0-release.tar.xz.spdx.json": {
+      "bytes": 104254,
+      "path": "ami-rust-0.2.0-release.tar.xz.spdx.json.json",
+      "sha256": "d67faf4c66e792a23a5cbf05048cbac5efedd07c8056471b8a163c140cb24cb1"
+    },
+    "ami-rust-0.2.0-transport.json": {
+      "bytes": 104148,
+      "path": "ami-rust-0.2.0-transport.json.json",
+      "sha256": "b4a0902b4e81b4c7f0aa7a67eb9f5460000e1c972b94c370c8fcd766adab48c5"
+    }
+  },
+  "host_profile": "linux-x86_64",
+  "inner_manifest_sha256": "5be3098e0f932704aa8db23bfec95d85034413b265038da51c64af79ee3b42bc",
+  "native_package_inputs_sha256": {
+    "linux-x86_64": "73869427eedeb187b28dfd1874af06988f31467efd08b07fd0d3299bcd470687",
+    "macos-aarch64": "e6080eb0b7bf66f6070646899d8317fa08b513834e8fb55439a9891e8ab545f4"
+  },
+  "native_package_inventory_sha256": "a9c66bc52c08529fccc08c624b26f83fe8e7ec98f6ea993bbc4bc4553954ab0f",
+  "predicate_sha256": "8310c2e503941056c7ede51c794b64aba33fda8d0d79e5a531682d46ce8faba1",
+  "proof_index_sha256": "ff434587f85c3f706c2835b0ac497e67b484d2ea7037a4c0d406725faf5a9ddf",
+  "publication_authorized": false,
+  "publisher_verification": {
+    "claim": "Actual native package outer/inner authentication and identity binding only; preparation, no-Python and complete lifecycle acceptance remain separate",
+    "host": "linux-x86_64",
+    "manifest_sha256": "5be3098e0f932704aa8db23bfec95d85034413b265038da51c64af79ee3b42bc",
+    "schema": "ami-rust-native-package-publisher-verification-v1",
+    "sdk_version": "0.2.0",
+    "status": "OUTER_AND_INNER_AUTHENTICATED"
+  },
+  "r1_accepted": false,
+  "run_attempt": 2,
+  "run_id": 39263593629,
+  "schema": "ami-rust-native-outer-verification-v1",
+  "source_commit": "c34adc55b9c4c77ccf1d624eaee13a1f4dfd2671",
+  "status": "OUTER_CRYPTO_VERIFIED_NOT_R1_ACCEPTED",
+  "supervision": {
+    "commands": [
+      {
+        "elapsed_seconds": 0.135,
+        "exit_code": 0,
+        "label": "native-rustc-identity",
+        "log_peak_observed_bytes": 64278,
+        "managed_peak_observed_bytes": 1939719417,
+        "rss_peak_observed_bytes": 18620416,
+        "stderr_log": "logs/native-rustc-identity.stderr.log",
+        "stdout_log": "logs/native-rustc-identity.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.608,
+        "exit_code": 0,
+        "label": "native-cargo-fetch",
+        "log_peak_observed_bytes": 65200,
+        "managed_peak_observed_bytes": 1959762398,
+        "rss_peak_observed_bytes": 41582592,
+        "stderr_log": "logs/native-cargo-fetch.stderr.log",
+        "stdout_log": "logs/native-cargo-fetch.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 43.625,
+        "exit_code": 0,
+        "label": "native-build-cli",
+        "log_peak_observed_bytes": 66584,
+        "managed_peak_observed_bytes": 2059964213,
+        "rss_peak_observed_bytes": 947433472,
+        "stderr_log": "logs/native-build-cli.stderr.log",
+        "stdout_log": "logs/native-build-cli.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 43.894,
+        "exit_code": 0,
+        "label": "native-build-xtask",
+        "log_peak_observed_bytes": 66873,
+        "managed_peak_observed_bytes": 2089320823,
+        "rss_peak_observed_bytes": 960454656,
+        "stderr_log": "logs/native-build-xtask.stderr.log",
+        "stdout_log": "logs/native-build-xtask.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.154,
+        "exit_code": 0,
+        "label": "native-cli-identity",
+        "log_peak_observed_bytes": 66977,
+        "managed_peak_observed_bytes": 2089320927,
+        "rss_peak_observed_bytes": 0,
+        "stderr_log": "logs/native-cli-identity.stderr.log",
+        "stdout_log": "logs/native-cli-identity.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.157,
+        "exit_code": 0,
+        "label": "native-outer-prepare-source-head",
+        "log_peak_observed_bytes": 67018,
+        "managed_peak_observed_bytes": 2089321072,
+        "rss_peak_observed_bytes": 0,
+        "stderr_log": "logs/native-outer-prepare-source-head.stderr.log",
+        "stdout_log": "logs/native-outer-prepare-source-head.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.156,
+        "exit_code": 0,
+        "label": "native-outer-prepare-source-tree",
+        "log_peak_observed_bytes": 67059,
+        "managed_peak_observed_bytes": 2089321113,
+        "rss_peak_observed_bytes": 0,
+        "stderr_log": "logs/native-outer-prepare-source-tree.stderr.log",
+        "stdout_log": "logs/native-outer-prepare-source-tree.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.399,
+        "exit_code": 0,
+        "label": "native-outer-prepare-source-status",
+        "log_peak_observed_bytes": 67059,
+        "managed_peak_observed_bytes": 2089321113,
+        "rss_peak_observed_bytes": 50806784,
+        "stderr_log": "logs/native-outer-prepare-source-status.stderr.log",
+        "stdout_log": "logs/native-outer-prepare-source-status.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.156,
+        "exit_code": 0,
+        "label": "native-outer-prepare-rustc-identity",
+        "log_peak_observed_bytes": 67255,
+        "managed_peak_observed_bytes": 2089321309,
+        "rss_peak_observed_bytes": 16822272,
+        "stderr_log": "logs/native-outer-prepare-rustc-identity.stderr.log",
+        "stdout_log": "logs/native-outer-prepare-rustc-identity.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.138,
+        "exit_code": 0,
+        "label": "verify-gh-version",
+        "log_peak_observed_bytes": 67336,
+        "managed_peak_observed_bytes": 2272626618,
+        "rss_peak_observed_bytes": 23097344,
+        "stderr_log": "logs/verify-gh-version.stderr.log",
+        "stdout_log": "logs/verify-gh-version.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.139,
+        "exit_code": 0,
+        "label": "verify-cosign-version",
+        "log_peak_observed_bytes": 67972,
+        "managed_peak_observed_bytes": 2272627254,
+        "rss_peak_observed_bytes": 30875648,
+        "stderr_log": "logs/verify-cosign-version.stderr.log",
+        "stdout_log": "logs/verify-cosign-version.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 16.012,
+        "exit_code": 0,
+        "label": "native-outer-prepare",
+        "log_peak_observed_bytes": 68438,
+        "managed_peak_observed_bytes": 2340277380,
+        "rss_peak_observed_bytes": 260161536,
+        "stderr_log": "logs/native-outer-prepare.stderr.log",
+        "stdout_log": "logs/native-outer-prepare.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.156,
+        "exit_code": 0,
+        "label": "native-outer-finalize-source-head",
+        "log_peak_observed_bytes": 68479,
+        "managed_peak_observed_bytes": 2300762255,
+        "rss_peak_observed_bytes": 0,
+        "stderr_log": "logs/native-outer-finalize-source-head.stderr.log",
+        "stdout_log": "logs/native-outer-finalize-source-head.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.155,
+        "exit_code": 0,
+        "label": "native-outer-finalize-source-tree",
+        "log_peak_observed_bytes": 68520,
+        "managed_peak_observed_bytes": 2300762296,
+        "rss_peak_observed_bytes": 0,
+        "stderr_log": "logs/native-outer-finalize-source-tree.stderr.log",
+        "stdout_log": "logs/native-outer-finalize-source-tree.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.154,
+        "exit_code": 0,
+        "label": "native-outer-finalize-source-status",
+        "log_peak_observed_bytes": 68520,
+        "managed_peak_observed_bytes": 2300762296,
+        "rss_peak_observed_bytes": 0,
+        "stderr_log": "logs/native-outer-finalize-source-status.stderr.log",
+        "stdout_log": "logs/native-outer-finalize-source-status.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.157,
+        "exit_code": 0,
+        "label": "native-outer-finalize-rustc-identity",
+        "log_peak_observed_bytes": 68716,
+        "managed_peak_observed_bytes": 2300762492,
+        "rss_peak_observed_bytes": 17235968,
+        "stderr_log": "logs/native-outer-finalize-rustc-identity.stderr.log",
+        "stdout_log": "logs/native-outer-finalize-rustc-identity.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.788,
+        "exit_code": 0,
+        "label": "native-outer-finalize",
+        "log_peak_observed_bytes": 69031,
+        "managed_peak_observed_bytes": 2336218286,
+        "rss_peak_observed_bytes": 76111872,
+        "stderr_log": "logs/native-outer-finalize.stderr.log",
+        "stdout_log": "logs/native-outer-finalize.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.158,
+        "exit_code": 0,
+        "label": "native-outer-verify-source-head",
+        "log_peak_observed_bytes": 69072,
+        "managed_peak_observed_bytes": 2300778789,
+        "rss_peak_observed_bytes": 0,
+        "stderr_log": "logs/native-outer-verify-source-head.stderr.log",
+        "stdout_log": "logs/native-outer-verify-source-head.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.158,
+        "exit_code": 0,
+        "label": "native-outer-verify-source-tree",
+        "log_peak_observed_bytes": 69113,
+        "managed_peak_observed_bytes": 2300778830,
+        "rss_peak_observed_bytes": 0,
+        "stderr_log": "logs/native-outer-verify-source-tree.stderr.log",
+        "stdout_log": "logs/native-outer-verify-source-tree.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.159,
+        "exit_code": 0,
+        "label": "native-outer-verify-source-status",
+        "log_peak_observed_bytes": 69113,
+        "managed_peak_observed_bytes": 2300778830,
+        "rss_peak_observed_bytes": 0,
+        "stderr_log": "logs/native-outer-verify-source-status.stderr.log",
+        "stdout_log": "logs/native-outer-verify-source-status.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.159,
+        "exit_code": 0,
+        "label": "native-outer-verify-rustc-identity",
+        "log_peak_observed_bytes": 69309,
+        "managed_peak_observed_bytes": 2300779026,
+        "rss_peak_observed_bytes": 17018880,
+        "stderr_log": "logs/native-outer-verify-rustc-identity.stderr.log",
+        "stdout_log": "logs/native-outer-verify-rustc-identity.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 0.407,
+        "exit_code": 0,
+        "label": "native-package-compose",
+        "log_peak_observed_bytes": 69674,
+        "managed_peak_observed_bytes": 2340671665,
+        "rss_peak_observed_bytes": 75796480,
+        "stderr_log": "logs/native-package-compose.stderr.log",
+        "stdout_log": "logs/native-package-compose.stdout.log",
+        "stop_reason": null
+      },
+      {
+        "elapsed_seconds": 2.998,
+        "exit_code": 0,
+        "label": "native-package-verify",
+        "log_peak_observed_bytes": 70066,
+        "managed_peak_observed_bytes": 2447902021,
+        "rss_peak_observed_bytes": 112365568,
+        "stderr_log": "logs/native-package-verify.stderr.log",
+        "stdout_log": "logs/native-package-verify.stdout.log",
+        "stop_reason": null
+      }
+    ],
+    "limits": {
+      "log_bytes": 16777216,
+      "rss_bytes": 4294967296,
+      "seconds": 1200,
+      "workspace_bytes": 12884901888
+    },
+    "peak_log_observed_bytes": 70066,
+    "peak_rss_observed_bytes": 960454656,
+    "peak_workspace_observed_bytes": 2447902021,
+    "schema": "ami-rust-native-supervision-v1",
+    "static_input_root_count": 4,
+    "static_input_roots": [
+      {
+        "label": "host-rust",
+        "log_bytes": 64082,
+        "path": "ami-rust-native-host",
+        "regular_file_bytes": 1329477437
+      },
+      {
+        "label": "inner-bundle",
+        "log_bytes": 0,
+        "path": "ami-rust-release-inner",
+        "regular_file_bytes": 39644340
+      },
+      {
+        "label": "verifier-work",
+        "log_bytes": 717,
+        "path": "ami-rust-release-work",
+        "regular_file_bytes": 183305945
+      },
+      {
+        "label": "verifier-metadata",
+        "log_bytes": 0,
+        "path": "ami-rust-release-bootstrap",
+        "regular_file_bytes": 4447
+      }
+    ]
+  },
+  "tag": "v0.2.0",
+  "workflow_commit": "c34adc55b9c4c77ccf1d624eaee13a1f4dfd2671"
+}

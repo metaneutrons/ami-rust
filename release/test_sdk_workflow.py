@@ -435,6 +435,30 @@ class OuterWorkflowTests(unittest.TestCase):
         native_consumer = source.split("\n  native-consumer:\n", 1)[1].split("\n  consumer:\n", 1)[0]
         self.assertIn('needs: [authenticate, release-candidate]', native_consumer)
         self.assertIn('--outer "$RUNNER_TEMP/ami-rust-native-outer-candidate"', native_consumer)
+        match = re.search(r"^    if: \$\{\{ (.+) \}\}$", native_consumer, re.MULTILINE)
+        self.assertIsNotNone(match)
+        # A selected branch can have skipped ancestors even when both direct
+        # dependencies succeeded. Without a status function GitHub adds
+        # success(), and the real run silently skips the entire host matrix.
+        self.assertIn('always()', match.group(1))
+        expression = (match.group(1).replace("needs['release-candidate']", 'needs.release_candidate')
+                      .replace('&&', ' and ').replace('||', ' or ').replace('!', ' not '))
+        for native, proposal, auth, outer, cancelled, expected in (
+            (True, False, 'success', 'success', False, True),
+            (True, False, 'failure', 'success', False, False),
+            (True, False, 'success', 'failure', False, False),
+            (True, False, 'success', 'skipped', False, False),
+            (True, False, 'skipped', 'success', False, False),
+            (True, True, 'success', 'success', False, False),
+            (False, False, 'success', 'success', False, False),
+            (True, False, 'success', 'success', True, False),
+        ):
+            inputs = SimpleNamespace(native_tooling=native, reference_proposal=proposal)
+            needs = SimpleNamespace(authenticate=SimpleNamespace(result=auth),
+                                    release_candidate=SimpleNamespace(result=outer))
+            actual = eval(expression, {'__builtins__': {}}, {'inputs':inputs, 'needs':needs,
+                'always':lambda:True, 'cancelled':lambda:cancelled, 'true':True})
+            self.assertEqual(actual, expected, (native, proposal, auth, outer, cancelled))
 
     def test_outer_signer_depends_on_the_selected_successful_path(self):
         self.assert_outer_gate(SOURCE)
@@ -446,6 +470,18 @@ class OuterWorkflowTests(unittest.TestCase):
         self.assertNotEqual(broken, SOURCE)
         with self.assertRaises(AssertionError):
             self.assert_outer_gate(broken)
+
+    def test_native_consumers_reject_implicit_skip_and_failed_outer_counterprobes(self):
+        before, after = SOURCE.split("\n  native-consumer:\n", 1)
+        for replacement in (
+            "${{ inputs.native_tooling }}",
+            "${{ always() && !cancelled() && inputs.native_tooling && !inputs.reference_proposal && needs.authenticate.result == 'success' }}",
+        ):
+            broken_after, count = re.subn(r"^    if: .+$", '    if: ' + replacement,
+                                         after, count=1, flags=re.MULTILINE)
+            self.assertEqual(count, 1)
+            with self.assertRaises(AssertionError):
+                self.assert_outer_gate(before + "\n  native-consumer:\n" + broken_after)
 
 
 if __name__ == "__main__":
