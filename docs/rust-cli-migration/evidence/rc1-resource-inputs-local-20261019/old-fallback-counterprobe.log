@@ -1,0 +1,37 @@
+   Compiling ami-rust-core v0.2.0-dev (/Volumes/Dev/Source/Amiga/ami-rust/release/public-replay-proof-output-fix-20261018/tooling/crates/core)
+   Compiling ami-rust-cli v0.2.0-dev (/Volumes/Dev/Source/Amiga/ami-rust/release/public-replay-proof-output-fix-20261018/tooling/crates/cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.72s
+     Running unittests src/main.rs (target/debug/deps/ami_rust-3e87c4b395d59ae4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/frontends.rs (target/debug/deps/frontends-403d06ca823e70f4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/ami_rust_core-a863b266ca0936fd)
+
+running 1 test
+test process_capture::tests::cancellation_kills_direct_child_after_it_leaves_supervisor_group ... FAILED
+
+failures:
+
+---- process_capture::tests::cancellation_kills_direct_child_after_it_leaves_supervisor_group stdout ----
+
+thread 'process_capture::tests::cancellation_kills_direct_child_after_it_leaves_supervisor_group' (212482238) panicked at crates/core/src/process_capture.rs:1228:9:
+assertion `left == right` failed: the direct child must receive SIGKILL after leaving its original group
+  left: None
+ right: Some(9)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    process_capture::tests::cancellation_kills_direct_child_after_it_leaves_supervisor_group
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 233 filtered out; finished in 2.01s
+
+error: test failed, to rerun pass `-p ami-rust-core --lib`

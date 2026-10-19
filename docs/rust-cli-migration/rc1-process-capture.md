@@ -38,6 +38,13 @@ also cleans up before resuming unwinding. `waitid` with `WNOWAIT` keeps the
 direct child's PID reserved until group signalling has finished. The adapter
 does not signal a group after its direct child has been reaped.
 
+The shared [wait-ownership lease](rc1-resource-inputs.md) now performs a fresh
+ownership observation before every signal, bounds interrupted observations and
+keeps the direct-child kill independent of the group result. A child that moved
+out of its original group must still be terminated on cancellation. Failed kill
+authorization without an observed exit reports cleanup failure instead of
+entering a blocking wait for a live child.
+
 After observing child exit, a final bounded read pass collects its buffered
 tail before distinguishing EOF from a descendant retaining a writer. Ordinary
 completion reaps the direct child. A same-group descendant retaining an output

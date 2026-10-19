@@ -1,0 +1,45 @@
+{
+  "schema": "ami-rust-rc1-native-package-hosted-v1",
+  "candidate": "607843c884ebdd8cbadbdddb0cfb53265deb658b",
+  "code_commit": "3ddaede05d027746f47c1ec059b2d82fc51e5072",
+  "base": "438600df32a5214bc77b7ee9224d84414275b1ff",
+  "run_id": 39211812168,
+  "run_url": "https://github.com/metaneutrons/ami-rust/actions/runs/39211812168",
+  "status": "PASS",
+  "all_seven_jobs_success": true,
+  "hosts": [
+    {
+      "host": "linux",
+      "job_id": 117926700421,
+      "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39211812168/job/117926700421",
+      "raw_log": "rc1-package-linux-39211812168.log",
+      "raw_log_bytes": 57389,
+      "raw_log_sha256": "6299e5479c415b13a50e9043b62179764e24d5adb8cd453cc035a6713b1789e6",
+      "core_tests": 204,
+      "frontend_tests": 1,
+      "manifest_integration_tests": 1,
+      "total_rust_tests": 206,
+      "status": "PASS"
+    },
+    {
+      "host": "macos",
+      "job_id": 117926700368,
+      "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39211812168/job/117926700368",
+      "raw_log": "rc1-package-macos-39211812168.log",
+      "raw_log_bytes": 61995,
+      "raw_log_sha256": "0a32ee5a4a6ca9d8e216fb5f794ed1563199d87b8bf6d4a8e0e87a729aef07f1",
+      "core_tests": 204,
+      "frontend_tests": 1,
+      "manifest_integration_tests": 1,
+      "total_rust_tests": 206,
+      "status": "PASS"
+    }
+  ],
+  "complete_rc1_accepted": false,
+  "consumer_capabilities_activated": false,
+  "scope": "Both-host native record/filesystem/header/host fixture execution. Internal transitional Python CI remains active; no integrated consumer no-Python/runtime/network-denial or SDK release acceptance claim.",
+  "recorded_utc": "2026-10-19T07:02:26.613325+00:00",
+  "merge_commit": "971622c25ade570cdc5ddd0625d736b24747ca0b",
+  "merge_time": "2026-10-19T07:03:04Z",
+  "merged_tooling_tree_identical": true
+}

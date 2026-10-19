@@ -1,0 +1,282 @@
+   Compiling ami-rust-core v0.2.0-dev (/Volumes/Dev/Source/Amiga/ami-rust/release/public-replay-proof-output-fix-20261018/tooling/crates/core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.19s
+     Running unittests src/main.rs (tooling/target/debug/deps/ami_rust-3e87c4b395d59ae4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/frontends.rs (tooling/target/debug/deps/frontends-403d06ca823e70f4)
+
+running 1 test
+test real_frontend_copies_and_cargo_plugin_have_identical_version_and_refusals ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s
+
+     Running unittests src/lib.rs (tooling/target/debug/deps/ami_rust_core-a863b266ca0936fd)
+
+running 235 tests
+test elf::tests::refuses_out_of_bounds_nobits_section_name_table ... ok
+test compression::tests::gzip_accepts_one_member_at_exact_caps_and_refuses_excess_caps ... ok
+test compression::tests::gzip_rejects_trailing_junk_concatenation_truncation_and_bad_crc ... ok
+test compression::tests::xz_rejects_every_suffix_truncation_and_bad_block_crc ... ok
+test compression::tests::writer_short_writes_are_completed_and_sink_failures_propagate ... ok
+test elf::tests::refuses_malformed_symbol_and_rela_table_metadata ... ok
+test elf::tests::refuses_duplicate_and_unresolved_strong_symbols ... ok
+test compression::tests::xz_enforces_compressed_decoded_and_dictionary_limits ... ok
+test elf::tests::refuses_overlapping_nonnull_section_at_index_zero ... ok
+test elf::tests::refuses_overlapping_rela_and_data_sections ... ok
+test digest::tests::validates_only_lowercase_sha256_hex ... ok
+test elf::tests::refuses_section_table_and_section_data_out_of_bounds ... ok
+test digest::tests::hashes_bytes_and_streams_binary_file_contents ... ok
+test elf::tests::refuses_wrong_abi_and_machine ... ok
+test files::tests::bounded_reader_checks_streamed_bytes_after_a_zero_length_observation ... ok
+test directory::tests::nofollow_classification_rejects_device_nodes_without_opening_them ... ok
+test files::tests::opener_rejects_parent_traversal_and_nul_components ... ok
+test elf::tests::refuses_unsupported_and_out_of_bounds_relocations ... ok
+test elf::tests::requires_startup_in_first_executable_section_at_zero ... ok
+test elf::tests::reports_native_object_and_reference_measurements ... ok
+test files::tests::rejects_nonportable_inventory_paths ... ok
+test frontend::tests::both_names_share_parser_and_exact_separator_rules ... ok
+test host_platform::tests::linux_profile_requires_kernel_binary_and_os_release_to_agree ... ok
+test host_platform::tests::macos_profile_requires_kernel_binary_and_product_major_to_agree ... ok
+test host_platform::tests::native_detection_matches_compiled_host_on_supported_ci ... ok
+test directory::tests::retained_handle_is_not_redirected_by_path_replacement ... ok
+test host_platform::tests::parses_supported_os_release_selector_forms_without_evaluation ... ok
+test directory::tests::enumeration_repeats_and_bounds_before_retaining_extra_names ... ok
+test host_platform::tests::refuses_missing_duplicate_malformed_or_non_utf8_os_release_selectors ... ok
+test directory::tests::refuses_linked_ancestors_and_leaf_and_reads_exact_link_bytes ... ok
+test directory::tests::nofollow_classification_and_open_identity_check_cover_entry_kinds ... ok
+test json::tests::direct_tree_preserves_private_marker_like_keys_as_ordinary_data ... ok
+test json::tests::ignores_container_like_text_inside_strings ... ok
+test frontend::tests::capability_ledger_matches_normative_contract_and_refuses_pending_work ... ok
+test json::tests::preserves_serde_json_integer_and_finite_float_semantics ... ok
+test files::tests::reads_binary_regular_file_at_exact_limit_and_from_relative_path ... ok
+test json::tests::rejects_bom_invalid_utf8_trailing_values_and_nonfinite_numbers ... ok
+test json::tests::rejects_malformed_json_and_typed_value_mismatch ... ok
+test json::tests::rejects_duplicate_keys_at_each_object_depth ... ok
+test json::tests::accepts_exact_container_depth_and_refuses_one_more ... ok
+test json::tests::profiles_match_the_frozen_format_contract ... ok
+test files::tests::refuses_fifo_without_blocking ... ok
+test files::tests::reads_a_non_utf8_filename_without_lossy_conversion ... ok
+test files::tests::rejects_a_file_one_byte_over_the_limit ... ok
+test files::tests::temporary_inputs_are_cleaned_up ... ok
+test files::tests::rejects_final_and_ancestor_symlinks ... ok
+test mutations::tests::exclusive_creation_sets_exact_modes_and_rejects_existing_entries ... ok
+test elf::tests::refuses_many_aliased_large_symbol_tables_before_symbol_parsing ... ok
+test ownership::tests::install_target_rejects_root_home_and_current_directory_ancestor ... ok
+test inventory::tests::duplicate_unsafe_overlapping_rows_and_tree_bounds_refuse ... ok
+test mutations::tests::tracked_creation_marks_owned_entries_before_followup_descriptor_work ... ok
+test ownership::tests::preserves_state_package_retention_exception_and_checks_overlap ... ok
+
+running 1 test
+test elf::tests::caches_repeated_long_names_and_preserves_lossy_utf8_reporting ... ok
+test mutations::tests::retained_parent_descriptor_survives_path_replacement ... ok
+test inventory::tests::exact_tree_bytes_modes_links_and_empty_directories_are_verified ... ok
+test ownership::tests::open_parent_handle_remains_available_for_race_safe_publication ... ok
+test inventory::tests::changed_missing_extra_and_link_substituted_files_refuse ... ok
+test ownership::tests::retains_native_bytes_in_fresh_target_names ... ok
+test mutations::tests::bounded_tree_removal_unlinks_links_without_following_them ... ok
+test ownership::tests::rejects_symlink_ancestors_and_insecure_parent_modes ... ok
+test package::tests::elf_structural_admission_checks_executable_ranges_without_loader_claim ... ok
+test mutations::tests::restrictive_umask_isolated_child_process ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 234 filtered out; finished in 0.01s
+
+test ownership::tests::fresh_output_absolutizes_relative_path_and_refuses_existing_entries ... ok
+test mutations::tests::restrictive_umask_isolated_child_process ... ok
+test ownership::tests::private_state_requires_nonroot_current_user_and_private_mode ... ok
+test mutations::tests::no_replace_rename_publishes_once_and_preserves_collisions ... ok
+test ownership::tests::accepts_fresh_prefix_and_rejects_occupied_leaf_kinds ... ok
+test ownership::tests::existing_install_target_retains_root_and_parent_and_checks_modes ... ok
+test inventory::tests::links_must_match_remain_inside_resolve_and_stay_within_work_bound ... ok
+test ownership::tests::external_trust_inputs_require_secure_regular_paths_and_executable_access ... ok
+test package_records::tests::accepts_asset_and_launcher_limits_then_refuses_one_byte_over ... ok
+test ownership::tests::validates_external_receipt_pin_disjointness_and_freshness ... ok
+test package_records::tests::distinct_proof_paths_may_total_exactly_64_mib_but_not_one_byte_more ... ok
+test package_records::tests::parses_mode_required_inventory_and_enforces_portable_paths_and_512_mib_bound ... ok
+test package_records::tests::parses_native_pins_and_binds_version_hosts_assets_and_static_launchers ... ok
+test package_records::tests::parses_proof_rows_and_enforces_exact_identity_sets_and_shared_path_identity ... ok
+test package_records::tests::preserves_4300_digit_exact_sdk_counters_and_rejects_4301 ... ok
+test package_records::tests::proof_count_and_distinct_path_byte_limits_accept_exact_boundaries ... ok
+test package_records::tests::proof_size_count_alias_and_digest_conflicts_are_refused ... ok
+test package_records::tests::rejects_duplicate_and_unknown_native_input_fields ... ok
+test package_records::tests::rejects_inconsistent_version_host_launcher_asset_and_repository_claims ... ok
+test package_records::tests::rejects_proof_subject_set_mismatch_and_conflicting_digest_lengths ... ok
+test package_records::tests::schema_and_semver_controls_are_closed ... ok
+test package::tests::package_input_schema_and_workflow_counters_follow_v2_contract ... ok
+test process_capture::tests::accepts_zero_output_limits_for_an_empty_command ... ok
+test package::tests::refuses_runtime_host_cli_and_inventory_version_mismatches ... ok
+test package::tests::current_host_profile_is_explicitly_supported ... ok
+test package::tests::refuses_unrecognized_python_named_file_even_when_inventory_lists_it ... ok
+test process_capture::tests::child_fixture_entry ... ok
+test process_capture::tests::externally_reaped_child_refuses_further_numeric_group_signalling ... ok
+test package::tests::accepts_explicit_linux_and_macos_package_headers_without_executing_them ... ok
+test package::tests::refuses_unlisted_extra_and_missing_payload_files ... ok
+test process_capture::tests::rejects_sigchld_auto_reap_before_starting_a_child ... ok
+test process_capture::tests::validates_absolute_paths_and_reports_missing_executable ... ok
+test process_lease::tests::child_fixture_entry ... ok
+test process_lease::tests::interrupted_observation_is_bounded_without_inventing_wait_ownership ... ok
+test package::tests::actual_executable_and_public_aliases_find_relocated_root_with_spaces ... ok
+test process_capture::tests::cancellation_kills_direct_child_after_it_leaves_supervisor_group ... ok
+test process_snapshot::historical_linkage_regression::absent_prior_parent_still_links_a_visible_child_during_table_churn ... ok
+test process_snapshot::tests::bounds_cumulative_history_before_allocating_indexes ... ok
+test process_snapshot::tests::closes_cycles_and_nested_groups_without_duplicate_members ... ok
+test process_snapshot::tests::closes_over_newly_observed_process_groups ... ok
+test process_snapshot::tests::closes_over_transitive_children_and_reparented_prior_members ... ok
+test process_snapshot::tests::parses_exact_four_integer_columns_and_blank_lines ... ok
+test process_snapshot::tests::process_ids_are_sorted_while_rows_keep_snapshot_order ... ok
+test process_snapshot::tests::refuses_aggregate_rss_arithmetic_overflow ... ok
+test process_snapshot::tests::refuses_byte_and_row_limit_excess ... ok
+test process_snapshot::tests::refuses_duplicate_pids ... ok
+test process_snapshot::tests::refuses_malformed_non_ascii_and_overflowing_columns ... ok
+test process_snapshot::tests::refuses_plus_signs_in_ascii_decimal_columns ... ok
+test process_snapshot::tests::refuses_zero_as_requested_target_pid ... ok
+test process_snapshot::tests::reports_missing_root_and_missing_prior_pid_without_hiding_live_member ... ok
+test process_lease::tests::lost_wait_ownership_blocks_group_and_child_signal_backends ... ok
+test publisher::tests::cosign_arguments_are_exact_for_all_three_authenticated_subjects ... ok
+test publisher::tests::gh_arguments_are_exact_for_all_three_authenticated_subjects ... ok
+test process_lease::tests::observes_signals_and_reaps_the_owned_direct_child ... ok
+test publisher::tests::observation_checks_cancellation_and_deadline_without_sleeping ... ok
+test publisher::tests::legacy_and_native_release_flavors_are_explicit_and_qualification_only_is_retained ... ok
+test package::tests::refuses_internal_file_directory_and_root_symlinks_and_fifo ... ok
+test package::tests::refuses_writable_payload_directories_and_wrong_initial_file_modes ... ok
+test publisher::tests::pinned_executable_rejects_sparse_oversize_before_streaming_contents ... ok
+test package::tests::checked_read_refuses_unlisted_bytes_mode_and_symlink_changes ... ok
+test publisher::tests::verifier_environment_is_an_exact_replacement_with_private_absolute_home ... ok
+test publisher_files::tests::bounded_reader_refuses_growth_even_when_still_under_the_limit ... ok
+test publisher::tests::pinned_executable_hash_and_permission_checks_refuse_mutation_and_unsafe_modes ... ok
+test publisher_files::tests::reads_empty_and_exact_limit_files ... ok
+test process_capture::tests::preserves_nonzero_exit_and_signal_status ... ok
+test publisher_files::tests::scan_accepts_an_empty_tree_only_with_empty_expected_sets ... ok
+test publisher_files::tests::retained_root_survives_rename_during_access ... ok
+test publisher_files::tests::scan_accepts_the_complete_nested_file_and_directory_set ... ok
+test publisher_files::tests::scan_preserves_the_historical_path_profile_for_reserved_device_names ... ok
+test publisher_files::tests::scan_refuses_extra_missing_and_empty_extra_directory_entries ... ok
+test publisher_files::tests::scan_refuses_fifo_without_blocking_and_enforces_combined_byte_limit ... ok
+test publisher_home::tests::drop_makes_a_best_effort_cleanup ... ok
+test publisher_home::tests::creates_private_home_and_gh_subdirectory_then_finishes ... ok
+test publisher_files::tests::scan_and_read_refuse_symlinks_and_unsafe_leaf_names ... ok
+test package::tests::refuses_missing_or_empty_license_text ... ok
+test package_records::tests::accepts_exact_two_mib_input_document_and_refuses_one_byte_more ... ok
+test publisher_metadata::tests::checks_raw_json_container_depth_before_typed_validation ... ok
+test publisher_metadata::tests::parses_declared_run_mappings_and_expected_tree_without_authenticating_them ... ok
+test publisher::tests::trusted_roots_accept_object_jsonl_and_reject_empty_nonobject_or_duplicate_json ... ok
+test publisher_home::tests::finish_reports_bounded_cleanup_error_and_names_retained_home ... ok
+test publisher_metadata::tests::preserves_python_valid_large_workflow_integer_lexemes ... ok
+test publisher_metadata::tests::rejects_disallowed_or_mismatched_hosts_and_invalid_subject_sets ... ok
+test publisher_metadata::tests::rejects_noninteger_counters_and_duplicate_json_keys ... ok
+test publisher_claims::tests::matches_seventy_pinned_synthetic_claim_decisions_without_running_python_or_verifiers ... ok
+test publisher_metadata::tests::rejects_nonportable_aliasing_and_reserved_asset_paths ... ok
+test publisher_policy::tests::excludes_the_main_repository_uri_and_rejects_private_raw_wrapper_shapes ... ok
+test publisher_policy::tests::parses_ordered_input_materials_with_exact_digest_shapes ... ok
+test publisher_metadata::tests::treats_private_raw_value_marker_as_an_ordinary_unknown_field ... ok
+test publisher_policy::tests::parses_policy_constants_hosts_and_normalized_paths_without_filesystem_access ... ok
+test publisher_tar::tests::accepts_alternate_regular_type_and_empty_pax_headers ... ok
+test publisher_policy::tests::strict_tree_rejects_duplicate_policy_and_material_keys ... ok
+test publisher_tar::tests::accepts_exact_inventory_and_normalizes_modes ... ok
+test publisher_metadata::tests::rejects_schema_unknown_fields_and_manifest_binding_errors ... ok
+test publisher_tar::tests::accepts_historical_signed_tar_checksum_variant ... ok
+test publisher_home::tests::exact_home_modes_survive_restrictive_umask_in_isolated_child ... ok
+test publisher_tar::tests::accepts_portable_gnu_long_name ... ok
+test publisher_tar::tests::accepts_python_empty_parsed_nonempty_pax_and_base256_mode ... ok
+test publisher_tar::tests::accepts_python_octal_prefix_separator_and_ascii_strip_rules ... ok
+test publisher_home::tests::stages_exact_private_bytes_without_aliasing_the_source ... ok
+test publisher_tar::tests::matches_historical_gnu_longname_outer_magic_and_nul_rules ... ok
+test publisher_tar::tests::rejects_exact_and_casefolded_file_ancestor_conflicts ... ok
+test publisher_tar::tests::rejects_bad_headers_truncated_data_and_invalid_trailers ... ok
+test publisher_tar::tests::refuses_non_ascii_whitespace_in_every_numeric_header_field ... ok
+test publisher_tar::tests::rejects_nonempty_pax_size_override_and_size_conflict ... ok
+test publisher_tar::tests::rejects_raw_backslash_paths_before_tar_path_normalization ... ok
+test publisher_tar::tests::rejects_extra_missing_duplicate_case_colliding_and_identity_mismatch ... ok
+test publisher_tar::tests::validates_authenticated_inventory_paths_and_digest_shape ... ok
+test publisher_tar::tests::rejects_sparse_links_and_other_non_regular_records ... ok
+test publisher_tar::tests::validates_full_width_ignored_base256_metadata_without_narrowing_it ... ok
+test receipts::tests::counter_prepass_enforces_exact_depth_before_ignored_children ... ok
+test receipts::tests::large_counter_prepass_does_not_hide_duplicates_or_reinterpret_json_objects ... ok
+test publisher_policy::tests::refuses_policy_field_constant_digest_host_and_path_mismatches ... ok
+test publisher::tests::qualification_only_bundle_is_rejected_before_verifier_launch_for_both_flavors ... ok
+test receipts::tests::inventory_refuses_bad_types_paths_identity_and_ancestor_collisions ... ok
+test receipts::tests::legacy_publisher_and_version_use_the_frozen_ascii_rules ... ok
+test receipts::tests::parses_all_three_schemas_and_never_promotes_historical_drivers ... ok
+test receipts::tests::raw_value_wrapper_cannot_replace_the_actual_receipt_root ... ok
+test receipts::tests::exact_schema_fields_refuse_legacy_null_extensions_and_missing_native_identity ... ok
+test records::tests::current_host_check_is_explicit_and_refuses_the_other_profile ... ok
+test receipts::tests::rejects_nested_unknown_keys_duplicate_keys_and_nonfinite_authentication ... ok
+test receipts::tests::preserves_large_workflow_counter_tokens_under_the_pinned_oracle_digit_bound ... ok
+test receipts::tests::publisher_reports_refuse_identity_subject_run_and_manifest_mismatch ... ok
+test records::tests::duplicate_project_lock_keys_refuse ... ok
+test records::tests::parses_closed_project_lock_v2_and_preserves_relative_root_semantics ... ok
+test records::tests::parses_closed_records_without_accessing_or_trusting_claimed_paths ... ok
+test receipts::tests::matches_fourteen_pinned_historical_oracle_fixtures_without_running_python ... ok
+test records::tests::raw_value_wrapper_cannot_replace_the_actual_record_root ... ok
+test records::tests::unknown_or_missing_schema_refuses_before_interpreting_fields ... ok
+test records::tests::refuses_extra_missing_wrong_typed_and_inconsistent_state_fields ... ok
+test records::tests::selection_requires_exact_separate_normalized_absolute_roots ... ok
+test release_manifest::tests::enforces_inventory_rows_path_collisions_and_exact_asset_requirements ... ok
+test release_manifest::tests::full_validation_copy_still_rejects_duplicate_keys_and_nonfinite_floats ... ok
+test records::tests::refuses_legacy_future_missing_and_unknown_project_lock_fields ... ok
+test release_manifest::tests::inventory_accepts_only_python_integer_negative_zero ... ok
+test records::tests::validates_project_lock_digests_host_binding_and_manifest_path ... ok
+test release_manifest::tests::parses_legacy_qualification_and_production_routes_without_auth_claims ... ok
+test release_manifest::tests::preserves_legacy_producer_opacity_but_requires_nonempty_object ... ok
+test release_manifest::tests::parses_native_v2_on_qualification_and_production_routes ... ok
+test release_manifest::tests::native_v2_requires_exact_schema_and_asset_bound_host_rows ... ok
+test release_manifest::tests::private_raw_value_lookalikes_are_opaque_and_original_bytes_survive ... ok
+test release_manifest::tests::raw_value_prepass_accepts_exact_depth_and_refuses_one_more_container ... ok
+test release_manifest::tests::refuses_unknown_schema_fields_and_missing_fields ... ok
+test release_manifest::tests::rejects_recursive_duplicate_json_keys ... ok
+test release_manifest::tests::preserves_opaque_integer_lexemes_with_python_digit_limit ... ok
+test signals::tests::sigterm_child_fixture ... ignored, run only through the isolated child-process test
+test release_manifest::tests::requires_exact_host_interpreter_hash_map_and_digest_syntax ... ok
+test release_manifest::tests::rejects_wrong_manifest_digest_asset_limits_and_file_types ... ok
+test transaction::tests::transaction_child_fixture ... ignored, executed by the parent test in an isolated process
+test workspace_accounting::tests::byte_accumulation_checks_u64_overflow ... ok
+test workspace_accounting::tests::caller_entry_and_work_bounds_refuse_excess_work ... ok
+test workspace_accounting::tests::counts_regular_and_exact_log_suffixes_per_path_with_nested_spaces_and_hardlinks ... ok
+test workspace_accounting::tests::counts_regular_files_without_read_permission ... ok
+test publisher_policy::tests::refuses_bad_input_schema_rows_uris_digests_and_material_counts ... ok
+test workspace_accounting::tests::log_suffix_match_is_byte_preserving ... ok
+test workspace_accounting::tests::later_sampling_observes_a_regular_log_file_growing ... ok
+test release_manifest::tests::enforces_inventory_count_and_aggregate_byte_bounds ... ok
+test workspace_accounting::tests::missing_initial_root_is_zero_but_a_root_symlink_refuses ... ok
+test workspace_accounting::tests::skips_only_enoent_for_entry_stat_and_child_directory_open ... ok
+test signals::tests::sigterm_lifecycle_and_thread_mask_are_isolated_in_a_child_process ... ok
+test records::tests::project_lock_uses_its_frozen_one_mibibyte_limit ... ok
+test workspace_accounting::tests::symlinks_and_special_entries_contribute_zero_without_opening_targets ... ok
+test elf::tests::accepts_objects_above_reference_thresholds_including_large_bss ... ok
+test receipts::tests::inventory_count_and_total_profile_accept_exact_boundary_only ... ok
+test package::tests::refuses_header_only_scripts_wrong_host_and_malformed_linux_pies_after_reindexing ... ok
+test process_snapshot::tests::traverses_deep_reversed_process_chain_and_preserves_row_order ... ok
+test publisher_tar::tests::enforces_archive_size_and_member_count_boundaries ... ok
+test json::tests::enforces_every_frozen_profile_byte_limit_including_exact_boundary ... ok
+test process_capture::tests::captures_argv_environment_cwd_stdin_and_both_streams ... ok
+test transaction::tests::filesystem_transactions_and_real_sigterm_are_isolated_in_a_child ... ok
+test package::tests::accepts_current_host_compiler_executable_header_without_running_fixture_copy ... ok
+test process_capture::tests::cancellation_panic_still_terminates_and_reaps_child_group ... ok
+test process_capture::tests::timeout_and_independent_stream_limits_terminate_the_child ... ok
+test process_capture::tests::cancellation_and_descendant_pipe_retention_clean_same_group ... ok
+test mutations::tests::deep_tree_removal_uses_heap_frames_not_call_stack_recursion ... ok
+
+test result: ok. 233 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 22.23s
+
+     Running tests/process_scope_oracles.rs (tooling/target/debug/deps/process_scope_oracles-a5f336d7c048cef5)
+
+running 1 test
+test reproduces_all_frozen_historical_scope_and_rss_decisions ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/release_manifest_oracles.rs (tooling/target/debug/deps/release_manifest_oracles-e41bcd815f6441b9)
+
+running 1 test
+test pinned_historical_manifest_cases_and_declared_contract_differences ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests ami_rust_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

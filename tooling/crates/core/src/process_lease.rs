@@ -1,0 +1,489 @@
+//! Wait-ownership lease for a command started as a new POSIX process group.
+//!
+//! The direct child is the reservation for its root process-group ID. Callers
+//! must set the child's process group to its own PID before starting it, call
+//! [`ensure_waitable_sigchld`] before spawning, and keep this lease as the sole
+//! reaping owner. Do not run a competing waiter. Every signal authorization
+//! rechecks the unreaped child with `waitid(WNOWAIT)`; loss of wait ownership
+//! disables all later signalling. This protects only the direct child and its
+//! original process group, not descendants that move to another group/session.
+//! Kernel waits and `Drop` cleanup are not hard-deadline operations.
+
+#![deny(unsafe_op_in_unsafe_fn)]
+
+use std::{
+    io,
+    process::{Child, ChildStderr, ChildStdout, ExitStatus},
+    thread,
+    time::Duration,
+};
+
+/// Confirm that child statuses remain waitable before a lease is created.
+///
+/// Call this before spawning the child. The caller must also ensure that no
+/// other thread or handler reaps children owned by this operation.
+pub(crate) fn ensure_waitable_sigchld() -> io::Result<()> {
+    posix::ensure_waitable_sigchld()
+}
+
+/// Owns one direct child and the process group whose ID equals that child's
+/// PID. Group IDs are derived from the leased child and are never caller input.
+pub(crate) struct ChildLease {
+    child: Child,
+    pid: u32,
+    root_group: libc::pid_t,
+    grace: Duration,
+    status: Option<ExitStatus>,
+    reaping_lost: bool,
+}
+
+impl ChildLease {
+    /// Create a lease for a child already started as a new process-group leader.
+    ///
+    /// The command must have used `process_group(0)` (or the equivalent) before
+    /// spawn. If the returned child ID cannot be represented as a positive
+    /// `pid_t`, this method kills and waits for only that owned child, then
+    /// returns the validation error with any cleanup failure included.
+    pub(crate) fn new(mut child: Child, grace: Duration) -> io::Result<Self> {
+        let pid = child.id();
+        let Ok(root_group) = libc::pid_t::try_from(pid) else {
+            return Err(invalid_child_id(&mut child, pid));
+        };
+        if root_group <= 0 {
+            return Err(invalid_child_id(&mut child, pid));
+        }
+        Ok(Self {
+            child,
+            pid,
+            root_group,
+            grace,
+            status: None,
+            reaping_lost: false,
+        })
+    }
+
+    pub(crate) fn pid(&self) -> u32 {
+        self.pid
+    }
+
+    pub(crate) fn status(&self) -> Option<ExitStatus> {
+        self.status
+    }
+
+    pub(crate) fn reaping_lost(&self) -> bool {
+        self.reaping_lost
+    }
+
+    pub(crate) fn take_stdout(&mut self) -> Option<ChildStdout> {
+        self.child.stdout.take()
+    }
+
+    pub(crate) fn take_stderr(&mut self) -> Option<ChildStderr> {
+        self.child.stderr.take()
+    }
+
+    /// Observe exit without reaping, keeping the PID reserved for group cleanup.
+    pub(crate) fn observe_exit(&mut self) -> io::Result<bool> {
+        if self.reaping_lost {
+            return Err(ownership_lost());
+        }
+        if self.status.is_some() {
+            return Ok(true);
+        }
+        match posix::child_exited(self.root_group) {
+            Err(error) if error.raw_os_error() == Some(libc::ECHILD) => {
+                self.reaping_lost = true;
+                Err(error)
+            }
+            result => result,
+        }
+    }
+
+    /// Signal only the original child process group while the child remains
+    /// wait-owned and unreaped. ESRCH means the group is empty and is accepted.
+    pub(crate) fn signal_root_group(&mut self, signal: libc::c_int) -> io::Result<()> {
+        self.signal_root_group_with(signal, posix::signal_group)
+    }
+
+    fn signal_root_group_with(
+        &mut self,
+        signal: libc::c_int,
+        mut send: impl FnMut(libc::pid_t, libc::c_int) -> io::Result<()>,
+    ) -> io::Result<()> {
+        // A true result still leaves the direct child unreaped, reserving its
+        // PID/PGID while same-group descendants may need cleanup.
+        let _ = self.observe_exit()?;
+        if self.status.is_some() || self.reaping_lost {
+            return Err(ownership_lost());
+        }
+        send(self.root_group, signal)
+    }
+
+    /// Kill the direct child only when WNOWAIT confirms it has not exited.
+    pub(crate) fn kill_direct_child(&mut self) -> io::Result<()> {
+        self.kill_direct_child_with(|child| child.kill())
+    }
+
+    fn kill_direct_child_with(
+        &mut self,
+        kill: impl FnOnce(&mut Child) -> io::Result<()>,
+    ) -> io::Result<()> {
+        let exited = self.observe_exit()?;
+        if self.status.is_some() || self.reaping_lost {
+            return Err(ownership_lost());
+        }
+        if exited {
+            return Ok(());
+        }
+        kill(&mut self.child)
+    }
+
+    /// Reap and cache the actual direct-child wait status.
+    pub(crate) fn reap(&mut self) -> io::Result<()> {
+        if self.reaping_lost {
+            return Err(ownership_lost());
+        }
+        if self.status.is_none() {
+            match self.child.wait() {
+                Ok(status) => self.status = Some(status),
+                Err(error) if error.raw_os_error() == Some(libc::ECHILD) => {
+                    self.reaping_lost = true;
+                    return Err(error);
+                }
+                Err(error) => return Err(error),
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Drop for ChildLease {
+    fn drop(&mut self) {
+        if self.status.is_some() || self.reaping_lost || self.observe_exit().is_err() {
+            return;
+        }
+
+        let _ = self.signal_root_group(libc::SIGTERM);
+        thread::sleep(self.grace);
+
+        // Every signal rechecks wait ownership. An observation error stops
+        // cleanup; an ECHILD observation permanently records lost ownership.
+        if self.status.is_some() || self.reaping_lost || self.observe_exit().is_err() {
+            return;
+        }
+        let _ = self.signal_root_group(libc::SIGKILL);
+        if self.status.is_some() || self.reaping_lost {
+            return;
+        }
+        // A failed signal authorization must not lead to a blocking wait for
+        // a possibly still-running child. Drop cannot report cleanup errors;
+        // leave the failed observation/signal to the explicit caller instead.
+        if self.kill_direct_child().is_err() {
+            return;
+        }
+        let _ = self.reap();
+    }
+}
+
+fn ownership_lost() -> io::Error {
+    io::Error::new(
+        io::ErrorKind::PermissionDenied,
+        "child wait ownership is unavailable; refusing to signal a possibly reused PID or process group",
+    )
+}
+
+fn invalid_child_id(child: &mut Child, pid: u32) -> io::Error {
+    let kill = child.kill();
+    let wait = child.wait();
+    io::Error::new(
+        io::ErrorKind::InvalidData,
+        format!(
+            "spawned child PID {pid} is not a positive representable pid_t; owned-child cleanup: kill={kill:?}, wait={wait:?}"
+        ),
+    )
+}
+
+mod posix {
+    use std::{io, mem::MaybeUninit, ptr};
+
+    #[allow(unsafe_code, reason = "POSIX sigaction requires libc structures.")]
+    pub(super) fn ensure_waitable_sigchld() -> io::Result<()> {
+        let mut action = MaybeUninit::<libc::sigaction>::uninit();
+        // SAFETY: a null new-action pointer queries the current process
+        // disposition; the output pointer is valid for sigaction.
+        if unsafe { libc::sigaction(libc::SIGCHLD, ptr::null(), action.as_mut_ptr()) } == -1 {
+            return Err(io::Error::last_os_error());
+        }
+        // SAFETY: successful sigaction initializes the queried action.
+        let action = unsafe { action.assume_init() };
+        if action.sa_sigaction != libc::SIG_DFL || action.sa_flags & libc::SA_NOCLDWAIT != 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "SIGCHLD disposition does not preserve waitable child status",
+            ));
+        }
+        Ok(())
+    }
+
+    #[allow(
+        unsafe_code,
+        reason = "POSIX process-group signalling requires kill(2)."
+    )]
+    pub(super) fn signal_group(group: libc::pid_t, signal: libc::c_int) -> io::Result<()> {
+        // SAFETY: getpgrp has no pointer arguments or side effects.
+        let caller_group = unsafe { libc::getpgrp() };
+        if group <= 0 || group == caller_group {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "leased process-group ID must be positive and different from the caller group",
+            ));
+        }
+        // SAFETY: the group is a positive ID derived from the unreaped direct
+        // child; a negative value targets only that process group.
+        if unsafe { libc::kill(-group, signal) } == 0 {
+            return Ok(());
+        }
+        let error = io::Error::last_os_error();
+        if error.raw_os_error() == Some(libc::ESRCH) {
+            Ok(())
+        } else {
+            Err(error)
+        }
+    }
+
+    #[allow(unsafe_code, reason = "POSIX WNOWAIT observation requires waitid(2).")]
+    pub(super) fn child_exited(pid: libc::pid_t) -> io::Result<bool> {
+        bounded_wait_observation(|| {
+            let mut info = MaybeUninit::<libc::siginfo_t>::zeroed();
+            // SAFETY: waitid writes siginfo on success. WNOWAIT observes the
+            // exit without reaping and preserves the child's PID reservation.
+            let result = unsafe {
+                libc::waitid(
+                    libc::P_PID,
+                    pid as libc::id_t,
+                    info.as_mut_ptr(),
+                    libc::WEXITED | libc::WNOHANG | libc::WNOWAIT,
+                )
+            };
+            if result == -1 {
+                return Err(io::Error::last_os_error());
+            }
+            // SAFETY: successful waitid initializes siginfo_t, including when
+            // WNOHANG reports no state change (si_pid is then zero).
+            let info = unsafe { info.assume_init() };
+            // SAFETY: si_pid is defined for the SIGCHLD information returned
+            // by a P_PID waitid request.
+            Ok(unsafe { info.si_pid() } != 0)
+        })
+    }
+
+    /// A signal storm must not trap the caller in a userspace retry loop.
+    /// Exhaustion is an observation error, never authorization to signal.
+    pub(super) fn bounded_wait_observation(
+        mut observe: impl FnMut() -> io::Result<bool>,
+    ) -> io::Result<bool> {
+        const MAX_ATTEMPTS: usize = 8;
+        for attempt in 0..MAX_ATTEMPTS {
+            match observe() {
+                Err(error)
+                    if error.kind() == io::ErrorKind::Interrupted && attempt + 1 < MAX_ATTEMPTS => {
+                }
+                result => return result,
+            }
+        }
+        unreachable!("the final observation returns its result")
+    }
+
+    #[cfg(test)]
+    #[allow(
+        unsafe_code,
+        reason = "The ECHILD fixture directly reaps only its own test child."
+    )]
+    pub(super) fn reap_direct_child(pid: libc::pid_t) -> io::Result<i32> {
+        loop {
+            let mut status = 0;
+            // SAFETY: tests call this only for a direct child spawned by the
+            // current test process; it intentionally simulates competing reap.
+            let waited = unsafe { libc::waitpid(pid, &mut status, 0) };
+            if waited == pid {
+                return Ok(status);
+            }
+            let error = io::Error::last_os_error();
+            if error.kind() == io::ErrorKind::Interrupted {
+                continue;
+            }
+            return Err(error);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{
+        os::unix::process::{CommandExt, ExitStatusExt},
+        process::{Command, Stdio},
+        time::Instant,
+    };
+
+    const FIXTURE_NAME: &str = "process_lease::tests::child_fixture_entry";
+    const FIXTURE_TOKEN: &str = "ami-rust-core-process-lease-v1";
+
+    fn spawn_fixture(mode: &str) -> Child {
+        let mut command = Command::new(std::env::current_exe().expect("test executable path"));
+        command
+            .args(["--exact", FIXTURE_NAME, "--nocapture", "--test-threads=1"])
+            .env("AMI_PROCESS_LEASE_FIXTURE_TOKEN", FIXTURE_TOKEN)
+            .env("AMI_PROCESS_LEASE_FIXTURE_MODE", mode)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .process_group(0);
+        command
+            .spawn()
+            .expect("spawn isolated process-lease fixture")
+    }
+
+    #[test]
+    fn child_fixture_entry() {
+        if std::env::var("AMI_PROCESS_LEASE_FIXTURE_TOKEN")
+            .ok()
+            .as_deref()
+            != Some(FIXTURE_TOKEN)
+        {
+            return;
+        }
+        match std::env::var("AMI_PROCESS_LEASE_FIXTURE_MODE").as_deref() {
+            Ok("hold") => loop {
+                thread::sleep(Duration::from_secs(30));
+            },
+            Ok("exit") => {}
+            other => panic!("unknown process-lease fixture mode: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn interrupted_observation_is_bounded_without_inventing_wait_ownership() {
+        let mut attempts = 0;
+        let error = posix::bounded_wait_observation(|| {
+            attempts += 1;
+            Err(io::Error::from_raw_os_error(libc::EINTR))
+        })
+        .expect_err("an interrupted observation is not an ownership check");
+        assert_eq!(error.raw_os_error(), Some(libc::EINTR));
+        assert_eq!(attempts, 8, "a signal storm must return to the caller");
+
+        for exited in [false, true] {
+            let mut attempts = 0;
+            let observed = posix::bounded_wait_observation(|| {
+                attempts += 1;
+                if attempts < 3 {
+                    Err(io::Error::from_raw_os_error(libc::EINTR))
+                } else {
+                    Ok(exited)
+                }
+            })
+            .expect("a successful later syscall retains its actual observation");
+            assert_eq!(observed, exited);
+            assert_eq!(attempts, 3);
+        }
+
+        let mut attempts = 0;
+        let error = posix::bounded_wait_observation(|| {
+            attempts += 1;
+            Err(io::Error::from_raw_os_error(libc::ECHILD))
+        })
+        .unwrap_err();
+        assert_eq!(error.raw_os_error(), Some(libc::ECHILD));
+        assert_eq!(attempts, 1, "ownership loss is never retried");
+    }
+
+    #[test]
+    fn observes_signals_and_reaps_the_owned_direct_child() {
+        ensure_waitable_sigchld().expect("test process must retain waitable child status");
+        let child = spawn_fixture("hold");
+        let mut lease = ChildLease::new(child, Duration::from_millis(20)).unwrap();
+        let pid = lease.pid();
+        assert!(pid > 0);
+        assert_eq!(lease.status(), None);
+        assert!(!lease.reaping_lost());
+        assert!(!lease.observe_exit().unwrap());
+
+        lease
+            .signal_root_group(libc::SIGTERM)
+            .expect("signal only the leased root group");
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !lease.observe_exit().expect("wait ownership remains held") {
+            assert!(
+                Instant::now() < deadline,
+                "fixture did not exit after SIGTERM"
+            );
+            thread::sleep(Duration::from_millis(10));
+        }
+        assert_eq!(lease.status(), None, "WNOWAIT must not reap the child");
+        lease.reap().expect("reap direct child after group cleanup");
+        assert_eq!(
+            lease.status().and_then(|status| status.signal()),
+            Some(libc::SIGTERM)
+        );
+        assert!(!lease.reaping_lost());
+
+        let mut backend_called = false;
+        assert!(
+            lease
+                .signal_root_group_with(libc::SIGTERM, |_, _| {
+                    backend_called = true;
+                    Ok(())
+                })
+                .is_err()
+        );
+        assert!(!backend_called, "a reaped root group must not be signalled");
+    }
+
+    #[test]
+    fn lost_wait_ownership_blocks_group_and_child_signal_backends() {
+        ensure_waitable_sigchld().expect("test process must retain waitable child status");
+        let child = spawn_fixture("exit");
+        let mut lease = ChildLease::new(child, Duration::from_millis(1)).unwrap();
+        let pid = lease.pid();
+
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !lease.observe_exit().unwrap() {
+            assert!(Instant::now() < deadline, "exit fixture did not finish");
+            thread::sleep(Duration::from_millis(10));
+        }
+        // An earlier WNOWAIT exit observation must not replace a fresh check
+        // immediately before a later signal-authorization attempt.
+        let raw_status = posix::reap_direct_child(pid as libc::pid_t)
+            .expect("controlled fixture reaper consumes only its own direct child");
+        assert_eq!(raw_status, 0);
+        let mut group_backend_called = false;
+        let error = lease
+            .signal_root_group_with(libc::SIGKILL, |_, _| {
+                group_backend_called = true;
+                Ok(())
+            })
+            .expect_err("fresh signal guard must notice the intervening external reap");
+        assert_eq!(error.raw_os_error(), Some(libc::ECHILD));
+        assert!(lease.reaping_lost());
+        assert!(
+            !group_backend_called,
+            "no group backend after an intervening reap"
+        );
+
+        let mut child_backend_called = false;
+        assert!(
+            lease
+                .kill_direct_child_with(|_| {
+                    child_backend_called = true;
+                    Ok(())
+                })
+                .is_err()
+        );
+        assert!(
+            !child_backend_called,
+            "direct-child kill backend must not run after wait ownership is lost"
+        );
+        assert!(lease.reap().is_err());
+    }
+}
