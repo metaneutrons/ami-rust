@@ -61,3 +61,9 @@ The copied oracle records identify their source and pinned interpreter; their
 Python exception for the over-limit integer remains recorded. Receipt parsing
 has independent review and focused tests. Full both-host CI, filesystem/release
 binding and all remaining RC1 acceptance criteria are separate gates.
+
+The [exact-source local result](evidence/rc1-receipts-local-20261019/result.json)
+records 103 passing core tests plus the real Cargo/frontend integration,
+formatting and Clippy with warnings denied on macOS using Rust 1.98.1.
+The isolated signal/transaction child fixtures are executed by their parents;
+no new consumer command or both-host receipt qualification is claimed.
