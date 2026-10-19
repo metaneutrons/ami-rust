@@ -432,12 +432,7 @@ pub fn run_build(
         },
     });
     signals.check()?;
-    write_new_file(
-        &root,
-        "build-receipt.json",
-        &pretty_json_line(&receipt)?,
-        0o600,
-    )?;
+    write_build_receipt(&root, &pretty_json_line(&receipt)?, signals)?;
 
     Ok(BuildResult {
         exit_code: 0,
@@ -1056,6 +1051,88 @@ fn write_new_file(directory: &Directory, name: &str, bytes: &[u8], mode: u32) ->
     Ok(())
 }
 
+fn write_build_receipt(directory: &Directory, bytes: &[u8], signals: &SigtermGuard) -> Result<()> {
+    write_build_receipt_with_sync(directory, bytes, signals, File::sync_all)
+}
+
+fn write_build_receipt_with_sync(
+    directory: &Directory,
+    bytes: &[u8],
+    signals: &SigtermGuard,
+    sync_file: impl FnOnce(&File) -> std::io::Result<()>,
+) -> Result<()> {
+    let temporary = random_build_receipt_name()?;
+    let mut created = false;
+    let mut published = false;
+    let result = (|| {
+        signals.check()?;
+        let mut file = signals.with_blocked(|| {
+            directory.create_new_file_tracked(&temporary, 0o600, || created = true)
+        })?;
+        signals.check()?;
+        file.write_all(bytes)?;
+        sync_file(&file).map_err(|error| {
+            Refusal::new(format!("could not sync native build receipt: {error}"))
+        })?;
+        signals.check()?;
+        signals.with_blocked(|| {
+            directory.rename_no_replace(&temporary, directory, OsStr::new("build-receipt.json"))?;
+            published = true;
+            Ok(())
+        })?;
+        directory.sync_best_effort();
+        signals.check().map_err(|error| {
+            Refusal::new(format!(
+                "build receipt was published but SIGTERM requested a stop: {error}"
+            ))
+        })?;
+        Ok(())
+    })();
+
+    if created
+        && !published
+        && let Err(cleanup) = directory.unlink_entry(&temporary)
+    {
+        return Err(Refusal::new(format!(
+            "{}; build receipt staging file {} could not be removed: {cleanup}",
+            result.as_ref().err().map_or_else(
+                || "build receipt was not published".to_owned(),
+                ToString::to_string
+            ),
+            temporary.to_string_lossy()
+        )));
+    }
+    match result {
+        Ok(()) if published => Ok(()),
+        Ok(()) => Err(Refusal::new("build receipt was not published")),
+        Err(error) if published => Err(Refusal::new(format!(
+            "build receipt was published but a later operation failed: {error}"
+        ))),
+        Err(error) => Err(error),
+    }
+}
+
+#[allow(
+    unsafe_code,
+    reason = "getentropy supplies a private exclusive receipt staging basename."
+)]
+fn random_build_receipt_name() -> Result<OsString> {
+    let mut bytes = [0_u8; 12];
+    // SAFETY: getentropy writes to this initialized 12-byte buffer, within its
+    // documented maximum. macOS and Linux provide this API.
+    if unsafe { libc::getentropy(bytes.as_mut_ptr().cast(), bytes.len()) } != 0 {
+        return Err(Refusal::new(format!(
+            "could not generate a private build receipt staging name: {}",
+            std::io::Error::last_os_error()
+        )));
+    }
+    let mut name = OsString::from(".ami-rust-build-receipt-");
+    for byte in bytes {
+        name.push(format!("{byte:02x}"));
+    }
+    Ok(name)
+}
+
 fn copy_new_file(source: &Path, directory: &Directory, name: &str, mode: u32) -> Result<()> {
     let mut source_file = File::open(source)?;
     if !source_file.metadata()?.is_file() {
@@ -1160,6 +1237,9 @@ impl HostBuildTriple for Host {
 mod tests {
     use super::*;
     use crate::resource_capture::ResourceReport;
+    use std::os::unix::fs::PermissionsExt;
+
+    const RECEIPT_CHILD_MODE: &str = "AMI_NATIVE_BUILD_RECEIPT_FIXTURE";
 
     fn cargo_artifact_message(kind: &str, filename: &str) -> String {
         json!({
@@ -1175,6 +1255,78 @@ mod tests {
         let (ram, available_disk) = host_capacity(&std::env::temp_dir()).unwrap();
         assert!(ram > 0 && available_disk > 0);
         assert!(host_capacity(Path::new("/ami-rust-nonexistent-capacity-control/absent")).is_err());
+    }
+
+    #[test]
+    fn build_receipt_publication_controls_run_with_isolated_signal_state() {
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "native_build::tests::build_receipt_child_fixture",
+                "--ignored",
+                "--nocapture",
+            ])
+            .env_clear()
+            .env("HOME", std::env::var_os("HOME").unwrap())
+            .env("PATH", "/usr/bin:/bin")
+            .env("LC_ALL", "C")
+            .env(RECEIPT_CHILD_MODE, "1")
+            .output()
+            .expect("spawn isolated build receipt test");
+        assert!(
+            output.status.success(),
+            "build receipt child failed\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    #[test]
+    #[ignore = "run by the parent test with isolated process-wide signal state"]
+    fn build_receipt_child_fixture() {
+        assert_eq!(std::env::var(RECEIPT_CHILD_MODE).as_deref(), Ok("1"));
+        let path = std::fs::canonicalize(std::env::temp_dir())
+            .unwrap()
+            .join(format!(
+                ".ami-rust-build-receipt-test-{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+        std::fs::create_dir(&path).expect("create receipt fixture");
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700))
+            .expect("make receipt fixture private");
+        let directory = Directory::open(&path).expect("open receipt fixture");
+        let signals = SigtermGuard::acquire().expect("install isolated signal guard");
+        let receipt = b"{\"schema\":\"ami-rust-native-build-receipt-v1\",\"status\":\"PASS\"}\n";
+        let final_path = path.join("build-receipt.json");
+
+        write_build_receipt_with_sync(&directory, receipt, &signals, File::sync_all)
+            .expect("publish synced build receipt");
+        assert_eq!(std::fs::read(&final_path).unwrap(), receipt);
+        assert_eq!(std::fs::read_dir(&path).unwrap().count(), 1);
+        std::fs::remove_file(&final_path).expect("remove positive control receipt");
+
+        let failed = write_build_receipt_with_sync(&directory, receipt, &signals, |_| {
+            Err(std::io::Error::other("injected sync failure after write"))
+        });
+        assert!(failed.is_err());
+        assert!(!final_path.exists(), "failed sync published a PASS receipt");
+        assert_eq!(std::fs::read_dir(&path).unwrap().count(), 0);
+
+        let existing = b"existing receipt";
+        std::fs::write(&final_path, existing).expect("create collision control");
+        assert!(
+            write_build_receipt_with_sync(&directory, receipt, &signals, File::sync_all).is_err()
+        );
+        assert_eq!(std::fs::read(&final_path).unwrap(), existing);
+        assert_eq!(std::fs::read_dir(&path).unwrap().count(), 1);
+
+        drop(directory);
+        signals.finish().expect("restore signal handler");
+        std::fs::remove_dir_all(path).expect("remove receipt fixture");
     }
 
     #[test]

@@ -368,6 +368,7 @@ pub fn migrate(
         &project_path,
         output,
         legacy.binding.as_deref(),
+        (&legacy.cargo.manifest_sha256, &legacy.cargo.lock_sha256),
         signals,
     )?;
     Ok(write_result(legacy, written, &installation, recipe.version))

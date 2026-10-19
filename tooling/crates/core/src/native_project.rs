@@ -270,6 +270,7 @@ pub(crate) fn lock_project_for_migration(
     project: &Path,
     output: &Path,
     expected_legacy_binding: Option<&[u8]>,
+    expected_cargo: (&str, &str),
     signals: &SigtermGuard,
 ) -> Result<ProjectLockResult> {
     lock_project_impl(
@@ -277,14 +278,23 @@ pub(crate) fn lock_project_for_migration(
         selection,
         project,
         output,
-        BindingPolicy::Retained(expected_legacy_binding),
+        BindingPolicy::Retained {
+            binding: expected_legacy_binding,
+            cargo_manifest_sha256: expected_cargo.0,
+            cargo_lock_sha256: expected_cargo.1,
+        },
         signals,
     )
 }
 
+#[derive(Clone, Copy)]
 enum BindingPolicy<'a> {
     Current,
-    Retained(Option<&'a [u8]>),
+    Retained {
+        binding: Option<&'a [u8]>,
+        cargo_manifest_sha256: &'a str,
+        cargo_lock_sha256: &'a str,
+    },
 }
 
 fn lock_project_impl(
@@ -308,7 +318,9 @@ fn lock_project_impl(
                 validate_sdk_binding(raw, installation)?;
             }
         }
-        BindingPolicy::Retained(expected) => {
+        BindingPolicy::Retained {
+            binding: expected, ..
+        } => {
             if binding.as_deref() != expected {
                 return Err(Refusal::new(
                     "legacy project SDK binding changed during migration",
@@ -317,6 +329,14 @@ fn lock_project_impl(
         }
     }
     let cargo = cargo_identity(&project_root, signals)?;
+    if let BindingPolicy::Retained {
+        cargo_manifest_sha256,
+        cargo_lock_sha256,
+        ..
+    } = binding_policy
+    {
+        require_legacy_cargo_identity(&cargo, cargo_manifest_sha256, cargo_lock_sha256)?;
+    }
     let lock_bytes = encode_project_lock(installation, selection, host, &cli_sha256, &cargo)?;
     signals.check()?;
     installation.recheck()?;
@@ -868,6 +888,21 @@ fn hash_regular_at(root: &Directory, name: &OsStr, signals: &SigtermGuard) -> Re
     Ok(crate::digest::encode_hex(&digest))
 }
 
+fn require_legacy_cargo_identity(
+    observed: &CargoIdentity,
+    expected_manifest_sha256: &str,
+    expected_lock_sha256: &str,
+) -> Result<()> {
+    if observed.manifest_sha256 != expected_manifest_sha256
+        || observed.lock_sha256 != expected_lock_sha256
+    {
+        return Err(Refusal::new(
+            "project Cargo inputs differ from the validated legacy migration pins",
+        ));
+    }
+    Ok(())
+}
+
 fn sdk_source_rows(installation: &CheckedNativeInstallation) -> Result<(Vec<SdkSourceRow>, u64)> {
     let mut rows = installation
         .file_identities()
@@ -1417,5 +1452,36 @@ mod tests {
         assert_eq!(SDK_SOURCE_FILE_LIMIT, 1_000);
         assert_eq!(SDK_SOURCE_BYTE_LIMIT, 8 * 1024 * 1024);
         assert_eq!(PROJECT_LOCK_NAME, "ami-rust.lock.json");
+    }
+
+    #[test]
+    fn migration_lock_writer_refuses_cargo_hashes_outside_legacy_pins() {
+        let expected_manifest = "a".repeat(64);
+        let expected_lock = "b".repeat(64);
+        let expected = CargoIdentity {
+            manifest_sha256: expected_manifest.clone(),
+            lock_sha256: expected_lock.clone(),
+        };
+        assert!(
+            require_legacy_cargo_identity(&expected, &expected_manifest, &expected_lock).is_ok()
+        );
+
+        let changed_manifest = CargoIdentity {
+            manifest_sha256: "c".repeat(64),
+            lock_sha256: expected_lock.clone(),
+        };
+        assert!(
+            require_legacy_cargo_identity(&changed_manifest, &expected_manifest, &expected_lock)
+                .is_err()
+        );
+
+        let changed_lock = CargoIdentity {
+            manifest_sha256: expected_manifest.clone(),
+            lock_sha256: "d".repeat(64),
+        };
+        assert!(
+            require_legacy_cargo_identity(&changed_lock, &expected_manifest, &expected_lock)
+                .is_err()
+        );
     }
 }
