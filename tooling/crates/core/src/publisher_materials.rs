@@ -394,6 +394,7 @@ fn append_native_materials(
         "tooling/crates/core/src/macos_process_snapshot.c",
         "tooling/crates/core/src/macos_process_snapshot.rs",
         "tooling/crates/xtask/src/native_release.rs",
+        "tooling/macos-host-selection.rs",
         "tooling/fixtures/accepted-r1-inputs.json",
         "tooling/fixtures/accepted-r1-support-inputs.json",
         "tools/bootstrap-host-rust.sh",
@@ -1422,6 +1423,22 @@ mod tests {
             std::fs::write(&config_path, serde_json::to_vec(&native).unwrap()).unwrap();
             let root = Directory::open(&temporary).unwrap();
             append_native_materials(&root, "0.2.0", &mut BTreeMap::new(), &mut || Ok(())).unwrap();
+
+            let selector_path = "tooling/macos-host-selection.rs";
+            let mut missing_selector = native.clone();
+            missing_selector["source_files"]
+                .as_array_mut()
+                .unwrap()
+                .retain(|path| path.as_str() != Some(selector_path));
+            std::fs::write(&config_path, serde_json::to_vec(&missing_selector).unwrap()).unwrap();
+            assert!(
+                append_native_materials(&root, "0.2.0", &mut BTreeMap::new(), &mut || Ok(()))
+                    .unwrap_err()
+                    .to_string()
+                    .contains("omits a required input")
+            );
+            std::fs::write(&config_path, serde_json::to_vec(&native).unwrap()).unwrap();
+
             std::fs::write(temporary.join("tooling/Cargo.lock"), b"changed lock").unwrap();
             assert!(
                 append_native_materials(&root, "0.2.0", &mut BTreeMap::new(), &mut || Ok(()))

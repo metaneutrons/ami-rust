@@ -1922,6 +1922,28 @@ mod linux {
                 }
                 println!("ADAPTER_NATIVE_POSITIVE");
             }
+            "positive-spawn" => {
+                let path = required(args, "--path")?;
+                let self_path = env::current_exe().map_err(|error| error.to_string())?;
+                // Exercise the same Command::output setup as the refusal
+                // controls, including opening /dev/null for the child's stdin.
+                let output = Command::new(self_path)
+                    .args(["--control", "positive", "--path", path])
+                    .output()
+                    .map_err(|error| format!("launch native positive descendant: {error}"))?;
+                if !output.status.success()
+                    || output.stdout != b"ADAPTER_NATIVE_POSITIVE\n"
+                    || !output.stderr.is_empty()
+                {
+                    return Err(format!(
+                        "native positive descendant failed: status={:?} stdout={:?} stderr={:?}",
+                        output.status.code(),
+                        output.stdout,
+                        output.stderr
+                    ));
+                }
+                println!("ADAPTER_NATIVE_DESCENDANT_POSITIVE");
+            }
             "direct" => {
                 let python = required(args, "--python")?;
                 match Command::new(python)

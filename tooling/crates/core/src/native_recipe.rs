@@ -137,6 +137,7 @@ pub struct NativeBuildRecipe {
     pub paths: NativeRecipePaths,
     pub host: Host,
     pub source_date_epoch: u64,
+    macos_host_paths: Option<(PathBuf, PathBuf)>,
 }
 
 impl NativeBuildRecipe {
@@ -145,7 +146,19 @@ impl NativeBuildRecipe {
             paths,
             host,
             source_date_epoch,
+            macos_host_paths: None,
         }
+    }
+
+    /// Select the already verified native Apple compiler and SDK for Cargo's
+    /// host build scripts and procedural macros. AROS target tools and flags
+    /// remain independent of this host-only selection.
+    pub fn select_macos_host_tools(&mut self, clang: PathBuf, sdk: PathBuf) -> Result<()> {
+        if self.host != Host::MacosAarch64 || !clang.is_absolute() || !sdk.is_absolute() {
+            return Err(Refusal::new("invalid explicit macOS host-tool selection"));
+        }
+        self.macos_host_paths = Some((clang, sdk));
+        Ok(())
     }
 
     pub fn artifact_dir(&self) -> PathBuf {
@@ -266,8 +279,16 @@ impl NativeBuildRecipe {
             .map_err(|_| Refusal::new("cannot encode vendored Cargo directory"))?;
         let host_flags = serde_json::to_string(&host_flags)
             .map_err(|_| Refusal::new("cannot encode Cargo host remap flags"))?;
+        let linker = self.macos_host_paths.as_ref().map_or_else(
+            || Ok(String::new()),
+            |(clang, _)| {
+                serde_json::to_string(path_utf8(clang)?)
+                    .map(|encoded| format!("linker={encoded}\n"))
+                    .map_err(|_| Refusal::new("cannot encode Cargo host linker"))
+            },
+        )?;
         Ok(format!(
-            "target-applies-to-host=false\n[source.crates-io]\nreplace-with=\"vendored\"\n[source.vendored]\ndirectory={vendor}\n[build]\njobs=2\n[host.{host}]\nrustflags={host_flags}\n"
+            "target-applies-to-host=false\n[source.crates-io]\nreplace-with=\"vendored\"\n[source.vendored]\ndirectory={vendor}\n[build]\njobs=2\n[host.{host}]\nrustflags={host_flags}\n{linker}"
         ))
     }
 
@@ -464,7 +485,16 @@ impl NativeBuildRecipe {
             arguments.push(OsString::from("--features"));
             arguments.push(features.clone());
         }
-        self.command_spec(options, self.paths.cargo_program.clone(), arguments)
+        let mut spec = self.command_spec(options, self.paths.cargo_program.clone(), arguments)?;
+        if let Some((clang, sdk)) = &self.macos_host_paths {
+            spec.env
+                .insert(OsString::from("SDKROOT"), sdk.as_os_str().to_os_string());
+            spec.env.insert(
+                OsString::from("CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER"),
+                clang.as_os_str().to_os_string(),
+            );
+        }
+        Ok(spec)
     }
 
     pub fn section_compaction_paths(&self) -> SectionCompactionPaths {
@@ -850,6 +880,46 @@ mod tests {
         assert_eq!(
             link.last().unwrap(),
             OsStr::new("/target tools/lib/clang/11.0.0/lib/aros/libclang_rt.builtins-x86_64.a")
+        );
+    }
+
+    #[test]
+    fn explicit_apple_host_selection_preserves_aros_commands_and_rejects_wrong_host() {
+        let mut linux = recipe();
+        assert!(
+            linux
+                .select_macos_host_tools("/Apple/clang".into(), "/Apple/SDK".into())
+                .is_err()
+        );
+        let mut macos = recipe();
+        macos.host = Host::MacosAarch64;
+        let options = options("hello-aros", &[]);
+        let original = macos.c_compile_spec(&options, CSourceUnit::Entry).unwrap();
+        let target_flags = macos.cargo_environment(&options).unwrap();
+        assert!(
+            macos
+                .select_macos_host_tools("relative".into(), "/Apple/SDK".into())
+                .is_err()
+        );
+        macos
+            .select_macos_host_tools("/Apple tools/clang".into(), "/Apple SDK".into())
+            .unwrap();
+        let target = macos.c_compile_spec(&options, CSourceUnit::Entry).unwrap();
+        assert_eq!(original.program, target.program);
+        assert_eq!(original.args, target.args);
+        assert_eq!(original.env, target.env);
+        assert_eq!(macos.cargo_environment(&options).unwrap(), target_flags);
+        let cargo = macos.cargo_spec(&options).unwrap();
+        assert_eq!(cargo.env[OsStr::new("SDKROOT")], OsStr::new("/Apple SDK"));
+        assert_eq!(
+            cargo.env[OsStr::new("CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER")],
+            OsStr::new("/Apple tools/clang")
+        );
+        assert!(
+            macos
+                .cargo_config_toml(&options)
+                .unwrap()
+                .contains("linker=\"/Apple tools/clang\"\n")
         );
     }
 

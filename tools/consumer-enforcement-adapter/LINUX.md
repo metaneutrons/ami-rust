@@ -104,8 +104,13 @@ read-file and read-library for inputs whose contents are intentionally needed.
 read-tree ROLE PATH grants read-file and directory-listing access below that
 tree. write-tree ROLE PATH grants reads and the supported write, create,
 remove, rename, symlink, and truncate rights below it. Neither directive grants
-execution. Add the runtime loader and ELF dependencies as individually reviewed
-read-file entries. deny-library PATH is enforced by absence of a matching
+execution. Grant the actual ELF `PT_INTERP` loader exact hashed execution as well
+as reads; other ELF dependencies receive individually reviewed read-file entries.
+Native subprocesses using null stdin also need exact `read-file /dev/null`
+access. Without it, `Command::output` can fail before attempting an exec, so
+that error alone cannot establish interpreter refusal. The native descendant
+positive and isolated missing-stdin counterprobe distinguish these cases.
+deny-library PATH is enforced by absence of a matching
 Landlock read allowance; the parser rejects a policy when a read-library
 mapping, read tree, write-tree, or executable rule would also grant access to
 that path. Thus broad system library trees are unsuitable when a denied library
@@ -139,7 +144,8 @@ with observed inputs; this is not a complete system runtime closure):
     exec-tree target-generated-buildscripts /owned/project/target/debug/build
     deny-exec /usr/bin/python3
     deny-library /usr/lib/x86_64-linux-gnu/libpython3.12.so.1.0
-    read-file /lib64/ld-linux-x86-64.so.2
+    exec-hash /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 <64-hex-sha256>
+    read-file /dev/null
     read-library /owned/sdk/lib/libclosed-sdk.so <64-hex-sha256>
     read-file /usr/lib/x86_64-linux-gnu/libc.so.6
     read-tree source /owned/project

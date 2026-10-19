@@ -1,0 +1,891 @@
+{
+  "cargo_lock_sha256": "b825f28b7530920b0b8b9d359abad658bc52453ab6ae631b75651162928c7322",
+  "cargo_offline": true,
+  "cargo_sha256": "6e17e865f3a20dd55a1d212f849f58b77124179f0de7c52973096d84ba34118d",
+  "case_insensitive_probe": {
+    "samefile": true
+  },
+  "filesystem_comparison": {
+    "case_count": 50,
+    "case_counts": {
+      "archive": 36,
+      "inventory": 14,
+      "total": 50
+    },
+    "decision_counts": {
+      "archive_full_report_equal": 14,
+      "decision_equal": 50,
+      "exit_equal": 50,
+      "python_accept": 17,
+      "rust_accept": 17
+    },
+    "fixture_digest_manifest_sha256": "3fa952f9167b2b54ec694b26f1271cfccd1949b5634cc041132957b623d548a0"
+  },
+  "filesystem_replay_artifacts": {
+    "coordinator.stderr.raw": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "coordinator.stdout.raw": {
+      "bytes": 215,
+      "sha256": "afb5bc01ddd36da2a389d1eb827df505c10df86c355b0d8f20f9ec8d06dbdf8f"
+    },
+    "report.json": {
+      "bytes": 110223,
+      "sha256": "b3a3152ad8dfcaf9127812379eccac755ba84ab530068985afbe26f8eba81571"
+    },
+    "runs/case-plan.json": {
+      "bytes": 26050,
+      "sha256": "888c6e31f671324ef21df124ff28cc5d2c21a61eda269dd119889ad3a36ac86f"
+    },
+    "runs/rust-cases.json": {
+      "bytes": 30950,
+      "sha256": "7e746b9b9c45f93bd45967a6fa9ccc9691f287afbf8948a9bf427d4e90b86dc5"
+    },
+    "runs/rust-child.stderr.raw": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runs/rust-child.stdout.raw": {
+      "bytes": 146,
+      "sha256": "4183b709cdb0fa759198e09c7b2a5945935d1c338038076a6b529d9e3e1c9e7b"
+    }
+  },
+  "fixture_mapping_comparison": {
+    "archive_case_count": 36,
+    "casefold_control_pass": true,
+    "digest_manifest_bytes_equal": true,
+    "fixture_file_pair_count": 72,
+    "mapped_files": [
+      {
+        "bytes": 160,
+        "bytes_equal": true,
+        "case": "absolute",
+        "kind": "tar.xz",
+        "manifest_sha256": "f3218025506a3c2df3c85587994106484057d0d97edf1c113da6a22fd8dd99c0",
+        "new_path": "absolute.tar.xz",
+        "new_sha256": "f3218025506a3c2df3c85587994106484057d0d97edf1c113da6a22fd8dd99c0",
+        "old_path": "absolute.tar.xz",
+        "old_sha256": "f3218025506a3c2df3c85587994106484057d0d97edf1c113da6a22fd8dd99c0"
+      },
+      {
+        "bytes": 130,
+        "bytes_equal": true,
+        "case": "absolute",
+        "kind": "inventory.json",
+        "manifest_sha256": "725e565a715d8a74bcb3095b7882d4aac1d907b19f2cecec5d1c48ea04328b3a",
+        "new_path": "absolute.inventory.json",
+        "new_sha256": "725e565a715d8a74bcb3095b7882d4aac1d907b19f2cecec5d1c48ea04328b3a",
+        "old_path": "absolute.inventory.json",
+        "old_sha256": "725e565a715d8a74bcb3095b7882d4aac1d907b19f2cecec5d1c48ea04328b3a"
+      },
+      {
+        "bytes": 168,
+        "bytes_equal": true,
+        "case": "ancestor-A",
+        "kind": "tar.xz",
+        "manifest_sha256": "dd7766f2955bac23ad4f1a872c35a2620ee5ccb9e9045d798b0d1983b726b787",
+        "new_path": "ancestor-uppercase.tar.xz",
+        "new_sha256": "dd7766f2955bac23ad4f1a872c35a2620ee5ccb9e9045d798b0d1983b726b787",
+        "old_path": "ancestor-A.tar.xz",
+        "old_sha256": "dd7766f2955bac23ad4f1a872c35a2620ee5ccb9e9045d798b0d1983b726b787"
+      },
+      {
+        "bytes": 251,
+        "bytes_equal": true,
+        "case": "ancestor-A",
+        "kind": "inventory.json",
+        "manifest_sha256": "48afc435ce815ee856eaa95ed5681ff58e953e39f29218e3a559741b1d08455a",
+        "new_path": "ancestor-uppercase.inventory.json",
+        "new_sha256": "48afc435ce815ee856eaa95ed5681ff58e953e39f29218e3a559741b1d08455a",
+        "old_path": "ancestor-A.inventory.json",
+        "old_sha256": "48afc435ce815ee856eaa95ed5681ff58e953e39f29218e3a559741b1d08455a"
+      },
+      {
+        "bytes": 168,
+        "bytes_equal": true,
+        "case": "ancestor-a",
+        "kind": "tar.xz",
+        "manifest_sha256": "88aa9138f07391f38ba9f95108a2d2b56eec49984157fb3f872d67517e15b84a",
+        "new_path": "ancestor-lowercase.tar.xz",
+        "new_sha256": "88aa9138f07391f38ba9f95108a2d2b56eec49984157fb3f872d67517e15b84a",
+        "old_path": "ancestor-a.tar.xz",
+        "old_sha256": "88aa9138f07391f38ba9f95108a2d2b56eec49984157fb3f872d67517e15b84a"
+      },
+      {
+        "bytes": 251,
+        "bytes_equal": true,
+        "case": "ancestor-a",
+        "kind": "inventory.json",
+        "manifest_sha256": "9f700366c13e588389b61984aa1b59b847d30a6e71191e4e0dba08452cb25b34",
+        "new_path": "ancestor-lowercase.inventory.json",
+        "new_sha256": "9f700366c13e588389b61984aa1b59b847d30a6e71191e4e0dba08452cb25b34",
+        "old_path": "ancestor-a.inventory.json",
+        "old_sha256": "9f700366c13e588389b61984aa1b59b847d30a6e71191e4e0dba08452cb25b34"
+      },
+      {
+        "bytes": 148,
+        "bytes_equal": true,
+        "case": "ascii-strip",
+        "kind": "tar.xz",
+        "manifest_sha256": "e76898896bcf7d0e639a0e558f53c8ede093510ef9d86127b0b3c4616db24a99",
+        "new_path": "ascii-strip.tar.xz",
+        "new_sha256": "e76898896bcf7d0e639a0e558f53c8ede093510ef9d86127b0b3c4616db24a99",
+        "old_path": "ascii-strip.tar.xz",
+        "old_sha256": "e76898896bcf7d0e639a0e558f53c8ede093510ef9d86127b0b3c4616db24a99"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "ascii-strip",
+        "kind": "inventory.json",
+        "manifest_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "new_path": "ascii-strip.inventory.json",
+        "new_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "old_path": "ascii-strip.inventory.json",
+        "old_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+      },
+      {
+        "bytes": 164,
+        "bytes_equal": true,
+        "case": "backslash",
+        "kind": "tar.xz",
+        "manifest_sha256": "31908986693307f9afb0db3be41e30e59ad494c8e9b3b8acf0f553a06a702da3",
+        "new_path": "backslash.tar.xz",
+        "new_sha256": "31908986693307f9afb0db3be41e30e59ad494c8e9b3b8acf0f553a06a702da3",
+        "old_path": "backslash.tar.xz",
+        "old_sha256": "31908986693307f9afb0db3be41e30e59ad494c8e9b3b8acf0f553a06a702da3"
+      },
+      {
+        "bytes": 135,
+        "bytes_equal": true,
+        "case": "backslash",
+        "kind": "inventory.json",
+        "manifest_sha256": "fcc88c73704cdebd2f29f9f0900c9f80dde06004a1d24ff207c75c65eba6db5a",
+        "new_path": "backslash.inventory.json",
+        "new_sha256": "fcc88c73704cdebd2f29f9f0900c9f80dde06004a1d24ff207c75c65eba6db5a",
+        "old_path": "backslash.inventory.json",
+        "old_sha256": "fcc88c73704cdebd2f29f9f0900c9f80dde06004a1d24ff207c75c65eba6db5a"
+      },
+      {
+        "bytes": 164,
+        "bytes_equal": true,
+        "case": "base256-mode",
+        "kind": "tar.xz",
+        "manifest_sha256": "833c713f16227c291ac07a602de734a30aaacb9dc298fa07ffadc72fb36f8d95",
+        "new_path": "base256-mode.tar.xz",
+        "new_sha256": "833c713f16227c291ac07a602de734a30aaacb9dc298fa07ffadc72fb36f8d95",
+        "old_path": "base256-mode.tar.xz",
+        "old_sha256": "833c713f16227c291ac07a602de734a30aaacb9dc298fa07ffadc72fb36f8d95"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "base256-mode",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "base256-mode.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "base256-mode.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 152,
+        "bytes_equal": true,
+        "case": "continuous",
+        "kind": "tar.xz",
+        "manifest_sha256": "0fd33c11f170a3c3746bb5edeb0d1b15d970e59c670c2199c3d9a18c6dcb0692",
+        "new_path": "continuous.tar.xz",
+        "new_sha256": "0fd33c11f170a3c3746bb5edeb0d1b15d970e59c670c2199c3d9a18c6dcb0692",
+        "old_path": "continuous.tar.xz",
+        "old_sha256": "0fd33c11f170a3c3746bb5edeb0d1b15d970e59c670c2199c3d9a18c6dcb0692"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "continuous",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "continuous.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "continuous.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 152,
+        "bytes_equal": true,
+        "case": "directory",
+        "kind": "tar.xz",
+        "manifest_sha256": "5b7b61d0f4719de64a6f46aaf5dd878688a5196ccf5739e9d162b27bcac6059d",
+        "new_path": "directory.tar.xz",
+        "new_sha256": "5b7b61d0f4719de64a6f46aaf5dd878688a5196ccf5739e9d162b27bcac6059d",
+        "old_path": "directory.tar.xz",
+        "old_sha256": "5b7b61d0f4719de64a6f46aaf5dd878688a5196ccf5739e9d162b27bcac6059d"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "directory",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "directory.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "directory.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 200,
+        "bytes_equal": true,
+        "case": "empty-parsed-pax",
+        "kind": "tar.xz",
+        "manifest_sha256": "5c5dcc8e039cfd0c87f20a9d2596029387284260fe146a128a30184a8f831222",
+        "new_path": "empty-parsed-pax.tar.xz",
+        "new_sha256": "5c5dcc8e039cfd0c87f20a9d2596029387284260fe146a128a30184a8f831222",
+        "old_path": "empty-parsed-pax.tar.xz",
+        "old_sha256": "5c5dcc8e039cfd0c87f20a9d2596029387284260fe146a128a30184a8f831222"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "empty-parsed-pax",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "empty-parsed-pax.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "empty-parsed-pax.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 152,
+        "bytes_equal": true,
+        "case": "fifo",
+        "kind": "tar.xz",
+        "manifest_sha256": "5256b6b6fa6a15f8d8ff8c5a3eea9ff9b46de3842bc5bbe14de2c8ba398d2dc4",
+        "new_path": "fifo.tar.xz",
+        "new_sha256": "5256b6b6fa6a15f8d8ff8c5a3eea9ff9b46de3842bc5bbe14de2c8ba398d2dc4",
+        "old_path": "fifo.tar.xz",
+        "old_sha256": "5256b6b6fa6a15f8d8ff8c5a3eea9ff9b46de3842bc5bbe14de2c8ba398d2dc4"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "fifo",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "fifo.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "fifo.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 216,
+        "bytes_equal": true,
+        "case": "gnu-first-nul",
+        "kind": "tar.xz",
+        "manifest_sha256": "f72454b5214994c5ac5089d4ad3c7391d9f54d657ec408fa5ac68a41a338c662",
+        "new_path": "gnu-first-nul.tar.xz",
+        "new_sha256": "f72454b5214994c5ac5089d4ad3c7391d9f54d657ec408fa5ac68a41a338c662",
+        "old_path": "gnu-first-nul.tar.xz",
+        "old_sha256": "f72454b5214994c5ac5089d4ad3c7391d9f54d657ec408fa5ac68a41a338c662"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "gnu-first-nul",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "gnu-first-nul.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "gnu-first-nul.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 196,
+        "bytes_equal": true,
+        "case": "gnu-longname",
+        "kind": "tar.xz",
+        "manifest_sha256": "91c121281eb0531000468029a734e504a846dd6c2160a77137afc917a4d21116",
+        "new_path": "gnu-longname.tar.xz",
+        "new_sha256": "91c121281eb0531000468029a734e504a846dd6c2160a77137afc917a4d21116",
+        "old_path": "gnu-longname.tar.xz",
+        "old_sha256": "91c121281eb0531000468029a734e504a846dd6c2160a77137afc917a4d21116"
+      },
+      {
+        "bytes": 346,
+        "bytes_equal": true,
+        "case": "gnu-longname",
+        "kind": "inventory.json",
+        "manifest_sha256": "a1a305443b0fea67453a13855ab412e6c722770f64563b96109eae2cee882a27",
+        "new_path": "gnu-longname.inventory.json",
+        "new_sha256": "a1a305443b0fea67453a13855ab412e6c722770f64563b96109eae2cee882a27",
+        "old_path": "gnu-longname.inventory.json",
+        "old_sha256": "a1a305443b0fea67453a13855ab412e6c722770f64563b96109eae2cee882a27"
+      },
+      {
+        "bytes": 152,
+        "bytes_equal": true,
+        "case": "hardlink",
+        "kind": "tar.xz",
+        "manifest_sha256": "41d51c5e2204e9afc80f91d97aab0e8e33c8eeadfcf17cb61831b8ad28c2793f",
+        "new_path": "hardlink.tar.xz",
+        "new_sha256": "41d51c5e2204e9afc80f91d97aab0e8e33c8eeadfcf17cb61831b8ad28c2793f",
+        "old_path": "hardlink.tar.xz",
+        "old_sha256": "41d51c5e2204e9afc80f91d97aab0e8e33c8eeadfcf17cb61831b8ad28c2793f"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "hardlink",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "hardlink.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "hardlink.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 156,
+        "bytes_equal": true,
+        "case": "nonascii-devmajor",
+        "kind": "tar.xz",
+        "manifest_sha256": "23e50a69bae0ef43cd2064a0fe3ae7dff82cf50b677f6837344210ed0cf1606a",
+        "new_path": "nonascii-devmajor.tar.xz",
+        "new_sha256": "23e50a69bae0ef43cd2064a0fe3ae7dff82cf50b677f6837344210ed0cf1606a",
+        "old_path": "nonascii-devmajor.tar.xz",
+        "old_sha256": "23e50a69bae0ef43cd2064a0fe3ae7dff82cf50b677f6837344210ed0cf1606a"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "nonascii-devmajor",
+        "kind": "inventory.json",
+        "manifest_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "new_path": "nonascii-devmajor.inventory.json",
+        "new_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "old_path": "nonascii-devmajor.inventory.json",
+        "old_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+      },
+      {
+        "bytes": 156,
+        "bytes_equal": true,
+        "case": "nonascii-devminor",
+        "kind": "tar.xz",
+        "manifest_sha256": "f0ea57cd47d4cd9bd3cb97ccfbd1608fb0aad7783c59061a4a2b476bdbf6dddc",
+        "new_path": "nonascii-devminor.tar.xz",
+        "new_sha256": "f0ea57cd47d4cd9bd3cb97ccfbd1608fb0aad7783c59061a4a2b476bdbf6dddc",
+        "old_path": "nonascii-devminor.tar.xz",
+        "old_sha256": "f0ea57cd47d4cd9bd3cb97ccfbd1608fb0aad7783c59061a4a2b476bdbf6dddc"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "nonascii-devminor",
+        "kind": "inventory.json",
+        "manifest_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "new_path": "nonascii-devminor.inventory.json",
+        "new_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "old_path": "nonascii-devminor.inventory.json",
+        "old_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+      },
+      {
+        "bytes": 156,
+        "bytes_equal": true,
+        "case": "nonascii-gid",
+        "kind": "tar.xz",
+        "manifest_sha256": "8adb1e07d3515bc6fb24cd5b4462bacbfcc6c9a94f59a7e9c2599d16c82ece8c",
+        "new_path": "nonascii-gid.tar.xz",
+        "new_sha256": "8adb1e07d3515bc6fb24cd5b4462bacbfcc6c9a94f59a7e9c2599d16c82ece8c",
+        "old_path": "nonascii-gid.tar.xz",
+        "old_sha256": "8adb1e07d3515bc6fb24cd5b4462bacbfcc6c9a94f59a7e9c2599d16c82ece8c"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "nonascii-gid",
+        "kind": "inventory.json",
+        "manifest_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "new_path": "nonascii-gid.inventory.json",
+        "new_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "old_path": "nonascii-gid.inventory.json",
+        "old_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+      },
+      {
+        "bytes": 148,
+        "bytes_equal": true,
+        "case": "nonascii-mode",
+        "kind": "tar.xz",
+        "manifest_sha256": "773cca9ee9066c5f02d1c1a6cae273559f6d883fa860da8dfa133ca1ecd0c86c",
+        "new_path": "nonascii-mode.tar.xz",
+        "new_sha256": "773cca9ee9066c5f02d1c1a6cae273559f6d883fa860da8dfa133ca1ecd0c86c",
+        "old_path": "nonascii-mode.tar.xz",
+        "old_sha256": "773cca9ee9066c5f02d1c1a6cae273559f6d883fa860da8dfa133ca1ecd0c86c"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "nonascii-mode",
+        "kind": "inventory.json",
+        "manifest_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "new_path": "nonascii-mode.inventory.json",
+        "new_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "old_path": "nonascii-mode.inventory.json",
+        "old_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+      },
+      {
+        "bytes": 152,
+        "bytes_equal": true,
+        "case": "nonascii-mtime",
+        "kind": "tar.xz",
+        "manifest_sha256": "29c6fce0fca9da1304f2c55e4c003d76adcf8cf0b525d50f44e0ce545067b40c",
+        "new_path": "nonascii-mtime.tar.xz",
+        "new_sha256": "29c6fce0fca9da1304f2c55e4c003d76adcf8cf0b525d50f44e0ce545067b40c",
+        "old_path": "nonascii-mtime.tar.xz",
+        "old_sha256": "29c6fce0fca9da1304f2c55e4c003d76adcf8cf0b525d50f44e0ce545067b40c"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "nonascii-mtime",
+        "kind": "inventory.json",
+        "manifest_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "new_path": "nonascii-mtime.inventory.json",
+        "new_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "old_path": "nonascii-mtime.inventory.json",
+        "old_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+      },
+      {
+        "bytes": 156,
+        "bytes_equal": true,
+        "case": "nonascii-size",
+        "kind": "tar.xz",
+        "manifest_sha256": "587ae534a4a4fdf9b8ab34e22c4f344881fd6321cabbf09df99ad8d51e0d88b6",
+        "new_path": "nonascii-size.tar.xz",
+        "new_sha256": "587ae534a4a4fdf9b8ab34e22c4f344881fd6321cabbf09df99ad8d51e0d88b6",
+        "old_path": "nonascii-size.tar.xz",
+        "old_sha256": "587ae534a4a4fdf9b8ab34e22c4f344881fd6321cabbf09df99ad8d51e0d88b6"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "nonascii-size",
+        "kind": "inventory.json",
+        "manifest_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "new_path": "nonascii-size.inventory.json",
+        "new_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "old_path": "nonascii-size.inventory.json",
+        "old_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+      },
+      {
+        "bytes": 156,
+        "bytes_equal": true,
+        "case": "nonascii-uid",
+        "kind": "tar.xz",
+        "manifest_sha256": "67273e36d845cd5df5be6bfa0c92a3ab4f5f9ccb8abec2072023b59fe6cfa7ca",
+        "new_path": "nonascii-uid.tar.xz",
+        "new_sha256": "67273e36d845cd5df5be6bfa0c92a3ab4f5f9ccb8abec2072023b59fe6cfa7ca",
+        "old_path": "nonascii-uid.tar.xz",
+        "old_sha256": "67273e36d845cd5df5be6bfa0c92a3ab4f5f9ccb8abec2072023b59fe6cfa7ca"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "nonascii-uid",
+        "kind": "inventory.json",
+        "manifest_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "new_path": "nonascii-uid.inventory.json",
+        "new_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "old_path": "nonascii-uid.inventory.json",
+        "old_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+      },
+      {
+        "bytes": 212,
+        "bytes_equal": true,
+        "case": "nongnu-longname-marker",
+        "kind": "tar.xz",
+        "manifest_sha256": "b99a1e873dedfb4920c8f13ecad87215de659b4e5d10abd866837557862a098b",
+        "new_path": "nongnu-longname-marker.tar.xz",
+        "new_sha256": "b99a1e873dedfb4920c8f13ecad87215de659b4e5d10abd866837557862a098b",
+        "old_path": "nongnu-longname-marker.tar.xz",
+        "old_sha256": "b99a1e873dedfb4920c8f13ecad87215de659b4e5d10abd866837557862a098b"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "nongnu-longname-marker",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "nongnu-longname-marker.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "nongnu-longname-marker.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 168,
+        "bytes_equal": true,
+        "case": "nonzero-tail",
+        "kind": "tar.xz",
+        "manifest_sha256": "a305b0cc9f6bcc33002311e161f558fc81f7e1b9d2d434424c8b8bb70e31ce3a",
+        "new_path": "nonzero-tail.tar.xz",
+        "new_sha256": "a305b0cc9f6bcc33002311e161f558fc81f7e1b9d2d434424c8b8bb70e31ce3a",
+        "old_path": "nonzero-tail.tar.xz",
+        "old_sha256": "a305b0cc9f6bcc33002311e161f558fc81f7e1b9d2d434424c8b8bb70e31ce3a"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "nonzero-tail",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "nonzero-tail.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "nonzero-tail.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 148,
+        "bytes_equal": true,
+        "case": "octal-prefix-separator",
+        "kind": "tar.xz",
+        "manifest_sha256": "af73dfb9697a16519293aa39a2f9587877c392770403571b2102b6957096ca0f",
+        "new_path": "octal-prefix-separator.tar.xz",
+        "new_sha256": "af73dfb9697a16519293aa39a2f9587877c392770403571b2102b6957096ca0f",
+        "old_path": "octal-prefix-separator.tar.xz",
+        "old_sha256": "af73dfb9697a16519293aa39a2f9587877c392770403571b2102b6957096ca0f"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "octal-prefix-separator",
+        "kind": "inventory.json",
+        "manifest_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "new_path": "octal-prefix-separator.inventory.json",
+        "new_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "old_path": "octal-prefix-separator.inventory.json",
+        "old_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+      },
+      {
+        "bytes": 216,
+        "bytes_equal": true,
+        "case": "pax",
+        "kind": "tar.xz",
+        "manifest_sha256": "ce5cf16bd6af37543383b226b5754cd0ac587f8ef7b93ccc79433fdf98671bb4",
+        "new_path": "pax.tar.xz",
+        "new_sha256": "ce5cf16bd6af37543383b226b5754cd0ac587f8ef7b93ccc79433fdf98671bb4",
+        "old_path": "pax.tar.xz",
+        "old_sha256": "ce5cf16bd6af37543383b226b5754cd0ac587f8ef7b93ccc79433fdf98671bb4"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "pax",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "pax.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "pax.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 164,
+        "bytes_equal": true,
+        "case": "regular",
+        "kind": "tar.xz",
+        "manifest_sha256": "59c78ef630d517519cf89b4bcb1e50b77c07d2e61a8613637151cd8a5d86d4b0",
+        "new_path": "regular.tar.xz",
+        "new_sha256": "59c78ef630d517519cf89b4bcb1e50b77c07d2e61a8613637151cd8a5d86d4b0",
+        "old_path": "regular.tar.xz",
+        "old_sha256": "59c78ef630d517519cf89b4bcb1e50b77c07d2e61a8613637151cd8a5d86d4b0"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "regular",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "regular.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "regular.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 598584,
+        "bytes_equal": true,
+        "case": "released-sdk",
+        "kind": "tar.xz",
+        "manifest_sha256": "087f69659f1d0d5136b2c07789488c23dd52ca7b38b21579183620a5fbc61dd4",
+        "new_path": "released-sdk.tar.xz",
+        "new_sha256": "087f69659f1d0d5136b2c07789488c23dd52ca7b38b21579183620a5fbc61dd4",
+        "old_path": "released-sdk.tar.xz",
+        "old_sha256": "087f69659f1d0d5136b2c07789488c23dd52ca7b38b21579183620a5fbc61dd4"
+      },
+      {
+        "bytes": 14398,
+        "bytes_equal": true,
+        "case": "released-sdk",
+        "kind": "inventory.json",
+        "manifest_sha256": "ea36a5bb069b525c80f99f6325e3b59ed965fe9fd712dcbc27f2b2c0cf13708f",
+        "new_path": "released-sdk.inventory.json",
+        "new_sha256": "ea36a5bb069b525c80f99f6325e3b59ed965fe9fd712dcbc27f2b2c0cf13708f",
+        "old_path": "released-sdk.inventory.json",
+        "old_sha256": "ea36a5bb069b525c80f99f6325e3b59ed965fe9fd712dcbc27f2b2c0cf13708f"
+      },
+      {
+        "bytes": 224,
+        "bytes_equal": true,
+        "case": "repeated-gnu-longlink",
+        "kind": "tar.xz",
+        "manifest_sha256": "018fe1863a8f153949de8d7aeff81ebe61dd888448bdcd98f47463baa9842c79",
+        "new_path": "repeated-gnu-longlink.tar.xz",
+        "new_sha256": "018fe1863a8f153949de8d7aeff81ebe61dd888448bdcd98f47463baa9842c79",
+        "old_path": "repeated-gnu-longlink.tar.xz",
+        "old_sha256": "018fe1863a8f153949de8d7aeff81ebe61dd888448bdcd98f47463baa9842c79"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "repeated-gnu-longlink",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "repeated-gnu-longlink.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "repeated-gnu-longlink.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 224,
+        "bytes_equal": true,
+        "case": "repeated-gnu-longname",
+        "kind": "tar.xz",
+        "manifest_sha256": "af0295a73747c52d59c8b22d5e1d7812b3408759093f15027c6a73688783e768",
+        "new_path": "repeated-gnu-longname.tar.xz",
+        "new_sha256": "af0295a73747c52d59c8b22d5e1d7812b3408759093f15027c6a73688783e768",
+        "old_path": "repeated-gnu-longname.tar.xz",
+        "old_sha256": "af0295a73747c52d59c8b22d5e1d7812b3408759093f15027c6a73688783e768"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "repeated-gnu-longname",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "repeated-gnu-longname.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "repeated-gnu-longname.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 160,
+        "bytes_equal": true,
+        "case": "reserved",
+        "kind": "tar.xz",
+        "manifest_sha256": "c48742a53320c8926f30ca66d974b9e18a1f125d83644169426d5743f72ed9f0",
+        "new_path": "reserved.tar.xz",
+        "new_sha256": "c48742a53320c8926f30ca66d974b9e18a1f125d83644169426d5743f72ed9f0",
+        "old_path": "reserved.tar.xz",
+        "old_sha256": "c48742a53320c8926f30ca66d974b9e18a1f125d83644169426d5743f72ed9f0"
+      },
+      {
+        "bytes": 132,
+        "bytes_equal": true,
+        "case": "reserved",
+        "kind": "inventory.json",
+        "manifest_sha256": "f221d3a3ed4dad48059bba09248535665cf1815152eda80660f1d39b85bda508",
+        "new_path": "reserved.inventory.json",
+        "new_sha256": "f221d3a3ed4dad48059bba09248535665cf1815152eda80660f1d39b85bda508",
+        "old_path": "reserved.inventory.json",
+        "old_sha256": "f221d3a3ed4dad48059bba09248535665cf1815152eda80660f1d39b85bda508"
+      },
+      {
+        "bytes": 148,
+        "bytes_equal": true,
+        "case": "signed-checksum",
+        "kind": "tar.xz",
+        "manifest_sha256": "db8ee2f9360e2f1a55f60b27ed2f63f0ae840b0bb9e0b3f0d6fcee607b2d17b0",
+        "new_path": "signed-checksum.tar.xz",
+        "new_sha256": "db8ee2f9360e2f1a55f60b27ed2f63f0ae840b0bb9e0b3f0d6fcee607b2d17b0",
+        "old_path": "signed-checksum.tar.xz",
+        "old_sha256": "db8ee2f9360e2f1a55f60b27ed2f63f0ae840b0bb9e0b3f0d6fcee607b2d17b0"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "signed-checksum",
+        "kind": "inventory.json",
+        "manifest_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "new_path": "signed-checksum.inventory.json",
+        "new_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "old_path": "signed-checksum.inventory.json",
+        "old_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+      },
+      {
+        "bytes": 152,
+        "bytes_equal": true,
+        "case": "symlink",
+        "kind": "tar.xz",
+        "manifest_sha256": "3705911dda1c6b70f757536337f1b732944f6d6af1c7f2e2a4fd459b62f81ccd",
+        "new_path": "symlink.tar.xz",
+        "new_sha256": "3705911dda1c6b70f757536337f1b732944f6d6af1c7f2e2a4fd459b62f81ccd",
+        "old_path": "symlink.tar.xz",
+        "old_sha256": "3705911dda1c6b70f757536337f1b732944f6d6af1c7f2e2a4fd459b62f81ccd"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "symlink",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "symlink.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "symlink.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 160,
+        "bytes_equal": true,
+        "case": "traversal",
+        "kind": "tar.xz",
+        "manifest_sha256": "f15e896a2bc75e3679662bfc434db06a1d50b5f1c88957882ae06d8691e7f559",
+        "new_path": "traversal.tar.xz",
+        "new_sha256": "f15e896a2bc75e3679662bfc434db06a1d50b5f1c88957882ae06d8691e7f559",
+        "old_path": "traversal.tar.xz",
+        "old_sha256": "f15e896a2bc75e3679662bfc434db06a1d50b5f1c88957882ae06d8691e7f559"
+      },
+      {
+        "bytes": 132,
+        "bytes_equal": true,
+        "case": "traversal",
+        "kind": "inventory.json",
+        "manifest_sha256": "5ca400088c1ee956bd94be1cc13e6811792f8c3ec75dc088342f58c6b5a110f0",
+        "new_path": "traversal.inventory.json",
+        "new_sha256": "5ca400088c1ee956bd94be1cc13e6811792f8c3ec75dc088342f58c6b5a110f0",
+        "old_path": "traversal.inventory.json",
+        "old_sha256": "5ca400088c1ee956bd94be1cc13e6811792f8c3ec75dc088342f58c6b5a110f0"
+      },
+      {
+        "bytes": 128,
+        "bytes_equal": true,
+        "case": "truncated",
+        "kind": "tar.xz",
+        "manifest_sha256": "55ea5e95f7bdb6ef45e4698db7e630c9fa2436154b39f3a6b923a8d6f8b63a91",
+        "new_path": "truncated.tar.xz",
+        "new_sha256": "55ea5e95f7bdb6ef45e4698db7e630c9fa2436154b39f3a6b923a8d6f8b63a91",
+        "old_path": "truncated.tar.xz",
+        "old_sha256": "55ea5e95f7bdb6ef45e4698db7e630c9fa2436154b39f3a6b923a8d6f8b63a91"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "truncated",
+        "kind": "inventory.json",
+        "manifest_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "new_path": "truncated.inventory.json",
+        "new_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5",
+        "old_path": "truncated.inventory.json",
+        "old_sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+      },
+      {
+        "bytes": 156,
+        "bytes_equal": true,
+        "case": "wide-negative-mtime",
+        "kind": "tar.xz",
+        "manifest_sha256": "83bbd9f22662cb0b482edcd35411b009613681d896c8f26130089c8e4f52e0ab",
+        "new_path": "wide-negative-mtime.tar.xz",
+        "new_sha256": "83bbd9f22662cb0b482edcd35411b009613681d896c8f26130089c8e4f52e0ab",
+        "old_path": "wide-negative-mtime.tar.xz",
+        "old_sha256": "83bbd9f22662cb0b482edcd35411b009613681d896c8f26130089c8e4f52e0ab"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "wide-negative-mtime",
+        "kind": "inventory.json",
+        "manifest_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "new_path": "wide-negative-mtime.inventory.json",
+        "new_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "old_path": "wide-negative-mtime.inventory.json",
+        "old_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+      },
+      {
+        "bytes": 156,
+        "bytes_equal": true,
+        "case": "wide-positive-mtime",
+        "kind": "tar.xz",
+        "manifest_sha256": "8661d620d6a92db021f009e2d7e6a8c210c0221567073ff5da1d2314d11d6ee9",
+        "new_path": "wide-positive-mtime.tar.xz",
+        "new_sha256": "8661d620d6a92db021f009e2d7e6a8c210c0221567073ff5da1d2314d11d6ee9",
+        "old_path": "wide-positive-mtime.tar.xz",
+        "old_sha256": "8661d620d6a92db021f009e2d7e6a8c210c0221567073ff5da1d2314d11d6ee9"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "wide-positive-mtime",
+        "kind": "inventory.json",
+        "manifest_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "new_path": "wide-positive-mtime.inventory.json",
+        "new_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1",
+        "old_path": "wide-positive-mtime.inventory.json",
+        "old_sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+      },
+      {
+        "bytes": 164,
+        "bytes_equal": true,
+        "case": "wrong-inventory",
+        "kind": "tar.xz",
+        "manifest_sha256": "59c78ef630d517519cf89b4bcb1e50b77c07d2e61a8613637151cd8a5d86d4b0",
+        "new_path": "wrong-inventory.tar.xz",
+        "new_sha256": "59c78ef630d517519cf89b4bcb1e50b77c07d2e61a8613637151cd8a5d86d4b0",
+        "old_path": "wrong-inventory.tar.xz",
+        "old_sha256": "59c78ef630d517519cf89b4bcb1e50b77c07d2e61a8613637151cd8a5d86d4b0"
+      },
+      {
+        "bytes": 134,
+        "bytes_equal": true,
+        "case": "wrong-inventory",
+        "kind": "inventory.json",
+        "manifest_sha256": "231b888f3fd6883542a39fad7cb6bd921e123dce68934e0debed00060cc5ee5c",
+        "new_path": "wrong-inventory.inventory.json",
+        "new_sha256": "231b888f3fd6883542a39fad7cb6bd921e123dce68934e0debed00060cc5ee5c",
+        "old_path": "wrong-inventory.inventory.json",
+        "old_sha256": "231b888f3fd6883542a39fad7cb6bd921e123dce68934e0debed00060cc5ee5c"
+      }
+    ],
+    "new_checkout_clean": true,
+    "new_digest_manifest_sha256": "3fa952f9167b2b54ec694b26f1271cfccd1949b5634cc041132957b623d548a0",
+    "new_sparse_checkout_files_match_manifest": true,
+    "new_sparse_checkout_manifest_files": 73,
+    "old_checkout_dirty": true,
+    "old_digest_manifest_sha256": "3fa952f9167b2b54ec694b26f1271cfccd1949b5634cc041132957b623d548a0"
+  },
+  "original_ci": {
+    "head": "bffb0539cfa216f4e7ca2dc5b9be1d8ab4beb838",
+    "linux": "success",
+    "macos": "failed clean-checkout precondition before historical comparison",
+    "macos_job_log_sha256": "2bf9e979e30233cb6b185c0b9cc88a1335d50a7519022b65840baffdefee6dbb",
+    "run_id": 39292898141
+  },
+  "pinned_python_sha256": "aed8ed802d0387d6831dead5885840e4e2ff3a7984dd7297e9a5f4466e9cda1d",
+  "private_report_sha256": "e72d5d9597f8a9ea6fae6d19fc360cf2d4649556b7b3a0ac6097cb5a02f9015c",
+  "public_source_head": "6c0c988d26f2da4650fba3c58fb0db8c8a948f47",
+  "public_source_tree": "3076fd60c2cd2514e764637786b8b8b35cfb8c40",
+  "replay_source_unchanged": true,
+  "rustc_sha256": "766eda9d8f53afd6fc7f27b3cd2e444dd22afacb5afa710a5625fc8e45b8c941",
+  "schema": "ami-rust-casefold-fixture-development-evidence-v1",
+  "scope": "Default macOS case-insensitive checkout control and one live 50-case historical filesystem differential. Not full RC1 or signed consumer acceptance.",
+  "sparse_checkouts": {
+    "new": {
+      "checkout_exit": 0,
+      "core_ignorecase": "true",
+      "physical_file_count": 73,
+      "status_porcelain": ""
+    },
+    "old": {
+      "checkout_exit": 0,
+      "core_ignorecase": "true",
+      "physical_file_count": 71,
+      "status_porcelain": "M tooling/crates/core/tests/fixtures/historical_filesystem/ancestor-A.inventory.json\n M tooling/crates/core/tests/fixtures/historical_filesystem/ancestor-A.tar.xz"
+    }
+  },
+  "status": "PASS_LOCAL_COMPONENT_ONLY",
+  "wrappers_empty": true
+}

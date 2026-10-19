@@ -405,6 +405,7 @@
     "tooling/crates/xtask/src/sdk.rs",
     "tooling/fixtures/accepted-r1-inputs.json",
     "tooling/fixtures/accepted-r1-support-inputs.json",
+    "tooling/macos-host-selection.rs",
     "tooling/rust-toolchain.toml",
     "tooling/third-party/THIRD-PARTY-NOTICES.md",
     "tooling/third-party/inventory.json",

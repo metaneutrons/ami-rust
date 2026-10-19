@@ -96,6 +96,16 @@ impl SigtermGuard {
         self.installed = false;
         Ok(())
     }
+
+    /// Restore the previous handler before sampling the request flag. This
+    /// lets a command classify requests received through its complete guarded
+    /// operation, including result serialization, without a check/restore gap.
+    /// Callers must finish their supervised child cleanup before calling this.
+    pub fn finish_requested(mut self) -> Result<bool> {
+        restore_sigterm_action(&self.previous_action)?;
+        self.installed = false;
+        Ok(self.requested())
+    }
 }
 
 impl Drop for SigtermGuard {

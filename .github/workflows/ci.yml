@@ -253,7 +253,7 @@ jobs:
             --rust-bin-dir "$cli_rust" --cargo-home "$RUNNER_TEMP/ami-rust-rc0-cargo-home" \
             --output-dir "$RUNNER_TEMP/ami-rust-historical-parsers"
           mkdir -m 700 "$RUNNER_TEMP/ami-rust-historical-home" "$RUNNER_TEMP/ami-rust-historical-tmp"
-          for historical_test in transactions filesystem; do
+          for historical_test in transactions filesystem receipt_lifecycle; do
             env -i PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin" \
               HOME="$RUNNER_TEMP/ami-rust-historical-home" TMPDIR="$RUNNER_TEMP/ami-rust-historical-tmp" \
               RUSTC="$cli_rust/rustc" RUSTDOC="$cli_rust/rustdoc" \
@@ -268,6 +268,28 @@ jobs:
               -- --ignored --exact "paired_historical_$historical_test"
             test -f "$RUNNER_TEMP/ami-rust-historical-$historical_test/binding.json"
           done
+          env -i PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin" \
+            HOME="$RUNNER_TEMP/ami-rust-historical-home" TMPDIR="$RUNNER_TEMP/ami-rust-historical-tmp" \
+            RUSTC="$cli_rust/rustc" RUSTDOC="$cli_rust/rustdoc" \
+            RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= CARGO_BUILD_JOBS=2 LC_ALL=C \
+            CARGO_HOME="$RUNNER_TEMP/ami-rust-rc0-cargo-home" \
+            "$cli_rust/cargo" build --locked --offline \
+            --manifest-path tools/consumer-enforcement-adapter/Cargo.toml \
+            --target-dir "$RUNNER_TEMP/ami-rust-rc0-consumer-enforcement-adapter"
+          env -i PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin" \
+            HOME="$RUNNER_TEMP/ami-rust-historical-home" TMPDIR="$RUNNER_TEMP/ami-rust-historical-tmp" \
+            RUSTC="$cli_rust/rustc" RUSTDOC="$cli_rust/rustdoc" \
+            RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= CARGO_BUILD_JOBS=2 LC_ALL=C \
+            CARGO_HOME="$RUNNER_TEMP/ami-rust-rc0-cargo-home" \
+            AMI_RUST_CONSUMER_ENFORCEMENT_ADAPTER="$RUNNER_TEMP/ami-rust-rc0-consumer-enforcement-adapter/debug/consumer-enforcement-adapter" \
+            AMI_RUST_CONSUMER_ENFORCEMENT_PYTHON_ROOT="$RUNNER_TEMP/ami-rust-python-bootstrap/runtime" \
+            AMI_RUST_CONSUMER_ENFORCEMENT_WORK="$RUNNER_TEMP/ami-rust-enforcement-controls-work" \
+            AMI_RUST_CONSUMER_ENFORCEMENT_OUTPUT="$RUNNER_TEMP/ami-rust-enforcement-controls-output" \
+            "$cli_rust/cargo" test --package ami-rust-xtask --test consumer_enforcement \
+            --locked --offline --manifest-path tooling/Cargo.toml \
+            --target-dir "$RUNNER_TEMP/ami-rust-host-core" \
+            -- --ignored --exact native_interpreter_controls_are_refused_under_the_adapter_policy
+          test -f "$RUNNER_TEMP/ami-rust-enforcement-controls-output/consumer-enforcement-controls.json"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test -z "$(git status --porcelain --untracked-files=all)"
       - name: Retain bounded historical comparison results
@@ -287,6 +309,13 @@ jobs:
             ${{ runner.temp }}/ami-rust-historical-filesystem/report.json
             ${{ runner.temp }}/ami-rust-historical-filesystem/binding.json
             ${{ runner.temp }}/ami-rust-historical-filesystem/coordinator.*.raw
+            ${{ runner.temp }}/ami-rust-historical-receipt_lifecycle/report.json
+            ${{ runner.temp }}/ami-rust-historical-receipt_lifecycle/binding.json
+            ${{ runner.temp }}/ami-rust-historical-receipt_lifecycle/failure.json
+            ${{ runner.temp }}/ami-rust-historical-receipt_lifecycle/helper.*.raw
+            ${{ runner.temp }}/ami-rust-enforcement-controls-output/**/*.json
+            ${{ runner.temp }}/ami-rust-enforcement-controls-output/**/*.raw
+            ${{ runner.temp }}/ami-rust-enforcement-controls-output/**/*.log
           if-no-files-found: error
           retention-days: 7
           compression-level: 9

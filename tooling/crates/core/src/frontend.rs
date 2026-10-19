@@ -614,11 +614,11 @@ pub fn render(invocation: Invocation) -> Result<CommandOutput> {
                 "claim":"receipt-owned native SDK and six local component inventories checked; Cargo inputs are checked by build, and publisher provenance is not re-established"
             })).map(CommandOutput::success)
         }),
-        Invocation::BuildLock { sdk_lock, output, cargo } => with_signals(|signals| {
+        Invocation::BuildLock { sdk_lock, output, cargo } => with_build_signals(|signals| {
             let checked = crate::native_project::verify_project_lock(&sdk_lock)?;
             render_build(&checked, cargo, &output, signals)
         }),
-        Invocation::BuildProject { state, project, output, cargo } => with_signals(|signals| {
+        Invocation::BuildProject { state, project, output, cargo } => with_build_signals(|signals| {
             let package = executing_package()?;
             let ready = crate::ready_state::ReadyInputs::open(&state, &package)?;
             let checked = crate::native_project::verify_project_lock(&project.join("ami-rust.lock.json"))?;
@@ -688,11 +688,38 @@ fn render_build(
 fn with_signals<T>(
     operation: impl FnOnce(&crate::signals::SigtermGuard) -> Result<T>,
 ) -> Result<T> {
+    with_signal_status(operation, false)
+}
+
+fn with_build_signals<T>(
+    operation: impl FnOnce(&crate::signals::SigtermGuard) -> Result<T>,
+) -> Result<T> {
+    with_signal_status(operation, true)
+}
+
+fn with_signal_status<T>(
+    operation: impl FnOnce(&crate::signals::SigtermGuard) -> Result<T>,
+    direct_build: bool,
+) -> Result<T> {
     let signals = crate::signals::SigtermGuard::acquire()?;
     let result = signals.check().and_then(|()| operation(&signals));
-    match (result, signals.finish()) {
-        (Ok(value), Ok(())) => Ok(value),
-        (Err(error), Ok(())) | (Ok(_), Err(error)) => Err(error),
+    let finished = if direct_build {
+        signals.finish_requested()
+    } else {
+        signals.finish().map(|()| false)
+    };
+    match (result, finished) {
+        (result, Ok(true)) => {
+            let message = match result {
+                Err(error) => format!("native build interrupted by SIGTERM: {error}"),
+                Ok(_) => {
+                    "SIGTERM requested after native build completion; output retained".to_owned()
+                }
+            };
+            Err(Refusal::new(message).with_exit_code(143))
+        }
+        (Ok(value), Ok(false)) => Ok(value),
+        (Err(error), Ok(false)) | (Ok(_), Err(error)) => Err(error),
         (Err(error), Err(restore)) => Err(Refusal::new(format!(
             "{error}; SIGTERM restoration also failed: {restore}"
         ))
@@ -903,6 +930,63 @@ mod tests {
 
     fn args(values: &[&str]) -> Vec<OsString> {
         values.iter().map(OsString::from).collect()
+    }
+
+    #[test]
+    fn build_signal_status_classification_is_isolated_in_a_child() {
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "frontend::tests::build_signal_status_child",
+                "--ignored",
+            ])
+            .env("AMI_RUST_BUILD_SIGNAL_CHILD", "run")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    #[test]
+    #[ignore = "run only through the isolated child-process parent"]
+    fn build_signal_status_child() {
+        assert_eq!(
+            std::env::var("AMI_RUST_BUILD_SIGNAL_CHILD").as_deref(),
+            Ok("run")
+        );
+        assert_eq!(with_build_signals(|_| Ok(17)).unwrap(), 17);
+        let child_only =
+            with_build_signals::<()>(
+                |_| Err(Refusal::new("Cargo interrupted").with_exit_code(130)),
+            )
+            .unwrap_err();
+        assert_eq!(child_only.exit_code(), 130);
+        for prior_error in [false, true] {
+            let own_signal = with_build_signals(|_| {
+                send_build_fixture_sigterm();
+                if prior_error {
+                    Err(Refusal::new("Cargo cleanup completed").with_exit_code(130))
+                } else {
+                    Ok(17)
+                }
+            })
+            .unwrap_err();
+            assert_eq!(own_signal.exit_code(), 143);
+        }
+    }
+
+    #[allow(
+        unsafe_code,
+        reason = "The isolated fixture synchronously raises SIGTERM on its own thread."
+    )]
+    fn send_build_fixture_sigterm() {
+        // SAFETY: raise targets the calling fixture thread; its live guard has
+        // installed the cooperative handler and SIGTERM is a valid signal.
+        assert_eq!(unsafe { libc::raise(libc::SIGTERM) }, 0);
     }
 
     #[test]
