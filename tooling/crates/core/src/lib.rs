@@ -30,6 +30,8 @@ pub mod publisher_tar;
 pub mod receipts;
 pub mod records;
 pub mod release_manifest;
+pub mod resource_capture;
+pub mod sdk;
 pub mod signals;
 pub mod transaction;
 pub mod workflow_counter;

@@ -5,8 +5,9 @@ change the target SDK workspace. [RC1 #71](https://github.com/metaneutrons/ami-r
 tracks the complete delivery; the [migration plan](../docs/rust-cli-cargo-migration-plan.md)
 defines its acceptance criteria.
 
-The first slice implements JSON, file/path and SHA-256 primitives plus help and
-version dispatch. It is not an installable replacement for the released CLI.
+The workspace implements native validation, transactions, publisher verification
+and an explicit release-verification command. It is not yet an installable
+replacement for the complete released CLI.
 The bare development binary reports CLI `0.2.0-dev`, references SDK `0.1.0`, and
 uses packaging revision `0` to indicate that this build has no package adapter.
 These values do not identify an authenticated installed state or publish a new
@@ -49,11 +50,25 @@ compilation detection.
 | Help and version | Implemented | Installed package inventory/identity integration remains RC1 |
 | Package verification, prepare, project creation, input check | Refused with status 2 | RC1 authenticated lifecycle and retained state |
 | SDK-lock verification/build and package project build | Refused with status 2 | RC1 validation/build behavior, then RC2 normal Cargo integration |
-| Release verify/install, project lock, uninstall, migration | Refused with status 2 | RC1 trust, ownership, extraction and migration matrix |
+| Explicit release verification | Implemented for release-v2/SDK-v2 development inputs | Exact signed native candidate and both-host qualification remain open |
+| Release install, project lock, uninstall, migration | Refused with status 2 | RC1 trust, ownership, extraction and migration matrix |
 
 Pending commands never fall back to Python or claim success. Passing these
 foundation fixtures does not accept RC1 or establish complete public/producer
 Python removal.
+
+## Explicit release verification
+
+After building the development binary, `ami-rust verify --bundle PATH --policy
+EXTERNAL_POLICY` authenticates the publisher and checks the retained SDK-v2
+archive. The byte-identical `cargo-ami` frontend exposes the same command as
+`cargo ami verify`. See the [native SDK contract](../docs/rust-cli-migration/native-sdk-v2.md)
+for inputs, output scope and remaining qualification. Existing released SDK-v1
+archives are not silently reclassified or executed by this native path.
+
+This command is development functionality. Installation, native builds and
+retained lifecycle commands remain unfinished. Historical signature evidence
+and synthetic archive fixtures do not qualify a signed native-v2 release.
 
 ## Input boundaries
 

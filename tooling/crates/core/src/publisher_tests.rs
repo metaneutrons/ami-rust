@@ -374,6 +374,7 @@ fn check_exec_pin(path: &Path, digest: &str) -> Result<()> {
     let mut observer = Observation {
         started: Instant::now(),
         cancelled: &mut not_cancelled,
+        resource_reports: Vec::new(),
     };
     check_pin(&pin, true, &mut observer)
 }
@@ -423,6 +424,7 @@ fn observation_checks_cancellation_and_deadline_without_sleeping() {
     let mut cancellation_observation = Observation {
         started: Instant::now(),
         cancelled: &mut cancelled,
+        resource_reports: Vec::new(),
     };
     assert_eq!(
         cancellation_observation.check().unwrap_err().to_string(),
@@ -433,6 +435,7 @@ fn observation_checks_cancellation_and_deadline_without_sleeping() {
     let mut deadline_observation = Observation {
         started: Instant::now() - TOTAL_TIMEOUT - Duration::from_secs(1),
         cancelled: &mut not_cancelled,
+        resource_reports: Vec::new(),
     };
     assert_eq!(
         deadline_observation.check().unwrap_err().to_string(),

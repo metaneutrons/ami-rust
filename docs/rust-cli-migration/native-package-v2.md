@@ -84,8 +84,8 @@ from reading argv[0]: Cargo's `cargo-ami` dispatch name must survive an alias.
 This lookup serves package-managed and retained adapter operations. Direct
 explicit-bundle/policy or SDK-lock operations have their own validated inputs;
 they must not silently acquire an ambient package dependency. A bare binary
-cannot satisfy `verify-package`. The current development help/version behavior
-is unchanged, and no new consumer command is activated by this delivery.
+cannot satisfy `verify-package`. The explicit [native release verification command](native-sdk-v2.md) uses
+its own bundle and external policy; package discovery remains independent.
 
 ## Profiles and qualification
 

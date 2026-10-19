@@ -4,7 +4,9 @@
 //! verifier calls and the external policy. This is a trusted-owner filesystem
 //! model: descriptor reads and pre/post rechecks detect ordinary changes, not
 //! an adversarial same-user writer. Tools reopen absolute paths. Process-group
-//! capture is neither a sandbox nor aggregate resource/descendant enforcement.
+//! capture and resource sampling are not process containment. Current visible
+//! RSS, private HOME bytes and aggregate logs use the host reference profile;
+//! sampling cannot prove the absence of unsampled or escaped processes.
 
 use crate::{
     Refusal, Result,
@@ -12,7 +14,7 @@ use crate::{
     directory::Directory,
     json::{JsonProfile, parse_json_value},
     ownership::protected_regular_file,
-    process_capture::{CaptureLimits, CommandSpec, capture},
+    process_capture::{CaptureLimits, CommandSpec},
     publisher_claims::{PublisherClaimContext, check_github_output},
     publisher_files::{read_bundle_file, read_open_regular, scan_bundle_exact},
     publisher_home::PublisherHome,
@@ -25,6 +27,8 @@ use crate::{
         NativeReleaseManifest, ReleaseFile, ReleaseManifest, parse_native_release_manifest,
         parse_release_manifest,
     },
+    resource_capture::{ResourceLimits, ResourceReport, SampleLimits, capture_with_resources},
+    workspace_accounting::ScanLimits,
 };
 use sha2::{Digest, Sha256};
 use std::{
@@ -79,6 +83,8 @@ pub struct VerifiedPublisherBundle {
     raw_manifest: Vec<u8>,
     assets: BTreeMap<String, Vec<u8>>,
     authentication: Authentication,
+    release_signature: Vec<u8>,
+    resource_reports: Vec<ResourceReport>,
 }
 
 impl VerifiedPublisherBundle {
@@ -93,6 +99,14 @@ impl VerifiedPublisherBundle {
     }
     pub fn authentication(&self) -> &Authentication {
         &self.authentication
+    }
+    /// Authenticated Cosign proof retained with the exact verified manifest.
+    pub fn release_signature(&self) -> &[u8] {
+        &self.release_signature
+    }
+    /// One sampled resource report for each successful pinned verifier call.
+    pub fn resource_reports(&self) -> &[ResourceReport] {
+        &self.resource_reports
     }
 }
 
@@ -123,11 +137,14 @@ struct CheckedBundle {
     raw_manifest: Vec<u8>,
     assets: BTreeMap<String, Vec<u8>>,
     authentication: Authentication,
+    release_signature: Vec<u8>,
+    resource_reports: Vec<ResourceReport>,
 }
 
 struct Observation<'a, C> {
     started: Instant,
     cancelled: &'a mut C,
+    resource_reports: Vec<ResourceReport>,
 }
 impl<C: FnMut() -> bool> Observation<'_, C> {
     fn check(&mut self) -> Result<()> {
@@ -161,6 +178,8 @@ pub fn verify_publisher_bundle(
         raw_manifest: checked.raw_manifest,
         assets: checked.assets,
         authentication: checked.authentication,
+        release_signature: checked.release_signature,
+        resource_reports: checked.resource_reports,
     })
 }
 
@@ -207,6 +226,7 @@ fn check_publisher_bundle(
     let mut observer = Observation {
         started: Instant::now(),
         cancelled: &mut cancelled,
+        resource_reports: Vec::new(),
     };
     observer.check()?;
     let root = bundle_directory(bundle)?;
@@ -410,7 +430,13 @@ fn check_publisher_bundle(
         }
         observer.check()
     })();
-    let cleanup = home.finish();
+    // Keep known resource evidence when a genuine verifier rejects a
+    // signature, claim checks fail, or later filesystem/cleanup checks fail.
+    let resource_summary = completed_resource_summary(&observer.resource_reports);
+    let result = result.map_err(|error| Refusal::new(format!("{error}; {resource_summary}")));
+    let cleanup = home
+        .finish()
+        .map_err(|error| Refusal::new(format!("{error}; {resource_summary}")));
     match (result, cleanup) {
         (Err(error), Err(cleanup)) => {
             return Err(Refusal::new(format!(
@@ -421,6 +447,9 @@ fn check_publisher_bundle(
         (Ok(()), Ok(())) => {}
     }
     observer.check()?;
+    let release_signature = retained
+        .remove(&metadata.cosign_bundles["release.json"])
+        .ok_or_else(|| Refusal::new("missing retained authenticated manifest signature"))?;
     let raw_manifest = retained
         .remove("release.json")
         .ok_or_else(|| Refusal::new("missing retained manifest"))?;
@@ -460,11 +489,25 @@ fn check_publisher_bundle(
         manifest,
         raw_manifest,
         assets,
+        release_signature,
+        resource_reports: observer.resource_reports,
         authentication: Authentication {
             report,
             external_policy_sha256: parse_digest(&sha256_bytes(&policy_raw))?,
         },
     })
+}
+
+fn completed_resource_summary(reports: &[ResourceReport]) -> String {
+    let peak = |value: fn(&ResourceReport) -> u64| reports.iter().map(value).max().unwrap_or(0);
+    format!(
+        "completed verifier captures={}; sampled peaks: RSS={} workspace={} logs={} bytes; incomplete samples={}",
+        reports.len(),
+        peak(|r| r.peak_visible_rss_bytes),
+        peak(|r| r.peak_workspace_bytes),
+        peak(|r| r.peak_log_bytes),
+        reports.iter().filter(|r| !r.last_sample_complete).count(),
+    )
 }
 
 fn parse_digest(value: &str) -> Result<crate::records::Sha256> {
@@ -651,7 +694,7 @@ fn run_verifier<C: FnMut() -> bool>(
         home.path(),
         verifier_environment(home.path()),
     );
-    let output = capture(
+    let captured = capture_with_resources(
         &spec,
         CaptureLimits {
             timeout,
@@ -659,9 +702,32 @@ fn run_verifier<C: FnMut() -> bool>(
             stderr_bytes: 64 * 1024,
             termination_grace: Duration::from_secs(2),
         },
+        ResourceLimits {
+            max_visible_rss_bytes: 4 * 1024 * 1024 * 1024,
+            max_workspace_bytes: 12 * 1024 * 1024 * 1024,
+            max_log_bytes: 16 * 1024 * 1024,
+        },
+        SampleLimits {
+            max_ps_bytes: 2 * 1024 * 1024,
+            max_ps_rows: 32_768,
+            max_history_entries: 131_072,
+            max_roots: 1,
+            scan: ScanLimits { max_entries: 100_000, max_work_units: 200_001 },
+        },
+        &[home.path().to_path_buf()],
         &mut *observer.cancelled,
     )
-    .map_err(|error| Refusal::new(format!("publisher verifier failed: {error}")))?;
+    .map_err(|error| {
+        let report = error.report();
+        Refusal::new(format!(
+            "publisher verifier failed: {error}; sampled peaks: RSS={} workspace={} logs={} bytes; last sample complete={}; observed escaped group count={}",
+            report.peak_visible_rss_bytes, report.peak_workspace_bytes,
+            report.peak_log_bytes, report.last_sample_complete,
+            report.current_escaped_process_groups.len(),
+        ))
+    })?;
+    observer.resource_reports.push(captured.report);
+    let output = captured.process;
     if !output.status.success() {
         return Err(Refusal::new(format!(
             "publisher verifier {} failed with {}",

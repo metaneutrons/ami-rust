@@ -2,8 +2,9 @@
 
 This partial [RC1 delivery](https://github.com/metaneutrons/ami-rust/issues/71)
 connects strict policy, metadata and SLSA claim readers to the existing pinned
-GitHub and Cosign tools. It does not activate a consumer command, install an
-SDK, qualify native builds or accept RC1. The released 0.1.0 inputs remain
+GitHub and Cosign tools. The [native verify command](native-sdk-v2.md) composes this verifier with
+SDK-v2 archive admission. It does not install an SDK, qualify native builds or
+accept RC1. The released 0.1.0 inputs remain
 unchanged. No cryptographic verification protocol is reimplemented in Rust.
 
 ## Admission and trust boundary
@@ -90,9 +91,11 @@ profile, independent of the 2 MiB input proof bound.
 Each command allows 60 seconds, 4 MiB stdout, 64 KiB stderr and a 2-second
 termination grace; the cooperative whole-verification deadline is 300 seconds.
 Private cache cleanup allows 16,384 entries and reports overflow. These are host
-publisher/container profiles, not AROS application quotas. Process-group capture
-does not enforce aggregate RSS/workspace or contain escaped/closed-pipe children;
-the separate complete host observer remains required before consumer activation.
+publisher/container profiles, not AROS application quotas. The
+[native integration](native-sdk-v2.md#resource-observation) now samples visible
+RSS, managed workspace and aggregate logs, and refuses remaining final scope
+members. Sampling is not process containment; complete host/no-Python
+qualification remains required before acceptance.
 
 Seventy inert pinned historical SLSA output fixtures cover nine accepted and
 61 refused decisions, including altered identities, materials, protected claims,
