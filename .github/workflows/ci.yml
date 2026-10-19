@@ -232,10 +232,10 @@ jobs:
         run: |
           set -euo pipefail
           python3 -I -B release/ci_python.py \
-            --prefix "$RUNNER_TEMP/ami-rust-historical-python" \
+            --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" \
             --inputs release/ci-python-inputs.json
           cli_rust="$RUNNER_TEMP/ami-rust-rc0-host/toolchain/bin"
-          historical_python="$RUNNER_TEMP/ami-rust-historical-python/runtime/python/bin/python3.12"
+          historical_python="$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12"
           export AMI_RUST_HISTORICAL_PYTHON="$historical_python"
           "$historical_python" -I -B release/ci_historical.py \
             --source-root "$GITHUB_WORKSPACE" --source-commit "$GITHUB_SHA" \
@@ -261,7 +261,7 @@ jobs:
         with:
           name: historical-comparison-${{ matrix.triple }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            ${{ runner.temp }}/ami-rust-historical-python/bootstrap.json
+            ${{ runner.temp }}/ami-rust-python-bootstrap/bootstrap.json
             ${{ runner.temp }}/ami-rust-historical-parsers/result.json
             ${{ runner.temp }}/ami-rust-historical-parsers/failure.json
             ${{ runner.temp }}/ami-rust-historical-parsers/work/current-rust-result.json
