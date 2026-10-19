@@ -231,7 +231,9 @@ jobs:
       - name: Compare current Rust with historical Python (maintainer tests only)
         run: |
           set -euo pipefail
-          python3 -I -B release/ci_python.py --prefix "$RUNNER_TEMP/ami-rust-historical-python"
+          python3 -I -B release/ci_python.py \
+            --prefix "$RUNNER_TEMP/ami-rust-historical-python" \
+            --inputs release/ci-python-inputs.json
           cli_rust="$RUNNER_TEMP/ami-rust-rc0-host/toolchain/bin"
           historical_python="$RUNNER_TEMP/ami-rust-historical-python/runtime/python/bin/python3.12"
           export AMI_RUST_HISTORICAL_PYTHON="$historical_python"
@@ -259,6 +261,7 @@ jobs:
         with:
           name: historical-comparison-${{ matrix.triple }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
+            ${{ runner.temp }}/ami-rust-historical-python/bootstrap.json
             ${{ runner.temp }}/ami-rust-historical-parsers/result.json
             ${{ runner.temp }}/ami-rust-historical-parsers/failure.json
             ${{ runner.temp }}/ami-rust-historical-parsers/work/current-rust-result.json
