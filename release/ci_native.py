@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import argparse
 import io
-import itertools
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -1020,19 +1020,61 @@ def _qualify_native_build_matrix(work, state, frontend, output, supervisor, conf
 
 
 def _retained_state_snapshot(root, *, entry_limit=100_000):
-    """Include empty directories, ownership and modes as well as file/link bytes."""
-    root = Path(root)
-    metadata = []
-    for path in itertools.chain((root,), root.rglob("*")):
-        if len(metadata) >= entry_limit:
-            raise ValueError("retained-state snapshot exceeds its entry limit")
-        info = path.lstat()
-        metadata.append({"path": path.relative_to(root).as_posix(), "uid": info.st_uid,
-                         "gid": info.st_gid, "mode": info.st_mode,
-                         "device": info.st_dev, "inode": info.st_ino,
-                         "mtime_ns": info.st_mtime_ns, "ctime_ns": info.st_ctime_ns})
-    return {"inventory": ci_sdk.component_inventory(root),
-            "metadata": sorted(metadata, key=lambda row: row["path"])}
+    root=Path(root)
+    metadata,files,symlinks=[],[],[]
+    def identity(info):
+        return (info.st_uid,info.st_gid,info.st_mode,info.st_dev,info.st_ino,
+                info.st_size,info.st_mtime_ns,info.st_ctime_ns)
+    def record(relative,info):
+        if len(metadata)>=entry_limit:
+            raise ValueError('retained-state snapshot exceeds its entry limit')
+        metadata.append({'path':relative,'uid':info.st_uid,'gid':info.st_gid,'mode':info.st_mode,
+                         'device':info.st_dev,'inode':info.st_ino,'mtime_ns':info.st_mtime_ns,'ctime_ns':info.st_ctime_ns})
+    def walk(fd,relative,expected):
+        before=os.fstat(fd)
+        if not stat.S_ISDIR(before.st_mode) or identity(before)!=identity(expected):
+            raise ValueError('retained directory changed before enumeration: '+relative)
+        record(relative,before)
+        # scandir errors propagate; Path.rglob silently skips unreadable subtrees.
+        with os.scandir(fd) as entries:
+            for entry in entries:
+                name=entry.name
+                child=name if relative=='.' else relative+'/'+name
+                info=os.stat(name,dir_fd=fd,follow_symlinks=False)
+                if stat.S_ISDIR(info.st_mode):
+                    child_fd=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)
+                    try:walk(child_fd,child,info)
+                    finally:os.close(child_fd)
+                elif stat.S_ISLNK(info.st_mode):
+                    record(child,info)
+                    target=os.readlink(name,dir_fd=fd)
+                    if identity(os.stat(name,dir_fd=fd,follow_symlinks=False))!=identity(info):
+                        raise ValueError('retained link changed during snapshot: '+child)
+                    symlinks.append({'path':child,'target':target})
+                elif stat.S_ISREG(info.st_mode):
+                    record(child,info)
+                    child_fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=fd)
+                    with os.fdopen(child_fd,'rb') as stream:
+                        if identity(os.fstat(stream.fileno()))!=identity(info):
+                            raise ValueError('retained file changed before snapshot read: '+child)
+                        digest=hashlib.sha256();size=0
+                        for block in iter(lambda:stream.read(1024*1024),b''):
+                            digest.update(block);size+=len(block)
+                        if size!=info.st_size or identity(os.fstat(stream.fileno()))!=identity(info):
+                            raise ValueError('retained file changed during snapshot read: '+child)
+                    files.append({'path':child,'bytes':size,'sha256':digest.hexdigest()})
+                else:
+                    raise ValueError('unsupported file type in retained-state snapshot: '+child)
+        if identity(os.fstat(fd))!=identity(before):
+            raise ValueError('retained directory changed during snapshot: '+relative)
+    expected=root.lstat()
+    if not stat.S_ISDIR(expected.st_mode):
+        raise ValueError('retained-state snapshot root must be a real directory')
+    fd=os.open(root,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+    try:walk(fd,'.',expected)
+    finally:os.close(fd)
+    key=lambda row:row['path']
+    return {'inventory':{'files':sorted(files,key=key),'symlinks':sorted(symlinks,key=key)},'metadata':sorted(metadata,key=key)}
 
 
 def _preservation_snapshot(roots):

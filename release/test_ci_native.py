@@ -708,6 +708,46 @@ class NativeObservationSpecTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unsupported observed consumer command"):
             self.spec(["unsupported-command"])
 
+    def test_links_are_data_and_external_targets_are_never_in_the_inventory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base=Path(temporary).resolve();root=base/'preserved';root.mkdir()
+            external=base/'external';external.mkdir();target=external/'private';target.write_bytes(b'outside-one')
+            (root/'absolute').symlink_to(target)
+            (root/'dangling').symlink_to(base/'missing')
+            (root/'directory').symlink_to(external,target_is_directory=True)
+            before=native._retained_state_snapshot(root)
+            self.assertEqual(before,native._retained_state_snapshot(root))
+            self.assertEqual(before['inventory']['files'],[])
+            self.assertEqual({row['target'] for row in before['inventory']['symlinks']},{str(target),str(base/'missing'),str(external)})
+            self.assertEqual(len(before['metadata']),4)
+            target.write_bytes(b'outside-two');self.assertEqual(before,native._retained_state_snapshot(root))
+            (root/'absolute').unlink();(root/'absolute').symlink_to(base/'different')
+            self.assertNotEqual(before,native._retained_state_snapshot(root))
+    def test_file_bytes_metadata_and_empty_directories_are_bound(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary).resolve();p=root/'file';p.write_bytes(b'one')
+            before=native._retained_state_snapshot(root);p.write_bytes(b'two')
+            self.assertNotEqual(before,native._retained_state_snapshot(root))
+            before=native._retained_state_snapshot(root);(root/'empty').mkdir()
+            self.assertNotEqual(before,native._retained_state_snapshot(root))
+            with self.assertRaisesRegex(ValueError,'entry limit'):native._retained_state_snapshot(root,entry_limit=1)
+
+    def test_unreadable_subtree_refuses_instead_of_omitting_writable_known_child(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary).resolve();directory=root/'opaque';directory.mkdir()
+            child=directory/'known';child.write_bytes(b'old')
+            directory.chmod(0o300)
+            try:
+                with self.assertRaises(PermissionError):native._retained_state_snapshot(root)
+                child.write_bytes(b'new')
+                with self.assertRaises(PermissionError):native._retained_state_snapshot(root)
+            finally:directory.chmod(0o700)
+    def test_root_symlink_refuses(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary).resolve();(root/'actual').mkdir();(root/'alias').symlink_to(root/'actual',target_is_directory=True)
+            with self.assertRaisesRegex(ValueError,'root must be a real directory'):native._retained_state_snapshot(root/'alias')
+
+
 
 class NativeMigrationPreservationTests(unittest.TestCase):
     def setUp(self):
