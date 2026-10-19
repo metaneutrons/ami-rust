@@ -7,7 +7,7 @@
 
 use crate::{
     Refusal, Result,
-    json::{JsonProfile, parse_json},
+    json::{JsonProfile, parse_json_value},
     records::{Host, Sha256},
 };
 use serde::{Deserialize, Serialize};
@@ -266,8 +266,7 @@ struct Wire {
 
 pub fn parse_install_receipt(raw: &[u8]) -> Result<InstallReceipt> {
     let (validation, counters) = counter_validation_copy(raw)?;
-    let value: serde_json::Value =
-        parse_json(&validation, JsonProfile::ReleaseManifestAndInstallReceipt)?;
+    let value = parse_json_value(&validation, JsonProfile::ReleaseManifestAndInstallReceipt)?;
     let object = value
         .as_object()
         .ok_or_else(|| Refusal::new("installation receipt must be an object"))?;
@@ -511,6 +510,17 @@ mod tests {
     }
     fn parse(value: &Value) -> Result<InstallReceipt> {
         parse_install_receipt(&serde_json::to_vec(value).unwrap())
+    }
+
+    #[test]
+    fn raw_value_wrapper_cannot_replace_the_actual_receipt_root() {
+        for version in 1..=3 {
+            let wrapped = json!({"$serde_json::private::RawValue":fixture(version).to_string()});
+            assert!(
+                parse(&wrapped).is_err(),
+                "accepted wrapped receipt v{version}"
+            );
+        }
     }
 
     #[test]

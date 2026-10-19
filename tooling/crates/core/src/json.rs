@@ -69,6 +69,8 @@ pub fn read_json<T: DeserializeOwned>(path: &Path, profile: JsonProfile) -> Resu
 /// JSON numbers retain `serde_json::Number` semantics (`i64`, `u64`, or finite
 /// `f64`). After the structural pass, `T` is deserialized from that value, so
 /// scalar roots and the exact schema remain the typed caller's responsibility.
+/// For an opaque `serde_json::Value` tree, use [`parse_json_value`] directly:
+/// its `Deserialize` implementation otherwise recognizes private marker keys.
 pub fn parse_json<T: DeserializeOwned>(bytes: &[u8], profile: JsonProfile) -> Result<T> {
     let value = parse_json_value(bytes, profile)?;
     T::deserialize(value)
