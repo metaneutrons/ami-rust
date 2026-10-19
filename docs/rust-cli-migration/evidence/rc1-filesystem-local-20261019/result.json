@@ -1,0 +1,86 @@
+{
+  "schema": "ami-rust-rc1-filesystem-local-v1",
+  "scope": "Read-only filesystem/project-lock/publisher TAR slice; not complete RC1 acceptance",
+  "source_commit": "9c834f9b209b0f1d1d7466f8de386a46ab7400e5",
+  "host": "macos-aarch64",
+  "source_sha256": {
+    "tooling/crates/cli/tests/frontends.rs": "e295a8d4c042994f92629db39429ba07dfecec0b79d61a9d5de6d9a927278bc0",
+    "tooling/crates/cli/src/main.rs": "50552bf5691718f6c5f1fdb9d36d4fac11823bc4fda0ab69e278cb2770ad1e9d",
+    "tooling/crates/core/src/frontend.rs": "59c8d6b20ea96d17dc22f8cf6875e224206053cbd5dc4332b864254bc5b372cb",
+    "tooling/crates/core/src/records.rs": "693b1262ab6140ea9b65e69b30ba0d02a7877b30fe5eabb0e0ea41582e10c867",
+    "tooling/crates/core/src/compression.rs": "a25f261d6bde6c6b235f4a1ea612255c49c1b98f16a5c8d0982502cdbd0b9e19",
+    "tooling/crates/core/src/error.rs": "54c606fab3b71f70c1fbfc27e41cd69e0c342efebcd435cf8d4530aab37c4b5f",
+    "tooling/crates/core/src/lib.rs": "c4601a95652116a0759292f6380a91e07ea2f9286cb37b0dba5830723a9a914c",
+    "tooling/crates/core/src/digest.rs": "37a274cf539531f18fe4a08e0b599fbcaa9ab1f1762a8b665b39a8daf0361898",
+    "tooling/crates/core/src/files.rs": "9320b67cb7948811f082122b88626aa31d2a09a2d1fc878e6ff50f85afe346bf",
+    "tooling/crates/core/src/json.rs": "fa98d69049d72176b46369de60541467b5774550fd18e6686fb1341475441ffe",
+    "tooling/crates/core/src/inventory.rs": "655ee6a2c5b9849536f2e81396cc21ed6183f6133d58e00cf295020251d6fde1",
+    "tooling/crates/core/src/directory.rs": "0e105f7064acafb351e91fe4b17a5bf9787cce60601d6be9e94aeee072160d8f",
+    "tooling/crates/core/src/publisher_tar.rs": "69fdfb1194d47b08a52e40247edc07dc900451c0d1c6c33b76bb38ecceca4d1c",
+    "tooling/crates/core/src/elf.rs": "a7f068fd2b28357abf2bc488a3b655078283dcb399671b96cdfe3d12bf567fb5"
+  },
+  "steps": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      "exit_code": 0,
+      "log": "1.log",
+      "sha256": "5b85d838e4c522893e1f170adc4616060b20b2952d9f94584450a9c0024ca513"
+    },
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "log": "2.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "log": "3.log",
+      "sha256": "c13f2c42e42dbb1bc7737ec6d5e1a91c2a303a2db7a3344853fce0e9578b13c7"
+    }
+  ],
+  "status": "PASS",
+  "core_tests_passed": 73,
+  "real_cargo_frontend_tests_passed": 1,
+  "production_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+  "independent_review": {
+    "result": "No remaining concrete blocker for this read-only slice",
+    "publisher_tar_sha256": "69fdfb1194d47b08a52e40247edc07dc900451c0d1c6c33b76bb38ecceca4d1c",
+    "corrections": [
+      "file/ancestor inventory conflicts",
+      "meaningful raw-header backslash control",
+      "GNU outermost-name and first-NUL semantics",
+      "signed/unsigned header checksums",
+      "strict ASCII and all numeric header fields including full 88-bit metadata"
+    ]
+  },
+  "unaccepted": [
+    "complete RC1-A1\u2013A4",
+    "authenticated acquisition/install/uninstall/retained lifecycle",
+    "generic component archive extraction",
+    "build supervision and untrusted ELF caller resource enforcement"
+  ],
+  "not_included": "Undeclared next-slice mutations.rs draft; not compiled or in this candidate"
+}

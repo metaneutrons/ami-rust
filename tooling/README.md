@@ -120,3 +120,11 @@ existing 16 MiB/1,000-file bounds apply to the small publisher SDK payload, not
 to compiler/component archives or AROS applications. Filesystem staging,
 ownership, exclusive publication, authentication and rollback remain subsequent
 consumer integration work.
+
+[Local filesystem/archive evidence](../docs/rust-cli-migration/evidence/rc1-filesystem-local-20261019/result.json)
+records 73 core cases plus the real Cargo/frontend case. The pinned historical
+Python 3.12.15 oracle agrees on 36 publisher archive cases (including all 94
+published SDK files) and 14 isolated inventory cases. All six retained macOS
+component inventories also match, with 12,544 regular files and 17 links.
+These are read-only compatibility checks. Both-host candidate CI and complete
+RC1 lifecycle/native qualification remain separate requirements.
