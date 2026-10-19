@@ -165,7 +165,13 @@ dangling-alias fixtures cover the correction.
 The lifecycle coordinator now persists the completed matrix report before
 package removal, including when retained replay later fails. Explicit maintainer
 tests additionally pair the frozen Python functions with current Rust across
-131 parser/claim cases and nine filesystem transaction cases on both CI hosts.
+131 parser/claim cases, nine filesystem transaction cases and 50 inventory/TAR
+cases on both CI hosts. The filesystem replay uses the current compiled core
+against the same pinned inputs as the historical functions, comparing all
+decisions and wrapper decision exits plus complete accepted TAR reports. It
+does not substitute those API comparisons for full consumer CLI lifecycle
+acceptance. Both complete historical source files and the internal interpreter
+are pinned; the active source/test/helper identities are recorded per run.
 Ordinary workspace tests leave these historical tests ignored; the named CI
 step supplies the pinned internal Python and records exact counts and source
 identities. Python is outside the consumer process tree and this temporary

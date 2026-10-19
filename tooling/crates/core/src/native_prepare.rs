@@ -84,6 +84,8 @@ fn prepare_created(
         let retained = retain_package(package, state, state_path, signals)?;
         let mut session = ConsumerSession::new(state_path, signals)?;
         phase = "source-checkout";
+        #[cfg(test)]
+        test_interrupt_after_retained_session(signals)?;
         let source =
             crate::consumer_source::checkout_package_source(&mut session, retained.pins())?;
         let baseline = InitialBaseline::load()?;
@@ -330,4 +332,293 @@ fn write_bytes(root: &Directory, name: &str, raw: &[u8], mode: u32) -> Result<()
     file.set_permissions(std::fs::Permissions::from_mode(mode))?;
     file.sync_all()?;
     Ok(())
+}
+
+#[cfg(test)]
+use std::sync::atomic::{AtomicBool, Ordering};
+
+#[cfg(test)]
+static INTERRUPT_AFTER_RETAINED_SESSION: AtomicBool = AtomicBool::new(false);
+#[cfg(test)]
+static TEST_SIGTERM_OBSERVED: AtomicBool = AtomicBool::new(false);
+
+#[cfg(test)]
+#[allow(
+    unsafe_code,
+    reason = "The isolated test sends SIGTERM to its own test process."
+)]
+fn test_interrupt_after_retained_session(signals: &SigtermGuard) -> Result<()> {
+    if !INTERRUPT_AFTER_RETAINED_SESSION.swap(false, Ordering::AcqRel) {
+        return Ok(());
+    }
+    // SAFETY: raise has no pointer arguments and delivers the signal to this
+    // calling test thread. The real cooperative handler is installed by prepare.
+    let status = unsafe { libc::raise(libc::SIGTERM) };
+    if status != 0 {
+        return Err(Refusal::new(format!(
+            "test could not deliver SIGTERM to its own process: {}",
+            std::io::Error::last_os_error()
+        )));
+    }
+    if !signals.requested() {
+        return Err(Refusal::new(
+            "test SIGTERM was not observed by the active installer guard",
+        ));
+    }
+    TEST_SIGTERM_OBSERVED.store(true, Ordering::Release);
+    signals.check()
+}
+
+#[cfg(test)]
+mod interruption_tests {
+    use super::{INTERRUPT_AFTER_RETAINED_SESSION, TEST_SIGTERM_OBSERVED, prepare};
+    use crate::{
+        digest::sha256_bytes,
+        host_platform::supported_host,
+        package::{PackageRuntime, check_native_package_root},
+    };
+    use serde_json::{Value, json};
+    use std::{
+        fs::{self, OpenOptions},
+        io::Write,
+        os::unix::fs::{MetadataExt, OpenOptionsExt},
+        path::{Path, PathBuf},
+        sync::atomic::Ordering,
+    };
+
+    fn hash_file(path: &Path) -> String {
+        sha256_bytes(&fs::read(path).expect("read evidence file"))
+    }
+
+    fn collect(root: &Path, current: &Path, rows: &mut Vec<Value>) {
+        let mut children = fs::read_dir(current)
+            .expect("read state directory")
+            .map(|entry| entry.expect("read state entry").path())
+            .collect::<Vec<_>>();
+        children.sort();
+        for child in children {
+            let metadata = fs::symlink_metadata(&child).expect("read entry metadata");
+            let relative = child.strip_prefix(root).expect("state-relative entry");
+            let mode = metadata.mode() & 0o7777;
+            let mut row = json!({
+                "path": relative.to_string_lossy(),
+                "uid": metadata.uid(),
+                "gid": metadata.gid(),
+                "mode": mode,
+            });
+            if metadata.file_type().is_dir() {
+                row["kind"] = json!("directory");
+                collect(root, &child, rows);
+            } else if metadata.file_type().is_file() {
+                row["kind"] = json!("file");
+                row["bytes"] = json!(metadata.len());
+                row["sha256"] = json!(hash_file(&child));
+            } else if metadata.file_type().is_symlink() {
+                row["kind"] = json!("symlink");
+                row["target"] = json!(
+                    fs::read_link(&child)
+                        .expect("read symlink target")
+                        .to_string_lossy()
+                );
+            } else {
+                panic!(
+                    "unexpected special entry in retained state: {}",
+                    child.display()
+                );
+            }
+            rows.push(row);
+        }
+    }
+
+    #[allow(
+        unsafe_code,
+        reason = "The test reads its own uid and gid for private-state checks."
+    )]
+    fn state_snapshot(root: &Path) -> Vec<Value> {
+        let metadata = fs::symlink_metadata(root).expect("state root metadata");
+        assert!(metadata.file_type().is_dir());
+        let mut rows = vec![json!({
+            "path": ".",
+            "kind": "directory",
+            "uid": metadata.uid(),
+            "gid": metadata.gid(),
+            "mode": metadata.mode() & 0o7777,
+        })];
+        collect(root, root, &mut rows);
+        let uid = unsafe { libc::getuid() };
+        let gid = unsafe { libc::getgid() };
+        for row in &rows {
+            assert_eq!(row["uid"].as_u64(), Some(u64::from(uid)));
+            assert_eq!(row["gid"].as_u64(), Some(u64::from(gid)));
+            if row["kind"] == "directory" || row["kind"] == "file" {
+                assert_eq!(row["mode"].as_u64().unwrap() & 0o022, 0, "{}", row["path"]);
+            }
+        }
+        assert_eq!(rows[0]["mode"], json!(0o700));
+        rows
+    }
+
+    fn snapshot_hash(rows: &[Value]) -> String {
+        sha256_bytes(&serde_json::to_vec(rows).expect("serialize state snapshot"))
+    }
+
+    fn write_report(path: &Path, report: &Value) {
+        let bytes = serde_json::to_vec_pretty(report).expect("serialize test report");
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(path)
+            .expect("create private test report");
+        file.write_all(&bytes).expect("write private test report");
+        file.write_all(b"\n")
+            .expect("terminate private test report");
+        file.sync_all().expect("sync private test report");
+    }
+
+    #[test]
+    #[ignore = "requires the pinned signed native package and writes retained private state"]
+    #[allow(
+        unsafe_code,
+        reason = "The test checks current-user ownership on the isolated state."
+    )]
+    fn interrupted_prepare_retains_state_and_retry_refuses_without_mutation() {
+        assert_eq!(
+            std::env::var("AMI_RUST_TEST_INTERRUPT_PREPARE").as_deref(),
+            Ok("1")
+        );
+        let package_path = PathBuf::from(
+            std::env::var_os("AMI_RUST_TEST_NATIVE_PACKAGE").expect("pinned package path"),
+        );
+        let state_path =
+            PathBuf::from(std::env::var_os("AMI_RUST_TEST_STATE").expect("fresh state path"));
+        let report_path =
+            PathBuf::from(std::env::var_os("AMI_RUST_TEST_REPORT").expect("test report path"));
+        let state_parent = state_path.parent().expect("state parent");
+        assert!(!state_path.exists());
+        let parent_metadata = fs::symlink_metadata(state_parent).expect("state parent exists");
+        assert!(parent_metadata.file_type().is_dir());
+        assert_eq!(parent_metadata.uid(), unsafe { libc::getuid() });
+        assert_eq!(parent_metadata.gid(), unsafe { libc::getgid() });
+        assert_eq!(parent_metadata.mode() & 0o7777, 0o700);
+
+        let sibling = state_parent.join("unrelated-user-data.bin");
+        let sibling_bytes = b"preserve unrelated data through interrupted prepare and refusal\n";
+        let mut sibling_file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(&sibling)
+            .expect("create unrelated sibling file");
+        sibling_file.write_all(sibling_bytes).unwrap();
+        sibling_file.sync_all().unwrap();
+        let sibling_sha_before = hash_file(&sibling);
+
+        let package = check_native_package_root(
+            &package_path,
+            PackageRuntime {
+                host: supported_host().expect("supported native host"),
+                cli_version: env!("CARGO_PKG_VERSION"),
+            },
+        )
+        .expect("checked native package");
+        INTERRUPT_AFTER_RETAINED_SESSION.store(true, Ordering::Release);
+        let error = match prepare(&package, &state_path) {
+            Ok(_) => panic!("test SIGTERM must interrupt prepare"),
+            Err(error) => error,
+        };
+        assert!(TEST_SIGTERM_OBSERVED.swap(false, Ordering::AcqRel));
+        assert_eq!(error.exit_code(), 2);
+        assert!(
+            error
+                .to_string()
+                .contains("prepare failed in source-checkout")
+        );
+        assert!(
+            error
+                .to_string()
+                .contains("SIGTERM requested; installer must stop safely")
+        );
+        assert!(state_path.is_dir());
+        assert!(!state_path.join("ready.json").exists());
+        assert!(!state_path.join("source").exists());
+
+        let failure: Value = serde_json::from_slice(
+            &fs::read(state_path.join("prepare-failure.json")).expect("failure record"),
+        )
+        .unwrap();
+        assert_eq!(failure["phase"], "source-checkout");
+        assert_eq!(failure["ready"], false);
+        assert_eq!(failure["state_retained"], true);
+        assert!(failure["reason"].as_str().unwrap().contains("SIGTERM"));
+
+        let retained_path = state_path
+            .join("retained/libexec/ami-rust")
+            .join(&package.pins().package_version);
+        let retained = check_native_package_root(
+            &retained_path,
+            PackageRuntime {
+                host: package.pins().host,
+                cli_version: &package.pins().cli_version,
+            },
+        )
+        .expect("retained package is still complete and internally consistent");
+        assert_eq!(retained.raw_inventory(), package.raw_inventory());
+        for name in ["ami-rust", "cargo-ami"] {
+            let alias = state_path.join("retained/bin").join(name);
+            assert!(
+                fs::symlink_metadata(&alias)
+                    .unwrap()
+                    .file_type()
+                    .is_symlink()
+            );
+            assert!(alias.is_file());
+            assert_eq!(
+                fs::read_link(alias).unwrap(),
+                PathBuf::from("../libexec/ami-rust")
+                    .join(&package.pins().package_version)
+                    .join("bin")
+                    .join(name)
+            );
+        }
+        let commands = fs::read_dir(state_path.join("commands"))
+            .expect("consumer session command root")
+            .count();
+        assert_eq!(commands, 0, "SIGTERM must occur before any child command");
+
+        let before_retry = state_snapshot(&state_path);
+        let retry_error = match prepare(&package, &state_path) {
+            Ok(_) => panic!("partial state must refuse retry"),
+            Err(error) => error,
+        };
+        assert!(retry_error.to_string().contains("state path must be fresh"));
+        assert_eq!(before_retry, state_snapshot(&state_path));
+        assert_eq!(fs::read(&sibling).unwrap(), sibling_bytes);
+        let sibling_sha_after = hash_file(&sibling);
+        assert_eq!(sibling_sha_before, sibling_sha_after);
+
+        let report = json!({
+            "schema": "ami-rust-native-test-interrupted-prepare-v1",
+            "status": "PASS_TEST_ONLY_REAL_SIGTERM_BEFORE_SOURCE_CHECKOUT",
+            "process_id": std::process::id(),
+            "self_sigterm_delivered_to_active_guard": true,
+            "prepare_error": error.to_string(),
+            "failure_record": failure,
+            "state_path": state_path.to_string_lossy(),
+            "state_entries": before_retry.len(),
+            "state_sha256_before_retry": snapshot_hash(&before_retry),
+            "state_sha256_after_retry": snapshot_hash(&state_snapshot(&state_path)),
+            "retained_package_inventory_sha256": hash_file(&retained_path.join("inventory.json")),
+            "retained_package_consistency_rechecked": true,
+            "retained_launcher_aliases": ["ami-rust", "cargo-ami"],
+            "consumer_commands": commands,
+            "ready_present": state_path.join("ready.json").exists(),
+            "source_present": state_path.join("source").exists(),
+            "retry_refusal": retry_error.to_string(),
+            "retry_state_unchanged": true,
+            "unrelated_sibling_sha256_before": sibling_sha_before,
+            "unrelated_sibling_sha256_after": sibling_sha_after,
+        });
+        write_report(&report_path, &report);
+    }
 }

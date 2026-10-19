@@ -1,0 +1,536 @@
+{
+  "schema": "ami-rust-native-observation-development-evidence-v1",
+  "date": "2026-10-19",
+  "authority": "rust-cli-cargo-migration-plan.md revision2 RC1-A1\u2013A4",
+  "status": "PASS_MACOS_COMPONENT_GATE_NOT_RC1_ACCEPTANCE",
+  "tested_source_commit": "8c100124623e650544cc941d402e7311c3b61769",
+  "tested_tree": "529daafd77c16195ed10293029e3618af5fe2094",
+  "source_materials": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 15107,
+      "sha256": "95e0f90ab8e1906e15dcda05229ab54ea892bd5a629052697d10db8254725023"
+    },
+    {
+      "path": "docs/rust-cli-migration/native-producer.md",
+      "bytes": 12159,
+      "sha256": "99cd3bd8fdc4b91a24df1b858afb9e38703333a9dbc42425701ccd61437dd451"
+    },
+    {
+      "path": "docs/rust-cli-migration/rc1-resource-inputs.md",
+      "bytes": 8840,
+      "sha256": "06f731816695bb595fe22799346f738c218269775193b979b67b96302de70d4a"
+    },
+    {
+      "path": "release/ci_auth.py",
+      "bytes": 54998,
+      "sha256": "24e6a7c17469ac3eacc9f982af916f37b7d703779d51800998603d607f4c60f7"
+    },
+    {
+      "path": "release/native-tooling-inputs.json",
+      "bytes": 28216,
+      "sha256": "5d752158700220934292eaf2000e8824eac1cde1278d0640a4d1369e4f2e1533"
+    },
+    {
+      "path": "release/test_native_tooling_materials.py",
+      "bytes": 10288,
+      "sha256": "f0908993ddb252824511dfacad7c5d881aa21b46eda30f8201d40cd12784bbb3"
+    },
+    {
+      "path": "tooling/crates/core/build.rs",
+      "bytes": 5790,
+      "sha256": "118689f951b0ac8d26be10d030f767cd58c3e4e2d52e45c91f8f3e6e4a12e15c"
+    },
+    {
+      "path": "tooling/crates/core/src/macos_process_snapshot.c",
+      "bytes": 1593,
+      "sha256": "52020b0506dcff4075db8bc5c055cedcdae8659519112bec091af7c90fb6ab8f"
+    },
+    {
+      "path": "tooling/crates/core/src/macos_process_snapshot.rs",
+      "bytes": 53756,
+      "sha256": "019c1c4a8f54c4e778f3bd0c7a6633f85cbdb3fd1e2833bb76672c48f51198bb"
+    },
+    {
+      "path": "tooling/crates/core/src/native_prepare.rs",
+      "bytes": 25323,
+      "sha256": "7b1c85ef9cc07f7a10cd047b74d7ace7e8850d2dcd6f0d5f629806c458c2152c"
+    },
+    {
+      "path": "tooling/crates/core/src/publisher_materials.rs",
+      "bytes": 55077,
+      "sha256": "b099e28499c167d887adf93309eff2cb57030463cd37b00d33f4076cff83a7da"
+    },
+    {
+      "path": "tooling/crates/core/src/resource_capture.rs",
+      "bytes": 38605,
+      "sha256": "deac68a42e210496565ef4bf0ec6da6b5415bae0db304208f82918c62272f18c"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/absolute.inventory.json",
+      "bytes": 130,
+      "sha256": "725e565a715d8a74bcb3095b7882d4aac1d907b19f2cecec5d1c48ea04328b3a"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/absolute.tar.xz",
+      "bytes": 160,
+      "sha256": "f3218025506a3c2df3c85587994106484057d0d97edf1c113da6a22fd8dd99c0"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/ancestor-A.inventory.json",
+      "bytes": 251,
+      "sha256": "48afc435ce815ee856eaa95ed5681ff58e953e39f29218e3a559741b1d08455a"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/ancestor-A.tar.xz",
+      "bytes": 168,
+      "sha256": "dd7766f2955bac23ad4f1a872c35a2620ee5ccb9e9045d798b0d1983b726b787"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/ancestor-a.inventory.json",
+      "bytes": 251,
+      "sha256": "9f700366c13e588389b61984aa1b59b847d30a6e71191e4e0dba08452cb25b34"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/ancestor-a.tar.xz",
+      "bytes": 168,
+      "sha256": "88aa9138f07391f38ba9f95108a2d2b56eec49984157fb3f872d67517e15b84a"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/ascii-strip.inventory.json",
+      "bytes": 134,
+      "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/ascii-strip.tar.xz",
+      "bytes": 148,
+      "sha256": "e76898896bcf7d0e639a0e558f53c8ede093510ef9d86127b0b3c4616db24a99"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/backslash.inventory.json",
+      "bytes": 135,
+      "sha256": "fcc88c73704cdebd2f29f9f0900c9f80dde06004a1d24ff207c75c65eba6db5a"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/backslash.tar.xz",
+      "bytes": 164,
+      "sha256": "31908986693307f9afb0db3be41e30e59ad494c8e9b3b8acf0f553a06a702da3"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/base256-mode.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/base256-mode.tar.xz",
+      "bytes": 164,
+      "sha256": "833c713f16227c291ac07a602de734a30aaacb9dc298fa07ffadc72fb36f8d95"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/continuous.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/continuous.tar.xz",
+      "bytes": 152,
+      "sha256": "0fd33c11f170a3c3746bb5edeb0d1b15d970e59c670c2199c3d9a18c6dcb0692"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/directory.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/directory.tar.xz",
+      "bytes": 152,
+      "sha256": "5b7b61d0f4719de64a6f46aaf5dd878688a5196ccf5739e9d162b27bcac6059d"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/empty-parsed-pax.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/empty-parsed-pax.tar.xz",
+      "bytes": 200,
+      "sha256": "5c5dcc8e039cfd0c87f20a9d2596029387284260fe146a128a30184a8f831222"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/fifo.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/fifo.tar.xz",
+      "bytes": 152,
+      "sha256": "5256b6b6fa6a15f8d8ff8c5a3eea9ff9b46de3842bc5bbe14de2c8ba398d2dc4"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/fixture-digests.json",
+      "bytes": 10786,
+      "sha256": "3fa952f9167b2b54ec694b26f1271cfccd1949b5634cc041132957b623d548a0"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/gnu-first-nul.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/gnu-first-nul.tar.xz",
+      "bytes": 216,
+      "sha256": "f72454b5214994c5ac5089d4ad3c7391d9f54d657ec408fa5ac68a41a338c662"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/gnu-longname.inventory.json",
+      "bytes": 346,
+      "sha256": "a1a305443b0fea67453a13855ab412e6c722770f64563b96109eae2cee882a27"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/gnu-longname.tar.xz",
+      "bytes": 196,
+      "sha256": "91c121281eb0531000468029a734e504a846dd6c2160a77137afc917a4d21116"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/hardlink.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/hardlink.tar.xz",
+      "bytes": 152,
+      "sha256": "41d51c5e2204e9afc80f91d97aab0e8e33c8eeadfcf17cb61831b8ad28c2793f"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonascii-devmajor.inventory.json",
+      "bytes": 134,
+      "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonascii-devmajor.tar.xz",
+      "bytes": 156,
+      "sha256": "23e50a69bae0ef43cd2064a0fe3ae7dff82cf50b677f6837344210ed0cf1606a"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonascii-devminor.inventory.json",
+      "bytes": 134,
+      "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonascii-devminor.tar.xz",
+      "bytes": 156,
+      "sha256": "f0ea57cd47d4cd9bd3cb97ccfbd1608fb0aad7783c59061a4a2b476bdbf6dddc"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonascii-gid.inventory.json",
+      "bytes": 134,
+      "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonascii-gid.tar.xz",
+      "bytes": 156,
+      "sha256": "8adb1e07d3515bc6fb24cd5b4462bacbfcc6c9a94f59a7e9c2599d16c82ece8c"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonascii-mode.inventory.json",
+      "bytes": 134,
+      "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonascii-mode.tar.xz",
+      "bytes": 148,
+      "sha256": "773cca9ee9066c5f02d1c1a6cae273559f6d883fa860da8dfa133ca1ecd0c86c"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonascii-mtime.inventory.json",
+      "bytes": 134,
+      "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonascii-mtime.tar.xz",
+      "bytes": 152,
+      "sha256": "29c6fce0fca9da1304f2c55e4c003d76adcf8cf0b525d50f44e0ce545067b40c"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonascii-size.inventory.json",
+      "bytes": 134,
+      "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonascii-size.tar.xz",
+      "bytes": 156,
+      "sha256": "587ae534a4a4fdf9b8ab34e22c4f344881fd6321cabbf09df99ad8d51e0d88b6"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonascii-uid.inventory.json",
+      "bytes": 134,
+      "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonascii-uid.tar.xz",
+      "bytes": 156,
+      "sha256": "67273e36d845cd5df5be6bfa0c92a3ab4f5f9ccb8abec2072023b59fe6cfa7ca"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nongnu-longname-marker.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nongnu-longname-marker.tar.xz",
+      "bytes": 212,
+      "sha256": "b99a1e873dedfb4920c8f13ecad87215de659b4e5d10abd866837557862a098b"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonzero-tail.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/nonzero-tail.tar.xz",
+      "bytes": 168,
+      "sha256": "a305b0cc9f6bcc33002311e161f558fc81f7e1b9d2d434424c8b8bb70e31ce3a"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/octal-prefix-separator.inventory.json",
+      "bytes": 134,
+      "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/octal-prefix-separator.tar.xz",
+      "bytes": 148,
+      "sha256": "af73dfb9697a16519293aa39a2f9587877c392770403571b2102b6957096ca0f"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/pax.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/pax.tar.xz",
+      "bytes": 216,
+      "sha256": "ce5cf16bd6af37543383b226b5754cd0ac587f8ef7b93ccc79433fdf98671bb4"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/regular.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/regular.tar.xz",
+      "bytes": 164,
+      "sha256": "59c78ef630d517519cf89b4bcb1e50b77c07d2e61a8613637151cd8a5d86d4b0"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/released-sdk.inventory.json",
+      "bytes": 14398,
+      "sha256": "ea36a5bb069b525c80f99f6325e3b59ed965fe9fd712dcbc27f2b2c0cf13708f"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/released-sdk.tar.xz",
+      "bytes": 598584,
+      "sha256": "087f69659f1d0d5136b2c07789488c23dd52ca7b38b21579183620a5fbc61dd4"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/repeated-gnu-longlink.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/repeated-gnu-longlink.tar.xz",
+      "bytes": 224,
+      "sha256": "018fe1863a8f153949de8d7aeff81ebe61dd888448bdcd98f47463baa9842c79"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/repeated-gnu-longname.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/repeated-gnu-longname.tar.xz",
+      "bytes": 224,
+      "sha256": "af0295a73747c52d59c8b22d5e1d7812b3408759093f15027c6a73688783e768"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/reserved.inventory.json",
+      "bytes": 132,
+      "sha256": "f221d3a3ed4dad48059bba09248535665cf1815152eda80660f1d39b85bda508"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/reserved.tar.xz",
+      "bytes": 160,
+      "sha256": "c48742a53320c8926f30ca66d974b9e18a1f125d83644169426d5743f72ed9f0"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/signed-checksum.inventory.json",
+      "bytes": 134,
+      "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/signed-checksum.tar.xz",
+      "bytes": 148,
+      "sha256": "db8ee2f9360e2f1a55f60b27ed2f63f0ae840b0bb9e0b3f0d6fcee607b2d17b0"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/symlink.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/symlink.tar.xz",
+      "bytes": 152,
+      "sha256": "3705911dda1c6b70f757536337f1b732944f6d6af1c7f2e2a4fd459b62f81ccd"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/traversal.inventory.json",
+      "bytes": 132,
+      "sha256": "5ca400088c1ee956bd94be1cc13e6811792f8c3ec75dc088342f58c6b5a110f0"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/traversal.tar.xz",
+      "bytes": 160,
+      "sha256": "f15e896a2bc75e3679662bfc434db06a1d50b5f1c88957882ae06d8691e7f559"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/truncated.inventory.json",
+      "bytes": 134,
+      "sha256": "efd7a8b6a8fffbb8c48ed056583334c667724f6558899cd458e14018861ab9c5"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/truncated.tar.xz",
+      "bytes": 128,
+      "sha256": "55ea5e95f7bdb6ef45e4698db7e630c9fa2436154b39f3a6b923a8d6f8b63a91"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/wide-negative-mtime.inventory.json",
+      "bytes": 134,
+      "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/wide-negative-mtime.tar.xz",
+      "bytes": 156,
+      "sha256": "83bbd9f22662cb0b482edcd35411b009613681d896c8f26130089c8e4f52e0ab"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/wide-positive-mtime.inventory.json",
+      "bytes": 134,
+      "sha256": "ddcbd6b6e785706b65679566cc2e4504a70944bc253861557bc0445b0566a6f1"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/wide-positive-mtime.tar.xz",
+      "bytes": 156,
+      "sha256": "8661d620d6a92db021f009e2d7e6a8c210c0221567073ff5da1d2314d11d6ee9"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/wrong-inventory.inventory.json",
+      "bytes": 134,
+      "sha256": "231b888f3fd6883542a39fad7cb6bd921e123dce68934e0debed00060cc5ee5c"
+    },
+    {
+      "path": "tooling/crates/core/tests/fixtures/historical_filesystem/wrong-inventory.tar.xz",
+      "bytes": 164,
+      "sha256": "59c78ef630d517519cf89b4bcb1e50b77c07d2e61a8613637151cd8a5d86d4b0"
+    },
+    {
+      "path": "tooling/crates/core/tests/historical_filesystem.rs",
+      "bytes": 17991,
+      "sha256": "1d4c2f34b0dd43e65ff7dbd6ac01bfab14f7fc983e33161e15b305a6b0e3e2b5"
+    },
+    {
+      "path": "tooling/crates/core/tests/support/historical_filesystem.py",
+      "bytes": 20486,
+      "sha256": "025a568d5e2b4a6d68009dc07ca9de71635bb6b1d5523c07d4a1f5aa411c664e"
+    },
+    {
+      "path": "tools/consumer-enforcement-adapter/Cargo.lock",
+      "bytes": 172,
+      "sha256": "53b6cb359fd9371d6933d260bd9404a7982105547e1194b1ce254b4d255188b9"
+    },
+    {
+      "path": "tools/consumer-enforcement-adapter/Cargo.toml",
+      "bytes": 166,
+      "sha256": "a54b34955e39b53371921a01d5bf70ddbc94daa25d0b012f90f4993879858c19"
+    },
+    {
+      "path": "tools/consumer-enforcement-adapter/LINUX.md",
+      "bytes": 11799,
+      "sha256": "0f54440bf6920304bbf853e5d2371b2b2a4f26e4210c5dec362df0c46a5729b2"
+    },
+    {
+      "path": "tools/consumer-enforcement-adapter/README.md",
+      "bytes": 4372,
+      "sha256": "37b2ad2048e608e4046d54359072fa73853f240039a518a61cf2b10931a972e8"
+    },
+    {
+      "path": "tools/consumer-enforcement-adapter/controls/embedded-libpython.c",
+      "bytes": 1123,
+      "sha256": "90484815e8494f055ec861527ba8ed827c3dfe763a20d5a41ed50f940abcc069"
+    },
+    {
+      "path": "tools/consumer-enforcement-adapter/src/linux.rs",
+      "bytes": 115037,
+      "sha256": "482e95c081632a70e9d9981c957b952bea00938ca7929b36099680b52d8c3e90"
+    },
+    {
+      "path": "tools/consumer-enforcement-adapter/src/macos.rs",
+      "bytes": 68886,
+      "sha256": "03e5872722352816a438ddca6c36b3c780d7411dc3c5e34eb12298877730bfdf"
+    },
+    {
+      "path": "tools/consumer-enforcement-adapter/src/main.rs",
+      "bytes": 648,
+      "sha256": "e00fc1e2d3365d235a2152eac035318b4c70973a9c46007c84e2435d0609261a"
+    }
+  ],
+  "host": "macos-aarch64",
+  "host_rustc_sha256": "766eda9d8f53afd6fc7f27b3cd2e444dd22afacb5afa710a5625fc8e45b8c941",
+  "host_cargo_sha256": "6e17e865f3a20dd55a1d212f849f58b77124179f0de7c52973096d84ba34118d",
+  "empty_rustc_wrappers": true,
+  "results": {
+    "core_unit_tests": {
+      "passed": 360,
+      "ignored_helper_fixtures": 16
+    },
+    "workspace_tests": "PASS",
+    "clippy_workspace_all_targets_deny_warnings": "PASS",
+    "changed_rust_format": "PASS",
+    "macos_enforcement_adapter_unit_tests": "PASS",
+    "workflow_actionlint": "PASS",
+    "native_material_positive_negative_tests": 8,
+    "live_historical_pairs": {
+      "parsers_receipts_publisher": 131,
+      "filesystem_transactions": 9,
+      "inventory_and_archive": 50,
+      "accepted_archive_full_reports_equal": 14,
+      "total": 190
+    },
+    "exact_sparse_ci_historical_step": {
+      "status": "PASS",
+      "fresh_pinned_python_bootstrap": true,
+      "source_clean_before_after": true,
+      "historical_pairs": 190,
+      "elapsed_seconds": 33.595,
+      "peak_rss_bytes": 905412608
+    }
+  },
+  "report_sha256": {
+    "workspace_and_lint": "0d7b27702bd1b7c5e90763e00c8354115e861b13006e472dd0e8d5921a8ec0af",
+    "remaining_190_pairs": "32400f7d5e6e97a06363e17618ab63f08d9cf5dcd677bb49c2b6cb0dec77b0ab",
+    "exact_sparse_ci_step": "0ea30abe9443b15643d89915765dc7b3366f10c89e932fad507ebebb1451ceba"
+  },
+  "failed_attempts": {
+    "a1": "Full-workspace formatting check found pre-existing untouched public_transport.rs formatting. Changed-file formatting is checked separately.",
+    "a2": "New adapter formatting required correction.",
+    "a3": "Workspace passed; Clippy found a macOS-only unused import and the explicit eight-argument kernel-query boundary. Both corrected before this tested source.",
+    "a4": "All listed component checks passed; the later orchestration invoked isolated Python unittest with an unavailable module search path. a5 uses the existing absolute test-file entry point on the same source, preserving the failed attempt."
+  },
+  "limitations": [
+    "This is development evidence, not signed/current-CLI cold or warm lifecycle acceptance.",
+    "Linux native adapter enforcement and all exact-candidate supported-host command controls remain required.",
+    "The restricted macOS build is still unaccepted: OS xcrun/Xcode lookup needs an exact library/metadata closure, including library aliases. Native process/RSS capture now runs through the Rust compile stage without invoking ps.",
+    "Public interruption exits, signed receipt-v3 ownership, upgrade/migration/removal/recovery and retained replay require the complete consumer qualification.",
+    "The two-root/five-variant and cross-host raw-metadata/Serde gates remain required for the final candidate.",
+    "Internal Python is transitional maintainer orchestration; RC4/RC5 retirement remains required.",
+    "No baseline, target toolchain, released SDK/package or protected AROS checkout change."
+  ]
+}

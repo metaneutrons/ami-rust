@@ -466,6 +466,9 @@ def input_manifest_for_sdk(source, sdk_version):
         add("git+https://github.com/" + REPO + "#" + path, "sha256",
             sha(read(below(Path(source), path))))
     required_sources = ("tooling/Cargo.lock", "tooling/Cargo.toml",
+                        "tooling/crates/core/build.rs",
+                        "tooling/crates/core/src/macos_process_snapshot.c",
+                        "tooling/crates/core/src/macos_process_snapshot.rs",
                         "tooling/crates/xtask/src/native_release.rs",
                         "tooling/fixtures/accepted-r1-inputs.json",
                         "tooling/fixtures/accepted-r1-support-inputs.json",
