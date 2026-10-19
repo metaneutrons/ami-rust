@@ -1,0 +1,52 @@
+{
+  "schema": "ami-rust-rc1-publisher-hosted-v1",
+  "status": "PASS",
+  "run_id": 39206729340,
+  "run_url": "https://github.com/metaneutrons/ami-rust/actions/runs/39206729340",
+  "candidate": "b1a63279242762c76b9cd2a19d38e6cc9edd305b",
+  "compiled_source_commit": "9ed0917674dbed2bd9a9b08cc7883a1450699ddd",
+  "scope": "Core publisher admission/claim/command/supervision tests only; no actual hosted verifiers, signed native-v2, complete consumer path or RC1 acceptance",
+  "hosts": [
+    {
+      "host": "linux",
+      "job_id": 117911124759,
+      "job_url": "https://github.com/metaneutrons/ami-rust/actions/runs/39206729340/job/117911124759",
+      "log_bytes": 53423,
+      "log_sha256": "d2f1bfd1020359f90b094c2f60e31896df66a50df385d1517a6b805e04d1d1a1",
+      "core_unit_tests": 172,
+      "frontend_tests": 1,
+      "manifest_oracle_integration_tests": 1,
+      "total_rust_tests": 174,
+      "static_claim_cases": 70,
+      "ignored_fixtures_executed_by_parent": 2,
+      "checks": [
+        "offline locked workspace tests",
+        "formatting",
+        "Clippy warnings denied"
+      ]
+    },
+    {
+      "host": "macos",
+      "job_id": 117911124783,
+      "job_url": "https://github.com/metaneutrons/ami-rust/actions/runs/39206729340/job/117911124783",
+      "log_bytes": 53074,
+      "log_sha256": "30bed6c64f2c3e8d410cf991266e3870f82f4793be6b9fa6452945fb7c1ba2b6",
+      "core_unit_tests": 172,
+      "frontend_tests": 1,
+      "manifest_oracle_integration_tests": 1,
+      "total_rust_tests": 174,
+      "static_claim_cases": 70,
+      "ignored_fixtures_executed_by_parent": 2,
+      "checks": [
+        "offline locked workspace tests",
+        "formatting",
+        "Clippy warnings denied"
+      ]
+    }
+  ],
+  "complete_rc1_accepted": false,
+  "log_capture": "gh api --allow-escape-sequences captures exact raw log bytes to files only; terminal escape codes removed from a separate validation string, never raw evidence.",
+  "merge_commit": "438600df32a5214bc77b7ee9224d84414275b1ff",
+  "merged_at": "2026-10-19T06:09:58Z",
+  "merged_tooling_identical_to_candidate": true
+}
