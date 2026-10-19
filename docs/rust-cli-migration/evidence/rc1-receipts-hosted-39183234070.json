@@ -1,0 +1,122 @@
+{
+  "schema": "ami-rust-rc1-receipts-hosted-v1",
+  "scope": "Closed receipt parsing and existing host core only; no consumer command activation or complete RC1 acceptance",
+  "candidate_commit": "ba58e8efb88132bb7719b62fdb0a2a36529ceb37",
+  "base_commit": "c13c61c7bfbe1d9d08aa94e375840af2b95ab66f",
+  "pr": "https://github.com/metaneutrons/ami-rust/pull/85",
+  "run": "https://github.com/metaneutrons/ami-rust/actions/runs/39183234070",
+  "status": "PASS",
+  "core_tests_per_host": 103,
+  "frontend_tests_per_host": 1,
+  "ignored_fixtures_executed_by_parent": 2,
+  "historical_static_oracle_cases": 20,
+  "host_results": {
+    "linux": {
+      "job": 117840277295,
+      "test_results": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 103,
+          "failed": 0,
+          "ignored": 2
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "log_bytes": 44324,
+      "log_sha256": "387f350a922253508760051d773afc76099313aebc03a1f2632e794abc721381"
+    },
+    "macos": {
+      "job": 117840277319,
+      "test_results": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 103,
+          "failed": 0,
+          "ignored": 2
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "log_bytes": 43974,
+      "log_sha256": "b9923a46ff78258727c80670c1177175699acb5cf8a28a47d4b25eef401778ae"
+    }
+  },
+  "complete_rc1_accepted": false,
+  "merge_commit": "a9d3342b792e2349d0b58b8fa54b3c514aa9a61f",
+  "log_retrieval": "gh api repos/metaneutrons/ami-rust/actions/jobs/JOB/logs (raw response bytes)"
+}
