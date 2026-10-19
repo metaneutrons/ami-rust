@@ -1,0 +1,11 @@
+{
+  "schema": "ami-rust-receipt-local-source-integration-v1",
+  "qualified_local_commit": "d955f1e52331f4fab5dd5b6ab751f8a266d19c50",
+  "public_source_commit": "aa723b3199e17d262c8649b47aa14e6e4374fd29",
+  "integration_base": "c13c61c7bfbe1d9d08aa94e375840af2b95ab66f",
+  "source_hashes_equal": true,
+  "all_locked_input_hashes_equal": true,
+  "test_rerun_for_identical_bytes_claimed": false,
+  "hosted_qualification": "New exact-candidate both-host CI required; local source hash equality is not hosted success",
+  "source_files_verified": 17
+}
