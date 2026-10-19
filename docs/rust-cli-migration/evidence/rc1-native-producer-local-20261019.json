@@ -1,0 +1,143 @@
+{
+  "schema": "ami-rust-native-producer-development-evidence-v1",
+  "status": "LOCAL_IMPLEMENTATION_NOT_HOSTED_QUALIFICATION",
+  "implementation_revision": "18dfb24e09edf08fb92ec5fce7487e8b0edde74f",
+  "pr94": {
+    "candidate": "59522da3bc3996ab4852dc1328f01dc706eeb0dd",
+    "merged": "3b065c8fdff8f43669dca3ec734d570c0be547d5",
+    "ci_run": 39248259190,
+    "both_host_ordinary_workspace_tests": 357,
+    "source_tree_equality": "PASS"
+  },
+  "local_host_build": {
+    "claim": "Real local native build and immutable input composition only; not protected producer identity, signing, no-Python qualification or RC1 acceptance",
+    "cli": {
+      "bytes": 3210800,
+      "sha256": "1a0470b80d77d63bd93df902bdf97da807e8349edc349a66bd7517151f652827"
+    },
+    "host": "macos-aarch64",
+    "host_compiler_input": "existing Rust 1.98.1 installation; exact compiler commit checked; no fresh bootstrap/archive-authentication claim",
+    "schema": "ami-rust-native-host-producer-development-v1",
+    "sdk": {
+      "bytes": 565784,
+      "sha256": "26d2522006040d1fb1b32336b058b82f468f29f29eb0335a5967b2949847d714"
+    },
+    "source_has_uncommitted_producer_changes": true,
+    "source_head": "59522da3bc3996ab4852dc1328f01dc706eeb0dd",
+    "status": "PASS_LOCAL_BUILD_AND_PINNED_SDK_DRAFT_ONLY",
+    "xtask": {
+      "bytes": 1076192,
+      "sha256": "6fbcb3ef0b149a0321d6bd2d5617614eb0e02324602b04c04d016da1f00aced7"
+    }
+  },
+  "immutable_public_input": {
+    "archive": {
+      "bytes": 25902508,
+      "sha256": "f4a8cbc562d3c43c573a5a34ddfa99d74928ded94c47df45f4182fde71567d5c",
+      "url": "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-0.1.0-release.tar.xz"
+    },
+    "claim": "Immutable input and safe extraction only; no new native-v2 producer authentication",
+    "files": 115,
+    "release_manifest_sha256": "cd9adcf44264c86eb0bdea35bb16c02529c8ae5b051d4a9dd3aa6007f0972b65",
+    "schema": "ami-rust-native-producer-development-input-v1",
+    "sdk_archive_sha256": "087f69659f1d0d5136b2c07789488c23dd52ca7b38b21579183620a5fbc61dd4",
+    "status": "PINNED_IMMUTABLE_CAPSULE_READ_ONLY"
+  },
+  "development_checks": [
+    {
+      "label": "01-format",
+      "exit": 0,
+      "seconds": 0.41
+    },
+    {
+      "label": "02-workspace",
+      "exit": 0,
+      "seconds": 32.153
+    },
+    {
+      "label": "03-clippy",
+      "exit": 0,
+      "seconds": 4.166
+    }
+  ],
+  "focused_producer_checks": [
+    {
+      "label": "04-native-python-controls",
+      "exit": 0,
+      "seconds": 0.083
+    },
+    {
+      "label": "05-material-controls",
+      "exit": 0,
+      "seconds": 0.077
+    },
+    {
+      "label": "06-auth-controls",
+      "exit": 0,
+      "seconds": 0.276
+    },
+    {
+      "label": "07-admission-controls",
+      "exit": 0,
+      "seconds": 0.069
+    },
+    {
+      "label": "08-workflow-controls",
+      "exit": 0,
+      "seconds": 0.35
+    },
+    {
+      "label": "09-actionlint",
+      "exit": 0,
+      "seconds": 0.162
+    },
+    {
+      "native_input_materials": 295,
+      "bytes": 73222,
+      "sha256": "6bd3a5c26586d0f2e390718b6c663ea784c98973571b835c9f0b5f9a84567382"
+    }
+  ],
+  "material_parity": {
+    "status": "PASS_BYTE_EXACT",
+    "materials": 295,
+    "reference_bytes": 73222,
+    "reference_sha256": "6bd3a5c26586d0f2e390718b6c663ea784c98973571b835c9f0b5f9a84567382",
+    "historical_0_1_0_closure_unchanged": true
+  },
+  "source_review": {
+    "scope": "native producer, independent signer reconstruction and direct native lifecycle wiring",
+    "blocking_findings": 0,
+    "limitation": "Source review, not actual hosted producer execution"
+  },
+  "development_failures": [
+    {
+      "kind": "test harness",
+      "result": "initial material test selected an unrelated opt-in test without its required reference; rerun only the intended opt-in native test"
+    },
+    {
+      "kind": "test harness",
+      "result": "macOS temporary-directory alias rejected by descriptor-relative opening; canonicalized the fixture root"
+    },
+    {
+      "kind": "test reference",
+      "result": "material reference generated before formatting no longer matched source hashes; regenerated after final source edits"
+    },
+    {
+      "kind": "test placement",
+      "result": "two existing admission-test assertions were initially placed in the new test; restored to their original test"
+    },
+    {
+      "kind": "workflow contract",
+      "result": "legacy guard assertions updated to require explicit exclusion of the new native branch"
+    }
+  ],
+  "remaining_gates": [
+    "protected-main native producer and actual signatures",
+    "complete package/outer transport integration and license/SPDX review",
+    "both-host complete no-Python consumer observation",
+    "cold/warm preparation, differential/failure/cancellation, migration/upgrade/removal and retained replay",
+    "five variants in two fresh roots per host",
+    "all RC2\u2013RC5 criteria"
+  ],
+  "claim": "No native-v2 authentication, RC1 acceptance, new SDK publication or complete Python retirement is established by this local report."
+}
