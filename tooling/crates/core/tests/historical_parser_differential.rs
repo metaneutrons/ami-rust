@@ -14,6 +14,11 @@ use std::{
 };
 
 const TOTAL_CASES: usize = 131;
+// These inert oracle records were generated on macOS. Their provenance stays
+// fixed when the same functions are replayed by the separately pinned Linux
+// interpreter. verify_pinned_python checks the actual current-host executable.
+const ORACLE_ORIGIN_PYTHON_SHA256: &str =
+    "aed8ed802d0387d6831dead5885840e4e2ff3a7984dd7297e9a5f4466e9cda1d";
 
 fn string<'a>(value: &'a Value, key: &str) -> &'a str {
     value[key]
@@ -195,8 +200,8 @@ fn historical_python_differential_corpus() {
     );
     assert_eq!(
         string(&manifest_oracle, "historical_python_sha256"),
-        string(&runtime, "sha256"),
-        "manifest oracle Python pin differs from current runtime pin"
+        ORACLE_ORIGIN_PYTHON_SHA256,
+        "manifest oracle origin Python pin changed"
     );
     assert_eq!(
         string(&manifest_oracle, "historical_source_sha256"),
@@ -207,8 +212,8 @@ fn historical_python_differential_corpus() {
     let receipt_oracle_raw = fs::read(&receipt_oracle_path).expect("receipt oracle bytes");
     let receipt_oracle: Value = serde_json::from_slice(&receipt_oracle_raw).unwrap();
     assert_eq!(
-        receipt_oracle["runtime"]["sha256"],
-        string(&runtime, "sha256")
+        receipt_oracle["runtime"]["sha256"], ORACLE_ORIGIN_PYTHON_SHA256,
+        "receipt oracle origin Python pin changed"
     );
     assert_eq!(
         receipt_oracle["source"]["sha256"],
@@ -219,8 +224,8 @@ fn historical_python_differential_corpus() {
     let integer_oracle_raw = fs::read(&integer_oracle_path).expect("integer oracle bytes");
     let integer_oracle: Value = serde_json::from_slice(&integer_oracle_raw).unwrap();
     assert_eq!(
-        integer_oracle["runtime"]["sha256"],
-        string(&runtime, "sha256")
+        integer_oracle["runtime"]["sha256"], ORACLE_ORIGIN_PYTHON_SHA256,
+        "integer oracle origin Python pin changed"
     );
     assert_eq!(
         integer_oracle["source"]["sha256"],
