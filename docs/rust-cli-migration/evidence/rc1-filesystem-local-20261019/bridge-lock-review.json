@@ -1,0 +1,17 @@
+{
+  "schema": "ami-rust-rc1-private-bridge-lock-review-v1",
+  "production_lock_sha256": "4495d87ec1f1f2d16f76657be5986134250b26d302c0125595b4a651a09e580d",
+  "registry_packages": 29,
+  "bridges": [
+    {
+      "directory": "rc1-elf-differential-20261019-a2",
+      "lock_sha256": "0ee580fb418601d236b78b876f5b996821e641408aba671c029789bb6da76fb2",
+      "registry_identities_checksums_equal": true
+    },
+    {
+      "directory": "rc1-archive-differential-20261019-a1",
+      "lock_sha256": "b8a40cec06c5c802b89ba089e6a9acab142a8a9fb64dd00c3953c96f59aa5545",
+      "registry_identities_checksums_equal": true
+    }
+  ]
+}

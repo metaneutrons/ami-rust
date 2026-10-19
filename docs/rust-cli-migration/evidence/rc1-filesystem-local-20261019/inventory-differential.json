@@ -1,0 +1,97 @@
+{
+  "schema": "ami-rust-rc1-inventory-differential-v1",
+  "status": "PASS",
+  "scope": "Read-only complete component inventory consistency; no authentication or ownership claim",
+  "cases": [
+    {
+      "case": "valid",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "decision_equal": true
+    },
+    {
+      "case": "empty-directory",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "decision_equal": true
+    },
+    {
+      "case": "link-chain",
+      "python_accepts": true,
+      "rust_accepts": true,
+      "decision_equal": true
+    },
+    {
+      "case": "file-change",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "decision_equal": true
+    },
+    {
+      "case": "file-missing",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "decision_equal": true
+    },
+    {
+      "case": "extra-file",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "decision_equal": true
+    },
+    {
+      "case": "file-symlink",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "decision_equal": true
+    },
+    {
+      "case": "directory-symlink",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "decision_equal": true
+    },
+    {
+      "case": "link-mismatch",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "decision_equal": true
+    },
+    {
+      "case": "escaping-link",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "decision_equal": true
+    },
+    {
+      "case": "broken-link",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "decision_equal": true
+    },
+    {
+      "case": "cyclic-link",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "decision_equal": true
+    },
+    {
+      "case": "extra-symlink",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "decision_equal": true
+    },
+    {
+      "case": "fifo",
+      "python_accepts": false,
+      "rust_accepts": false,
+      "decision_equal": true
+    }
+  ],
+  "source_sha256": {
+    "host/contracts.py": "6984a7aaa1fbd22ab01877ed4d8cbf88ba1c0dddf46bbc96ea53bedb46fe0176",
+    "tooling/crates/core/src/directory.rs": "0e105f7064acafb351e91fe4b17a5bf9787cce60601d6be9e94aeee072160d8f",
+    "tooling/crates/core/src/inventory.rs": "655ee6a2c5b9849536f2e81396cc21ed6183f6133d58e00cf295020251d6fde1"
+  },
+  "development_source": "Local pre-integration tree; exact tested module hashes below. Final candidate maps these bytes before acceptance."
+}

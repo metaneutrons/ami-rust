@@ -98,3 +98,25 @@ the frozen Python oracle; a deliberately malformed overlapping-section fixture
 is rejected more strictly under the ELF gABI. Original and failed evidence is
 retained. Neither these fixtures nor foundation CI accepts RC1-A1–A4; the public
 commands remain pending until their complete lifecycle is implemented.
+
+## Filesystem and archive verification slice
+
+The project-lock-v2 parser preserves relative SDK/component roots for resolution
+against the lock's parent. It checks the closed schema, digest shapes and the
+frozen 1 MiB JSON bound; it does not resolve paths, authenticate a receipt or
+execute a legacy driver.
+
+Directory enumeration and complete component verification retain no-follow
+root handles. They verify every declared regular file, exact symlink bytes,
+complete file/link membership and in-root link resolution. Optional inventory
+modes are checked when present. Unlisted empty real directories remain allowed,
+as in the component reference implementation. Caller-selected tree-entry and
+link-work limits apply to host verification; shared writers are not snapshotted.
+
+The publisher SDK TAR verifier is a separate profile from generic prerequisite
+archives. It checks the complete decoded archive and authenticated file inventory
+before returning borrowed file contents, without any extraction writes. Its
+existing 16 MiB/1,000-file bounds apply to the small publisher SDK payload, not
+to compiler/component archives or AROS applications. Filesystem staging,
+ownership, exclusive publication, authentication and rollback remain subsequent
+consumer integration work.
