@@ -1,0 +1,120 @@
+{
+  "schema": "ami-rust-native-matrix-development-v1",
+  "status": "PASS_LOCAL_FIXTURES_NOT_RC1_ACCEPTANCE",
+  "base_commit": "c34adc55b9c4c77ccf1d624eaee13a1f4dfd2671",
+  "source_files": [
+    {
+      "path": ".github/workflows/sdk-qualify.yml",
+      "sha256": "80730d9f61c83fb26aa6db7c5e52927cc8c2cc0d907a7ef1193a3096cee4c36e"
+    },
+    {
+      "path": "release/ci_native.py",
+      "sha256": "3a238aa547cb3da71eaf9d1a29e58d6ac1bb3b0f30cf9ef0679593d6abd46d9c"
+    },
+    {
+      "path": "release/ci_sdk.py",
+      "sha256": "7195236194fdbe0cc2b1b1581aa4fc6e88a3b970bc8345b5ea14f2c6298fb0b4"
+    },
+    {
+      "path": "release/test_ci_native.py",
+      "sha256": "6b958bbf4fb0878069c745cf4d94b27daba6a54e8f8a6ee41f9dce07bf28cb6d"
+    },
+    {
+      "path": "release/test_sdk_workflow.py",
+      "sha256": "2cced0c95a586821b00fd8dd354b68ff99be64dbddb56430f5ef7e77e8dd2602"
+    },
+    {
+      "path": "tooling/crates/core/src/native_migrate.rs",
+      "sha256": "26b0b4f598a3fbe3f792e7a355906eb35ca16902496ab705adc096ed4e0c951c"
+    }
+  ],
+  "changes": [
+    "Run selected native consumer jobs explicitly after successful authentication and outer transport, regardless of skipped legacy ancestors",
+    "Invoke authenticated packaged frontend for five unchanged build variants in two independent SDK copies/output roots",
+    "Bind CLI artifact paths and each receipt to its exact project lock/SDK manifest; compare unchanged canonical bytes to host references and each other",
+    "Retain bounded mismatch maps/raw evidence before cleanup, adapting raw allowance to actual remaining hosted ceilings",
+    "Exercise migration dry-run with an executable legacy interpreter trap and positive marker control; prove legacy and unrelated sentinel bytes unchanged"
+  ],
+  "fixture_checks": [
+    {
+      "label": "native",
+      "exit_code": 0,
+      "log_sha256": "929c9d43dab518e1b6576b0610e7ea6194e10d9739646950d19b8757685678c7",
+      "tests": 14
+    },
+    {
+      "label": "sdk",
+      "exit_code": 0,
+      "log_sha256": "034f165e0ccec1a8d22bb1e49486a078e6d08bd1615435e23cf750b9fe0612f5",
+      "tests": 52
+    },
+    {
+      "label": "workflow",
+      "exit_code": 0,
+      "log_sha256": "9f947e270619203f1523f6eb8f0db7d422637a8b8bb43c2bd34ff0bbc4d049d9",
+      "tests": 23
+    },
+    {
+      "label": "outer",
+      "exit_code": 0,
+      "log_sha256": "7c758af7411e05fc2e6c4fb89045f7a03d9a5957d5305092903a23a66373d034",
+      "tests": 9
+    },
+    {
+      "label": "admission",
+      "exit_code": 0,
+      "log_sha256": "5f0635b83af38a6c5d516fcb60dc3fa63c9c6ca4854e51a6a29ca33c92ccef16",
+      "tests": 9
+    },
+    {
+      "label": "materials",
+      "exit_code": 0,
+      "log_sha256": "e19a86747084065fc6026e9e5463e2291a2e56061843e8a27e0424f4fed284be",
+      "tests": 7
+    },
+    {
+      "label": "actionlint",
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "rustfmt",
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "diff",
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "rust_checks": [
+    {
+      "label": "workspace-test",
+      "exit_code": 0
+    },
+    {
+      "label": "clippy",
+      "exit_code": 0
+    }
+  ],
+  "rust_test_scope": {
+    "core": 351,
+    "ordinary_integration_targets": 3,
+    "xtask": 16,
+    "claim": "Ordinary workspace test command passed; ignored protected/retained gates remain unexecuted. Isolated migration child control is included in the migration test path, not a separate full lifecycle."
+  },
+  "preserved_development_failures": [
+    "Independent review found missing output parameter in matrix integration; corrected and covered by package lifecycle seam fixture",
+    "Diagnostic helper initially captured the default raw cap before a test override; the raw-cap countercontrol failed as expected; corrected to resolve the default at call time and all 52 SDK tests then passed"
+  ],
+  "remaining": [
+    "Actual signed consumer cold preparation on both hosts",
+    "Actual ten native builds per host and cross-host metadata review",
+    "Complete differential command/ownership/receipt matrix",
+    "Full no-Python observed/enforced supported consumer process tree",
+    "Signed upgrade/migration/retained lifecycle"
+  ],
+  "publication_authorized": false,
+  "RC1_accepted": false
+}

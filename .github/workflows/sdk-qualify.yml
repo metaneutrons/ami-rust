@@ -1291,12 +1291,14 @@ jobs:
           PY
 
   native-consumer:
-    if: ${{ inputs.native_tooling }}
+    # The outer signer has a deliberately skipped legacy consumer ancestor.
+    # Override GitHub's implicit success() while requiring both actual inputs.
+    if: ${{ always() && !cancelled() && inputs.native_tooling && !inputs.reference_proposal && needs.authenticate.result == 'success' && needs['release-candidate'].result == 'success' }}
     name: Native signed lifecycle (${{ matrix.profile }})
     needs: [authenticate, release-candidate]
     runs-on: ${{ matrix.os }}
     environment: release
-    # Cold provisioning and two client builds use the existing full-consumer
+    # Cold provisioning and the complete native matrix use the existing full-consumer
     # job allowance; individual supervised commands retain their own limits.
     timeout-minutes: 80
     strategy:

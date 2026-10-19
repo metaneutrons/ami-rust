@@ -1407,8 +1407,14 @@ def _preserve_canonical_snapshot(artifacts: Path, rows: dict, work: Path,
 def _write_cold_root_diagnostics(work: Path, variant: str, first_layout: str,
                                  second_layout: str, first_rows: dict, second_rows: dict,
                                  first_snapshot: dict, second_artifacts: Path,
-                                 first_native: dict, second_native: dict) -> Path:
+                                 first_native: dict, second_native: dict, *,
+                                 raw_limit_bytes: int | None = None) -> Path:
     """Write bounded exact-byte evidence for a strict cold-root mismatch."""
+    if raw_limit_bytes is None:
+        raw_limit_bytes = MAX_COLD_ROOT_DIAGNOSTIC_RAW_BYTES
+    if (type(raw_limit_bytes) is not int
+            or not 0 <= raw_limit_bytes <= MAX_COLD_ROOT_DIAGNOSTIC_RAW_BYTES):
+        raise ValueError("invalid cold-root diagnostic raw retention allowance")
     root = work / "cold-root-diagnostics"
     if root.exists() or root.is_symlink():
         raise ValueError("cold-root diagnostics destination is not fresh")
@@ -1434,7 +1440,7 @@ def _write_cold_root_diagnostics(work: Path, variant: str, first_layout: str,
             result["omitted_reason"] = "source bytes differ from canonical map"
             omitted += expected["bytes"]
             return result
-        if expected["bytes"] > MAX_COLD_ROOT_DIAGNOSTIC_RAW_BYTES - used:
+        if expected["bytes"] > raw_limit_bytes - used:
             result["omitted_reason"] = "aggregate raw evidence ceiling reached"
             omitted += expected["bytes"]
             return result
@@ -1479,7 +1485,7 @@ def _write_cold_root_diagnostics(work: Path, variant: str, first_layout: str,
         "first_native": first_native,
         "second_native": second_native,
         "differing_members": members,
-        "raw_retention_limit_bytes": MAX_COLD_ROOT_DIAGNOSTIC_RAW_BYTES,
+        "raw_retention_limit_bytes": raw_limit_bytes,
         "raw_retained_bytes": used,
         "raw_omitted_bytes": omitted,
         "host_artifact_retention_limit_bytes": 32 * 1024**2,
@@ -1493,7 +1499,8 @@ def _write_cold_root_diagnostics(work: Path, variant: str, first_layout: str,
 
 def _assert_cold_roots_match(work: Path, variant: str, first_layout: str,
                              second_layout: str, first: dict, second_rows: dict,
-                             second_artifacts: Path, second_native: dict) -> None:
+                             second_artifacts: Path, second_native: dict, *,
+                             diagnostic_raw_limit_bytes: int | None = None) -> None:
     """Keep strict comparison semantics and save evidence before raising."""
     if (second_native["sha256"] == first["sha256"]
             and second_native["bytes"] == first["bytes"]
@@ -1502,7 +1509,8 @@ def _assert_cold_roots_match(work: Path, variant: str, first_layout: str,
     _write_cold_root_diagnostics(
         work, variant, first_layout, second_layout, first["artifacts"], second_rows,
         first["snapshot"], second_artifacts,
-        {"bytes": first["bytes"], "sha256": first["sha256"]}, second_native)
+        {"bytes": first["bytes"], "sha256": first["sha256"]}, second_native,
+        raw_limit_bytes=diagnostic_raw_limit_bytes)
     raise ValueError("cold-root native outputs differ for " + variant)
 
 

@@ -1,0 +1,108 @@
+{
+  "schema": "ami-rust-native-protected-development-result-v1",
+  "status": "PASS_PRODUCTION_AND_AUTHENTICATION_CONSUMERS_SKIPPED_NOT_RC1_ACCEPTANCE",
+  "source_commit": "c34adc55b9c4c77ccf1d624eaee13a1f4dfd2671",
+  "run_id": 39263593629,
+  "run_attempt": 2,
+  "run_url": "https://github.com/metaneutrons/ami-rust/actions/runs/39263593629/attempts/2",
+  "jobs": [
+    {
+      "name": "Admit complete workflow artifact retention",
+      "conclusion": "success"
+    },
+    {
+      "name": "Native tooling producer (macos-aarch64)",
+      "conclusion": "success"
+    },
+    {
+      "name": "Native tooling producer (linux-x86_64)",
+      "conclusion": "success"
+    },
+    {
+      "name": "SDK producer (${{ matrix.os }})",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "Assemble common unsigned candidate",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "Assemble native common candidate",
+      "conclusion": "success"
+    },
+    {
+      "name": "Authenticate candidate (macos-aarch64)",
+      "conclusion": "success"
+    },
+    {
+      "name": "Authenticate candidate (linux-x86_64)",
+      "conclusion": "success"
+    },
+    {
+      "name": "Authenticate complete release transport",
+      "conclusion": "success"
+    },
+    {
+      "name": "Independent consumer (${{ matrix.profile }})",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "Native signed lifecycle (${{ matrix.profile }})",
+      "conclusion": "skipped"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 12193915342,
+      "name": "sdk-authenticated-linux-x86_64-39263593629-2",
+      "size_in_bytes": 29385889,
+      "digest": "sha256:2cc9b91af2e2bdd1018c2cd1ad41c29e9834c23306a3d66101544b27fb00b5ea"
+    },
+    {
+      "id": 12193521853,
+      "name": "sdk-release-candidate-39263593629-2",
+      "size_in_bytes": 28130791,
+      "digest": "sha256:e158645845b31f6018ab807b42b4a44828eb33a5ed86807231e6ecebe4050b93"
+    },
+    {
+      "id": 12193481639,
+      "name": "sdk-authenticated-macos-aarch64-39263593629-2",
+      "size_in_bytes": 29386167,
+      "digest": "sha256:ff4c5ad7b74b5fd80f34afc9523946e90a0a44378aedad4788a07a00cf36edd6"
+    },
+    {
+      "id": 12192916418,
+      "name": "sdk-common-39263593629-2",
+      "size_in_bytes": 29265064,
+      "digest": "sha256:1677f5f9c981f9e83292996d2726290b58aa4a40a8e5458181359223d23ae96e"
+    },
+    {
+      "id": 12192605972,
+      "name": "native-host-linux-x86_64-39263593629-2",
+      "size_in_bytes": 2132421,
+      "digest": "sha256:60373e591af6d85a1d3f8f65b061c7c062b83d9fa83c3211db0debb1fb5b3931"
+    },
+    {
+      "id": 12192336598,
+      "name": "native-host-macos-aarch64-39263593629-2",
+      "size_in_bytes": 1973440,
+      "digest": "sha256:09da601ed2eda6a95d50c7c7f7d4532966d36419fc39e5daba3627acdc937e99"
+    }
+  ],
+  "raw_log": {
+    "bytes": 634414,
+    "sha256": "5eaf2d050d3c1f1839e8745a4f6efbba53af6f2fa3b102563c5f2991b305f14e"
+  },
+  "same_sdk_bytes_on_both_hosts": true,
+  "archive_backup": "All six exact GitHub artifact ZIPs verified against API digests, CRC checked and archived with per-member digests before expiry.",
+  "consumer_gap": "Native consumer jobs skipped because the job condition retained implicit success() across a deliberately skipped legacy consumer ancestor. Native package preparation, full native matrix and retained replay were not run.",
+  "remaining": [
+    "RC1-A1 complete no-Python observed consumer execution",
+    "RC1-A2 complete differential failure/ownership/receipt matrix",
+    "RC1-A3 actual five variants in two roots on each host plus cross-host metadata review",
+    "RC1-A4 complete signed migration/upgrade/removal preservation"
+  ],
+  "publication_authorized": false,
+  "sdk_published": false,
+  "RC1_accepted": false
+}

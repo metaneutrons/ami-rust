@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import shutil
 import stat
 import sys
@@ -546,27 +547,351 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
     if removed["status"] != "uninstalled" or prefix.exists() or pin.read_text().strip() != receipt:
         raise ValueError("native uninstall did not preserve the external pin and remove only its installation")
     package_lifecycle = _qualify_native_package(
-        work, outer, bundle, cli, xtask, supervisor, policy_path, identity, config, command)
+        work, output, outer, bundle, cli, xtask, supervisor, policy_path, identity, config, command)
     report = {"schema": "ami-rust-native-direct-lifecycle-v1", "status": "PASS_NATIVE_LIFECYCLE_NOT_RC1_ACCEPTANCE",
               "package_lifecycle": package_lifecycle,
+              "native_matrix": package_lifecycle["native_matrix"],
               "source": identity, "host": current_host(), "commands": commands,
               "supervision": _supervision_summary(supervisor, tools.get("commands", []),
                                                    bootstrap_insert_at),
               "manifest_sha256": auth.sha(auth.read(bundle / "release.json")),
               "cli_sha256": auth.sha(auth.read(cli)), "receipt_sha256": receipt,
               "remaining_gates": ["complete both-host no-Python observation", "complete cold/warm and negative lifecycle matrix",
-                                  "two-root five-variant builds", "migration, upgrade and retained replay matrix"],
-              "claim": "Real inner/outer signatures, native direct and package preparation/build/removal/retained replay; internal Python coordination is outside consumer scope. Complete observed no-Python and RC1 matrix remain open"}
-    write(output / "native-direct-lifecycle.json", auth.encoded(report))
+                                  "complete cross-host R1-A2 native output and raw-metadata comparison",
+                                  "complete migration, upgrade and retained replay R1-A4 matrix"],
+              "claim": "Real inner/outer signatures, native direct and package preparation/build/removal/retained replay, plus the current-host two-root five-variant matrix; internal Python coordination is outside consumer scope. No-Python observation, cross-host R1-A2/A4 and RC1 acceptance remain open"}
+    report_path = output / "native-direct-lifecycle.json"
+    initial_report = auth.encoded(report)
+    if ci_sdk.directory_bytes(output) + len(initial_report) > ci_sdk.MAX_OUTPUT_BYTES:
+        raise ValueError("native lifecycle report would exceed the 32 MiB consumer artifact ceiling")
+    write(report_path, initial_report)
     _check_limits(supervisor, "native direct lifecycle report")
     report["supervision"] = _supervision_summary(supervisor, tools.get("commands", []),
                                                   bootstrap_insert_at)
-    (output / "native-direct-lifecycle.json").write_bytes(auth.encoded(report))
+    final_report = auth.encoded(report)
+    if (ci_sdk.directory_bytes(output) - report_path.stat().st_size + len(final_report)
+            > ci_sdk.MAX_OUTPUT_BYTES):
+        raise ValueError("native lifecycle report would exceed the 32 MiB consumer artifact ceiling")
+    report_path.write_bytes(final_report)
+    if ci_sdk.directory_bytes(output) > ci_sdk.MAX_OUTPUT_BYTES:
+        raise ValueError("native lifecycle output exceeded the 32 MiB consumer artifact ceiling")
     _check_limits(supervisor, "native direct lifecycle report")
     return report
 
 
-def _qualify_native_package(work, outer, bundle, cli, xtask, supervisor, policy_path, identity, config, command):
+def _publish_cold_root_diagnostics(work, output):
+    diagnostics = Path(work) / "cold-root-diagnostics"
+    output = Path(output)
+    destination = output / "cold-root-diagnostics"
+    if (diagnostics.is_symlink() or not diagnostics.is_dir()
+            or output.is_symlink() or not output.is_dir()
+            or destination.exists() or destination.is_symlink()):
+        raise ValueError("cold-root diagnostics are not available at a fresh consumer destination")
+    report = diagnostics / "report.json"
+    raw = diagnostics / "raw"
+    if (report.is_symlink() or not report.is_file() or raw.is_symlink() or not raw.is_dir()
+            or report.stat().st_size > ci_sdk.MAX_COLD_ROOT_DIAGNOSTIC_REPORT_BYTES
+            or ci_sdk.directory_bytes(raw) > ci_sdk.MAX_COLD_ROOT_DIAGNOSTIC_RAW_BYTES):
+        raise ValueError("cold-root diagnostics exceed their bounded evidence profile")
+    for path in diagnostics.rglob("*"):
+        if path.is_symlink() or not (path.is_file() or path.is_dir()):
+            raise ValueError("cold-root diagnostics contain a nonregular entry")
+    diagnostic_bytes = ci_sdk.directory_bytes(diagnostics)
+    if ci_sdk.directory_bytes(output) + diagnostic_bytes > ci_sdk.MAX_OUTPUT_BYTES:
+        raise ValueError("cold-root diagnostics would exceed the 32 MiB consumer artifact ceiling")
+    inventory = ci_sdk.component_inventory(diagnostics)
+    # Both roots share the runner filesystem. Rename the evidence so preserving
+    # a failure does not duplicate up to 26 MiB of managed workspace.
+    diagnostics.rename(destination)
+    if (ci_sdk.component_inventory(destination) != inventory
+            or ci_sdk.directory_bytes(output) > ci_sdk.MAX_OUTPUT_BYTES):
+        raise ValueError("cold-root diagnostics changed or exceeded the consumer artifact ceiling")
+
+
+def _preserve_matrix_metadata(artifacts, rows, work):
+    """Keep only the three exact dependency archives until the matrix passes."""
+    destination = Path(work) / "pending-native-metadata"
+    if destination.exists() or destination.is_symlink():
+        raise ValueError("native matrix metadata staging directory must be fresh")
+    destination.mkdir(mode=0o700)
+    retained = {}
+    for crate in ci_sdk.METADATA_CRATES:
+        names = [name for name in rows
+                 if name.startswith("target/release/deps/")
+                 and re.fullmatch("lib" + crate + r"-[0-9a-f]+\.rlib", Path(name).name)]
+        if len(names) != 1:
+            raise ValueError("expected exactly one raw metadata archive for " + crate)
+        name = names[0]
+        source = Path(artifacts).joinpath(*ci_sdk._safe_relative(name).parts)
+        row = rows[name]
+        if (source.is_symlink() or not source.is_file()
+                or source.stat().st_size != row["bytes"] or ci_sdk.sha256(source) != row["sha256"]):
+            raise ValueError("native matrix metadata archive differs from its canonical row: " + crate)
+        target = destination.joinpath(*ci_sdk._safe_relative(name).parts)
+        target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+        if target.stat().st_size != row["bytes"] or ci_sdk.sha256(target) != row["sha256"]:
+            raise ValueError("preserved native matrix metadata archive differs: " + crate)
+        retained[name] = row
+    return destination, retained
+
+
+def _matrix_diagnostic_allowance(supervisor, output):
+    # Reserve the complete structured mismatch report even when raw evidence
+    # must be omitted. Moving it to output adds no second workspace copy.
+    available = min(ci_sdk.MAX_OUTPUT_BYTES - ci_sdk.directory_bytes(output),
+                    ci_sdk.MAX_WORK_BYTES - supervisor.managed_bytes())
+    if available < ci_sdk.MAX_COLD_ROOT_DIAGNOSTIC_REPORT_BYTES:
+        raise ValueError("insufficient managed headroom for the native matrix diagnostic report")
+    return min(ci_sdk.MAX_COLD_ROOT_DIAGNOSTIC_RAW_BYTES,
+               available - ci_sdk.MAX_COLD_ROOT_DIAGNOSTIC_REPORT_BYTES)
+
+
+def _qualify_native_build_matrix(work, state, frontend, output, supervisor, config, command):
+    """Build the frozen five-variant set in two private roots through the signed frontend."""
+    work, state, output = Path(work).absolute(), Path(state).absolute(), Path(output).absolute()
+    host = current_host()
+    inputs_path = ROOT / "release/ci-sdk-inputs.json"
+    inputs = ci_sdk.read_json(inputs_path)
+    reference_pin = inputs["native_reference"]
+    reference = ci_sdk.validate_native_reference(
+        ci_sdk.read_json(ROOT / reference_pin["path"], 2 * 1024**2),
+        inputs, reference_pin["sha256"])
+
+    prefix = state / ("sdk-" + config["sdk_version"])
+    selection = state / "selection.json"
+    receipt_path = prefix / "install-receipt.json"
+    sdk_source = prefix / "sdk"
+    if (state.is_symlink() or not state.is_dir() or prefix.is_symlink() or not prefix.is_dir()
+            or selection.is_symlink() or not selection.is_file()
+            or receipt_path.is_symlink() or not receipt_path.is_file()
+            or sdk_source.is_symlink() or not sdk_source.is_dir()):
+        raise ValueError("native matrix requires the cold-prepared installed SDK and selection")
+    selection_bytes = auth.read(selection)
+    selection_value = auth.parsed(selection_bytes)
+    install_receipt_sha256 = auth.sha(auth.read(receipt_path))
+    if selection_value.get("install_receipt_sha256") != install_receipt_sha256:
+        raise ValueError("native matrix selection differs from the installed SDK receipt")
+    sdk_inventory = ci_sdk.component_inventory(sdk_source)
+    if (not (sdk_source / "Cargo.toml").is_file()
+            or (sdk_source / "Cargo.toml").is_symlink()
+            or not (sdk_source / "Cargo.lock").is_file()
+            or (sdk_source / "Cargo.lock").is_symlink()):
+        raise ValueError("installed native SDK source workspace is incomplete")
+    sdk_inventory_sha256 = auth.sha(auth.encoded(sdk_inventory))
+    sdk_source_bytes = sum(row["bytes"] for row in sdk_inventory["files"])
+
+    matrix_root = work / "native matrix with spaces"
+    if matrix_root.exists() or matrix_root.is_symlink():
+        raise ValueError("native matrix private root must be fresh")
+    matrix_root.mkdir(mode=0o700)
+    layouts = []
+    for name in ("sdk-layout-a", "sdk-layout-b-with-spaces"):
+        root = matrix_root / name
+        root.mkdir(mode=0o700)
+        project = root / "sdk"
+        shutil.copytree(sdk_source, project, symlinks=True, copy_function=shutil.copy2)
+        copied_inventory = ci_sdk.component_inventory(project)
+        if copied_inventory != sdk_inventory:
+            raise ValueError("native matrix SDK project copy differs from the verified installation")
+        lock_path = root / "project-lock.json"
+        lock_label = "17-matrix-lock-" + name
+        lock_output = auth.parsed(command(lock_label, ["lock", "--prefix", prefix,
+            "--selection", selection, "--project", project, "--output", lock_path], executable=frontend))
+        if (lock_output.get("status") != "locked" or lock_output.get("output") != str(lock_path)
+                or lock_output.get("receipt_sha256") != install_receipt_sha256
+                or lock_output.get("sdk_manifest_sha256") != auth.sha(auth.read(project / "contract/sdk.json"))
+                or lock_path.is_symlink() or not lock_path.is_file()):
+            raise ValueError("native matrix direct lock did not bind the prepared SDK and project")
+        layouts.append({"name": name, "root": root, "project": project,
+                        "lock": lock_path, "lock_sha256": ci_sdk.sha256(lock_path),
+                        "receipt_sha256": lock_output["receipt_sha256"],
+                        "sdk_manifest_sha256": lock_output["sdk_manifest_sha256"]})
+        _check_limits(supervisor, "created native matrix direct lock " + name)
+
+    first_by_variant = {}
+    build_records = []
+    metadata_stage = None
+    metadata_rows = None
+    for layout in layouts:
+        build_parent = layout["root"] / "build outputs"
+        build_parent.mkdir(mode=0o700)
+        for variant, (package, feature_args) in ci_sdk.VARIANTS.items():
+            build_output = build_parent / variant
+            label = f"{layout['name']}/{variant}"
+            build_label = "19-matrix-build-" + layout["name"] + "-" + variant
+            arguments = ["build", "--sdk-lock", layout["lock"], "--output-dir", build_output,
+                         "--", "build", "--manifest-path", layout["project"] / "Cargo.toml",
+                         "--package", package, "--release", "--locked", "--offline", *feature_args]
+            build_output_value = auth.parsed(command(build_label, arguments, executable=frontend))
+            if (build_output_value.get("status") != "PASS"
+                    or build_output_value.get("native_executable") != str(build_output / "artifacts/AMIRUST")
+                    or build_output_value.get("receipt") != str(build_output / "build-receipt.json")):
+                raise ValueError("native matrix frontend build did not report PASS: " + label)
+            build_receipt = ci_sdk.read_json(build_output / "build-receipt.json", 4 * 1024**2)
+            if (build_receipt.get("project_lock_sha256") != layout["lock_sha256"]
+                    or build_receipt.get("sdk_manifest_sha256") != layout["sdk_manifest_sha256"]):
+                raise ValueError("native matrix build receipt differs from its selected project lock: " + label)
+            expected_rows = ci_sdk._expected_native_rows(reference, host, variant)
+            try:
+                result, native_file = ci_sdk._verify_native_receipt(
+                    build_output, expected_rows, supervisor, label)
+            except ValueError as error:
+                if "canonical outputs differ from the accepted host reference" not in str(error):
+                    raise
+                observed, observed_native = ci_sdk._verify_native_receipt(
+                    build_output, None, supervisor, label + "/reference-diagnostic")
+                if layout is layouts[0]:
+                    diagnostic_first_layout = "accepted-host-reference"
+                    diagnostic_first_rows = expected_rows
+                    diagnostic_first_snapshot = {}
+                    diagnostic_first_native = expected_rows["AMIRUST"]
+                else:
+                    first = first_by_variant[variant]
+                    diagnostic_first_layout = layouts[0]["name"]
+                    diagnostic_first_rows = first["artifacts"]
+                    diagnostic_first_snapshot = first["snapshot"]
+                    diagnostic_first_native = {
+                        "bytes": first["bytes"], "sha256": first["sha256"]}
+                ci_sdk._write_cold_root_diagnostics(
+                    work, variant, diagnostic_first_layout, layout["name"],
+                    diagnostic_first_rows, observed["artifacts"], diagnostic_first_snapshot,
+                    build_output / "artifacts", diagnostic_first_native, {
+                        "bytes": observed_native.stat().st_size,
+                        "sha256": ci_sdk.sha256(observed_native)},
+                    raw_limit_bytes=_matrix_diagnostic_allowance(supervisor, output))
+                _publish_cold_root_diagnostics(work, output)
+                raise
+
+            native_row = {"bytes": native_file.stat().st_size, "sha256": ci_sdk.sha256(native_file)}
+            if layout is layouts[0]:
+                preserved = ci_sdk._preserve_native_payload(native_file, work, variant)
+                snapshot = ci_sdk._preserve_canonical_snapshot(
+                    build_output / "artifacts", result["artifacts"], work, variant,
+                    supervisor.managed_bytes)
+                first_by_variant[variant] = {
+                    "path": preserved, "bytes": native_row["bytes"],
+                    "sha256": native_row["sha256"], "artifacts": result["artifacts"],
+                    "snapshot": snapshot}
+                _check_limits(supervisor, "preserved first native matrix root " + variant)
+            else:
+                first = first_by_variant[variant]
+                try:
+                    ci_sdk._assert_cold_roots_match(
+                        work, variant, layouts[0]["name"], layout["name"], first,
+                        result["artifacts"], build_output / "artifacts", native_row,
+                        diagnostic_raw_limit_bytes=_matrix_diagnostic_allowance(supervisor, output))
+                except ValueError:
+                    _publish_cold_root_diagnostics(work, output)
+                    raise
+                if variant == "dependencies":
+                    metadata_stage, metadata_rows = _preserve_matrix_metadata(
+                        build_output / "artifacts", result["artifacts"], work)
+                    _check_limits(supervisor, "preserved native matrix metadata archives")
+                snapshot_root = work / "cold-root-first" / variant
+                if snapshot_root.exists():
+                    shutil.rmtree(snapshot_root)
+                if snapshot_root.exists() or snapshot_root.is_symlink():
+                    raise RuntimeError("matched native matrix snapshot could not be retired")
+
+            build_records.append({
+                "identity": {"layout": layout["name"], "variant": variant,
+                             "package": package, "feature_arguments": list(feature_args)},
+                "command_label": build_label,
+                "build_receipt_sha256": result["receipt_sha256"],
+                "canonical_artifact_count": len(result["artifacts"]),
+                "canonical_artifacts": result["artifacts"],
+                "build_byproducts": result["build_byproducts"],
+                "AMIRUST": native_row,
+                "reference_match": result["artifacts"] == expected_rows})
+            ci_sdk._retire_successful_build(build_output, work)
+            _check_limits(supervisor, "retired successful native matrix build " + label)
+
+    if (metadata_stage is None or metadata_rows is None
+            or set(first_by_variant) != set(ci_sdk.VARIANTS)
+            or len(build_records) != 2 * len(ci_sdk.VARIANTS)):
+        raise RuntimeError("native matrix did not complete all five variants in both roots")
+    if (auth.read(selection) != selection_bytes
+            or auth.sha(auth.read(receipt_path)) != install_receipt_sha256):
+        raise ValueError("native matrix changed the prepared selection or installed receipt")
+
+    retained_native = [{"variant": variant, "path": "native/" + variant + ".AMIRUST",
+                        "bytes": first_by_variant[variant]["bytes"],
+                        "sha256": first_by_variant[variant]["sha256"]}
+                       for variant in ci_sdk.VARIANTS]
+    retained_metadata = [{"crate": crate, "path": "metadata/" + crate + ".rlib",
+                          "canonical_path": name, **metadata_rows[name]}
+                         for crate in ci_sdk.METADATA_CRATES
+                         for name in metadata_rows
+                         if name.startswith("target/release/deps/")
+                         and re.fullmatch("lib" + crate + r"-[0-9a-f]+\.rlib", Path(name).name)]
+    if (len(retained_native) != len(ci_sdk.VARIANTS)
+            or len(retained_metadata) != len(ci_sdk.METADATA_CRATES)):
+        raise ValueError("native matrix success payload inventory is incomplete")
+    matrix = {
+        "schema": "ami-rust-native-two-root-five-variant-matrix-v1",
+        "status": "PASS_CURRENT_HOST_MATRIX_NOT_RC1_ACCEPTANCE",
+        "host": host,
+        "sdk_version": config["sdk_version"],
+        "reference_sha256": reference_pin["sha256"],
+        "root_count": len(layouts),
+        "variant_count": len(ci_sdk.VARIANTS),
+        "build_count": len(build_records),
+        "canonical_artifact_count": sum(row["canonical_artifact_count"] for row in build_records),
+        "canonical_artifact_count_by_layout": {
+            layout["name"]: sum(row["canonical_artifact_count"] for row in build_records
+                                if row["identity"]["layout"] == layout["name"])
+            for layout in layouts},
+        "layouts": [{"name": layout["name"],
+                     "project": layout["project"].relative_to(work).as_posix(),
+                     "lock_sha256": layout["lock_sha256"],
+                     "receipt_sha256": layout["receipt_sha256"],
+                     "sdk_manifest_sha256": layout["sdk_manifest_sha256"],
+                     "sdk_source_file_count": len(sdk_inventory["files"]),
+                     "sdk_source_symlink_count": len(sdk_inventory["symlinks"]),
+                     "sdk_source_bytes": sdk_source_bytes,
+                     "sdk_source_inventory_sha256": sdk_inventory_sha256}
+                    for layout in layouts],
+        "builds": build_records,
+        "retained_native_payloads": retained_native,
+        "retained_dependency_metadata": retained_metadata,
+        "claim": "The five frozen native variants match the exact host reference in two fresh SDK project and build roots. This is current-host evidence only; cross-host R1-A2/A4, no-Python observation, and RC1 acceptance remain open.",
+    }
+    output_bytes = ci_sdk.directory_bytes(output)
+    retained_bytes = sum(row["bytes"] for row in retained_native + retained_metadata)
+    report_reserve = 2 * 1024**2
+    if (output_bytes + retained_bytes + len(auth.encoded(matrix)) + report_reserve
+            > ci_sdk.MAX_OUTPUT_BYTES):
+        raise ValueError("native matrix outputs would exceed the 32 MiB consumer artifact ceiling")
+    if ((output / "native").exists() or (output / "native").is_symlink()
+            or (output / "metadata").exists() or (output / "metadata").is_symlink()):
+        raise ValueError("native matrix output destinations must be fresh")
+    published_native = [ci_sdk._copy_native_payload(
+        first_by_variant[variant]["path"], output, variant) | {"variant": variant}
+        for variant in ci_sdk.VARIANTS]
+    published_metadata = ci_sdk._copy_metadata_archives(
+        metadata_stage, metadata_rows, output)
+    if published_native != retained_native or published_metadata != retained_metadata:
+        raise ValueError("published native matrix outputs differ from their verified staging rows")
+    if ci_sdk.directory_bytes(output) > ci_sdk.MAX_OUTPUT_BYTES:
+        raise ValueError("native matrix outputs exceeded the 32 MiB consumer artifact ceiling")
+
+    for layout in layouts:
+        shutil.rmtree(layout["root"])
+        if layout["root"].exists() or layout["root"].is_symlink():
+            raise RuntimeError("successful native matrix project root could not be retired")
+    if matrix_root.exists():
+        matrix_root.rmdir()
+    for temporary in (work / "pending-native", metadata_stage):
+        if temporary.exists():
+            shutil.rmtree(temporary)
+        if temporary.exists() or temporary.is_symlink():
+            raise RuntimeError("successful native matrix staging could not be retired")
+    _check_limits(supervisor, "completed native two-root five-variant matrix")
+    return matrix
+
+
+def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor, policy_path, identity, config, command):
     """Exercise the actual packaged frontend and retained replay on signed inputs."""
     metadata = outer / "metadata"
     outer_report = auth.parsed(auth.read(metadata / "outer-verification.json"))
@@ -622,6 +947,8 @@ def _qualify_native_package(work, outer, bundle, cli, xtask, supervisor, policy_
         "--project", project, "--output-dir", first], executable=frontend))
     if built.get("status") != "PASS" or not (first / "build-receipt.json").is_file():
         raise ValueError("native packaged build omitted its PASS receipt")
+    native_matrix = _qualify_native_build_matrix(
+        work, state, frontend, output, supervisor, config, command)
     original_elf = auth.read(first / "artifacts/AMIRUST")
     marker = work / "unrelated-user-file.txt"
     write(marker, b"preserve across package removal\n")
@@ -639,6 +966,7 @@ def _qualify_native_package(work, outer, bundle, cli, xtask, supervisor, policy_
     return {"status": "PASS_SIGNED_PACKAGE_PREPARE_BUILD_AND_RETAINED_REPLAY",
         "package_core_sha256": pins["core_sha256"], "authentication": authentication,
         "native_executable_sha256": auth.sha(original_elf),
+        "native_matrix": native_matrix,
         "ready_sha256": auth.sha(ready),
         "removal": "private owned package root removed; state, project and unrelated marker preserved",
         "limitation": "Cargo offline mode exercised; OS network denial and complete no-Python observation remain unqualified"}

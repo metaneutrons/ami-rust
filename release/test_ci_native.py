@@ -204,6 +204,296 @@ class NativeSupervisorTests(unittest.TestCase):
             native._supervised_run(ReturningSupervisor({}), ["native-test"],
                                    label="expected-error", expected=2)
 
+
+class NativeMatrixTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = Path(tempfile.mkdtemp(prefix="ami-rust-native-matrix-test-")).resolve()
+        self.work = self.temporary / "work"
+        self.output = self.temporary / "output"
+        self.state = self.work / "native-ready-state"
+        self.prefix = self.state / "sdk-0.2.0"
+        self.sdk = self.prefix / "sdk"
+        for path in (self.work, self.output, self.state, self.sdk / "contract"):
+            path.mkdir(parents=True, exist_ok=True)
+        (self.sdk / "Cargo.toml").write_text("[workspace]\n")
+        (self.sdk / "Cargo.lock").write_text("version = 4\n")
+        (self.sdk / "contract/sdk.json").write_text("{}\n")
+        receipt = b"verified installation fixture\n"
+        (self.prefix / "install-receipt.json").write_bytes(receipt)
+        self.selection_bytes = auth.encoded({"install_receipt_sha256": auth.sha(receipt)})
+        (self.state / "selection.json").write_bytes(self.selection_bytes)
+        self.frontend = self.work / "signed-ami-rust"
+        self.frontend.write_bytes(b"inert signed frontend fixture")
+        self.rows = self._reference_rows()
+
+    def tearDown(self):
+        shutil.rmtree(self.temporary)
+
+    def _artifact_bytes(self, variant):
+        result = {"AMIRUST": ("native fixture for " + variant).encode()}
+        if variant == "dependencies":
+            for crate in ci_sdk.METADATA_CRATES:
+                result["target/release/deps/lib" + crate + "-abc123.rlib"] = b"!<arch>\n" + crate.encode()
+        return result
+
+    def _reference_rows(self):
+        rows = {}
+        for variant in ci_sdk.VARIANTS:
+            rows[variant] = {
+                name: {"bytes": len(raw), "sha256": auth.sha(raw)}
+                for name, raw in self._artifact_bytes(variant).items()}
+        return rows
+
+    def _fixture_supervisor(self):
+        class Limits:
+            native_static_log_bytes = 0
+            native_peak_logs = 0
+
+            def check_limits(self, label):
+                self.checked = label
+
+            def logs_bytes(self):
+                return 0
+
+            def managed_bytes(self):
+                return ci_sdk.directory_bytes(self.work) + ci_sdk.directory_bytes(self.output)
+
+        limits = Limits()
+        limits.work, limits.output = self.work, self.output
+        return limits
+
+    def _command(self, *, mismatching=None, wrong_receipt=False):
+        invocations = []
+        host = native.current_host()
+        by_package = {package: variant for variant, (package, _) in ci_sdk.VARIANTS.items()
+                      if package != "ami-rust-minimal"}
+
+        def command(label, arguments, expected=0, *, executable):
+            invocations.append((label, list(arguments), executable))
+            self.assertEqual(executable, self.frontend)
+            if arguments[0] == "lock":
+                lock_path = Path(arguments[arguments.index("--output") + 1])
+                project = Path(arguments[arguments.index("--project") + 1])
+                lock_path.write_bytes(b"native project lock fixture\n")
+                return auth.encoded({"status": "locked", "output": str(lock_path),
+                    "receipt_sha256": auth.sha(auth.read(self.prefix / "install-receipt.json")),
+                    "sdk_manifest_sha256": auth.sha(auth.read(project / "contract/sdk.json"))})
+            self.assertEqual(arguments[0], "build")
+            self.assertFalse((self.output / "native").exists(), "native outputs published before all builds pass")
+            self.assertFalse((self.output / "metadata").exists(), "metadata published before all builds pass")
+            output = Path(arguments[arguments.index("--output-dir") + 1])
+            package = arguments[arguments.index("--package") + 1]
+            cargo_args = arguments[arguments.index("--") + 1:]
+            if package == "ami-rust-minimal":
+                variant = ("minimal-noalloc" if "--no-default-features" in cargo_args
+                           else "minimal-alloc")
+            else:
+                variant = by_package[package]
+            layout = output.parent.parent.name
+            project = output.parent.parent / "sdk"
+            self.assertEqual(Path(arguments[arguments.index("--sdk-lock") + 1]),
+                             output.parent.parent / "project-lock.json")
+            self.assertEqual(list(map(str, cargo_args)), [
+                "build", "--manifest-path", str(project / "Cargo.toml"),
+                "--package", package, "--release", "--locked", "--offline",
+                *ci_sdk.VARIANTS[variant][1]])
+            artifact_data = self._artifact_bytes(variant)
+            if mismatching == (layout, variant):
+                artifact_data = dict(artifact_data)
+                artifact_data["AMIRUST"] += b" changed-root-bytes"
+            artifacts = output / "artifacts"
+            rows = {}
+            for name, raw in artifact_data.items():
+                destination = artifacts / name
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(raw)
+                rows[name] = {"bytes": len(raw), "sha256": auth.sha(raw)}
+            byproducts = {}
+            for name in ci_sdk.NATIVE_BUILD_BYPRODUCTS:
+                raw = ("fixture:" + name).encode()
+                (artifacts / name).write_bytes(raw)
+                byproducts[name] = raw
+            (output / "build-receipt.json").write_bytes(auth.encoded({
+                "status": "PASS", "host": host, "canonical_artifacts": rows,
+                "project_lock_sha256": ("f" * 64 if wrong_receipt else auth.sha(auth.read(output.parent.parent / "project-lock.json"))),
+                "sdk_manifest_sha256": auth.sha(auth.read(project / "contract/sdk.json")),
+                "cargo_frontend": {"sha256": "a" * 64}, "commands": [],
+                "elapsed_seconds": 0}))
+            return auth.encoded({"status": "PASS", "native_executable": str(artifacts / "AMIRUST"),
+                                 "receipt": str(output / "build-receipt.json")})
+
+        return command, invocations
+
+    def test_two_root_matrix_runs_all_frozen_variants_and_publishes_after_success(self):
+        command, invocations = self._command()
+        reference = {"hosts": {native.current_host(): self.rows}}
+        with patch.object(native.ci_sdk, "validate_native_reference", return_value=reference):
+            matrix = native._qualify_native_build_matrix(
+                self.work, self.state, self.frontend, self.output, self._fixture_supervisor(),
+                {"sdk_version": "0.2.0"}, command)
+
+        self.assertEqual(matrix["status"], "PASS_CURRENT_HOST_MATRIX_NOT_RC1_ACCEPTANCE")
+        self.assertEqual(matrix["root_count"], 2)
+        self.assertEqual(matrix["build_count"], 10)
+        self.assertEqual(len(matrix["builds"]), 10)
+        self.assertEqual(len({row["command_label"] for row in matrix["builds"]}), 10)
+        self.assertEqual(len([row for row in invocations if row[1][0] == "lock"]), 2)
+        build_calls = [row for row in invocations if row[1][0] == "build"]
+        self.assertEqual(len(build_calls), 10)
+        self.assertEqual(len({row[0] for row in invocations}), 12)
+        self.assertTrue(all(row[2] == self.frontend for row in invocations))
+        self.assertEqual([row["identity"]["variant"] for row in matrix["builds"]],
+                         list(ci_sdk.VARIANTS) * 2)
+        self.assertIn(" ", str(self.work / "native matrix with spaces/sdk-layout-b-with-spaces/sdk"))
+        self.assertEqual(len(matrix["retained_native_payloads"]), 5)
+        self.assertEqual(len(matrix["retained_dependency_metadata"]), 3)
+        for row in matrix["retained_native_payloads"]:
+            self.assertEqual((self.output / row["path"]).read_bytes(),
+                             ("native fixture for " + row["variant"]).encode())
+        for row in matrix["retained_dependency_metadata"]:
+            self.assertEqual((self.output / row["path"]).read_bytes(),
+                             b"!<arch>\n" + row["crate"].encode())
+        self.assertEqual(auth.read(self.state / "selection.json"), self.selection_bytes)
+        self.assertFalse((self.work / "native matrix with spaces").exists())
+        self.assertFalse((self.work / "pending-native").exists())
+        self.assertFalse((self.work / "pending-native-metadata").exists())
+
+    def test_reference_mismatch_copies_bounded_diagnostics_before_failing(self):
+        command, _ = self._command(mismatching=("sdk-layout-b-with-spaces", "qualification"))
+        reference = {"hosts": {native.current_host(): self.rows}}
+        with patch.object(native.ci_sdk, "validate_native_reference", return_value=reference):
+            with self.assertRaisesRegex(ValueError, "accepted host reference"):
+                native._qualify_native_build_matrix(
+                    self.work, self.state, self.frontend, self.output, self._fixture_supervisor(),
+                    {"sdk_version": "0.2.0"}, command)
+
+        diagnostics = self.output / "cold-root-diagnostics"
+        report = auth.parsed(auth.read(diagnostics / "report.json"))
+        self.assertEqual(report["status"], "COLD_ROOT_NATIVE_MISMATCH")
+        self.assertEqual(report["variant"], "qualification")
+        self.assertEqual(report["first_layout"], "sdk-layout-a")
+        self.assertEqual(report["second_layout"], "sdk-layout-b-with-spaces")
+        self.assertGreater(report["raw_retained_bytes"], 0)
+        self.assertFalse((self.output / "native").exists())
+        self.assertFalse((self.output / "metadata").exists())
+        self.assertFalse((self.work / "cold-root-diagnostics").exists())
+
+    def test_equal_artifacts_with_a_receipt_for_another_lock_are_refused(self):
+        command, _ = self._command(wrong_receipt=True)
+        reference = {"hosts": {native.current_host(): self.rows}}
+        with patch.object(native.ci_sdk, "validate_native_reference", return_value=reference):
+            with self.assertRaisesRegex(ValueError, "selected project lock"):
+                native._qualify_native_build_matrix(
+                    self.work, self.state, self.frontend, self.output, self._fixture_supervisor(),
+                    {"sdk_version": "0.2.0"}, command)
+        self.assertFalse((self.output / "native").exists())
+        self.assertFalse((self.output / "metadata").exists())
+
+    def test_mismatch_keeps_structured_evidence_when_raw_retention_has_no_headroom(self):
+        with (self.output / "previous-command.stdout.json").open("wb") as stream:
+            stream.truncate(ci_sdk.MAX_OUTPUT_BYTES - ci_sdk.MAX_COLD_ROOT_DIAGNOSTIC_REPORT_BYTES)
+        command, _ = self._command(mismatching=("sdk-layout-b-with-spaces", "qualification"))
+        reference = {"hosts": {native.current_host(): self.rows}}
+        with patch.object(native.ci_sdk, "validate_native_reference", return_value=reference):
+            with self.assertRaisesRegex(ValueError, "accepted host reference"):
+                native._qualify_native_build_matrix(
+                    self.work, self.state, self.frontend, self.output, self._fixture_supervisor(),
+                    {"sdk_version": "0.2.0"}, command)
+        report = auth.parsed(auth.read(self.output / "cold-root-diagnostics/report.json"))
+        self.assertEqual(report["raw_retention_limit_bytes"], 0)
+        self.assertEqual(report["raw_retained_bytes"], 0)
+        self.assertGreater(report["raw_omitted_bytes"], 0)
+        self.assertLessEqual(ci_sdk.directory_bytes(self.output), ci_sdk.MAX_OUTPUT_BYTES)
+        self.assertFalse((self.work / "cold-root-diagnostics").exists())
+
+    def test_signed_package_lifecycle_runs_matrix_before_removal_and_keeps_replay(self):
+        outer = self.work / "outer"
+        metadata = outer / "metadata"
+        metadata.mkdir(parents=True)
+        host = native.current_host()
+        identity = {"source_sha": "a" * 40, "run_id": 42, "run_attempt": 2}
+        config = {"sdk_version": "0.2.0", "cli_version": "0.2.0-dev"}
+        pins = {"source_commit": identity["source_sha"], "sdk_run_id": 42,
+                "sdk_run_attempt": 2, "host": host, **config, "core_sha256": "b" * 64}
+        (metadata / ("native-package-inputs-" + host + ".json")).write_bytes(auth.encoded(pins))
+        (metadata / "outer-verification.json").write_bytes(auth.encoded({
+            "status": "OUTER_CRYPTO_VERIFIED_NOT_R1_ACCEPTED", "source_commit": identity["source_sha"],
+            "run_id": 42, "run_attempt": 2}))
+        package = self.work / "native-package"
+        matrix_calls = []
+        commands = []
+
+        def compose(*args, **kwargs):
+            (package / "bin").mkdir(parents=True)
+            (package / "bin/ami-rust").write_bytes(b"inert frontend fixture")
+
+        def command(label, arguments, expected=0, *, executable):
+            commands.append(label)
+            if arguments[0] == "prepare":
+                if expected:
+                    return b""
+                (self.state / "ready.json").write_bytes(b"ready fixture\n")
+                retained = self.state / "retained/bin/ami-rust"
+                retained.parent.mkdir(parents=True)
+                retained.write_bytes(b"inert retained fixture")
+                return auth.encoded({"status": "READY"})
+            if arguments[0] == "new":
+                Path(arguments[arguments.index("--project") + 1]).mkdir()
+            if arguments[0] == "build":
+                build = Path(arguments[arguments.index("--output-dir") + 1])
+                (build / "artifacts").mkdir(parents=True)
+                (build / "artifacts/AMIRUST").write_bytes(b"native replay fixture")
+                (build / "build-receipt.json").write_bytes(b"receipt fixture")
+                if executable == self.state / "retained/bin/ami-rust":
+                    self.assertFalse(package.exists())
+                    self.assertEqual(len(matrix_calls), 1)
+                return auth.encoded({"status": "PASS"})
+            return b""
+
+        def matrix(work, state, frontend, output, supervisor, selected, callback):
+            self.assertEqual((work, state, output), (self.work, self.state, self.output))
+            self.assertEqual(frontend, package / "bin/ami-rust")
+            self.assertTrue(frontend.is_file(), "matrix must run before package removal")
+            self.assertEqual(selected, config)
+            self.assertIs(callback, command)
+            self.assertIn("14-package-offline-build", commands)
+            matrix_calls.append(True)
+            return {"build_count": 10, "fixture": True}
+
+        # Composition is a stub in this lifecycle-order fixture. Supply inert
+        # notice data locally so the test also works in the narrow installer
+        # CI checkout; actual legal bytes are checked by package production.
+        fixture_source = self.temporary / "source-fixture"
+        licenses = fixture_source / "tooling/third-party/licenses"
+        licenses.mkdir(parents=True)
+        for name in ("LICENSE-MIT", "LICENSE-APACHE"):
+            (fixture_source / name).write_bytes(b"inert notice fixture\n")
+        (licenses.parent / "THIRD-PARTY-NOTICES.md").write_bytes(b"inert third-party notice fixture\n")
+        with patch.object(native, "ROOT", fixture_source), \
+                patch.object(native, "_supervised_run", side_effect=compose), \
+                patch.object(native, "_supervised_text", return_value='{"status":"OUTER_AND_INNER_AUTHENTICATED"}'), \
+                patch.object(native, "_qualify_native_build_matrix", side_effect=matrix):
+            report = native._qualify_native_package(
+                self.work, self.output, outer, self.work / "bundle", self.frontend,
+                self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
+                identity, config, command)
+        self.assertEqual(report["native_matrix"], {"build_count": 10, "fixture": True})
+        self.assertEqual(commands[-2:], ["15-retained-input-recheck", "16-retained-offline-replay"])
+        self.assertFalse(package.exists())
+
+
+class NativeSupervisorAdditionalTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = Path(tempfile.mkdtemp(prefix="ami-rust-native-supervisor-test-")).resolve()
+        self.work = self.temporary / "work"
+        self.output = self.temporary / "output"
+        self.python_root = self.temporary / "ami-rust-python-bootstrap"
+        for path in (self.work, self.output, self.python_root):
+            path.mkdir()
+
+    def tearDown(self):
+        shutil.rmtree(self.temporary)
+
     def test_existing_supervisor_records_stdout_stderr_and_expected_failure(self):
         env = native._clean_child_env({"PATH": "/usr/bin:/bin", "CARGO_REGISTRY_TOKEN": "test-token",
                                        "CARGO_REGISTRIES_CRATES_IO_TOKEN": "test-token-2"})

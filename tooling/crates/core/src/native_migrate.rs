@@ -1142,6 +1142,7 @@ mod tests {
     fn migration_child_fixture() {
         assert_eq!(std::env::var(CHILD_MODE).as_deref(), Ok("1"));
         dry_run_validates_legacy_lock_and_reports_embedded_selection();
+        dry_run_treats_legacy_interpreter_as_inert_data();
         dry_run_refuses_changed_cargo_inputs_and_future_lock_schema();
         dry_run_refuses_linked_cargo_file();
         dry_run_refuses_changed_legacy_binding();
@@ -1345,6 +1346,96 @@ mod tests {
         );
         fs::set_permissions(python, fs::Permissions::from_mode(0o777)).unwrap();
         assert!(dry_run(&project, &signals).is_err());
+        signals.finish().expect("restore signal handler");
+    }
+
+    fn dry_run_treats_legacy_interpreter_as_inert_data() {
+        fn snapshot_files(roots: &[PathBuf]) -> BTreeMap<PathBuf, Vec<u8>> {
+            let mut pending = roots.to_vec();
+            let mut snapshot = BTreeMap::new();
+            while let Some(directory) = pending.pop() {
+                for entry in fs::read_dir(directory).expect("read snapshot directory") {
+                    let entry = entry.expect("snapshot directory entry");
+                    let path = entry.path();
+                    let kind = entry.file_type().expect("snapshot entry type");
+                    if kind.is_dir() {
+                        pending.push(path);
+                    } else {
+                        assert!(kind.is_file(), "unexpected non-file in fixture: {path:?}");
+                        snapshot.insert(path.clone(), fs::read(path).expect("snapshot file bytes"));
+                    }
+                }
+            }
+            snapshot
+        }
+
+        const INTERPRETER: &[u8] = b"#!/bin/sh\n: > \"${0}.marker\"\n";
+
+        let fixture = Fixture::new();
+        let project = fixture.build();
+        let interpreter = fixture.0.join("selected-legacy-python");
+        fs::write(&interpreter, INTERPRETER).expect("fixture legacy interpreter");
+        fs::set_permissions(&interpreter, fs::Permissions::from_mode(0o755))
+            .expect("fixture interpreter executable mode");
+        let marker = PathBuf::from(format!("{}.marker", interpreter.display()));
+
+        // Prove the inert fixture is executable before checking dry_run.
+        let status = std::process::Command::new(&interpreter)
+            .env_clear()
+            .status()
+            .expect("execute fixture interpreter countercontrol");
+        assert!(
+            status.success(),
+            "fixture interpreter countercontrol failed"
+        );
+        assert!(marker.is_file(), "fixture interpreter did not write marker");
+        fs::remove_file(&marker).expect("remove countercontrol marker");
+
+        let lock_path = project.join("ami-rust.lock.json");
+        let mut lock: Value = serde_json::from_slice(&fs::read(&lock_path).unwrap()).unwrap();
+        lock["host"]["python"] = json!(interpreter.to_str().unwrap());
+        lock["host"]["python_sha256"] = json!(sha256_bytes(INTERPRETER));
+        fs::write(&lock_path, serde_json::to_vec_pretty(&lock).unwrap())
+            .expect("update fixture legacy interpreter identity");
+
+        let global_rust_sentinel = fixture.0.join("global-rust/identity");
+        fs::create_dir_all(global_rust_sentinel.parent().unwrap()).expect("global Rust directory");
+        fs::write(&global_rust_sentinel, b"global Rust sentinel\n").expect("global Rust sentinel");
+        let unrelated_sdk_sentinel = fixture.0.join("unrelated-sdk/sdk.catalog");
+        fs::create_dir_all(unrelated_sdk_sentinel.parent().unwrap())
+            .expect("unrelated SDK directory");
+        fs::write(&unrelated_sdk_sentinel, b"unrelated SDK sentinel\n")
+            .expect("unrelated SDK sentinel");
+
+        let mut legacy_roots = vec![project.clone(), fixture.0.join("sdk")];
+        legacy_roots.extend(
+            COMPONENT_NAMES
+                .into_iter()
+                .map(|name| fixture.0.join(format!("component-{name}"))),
+        );
+        let before = snapshot_files(&legacy_roots);
+        let global_rust_bytes = fs::read(&global_rust_sentinel).unwrap();
+        let unrelated_sdk_bytes = fs::read(&unrelated_sdk_sentinel).unwrap();
+
+        let signals = SigtermGuard::acquire().expect("signal guard");
+        let report = dry_run(&project, &signals).expect("valid inert-interpreter dry-run");
+        assert_eq!(report.status, "migration-required");
+        assert!(report.migration_required);
+        assert!(!report.selection_missing);
+        assert_eq!(report.legacy_python.path, interpreter.to_str().unwrap());
+        assert_eq!(report.legacy_python.sha256, sha256_bytes(INTERPRETER));
+        assert!(!marker.exists(), "dry_run executed the legacy interpreter");
+        assert_eq!(fs::read(&interpreter).unwrap(), INTERPRETER);
+        assert_eq!(
+            snapshot_files(&legacy_roots),
+            before,
+            "dry_run changed legacy bytes"
+        );
+        assert_eq!(fs::read(&global_rust_sentinel).unwrap(), global_rust_bytes);
+        assert_eq!(
+            fs::read(&unrelated_sdk_sentinel).unwrap(),
+            unrelated_sdk_bytes
+        );
         signals.finish().expect("restore signal handler");
     }
 

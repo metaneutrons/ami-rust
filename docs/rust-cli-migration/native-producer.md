@@ -45,7 +45,16 @@ remains available on its existing identities.
    collision/wrong-pin refusals, then remove it while preserving the pin.
 8. Each host composes its actual native package from the signed outer assets
    and selected launcher, authenticates the complete package, prepares a fresh
-   state, creates a project and builds offline. Removing the private package
+   state, creates a project and builds offline. Before package removal, the
+   packaged frontend creates locks for two independent SDK project copies and
+   builds all five frozen variants in fresh output roots, including a path with
+   spaces. Every response and receipt binds its output paths, project lock and
+   SDK identity. Canonical bytes must match the exact host reference and the
+   other root. Only after all ten builds pass are the five executables and three
+   unchanged dependency archives retained for independent cross-host review.
+   Mismatch diagnostics are moved into consumer output before failure/cleanup;
+   raw retention adapts to remaining hosted artifact/workspace headroom and the
+   structured report states any omitted bytes. Removing the private package
    directory must preserve the state, project and an unrelated user file; the
    retained launcher must then reproduce the same native executable.
 
@@ -68,7 +77,7 @@ crate texts, plus the full upstream standard-library copyright document. The
 source inventory and distributed notice links are bound to the new release;
 a new SPDX document describes the launchers and 29 locked host build inputs,
 while the exact original component SPDX remains an explicitly historical asset.
-Exact linked standard-library and final release license acceptance remain open.
+Final release license acceptance remains open.
 
 The new Rust maintainer task owns SDK/release/transport/package composition; the Rust core owns
 consumer verification/installation. `release/ci_native.py` and `release/ci_native_outer.py` coordinate internal
@@ -90,14 +99,30 @@ and 16 MiB log limits. A job deadline is not a promise of that running time.
 
 ## Remaining acceptance
 
-Local unit fixtures and an unsigned draft do not establish a real protected
-producer run. Even a passing direct lifecycle report does not close RC1-A1–A4:
+The first real protected native run
+[39263593629, attempt 2](https://github.com/metaneutrons/ami-rust/actions/runs/39263593629/attempts/2)
+completed production and authentication at exact source
+`c34adc55b9c4c77ccf1d624eaee13a1f4dfd2671`. The SDK source archive and manifest
+were byte-identical on both hosts; independently rebuilt host launchers matched
+before signing. Actual inner/outer GH and Cosign verification and altered-proof
+controls passed. [Durable reports and artifact digests](evidence/native-39263593629-attempt2/result.json)
+preserve those measured results. All six artifact ZIPs were archived and checked
+against GitHub's SHA-256 digests, including per-member integrity checks.
+
+Both native consumer jobs were **skipped**: their condition inherited GitHub's
+implicit `success()` across a deliberately skipped legacy consumer ancestor.
+The workflow's green aggregate therefore did not establish preparation, build
+or retained replay. The corrected consumer condition explicitly evaluates
+`always()`, cancellation, selected mode and successful direct authentication/
+transport dependencies. Positive and deliberately broken-condition fixtures
+check this branch, but only a new real run can prove its hosted execution.
+
+Even a passing direct lifecycle report does not close RC1-A1–A4:
 complete package preparation, cold/warm acquisition, no-Python observation,
 differential decisions, five variants in two fresh roots per host, cancellation,
 migration, upgrade/removal and retained replay remain required on exact inputs.
 
-The native notice/SPDX and outer transport/package paths are implementation,
-not a protected-run result. Their actual both-host execution, final source/license
+The full two-root matrix, native package consumer execution, final source/license
 audit and complete qualification remain required before release acceptance.
 The preserved old legal assets apply to their unchanged components; they are
 not a claim that the new host binary dependencies have already passed a new

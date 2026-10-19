@@ -1,0 +1,81 @@
+{
+  "schema": "ami-rust-pr95-component-ci-v1",
+  "candidate": "59cf55bfad4ae962726645198f067c524e514f61",
+  "status": "PASS_COMPONENT_CI_NOT_RC1_ACCEPTANCE",
+  "runs": [
+    {
+      "run_id": 39260964626,
+      "head_sha": "59cf55bfad4ae962726645198f067c524e514f61",
+      "conclusion": "success",
+      "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39260964626",
+      "jobs": [
+        {
+          "name": "Packaging fixtures (Ubuntu 24.04)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Installer fixtures (macos-26)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Installer fixtures (ubuntu-24.04)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Select Rust migration checks",
+          "conclusion": "success"
+        },
+        {
+          "name": "Rust migration fixtures (ubuntu-24.04)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Rust migration fixtures (macos-26)",
+          "conclusion": "success"
+        },
+        {
+          "name": "CI Success",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "run_id": 39260964094,
+      "head_sha": "59cf55bfad4ae962726645198f067c524e514f61",
+      "conclusion": "success",
+      "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39260964094",
+      "jobs": [
+        {
+          "name": "Pinned Cargo source graph (Ubuntu 24.04)",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "run_id": 39260964116,
+      "head_sha": "59cf55bfad4ae962726645198f067c524e514f61",
+      "conclusion": "success",
+      "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39260964116",
+      "jobs": [
+        {
+          "name": "RC0 native Cargo (linux-x86_64)",
+          "conclusion": "success"
+        },
+        {
+          "name": "RC0 Linux no-Python controls",
+          "conclusion": "success"
+        },
+        {
+          "name": "RC0 native Cargo (macos-aarch64)",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "raw_log_sha256": "2de4121e1ec0564eccadb876427afb07f2a3302c9beaac9a0dfee59b7db3c849",
+  "claim": "Both-host component fixtures plus prerequisite source-graph and RC0 controls pass. This is not a protected signed native-v2 consumer or RC1 acceptance result.",
+  "merged_commit": "c34adc55b9c4c77ccf1d624eaee13a1f4dfd2671",
+  "qualified_to_merged_tree_equal": true,
+  "pr": "https://github.com/metaneutrons/ami-rust/pull/95",
+  "plan_revision": 2
+}
