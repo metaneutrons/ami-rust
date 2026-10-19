@@ -181,6 +181,19 @@ class MainAdmission(unittest.TestCase):
         self.assertEqual(response.read_limits, [2 * MIB + 1])
         self.assertNotIn(unprotected_env['GH_TOKEN'], output)
 
+    def test_native_workflow_reserves_the_entire_selected_dag(self):
+        pending = sum(ci_artifact_admission.NATIVE_ARTIFACT_CEILINGS.values())
+        self.assertEqual(pending, 288 * MIB)
+        page = {'total_count': 1, 'artifacts': [{'id': 1, 'size_in_bytes': POOL - pending}]}
+        output, _, _ = self.run_main(['--sdk-candidate', '--native-tooling'], TEST_ENV, page)
+        report = json.loads(output)
+        self.assertEqual(report['pending_workflow_metadata_ceiling_bytes'], pending)
+        self.assertEqual(report['workflow_artifact_ceilings_bytes'], ci_artifact_admission.NATIVE_ARTIFACT_CEILINGS)
+        self.assertFalse(report['SDK_release_publication_authorized'])
+        page['artifacts'][0]['size_in_bytes'] += 1
+        with self.assertRaisesRegex(ValueError, 'quota'):
+            self.run_main(['--sdk-candidate', '--native-tooling'], TEST_ENV, page)
+
 
 if __name__ == '__main__':
     unittest.main()

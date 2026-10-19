@@ -369,6 +369,133 @@ def input_manifest(source):
             "materials": [materials[k] for k in sorted(materials)]}
 
 
+def input_manifest_for_sdk(source, sdk_version):
+    """Extend the historical publisher materials for native SDK generations."""
+    legacy = input_manifest(source)
+    if sdk_version == "0.1.0":
+        return legacy
+
+    materials = {}
+
+    def add(uri, algorithm, digest):
+        if (not isinstance(uri, str)
+                or algorithm not in ("sha256", "gitCommit")
+                or not isinstance(digest, str)
+                or not re.fullmatch(r"[0-9a-f]{64}" if algorithm == "sha256" else r"[0-9a-f]{40}", digest)):
+            raise ValueError("invalid publisher input material")
+        row = {"uri": uri, "digest": {algorithm: digest}}
+        if uri in materials and materials[uri] != row:
+            raise ValueError("conflicting publisher material identity")
+        materials[uri] = row
+
+    for row in legacy["materials"]:
+        digest = row["digest"]
+        if not isinstance(digest, dict) or len(digest) != 1:
+            raise ValueError("invalid legacy publisher material digest")
+        algorithm, value = next(iter(digest.items()))
+        add(row["uri"], algorithm, value)
+
+    config_path = "release/native-tooling-inputs.json"
+    config_raw = read(below(Path(source), config_path))
+    config = parsed(config_raw)
+    config_fields = {"schema", "sdk_version", "cli_version", "legacy_release", "cargo_lock",
+                     "registry_crates", "source_files"}
+    if not isinstance(config, dict) or set(config) != config_fields:
+        raise ValueError("malformed native tooling inputs")
+    if (config.get("schema") != "ami-rust-native-tooling-inputs-v1"
+            or config.get("sdk_version") != sdk_version or sdk_version == "0.1.0"):
+        raise ValueError("native tooling inputs select a different SDK generation")
+    cli_version = config.get("cli_version")
+    if not isinstance(cli_version, str) or cli_version.split("-", 1)[0] != sdk_version:
+        raise ValueError("native CLI and SDK version cores differ")
+
+    def pin(value, label):
+        if not isinstance(value, dict) or set(value) != {"path", "bytes", "sha256"}:
+            raise ValueError("malformed " + label + " pin")
+        path = rel(value.get("path"))
+        size = value.get("bytes")
+        digest = value.get("sha256")
+        if type(size) is not int or size <= 0:
+            raise ValueError("malformed " + label + " byte pin")
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise ValueError("malformed " + label + " digest")
+        return path, size, digest
+
+    lock_path, lock_size, lock_digest = pin(config["cargo_lock"], "native Cargo lock")
+    if lock_path != "tooling/Cargo.lock":
+        raise ValueError("native producer must pin tooling/Cargo.lock")
+    lock_raw = read(below(Path(source), lock_path))
+    if len(lock_raw) != lock_size or sha(lock_raw) != lock_digest:
+        raise ValueError("native Cargo lock differs from its source pin")
+
+    baseline = parsed(read(below(Path(source), "tooling/fixtures/accepted-r1-inputs.json")))
+    try:
+        accepted_archive = baseline["accepted_release"]["public_provenance"]["public_release_archive_asset"]
+    except (KeyError, TypeError) as exc:
+        raise ValueError("accepted R1 baseline omits its public release archive pin") from exc
+    capsule = config["legacy_release"]
+    if not isinstance(capsule, dict) or set(capsule) != {"url", "bytes", "sha256"}:
+        raise ValueError("malformed accepted input capsule")
+    capsule_url = capsule.get("url")
+    capsule_size = capsule.get("bytes")
+    capsule_digest = capsule.get("sha256")
+    accepted_size = accepted_archive.get("bytes") if isinstance(accepted_archive, dict) else None
+    accepted_digest = accepted_archive.get("sha256") if isinstance(accepted_archive, dict) else None
+    if (capsule_url != "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-0.1.0-release.tar.xz"
+            or type(capsule_size) is not int or capsule_size <= 0
+            or not isinstance(capsule_digest, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", capsule_digest)
+            or type(accepted_size) is not int or accepted_size != capsule_size
+            or accepted_digest != capsule_digest):
+        raise ValueError("native producer input capsule differs from the accepted baseline")
+    add(capsule_url, "sha256", capsule_digest)
+
+    source_files = config["source_files"]
+    if not isinstance(source_files, list) or not 1 <= len(source_files) <= 1000:
+        raise ValueError("invalid native producer source inventory length")
+    previous = None
+    for path in source_files:
+        if not isinstance(path, str):
+            raise ValueError("native source path must be a string")
+        rel(path)
+        if (not (path.startswith("tooling/")
+                 or path in ("tools/bootstrap-host-rust.sh", "tools/build-native-cli.sh"))
+                or (previous is not None and previous >= path)):
+            raise ValueError("native source inventory has unsupported or unordered paths")
+        previous = path
+        add("git+https://github.com/" + REPO + "#" + path, "sha256",
+            sha(read(below(Path(source), path))))
+    required_sources = ("tooling/Cargo.lock", "tooling/Cargo.toml",
+                        "tooling/crates/xtask/src/native_release.rs",
+                        "tooling/fixtures/accepted-r1-inputs.json",
+                        "tooling/fixtures/accepted-r1-support-inputs.json",
+                        "tools/bootstrap-host-rust.sh", "tools/build-native-cli.sh")
+    if any(path not in source_files for path in required_sources):
+        raise ValueError("native producer source inventory omits a required input")
+
+    registry_crates = config["registry_crates"]
+    if not isinstance(registry_crates, list) or len(registry_crates) != 29:
+        raise ValueError("native producer registry set differs from the reviewed 29-crate selection")
+    previous = None
+    for crate in registry_crates:
+        if not isinstance(crate, dict) or set(crate) != {"name", "version", "url", "sha256"}:
+            raise ValueError("malformed native registry crate")
+        name, version = crate.get("name"), crate.get("version")
+        if (not isinstance(name, str) or not name
+                or not all(c.isascii() and (c.isalnum() or c in "_-") for c in name)
+                or not isinstance(version, str) or not version
+                or not all(c.isascii() and (c.isalnum() or c in ".+-") for c in version)
+                or (previous is not None and previous >= (name, version))
+                or crate.get("url") != f"https://static.crates.io/crates/{name}/{name}-{version}.crate"):
+            raise ValueError("invalid or unordered native registry crate identity")
+        previous = (name, version)
+        add(crate["url"], "sha256", crate.get("sha256"))
+
+    add("git+https://github.com/" + REPO + "#" + config_path, "sha256", sha(config_raw))
+    return {"schema": "ami-rust-publisher-inputs-v1",
+            "materials": [materials[uri] for uri in sorted(materials)]}
+
+
 def sdk_contents(raw):
     # Reuse the delivered installer's bounded XZ parser, before tar parsing.
     spec = importlib.util.spec_from_file_location("_ci_auth_installer", ROOT / "release/install.py")
@@ -780,7 +907,8 @@ def finalize(bundle, host, gh, cosign):
         raise ValueError("authentication must cover exactly all three subjects")
     bundle = Path(bundle)
     release_raw = read(bundle / "release.json")
-    producer = parsed(release_raw)["producer"]
+    release = parsed(release_raw)
+    producer = release["producer"]
     record = {"schema": "ami-rust-authentication-v2", "manifest_sha256": sha(release_raw),
               "workflow_runs": [{"run_id": producer["run_id"], "run_attempt": producer["run_attempt"],
                                  "host_profile": host}], "gh_attestations": [], "cosign_bundles": []}
@@ -802,7 +930,10 @@ def finalize(bundle, host, gh, cosign):
                 record["cosign_bundles"].append(row)
     additions[bundle / ".auth/authentication.json"] = encoded(record)
     existing = sum(path.lstat().st_size for path in bundle.rglob("*") if path.is_file())
-    if existing + sum(map(len, additions.values())) > TREE_LIMIT - 4096:
+    # Native-v2 is a new prospective format with two host binaries. The
+    # immutable historical-v1 authentication profile remains unchanged.
+    tree_limit = 64 * 1024**2 if release.get("schema") == "ami-rust-release-v2" else TREE_LIMIT
+    if existing + sum(map(len, additions.values())) > tree_limit - 4096:
         raise ValueError("authenticated candidate exceeds retained artifact ceiling")
     for path, raw in additions.items():
         path.parent.mkdir(exist_ok=True)

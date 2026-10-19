@@ -250,6 +250,201 @@ pub fn publisher_input_manifest(
     Ok(encode_manifest(&materials))
 }
 
+/// Select the material closure for the requested SDK generation. Historical
+/// SDKs retain their original byte-exact closure; native generations also bind
+/// the Rust tooling sources, locked crate archives and accepted input capsule.
+pub fn publisher_input_manifest_for_sdk(
+    source: &Path,
+    sdk_version: &str,
+    mut cancellation_check: impl FnMut() -> Result<()>,
+) -> Result<Vec<u8>> {
+    let legacy = publisher_input_manifest(source, &mut cancellation_check)?;
+    if sdk_version == "0.1.0" {
+        return Ok(legacy);
+    }
+    let parsed = crate::publisher_policy::parse_inputs_manifest(&legacy)?;
+    let mut materials = BTreeMap::new();
+    for material in parsed.materials {
+        use crate::publisher_policy::PinnedMaterialDigest;
+        match material.digest {
+            PinnedMaterialDigest::Sha256 { sha256 } => {
+                add_material(&mut materials, material.uri, "sha256", sha256.as_str())?;
+            }
+            PinnedMaterialDigest::GitCommit { git_commit } => {
+                add_material(&mut materials, material.uri, "gitCommit", &git_commit)?;
+            }
+        }
+    }
+    let root = Directory::open(source)?;
+    append_native_materials(&root, sdk_version, &mut materials, &mut cancellation_check)?;
+    Ok(encode_manifest(&materials))
+}
+
+fn append_native_materials(
+    root: &Directory,
+    sdk_version: &str,
+    materials: &mut BTreeMap<String, MaterialDigest>,
+    cancellation_check: &mut impl FnMut() -> Result<()>,
+) -> Result<()> {
+    const CONFIG: &str = "release/native-tooling-inputs.json";
+    let raw = read_source_file(root, CONFIG, INPUT_FILE_LIMIT, cancellation_check)?;
+    let value = parse_json_value(&raw, JsonProfile::SdkComponentManifest)?;
+    let config = object(&value, "native tooling inputs")?;
+    require_exact_fields(
+        config,
+        &[
+            "schema",
+            "sdk_version",
+            "cli_version",
+            "legacy_release",
+            "cargo_lock",
+            "registry_crates",
+            "source_files",
+        ],
+        "native tooling inputs",
+    )?;
+    if string_field(config, "schema", "native inputs schema")?
+        != "ami-rust-native-tooling-inputs-v1"
+        || string_field(config, "sdk_version", "native SDK version")? != sdk_version
+        || sdk_version == "0.1.0"
+    {
+        return Err(Refusal::new(
+            "native tooling inputs select a different SDK generation",
+        ));
+    }
+    let cli_version = string_field(config, "cli_version", "native CLI version")?;
+    if cli_version.split('-').next() != Some(sdk_version) {
+        return Err(Refusal::new("native CLI and SDK version cores differ"));
+    }
+    let lock = file_pin(required_field(config, "cargo_lock")?, "native Cargo lock")?;
+    if lock.path != "tooling/Cargo.lock" {
+        return Err(Refusal::new("native producer must pin tooling/Cargo.lock"));
+    }
+    verify_source_file(
+        root,
+        &lock.path,
+        lock.bytes,
+        &lock.sha256,
+        INPUT_FILE_LIMIT,
+        cancellation_check,
+    )?;
+    let baseline_raw = read_source_file(
+        root,
+        "tooling/fixtures/accepted-r1-inputs.json",
+        INPUT_FILE_LIMIT,
+        cancellation_check,
+    )?;
+    let baseline = parse_json_value(&baseline_raw, JsonProfile::SdkComponentManifest)?;
+    let accepted_archive =
+        &baseline["accepted_release"]["public_provenance"]["public_release_archive_asset"];
+    let capsule = required_field(config, "legacy_release")?;
+    let capsule_object = object(capsule, "accepted input capsule")?;
+    require_exact_fields(
+        capsule_object,
+        &["url", "bytes", "sha256"],
+        "accepted input capsule",
+    )?;
+    if capsule["bytes"] != accepted_archive["bytes"]
+        || capsule["sha256"] != accepted_archive["sha256"]
+        || capsule["url"].as_str()
+            != Some(
+                "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-0.1.0-release.tar.xz",
+            )
+    {
+        return Err(Refusal::new(
+            "native producer input capsule differs from the accepted baseline",
+        ));
+    }
+    add_url_material(materials, capsule, "accepted input capsule")?;
+    let sources = array(
+        required_field(config, "source_files")?,
+        "native source files",
+    )?;
+    if sources.is_empty() || sources.len() > 1_000 {
+        return Err(Refusal::new(
+            "invalid native producer source inventory length",
+        ));
+    }
+    let mut previous = None;
+    for path in sources {
+        cancellation_check()?;
+        let path = path
+            .as_str()
+            .ok_or_else(|| Refusal::new("native source path must be a string"))?;
+        validate_source_path(path)?;
+        if !(path.starts_with("tooling/")
+            || matches!(
+                path,
+                "tools/bootstrap-host-rust.sh" | "tools/build-native-cli.sh"
+            ))
+            || previous.is_some_and(|previous: &str| previous >= path)
+        {
+            return Err(Refusal::new(
+                "native source inventory has unsupported or unordered paths",
+            ));
+        }
+        previous = Some(path);
+        let (_, digest) = hash_source_file(root, path, INPUT_FILE_LIMIT, cancellation_check)?;
+        add_repository_material(materials, path, &digest)?;
+    }
+    for required in [
+        "tooling/Cargo.lock",
+        "tooling/Cargo.toml",
+        "tooling/crates/xtask/src/native_release.rs",
+        "tooling/fixtures/accepted-r1-inputs.json",
+        "tooling/fixtures/accepted-r1-support-inputs.json",
+        "tools/bootstrap-host-rust.sh",
+        "tools/build-native-cli.sh",
+    ] {
+        if !sources.iter().any(|path| path.as_str() == Some(required)) {
+            return Err(Refusal::new(
+                "native producer source inventory omits a required input",
+            ));
+        }
+    }
+    let crates = array(
+        required_field(config, "registry_crates")?,
+        "native registry crates",
+    )?;
+    if crates.len() != 29 {
+        return Err(Refusal::new(
+            "native producer registry set differs from the reviewed 29-crate selection",
+        ));
+    }
+    let mut previous = None;
+    for row in crates {
+        cancellation_check()?;
+        let record = object(row, "native crate input")?;
+        require_exact_fields(
+            record,
+            &["name", "version", "url", "sha256"],
+            "native crate input",
+        )?;
+        let name = string_field(record, "name", "native crate name")?;
+        let version = string_field(record, "version", "native crate version")?;
+        if name.is_empty()
+            || version.is_empty()
+            || !name
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b"_-".contains(&b))
+            || !version
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b".+-".contains(&b))
+            || previous.is_some_and(|previous| previous >= (name, version))
+            || string_field(record, "url", "native crate URL")?
+                != format!("https://static.crates.io/crates/{name}/{name}-{version}.crate")
+        {
+            return Err(Refusal::new(
+                "invalid or unordered native registry crate identity",
+            ));
+        }
+        previous = Some((name, version));
+        add_url_material(materials, row, "native crate input")?;
+    }
+    add_repository_material(materials, CONFIG, &sha256_bytes(&raw))?;
+    cancellation_check()
+}
+
 fn load_portable_csdk(
     root: &Directory,
     inputs: &Value,
@@ -1182,6 +1377,72 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     #[test]
+    fn native_materials_bind_the_locked_sources_and_refuse_changed_lock_or_capsule() {
+        let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../..")
+            .canonicalize()
+            .unwrap();
+        let native = parse_json_value(
+            &std::fs::read(source.join("release/native-tooling-inputs.json")).unwrap(),
+            JsonProfile::SdkComponentManifest,
+        )
+        .unwrap();
+        let root = Directory::open(&source).unwrap();
+        let mut materials = BTreeMap::new();
+        append_native_materials(&root, "0.2.0", &mut materials, &mut || Ok(())).unwrap();
+        assert!(materials.contains_key(
+            "git+https://github.com/metaneutrons/ami-rust#tooling/crates/cli/src/main.rs"
+        ));
+        assert!(materials.contains_key(native["legacy_release"]["url"].as_str().unwrap()));
+        let mut cancelled = || Err(Refusal::new("cancelled native materials"));
+        assert!(
+            append_native_materials(&root, "0.2.0", &mut BTreeMap::new(), &mut cancelled).is_err()
+        );
+        assert!(
+            append_native_materials(&root, "0.3.0", &mut BTreeMap::new(), &mut || Ok(())).is_err()
+        );
+
+        let temporary = std::env::temp_dir()
+            .canonicalize()
+            .unwrap()
+            .join(format!("ami-native-materials-{}", std::process::id()));
+        std::fs::create_dir(&temporary).unwrap();
+        {
+            for path in native["source_files"].as_array().unwrap() {
+                let path = path.as_str().unwrap();
+                let target = temporary.join(path);
+                std::fs::create_dir_all(target.parent().unwrap()).unwrap();
+                std::fs::copy(source.join(path), target).unwrap();
+            }
+            let config_path = temporary.join("release/native-tooling-inputs.json");
+            std::fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+            std::fs::write(&config_path, serde_json::to_vec(&native).unwrap()).unwrap();
+            let root = Directory::open(&temporary).unwrap();
+            append_native_materials(&root, "0.2.0", &mut BTreeMap::new(), &mut || Ok(())).unwrap();
+            std::fs::write(temporary.join("tooling/Cargo.lock"), b"changed lock").unwrap();
+            assert!(
+                append_native_materials(&root, "0.2.0", &mut BTreeMap::new(), &mut || Ok(()))
+                    .unwrap_err()
+                    .to_string()
+                    .contains("source pin")
+            );
+            std::fs::copy(
+                source.join("tooling/Cargo.lock"),
+                temporary.join("tooling/Cargo.lock"),
+            )
+            .unwrap();
+            let mut bad = native.clone();
+            bad["legacy_release"]["sha256"] = Value::String("f".repeat(64));
+            std::fs::write(&config_path, serde_json::to_vec(&bad).unwrap()).unwrap();
+            assert!(
+                append_native_materials(&root, "0.2.0", &mut BTreeMap::new(), &mut || Ok(()))
+                    .is_err()
+            );
+        }
+        std::fs::remove_dir_all(temporary).unwrap();
+    }
+
+    #[test]
     fn source_path_rules_reject_windows_aliases_and_nonportable_bytes() {
         for path in [
             "",
@@ -1234,6 +1495,26 @@ mod tests {
         assert_eq!(
             actual, expected,
             "source-derived publisher material bytes differ"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires AMI_RUST_NATIVE_INPUTS_REFERENCE from the transitional producer"]
+    fn native_material_manifest_matches_opt_in_transitional_producer() {
+        let reference = std::env::var_os("AMI_RUST_NATIVE_INPUTS_REFERENCE")
+            .expect("native reference is required");
+        let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../..")
+            .canonicalize()
+            .unwrap();
+        let actual = publisher_input_manifest_for_sdk(&source, "0.2.0", || Ok(())).unwrap();
+        assert_eq!(
+            sha256_bytes(&actual),
+            sha256_bytes(&std::fs::read(reference).unwrap())
+        );
+        assert_eq!(
+            publisher_input_manifest_for_sdk(&source, "0.1.0", || Ok(())).unwrap(),
+            publisher_input_manifest(&source, || Ok(())).unwrap()
         );
     }
 }

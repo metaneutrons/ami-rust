@@ -1,4 +1,5 @@
 //! Maintainer operations. Producing a draft never authorizes signing/publication.
+mod native_release;
 mod sdk;
 
 use ami_rust_core::{
@@ -26,11 +27,16 @@ fn main() {
 
 fn run() -> Result<()> {
     let mut arguments = std::env::args_os().skip(1);
-    if arguments.next().as_deref() != Some(std::ffi::OsStr::new("native-sdk")) {
-        return Err(Refusal::new(
-            "usage: ami-rust-xtask native-sdk --source-sdk SDK_TAR_XZ --source-commit SHA --version VERSION --output FRESH_DIRECTORY",
-        ));
+    match arguments.next().as_deref().and_then(|value| value.to_str()) {
+        Some("native-sdk") => run_native_sdk(arguments),
+        Some("native-release") => run_native_release(arguments),
+        _ => Err(Refusal::new(
+            "usage: ami-rust-xtask {native-sdk|native-release} OPTIONS; outputs are unsigned drafts",
+        )),
     }
+}
+
+fn run_native_sdk(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
     let mut options = BTreeMap::new();
     while let Some(key) = arguments.next() {
         if !["--source-sdk", "--source-commit", "--version", "--output"]
@@ -93,6 +99,138 @@ fn run() -> Result<()> {
     })
 }
 
+fn run_native_release(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
+    let mut options = BTreeMap::new();
+    while let Some(key) = arguments.next() {
+        if ![
+            "--source-bundle",
+            "--source-commit",
+            "--version",
+            "--linux-cli",
+            "--macos-cli",
+            "--producer-file",
+            "--output",
+        ]
+        .iter()
+        .any(|candidate| key == *candidate)
+        {
+            return Err(Refusal::new("unknown native-release argument"));
+        }
+        let value = arguments
+            .next()
+            .ok_or_else(|| Refusal::new("native-release option requires a value"))?;
+        if options.insert(key, value).is_some() {
+            return Err(Refusal::new("native-release options may occur only once"));
+        }
+    }
+    let source = fs::canonicalize(PathBuf::from(take(&mut options, "--source-bundle")?))?;
+    let output = PathBuf::from(take(&mut options, "--output")?);
+    let commit = take(&mut options, "--source-commit")?
+        .into_string()
+        .map_err(|_| Refusal::new("source commit must be UTF-8"))?;
+    let version = take(&mut options, "--version")?
+        .into_string()
+        .map_err(|_| Refusal::new("SDK version must be UTF-8"))?;
+    let linux = PathBuf::from(take(&mut options, "--linux-cli")?);
+    let macos = PathBuf::from(take(&mut options, "--macos-cli")?);
+    let producer_path = PathBuf::from(take(&mut options, "--producer-file")?);
+    let parent = fs::canonicalize(
+        output
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or(Path::new(".")),
+    )?;
+    let output = parent.join(
+        output
+            .file_name()
+            .ok_or_else(|| Refusal::new("output must name a fresh directory"))?,
+    );
+    if output.starts_with(&source)
+        || source.starts_with(&output)
+        || fs::symlink_metadata(&output).is_ok()
+    {
+        return Err(Refusal::new(
+            "native release output must be fresh and disjoint from the accepted input bundle",
+        ));
+    }
+    let manifest = read_bounded(&source.join("release.json"), 4 * 1024 * 1024)?;
+    let mut assets = BTreeMap::new();
+    for path in native_release::legacy_preservation_paths(&manifest)? {
+        assets.insert(
+            path.clone(),
+            read_bounded(&source.join(path), 16 * 1024 * 1024)?,
+        );
+    }
+    let sdk = sdk::assemble_native_sdk(
+        &read_legacy_sdk(&source.join("sdk.tar.xz"))?,
+        &commit,
+        &version,
+    )?;
+    let launchers = BTreeMap::from([
+        (
+            "linux-x86_64".to_owned(),
+            read_bounded(&linux, 16 * 1024 * 1024)?,
+        ),
+        (
+            "macos-aarch64".to_owned(),
+            read_bounded(&macos, 16 * 1024 * 1024)?,
+        ),
+    ]);
+    let producer = parse_json_value(
+        &read_bounded(&producer_path, 2 * 1024 * 1024)?,
+        JsonProfile::SdkComponentManifest,
+    )?;
+    let draft = native_release::assemble_native_release_v2(
+        &manifest, &assets, &sdk, &launchers, &producer,
+    )?;
+    fs::DirBuilder::new().mode(0o700).create(&output)?;
+    let write = || -> Result<()> {
+        for (path, bytes) in &draft.assets {
+            let destination = output.join(path);
+            fs::create_dir_all(
+                destination
+                    .parent()
+                    .ok_or_else(|| Refusal::new("asset has no parent"))?,
+            )?;
+            write_new(&destination, bytes)?;
+        }
+        write_new(&output.join("release.json"), &draft.manifest)?;
+        // The output bundle has a closed inventory. Draft commentary goes to
+        // stdout instead of creating an unbound file inside that inventory.
+        println!(
+            "{}",
+            serde_json::json!({
+                "schema":"ami-rust-native-release-draft-v1", "status":"UNSIGNED_DRAFT",
+                "version":version, "source_identity":commit,
+                "release_manifest_sha256":draft.manifest_sha256,
+                "sdk_manifest_sha256":sdk.manifest_sha256, "assets":draft.assets.len(),
+                "claim":"Declared identities and byte inventories only; no authentication, qualification, signing or publication established"
+            })
+        );
+        Ok(())
+    };
+    write().map_err(|error| {
+        Refusal::new(format!(
+            "{error}; partial draft retained at {}",
+            output.display()
+        ))
+    })
+}
+
+fn read_bounded(path: &Path, limit: usize) -> Result<Vec<u8>> {
+    let mut raw = Vec::new();
+    fs::File::open(path)?
+        .take((limit + 1) as u64)
+        .read_to_end(&mut raw)?;
+    if raw.len() > limit {
+        return Err(Refusal::new(format!(
+            "maintainer input exceeds its format bound: {}",
+            path.display()
+        )));
+    }
+    Ok(raw)
+}
+
 fn take(options: &mut BTreeMap<OsString, OsString>, name: &str) -> Result<OsString> {
     options
         .remove(std::ffi::OsStr::new(name))
@@ -117,6 +255,21 @@ fn read_legacy_sdk(path: &Path) -> Result<BTreeMap<String, Vec<u8>>> {
     fs::File::open(path)?
         .take((LIMIT + 1) as u64)
         .read_to_end(&mut compressed)?;
+    // This migration input is the immutable accepted SDK archive, including
+    // its original legal notices. Checking only the copied target files would
+    // leave other retained asset bytes outside the compiled baseline pin.
+    let baseline = parse_json_value(
+        include_bytes!("../../../fixtures/accepted-r1-inputs.json"),
+        JsonProfile::SdkComponentManifest,
+    )?;
+    let pin = &baseline["accepted_release"]["sdk_archive"];
+    if pin["bytes"].as_u64() != Some(compressed.len() as u64)
+        || pin["sha256"].as_str() != Some(sha256_bytes(&compressed).as_str())
+    {
+        return Err(Refusal::new(
+            "source SDK archive differs from the immutable accepted baseline",
+        ));
+    }
     let mut decoded = Vec::new();
     copy_xz(
         &compressed,

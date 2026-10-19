@@ -1,0 +1,104 @@
+"""Native producer controls; synthetic fixtures are not publisher evidence."""
+import io
+import json
+from pathlib import Path
+import sys
+import tarfile
+import tempfile
+import unittest
+from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import ci_auth as auth
+import ci_native as native
+
+
+class NativeProducerTests(unittest.TestCase):
+    def test_actual_native_lock_and_archive_selection_agree(self):
+        # This fixture checks the real committed lock/registry selection.
+        # Full source/material parity is exercised separately against the
+        # actual source checkout; the installer CI uses a sparse checkout.
+        with patch.object(auth, "input_manifest_for_sdk", return_value={}):
+            value = native.native_inputs()
+        self.assertEqual(value["sdk_version"], "0.2.0")
+        self.assertEqual(len(value["registry_crates"]), 29)
+        changed = json.loads(json.dumps(value))
+        changed["registry_crates"][0]["sha256"] = "f" * 64
+        original = auth.read
+
+        def read(path, *args):
+            if Path(path).name == "native-tooling-inputs.json":
+                return auth.encoded(changed)
+            return original(path, *args)
+
+        with patch.object(auth, "read", side_effect=read):
+            with self.assertRaisesRegex(ValueError, "reviewed Cargo lock"):
+                native.native_inputs()
+
+    def test_host_payload_is_bound_to_source_host_lock_and_actual_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            identity = {"source_sha": "a" * 40, "workflow_sha": "a" * 40, "run_id": 1, "run_attempt": 1}
+            config = {"sdk_version": "0.2.0", "cli_version": "0.2.0-dev", "cargo_lock": {"fixture": True}}
+            files = {"ami-rust": b"inert host fixture", "sdk.tar.xz": b"inert SDK", "sdk-manifest.json": b"{}\n"}
+            for name, raw in files.items():
+                (root / name).write_bytes(raw)
+            report = {"schema": "ami-rust-native-host-producer-v1", "status": "UNSIGNED_HOST_OUTPUT",
+                      "source": identity, "host": "linux-x86_64", **config,
+                      "cli_identity": {"schema": "ami-rust-version-v1", "cli_version": "0.2.0-dev"},
+                      "files": [{"path": k, "bytes": len(v), "sha256": auth.sha(v)} for k, v in sorted(files.items())]}
+            (root / "native-host-producer.json").write_bytes(auth.encoded(report))
+            self.assertEqual(native.validate_host_payload(root, "linux-x86_64", identity, config), root)
+            for host, changed_identity in (("macos-aarch64", identity),
+                                           ("linux-x86_64", {**identity, "source_sha": "b" * 40})):
+                with self.assertRaisesRegex(ValueError, "different source"):
+                    native.validate_host_payload(root, host, changed_identity, config)
+            (root / "ami-rust").write_bytes(b"altered fixture")
+            with self.assertRaisesRegex(ValueError, "bytes differ"):
+                native.validate_host_payload(root, "linux-x86_64", identity, config)
+
+    def test_capsule_hash_and_paths_are_checked_before_writing_members(self):
+        import lzma
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory).resolve()
+
+            def capsule(name):
+                out = io.BytesIO()
+                with tarfile.open(fileobj=out, mode="w", format=tarfile.USTAR_FORMAT) as archive:
+                    for path in ("release.json", name):
+                        raw = b"{}\n"
+                        row = tarfile.TarInfo(path)
+                        row.size = len(raw)
+                        archive.addfile(row, io.BytesIO(raw))
+                return lzma.compress(out.getvalue())
+
+            raw = capsule("sdk.tar.xz")
+            pin = {"url": "https://example.invalid/fixture", "bytes": len(raw), "sha256": auth.sha(raw)}
+            with patch.object(native.urllib.request, "urlopen", return_value=io.BytesIO(raw)):
+                result = native.obtain_legacy(work, pin)
+                self.assertEqual((result / "sdk.tar.xz").read_bytes(), b"{}\n")
+            bad_hash_work = work / "bad-hash"
+            bad_hash_work.mkdir()
+            with patch.object(native.urllib.request, "urlopen", return_value=io.BytesIO(raw)):
+                with self.assertRaisesRegex(ValueError, "differs from its pin"):
+                    native.obtain_legacy(bad_hash_work, {**pin, "sha256": "0" * 64})
+            self.assertEqual(list(bad_hash_work.iterdir()), [])
+            bad_path_work = work / "bad-path"
+            bad_path_work.mkdir()
+            evil = capsule("../escaped")
+            with patch.object(native.urllib.request, "urlopen", return_value=io.BytesIO(evil)):
+                with self.assertRaisesRegex(ValueError, "unsafe relative"):
+                    native.obtain_legacy(bad_path_work, {**pin, "bytes": len(evil), "sha256": auth.sha(evil)})
+            self.assertEqual(list(bad_path_work.iterdir()), [])
+            self.assertFalse((work / "escaped").exists())
+
+    def test_unprotected_context_cannot_start_host_production(self):
+        with patch.dict(native.os.environ, {"GITHUB_ACTIONS": "false"}, clear=True), \
+                patch.object(native, "fresh") as create:
+            with self.assertRaisesRegex(ValueError, "protected hosted"):
+                native.host_build(Path("/unused-work"), Path("/unused-output"), Path("/unused-rust"), "linux-x86_64")
+            create.assert_not_called()
+
+
+if __name__ == "__main__":
+    unittest.main()

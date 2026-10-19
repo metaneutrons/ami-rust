@@ -146,7 +146,11 @@ pub fn bootstrap_verifiers(
         check_identity(&bytes, pin, "bytes", "sha256")?;
         write_new(&trust_root, root, &bytes, 0o600)?;
     }
-    let inputs = crate::publisher_materials::publisher_input_manifest(source, || signals.check())?;
+    let inputs = crate::publisher_materials::publisher_input_manifest_for_sdk(
+        source,
+        &pins.sdk_version,
+        || signals.check(),
+    )?;
     write_new(&trust_root, "inputs.json", &inputs, 0o600)?;
     let policy = serde_json::json!({
         "schema":"ami-rust-publisher-trust-v2", "repository":pins.repository,
