@@ -1,0 +1,240 @@
+{
+  "schema": "ami-rust-pr100-b937-hosted-result-v1",
+  "source_head": "b93790cd693fbea4f6e4643f2312e2bc8559e52f",
+  "ci_merge": "55bd39fee060d3dae5f4c8bc2af5ab561145468b",
+  "run_id": 39316770902,
+  "run_attempt": 1,
+  "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39316770902",
+  "conclusion": "failure",
+  "macos_job": "success",
+  "linux_job": "failure",
+  "host_evidence": [
+    {
+      "host": "linux",
+      "artifact_id": 12219106266,
+      "artifact_sha256": "eda258f34238d6771e8fb67f2d3768b81505d0f74c32f3f75327309f7213d76d",
+      "artifact_bytes": 69479,
+      "artifact_file_count": 33,
+      "ci_checkout": {
+        "clean_checkout_verified": true,
+        "commit": "55bd39fee060d3dae5f4c8bc2af5ab561145468b",
+        "tree": "4ba9a98e62e074da6f2e9e8f6b199dffcdc12415"
+      },
+      "parser_cases": 131,
+      "parser_report_sha256": "b740beadfd4943094892c5467e6995cefb972439862c2684e8afb46cf33a71e9",
+      "historical_comparison": [
+        {
+          "kind": "transactions",
+          "cases": 9,
+          "report_sha256": "f396e1345c88d06a64ba69a300b10760eca8f996737aa58c69583e9dee16038b",
+          "binding_sha256": "b97e40d79c89e7319efa3c9c31b99aaf5b6fae90fc8f633979151bd9e7d2b55f",
+          "verified_source_count": 58
+        },
+        {
+          "kind": "filesystem",
+          "cases": 50,
+          "report_sha256": "865e0f281a7fec4b0f7e0157595171f1b3fe0fb783a75e3b932c492493cfdab3",
+          "binding_sha256": "d8565ae481f71480d593fb7cbc3298736be39ca55ed942eb2ec84915d9940b45",
+          "verified_source_count": 58
+        },
+        {
+          "kind": "receipt_lifecycle",
+          "cases": 2,
+          "report_sha256": "fcb5a2f7e9e0c41ae73f43b3ad524bc18b3f11e048330cc95a8b75f81a305926",
+          "binding_sha256": "b6889b23bae77e71b3fcf30f5bed05fe11500da9a42d77a8caf96b4eda00e06f",
+          "verified_source_count": 61
+        }
+      ],
+      "historical_pair_count": 192,
+      "controls_status": "RUNNING",
+      "recorded_control_cases": [
+        "unconfined_direct",
+        "unconfined_transitive",
+        "unconfined_shebang",
+        "unconfined_embedded",
+        "native_positive",
+        "restricted_direct"
+      ],
+      "adapter_reports": [
+        {
+          "name": "native_positive",
+          "sha256": "d4a2e73e0f4800d38078da2b67783981aa990f3650523437ba91c4fb84366f6b",
+          "child_exit_code": 0,
+          "child_signal": null
+        },
+        {
+          "name": "restricted_direct",
+          "sha256": "2ba335a5ba8b9871b225f86803bd82625c0bf2003326917bbfb878d377efb87d",
+          "child_exit_code": 0,
+          "child_signal": null
+        },
+        {
+          "name": "restricted_transitive",
+          "sha256": "489bc6bd7489cfb405217eafd92f9b8394ed43c29ddd954166d44c9e85b4c0de",
+          "child_exit_code": 2,
+          "child_signal": null
+        }
+      ],
+      "controls_report_sha256": "0db916baee43a2c5e1824a18038fa344696dff0c3222ad4f440816fe854c0796"
+    },
+    {
+      "host": "macos",
+      "artifact_id": 12218950982,
+      "artifact_sha256": "53d8bd4f1d70c69a9190f1647e06d8989917803e61478230159ad3510f720e61",
+      "artifact_bytes": 73265,
+      "artifact_file_count": 39,
+      "ci_checkout": {
+        "clean_checkout_verified": true,
+        "commit": "55bd39fee060d3dae5f4c8bc2af5ab561145468b",
+        "tree": "4ba9a98e62e074da6f2e9e8f6b199dffcdc12415"
+      },
+      "parser_cases": 131,
+      "parser_report_sha256": "74e39c2c9d764e1929d9ae7b1aa08c419c3412fd67c0f7eb5bd3c8a49c500d90",
+      "historical_comparison": [
+        {
+          "kind": "transactions",
+          "cases": 9,
+          "report_sha256": "c35b1e4da212e9d24eb838dc50549298982c064bfafde4a65140742283383acc",
+          "binding_sha256": "01bac530ade170068ce1a7be7981fe3a94a67d471b97669f4d8abec9cc226b6d",
+          "verified_source_count": 58
+        },
+        {
+          "kind": "filesystem",
+          "cases": 50,
+          "report_sha256": "285d49b422d7165179e55f79ad83b34e5249f47f6fce3e7a77baef1d9b8b1087",
+          "binding_sha256": "b11c0e88092b29108cdaf1a3f8870ab645940818dc50d5326952568ca6b4b964",
+          "verified_source_count": 58
+        },
+        {
+          "kind": "receipt_lifecycle",
+          "cases": 2,
+          "report_sha256": "b7881e2276f33372b582639c493f83fd360b796fcf7f6f3ec731f37b6358d702",
+          "binding_sha256": "146dee5b8542dcd1bdfdd82d4bfaee63adc42d951dd880bdd7e699b6008a08b9",
+          "verified_source_count": 61
+        }
+      ],
+      "historical_pair_count": 192,
+      "controls_status": "PASS_NARROW_NATIVE_INTERPRETER_CONTROLS",
+      "recorded_control_cases": [
+        "unconfined_direct",
+        "unconfined_transitive",
+        "unconfined_shebang",
+        "unconfined_embedded",
+        "native_positive",
+        "restricted_direct",
+        "restricted_transitive",
+        "restricted_shebang",
+        "restricted_embedded"
+      ],
+      "adapter_reports": [
+        {
+          "name": "native_positive",
+          "sha256": "8f919ce77f10855b00ffae44c1de3682bf40827ee559c6ec0251b2924cacf50e",
+          "child_exit_code": 0,
+          "child_signal": null
+        },
+        {
+          "name": "restricted_direct",
+          "sha256": "a2a02340ad060ec164057b411bae3e4ca4a3eb73976d88de67afb4187f00cb05",
+          "child_exit_code": 0,
+          "child_signal": null
+        },
+        {
+          "name": "restricted_embedded",
+          "sha256": "86c09e32d09bae0de3035abb061e0572774d91510c1c4f296c26d86f097f5644",
+          "child_exit_code": 77,
+          "child_signal": null
+        },
+        {
+          "name": "restricted_shebang",
+          "sha256": "7302dc54ed98b0cd9afbea269a9157faa3fe242ec4b9dcd4d68a837729a2a6b7",
+          "child_exit_code": 0,
+          "child_signal": null
+        },
+        {
+          "name": "restricted_transitive",
+          "sha256": "5350b52d6aa11d0d08991c331b03d7b2f85e93a92ff420a9bb0eb290a08fc967",
+          "child_exit_code": 0,
+          "child_signal": null
+        }
+      ],
+      "controls_report_sha256": "fb6a43ade438cd15edcbb6ac8ef2253821192690fcd6b4343e2856c016d285bc"
+    }
+  ],
+  "linux_failure": "The initial native executable now runs. Nested native descendant launch fails EACCES before Python is attempted; no complete Linux interpreter-control acceptance. The missing exact /dev/null read is a source-grounded hypothesis pending an allowed native descendant positive and isolated missing-stdin counterprobe.",
+  "scope": "Both hosts retain 192 narrow historical comparisons, including deliberate manifest-schema differences. Mac has nine actual interpreter controls. These are not the full signed consumer lifecycle, clean native build matrix, RC1 acceptance, or a release.",
+  "next_change": "Exact Linux /dev/null read allowance; same-setup native-descendant positive and omitted-allowance counterprobe. No kernel policy weakening, broad /dev access, extra executable/library/network allowance, compiler/C-SDK/ABI/QEMU or protected-checkout changes.",
+  "pending_correction": {
+    "source_files": {
+      "tooling/crates/xtask/tests/consumer_enforcement.rs": "dd0b065fed5aaf0b8a9320ac5d28d25c64aa06a1b79765eb6c0f771ee8f5407c",
+      "tools/consumer-enforcement-adapter/src/linux.rs": "443ae99cbe0be7a10c08c3a8ce6d9466097fd3635520326134db31923210f819",
+      "tools/consumer-enforcement-adapter/LINUX.md": "f61560eb245494302056438208f948f0cb72a8cd939659a6c4f71500aeed9259"
+    },
+    "kernel_evidence": "NOT_YET_RUN_FOR_THIS_CORRECTION",
+    "new_linux_controls": [
+      "same-setup native positive descendant with exact stdout/status and marker effect",
+      "isolated identical policy without only read-file /dev/null, expected child exit2, EACCES and no marker"
+    ],
+    "macos_component_gate": {
+      "driver_sha256": "fac3d1cf692b0247c7d17ed2aa424d3e6c9e62b5aa43afed21c0bb6d79440a33",
+      "report_sha256": "d7629404e5dcc52c7ee8daca2932c59777cbb7d0cdbfa889605c165df2cc22f7",
+      "status": "FAIL",
+      "commands": [
+        {
+          "label": "format-changed-integration-source",
+          "exit_code": 0,
+          "stop_reason": null
+        },
+        {
+          "label": "clone-prior-component-cache",
+          "exit_code": 0,
+          "stop_reason": null
+        },
+        {
+          "label": "strict-clippy",
+          "exit_code": 0,
+          "stop_reason": null
+        },
+        {
+          "label": "consumer-control-parser-tests",
+          "exit_code": 0,
+          "stop_reason": null
+        },
+        {
+          "label": "adapter-unit-tests",
+          "exit_code": 0,
+          "stop_reason": null
+        },
+        {
+          "label": "source-material-positive-negative-controls",
+          "exit_code": 0,
+          "stop_reason": null
+        },
+        {
+          "label": "workflow-lint",
+          "exit_code": 0,
+          "stop_reason": null
+        },
+        {
+          "label": "linux-adapter-strict-cross-check-not-runtime",
+          "exit_code": 101,
+          "stop_reason": null
+        }
+      ],
+      "limitation": "Extra strict Clippy over the standalone Linux adapter found two pre-existing lints: emit_report argument count and chunks_exact_to_as_chunks in SHA-256. Those unchanged sections are outside this runtime-input correction. The failed check is retained; it is not relabelled as passed. Existing workspace strict Clippy, focused test target, Mac adapter tests, source material positive/negative tests and workflow lint passed."
+    },
+    "linux_cross_check": {
+      "driver_sha256": "303c11a72122d597ec77ef8e062d8b73b8a72d9e6a46b7a5c98c699fad64be12",
+      "report_sha256": "67b05c114ea788d22d804ceb63a8fd68ffafbee1220bfc7b1f16c44b2d4687ff",
+      "status": "PASS_LINUX_CROSS_CHECK_ONLY_NOT_RUNTIME",
+      "scope": "Pinned Linux cargo check --all-targets; compile evidence only."
+    },
+    "resource_limits": {
+      "log_bytes": 16777216,
+      "rss_bytes": 4294967296,
+      "seconds": 1200,
+      "workspace_bytes": 12884901888
+    },
+    "reference_native_inputs": "Unchanged target Rust, C-SDK, ABI-v1 and qualified 512 MiB QEMU baseline; no protected AROS checkout or nxpk changes."
+  }
+}

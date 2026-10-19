@@ -340,7 +340,7 @@ fn native_interpreter_controls_are_refused_under_the_adapter_policy() -> Result<
     let positive_mode = if platform == Platform::Macos {
         "positive-write"
     } else {
-        "positive"
+        "positive-spawn"
     };
     let positive_args: Vec<OsString> = strings(["--control", positive_mode, "--path"])
         .into_iter()
@@ -354,6 +354,43 @@ fn native_interpreter_controls_are_refused_under_the_adapter_policy() -> Result<
     } else {
         vec![adapter.clone()]
     };
+    if platform == Platform::Linux {
+        // Without this one runtime input Command::output fails while opening
+        // stdin, before it can attempt an exec. Such a failure cannot prove
+        // that Python itself was refused. Preserve an isolated counterprobe.
+        let complete = policy_text(&positive_execs, &context)?;
+        let missing_stdin = complete.replace("read-file /dev/null\n", "");
+        if missing_stdin == complete {
+            return Err("Linux policy omitted the exact native stdin allowance".to_owned());
+        }
+        let refused = run_restricted(
+            "native_descendant_missing_stdin",
+            &context,
+            &adapter,
+            &positive_args,
+            &policy_path(
+                &input_dir,
+                "native-descendant-missing-stdin",
+                &missing_stdin,
+            )?,
+            2,
+        )?;
+        require_text(
+            refused.stderr.as_bytes(),
+            "launch native positive descendant: Permission denied (os error 13)",
+            "native descendant missing stdin counterprobe",
+        )?;
+        if positive_marker.exists()
+            || fs::read_dir(&markers)
+                .map_err(display_error)?
+                .next()
+                .is_some()
+        {
+            return Err("missing-stdin counterprobe unexpectedly ran the descendant".to_owned());
+        }
+        cases.push(refused.case);
+        save_progress(&result_path, &mut result, &inputs, &cases, "RUNNING")?;
+    }
     let positive = run_restricted(
         "native_positive",
         &context,
@@ -375,7 +412,7 @@ fn native_interpreter_controls_are_refused_under_the_adapter_policy() -> Result<
     } else {
         require_text(
             positive.stdout.as_bytes(),
-            "ADAPTER_NATIVE_POSITIVE",
+            "ADAPTER_NATIVE_DESCENDANT_POSITIVE",
             "Linux native positive marker",
         )?;
     }
@@ -929,6 +966,11 @@ fn run_restricted(
 
 fn policy_text(execs: &[PathBuf], context: &ReplayContext<'_>) -> Result<String, String> {
     let mut text = String::from("consumer-policy-v1\n");
+    if context.platform == Platform::Linux {
+        // Exact read access for std::process::Command's null stdin. This
+        // neither grants execution nor opens the rest of /dev for reads.
+        text.push_str("read-file /dev/null\n");
+    }
     let mut seen_execs = BTreeSet::<PathBuf>::new();
     for executable in execs.iter().chain(
         context
