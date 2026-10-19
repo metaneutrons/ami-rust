@@ -282,6 +282,10 @@ class NativeMatrixTests(unittest.TestCase):
             self.assertFalse((self.output / "native").exists(), "native outputs published before all builds pass")
             self.assertFalse((self.output / "metadata").exists(), "metadata published before all builds pass")
             output = Path(arguments[arguments.index("--output-dir") + 1])
+            self.assertTrue(output.parent.is_dir())
+            self.assertEqual(output.parent.stat().st_mode & 0o777, 0o700)
+            self.assertEqual(list(output.parent.iterdir()), [],
+                             "derived executable parent contains an earlier build")
             package = arguments[arguments.index("--package") + 1]
             cargo_args = arguments[arguments.index("--") + 1:]
             if package == "ami-rust-minimal":
@@ -289,10 +293,10 @@ class NativeMatrixTests(unittest.TestCase):
                            else "minimal-alloc")
             else:
                 variant = by_package[package]
-            layout = output.parent.parent.name
-            project = output.parent.parent / "sdk"
+            project = Path(cargo_args[cargo_args.index("--manifest-path") + 1]).parent
+            layout = project.parent.name
             self.assertEqual(Path(arguments[arguments.index("--sdk-lock") + 1]),
-                             output.parent.parent / "project-lock.json")
+                             project.parent / "project-lock.json")
             self.assertEqual(list(map(str, cargo_args)), [
                 "build", "--manifest-path", str(project / "Cargo.toml"),
                 "--package", package, "--release", "--locked", "--offline",
@@ -315,7 +319,7 @@ class NativeMatrixTests(unittest.TestCase):
                 byproducts[name] = raw
             (output / "build-receipt.json").write_bytes(auth.encoded({
                 "status": "PASS", "host": host, "canonical_artifacts": rows,
-                "project_lock_sha256": ("f" * 64 if wrong_receipt else auth.sha(auth.read(output.parent.parent / "project-lock.json"))),
+                "project_lock_sha256": ("f" * 64 if wrong_receipt else auth.sha(auth.read(project.parent / "project-lock.json"))),
                 "sdk_manifest_sha256": auth.sha(auth.read(project / "contract/sdk.json")),
                 "cargo_frontend": {"sha256": "a" * 64}, "commands": [],
                 "elapsed_seconds": 0}))
@@ -428,12 +432,14 @@ class NativeMatrixTests(unittest.TestCase):
         package = self.work / "native-package"
         matrix_calls = []
         commands = []
+        prepared_state = None
 
         def compose(*args, **kwargs):
             (package / "bin").mkdir(parents=True)
             (package / "bin/ami-rust").write_bytes(b"inert frontend fixture")
 
         def command(label, arguments, expected=0, *, executable):
+            nonlocal prepared_state
             commands.append(label)
             if label == "16-retained-offline-replay" and fail_replay:
                 self.assertFalse(package.exists())
@@ -443,8 +449,12 @@ class NativeMatrixTests(unittest.TestCase):
             if arguments[0] == "prepare":
                 if expected:
                     return b""
-                (self.state / "ready.json").write_bytes(b"ready fixture\n")
-                retained = self.state / "retained/bin/ami-rust"
+                prepared_state = Path(arguments[arguments.index("--state") + 1])
+                self.assertEqual(list(prepared_state.parent.iterdir()), [])
+                self.assertEqual(prepared_state.parent.stat().st_mode & 0o777, 0o700)
+                prepared_state.mkdir(mode=0o700)
+                (prepared_state / "ready.json").write_bytes(b"ready fixture\n")
+                retained = prepared_state / "retained/bin/ami-rust"
                 retained.parent.mkdir(parents=True)
                 retained.write_bytes(b"inert retained fixture")
                 return auth.encoded({"status": "READY"})
@@ -455,14 +465,14 @@ class NativeMatrixTests(unittest.TestCase):
                 (build / "artifacts").mkdir(parents=True)
                 (build / "artifacts/AMIRUST").write_bytes(b"native replay fixture")
                 (build / "build-receipt.json").write_bytes(b"receipt fixture")
-                if executable == self.state / "retained/bin/ami-rust":
+                if executable == prepared_state / "retained/bin/ami-rust":
                     self.assertFalse(package.exists())
                     self.assertEqual(len(matrix_calls), 1)
                 return auth.encoded({"status": "PASS"})
             return b""
 
         def matrix(work, state, frontend, output, supervisor, selected, callback):
-            self.assertEqual((work, state, output), (self.work, self.state, self.output))
+            self.assertEqual((work, state, output), (self.work, prepared_state, self.output))
             self.assertEqual(frontend, package / "bin/ami-rust")
             self.assertTrue(frontend.is_file(), "matrix must run before package removal")
             self.assertEqual(selected, config)

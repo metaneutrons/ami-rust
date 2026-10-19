@@ -717,7 +717,11 @@ def _qualify_native_build_matrix(work, state, frontend, output, supervisor, conf
         build_parent = layout["root"] / "build outputs"
         build_parent.mkdir(mode=0o700)
         for variant, (package, feature_args) in ci_sdk.VARIANTS.items():
-            build_output = build_parent / variant
+            # Each command starts with its own empty derived-executable parent.
+            # Reusing build_parent would include the preceding variant's tools.
+            derived_parent = build_parent / (variant + "-derived")
+            derived_parent.mkdir(mode=0o700)
+            build_output = derived_parent / "build"
             label = f"{layout['name']}/{variant}"
             build_label = "19-matrix-build-" + layout["name"] + "-" + variant
             arguments = ["build", "--sdk-lock", layout["lock"], "--output-dir", build_output,
@@ -931,7 +935,11 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
         "--work", work / "native-package-authentication"], label="native-consumer-package-authentication", timeout=1200).encode())
     if authentication.get("status") != "OUTER_AND_INNER_AUTHENTICATED":
         raise ValueError("native package outer/inner authentication did not complete")
-    state = work / "native-ready-state"
+    state_write_area = work / "native-state-write-area"
+    state_write_area.mkdir(mode=0o700)
+    state_parent = state_write_area / "derived"
+    state_parent.mkdir(mode=0o700)
+    state = state_parent / "native-ready-state"
     prepared = auth.parsed(command("10-package-cold-prepare", ["prepare", "--state", state], executable=frontend))
     if prepared.get("status") != "READY":
         raise ValueError("native package preparation did not produce READY")
@@ -942,7 +950,11 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
         raise ValueError("occupied-state preparation changed the accepted READY record")
     project = work / "native-client-project"
     command("13-new-client-project", ["new", "--state", state, "--project", project], executable=frontend)
-    first = work / "native-client-build"
+    first_write_area = work / "native-client-build"
+    first_write_area.mkdir(mode=0o700)
+    first_parent = first_write_area / "derived"
+    first_parent.mkdir(mode=0o700)
+    first = first_parent / "build"
     built = auth.parsed(command("14-package-offline-build", ["build", "--state", state,
         "--project", project, "--output-dir", first], executable=frontend))
     if built.get("status") != "PASS" or not (first / "build-receipt.json").is_file():
@@ -960,7 +972,11 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
     if not retained.is_file() or auth.read(state / "ready.json") != ready:
         raise ValueError("native package removal did not preserve retained tooling and state")
     command("15-retained-input-recheck", ["check-inputs", "--state", state], executable=retained)
-    replay = work / "native-retained-build"
+    replay_write_area = work / "native-retained-build"
+    replay_write_area.mkdir(mode=0o700)
+    replay_parent = replay_write_area / "derived"
+    replay_parent.mkdir(mode=0o700)
+    replay = replay_parent / "build"
     repeated = auth.parsed(command("16-retained-offline-replay", ["build", "--state", state,
         "--project", project, "--output-dir", replay], executable=retained))
     if (repeated.get("status") != "PASS" or auth.read(replay / "artifacts/AMIRUST") != original_elf
