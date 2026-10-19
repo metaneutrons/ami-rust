@@ -28,6 +28,14 @@ pub struct ConsumerSession<'a> {
     build_output: bool,
 }
 
+enum ProgramValidation<'a> {
+    Ordinary,
+    #[cfg(target_os = "macos")]
+    SelectedGit(&'a crate::consumer_source::SelectedMacosGit),
+    #[cfg(not(target_os = "macos"))]
+    _Lifetime(std::marker::PhantomData<&'a ()>),
+}
+
 pub struct ConsumerOutput {
     pub stdout: Vec<u8>,
     pub stderr: Vec<u8>,
@@ -135,7 +143,7 @@ impl<'a> ConsumerSession<'a> {
         spec: CommandSpec,
         timeout: Duration,
     ) -> Result<ConsumerOutput> {
-        self.run_spec_inner(label, spec, timeout, true)
+        self.run_spec_inner(label, spec, timeout, true, ProgramValidation::Ordinary)
     }
 
     /// Preserve the actual child status for build frontends while retaining the
@@ -146,7 +154,28 @@ impl<'a> ConsumerSession<'a> {
         spec: CommandSpec,
         timeout: Duration,
     ) -> Result<ConsumerOutput> {
-        self.run_spec_inner(label, spec, timeout, false)
+        self.run_spec_inner(label, spec, timeout, false, ProgramValidation::Ordinary)
+    }
+
+    /// Run only the exact Git authorized by the checked macOS selection.
+    /// Other consumer commands retain the ordinary full ancestor policy.
+    #[cfg(target_os = "macos")]
+    pub(crate) fn run_selected_macos_git(
+        &mut self,
+        label: &str,
+        selected: &crate::consumer_source::SelectedMacosGit,
+        args: Vec<OsString>,
+        timeout: Duration,
+    ) -> Result<ConsumerOutput> {
+        let program = selected.checked_program()?;
+        let spec = CommandSpec::new(program.as_os_str(), args, &self.path, self.environment());
+        self.run_spec_inner(
+            label,
+            spec,
+            timeout,
+            true,
+            ProgramValidation::SelectedGit(selected),
+        )
     }
 
     fn run_spec_inner(
@@ -155,6 +184,7 @@ impl<'a> ConsumerSession<'a> {
         mut spec: CommandSpec,
         timeout: Duration,
         require_success: bool,
+        program_validation: ProgramValidation<'_>,
     ) -> Result<ConsumerOutput> {
         use std::os::unix::{ffi::OsStrExt, fs::MetadataExt};
         self.last_failure_exit_code = None;
@@ -173,7 +203,21 @@ impl<'a> ConsumerSession<'a> {
         spec.env.remove(OsStr::new("CARGO_REGISTRY_TOKEN"));
         spec.env
             .remove(OsStr::new("CARGO_REGISTRIES_CRATES_IO_TOKEN"));
-        validate_program(Path::new(&spec.program), self.root.metadata()?.uid())?;
+        match program_validation {
+            ProgramValidation::Ordinary => {
+                validate_program(Path::new(&spec.program), self.root.metadata()?.uid())?;
+            }
+            #[cfg(target_os = "macos")]
+            ProgramValidation::SelectedGit(selected) => {
+                if selected.checked_program()? != Path::new(&spec.program) {
+                    return Err(Refusal::new(
+                        "consumer command differs from selected macOS Git",
+                    ));
+                }
+            }
+            #[cfg(not(target_os = "macos"))]
+            ProgramValidation::_Lifetime(_) => unreachable!(),
+        }
         self.next_command = self
             .next_command
             .checked_add(1)
