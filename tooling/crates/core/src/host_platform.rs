@@ -266,7 +266,7 @@ mod tests {
             ],
         ];
         for raw in malformed {
-            assert!(parse_os_release(*raw).is_err(), "accepted {raw:?}");
+            assert!(parse_os_release(raw).is_err(), "accepted {raw:?}");
         }
     }
 

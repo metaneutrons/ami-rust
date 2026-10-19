@@ -330,7 +330,7 @@ fn elf_executable_entry(raw: &[u8]) -> bool {
         return false;
     };
     let mut entry_loaded = false;
-    for header in headers.chunks_exact(56) {
+    for header in headers.as_chunks::<56>().0 {
         let u32_at = |offset| {
             u32::from_le_bytes(
                 header[offset..offset + 4]
