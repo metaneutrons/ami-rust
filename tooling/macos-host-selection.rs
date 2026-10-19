@@ -1,4 +1,4 @@
-//! Filesystem-only selection and identity checks for the selected macOS developer tools.
+//! Filesystem and process-ownership checks for the selected macOS developer tools.
 //!
 //! The caller obtains the selected developer directory through its already-bounded
 //! host-selection interface and passes that exact path to [`resolve_selected`].
@@ -17,6 +17,24 @@ const ROOT_UID: u32 = 0;
 const GROUP_OR_OTHER_WRITE: u32 = 0o022;
 const EXECUTE_BITS: u32 = 0o111;
 const READ_BITS: u32 = 0o444;
+
+#[allow(
+    unsafe_code,
+    reason = "POSIX geteuid exposes the effective owner without a subprocess or environment lookup."
+)]
+unsafe extern "C" {
+    fn geteuid() -> u32;
+}
+
+#[allow(
+    unsafe_code,
+    reason = "The no-argument POSIX geteuid call only reads process ownership."
+)]
+fn effective_uid() -> u32 {
+    // SAFETY: geteuid takes no arguments, reads only the calling process's
+    // effective POSIX user ID, and cannot fail.
+    unsafe { geteuid() }
+}
 
 /// The only supported selected developer-directory layouts.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -94,8 +112,9 @@ pub struct HostSelection {
     pub sdk: PathIdentity,
     pub sdk_settings_json: PathIdentity,
     pub sdk_settings_plist: PathIdentity,
-    /// Root-owned, non-group/world-writable canonical directories from the
-    /// selected installation root through each selected path, sorted and deduplicated.
+    /// Root- or current-user-owned, non-group/world-writable canonical
+    /// directories from the selected installation root through each selected
+    /// path, sorted and deduplicated.
     pub guarded_directories: Vec<PathIdentity>,
 }
 
@@ -156,10 +175,10 @@ impl Error for SelectionError {}
 /// absolute path and accepts only Xcode's `Contents/Developer` directory or
 /// the Command Line Tools root. Selected objects and canonical directories
 /// from the selected installation root through those objects must be
-/// root-owned and not group/world writable. Compiler/linker files must be
-/// regular executable files; both SDK settings files must be nonempty regular
-/// readable files. Directories above the selected installation are outside
-/// this check.
+/// owned by root or the current effective user and not group/world writable.
+/// Compiler/linker files must be regular executable files; both SDK settings
+/// files must be nonempty regular readable files. Directories above the
+/// selected installation are outside this check.
 pub fn resolve_selected(developer_directory: &Path) -> Result<HostSelection, SelectionError> {
     validate_absolute_path(developer_directory)?;
     let developer = inspect_entry(developer_directory, EntryKind::Directory, false, false)?;
@@ -346,16 +365,7 @@ fn inspect_entry(
                 format!("cannot read selected symlink: {error}"),
             )
         })?;
-        if requested_meta.uid() != ROOT_UID {
-            return Err(SelectionError::at(
-                SelectionErrorKind::UnsafeOwnership,
-                requested_path,
-                format!(
-                    "selected symlink must be owned by root (uid {ROOT_UID}), found uid {}",
-                    requested_meta.uid()
-                ),
-            ));
-        }
+        validate_owner(requested_path, requested_meta.uid(), effective_uid())?;
         Some(LinkIdentity {
             target_text,
             uid: requested_meta.uid(),
@@ -407,6 +417,7 @@ fn inspect_entry(
         &canonical_path,
         expected_kind,
         metadata.uid(),
+        effective_uid(),
         metadata.mode() & 0o7777,
         executable,
         nonempty,
@@ -442,21 +453,20 @@ fn inspect_entry(
     })
 }
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "Pure metadata policy compares actual/effective ownership, kind, permissions and required capabilities explicitly."
+)]
 fn validate_attributes(
     path: &Path,
     kind: EntryKind,
     uid: u32,
+    current_uid: u32,
     mode: u32,
     executable: bool,
     nonempty: bool,
 ) -> Result<(), SelectionError> {
-    if uid != ROOT_UID {
-        return Err(SelectionError::at(
-            SelectionErrorKind::UnsafeOwnership,
-            path,
-            format!("selected path must be owned by root (uid {ROOT_UID}), found uid {uid}"),
-        ));
-    }
+    validate_owner(path, uid, current_uid)?;
     if kind == EntryKind::Directory && mode & GROUP_OR_OTHER_WRITE != 0 {
         return Err(SelectionError::at(
             SelectionErrorKind::WritablePath,
@@ -497,6 +507,19 @@ fn validate_attributes(
             SelectionErrorKind::NotReadable,
             path,
             "SDK metadata has no read permission bit",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_owner(path: &Path, uid: u32, current_uid: u32) -> Result<(), SelectionError> {
+    if uid != ROOT_UID && uid != current_uid {
+        return Err(SelectionError::at(
+            SelectionErrorKind::UnsafeOwnership,
+            path,
+            format!(
+                "selected path must be owned by root (uid {ROOT_UID}) or the current effective user (uid {current_uid}), found uid {uid}"
+            ),
         ));
     }
     Ok(())
@@ -556,6 +579,7 @@ fn collect_guarded_directories(
             &path,
             EntryKind::Directory,
             metadata.uid(),
+            effective_uid(),
             metadata.mode() & 0o7777,
             false,
             false,
@@ -620,6 +644,7 @@ mod tests {
                 Path::new("/selected/compiler"),
                 EntryKind::RegularFile,
                 0,
+                501,
                 0o755,
                 true,
                 false,
@@ -631,6 +656,7 @@ mod tests {
                 Path::new("/selected/sdk"),
                 EntryKind::Directory,
                 0,
+                501,
                 0o755,
                 false,
                 false,
@@ -642,6 +668,7 @@ mod tests {
                 Path::new("/selected/SDKSettings.json"),
                 EntryKind::RegularFile,
                 0,
+                501,
                 0o644,
                 false,
                 true,
@@ -651,11 +678,68 @@ mod tests {
     }
 
     #[test]
+    fn production_attributes_accept_current_user_and_reject_other_users_and_writable_modes() {
+        assert!(
+            validate_attributes(
+                Path::new("/selected/compiler"),
+                EntryKind::RegularFile,
+                501,
+                501,
+                0o755,
+                true,
+                false,
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_attributes(
+                Path::new("/selected/sdk"),
+                EntryKind::Directory,
+                501,
+                501,
+                0o755,
+                false,
+                false,
+            )
+            .is_ok()
+        );
+        assert_eq!(
+            validate_attributes(
+                Path::new("/selected/compiler"),
+                EntryKind::RegularFile,
+                502,
+                501,
+                0o755,
+                true,
+                false,
+            )
+            .unwrap_err()
+            .kind,
+            SelectionErrorKind::UnsafeOwnership
+        );
+        assert_eq!(
+            validate_attributes(
+                Path::new("/selected/compiler"),
+                EntryKind::RegularFile,
+                501,
+                501,
+                0o775,
+                true,
+                false,
+            )
+            .unwrap_err()
+            .kind,
+            SelectionErrorKind::WritablePath
+        );
+    }
+
+    #[test]
     fn production_attributes_reject_wrong_owner_writable_paths_and_nonexecutables() {
         assert_eq!(
             validate_attributes(
                 Path::new("/selected/compiler"),
                 EntryKind::RegularFile,
+                502,
                 501,
                 0o755,
                 true,
@@ -670,6 +754,7 @@ mod tests {
                 Path::new("/selected/compiler"),
                 EntryKind::RegularFile,
                 0,
+                501,
                 0o775,
                 true,
                 false,
@@ -683,6 +768,7 @@ mod tests {
                 Path::new("/selected/compiler"),
                 EntryKind::RegularFile,
                 0,
+                501,
                 0o644,
                 true,
                 false,
@@ -696,6 +782,7 @@ mod tests {
                 Path::new("/selected/SDKSettings.json"),
                 EntryKind::RegularFile,
                 0,
+                501,
                 0o200,
                 false,
                 true,

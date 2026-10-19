@@ -176,7 +176,7 @@ fn native_interpreter_controls_are_refused_under_the_adapter_policy() -> Result<
         "native_runtime_boundary": if platform == Platform::Macos {
             "macOS system shared cache under imported system profile; no file-backed system-library grants"
         } else {
-            "exact file-backed Linux ldd closure for adapter and fixture"
+            "exact file-backed Linux ldd closure, with each ELF PT_INTERP excluded from read-file grants and granted as an exact hashed executable"
         },
         "test_source": {"path": result_source.display().to_string(), "sha256": result_source_sha},
     });
@@ -194,15 +194,41 @@ fn native_interpreter_controls_are_refused_under_the_adapter_policy() -> Result<
     persist_result(&result_path, &result)?;
 
     // macOS system libraries live in the shared cache under the imported
-    // system profile. Linux grants the exact file-backed ldd closure.
+    // system profile. Linux grants the exact file-backed ldd closure, with
+    // each binary's exact ELF interpreter separated as a hashed executable.
     let runtime_binaries = [adapter.clone(), fixture.clone()];
-    let runtime_libraries = if platform == Platform::Linux {
-        linux_runtime_libraries(&runtime_binaries, &runner)?
+    let (runtime_libraries, runtime_interpreters) = if platform == Platform::Linux {
+        let interpreters = linux_runtime_interpreters(&runtime_binaries)?;
+        let mut libraries = linux_runtime_libraries(&runtime_binaries, &runner)?;
+        for interpreter in &interpreters {
+            if !libraries
+                .iter()
+                .any(|library| library == &interpreter.canonical_path)
+            {
+                return Err(format!(
+                    "ELF PT_INTERP {} for {} is absent from the ldd runtime closure",
+                    interpreter.canonical_path.display(),
+                    interpreter.binary.display()
+                ));
+            }
+        }
+        let interpreter_paths = interpreters
+            .iter()
+            .map(|interpreter| interpreter.canonical_path.clone())
+            .collect::<BTreeSet<_>>();
+        libraries.retain(|library| !interpreter_paths.contains(library));
+        (libraries, interpreters)
     } else {
-        Vec::new()
+        (Vec::new(), Vec::new())
     };
     if runtime_libraries.iter().any(|path| path == &python_library) {
         return Err("Python library unexpectedly appears in the native runtime closure".to_owned());
+    }
+    if runtime_interpreters
+        .iter()
+        .any(|interpreter| interpreter.canonical_path == python_library)
+    {
+        return Err("Python library unexpectedly appears as an ELF interpreter".to_owned());
     }
     let runtime_library_identities = runtime_libraries
         .iter()
@@ -214,6 +240,19 @@ fn native_interpreter_controls_are_refused_under_the_adapter_policy() -> Result<
         })
         .collect::<Result<Vec<_>, String>>()?;
     inputs["native_runtime_libraries"] = json!(runtime_library_identities);
+    let runtime_interpreter_identities = runtime_interpreters
+        .iter()
+        .map(|interpreter| {
+            Ok(json!({
+                "binary": interpreter.binary.display().to_string(),
+                "binary_sha256": sha256_file(&interpreter.binary).map_err(|error| error.to_string())?,
+                "elf_pt_interp": interpreter.declared_path.display().to_string(),
+                "canonical_path": interpreter.canonical_path.display().to_string(),
+                "sha256": sha256_file(&interpreter.canonical_path).map_err(|error| error.to_string())?,
+            }))
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    inputs["native_runtime_interpreters"] = json!(runtime_interpreter_identities);
     result["inputs"] = inputs.clone();
     persist_result(&result_path, &result)?;
     let context = ReplayContext {
@@ -221,6 +260,7 @@ fn native_interpreter_controls_are_refused_under_the_adapter_policy() -> Result<
         python: &python,
         python_library: &python_library,
         runtime_libraries: &runtime_libraries,
+        runtime_interpreters: &runtime_interpreters,
         input_dir: &input_dir,
         reports: &reports,
         child: &child,
@@ -510,6 +550,7 @@ struct ReplayContext<'a> {
     python: &'a Path,
     python_library: &'a Path,
     runtime_libraries: &'a [PathBuf],
+    runtime_interpreters: &'a [RuntimeInterpreter],
     input_dir: &'a Path,
     reports: &'a Path,
     child: &'a Path,
@@ -518,6 +559,13 @@ struct ReplayContext<'a> {
     markers: &'a Path,
     runner: &'a RunContext<'a>,
     platform: Platform,
+}
+
+#[derive(Clone, Debug)]
+struct RuntimeInterpreter {
+    binary: PathBuf,
+    declared_path: PathBuf,
+    canonical_path: PathBuf,
 }
 
 fn selected_host() -> Result<(&'static str, Platform), String> {
@@ -882,7 +930,12 @@ fn run_restricted(
 fn policy_text(execs: &[PathBuf], context: &ReplayContext<'_>) -> Result<String, String> {
     let mut text = String::from("consumer-policy-v1\n");
     let mut seen_execs = BTreeSet::<PathBuf>::new();
-    for executable in execs {
+    for executable in execs.iter().chain(
+        context
+            .runtime_interpreters
+            .iter()
+            .map(|interpreter| &interpreter.canonical_path),
+    ) {
         let executable = executable.canonicalize().map_err(display_error)?;
         if seen_execs.insert(executable.clone()) {
             text.push_str(&format!(
@@ -952,6 +1005,156 @@ fn policy_text(execs: &[PathBuf], context: &ReplayContext<'_>) -> Result<String,
     }
     text.push_str(&format!("cwd {}\nnetwork deny\n", context.child.display()));
     Ok(text)
+}
+
+fn linux_runtime_interpreters(binaries: &[PathBuf]) -> Result<Vec<RuntimeInterpreter>, String> {
+    let mut interpreters = Vec::with_capacity(binaries.len());
+    for binary in binaries {
+        let bytes = fs::read(binary)
+            .map_err(|error| format!("read native ELF {}: {error}", binary.display()))?;
+        let declared_path = parse_elf_pt_interp(&bytes)
+            .map_err(|error| format!("inspect native ELF {}: {error}", binary.display()))?;
+        let canonical_path = canonical_executable(&declared_path, "ELF PT_INTERP")?;
+        interpreters.push(RuntimeInterpreter {
+            binary: binary.clone(),
+            declared_path,
+            canonical_path,
+        });
+    }
+    if interpreters.is_empty() {
+        return Err("no native ELF binaries were supplied for PT_INTERP inspection".to_owned());
+    }
+    Ok(interpreters)
+}
+
+fn parse_elf_pt_interp(bytes: &[u8]) -> Result<PathBuf, String> {
+    const ELF_HEADER_SIZE: usize = 64;
+    const ELF64_PROGRAM_HEADER_SIZE: usize = 56;
+    const PT_INTERP: u32 = 3;
+
+    if bytes.len() < ELF_HEADER_SIZE || bytes.get(..4) != Some(&b"\x7fELF"[..]) {
+        return Err("missing or truncated ELF64 header".to_owned());
+    }
+    if bytes[4] != 2 || bytes[5] != 1 || bytes[6] != 1 {
+        return Err("expected ELF64 little-endian current-version input".to_owned());
+    }
+
+    let object_type = read_elf_u16(bytes, 16, "e_type")?;
+    if !matches!(object_type, 2 | 3) {
+        return Err(format!("unsupported ELF object type {object_type}"));
+    }
+    let machine = read_elf_u16(bytes, 18, "e_machine")?;
+    if machine != 62 {
+        return Err(format!("expected x86-64 ELF machine 62, got {machine}"));
+    }
+    if read_elf_u32(bytes, 20, "e_version")? != 1 {
+        return Err("ELF header has an unsupported version".to_owned());
+    }
+    if usize::from(read_elf_u16(bytes, 52, "e_ehsize")?) != ELF_HEADER_SIZE {
+        return Err("ELF header has an unexpected size".to_owned());
+    }
+
+    let program_header_offset = usize::try_from(read_elf_u64(bytes, 32, "e_phoff")?)
+        .map_err(|_| "ELF program-header offset is not representable".to_owned())?;
+    let program_header_size = usize::from(read_elf_u16(bytes, 54, "e_phentsize")?);
+    if program_header_size != ELF64_PROGRAM_HEADER_SIZE {
+        return Err(format!(
+            "ELF program-header size is {program_header_size}, expected {ELF64_PROGRAM_HEADER_SIZE}"
+        ));
+    }
+    let program_header_count = usize::from(read_elf_u16(bytes, 56, "e_phnum")?);
+    if program_header_count == 0 || program_header_count == usize::from(u16::MAX) {
+        return Err(
+            "ELF program-header count is missing or uses unsupported extended numbering".to_owned(),
+        );
+    }
+    let program_header_bytes = program_header_count
+        .checked_mul(program_header_size)
+        .ok_or_else(|| "ELF program-header table size overflows".to_owned())?;
+    let program_header_end = program_header_offset
+        .checked_add(program_header_bytes)
+        .ok_or_else(|| "ELF program-header table end overflows".to_owned())?;
+    if program_header_end > bytes.len() {
+        return Err("ELF program-header table is truncated".to_owned());
+    }
+
+    let mut interpreter = None;
+    for index in 0..program_header_count {
+        let entry_offset = program_header_offset
+            .checked_add(
+                index
+                    .checked_mul(program_header_size)
+                    .ok_or_else(|| "ELF program-header offset overflows".to_owned())?,
+            )
+            .ok_or_else(|| "ELF program-header offset overflows".to_owned())?;
+        if read_elf_u32(bytes, entry_offset, "p_type")? != PT_INTERP {
+            continue;
+        }
+        if interpreter.is_some() {
+            return Err("ELF contains more than one PT_INTERP segment".to_owned());
+        }
+
+        let path_offset = usize::try_from(read_elf_u64(bytes, entry_offset + 8, "p_offset")?)
+            .map_err(|_| "ELF PT_INTERP offset is not representable".to_owned())?;
+        let path_size = usize::try_from(read_elf_u64(bytes, entry_offset + 32, "p_filesz")?)
+            .map_err(|_| "ELF PT_INTERP size is not representable".to_owned())?;
+        if path_size < 2 {
+            return Err("ELF PT_INTERP path is empty or lacks a terminator".to_owned());
+        }
+        let path_end = path_offset
+            .checked_add(path_size)
+            .ok_or_else(|| "ELF PT_INTERP end overflows".to_owned())?;
+        let path_bytes = bytes
+            .get(path_offset..path_end)
+            .ok_or_else(|| "ELF PT_INTERP segment is truncated".to_owned())?;
+        if path_bytes.last() != Some(&0) || path_bytes[..path_bytes.len() - 1].contains(&0) {
+            return Err("ELF PT_INTERP path is not a single NUL-terminated string".to_owned());
+        }
+        let path_text = std::str::from_utf8(&path_bytes[..path_bytes.len() - 1])
+            .map_err(|error| format!("ELF PT_INTERP path is not UTF-8: {error}"))?;
+        if path_text.chars().any(char::is_control) {
+            return Err("ELF PT_INTERP path contains unsupported control characters".to_owned());
+        }
+        let path = PathBuf::from(path_text);
+        if !path.is_absolute() {
+            return Err("ELF PT_INTERP path is not absolute".to_owned());
+        }
+        interpreter = Some(path);
+    }
+
+    interpreter.ok_or_else(|| "ELF has no PT_INTERP segment".to_owned())
+}
+
+fn read_elf_u16(bytes: &[u8], offset: usize, field: &str) -> Result<u16, String> {
+    let end = offset
+        .checked_add(2)
+        .ok_or_else(|| format!("ELF {field} offset overflows"))?;
+    let value = bytes
+        .get(offset..end)
+        .ok_or_else(|| format!("ELF {field} is truncated"))?;
+    Ok(u16::from_le_bytes([value[0], value[1]]))
+}
+
+fn read_elf_u32(bytes: &[u8], offset: usize, field: &str) -> Result<u32, String> {
+    let end = offset
+        .checked_add(4)
+        .ok_or_else(|| format!("ELF {field} offset overflows"))?;
+    let value = bytes
+        .get(offset..end)
+        .ok_or_else(|| format!("ELF {field} is truncated"))?;
+    Ok(u32::from_le_bytes([value[0], value[1], value[2], value[3]]))
+}
+
+fn read_elf_u64(bytes: &[u8], offset: usize, field: &str) -> Result<u64, String> {
+    let end = offset
+        .checked_add(8)
+        .ok_or_else(|| format!("ELF {field} offset overflows"))?;
+    let value = bytes
+        .get(offset..end)
+        .ok_or_else(|| format!("ELF {field} is truncated"))?;
+    Ok(u64::from_le_bytes([
+        value[0], value[1], value[2], value[3], value[4], value[5], value[6], value[7],
+    ]))
 }
 
 fn linux_runtime_libraries(
@@ -1047,4 +1250,96 @@ fn paths_overlap(left: &Path, right: &Path) -> bool {
 
 fn display_error(error: impl std::fmt::Display) -> String {
     error.to_string()
+}
+
+#[cfg(test)]
+mod elf_pt_interp_tests {
+    use super::parse_elf_pt_interp;
+    use std::path::PathBuf;
+
+    #[test]
+    fn reads_the_single_absolute_elf_interpreter() {
+        let bytes = elf_with_interpreters(&["/lib64/ld-linux-x86-64.so.2"]);
+        assert_eq!(
+            parse_elf_pt_interp(&bytes).expect("valid ELF PT_INTERP"),
+            PathBuf::from("/lib64/ld-linux-x86-64.so.2")
+        );
+    }
+
+    #[test]
+    fn rejects_missing_duplicate_truncated_and_relative_interpreters() {
+        let mut missing = elf_with_interpreters(&["/lib64/ld-linux-x86-64.so.2"]);
+        missing[64..68].copy_from_slice(&1_u32.to_le_bytes());
+        assert!(
+            parse_elf_pt_interp(&missing)
+                .expect_err("missing PT_INTERP must fail")
+                .contains("no PT_INTERP")
+        );
+
+        let duplicate =
+            elf_with_interpreters(&["/lib64/ld-linux-x86-64.so.2", "/lib64/ld-linux-x86-64.so.2"]);
+        assert!(
+            parse_elf_pt_interp(&duplicate)
+                .expect_err("duplicate PT_INTERP must fail")
+                .contains("more than one PT_INTERP")
+        );
+
+        let mut truncated = elf_with_interpreters(&["/lib64/ld-linux-x86-64.so.2"]);
+        truncated.pop();
+        assert!(
+            parse_elf_pt_interp(&truncated)
+                .expect_err("truncated PT_INTERP must fail")
+                .contains("segment is truncated")
+        );
+
+        let mut missing_terminator = elf_with_interpreters(&["/lib64/ld-linux-x86-64.so.2"]);
+        *missing_terminator
+            .last_mut()
+            .expect("path has a terminator") = b'x';
+        assert!(
+            parse_elf_pt_interp(&missing_terminator)
+                .expect_err("unterminated PT_INTERP must fail")
+                .contains("NUL-terminated")
+        );
+
+        let relative = elf_with_interpreters(&["ld-linux-x86-64.so.2"]);
+        assert!(
+            parse_elf_pt_interp(&relative)
+                .expect_err("relative PT_INTERP must fail")
+                .contains("not absolute")
+        );
+    }
+
+    fn elf_with_interpreters(paths: &[&str]) -> Vec<u8> {
+        const ELF_HEADER_SIZE: usize = 64;
+        const ELF64_PROGRAM_HEADER_SIZE: usize = 56;
+        let table_end = ELF_HEADER_SIZE + paths.len() * ELF64_PROGRAM_HEADER_SIZE;
+        let mut bytes = vec![0_u8; table_end];
+        bytes[..4].copy_from_slice(b"\x7fELF");
+        bytes[4] = 2;
+        bytes[5] = 1;
+        bytes[6] = 1;
+        bytes[16..18].copy_from_slice(&3_u16.to_le_bytes());
+        bytes[18..20].copy_from_slice(&62_u16.to_le_bytes());
+        bytes[20..24].copy_from_slice(&1_u32.to_le_bytes());
+        bytes[32..40].copy_from_slice(&(ELF_HEADER_SIZE as u64).to_le_bytes());
+        bytes[52..54].copy_from_slice(&(ELF_HEADER_SIZE as u16).to_le_bytes());
+        bytes[54..56].copy_from_slice(&(ELF64_PROGRAM_HEADER_SIZE as u16).to_le_bytes());
+        bytes[56..58].copy_from_slice(&(paths.len() as u16).to_le_bytes());
+
+        let mut path_offset = table_end;
+        for (index, path) in paths.iter().enumerate() {
+            let header_offset = ELF_HEADER_SIZE + index * ELF64_PROGRAM_HEADER_SIZE;
+            bytes[header_offset..header_offset + 4].copy_from_slice(&3_u32.to_le_bytes());
+            let path_size = path.len() + 1;
+            bytes[header_offset + 8..header_offset + 16]
+                .copy_from_slice(&(path_offset as u64).to_le_bytes());
+            bytes[header_offset + 32..header_offset + 40]
+                .copy_from_slice(&(path_size as u64).to_le_bytes());
+            bytes.extend_from_slice(path.as_bytes());
+            bytes.push(0);
+            path_offset += path_size;
+        }
+        bytes
+    }
 }
