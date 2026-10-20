@@ -1480,6 +1480,8 @@ def _published_v1_preservation_roots(legacy, guards):
         "published_v1_build": Path(report["build"]),
         "published_v1_package_tree": Path(report["package_tree"]),
         "published_v1_home": Path(report["home"]),
+        **({"published_v1_interrupted_prepare": Path(legacy["interruption"]["area"])}
+           if "interruption" in legacy else {}),
         **guards,
     }
 
@@ -1802,6 +1804,185 @@ def _qualify_native_migration(work, output, state, project, frontend, xtask, sup
     return report
 
 
+def _prepare_state_owner(state):
+    """Measure the actual partial-state root, never infer ownership from a report."""
+    info = Path(state).lstat()
+    private = (stat.S_ISDIR(info.st_mode) and info.st_uid == os.getuid()
+               and stat.S_IMODE(info.st_mode) == 0o700 and os.getuid() != 0)
+    if not private:
+        raise ValueError("interrupted prepare state must be private and owned by the current user")
+    return {"uid": info.st_uid, "mode": stat.S_IMODE(info.st_mode),
+            "private_current_user": True}
+
+
+def _unpublished_prepare_state(state):
+    """Neither interrupted source fetch may publish an installation or READY."""
+    forbidden = {"READY", "ready.json", "receipt.sha256", "selection.json",
+                 "ami-rust-python-bootstrap"}
+    entries = sorted(entry.name for entry in state.iterdir()
+                     if entry.name in forbidden or entry.name.startswith("sdk-"))
+    if entries:
+        raise ValueError("interrupted source fetch published later-stage entries: " + repr(entries))
+    return {"ready_absent": True, "installation_prefix_absent": True,
+            "installation_receipt_absent": True, "selection_absent": True,
+            "python_bootstrap_absent": True}
+
+
+def _preserve_prepare_captures(driver, destination, names):
+    """Keep fixed, bounded raw files even when a driver or its validation fails."""
+    if not driver.exists() and not driver.is_symlink():
+        return
+    if not stat.S_ISDIR(driver.lstat().st_mode):
+        raise ValueError("prepare capture root must be a real directory")
+    destination.mkdir(mode=0o700)
+    for name in names:
+        source = driver / name
+        if source.exists() or source.is_symlink():
+            write(destination / name, auth.read(source, cap=16 * 1024**2), 0o600)
+
+
+def _validate_historical_prepare_capture(driver, summary, interpreter, cli, state, published):
+    report_path = driver / "preparation-capture.json"
+    report = auth.parsed(auth.read(report_path))
+    command, observation = report.get("command", {}), report.get("observation", {})
+    capture, post = report.get("capture", {}), report.get("post_capture", {})
+    expected_argv = ["-I", "-B", str(cli), "prepare", "--state", str(state)]
+    if (summary.get("status") != "OBSERVED_FETCH_STAGE_SIGTERM"
+            or summary.get("report") != str(report_path)
+            or report.get("status") != "OBSERVED_FETCH_STAGE_SIGTERM"
+            or command.get("program") != str(interpreter) or command.get("argv") != expected_argv
+            or command.get("python_sha256") != published["interpreter"]["sha256"]
+            or command.get("frontend_sha256") != published["historical_cli_sha256"]):
+        raise ValueError("historical interruption omitted its exact checked command identities")
+    if (observation.get("attempted") is not True or observation.get("signal_sent") is not True
+            or observation.get("direct_child_raw_signal") != 15
+            or observation.get("direct_child_exit_code") is not None
+            or observation.get("shell_convention_status") != 143
+            or observation.get("shell_was_invoked") is not False
+            or observation.get("helper_interrupted") is not False
+            or observation.get("helper_signal_error") is not None
+            or any(observation.get(key) is not None for key in
+                   ("signal_error", "scan_error", "later_stage"))):
+        raise ValueError("historical interruption omitted the actual direct-child SIGTERM")
+    marker = observation.get("fetch_head_at_signal", {})
+    if (marker.get("path") != str(state / "source/.git/FETCH_HEAD")
+            or marker.get("regular_file") is not True or marker.get("size_bytes") != 0
+            or marker.get("uid") != os.getuid()
+            or any(marker.get(key) is not True for key in
+                   ("READY_absent", "ci_python_absent", "index_absent", "ready_json_absent"))
+            or any(post.get(key) is not False for key in
+                   ("READY_present", "ci_python_present", "git_index_present", "ready_json_present"))
+            or post.get("later_stage_markers") != []):
+        raise ValueError("historical interruption did not establish the pre-checkout fetch stage")
+    accepted = capture.get("accepted_path")
+    proper_path = (
+        accepted == "DescendantRetainedPipe-cleaned-and-reaped"
+        and capture.get("result") == "capture-error"
+        and capture.get("cause") == "DescendantRetainedPipe"
+    ) or (
+        accepted == "CapturedProcess-raw-SIGTERM-reaped"
+        and capture.get("result") == "captured-normal" and capture.get("cause") is None
+    )
+    if (not proper_path or capture.get("cleanup_error") is not None
+            or capture.get("cleanup_outcome") != "accepted-path-with-no-reported-cleanup-error"):
+        raise ValueError("historical interruption did not establish clean capture/reaping")
+    for stream in ("stdout", "stderr"):
+        raw = auth.read(driver / ("prepare." + stream + ".raw"), cap=16 * 1024**2)
+        row = capture.get(stream, {})
+        if (row.get("path") != "prepare." + stream + ".raw"
+                or row.get("bytes") != len(raw) or row.get("sha256") != auth.sha(raw)):
+            raise ValueError("historical prepare capture differs from its actual bytes")
+    return report
+
+
+def _qualify_historical_prepare_interruption(work, output, xtask, supervisor, published):
+    """Transitional published-Python oracle, outside new-consumer observations."""
+    area = fresh(work / "published-interrupted-prepare-area")
+    parent, home, tmp = area / "state-parent", area / "home", area / "tmp"
+    for directory in (parent, home, tmp):
+        directory.mkdir(mode=0o700)
+    state, driver = parent / "state", area / "driver-output"
+    sibling = parent / "unrelated-user-data.bin"
+    sentinel = b"preserve historical interrupted-prepare sibling\n"
+    write(sibling, sentinel, 0o600)
+    cli = Path(published["package_root"]) / "cli.py"
+    # The published Python archive preserves a group-writable executable.
+    # Harden an isolated, byte-identical copy; never alter historical inputs.
+    runtime_source = Path(published["interpreter"]["root"]) / "runtime/python"
+    interpreter_relative = Path(published["interpreter"]["path"]).relative_to(runtime_source)
+    runtime = area / "python-runtime"
+    shutil.copytree(runtime_source, runtime, symlinks=True)
+    runtime.chmod(0o700)
+    interpreter = runtime / interpreter_relative
+    if not stat.S_ISREG(interpreter.lstat().st_mode):
+        raise ValueError("historical probe interpreter must be a real regular file")
+    interpreter.chmod(0o755)
+    if auth.sha(auth.read(interpreter, cap=128 * 1024**2)) != published["interpreter"]["sha256"]:
+        raise ValueError("private historical interpreter copy differs from the pinned bytes")
+    report = {"schema": "ami-rust-historical-prepare-interruption-effects-v1", "status": "RUNNING",
+              "host": current_host(), "area": str(area), "state": str(state),
+              "runtime_root": str(runtime),
+              "interpreter_copy": {"original": published["interpreter"]["path"],
+                  "copy": str(interpreter), "sha256": published["interpreter"]["sha256"],
+                  "original_mode": stat.S_IMODE(Path(published["interpreter"]["path"]).lstat().st_mode),
+                  "copy_mode": stat.S_IMODE(interpreter.lstat().st_mode)},
+              "scope": "Actual historical Python half only; not new-consumer no-Python or RC1 acceptance."}
+    original_env = supervisor.env
+    try:
+        supervisor.env = {"PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "HOME": str(home),
+                          "TMPDIR": str(tmp), "LC_ALL": "C"}
+        _supervised_run(supervisor, [interpreter, "-I", "-B", cli, "verify-package"],
+                        label="09-published-prepare-original-verify", cwd=area)
+        row = _supervised_run(supervisor, [xtask, "historical-prepare-interruption",
+            "--python", interpreter, "--frontend", cli, "--state", state,
+            "--home", home, "--tmp", tmp, "--cwd", area, "--output", driver],
+            label="09-published-prepare-sigterm", cwd=area)
+        summary = auth.parsed(auth.read(work / row["stdout_log"]))
+        captured = _validate_historical_prepare_capture(driver, summary, interpreter, cli,
+                                                        state, published)
+        owner = _prepare_state_owner(state)
+        unpublished = _unpublished_prepare_state(state)
+        if (state / "prepare-failure.json").exists() or (state / "prepare-failure.json").is_symlink():
+            raise ValueError("historical interrupted state unexpectedly contains a new failure receipt")
+        retained_cli = state / "retained/libexec/ami-rust/0.1.0-2/cli.py"
+        _supervised_run(supervisor, [interpreter, "-I", "-B", retained_cli, "verify-package"],
+                        label="09-published-prepare-retained-verify", cwd=area)
+        before = _retained_state_snapshot(state)
+        sibling_before = _retained_state_snapshot(parent)
+        retry = _supervised_run(supervisor, [interpreter, "-I", "-B", cli, "prepare", "--state", state],
+                               label="09-published-prepare-retry-refusal", cwd=area, expected=2)
+        refusal = auth.read(work / retry["stderr_log"])
+        if refusal != (b"ami-rust: preparation requires a fresh state; "
+                       b"failed states are retained for diagnosis\n"):
+            raise ValueError("historical retry missed its real fresh-state refusal")
+        after = _retained_state_snapshot(state)
+        if (before != after or sibling_before != _retained_state_snapshot(parent)
+                or auth.read(sibling) != sentinel):
+            raise ValueError("historical prepare retry changed retained ownership, bytes or sibling data")
+        report.update(status="PASS_ACTUAL_HISTORICAL_PREPARE_INTERRUPTION",
+            driver=captured, state_owner=owner, retry_exit_code=retry["exit_code"],
+            state_snapshot=before, state_snapshot_sha256=auth.sha(auth.encoded(before)),
+            retry_state_snapshot_sha256=auth.sha(auth.encoded(after)),
+            retained_package_consistent=True, unpublished=unpublished, failure_receipt=None,
+            package=published["package_version_pins"],
+            retry_refusal_sha256=auth.sha(refusal), unrelated_sibling_sha256=auth.sha(sentinel))
+        _check_limits(supervisor, "completed actual historical prepare interruption")
+        return report
+    except Exception as error:
+        report.update(status="FAIL", error=repr(error))
+        raise
+    finally:
+        supervisor.env = original_env
+        try:
+            _preserve_prepare_captures(driver, output / "historical-prepare-interruption-captures",
+                                      ("preparation-capture.json", "prepare.stdout.raw", "prepare.stderr.raw"))
+        except Exception as error:
+            report.update(status="FAIL", capture_preservation_error=repr(error))
+            raise
+        finally:
+            write(output / "historical-prepare-interruption.json", auth.encoded(report), 0o600)
+
+
 def _qualify_prepare_interruption(work, output, frontend, xtask, command):
     """Observe an actual public prepare SIGTERM, then verify retained effects."""
     area = work / "native-interrupted-prepare-area"
@@ -1812,6 +1993,26 @@ def _qualify_prepare_interruption(work, output, frontend, xtask, command):
     sibling = area / "unrelated-user-data.bin"
     sentinel = b"preserve interrupted-prepare sibling\n"
     write(sibling, sentinel)
+    effects = {"schema": "ami-rust-public-prepare-interruption-effects-v1", "status": "RUNNING"}
+    try:
+        return _native_prepare_interruption_effects(work, output, frontend, xtask, command,
+                                                   state, driver, sibling, sentinel, effects)
+    except Exception as error:
+        effects.update(status="FAIL", error=repr(error))
+        raise
+    finally:
+        try:
+            _preserve_prepare_captures(driver, output / "native-prepare-interruption-captures",
+                                      ("report.json", "stdout.raw", "stderr.raw"))
+        except Exception as error:
+            effects.update(status="FAIL", capture_preservation_error=repr(error))
+            raise
+        finally:
+            write(output / "native-prepare-interruption.json", auth.encoded(effects), 0o600)
+
+
+def _native_prepare_interruption_effects(work, output, frontend, xtask, command,
+                                       state, driver, sibling, sentinel, effects):
     result = auth.parsed(command("09-public-prepare-sigterm", ["native-prepare-interruption",
         "--frontend", frontend, "--state", state, "--home", work / "home",
         "--tmp", work / "tmp", "--output", driver], executable=xtask))
@@ -1819,10 +2020,21 @@ def _qualify_prepare_interruption(work, output, frontend, xtask, command):
     if (result.get("actual_child_exit_code") != 143 or result.get("helper_exit_code") != 0
             or report.get("status") != "OBSERVED_EXPECTED_PREPARE_INTERRUPTION"
             or report.get("capture", {}).get("actual_child_exit_code") != 143
+            or report.get("capture", {}).get("actual_child_signal") is not None
+            or report.get("capture", {}).get("error") is not None
             or report.get("launcher", {}).get("sha256") != auth.sha(auth.read(frontend))
             or report.get("signal", {}).get("sent") is not True
-            or (state / "ready.json").exists()):
+            or report.get("signal", {}).get("helper_interrupted") is not False
+            or any(report.get("signal", {}).get(key) is not None
+                   for key in ("error", "scan_error", "helper_signal_error"))):
         raise ValueError("public prepare interruption omitted its actual status or retained effects")
+    owner, unpublished = _prepare_state_owner(state), _unpublished_prepare_state(state)
+    failure_raw = auth.read(state / "prepare-failure.json")
+    failure = auth.parsed(failure_raw)
+    if (failure.get("schema") != "ami-rust-prepare-failure-v1"
+            or failure.get("phase") != "source-checkout"
+            or failure.get("ready") is not False or failure.get("state_retained") is not True):
+        raise ValueError("native interruption omitted its valid pre-publication failure receipt")
     for stream in ("stdout", "stderr"):
         raw = auth.read(driver / (stream + ".raw"))
         row = report["capture"][stream]
@@ -1831,25 +2043,76 @@ def _qualify_prepare_interruption(work, output, frontend, xtask, command):
     retained = state / "retained/bin/ami-rust"
     command("09-interrupted-retained-package-consistency", ["verify-package"], executable=retained)
     before = _retained_state_snapshot(state)
+    area_before = _retained_state_snapshot(state.parent.parent)
     command("09-interrupted-state-retry-refusal", ["prepare", "--state", state], 2,
         executable=frontend, disposable_refusal_state=state)
     refusal = auth.read(output / "09-interrupted-state-retry-refusal.stderr.log")
     if refusal != b"ami-rust: state path must be fresh\n":
         raise ValueError("interrupted-state retry did not reach the native fresh-state refusal")
-    if _retained_state_snapshot(state) != before or auth.read(sibling) != sentinel:
+    after = _retained_state_snapshot(state)
+    if (after != before or _retained_state_snapshot(state.parent.parent) != area_before
+            or auth.read(sibling) != sentinel):
         raise ValueError("interrupted prepare retry changed retained ownership, bytes or sibling data")
-    result = {"schema": "ami-rust-public-prepare-interruption-effects-v1",
-        "status": "PASS_ACTUAL_CLI_SIGTERM_RETAINED_STATE_AND_UNCHANGED_RETRY",
+    effects.update({"status": "PASS_ACTUAL_CLI_SIGTERM_RETAINED_STATE_AND_UNCHANGED_RETRY",
         "driver": report, "state_snapshot": before,
         "state_snapshot_sha256": auth.sha(auth.encoded(before)),
+        "retry_state_snapshot_sha256": auth.sha(auth.encoded(after)),
+        "state_owner": owner, "unpublished": unpublished,
+        "failure_receipt": {"sha256": auth.sha(failure_raw), "record": failure},
         "retry_exit_code": 2, "retained_package_consistent": True,
         "retry_state_write_authority": "exact disposable partial state; no derived execution",
         "retry_refusal_sha256": auth.sha(refusal),
         "unrelated_sibling_sha256": auth.sha(sentinel),
-        "scope": "Source-checkout interruption only; installation publication recovery is a separate case."}
-    write(output / "native-prepare-interruption.json", auth.encoded(result))
-    shutil.copytree(driver, output / "native-prepare-interruption-captures")
-    return result
+        "scope": "Source-checkout interruption only; installation publication recovery is a separate case."})
+    return effects
+
+
+def _compare_prepare_interruptions(historical, native, identity, config):
+    """Compare visible semantics; raw SIGTERM and handled exit 143 are distinct."""
+    expected = ("PASS_ACTUAL_HISTORICAL_PREPARE_INTERRUPTION",
+                "PASS_ACTUAL_CLI_SIGTERM_RETAINED_STATE_AND_UNCHANGED_RETRY")
+    refusals = (b"ami-rust: preparation requires a fresh state; failed states are retained for diagnosis\n",
+                b"ami-rust: state path must be fresh\n")
+    for half, status, refusal in zip((historical, native), expected, refusals):
+        owner = half.get("state_owner", {})
+        unpublished = half.get("unpublished", {})
+        if (half.get("status") != status or half.get("retry_exit_code") != 2
+                or half.get("retained_package_consistent") is not True
+                or owner != {"uid": os.getuid(), "mode": 0o700, "private_current_user": True}
+                or unpublished != {"ready_absent": True, "installation_prefix_absent": True,
+                                   "installation_receipt_absent": True, "selection_absent": True,
+                                   "python_bootstrap_absent": True}
+                or half.get("state_snapshot_sha256") != auth.sha(auth.encoded(half.get("state_snapshot")))
+                or half.get("retry_state_snapshot_sha256") != half.get("state_snapshot_sha256")
+                or half.get("retry_refusal_sha256") != auth.sha(refusal)):
+            raise ValueError("prepare interruption pair lacks a validated half or preserved visible effects")
+    old = historical["driver"]["observation"]
+    new = native["driver"]["capture"]
+    package = native["driver"]["package"]
+    if (old.get("direct_child_raw_signal") != 15 or old.get("direct_child_exit_code") is not None
+            or old.get("shell_convention_status") != 143 or old.get("shell_was_invoked") is not False
+            or new.get("actual_child_exit_code") != 143 or new.get("actual_child_signal") is not None
+            or historical.get("failure_receipt") is not None
+            or not native.get("failure_receipt")
+            or package.get("source_commit") != identity["source_sha"]
+            or package.get("host") != current_host()
+            or package.get("sdk_version") != config["sdk_version"]
+            or package.get("cli_version") != config["cli_version"]):
+        raise ValueError("prepare interruption pair lost its signal distinction or current package identity")
+    return {"schema": "ami-rust-prepare-interruption-comparison-v1",
+            "status": "PASS_ACTUAL_HOST_PREPARE_INTERRUPTION_SEMANTIC_PAIR",
+            "host": current_host(), "native_package": package,
+            "historical_package": historical["package"],
+            "historical_effects_sha256": auth.sha(auth.encoded(historical)),
+            "native_effects_sha256": auth.sha(auth.encoded(native)),
+            "shared_effects": historical["unpublished"],
+            "deliberate_differences": {
+                "stage_witnesses": "Historical: empty FETCH_HEAD before checkout/bootstrap; Rust: active source-fetch command directory. Neither witness observes Git argv or its PID.",
+                "termination": "Published Python: raw SIGTERM 15, no exit code; Rust: handled exit 143, no raw signal.",
+                "diagnostics": "Both refuse retry with exit 2; each retains its version-specific diagnostic.",
+                "failure_receipt": "Published Python writes no receipt; Rust retains a source-checkout failure receipt.",
+                "source": "Each release uses its authentic source pin; the two source commits need not match."},
+            "scope": "One host, actual CLI interruptions at separately witnessed pre-checkout source-fetch stages. Both-host protected SDK and complete RC1 acceptance remain separate."}
 
 
 def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor, policy_path, identity, config, command):
@@ -1897,22 +2160,25 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
 
     # Preserve a genuine published 0.1.0 rollback population before any new
     # consumer prepare/interruption command. Its historical Python is setup
-    # evidence only; all following observations use the packaged Rust CLI.
+    # evidence only, including its separately observed interruption below.
     guards = _retained_preservation_guards(work)
     archive = _download_published_v1_archive(work, supervisor)
     legacy_report = _prepare_published_legacy(work, output, supervisor, archive)
     if legacy_report.get("status") != "PASS_ACTUAL_PUBLISHED_V1_SETUP_ORACLE_NOT_RC1_ACCEPTANCE":
         raise ValueError("published 0.1.0 rollback setup did not complete through its actual historical package")
+    historical_interruption = _qualify_historical_prepare_interruption(
+        work, output, xtask, supervisor, legacy_report)
     # Every new consumer command from this point shares the same excluded
     # historical runtime, including migrated-lock verification and builds.
     observed_command = command
-    inert_runtime = Path(legacy_report["state"]) / "ami-rust-python-bootstrap/runtime/python"
+    inert_runtimes = (Path(legacy_report["state"]) / "ami-rust-python-bootstrap/runtime/python",
+                      Path(historical_interruption["runtime_root"]))
 
     def command(label, arguments, expected=0, **options):
         return observed_command(label, arguments, expected,
-                                inert_python_roots=(inert_runtime,), **options)
+                                inert_python_roots=inert_runtimes, **options)
 
-    legacy = {"report": legacy_report, "checkpoints": []}
+    legacy = {"report": legacy_report, "interruption": historical_interruption, "checkpoints": []}
     legacy_roots = _published_v1_preservation_roots(legacy, guards)
     legacy["baseline"] = _preservation_snapshot(legacy_roots)
     archive_copy = Path(legacy_report["archive"]["copy"])
@@ -1988,6 +2254,8 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
                    "preservation_after": selector_after_activation}]
 
     interruption = _qualify_prepare_interruption(work, output, frontend, xtask, command)
+    interruption_pair = _compare_prepare_interruptions(historical_interruption, interruption, identity, config)
+    write(output / "prepare-interruption-comparison.json", auth.encoded(interruption_pair))
     _check_published_v1_preservation(legacy, guards, "new native prepare interruption and refusal")
     native_matrix = _qualify_native_build_matrix(
         work, state, frontend, output, supervisor, config, command)
@@ -2071,6 +2339,8 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
     return {"status": "PASS_SIDE_BY_SIDE_PUBLISHED_V1_TO_NATIVE_PACKAGE_TRANSITION_AND_RETAINED_REPLAY",
         "package_core_sha256": pins["core_sha256"], "authentication": authentication,
         "prepare_interruption": interruption,
+        "historical_prepare_interruption": historical_interruption,
+        "prepare_interruption_comparison": interruption_pair,
         "public_migration": migration,
         "published_v1_transition": transition,
         "native_executable_sha256": auth.sha(original_elf),
@@ -2078,7 +2348,7 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
         "retained_removal_preservation": preservation,
         "ready_sha256": auth.sha(ready),
         "removal": "private native 0.2 package root removed after selector rollback; both real old/new states, projects, builds and unrelated guards preserved",
-        "limitation": "Historical Python created the actual published 0.1.0 state/project/build and ran two retained --version rollback controls as separate internal oracles. Those invocations are outside the observed new Rust consumer tree. New Rust operations use the runtime-excluding policy; Linux migration additionally installs the process-wide no-exec guard before reading the inert interpreter. Cargo offline mode was exercised; OS network denial and complete no-Python observation remain unqualified; no package-manager transaction or RC1 acceptance is claimed"}
+        "limitation": "Historical Python created the published 0.1.0 state/project/build, ran its separate interrupted-prepare/retained-verification/retry oracle and two retained --version rollback controls. Those invocations are outside the observed new Rust consumer tree. New Rust operations use the runtime-excluding policy; Linux migration additionally installs the process-wide no-exec guard before reading the inert interpreter. Cargo offline mode was exercised; OS network denial and complete no-Python observation remain unqualified; no package-manager transaction or RC1 acceptance is claimed"}
 
 
 def main():

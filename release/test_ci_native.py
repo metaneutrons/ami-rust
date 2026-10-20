@@ -425,8 +425,11 @@ class NativeMatrixTests(unittest.TestCase):
     def test_failed_published_setup_never_runs_new_consumer_commands(self):
         self._run_signed_package_lifecycle_matrix_case(fail_setup=True)
 
+    def test_failed_historical_interruption_stops_before_new_consumer_observations(self):
+        self._run_signed_package_lifecycle_matrix_case(fail_historical_interruption=True)
+
     def _run_signed_package_lifecycle_matrix_case(self, *, fail_replay=False, mutate_replay=False,
-                                                  fail_setup=False):
+                                                  fail_setup=False, fail_historical_interruption=False):
         (self.work / "home").mkdir(mode=0o700)
         outer = self.work / "outer"
         metadata = outer / "metadata"
@@ -447,6 +450,7 @@ class NativeMatrixTests(unittest.TestCase):
         observed_command_options = []
         prepared_state = None
         legacy_report = {}
+        interruption_order = []
         dummy_archive = b"inert published archive fixture; not an archive authenticity claim\n"
         archive_input = self.work / "published-v1-archive-input.xz"
         archive_input.write_bytes(dummy_archive)
@@ -463,7 +467,8 @@ class NativeMatrixTests(unittest.TestCase):
             if legacy_report:
                 expected_inert_root = (Path(legacy_report["state"])
                                        / "ami-rust-python-bootstrap/runtime/python")
-                self.assertEqual(options.get("inert_python_roots"), (expected_inert_root,),
+                self.assertEqual(options.get("inert_python_roots"), (expected_inert_root,
+                    self.work / "inert-interrupted-published-state/python-runtime"),
                                  "every post-setup consumer command must exclude the retained v1 runtime")
             else:
                 self.assertNotIn("inert_python_roots", options)
@@ -512,7 +517,8 @@ class NativeMatrixTests(unittest.TestCase):
             callback("matrix-inert-runtime-exclusion-probe", ["verify-package"], executable=frontend)
             self.assertEqual(observed_command_options[-1][1].get("inert_python_roots"),
                              (Path(legacy_report["state"])
-                              / "ami-rust-python-bootstrap/runtime/python",))
+                              / "ami-rust-python-bootstrap/runtime/python",
+                              self.work / "inert-interrupted-published-state/python-runtime"))
             self.assertIn("14-package-offline-build", commands)
             matrix_calls.append(True)
             return {"build_count": 10, "fixture": True}
@@ -636,6 +642,25 @@ class NativeMatrixTests(unittest.TestCase):
             return {"status": "SYNTHETIC_ORDER_FIXTURE_NO_MIGRATION_EVIDENCE",
                     "migration_area": str(area)}
 
+        def historical_interruption(work, output, xtask, supervisor, published):
+            self.assertIs(published, legacy_report)
+            self.assertEqual(commands, ["09-package-consistency", "09-package-publisher-authentication"])
+            interruption_order.append("historical")
+            if fail_historical_interruption:
+                raise ValueError("isolated historical interruption failure")
+            area = work / "inert-interrupted-published-state"
+            area.mkdir(mode=0o700)
+            (area / "sentinel").write_bytes(b"inert interrupted state fixture\n")
+            (area / "python-runtime").mkdir(mode=0o700)
+            return {"status": "SYNTHETIC_ORDER_FIXTURE_NO_SIGTERM_EVIDENCE", "area": str(area),
+                    "runtime_root": str(area / "python-runtime")}
+
+        def native_interruption(work, output, frontend, xtask, callback):
+            self.assertEqual(interruption_order, ["historical"])
+            interruption_order.append("native")
+            callback("interruption-inert-runtime-exclusion-probe", ["verify-package"], executable=frontend)
+            return {"status": "SYNTHETIC_ORDER_FIXTURE_NO_SIGTERM_EVIDENCE"}
+
         # Composition is a stub in this lifecycle-order fixture. Supply inert
         # notice data locally so the test also works in the narrow installer
         # CI checkout; actual legal bytes are checked by package production.
@@ -656,10 +681,20 @@ class NativeMatrixTests(unittest.TestCase):
                 patch.object(native, "_supervised_run", side_effect=compose), \
                 patch.object(native, "_qualify_native_build_matrix", side_effect=matrix), \
                 patch.object(native, "_qualify_native_migration", side_effect=migration) as migration_probe, \
-                patch.object(native, "_qualify_prepare_interruption", return_value={
-                    "status": "SYNTHETIC_MATRIX_ORDER_FIXTURE_NO_SIGTERM_EVIDENCE"}) as interruption_probe:
+                patch.object(native, "_qualify_historical_prepare_interruption",
+                             side_effect=historical_interruption) as historical_probe, \
+                patch.object(native, "_compare_prepare_interruptions", return_value={
+                    "status": "SYNTHETIC_ORDER_FIXTURE_NOT_A_COMPARISON"}) as pair_probe, \
+                patch.object(native, "_qualify_prepare_interruption",
+                             side_effect=native_interruption) as interruption_probe:
             if fail_setup:
                 with self.assertRaisesRegex(ValueError, "published 0.1.0 rollback setup did not complete"):
+                    native._qualify_native_package(
+                        self.work, self.output, outer, self.work / "bundle", self.frontend,
+                        self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
+                        identity, config, command)
+            elif fail_historical_interruption:
+                with self.assertRaisesRegex(ValueError, "isolated historical interruption failure"):
                     native._qualify_native_package(
                         self.work, self.output, outer, self.work / "bundle", self.frontend,
                         self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
@@ -688,24 +723,208 @@ class NativeMatrixTests(unittest.TestCase):
                     "ready_state_and_retained_tooling", "native_project", "native_first_build",
                     "native_migration_area", "published_v1_state", "published_v1_project",
                     "published_v1_build", "published_v1_package_tree", "published_v1_home",
+                    "published_v1_interrupted_prepare",
                     "global_cargo_config", "global_rustup_config", "unrelated_sdk", "user_data"})
-        if fail_setup:
+        if fail_setup or fail_historical_interruption:
             self.assertFalse((self.output / "native-build-matrix.json").exists())
         else:
             self.assertEqual(auth.parsed(auth.read(self.output / "native-build-matrix.json")),
                              {"build_count": 10, "fixture": True})
         archive_probe.assert_called_once_with(self.work, ANY)
         setup_probe.assert_called_once_with(self.work, self.output, ANY, archive_input)
-        if fail_setup:
+        if fail_setup or fail_historical_interruption:
             self.assertEqual(commands, ["09-package-consistency", "09-package-publisher-authentication"])
             interruption_probe.assert_not_called()
             migration_probe.assert_not_called()
+            pair_probe.assert_not_called()
+            if fail_setup:
+                historical_probe.assert_not_called()
+            else:
+                historical_probe.assert_called_once()
             self.assertTrue(package.exists())
         else:
+            self.assertEqual(interruption_order, ["historical", "native"])
+            historical_probe.assert_called_once()
+            pair_probe.assert_called_once()
             interruption_probe.assert_called_once()
             migration_probe.assert_called_once()
             self.assertEqual(commands[-2:], ["15-retained-input-recheck", "16-retained-offline-replay"])
             self.assertFalse(package.exists())
+
+
+class PrepareInterruptionPairTests(unittest.TestCase):
+    """Synthetic adapter controls; no child execution or SDK acceptance claim."""
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="ami-rust-interruption-controls-")
+        self.root = Path(self.temporary.name).resolve()
+        self.identity = {"source_sha": "a" * 40}
+        self.config = {"sdk_version": "0.2.0", "cli_version": "0.2.0-dev"}
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def run_pair(self, name, *, historical_change=None, native_change=None, retry_mutation=False):
+        area = self.root / name
+        area.mkdir(mode=0o700)
+        work, output = area / "work", area / "output"
+        work.mkdir(mode=0o700)
+        output.mkdir(mode=0o700)
+        cli = area / "cli.py"
+        runtime_root = area / "bootstrap/runtime/python"
+        (runtime_root / "bin").mkdir(parents=True)
+        python = runtime_root / "bin/python3.12"
+        cli.write_bytes(b"inert historical CLI fixture")
+        python.write_bytes(b"inert interpreter fixture")
+        published = {"package_root": str(area), "historical_cli_sha256": auth.sha(cli.read_bytes()),
+                     "interpreter": {"path": str(python), "root": str(area / "bootstrap"),
+                                     "sha256": auth.sha(python.read_bytes())},
+                     "package_version_pins": {"source_commit": "b" * 40, "sdk_version": "0.1.0"}}
+        supervisor = SimpleNamespace(work=work, output=output, env={"sentinel": "restore me"})
+        original_env = supervisor.env
+
+        def supervise(_supervisor, argv, *, label, cwd, expected=0):
+            stdout, stderr = output / (label + ".stdout"), output / (label + ".stderr")
+            payload = b""
+            refusal = b""
+            if label == "09-published-prepare-sigterm":
+                state = Path(argv[argv.index("--state") + 1])
+                driver = Path(argv[argv.index("--output") + 1])
+                state.mkdir(mode=0o700)
+                retained = state / "retained/libexec/ami-rust/0.1.0-2/cli.py"
+                retained.parent.mkdir(parents=True)
+                retained.write_bytes(cli.read_bytes())
+                driver.mkdir(mode=0o700)
+                for stream in ("stdout", "stderr"):
+                    (driver / ("prepare." + stream + ".raw")).write_bytes(b"")
+                observation = {"attempted": True, "signal_sent": True, "direct_child_raw_signal": 15,
+                    "direct_child_exit_code": None, "shell_convention_status": 143,
+                    "shell_was_invoked": False, "helper_interrupted": False,
+                    "fetch_head_at_signal": {"path": str(state / "source/.git/FETCH_HEAD"),
+                        "regular_file": True, "size_bytes": 0, "uid": os.getuid(),
+                        "READY_absent": True, "ci_python_absent": True,
+                        "index_absent": True, "ready_json_absent": True}}
+                report = {"status": "OBSERVED_FETCH_STAGE_SIGTERM", "observation": observation,
+                    "command": {"program": str(argv[argv.index("--python") + 1]),
+                        "argv": ["-I", "-B", str(cli), "prepare", "--state", str(state)],
+                        "python_sha256": published["interpreter"]["sha256"],
+                        "frontend_sha256": published["historical_cli_sha256"]},
+                    "post_capture": {"READY_present": False, "ci_python_present": False,
+                        "git_index_present": False, "ready_json_present": False, "later_stage_markers": []},
+                    "capture": {"accepted_path": "DescendantRetainedPipe-cleaned-and-reaped",
+                        "result": "capture-error", "cause": "DescendantRetainedPipe", "cleanup_error": None,
+                        "cleanup_outcome": "accepted-path-with-no-reported-cleanup-error",
+                        **{stream: {"path": "prepare." + stream + ".raw", "bytes": 0,
+                                    "sha256": auth.sha(b"")} for stream in ("stdout", "stderr")}}}
+                if historical_change:
+                    historical_change(report, state)
+                (driver / "preparation-capture.json").write_bytes(auth.encoded(report))
+                payload = auth.encoded({"status": "OBSERVED_FETCH_STAGE_SIGTERM",
+                                        "report": str(driver / "preparation-capture.json")})
+            elif label == "09-published-prepare-retry-refusal":
+                refusal = (b"ami-rust: preparation requires a fresh state; "
+                           b"failed states are retained for diagnosis\n")
+            stdout.write_bytes(payload)
+            stderr.write_bytes(refusal)
+            return {"stdout_log": str(stdout.relative_to(work.parent)),
+                    "stderr_log": str(stderr.relative_to(work.parent)), "exit_code": expected}
+
+        # The real supervisor stores log paths relative to work. Keep this
+        # fixture's log files there as well, rather than imitating execution.
+        def supervised(*args, **kwargs):
+            row = supervise(*args, **kwargs)
+            for key in ("stdout_log", "stderr_log"):
+                row[key] = os.path.relpath(area / row[key], work)
+            return row
+
+        frontend = area / "ami-rust"
+        frontend.write_bytes(b"inert new CLI fixture")
+
+        def command(label, arguments, expected=0, **options):
+            if label == "09-public-prepare-sigterm":
+                state = Path(arguments[arguments.index("--state") + 1])
+                driver = Path(arguments[arguments.index("--output") + 1])
+                state.mkdir(mode=0o700)
+                (state / "retained/bin").mkdir(parents=True)
+                (state / "retained/bin/ami-rust").write_bytes(frontend.read_bytes())
+                failure = {"schema": "ami-rust-prepare-failure-v1", "phase": "source-checkout",
+                           "ready": False, "state_retained": True}
+                (state / "prepare-failure.json").write_bytes(auth.encoded(failure))
+                driver.mkdir(mode=0o700)
+                for stream in ("stdout", "stderr"):
+                    (driver / (stream + ".raw")).write_bytes(b"")
+                report = {"status": "OBSERVED_EXPECTED_PREPARE_INTERRUPTION",
+                    "launcher": {"sha256": auth.sha(frontend.read_bytes())},
+                    "signal": {"sent": True, "helper_interrupted": False},
+                    "package": {"source_commit": self.identity["source_sha"],
+                                "host": native.current_host(), **self.config},
+                    "capture": {"actual_child_exit_code": 143, "actual_child_signal": None,
+                                "error": None, **{stream: {"bytes": 0, "sha256": auth.sha(b"")}
+                                                  for stream in ("stdout", "stderr")}}}
+                if native_change:
+                    native_change(report, state)
+                (driver / "report.json").write_bytes(auth.encoded(report))
+                return auth.encoded({"actual_child_exit_code": 143, "helper_exit_code": 0})
+            if label == "09-interrupted-state-retry-refusal":
+                (output / (label + ".stderr.log")).write_bytes(b"ami-rust: state path must be fresh\n")
+                if retry_mutation:
+                    state = Path(arguments[arguments.index("--state") + 1])
+                    (state / "retained/bin/ami-rust").chmod(0o777)
+            return b""
+
+        with patch.object(native, "_supervised_run", side_effect=supervised), \
+                patch.object(native, "_check_limits"):
+            try:
+                old = native._qualify_historical_prepare_interruption(
+                    work, output, area / "xtask", supervisor, published)
+                new = native._qualify_prepare_interruption(work, output, frontend, area / "xtask", command)
+                return old, new, native._compare_prepare_interruptions(old, new, self.identity, self.config)
+            finally:
+                self.assertIs(supervisor.env, original_env)
+
+    def test_pair_preserves_deliberate_signal_and_receipt_differences(self):
+        old, new, paired = self.run_pair("positive")
+        self.assertEqual(paired["status"], "PASS_ACTUAL_HOST_PREPARE_INTERRUPTION_SEMANTIC_PAIR")
+        self.assertIsNone(old["failure_receipt"])
+        self.assertEqual(new["failure_receipt"]["record"]["phase"], "source-checkout")
+        self.assertNotEqual(paired["historical_package"]["source_commit"],
+                            paired["native_package"]["source_commit"])
+        for index, value in enumerate(({}, {**old, "retry_exit_code": 0},
+                                       {**old, "retry_state_snapshot_sha256": "0" * 64})):
+            with self.subTest(index=index), self.assertRaises(ValueError):
+                native._compare_prepare_interruptions(value, new, self.identity, self.config)
+
+    def test_historical_invalid_capture_cannot_form_a_pair_and_keeps_raw_evidence(self):
+        changes = [lambda report, state: report["capture"].update(cleanup_error="EPERM"),
+                   lambda report, state: report["observation"].update(direct_child_raw_signal=None),
+                   lambda report, state: report["observation"].update(helper_interrupted=True),
+                   lambda report, state: report["observation"]["fetch_head_at_signal"].update(size_bytes=1),
+                   lambda report, state: report["command"].update(frontend_sha256="0" * 64),
+                   lambda report, state: report["capture"]["stdout"].update(sha256="0" * 64)]
+        for index, change in enumerate(changes):
+            name = "bad-old-" + str(index)
+            with self.subTest(index=index), self.assertRaises(ValueError):
+                self.run_pair(name, historical_change=change)
+            output = self.root / name / "output"
+            self.assertEqual(auth.parsed(auth.read(output / "historical-prepare-interruption.json"))["status"], "FAIL")
+            self.assertTrue((output / "historical-prepare-interruption-captures/prepare.stdout.raw").is_file())
+
+    def test_native_invalid_effects_and_changed_retry_cannot_form_a_pair(self):
+        changes = [lambda report, state: report["capture"].update(actual_child_signal=15),
+                   lambda report, state: report["capture"].update(error="cleanup failed"),
+                   lambda report, state: (state / "sdk-0.2.0").mkdir(),
+                   lambda report, state: (state / "ready.json").symlink_to("missing-ready"),
+                   lambda report, state: (state / "receipt.sha256").write_bytes(b"premature"),
+                   lambda report, state: (state / "prepare-failure.json").write_bytes(auth.encoded({"ready": True}))]
+        for index, change in enumerate(changes):
+            name = "bad-new-" + str(index)
+            with self.subTest(index=index), self.assertRaises(ValueError):
+                self.run_pair(name, native_change=change)
+            output = self.root / name / "output"
+            self.assertEqual(auth.parsed(auth.read(output / "native-prepare-interruption.json"))["status"], "FAIL")
+            self.assertTrue((output / "native-prepare-interruption-captures/stderr.raw").is_file())
+        with self.assertRaisesRegex(ValueError, "changed retained ownership"):
+            self.run_pair("changed-retry", retry_mutation=True)
 
 
 class NativeObservationSpecTests(unittest.TestCase):
