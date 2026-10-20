@@ -26,6 +26,7 @@ REQUIRED_SOURCES = (
     "tooling/crates/xtask/src/consumer_observe.rs",
     "tooling/crates/xtask/src/consumer_report.rs",
     "tooling/crates/xtask/src/consumer_runtime.rs",
+    "tooling/crates/xtask/src/historical_prepare_sigterm.rs",
     "tooling/crates/xtask/src/legacy_migration_fixture.rs",
     "tooling/crates/xtask/src/native_release.rs",
     "tooling/crates/xtask/src/prepare_sigterm.rs",
@@ -202,6 +203,11 @@ class NativeToolingMaterialsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid or unordered native registry crate"):
             auth.input_manifest_for_sdk(self.source, "0.2.0")
 
+    def test_repository_inventory_contains_the_mandatory_native_sources(self):
+        # The miniature fixtures cannot detect an omission in the real config.
+        actual = auth.parsed(auth.read(Path(__file__).resolve().parent / "native-tooling-inputs.json"))
+        self.assertTrue(set(REQUIRED_SOURCES) <= set(actual["source_files"]))
+
     def test_native_sampler_and_observer_sources_are_mandatory_and_digest_bound(self):
         sampler_sources = (
             "tooling/crates/core/build.rs",
@@ -211,6 +217,7 @@ class NativeToolingMaterialsTests(unittest.TestCase):
             "tooling/crates/xtask/src/consumer_observe.rs",
             "tooling/crates/xtask/src/consumer_report.rs",
             "tooling/crates/xtask/src/consumer_runtime.rs",
+            "tooling/crates/xtask/src/historical_prepare_sigterm.rs",
             "tooling/crates/xtask/src/legacy_migration_fixture.rs",
             "tooling/crates/xtask/src/prepare_sigterm.rs",
         )

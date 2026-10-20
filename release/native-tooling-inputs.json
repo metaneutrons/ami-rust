@@ -401,6 +401,7 @@
     "tooling/crates/xtask/src/consumer_observe.rs",
     "tooling/crates/xtask/src/consumer_report.rs",
     "tooling/crates/xtask/src/consumer_runtime.rs",
+    "tooling/crates/xtask/src/historical_prepare_sigterm.rs",
     "tooling/crates/xtask/src/legacy_migration_fixture.rs",
     "tooling/crates/xtask/src/main.rs",
     "tooling/crates/xtask/src/native_notices.rs",

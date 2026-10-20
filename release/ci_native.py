@@ -2003,7 +2003,7 @@ def _qualify_prepare_interruption(work, output, frontend, xtask, command):
     finally:
         try:
             _preserve_prepare_captures(driver, output / "native-prepare-interruption-captures",
-                                      ("report.json", "stdout.raw", "stderr.raw"))
+                                      ("report.json", "stdout.raw", "stderr.raw", "prepare-failure.json"))
         except Exception as error:
             effects.update(status="FAIL", capture_preservation_error=repr(error))
             raise
@@ -2035,6 +2035,7 @@ def _native_prepare_interruption_effects(work, output, frontend, xtask, command,
             or failure.get("phase") != "source-checkout"
             or failure.get("ready") is not False or failure.get("state_retained") is not True):
         raise ValueError("native interruption omitted its valid pre-publication failure receipt")
+    write(driver / "prepare-failure.json", failure_raw, 0o600)
     for stream in ("stdout", "stderr"):
         raw = auth.read(driver / (stream + ".raw"))
         row = report["capture"][stream]

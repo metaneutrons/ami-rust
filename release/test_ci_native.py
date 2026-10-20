@@ -887,6 +887,9 @@ class PrepareInterruptionPairTests(unittest.TestCase):
         self.assertEqual(paired["status"], "PASS_ACTUAL_HOST_PREPARE_INTERRUPTION_SEMANTIC_PAIR")
         self.assertIsNone(old["failure_receipt"])
         self.assertEqual(new["failure_receipt"]["record"]["phase"], "source-checkout")
+        raw_receipt = auth.read(self.root / "positive/output/native-prepare-interruption-captures/prepare-failure.json")
+        self.assertEqual(auth.parsed(raw_receipt), new["failure_receipt"]["record"])
+        self.assertEqual(auth.sha(raw_receipt), new["failure_receipt"]["sha256"])
         self.assertNotEqual(paired["historical_package"]["source_commit"],
                             paired["native_package"]["source_commit"])
         for index, value in enumerate(({}, {**old, "retry_exit_code": 0},

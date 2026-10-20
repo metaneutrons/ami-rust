@@ -88,5 +88,55 @@
     "Complete signed native matrix and lifecycle, followed by RC1 acceptance",
     "Unchanged RC2-RC5 scope"
   ],
-  "resource_limit": "Per-stream caps remain bounded failure limits, not a promise that all maxima fit one artifact. Existing aggregate log/output limits remain required; real both-host artifact sizes are not yet measured."
+  "resource_limit": "Per-stream caps remain bounded failure limits, not a promise that all maxima fit one artifact. Existing aggregate log/output limits remain required; real both-host artifact sizes are not yet measured.",
+  "provenance_and_readback_followup": {
+    "source_files": {
+      "release/ci_auth.py": "34ad4fdeb7fabe83279a7b28b57f6823d1d772392e9f28d3c4fd2a9b4322e9e1",
+      "release/ci_native.py": "fcd22f4c524d1c75023a809a171c8801f8d00ccd09906508c49336482352bfd5",
+      "release/native-tooling-inputs.json": "3556b642d7d4c2f54cadf310c51054cb8b4d9077bf2f97042118b980ef458571",
+      "release/test_ci_native.py": "1fce3abf94796a5933326d64646cc6871749b2ee9fc509741d2b30d4a0af878f",
+      "release/test_native_tooling_materials.py": "2d4d8a1b018ef86a11832cd4085ee5fbe7fd20a8b5700e306e8127c2e3afd11a"
+    },
+    "scope": "Explicit producer source pin and raw receipt evidence correction. Rust/native execution code is unchanged; original development measurements above retain their original source identities.",
+    "prior_candidate": "bd7c5af5a6b56112d02a647b32d29c68f21ea978",
+    "prior_ci": {
+      "run_id": 39359828442,
+      "attempt": 1,
+      "conclusion": "success",
+      "all_seven_jobs_verified": true,
+      "source_tree": "8906ff5e6c4d615a21019bcdd2ab3e3821507d56",
+      "verified_report_sha256": "c2f5cd18ae29be1e090a2196e8627b73372e67d7360b3781638853b44c497111",
+      "historical_comparison_pairs_per_host": 192,
+      "portable_historical_pin_stage_capture_tests_verified": true,
+      "darwin_actual_zombie_live_descendant_and_ownership_tests_verified": true
+    },
+    "missing_material": "historical_prepare_sigterm.rs is now mandatory and digest-bound in actual producer inputs and fixture validation; the embedded ci-python-inputs.json already belonged to the base input manifest.",
+    "raw_receipt": "The exact native prepare-failure.json bytes are preserved alongside raw streams for independent semantic/digest/snapshot readback.",
+    "local_controls": {
+      "status": "PASS_CHANGED_SOURCE_MATERIALS_AND_RAW_RECEIPT_CAPTURE",
+      "report_sha256": "c795eb68963a26c26728afcef22b9cfb6f94ad6eb8e485552bd6ea592e527903",
+      "test_counts": {
+        "native-adapter-controls": [
+          "Ran 54 tests in 0.857s"
+        ],
+        "native-source-material-controls": [
+          "Ran 10 tests in 0.098s"
+        ],
+        "publisher-auth-material-controls": [
+          "Ran 25 tests in 0.303s"
+        ]
+      }
+    },
+    "omission_counter": {
+      "status": "PASS_ISOLATED_REAL_CONFIG_OMISSION_REFUSED",
+      "report_sha256": "9335224b6a249ce616fb03cd7c8736b8ae4d404137dca04eadd87d31607bbd83"
+    },
+    "readback_controls": {
+      "status": "PASS_OFFLINE_READBACK_CONTROLS_ONLY",
+      "tests": 20,
+      "report_sha256": "b5f0eb650868f56f9200297eaf765418ca29c60813794ea1481c123e9c4c8eb8",
+      "limitation": "Synthetic new half; not actual protected SDK evidence."
+    },
+    "remaining": "New exact candidate hosted CI, full protected signed SDK and RC1 acceptance remain open."
+  }
 }
