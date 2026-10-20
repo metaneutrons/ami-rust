@@ -41,6 +41,7 @@ jobs:
             release/native-tooling-inputs.json
             tooling/Cargo.lock
             tooling/Cargo.toml
+            tooling/fixtures/accepted-r1-inputs.json
             release/ci-cargo-producers/
             release/trust/
             release/portable-csdk/spec.json

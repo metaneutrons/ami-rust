@@ -317,12 +317,43 @@ fn lookup_path(path: &Path) -> Result<PathBuf> {
         )));
     }
     let mut normalized = PathBuf::new();
+    let mut saw_parent = false;
     for component in path.components() {
         match component {
             Component::RootDir => normalized.push("/"),
             Component::Normal(name) => normalized.push(name),
             Component::CurDir => {}
-            Component::ParentDir | Component::Prefix(_) => {
+            Component::ParentDir => {
+                saw_parent = true;
+                if normalized.as_path() == Path::new("/") {
+                    // A parent of the filesystem root remains the root.
+                    continue;
+                }
+                let metadata = fs::symlink_metadata(&normalized).map_err(|error| {
+                    Refusal::new(format!(
+                        "cannot normalize library lookup parent because the preceding component is not an existing real directory {}: {error}",
+                        normalized.display()
+                    ))
+                })?;
+                if metadata.file_type().is_symlink() {
+                    return Err(Refusal::new(format!(
+                        "library lookup parent crosses a symbolic-link component and cannot be normalized: {}",
+                        normalized.display()
+                    )));
+                }
+                if !metadata.is_dir() {
+                    return Err(Refusal::new(format!(
+                        "cannot normalize library lookup parent because the preceding component is not a directory: {}",
+                        normalized.display()
+                    )));
+                }
+                if !normalized.pop() {
+                    return Err(Refusal::new(
+                        "library lookup parent normalization would remove the filesystem root",
+                    ));
+                }
+            }
+            Component::Prefix(_) => {
                 return Err(Refusal::new(format!(
                     "library lookup path contains unsupported parent syntax: {}",
                     path.display()
@@ -334,6 +365,29 @@ fn lookup_path(path: &Path) -> Result<PathBuf> {
         return Err(Refusal::new(
             "library lookup path did not normalize to an absolute path",
         ));
+    }
+    if saw_parent {
+        let original = fs::canonicalize(path).map_err(|error| {
+            Refusal::new(format!(
+                "cannot verify library lookup path parent semantics for {}: {error}",
+                path.display()
+            ))
+        })?;
+        let normalized_target = fs::canonicalize(&normalized).map_err(|error| {
+            Refusal::new(format!(
+                "cannot verify normalized library lookup target {}: {error}",
+                normalized.display()
+            ))
+        })?;
+        if original != normalized_target {
+            return Err(Refusal::new(format!(
+                "library lookup parent normalization changes filesystem lookup semantics: {} resolves to {}, while {} resolves to {}",
+                path.display(),
+                original.display(),
+                normalized.display(),
+                normalized_target.display()
+            )));
+        }
     }
     let _ = path_text(&normalized)?;
     Ok(normalized)
@@ -1531,5 +1585,146 @@ mod tests {
                 .iter()
                 .any(|row| row["lookup_path"] == path_text(&library_alias).unwrap())
         );
+    }
+
+    #[test]
+    fn llvm_parent_lookup_normalizes_real_directories_and_retains_final_alias() {
+        let temp = Scratch::new();
+        let package = temp.0.join("rustc");
+        let bin = package.join("bin");
+        let lib = package.join("lib");
+        let payloads = package.join("payloads");
+        fs::create_dir_all(&bin).expect("create rustc bin directory");
+        fs::create_dir_all(&lib).expect("create rustc lib directory");
+        fs::create_dir_all(&payloads).expect("create real library directory");
+
+        let real_library = payloads.join("libLLVM.so.23.1-rust-1.100.0-nightly");
+        fs::write(&real_library, b"pinned runtime library bytes").expect("write real library");
+        let lookup_alias = lib.join("libLLVM.so.23.1-rust-1.100.0-nightly");
+        symlink(&real_library, &lookup_alias).expect("create final LLVM library lookup alias");
+        let requested = package.join("bin/../lib/../lib/libLLVM.so.23.1-rust-1.100.0-nightly");
+
+        let normalized = lookup_path(&requested).expect("normalize real-directory RPATH parents");
+        assert_eq!(normalized, lookup_alias);
+        let mut discovery = Discovery::default();
+        add_library(&mut discovery, &requested, "LLVM RPATH lookup")
+            .expect("register normalized LLVM lookup alias");
+        assert_eq!(discovery.libraries, BTreeSet::from([lookup_alias.clone()]));
+        let alias_row = discovery
+            .library_aliases
+            .iter()
+            .find(|row| row["lookup_path"] == path_text(&lookup_alias).unwrap())
+            .expect("retain final lookup alias evidence");
+        assert_eq!(
+            PathBuf::from(
+                alias_row["canonical_path"]
+                    .as_str()
+                    .expect("canonical path")
+            ),
+            fs::canonicalize(&real_library).expect("canonicalize actual library")
+        );
+        assert_eq!(
+            sha256_file(Path::new(alias_row["canonical_path"].as_str().unwrap()))
+                .expect("hash canonical library"),
+            sha256_file(&real_library).expect("hash real library")
+        );
+
+        let root_parent_path = PathBuf::from("/../")
+            .join(
+                temp.0
+                    .strip_prefix("/")
+                    .expect("temporary path is absolute"),
+            )
+            .join("rustc/payloads/libLLVM.so.23.1-rust-1.100.0-nightly");
+        assert_eq!(
+            lookup_path(&root_parent_path).expect("retain root parent as root"),
+            real_library
+        );
+    }
+
+    #[test]
+    fn library_lookup_refuses_parent_cancellation_of_symlink_component() {
+        let temp = Scratch::new();
+        let real = temp.0.join("real");
+        let real_subdirectory = real.join("subdirectory");
+        fs::create_dir_all(&real_subdirectory).expect("create real target parent");
+        let semantic_target = real.join("candidate.dylib");
+        let lexical_target = temp.0.join("candidate.dylib");
+        fs::write(&semantic_target, b"symlink-target bytes").expect("write semantic target");
+        fs::write(&lexical_target, b"lexical target bytes").expect("write lexical target");
+        let alias = temp.0.join("directory-alias");
+        symlink(&real_subdirectory, &alias).expect("create directory symlink");
+
+        let requested = alias.join("../candidate.dylib");
+        assert!(
+            lexical_target.is_file(),
+            "the lexical normalization target exists"
+        );
+        assert!(
+            semantic_target.is_file(),
+            "the symlink-resolved target exists"
+        );
+        let error = lookup_path(&requested)
+            .expect_err("must not cancel a symlink component")
+            .to_string();
+        assert!(
+            error.contains("symbolic-link component"),
+            "unexpected refusal: {error}"
+        );
+    }
+
+    #[test]
+    fn library_lookup_can_cancel_real_directory_beneath_preserved_symlink_prefix() {
+        let temp = Scratch::new();
+        let real = temp.0.join("real");
+        let nested = real.join("nested");
+        fs::create_dir_all(&nested).expect("create nested real directory");
+        let real_library = real.join("libtarget.dylib");
+        fs::write(&real_library, b"aliased-prefix runtime bytes").expect("write library");
+        let alias = temp.0.join("directory-alias");
+        symlink(&real, &alias).expect("create unremoved directory alias");
+        let final_alias = alias.join("liblookup.dylib");
+        symlink(&real_library, &final_alias).expect("create final library lookup alias");
+
+        let requested = alias.join("nested/../liblookup.dylib");
+        let normalized = lookup_path(&requested)
+            .expect("cancel real nested directory while preserving aliased prefix");
+        assert_eq!(normalized, final_alias);
+        let mut discovery = Discovery::default();
+        add_library(&mut discovery, &requested, "aliased prefix lookup")
+            .expect("register lookup under preserved symlink prefix");
+        assert_eq!(discovery.libraries, BTreeSet::from([final_alias.clone()]));
+        let alias_row = discovery
+            .library_aliases
+            .iter()
+            .find(|row| row["lookup_path"] == path_text(&final_alias).unwrap())
+            .expect("retain final lookup alias");
+        assert_eq!(
+            PathBuf::from(
+                alias_row["canonical_path"]
+                    .as_str()
+                    .expect("canonical path")
+            ),
+            fs::canonicalize(&real_library).expect("canonicalize real library")
+        );
+    }
+
+    #[test]
+    fn library_lookup_refuses_missing_or_non_directory_parent_components() {
+        let temp = Scratch::new();
+        let file_component = temp.0.join("not-a-directory");
+        fs::write(&file_component, b"regular file").expect("write non-directory component");
+
+        let missing = temp.0.join("missing/../candidate.dylib");
+        let missing_error = lookup_path(&missing)
+            .expect_err("missing parent must not be normalized")
+            .to_string();
+        assert!(missing_error.contains("not an existing real directory"));
+
+        let non_directory = temp.0.join("not-a-directory/../candidate.dylib");
+        let non_directory_error = lookup_path(&non_directory)
+            .expect_err("regular file parent must not be normalized")
+            .to_string();
+        assert!(non_directory_error.contains("not a directory"));
     }
 }

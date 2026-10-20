@@ -13,6 +13,14 @@ on:
       - tooling/crates/xtask/src/consumer_observe.rs
       - tooling/crates/xtask/src/consumer_report.rs
       - tooling/crates/xtask/src/consumer_runtime.rs
+      - tooling/crates/xtask/src/cold_runtime_probe.rs
+      - release/ci_native.py
+      - release/ci_sdk.py
+      - release/ci_cargo.py
+      - release/ci_auth.py
+      - release/ci_python.py
+      - release/ci-python-inputs.json
+      - release/ci-sdk-inputs.json
       - tools/bootstrap-host-rust.sh
       - tools/consumer-enforcement-adapter/**
 
@@ -133,6 +141,87 @@ jobs:
           }, indent=2) + "\n")
           PY
           exit "$result"
+
+      - name: Bootstrap pinned Python for native probe resource supervision
+        if: steps.build.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -I -B release/ci_python.py \
+            --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" \
+            --inputs release/ci-python-inputs.json
+
+      - name: Prove staged target compiler runtime admission and omitted-library refusal
+        if: steps.build.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B - <<'PY'
+          import json
+          import os
+          import shutil
+          import sys
+          from pathlib import Path
+
+          source = Path(os.environ["GITHUB_WORKSPACE"]).resolve(strict=True)
+          sys.path.insert(0, str(source / "release"))
+          import ci_native as native
+
+          root = Path(os.environ["RUNNER_TEMP"]).resolve(strict=True)
+          work = root / "ami-rust-linux-cold-runtime-work"
+          output = root / "ami-rust-linux-git-transport/cold-runtime-resource-output"
+          python = root / "ami-rust-python-bootstrap"
+          for path in (work, output):
+              if path.exists() or path.is_symlink():
+                  raise SystemExit("cold runtime resource roots must be fresh")
+              path.mkdir(mode=0o700)
+          for name in ("home", "tmp"):
+              (work / name).mkdir(mode=0o700)
+          binary = Path((root / "ami-rust-linux-git-transport/test-binary.txt").read_text().strip())
+          env = {"PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "LC_ALL": "C", "TZ": "UTC",
+                 "HOME": str(work / "home"), "TMPDIR": str(work / "tmp"),
+                 "AMI_RUST_COLD_RUNTIME_SOURCE_ROOT": str(source),
+                 "AMI_RUST_COLD_RUNTIME_ADAPTER": str(root / "ami-rust-linux-git-adapter-target/debug/consumer-enforcement-adapter"),
+                 "AMI_RUST_COLD_RUNTIME_WORK_ROOT": str(work / "case"),
+                 "AMI_RUST_COLD_RUNTIME_ARTIFACT_ROOT": str(output / "probe")}
+          supervisor = native._make_supervisor(work, output, python, env,
+              static_roots=[("pinned-host-rust", root / "ami-rust-linux-git-rust"),
+                            ("adapter-build", root / "ami-rust-linux-git-adapter-target"),
+                            ("probe-build", root / "ami-rust-linux-git-xtask-target")])
+          status = "FAILED_OR_INCOMPLETE_CAUSE_SPECIFIC_PROBE"
+          try:
+              row = native._supervised_run(supervisor,
+                  [binary, "--ignored", "--exact", "consumer_observe::tests::linux_cold_rustc_runtime_dependency_regression",
+                   "--test-threads=1"], label="linux-cold-rustc-runtime-regression", timeout=1200)
+              stdout = (work / row["stdout_log"]).read_text()
+              if (stdout.splitlines().count("running 1 test") != 1
+                      or stdout.splitlines().count("test consumer_observe::tests::linux_cold_rustc_runtime_dependency_regression ... ok") != 1
+                      or sum(line.startswith("test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured;")
+                             for line in stdout.splitlines()) != 1):
+                  raise RuntimeError("expected exactly one completed cold runtime regression test")
+              probe = json.loads((output / "probe/probe-result.json").read_text())
+              if (probe.get("schema") != "ami-rust-linux-cold-rustc-runtime-probe-v1"
+                      or probe.get("status") != "PASS"
+                      or not isinstance(probe.get("counter_cleanup"), dict)
+                      or probe["counter_cleanup"].get("gate_passed") is not True
+                      or any(probe.get(key) is not True for key in
+                             ("counter_gate_passed", "positive_gate_passed", "source_bindings_unchanged"))):
+                  raise RuntimeError("cold runtime positive and omission-control evidence is incomplete")
+              native._check_limits(supervisor, "completed cold compiler runtime regression")
+              status = "PASS_CAUSE_SPECIFIC_RUNTIME_PROBE_NOT_FULL_COLD_CLI_OR_RC1_ACCEPTANCE"
+          finally:
+              for row in supervisor.commands:
+                  for key in ("stdout_log", "stderr_log"):
+                      if row.get(key):
+                          path = work / row[key]
+                          shutil.copyfile(path, output / path.name)
+              native.write(output / "resource-supervision.json", native.auth.encoded({
+                  "schema": "ami-rust-linux-cold-runtime-resource-supervision-v1",
+                  "status": status, "source_sha": os.environ["GITHUB_SHA"],
+                  "supervision": native._supervision_summary(supervisor),
+                  "claim": "Cause-specific pinned compiler loader regression only. Full authenticated CLI cold preparation, native build and both-host RC1 qualification remain required."}))
+              native._check_limits(supervisor, "cold compiler runtime regression evidence")
+          PY
 
       - name: Retain bounded traces and diagnostic output
         if: always()

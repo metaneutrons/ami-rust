@@ -897,6 +897,63 @@ mod tests {
         }
     }
 
+    // Share the actual ignored-probe layout with an ordinary parser regression
+    // so schema mistakes fail before a compiler download or hosted probe.
+    fn configure_cold_runtime_fixture_roots(
+        fixture: &mut Fixture,
+        work: &Path,
+        reference_component: &Path,
+    ) {
+        fixture.value["phase"] = json!("cold-prepare");
+        fixture.value["cwd"] = json!(work);
+        fixture.value["home"] = json!(work.join("home"));
+        fixture.value["tmp"] = json!(work.join("tmp"));
+        fixture.value["read_trees"] = json!([{"role":"toolchain","path":reference_component}]);
+        fixture.value["write_trees"] = json!([{"role":"state","path":work.join("state-writes")}]);
+        fixture.value["derived"] = json!({
+            "role":"consumer-state-parent", "path":work.join("state-writes/derived")
+        });
+    }
+
+    #[test]
+    fn cold_runtime_probe_layout_parses_and_rejects_untyped_read_tree() {
+        let mut fixture = Fixture::new();
+        let work = fixture.root.join("work");
+        for relative in [
+            "",
+            "home",
+            "tmp",
+            "state-writes",
+            "state-writes/derived",
+            "reference",
+        ] {
+            fs::DirBuilder::new()
+                .mode(0o700)
+                .create(work.join(relative))
+                .expect("private probe layout");
+        }
+        let reference = work.join("reference");
+        configure_cold_runtime_fixture_roots(&mut fixture, &work, &reference);
+        let spec = fixture
+            .parse()
+            .expect("actual probe root configuration must parse");
+        assert_eq!(spec.phase, "cold-prepare");
+        assert_eq!(spec.read_trees.len(), 1);
+        assert_eq!(spec.read_trees[0].role, "toolchain");
+        assert_eq!(spec.read_trees[0].path, reference);
+        assert_eq!(spec.write_trees.len(), 1);
+        assert_eq!(spec.write_trees[0].path, work.join("state-writes"));
+        assert_eq!(
+            spec.derived.as_ref().expect("derived state").path,
+            work.join("state-writes/derived")
+        );
+        fixture.value["read_trees"] = json!([reference]);
+        let error = fixture
+            .parse()
+            .expect_err("untyped read tree must be refused");
+        assert_eq!(error.to_string(), "tree needs exactly role and path");
+    }
+
     fn aliased_library_runtime(
         fixture: &Fixture,
     ) -> (PathBuf, PathBuf, consumer_runtime::RuntimeInputs) {
@@ -1877,4 +1934,7 @@ mod tests {
             report_path.display()
         );
     }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    include!("cold_runtime_probe.rs");
 }
