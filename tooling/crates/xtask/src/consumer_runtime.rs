@@ -1034,8 +1034,10 @@ fn discover_linux_runtime(discovery: &mut Discovery, work: &Path) -> Result<()> 
                 .get(executable)
                 .ok_or_else(|| Refusal::new("Linux executable has no recorded PT_INTERP loader"))?;
             let argument = path_text(executable)?;
-            let captured = run_query(&ldd, &[argument.as_str()], work, "Linux ldd closure")?;
-            let dependencies = parse_ldd_output(&captured.stdout)?;
+            let label = format!("Linux ldd closure for {}", executable.display());
+            let captured = run_query(&ldd, &[argument.as_str()], work, &label)?;
+            let dependencies = parse_ldd_output(&captured.stdout)
+                .map_err(|error| Refusal::new(format!("{label}: {error}")))?;
             if dependencies.is_empty() {
                 return Err(Refusal::new(format!(
                     "ldd returned no file-backed runtime inputs for {}",
