@@ -1,0 +1,154 @@
+{
+  "base_source": "204bf035978c12ce0a60ced7ff1fe9bb55ee5cc6",
+  "failed_campaign": {
+    "attempt": 1,
+    "conclusion": "failure",
+    "originals_manifest_sha256": "8fab9704d645c521d18595e082e8dbe9b0e9c5e5b734effab0b3237afd95a2f2",
+    "scope": "Both producers, signers and transport passed; both complete native consumers failed. All8originalZIPs/providerdigestCRC/memberinventoriesretained. No success-only composition.",
+    "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39411712024"
+  },
+  "independent_source_review": {
+    "result": "No blocking correctness/security finding; alias/report cardinality documentation corrected.",
+    "sha256": "fde79c68287727d8832ea8ab5614c9421827e1814d63701e40a2b1771cbde738"
+  },
+  "limits": [
+    "Actual fresh local minimal-noalloc AROS build uses a synthetic consistency-only installation and retained pinned components. It is not signed current SDK cold preparation, complete five-variant/two-root or Linux acceptance.",
+    "Both-host complete qualification, two roots/five variants, metadata/Serde, interruption, migration/upgrade/removal/recovery and retained replay remain required.",
+    "RC1\u2013RC5 stay open. No release/publication. ABI-v1/QEMU baseline and protected AROS checkouts unchanged."
+  ],
+  "linux": {
+    "canonical_targets": 170,
+    "correction": "Verify each lookup/hash and reject identical repeated lookup directives before coalescing equal canonical targets. Bad hash/missing file/permission overlaps still refuse. No wider read or exec authority.",
+    "diagnosis_sha256": "56c8259f61566e91f7c62bf1eecc4eafca13412cecf99467c9b0c56f2c37c8d6",
+    "lookup_spellings": 287,
+    "new_regressions": [
+      "read_library_aliases_are_verified_and_share_one_enforcement_entry",
+      "read_library_rejects_repeated_original_lookup_spelling"
+    ],
+    "observed_failure": "Cold-prepare consumer never launched; adapter rejected distinct verified library aliases after canonicalizing them to one file.",
+    "qualification": "All-targets Linux cross compile passed; native Linux admission and complete lifecycle still pending."
+  },
+  "local_results": {
+    "a2_failure_retained": "Actual strip positive/counter and Linux xtask strict check passed; a later additional adapter-wide strictClippy attempt found two unchanged pre-existing sites. No warnings suppressed or CI gates changed.",
+    "a2_sha256": "afc8ff21ceffe4dcbdc35982b095b65ee04685a95a34f2066e397a39c68c6775",
+    "additional_adapter_clippy_limit": {
+      "base": "204bf035978c12ce0a60ced7ff1fe9bb55ee5cc6",
+      "findings": [
+        "too_many_arguments on unchanged22argumentreportfunction",
+        "chunks_exact_to_as_chunks on unchangedSHA256blockparser"
+      ],
+      "no_warning_suppression_or_workflow_gate_change": true,
+      "source_inspection_proves_unchanged_sites": true,
+      "status": "FAIL_RETAINED_NOT_REQUIRED_CI_GATE",
+      "unchanged_chunk_expression": "block.chunks_exact(4).enumerate()",
+      "unchanged_report_signature_sha256": "619d9c2b72538a4eda700f454bf0cf4f4ba6b58895dd284ab58ec632fc67fa96"
+    },
+    "sampled_peaks": {
+      "a2": {
+        "peak_log_observed_bytes": 159579,
+        "peak_rss_observed_bytes": 986169344,
+        "peak_workspace_observed_bytes": 3803293890
+      },
+      "a3": {
+        "peak_log_observed_bytes": 3093,
+        "peak_rss_observed_bytes": 545210368,
+        "peak_workspace_observed_bytes": 1477881891
+      },
+      "real_native_build": {
+        "peak_log_observed_bytes": 231876,
+        "peak_rss_observed_bytes": 2420850688,
+        "peak_workspace_observed_bytes": 3047097501
+      }
+    },
+    "supplement_a3_sha256": "a5ef1a7e13f852d63040bdbfd04e42a080599669c9dc4b3973570042fbebfc23",
+    "supplement_status": "PASS_LOCAL_DARWIN_STRIP_COUNTER_AND_COMPONENT_CHECKS_LINUX_RUNTIME_PENDING"
+  },
+  "macos": {
+    "actual_native_build": {
+      "canonical_artifact_count": 14,
+      "cli_sha256": "445ef6803111d710bee26fd433514720d509963ff5a07817841130960e38bc59",
+      "native_sha256": "5a932c76d1f791c4ac4cd1dd267506bae3d25d4ea94209356f08a255f3af296e",
+      "reference_match": true,
+      "result_sha256": "92f83af8e3a1fa1c28e340a06fcafc26a2c5d7e92708f94acb22df1097a7f4e4",
+      "source_files": {
+        "tooling/crates/core/src/native_recipe.rs": "2d4480bc0a9a52a663f6d988f7c071f5d1abea866a64b71cb3e024a11ebf146d",
+        "tooling/crates/xtask/src/cold_runtime_probe.rs": "0d9a47d727dc4bbf686d9c23efee5c10c77e410740fc41c05485cc1891b8f069",
+        "tooling/crates/xtask/src/consumer_observe.rs": "42137a51bbe5490891b844222172fde7978a9e82ae0a9f90c3702cfef2cd3cdd",
+        "tools/consumer-enforcement-adapter/src/linux.rs": "1f24f3f3bdde549a48aabef3ebe411b7fd5e389c6ea3aaae681592463697ab53"
+      },
+      "status": "PASS_ACTUAL_DARWIN_STRIP_RUNTIME_AND_CANONICAL_AROS_BUILD_ENFORCED_MACOS_DEVELOPMENT_ONLY",
+      "strip_runtime": {
+        "cargo_stderr_sha256": "fe0a5ef8950473232042c601249f8afae302ff10847f1108b05e3428e31ee13a",
+        "loader_failure_absent": true,
+        "rust_llvm_dylib_sha256": "f875883949c8ff96b94faca6a295f66302ae305ce897165fc8765d5ba2d73573",
+        "rust_objcopy_sha256": "41f770659a8429c0d1239b103da688041df424998529775bfa9b6d97a0011e95",
+        "scope": "Actual fresh target build compiled the compiler-builtins Darwin host script with frozen strip flags, not only a host-only process exit.",
+        "strip_failure_warning_absent": true
+      }
+    },
+    "compiler_source": {
+      "finding": "The relevant external helper branch is Darwin-specific.",
+      "sha256": "8ab5fee9b144c2a9a4425014f1b5128eb9807adcd09baad19da11df43e3099b7",
+      "url": "https://github.com/rust-lang/rust/blob/330d317121e16b5db8e5adc63595910528ff2ee7/compiler/rustc_codegen_ssa/src/back/link.rs"
+    },
+    "correction": "Restore exact hashed rust-objcopy on macOS and supply only the selected Rust root/lib as DYLD_FALLBACK_LIBRARY_PATH in the native Cargo build environment. Cargo preserves it for rustc and its helper. No global loader environment, Linux environment, target flags or pinned component bytes changed.",
+    "loader_core_test_results": [
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 399 filtered out; finished in 0.00s",
+      "test result: ok. 381 passed; 0 failed; 19 ignored; 0 measured; 0 filtered out; finished in 23.80s",
+      "test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "loader_core_tests_sha256": "41636b9cc7423eaa47621f388fb73704d009f1e94c5514331e2c1ce2624153aa",
+    "loader_source_survey_sha256": "9d63e9c66beaa65d54e64809e28dfed04da76ce56d8372c896620793c7fcbfd2",
+    "observed_failure": "Pinned rustc -Cstrip=debuginfo implicitly calls rust-objcopy while building the compiler-builtins host build script; PR108 had removed that helper.",
+    "original_job_diagnostic_sha256": "5164df165cca7103ee4630da2a8b741cec3a5c610aa1fd88b32fb23a542a5aca",
+    "permission_probe_and_omitted_helper_counter": {
+      "adapter_sha256": "75aaeea307ff436d20bde0a731418d82408699187556ffa09903e6ceab4bfd13",
+      "counter_exit": 1,
+      "counter_policy_sha256": "541924db2cfe78f5b689b52542cc51811d38716c11581a0e3dd50a1d64d35581",
+      "counter_report_sha256": "91cf64971428babd486c3336ce319be4695a0dcf1a50403e2bda89c40e493de3",
+      "counter_stderr_sha256": "3856eb65fa3ee0611673db60ec5c6824cbc2d8d9feb83db4865401529a140106",
+      "observer_sha256": "b6e06b2a371fcfa76d64f9a85a2752449424c2f0cd5eda2eded8d29b60ae7492",
+      "pinned_rustc_sha256": "5bb7cf7ca89e240c2f97c00c94b5aa3576a84798def7d329b72cb12a20e6e6d0",
+      "policy_sha256": "e5badc1dc1877172ae33de8037efa3b9e83db28cc9b76c553871f51330620602",
+      "positive_binary_sha256": "63f57e5ae0f8abbf33399db84d1f3379f0e1e55a1d74bb85a505e265ab4ce0a7",
+      "produced_host_program_ran": true,
+      "rust_objcopy_sha256": "41f770659a8429c0d1239b103da688041df424998529775bfa9b6d97a0011e95",
+      "same_policy_after_only_fresh_derived_parent_rebinding_and_omitted_objcopy_execution": true,
+      "selection_sha256": "798f83b906159eb0d76772c098312c88f6a2fca59c5d726c0351aa5d98b9685a"
+    },
+    "permission_probe_limitation": "The earlier host-only positive ran its output but rust-objcopy emitted a missing-LLVM warning; it proves helper execution authority only, not functional stripping. That failure remains retained and is the measurement counter below.",
+    "post_build_test_only_source_equivalence": {
+      "actual_target_build_recipe_sha256": "2d4480bc0a9a52a663f6d988f7c071f5d1abea866a64b71cb3e024a11ebf146d",
+      "current_recipe_sha256": "ee5aa052c023ddaa9e61e8c977d01d9dc24626e75476cf4b4b477087b9ef78f6",
+      "production_source_unchanged": true,
+      "reconstruct_tested_bytes_by_removing_only_current_linux_absent_loader_unit_assertion": true,
+      "schema": "ami-rust-native-recipe-test-only-source-equivalence-v1",
+      "scope": "Retains actual target-build evidence for the same production bytes. Does not establish complete signed both-host SDK acceptance.",
+      "sha256": "f307e5f02e9baddd1abe868c93bbf7790d97c79c7a82e347b5deaca37f472a31",
+      "source_difference": "Only one Linux no-DYLD test assertion within cfg(test); current full core tests plus both-host strict compile/lint passed."
+    },
+    "strip_measurement_control_sha256": "34cd11b3d901e88f7df262b3fb32950cebaa875a701e234190d0eaf2d5c0357b",
+    "test_results": [
+      "test result: ok. 53 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s",
+      "test result: ok. 2 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ]
+  },
+  "recorded_utc": "2026-10-20T12:01:29.866779+00:00",
+  "schema": "ami-rust-platform-runtime-fixes-development-v1",
+  "source_files": {
+    "tooling/crates/core/src/native_recipe.rs": "ee5aa052c023ddaa9e61e8c977d01d9dc24626e75476cf4b4b477087b9ef78f6",
+    "tooling/crates/xtask/src/cold_runtime_probe.rs": "0d9a47d727dc4bbf686d9c23efee5c10c77e410740fc41c05485cc1891b8f069",
+    "tooling/crates/xtask/src/consumer_observe.rs": "42137a51bbe5490891b844222172fde7978a9e82ae0a9f90c3702cfef2cd3cdd",
+    "tools/consumer-enforcement-adapter/LINUX.md": "18440e7d0c51cdd52292812364129b9a2672d0c9eff504715b47460f1feefe6d",
+    "tools/consumer-enforcement-adapter/src/linux.rs": "1f24f3f3bdde549a48aabef3ebe411b7fd5e389c6ea3aaae681592463697ab53"
+  },
+  "status": "LOCAL_COMPONENT_AND_ACTUAL_DARWIN_STRIP_EVIDENCE_NOT_RC1_ACCEPTANCE"
+}

@@ -522,8 +522,10 @@ fn run_linux_cold_rustc_runtime_probe() -> std::result::Result<(), String> {
     ]);
     fixture.value["expected_exit"] = json!(0);
     let selected_rust_tools = rust_component_executables(COLD_RUNTIME_TARGET)
-        .map(|relative| source_component.join(relative));
-    let mut declared_executables = selected_rust_tools.to_vec();
+        .into_iter()
+        .map(|relative| source_component.join(relative))
+        .collect::<Vec<_>>();
+    let mut declared_executables = selected_rust_tools.clone();
     declared_executables.extend([cp_path.clone(), env_path.clone(), test_binary.clone()]);
     fixture.value["executables"] = json!(declared_executables);
     fixture.value["bindings"]

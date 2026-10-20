@@ -87,9 +87,12 @@ records that digest as declared but does not verify it. For absent or
 self-removing executables, the source/recipe closure and its binding to the
 managed path remain external review evidence.
 
-read-library PATH SHA256 accepts only an existing canonical regular file and
-checks its declared hash before and after the command. It grants Landlock
-READ_FILE only, so it does not authorize executing the library. A path
+read-library PATH SHA256 resolves each supplied lookup path to an existing
+canonical regular file and verifies every declared hash before admission.
+Distinct verified aliases to the same canonical target share one Landlock
+READ_FILE rule and one read_library_mappings report row; a repeated identical
+lookup directive is refused. The canonical target hash is checked again after
+the command. This does not authorize executing the library. A path
 overlapping deny-library, an executable allowance, or a writable tree is
 rejected. Library mappings are listed separately from the executable allowlist
 in report.json.
