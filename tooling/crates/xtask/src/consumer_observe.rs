@@ -860,6 +860,7 @@ mod tests {
     struct Fixture {
         root: PathBuf,
         value: Value,
+        preserve: bool,
     }
     impl Fixture {
         fn new() -> Self {
@@ -868,10 +869,14 @@ mod tests {
                 std::process::id(),
                 NEXT.fetch_add(1, Ordering::Relaxed)
             ));
+            Self::at(root, false)
+        }
+
+        fn at(root: PathBuf, preserve: bool) -> Self {
             fs::DirBuilder::new()
                 .mode(0o700)
                 .create(&root)
-                .expect("fixture root");
+                .expect("fixture root must be fresh");
             let root = root.canonicalize().expect("canonical root");
             let binding = root.join("reviewed-input");
             fs::write(&binding, b"reviewed input\n").expect("input");
@@ -881,7 +886,11 @@ mod tests {
                 "executables":[], "libraries":[], "deny_exec":[], "deny_library":[],
                 "component_record":null, "derived":null,
                 "bindings":[{"path":binding,"sha256":sha256_bytes(b"reviewed input\n")}]});
-            Self { root, value }
+            Self {
+                root,
+                value,
+                preserve,
+            }
         }
         fn parse(&self) -> Result<Spec> {
             parse_spec(&serde_json::to_vec(&self.value).expect("JSON"))
@@ -920,7 +929,9 @@ mod tests {
 
     impl Drop for Fixture {
         fn drop(&mut self) {
-            fs::remove_dir_all(&self.root).expect("remove own fixture");
+            if !self.preserve {
+                fs::remove_dir_all(&self.root).expect("remove own fixture");
+            }
         }
     }
     #[test]
@@ -1176,5 +1187,325 @@ mod tests {
         .expect("policy");
         assert!(policy.contains("network deny\n") && !policy.contains("exec-derived-tree "));
         assert!(!policy.contains("write-null "));
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn create_private_directory(path: &Path) -> std::result::Result<(), String> {
+        let parent = path
+            .parent()
+            .ok_or_else(|| format!("diagnostic path has no parent: {}", path.display()))?;
+        if !path.is_absolute()
+            || fs::canonicalize(parent).map_err(|error| error.to_string())? != parent
+            || fs::symlink_metadata(path).is_ok()
+        {
+            return Err(format!(
+                "diagnostic directory must be fresh under a canonical parent: {}",
+                path.display()
+            ));
+        }
+        fs::DirBuilder::new()
+            .mode(0o700)
+            .create(path)
+            .map_err(|error| error.to_string())
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn write_diagnostic_json(path: &Path, value: &Value) -> std::result::Result<(), String> {
+        let mut raw = serde_json::to_vec_pretty(value).map_err(|error| error.to_string())?;
+        raw.push(b'\n');
+        write_new(path, &raw).map_err(|error| error.to_string())
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn diagnostic_json_file(path: &Path) -> Value {
+        read_regular_bounded(path, 2 * 1024 * 1024)
+            .ok()
+            .and_then(|raw| serde_json::from_slice(&raw).ok())
+            .unwrap_or(Value::Null)
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn required_diagnostic_path(name: &str) -> std::result::Result<PathBuf, String> {
+        let path =
+            PathBuf::from(std::env::var_os(name).ok_or_else(|| {
+                format!("missing required diagnostic environment variable {name}")
+            })?);
+        if !path.is_absolute() {
+            return Err(format!("{name} must be an absolute path"));
+        }
+        Ok(path)
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn run_raw_adapter_case(
+        label: &str,
+        output: &Path,
+        adapter: &Path,
+        policy: &Path,
+        spec: &Spec,
+        command: &[String],
+    ) -> std::result::Result<Value, String> {
+        create_private_directory(output)?;
+        let report_dir = output.join("reports/command");
+        let arguments = [
+            OsString::from("--policy"),
+            policy.as_os_str().to_os_string(),
+            OsString::from("--report-dir"),
+            report_dir.as_os_str().to_os_string(),
+            OsString::from("--run"),
+            OsString::from("--"),
+        ]
+        .into_iter()
+        .chain(command.iter().map(OsString::from));
+        let adapter_command =
+            CommandSpec::new(adapter.as_os_str(), arguments, &spec.cwd, child_env(spec));
+        use std::os::unix::process::ExitStatusExt;
+        let captured = capture(
+            &adapter_command,
+            CaptureLimits {
+                timeout: Duration::from_secs(90),
+                stdout_bytes: 1024 * 1024,
+                stderr_bytes: 1024 * 1024,
+                termination_grace: Duration::from_secs(2),
+            },
+            || false,
+        );
+        let (outer_exit, outer_signal, stdout, stderr, capture_error) = match captured {
+            Ok(captured) => (
+                captured.exit_code(),
+                captured.signal(),
+                captured.stdout,
+                captured.stderr,
+                Value::Null,
+            ),
+            Err(error) => {
+                let message = error.to_string();
+                (
+                    error.status.as_ref().and_then(|status| status.code()),
+                    error.status.as_ref().and_then(ExitStatusExt::signal),
+                    error.stdout,
+                    error.stderr,
+                    json!(message),
+                )
+            }
+        };
+        write_new(&output.join("adapter.stdout.raw"), &stdout)
+            .map_err(|error| error.to_string())?;
+        write_new(&output.join("adapter.stderr.raw"), &stderr)
+            .map_err(|error| error.to_string())?;
+        let report_path = report_dir.join("report.json");
+        let report = diagnostic_json_file(&report_path);
+        let summary = json!({
+            "label":label,
+            "command":command,
+            "policy_path":policy,
+            "outer_exit_code":outer_exit,
+            "outer_signal":outer_signal,
+            "capture_error":capture_error,
+            "child_exit_code":report.get("child_exit_code").cloned().unwrap_or(Value::Null),
+            "child_signal":report.get("child_signal").cloned().unwrap_or(Value::Null),
+            "launch_error":report.get("launch_error").cloned().unwrap_or(Value::Null),
+            "evidence_failures":report.get("evidence_failures").cloned().unwrap_or(Value::Null),
+            "report_path":report_path,
+            "stdout_path":output.join("reports/command/stdout.raw"),
+            "stderr_path":output.join("reports/command/stderr.raw"),
+            "adapter_stdout_path":output.join("adapter.stdout.raw"),
+            "adapter_stderr_path":output.join("adapter.stderr.raw"),
+        });
+        write_diagnostic_json(&output.join("case.json"), &summary)?;
+        Ok(summary)
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn run_linux_git_https_transport_diagnostic() -> std::result::Result<(), String> {
+        const URL: &str = "https://github.com/metaneutrons/ami-rust";
+        let artifact_root =
+            required_diagnostic_path("AMI_RUST_LINUX_GIT_DIAGNOSTIC_ARTIFACT_ROOT")?;
+        create_private_directory(&artifact_root)?;
+        let mut fixture = Fixture::at(artifact_root.join("fixture"), true);
+        let home = fixture.root.join("home");
+        let tmp = fixture.root.join("tmp");
+        let write_root = fixture.root.join("state-writes");
+        let derived = write_root.join("derived");
+        for path in [&home, &tmp, &write_root, &derived] {
+            create_private_directory(path)?;
+        }
+
+        let adapter = fs::canonicalize(required_diagnostic_path(
+            "AMI_RUST_LINUX_GIT_DIAGNOSTIC_ADAPTER",
+        )?)
+        .map_err(|error| error.to_string())?;
+        if !fs::metadata(&adapter)
+            .map_err(|error| error.to_string())?
+            .is_file()
+        {
+            return Err("configured consumer adapter is not a regular file".to_owned());
+        }
+        fixture.value["phase"] = json!("cold-prepare");
+        fixture.value["command"] = json!([
+            "/usr/bin/git",
+            "ls-remote",
+            "--exit-code",
+            URL,
+            "refs/heads/main"
+        ]);
+        fixture.value["expected_exit"] = json!(0);
+        fixture.value["cwd"] = json!(fixture.root);
+        fixture.value["home"] = json!(home);
+        fixture.value["tmp"] = json!(tmp);
+        fixture.value["executables"] = json!(["/usr/bin/env"]);
+        fixture.value["write_trees"] = json!([{"role":"state", "path":write_root}]);
+        fixture.value["derived"] = json!({"role":"consumer-state-parent", "path":derived});
+        let raw = serde_json::to_vec_pretty(&fixture.value).map_err(|error| error.to_string())?;
+        write_new(&artifact_root.join("spec.json"), &raw).map_err(|error| error.to_string())?;
+        let spec = fixture.parse().map_err(|error| error.to_string())?;
+
+        let mut executables = spec.executables.clone();
+        executables.insert(fs::canonicalize(&spec.command[0]).map_err(|error| error.to_string())?);
+        let runtime =
+            consumer_runtime::discover(executables, spec.libraries.clone(), false, true, &spec.cwd)
+                .map_err(|error| error.to_string())?;
+        write_diagnostic_json(
+            &artifact_root.join("runtime-discovery.json"),
+            &runtime.evidence,
+        )?;
+        let exec_path = runtime.evidence["queries"]
+            .as_array()
+            .and_then(|rows| {
+                rows.iter()
+                    .find(|row| row["label"] == "system git --exec-path")
+            })
+            .and_then(|row| row["stdout"].as_str())
+            .ok_or_else(|| "runtime discovery omitted Git --exec-path evidence".to_owned())?;
+        let helper_dir = PathBuf::from(exec_path);
+        let canonical_helper = fs::canonicalize(helper_dir.join("git-remote-http"))
+            .map_err(|error| error.to_string())?;
+        let alias_helper = helper_dir.join("git-remote-https");
+        let alias_target = fs::canonicalize(&alias_helper).map_err(|error| error.to_string())?;
+        if alias_target != canonical_helper
+            || !runtime.executables.contains(&canonical_helper)
+            || !runtime
+                .executables
+                .contains(&fs::canonicalize("/usr/bin/env").map_err(|e| e.to_string())?)
+        {
+            return Err(
+                "runtime discovery did not bind Git, env and the helper alias target".to_owned(),
+            );
+        }
+        write_diagnostic_json(
+            &artifact_root.join("helper-resolution.json"),
+            &json!({
+                "git_exec_path":helper_dir,
+                "canonical_helper":canonical_helper,
+                "literal_https_alias":alias_helper,
+                "literal_https_alias_target":alias_target,
+                "same_target":true,
+                "source":"consumer_runtime::discover query evidence",
+            }),
+        )?;
+
+        let main_output = artifact_root.join("git-ls-remote");
+        create_private_directory(&main_output)?;
+        let main_result = execute(&spec, &raw, &adapter, &main_output);
+        let policy = main_output.join("policy.txt");
+        if !policy.is_file() {
+            return Err(format!(
+                "Git observation did not write its exact policy; partial evidence remains in {}: {main_result:?}",
+                main_output.display()
+            ));
+        }
+        let main_report_path = main_output.join("reports/command/report.json");
+        let main_report = diagnostic_json_file(&main_report_path);
+        let main_case = json!({
+            "label":"git-ls-remote",
+            "command":spec.command,
+            "expected_exit":0,
+            "execute_result":main_result.as_ref().map(|_| "admitted").unwrap_or("not-admitted"),
+            "execute_error":main_result.err().map(|error| error.to_string()),
+            "adapter_process":diagnostic_json_file(&main_output.join("adapter-process.json")),
+            "child_exit_code":main_report.get("child_exit_code").cloned().unwrap_or(Value::Null),
+            "child_signal":main_report.get("child_signal").cloned().unwrap_or(Value::Null),
+            "launch_error":main_report.get("launch_error").cloned().unwrap_or(Value::Null),
+            "evidence_failures":main_report.get("evidence_failures").cloned().unwrap_or(Value::Null),
+            "report_path":main_report_path,
+            "stdout_path":main_output.join("reports/command/stdout.raw"),
+            "stderr_path":main_output.join("reports/command/stderr.raw"),
+            "executed_policy":policy,
+            "executed_policy_sha256":sha256_file(&policy).map_err(|error| error.to_string())?,
+            "claim":"Raw observation only; the expected exit-0 result is not assumed.",
+        });
+        write_diagnostic_json(&main_output.join("case.json"), &main_case)?;
+
+        let policy = main_output.join("policy.txt");
+        let positive = run_raw_adapter_case(
+            "git-version-positive-spawn",
+            &artifact_root.join("git-version"),
+            &adapter,
+            &policy,
+            &spec,
+            &["/usr/bin/git".into(), "--version".into()],
+        )?;
+        let canonical = run_raw_adapter_case(
+            "canonical-http-helper-empty-stdin",
+            &artifact_root.join("canonical-helper"),
+            &adapter,
+            &policy,
+            &spec,
+            &[
+                "/usr/bin/env".into(),
+                canonical_helper.display().to_string(),
+                "origin".into(),
+                URL.into(),
+            ],
+        )?;
+        let alias = run_raw_adapter_case(
+            "literal-https-alias-empty-stdin",
+            &artifact_root.join("https-alias"),
+            &adapter,
+            &policy,
+            &spec,
+            &[
+                "/usr/bin/env".into(),
+                alias_helper.display().to_string(),
+                "origin".into(),
+                URL.into(),
+            ],
+        )?;
+        write_diagnostic_json(
+            &artifact_root.join("diagnostic-result.json"),
+            &json!({
+                "schema":"ami-rust-linux-git-transport-diagnostic-v1",
+                "status":"DIAGNOSTIC_CASES_RECORDED_NO_ACCEPTANCE_CLAIM",
+                "host":"linux-x86_64",
+                "spec_path":artifact_root.join("spec.json"),
+                "runtime_discovery_path":artifact_root.join("runtime-discovery.json"),
+                "helper_resolution_path":artifact_root.join("helper-resolution.json"),
+                "cases":[main_case, positive, canonical, alias],
+                "policy":"The direct controls reuse the exact policy written by the Git command observation.",
+                "claim":"This distinguishes real Git, a native positive spawn, the canonical HTTP helper and the literal HTTPS alias under one cold-prepare policy. It is diagnostic evidence only; it does not establish RC1 or resource acceptance.",
+            }),
+        )?;
+        Ok(())
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    #[test]
+    #[ignore = "PR-only Linux Git HTTPS transport diagnostic; not an acceptance gate"]
+    fn linux_git_https_transport_diagnostic() {
+        let artifact =
+            std::env::var_os("AMI_RUST_LINUX_GIT_DIAGNOSTIC_ARTIFACT_ROOT").map(PathBuf::from);
+        if let Err(error) = run_linux_git_https_transport_diagnostic() {
+            if let Some(artifact) = artifact.filter(|path| path.is_dir()) {
+                let _ = write_diagnostic_json(
+                    &artifact.join("diagnostic-failure.json"),
+                    &json!({
+                        "status":"DIAGNOSTIC_INCOMPLETE",
+                        "error":error,
+                        "claim":"No acceptance claim is established; partial evidence is retained.",
+                    }),
+                );
+            }
+            panic!("Linux Git transport diagnostic setup failed; inspect retained output: {error}");
+        }
     }
 }
