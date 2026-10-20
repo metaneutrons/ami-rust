@@ -830,10 +830,15 @@ fn run_linux_cold_rustc_runtime_probe() -> std::result::Result<(), String> {
     verify_driver(&test_binary, &observer_sha256).map_err(|error| error.to_string())?;
     verify_driver(&adapter, &adapter_sha256).map_err(|error| error.to_string())?;
     let pass = counter_gate && cleanup_gate && positive_gate && source_unchanged;
+    let cargo_fork = if pass {
+        run_pinned_cargo_fork_probe(&work_root, &artifact_root, &adapter, &source_component)?
+    } else {
+        Value::Null
+    };
     let result = json!({
         "schema":"ami-rust-linux-cold-rustc-runtime-probe-v1",
         "status":if pass { "PASS" } else { "FAIL" },
-        "scope":"Cause-specific staged target-rustc runtime admission only; full cold preparation, native build and RC1 qualification are not established.",
+        "scope":"Cause-specific staged target-rustc loader and pinned Cargo subprocess checks; full cold preparation, native AROS build and RC1 qualification are not established.",
         "host":COLD_RUNTIME_TARGET,
         "source_root":source_root,
         "sdk_inputs_sha256":inputs_sha256,
@@ -853,18 +858,19 @@ fn run_linux_cold_rustc_runtime_probe() -> std::result::Result<(), String> {
         "counter_cleanup":cleanup_report,
         "positive_gate_passed":positive_gate,
         "source_bindings_unchanged":source_unchanged,
+        "pinned_cargo_fork":cargo_fork,
         "derived_parent_initial_identity":derived_before,
         "derived_parent_before_positive_identity":after_cleanup_identity,
         "derived_parent_final_identity":final_parent_identity,
         "cases":{"counter":counter_gate_report,"positive":positive_gate_report},
         "limits":{"curl_seconds":300,"tar_seconds":300,"runtime_discovery_each_query_seconds":30,"adapter_case_seconds":90,"per_stream_capture_bytes":1048576},
         "limitations":[
-            "Cause-specific staged pinned rustc -vV loader/runtime regression only; it does not run the full native CLI cold preparation or one native build.",
+            "The staged rustc -vV loader and separate empty host-library Cargo build are cause-specific probes; they do not run the full native CLI cold preparation or an AROS application build.",
             "The existing cold-prepare policy grants outbound network permission, but the observed child performs only a local component copy and rustc -vV.",
             "Host shared-library bytes are those discovered on this Linux runner; the pinned rustc archive does not pin the host operating-system runtime.",
             "No Python executable or libpython is granted; default-deny policy remains in force for unlisted execution and file access.",
         ],
-        "claim":"Scoped Linux cause-specific proof only. Full authenticated cold preparation, a native build and protected both-host SDK qualification remain required.",
+        "claim":"Scoped Linux cause-specific proof only. Full authenticated cold preparation, an AROS application build and protected both-host SDK qualification remain required.",
     });
     write_diagnostic_json(&artifact_root.join("probe-result.json"), &result)?;
     if !pass {

@@ -184,13 +184,22 @@ mod linux {
     const AT_EMPTY_PATH: i32 = 0x1000;
     const MFD_CLOEXEC: u32 = 1;
 
-    // Linux x86-64 syscall numbers for the network-deny profile. Blocking
-    // socket creation and connect/bind/accept also blocks their common send
-    // and receive entry points; io_uring_setup is denied to avoid creating a
-    // less visible asynchronous socket path.
+    // Linux x86-64 syscall numbers for the network-deny profile. socketpair
+    // has a separate argument check below: only an unnamed AF_UNIX
+    // SOCK_SEQPACKET pair is allowed for Rust's private subprocess handshake.
+    // All other socket creation and network operations remain denied;
+    // io_uring_setup is denied to close an asynchronous socket path.
     const NETWORK_SYSCALLS: &[u32] = &[
-        41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 288, 299, 307, 425,
+        41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 54, 55, 288, 299, 307, 425,
     ];
+
+    const AF_UNIX: i32 = 1;
+    const AF_INET: i32 = 2;
+    const SOCK_STREAM: i32 = 1;
+    const SOCK_SEQPACKET: i32 = 5;
+    const SOCK_CLOEXEC: i32 = 0x0008_0000;
+    const SYS_SOCKET: isize = 41;
+    const SYS_SOCKETPAIR: isize = 53;
 
     #[repr(C)]
     struct LandlockRulesetAttr {
@@ -1708,6 +1717,75 @@ mod linux {
                 k: SECCOMP_RET_ERRNO | EACCES as u32,
             },
         ];
+        if !network_outbound {
+            // Rust's Unix subprocess backend uses a private, unnamed
+            // AF_UNIX/SOCK_SEQPACKET socketpair for its child handshake.
+            // This narrow exception grants no addressable socket or public
+            // network operation. Read syscall arguments as low 32-bit words:
+            // the kernel receives these three parameters as `int` values.
+            filter.extend([
+                SockFilter {
+                    code: BPF_JMP_JEQ_K,
+                    jt: 0,
+                    jf: 9,
+                    k: SYS_SOCKETPAIR as u32,
+                },
+                SockFilter {
+                    code: BPF_LD_W_ABS,
+                    jt: 0,
+                    jf: 0,
+                    k: 16, // args[0], domain
+                },
+                SockFilter {
+                    code: BPF_JMP_JEQ_K,
+                    jt: 0,
+                    jf: 6,
+                    k: AF_UNIX as u32,
+                },
+                SockFilter {
+                    code: BPF_LD_W_ABS,
+                    jt: 0,
+                    jf: 0,
+                    k: 24, // args[1], type
+                },
+                SockFilter {
+                    code: BPF_JMP_JEQ_K,
+                    jt: 1,
+                    jf: 0,
+                    k: SOCK_SEQPACKET as u32,
+                },
+                SockFilter {
+                    code: BPF_JMP_JEQ_K,
+                    jt: 0,
+                    jf: 3,
+                    k: (SOCK_SEQPACKET | SOCK_CLOEXEC) as u32,
+                },
+                SockFilter {
+                    code: BPF_LD_W_ABS,
+                    jt: 0,
+                    jf: 0,
+                    k: 32, // args[2], protocol
+                },
+                SockFilter {
+                    code: BPF_JMP_JEQ_K,
+                    jt: 0,
+                    jf: 1,
+                    k: 0,
+                },
+                SockFilter {
+                    code: BPF_RET_K,
+                    jt: 0,
+                    jf: 0,
+                    k: SECCOMP_RET_ALLOW,
+                },
+                SockFilter {
+                    code: BPF_RET_K,
+                    jt: 0,
+                    jf: 0,
+                    k: SECCOMP_RET_ERRNO | EACCES as u32,
+                },
+            ]);
+        }
         let mut blocked = vec![SYS_EXECVEAT as u32, SYS_MEMFD_CREATE as u32];
         if !network_outbound {
             blocked.extend_from_slice(NETWORK_SYSCALLS);
@@ -2204,6 +2282,34 @@ mod linux {
                 }
                 println!("ADAPTER_NATIVE_DESCENDANT_POSITIVE");
             }
+            "positive-fork-spawn" => {
+                let self_path = env::current_exe().map_err(|error| error.to_string())?;
+                let mut command = Command::new(self_path);
+                command.args(["--control", "positive"]);
+                if let Some(path) = option(args, "--path") {
+                    command.args(["--path", path]);
+                }
+                // SAFETY: This hook is deliberately empty. It performs no
+                // allocation, locking, or other work between fork and exec.
+                unsafe {
+                    command.pre_exec(|| Ok(()));
+                }
+                let output = command.output().map_err(|error| {
+                    format!("launch native forked positive descendant: {error}")
+                })?;
+                if !output.status.success()
+                    || output.stdout != b"ADAPTER_NATIVE_POSITIVE\n"
+                    || !output.stderr.is_empty()
+                {
+                    return Err(format!(
+                        "native forked positive descendant failed: status={:?} stdout={:?} stderr={:?}",
+                        output.status.code(),
+                        output.stdout,
+                        output.stderr
+                    ));
+                }
+                println!("ADAPTER_NATIVE_FORK_DESCENDANT_POSITIVE");
+            }
             "direct" => {
                 let python = required(args, "--python")?;
                 match Command::new(python)
@@ -2350,6 +2456,7 @@ mod linux {
                 }
             }
             "seccomp" => seccomp_control()?,
+            "socketpair-refusal" => socketpair_refusal_control()?,
             _ => return Err(format!("unknown control mode {mode:?}")),
         }
         Ok(())
@@ -2403,6 +2510,118 @@ mod linux {
         Ok(())
     }
 
+    fn socketpair_refusal_control() -> Result<(), String> {
+        for (domain, sock_type, protocol, label) in [
+            (AF_INET, SOCK_SEQPACKET, 0, "inet-domain"),
+            (AF_UNIX, SOCK_STREAM, 0, "stream-type"),
+            (AF_UNIX, SOCK_SEQPACKET, 1, "nonzero-protocol"),
+        ] {
+            let mut pair = [-1; 2];
+            // SAFETY: pair points to two writable integers; the remaining
+            // arguments are scalar socket parameters. Seccomp must refuse
+            // each disallowed combination before the kernel creates a pair.
+            let result = unsafe {
+                syscall(
+                    SYS_SOCKETPAIR,
+                    domain,
+                    sock_type,
+                    protocol,
+                    pair.as_mut_ptr(),
+                )
+            };
+            let errno = io::Error::last_os_error().raw_os_error();
+            if result == 0 {
+                for fd in pair {
+                    // SAFETY: a successful socketpair returned both owned fds.
+                    let _ = unsafe { close(fd) };
+                }
+            }
+            if result != -1 || errno != Some(EACCES) {
+                return Err(format!(
+                    "disallowed socketpair {label} expected EACCES; result={result} errno={errno:?}"
+                ));
+            }
+            println!("SOCKETPAIR_REFUSED case={label} errno={EACCES}");
+        }
+
+        for sock_type in [SOCK_SEQPACKET, SOCK_SEQPACKET | SOCK_CLOEXEC] {
+            local_socketpair_roundtrip(sock_type)?;
+        }
+        println!("LOCAL_SOCKETPAIR_IO_OK");
+
+        for number in NETWORK_SYSCALLS {
+            let arguments = if *number == SYS_SOCKET as u32 {
+                [AF_INET as u64, SOCK_STREAM as u64, 0, 0, 0, 0]
+            } else if *number == 425 {
+                [1, 0, 0, 0, 0, 0]
+            } else {
+                [u64::MAX, 0, 0, 0, 0, 0]
+            };
+            let result = syscall6(*number as isize, arguments);
+            let errno = io::Error::last_os_error().raw_os_error();
+            if result >= 0 && [41, 43, 288, 425].contains(number) {
+                // socket, accept, accept4, and io_uring_setup return one
+                // owned descriptor if unexpectedly allowed.
+                // SAFETY: result is the descriptor returned by that syscall.
+                let _ = unsafe { close(result as i32) };
+            }
+            if result != -1 || errno != Some(EACCES) {
+                return Err(format!(
+                    "network syscall {number} expected EACCES; result={result} errno={errno:?}"
+                ));
+            }
+            println!("NETWORK_SYSCALL_REFUSED number={number} errno={EACCES}");
+        }
+        println!("ADAPTER_NETWORK_DENIAL_CONTROL");
+        Ok(())
+    }
+
+    fn local_socketpair_roundtrip(sock_type: i32) -> Result<(), String> {
+        let mut pair = [-1; 2];
+        // SAFETY: pair points to two writable integers; the accepted AF_UNIX
+        // and SOCK_SEQPACKET arguments create only an unnamed local pair.
+        let result = unsafe { syscall(SYS_SOCKETPAIR, AF_UNIX, sock_type, 0, pair.as_mut_ptr()) };
+        if result != 0 {
+            return Err(format!(
+                "allowed local socketpair type={sock_type:#x} failed: {}",
+                io::Error::last_os_error()
+            ));
+        }
+        // SAFETY: successful socketpair returned two newly owned descriptors.
+        let sender = unsafe { File::from_raw_fd(pair[0]) };
+        // SAFETY: successful socketpair returned two newly owned descriptors.
+        let mut receiver = unsafe { File::from_raw_fd(pair[1]) };
+        let payload = b"private rust subprocess handshake";
+        (&sender)
+            .write_all(payload)
+            .map_err(|error| format!("write allowed local socketpair: {error}"))?;
+        let mut received = vec![0; payload.len()];
+        receiver
+            .read_exact(&mut received)
+            .map_err(|error| format!("read allowed local socketpair: {error}"))?;
+        if received != payload {
+            return Err("local socketpair returned unexpected payload".to_owned());
+        }
+        Ok(())
+    }
+
+    fn syscall6(number: isize, arguments: [u64; 6]) -> isize {
+        // SAFETY: callers supply the argument layout for the named Linux
+        // syscall. The denial control uses null pointers and invalid fds, so
+        // no external network endpoint or user memory is accessed.
+        unsafe {
+            syscall(
+                number,
+                arguments[0],
+                arguments[1],
+                arguments[2],
+                arguments[3],
+                arguments[4],
+                arguments[5],
+            )
+        }
+    }
+
     fn required<'a>(args: &'a [String], name: &str) -> Result<&'a str, String> {
         args.iter()
             .position(|argument| argument == name)
@@ -2431,6 +2650,153 @@ mod linux {
             fs::create_dir_all(path).expect("create test directory");
             fs::set_permissions(path, fs::Permissions::from_mode(0o700))
                 .expect("set test directory mode");
+        }
+
+        fn evaluate_seccomp_filter(
+            filter: &[SockFilter],
+            arch: u32,
+            syscall_number: u32,
+            arguments: [u64; 6],
+        ) -> u32 {
+            let mut accumulator = 0u32;
+            let mut pc = 0usize;
+            loop {
+                let instruction = filter.get(pc).expect("BPF program terminates");
+                match instruction.code {
+                    BPF_LD_W_ABS => {
+                        accumulator = match instruction.k {
+                            0 => syscall_number,
+                            4 => arch,
+                            16 => arguments[0] as u32,
+                            24 => arguments[1] as u32,
+                            32 => arguments[2] as u32,
+                            offset => panic!("unexpected BPF data offset {offset}"),
+                        };
+                    }
+                    BPF_JMP_JEQ_K => {
+                        pc += 1 + if accumulator == instruction.k {
+                            instruction.jt as usize
+                        } else {
+                            instruction.jf as usize
+                        };
+                        continue;
+                    }
+                    BPF_JMP_JSET_K => {
+                        pc += 1 + if accumulator & instruction.k != 0 {
+                            instruction.jt as usize
+                        } else {
+                            instruction.jf as usize
+                        };
+                        continue;
+                    }
+                    BPF_RET_K => return instruction.k,
+                    code => panic!("unexpected BPF instruction {code:#x}"),
+                }
+                pc += 1;
+            }
+        }
+
+        fn assert_eacces(result: u32) {
+            assert_eq!(result, SECCOMP_RET_ERRNO | EACCES as u32);
+        }
+
+        #[test]
+        fn network_deny_filter_only_allows_private_seqpacket_socketpairs() {
+            let filter = seccomp_filter(false);
+            for sock_type in [SOCK_SEQPACKET, SOCK_SEQPACKET | SOCK_CLOEXEC] {
+                let args = [AF_UNIX as u64, sock_type as u64, 0, 0, 0, 0];
+                assert_eq!(
+                    evaluate_seccomp_filter(
+                        &filter,
+                        AUDIT_ARCH_X86_64,
+                        SYS_SOCKETPAIR as u32,
+                        args,
+                    ),
+                    SECCOMP_RET_ALLOW,
+                    "AF_UNIX SOCK_SEQPACKET type={sock_type:#x}"
+                );
+            }
+
+            // socketpair() takes int parameters, so the kernel uses the low
+            // 32 bits even if a raw syscall register contains high bits.
+            let args = [
+                (0xfeed_beefu64 << 32) | AF_UNIX as u64,
+                (0xfade_babeu64 << 32) | SOCK_SEQPACKET as u64,
+                0xffff_ffff_0000_0000,
+                0,
+                0,
+                0,
+            ];
+            assert_eq!(
+                evaluate_seccomp_filter(&filter, AUDIT_ARCH_X86_64, SYS_SOCKETPAIR as u32, args,),
+                SECCOMP_RET_ALLOW
+            );
+
+            for (domain, sock_type, protocol) in [
+                (AF_INET, SOCK_SEQPACKET, 0),
+                (AF_UNIX, SOCK_STREAM, 0),
+                (AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC | 0x800, 0),
+                (AF_UNIX, SOCK_SEQPACKET, 1),
+            ] {
+                assert_eacces(evaluate_seccomp_filter(
+                    &filter,
+                    AUDIT_ARCH_X86_64,
+                    SYS_SOCKETPAIR as u32,
+                    [domain as u64, sock_type as u64, protocol as u64, 0, 0, 0],
+                ));
+            }
+
+            assert!(!NETWORK_SYSCALLS.contains(&(SYS_SOCKETPAIR as u32)));
+            for syscall_number in (41u32..=55)
+                .filter(|number| *number != SYS_SOCKETPAIR as u32)
+                .chain([288, 299, 307, 425])
+            {
+                assert!(NETWORK_SYSCALLS.contains(&syscall_number));
+                assert_eacces(evaluate_seccomp_filter(
+                    &filter,
+                    AUDIT_ARCH_X86_64,
+                    syscall_number,
+                    [0; 6],
+                ));
+            }
+            assert_eacces(evaluate_seccomp_filter(
+                &filter,
+                AUDIT_ARCH_X86_64,
+                SYS_SOCKETPAIR as u32 | X32_SYSCALL_BIT,
+                [AF_UNIX as u64, SOCK_SEQPACKET as u64, 0, 0, 0, 0],
+            ));
+            assert_eq!(
+                evaluate_seccomp_filter(
+                    &filter,
+                    0x4000_0003,
+                    SYS_SOCKETPAIR as u32,
+                    [AF_UNIX as u64, SOCK_SEQPACKET as u64, 0, 0, 0, 0],
+                ),
+                SECCOMP_RET_KILL_PROCESS
+            );
+        }
+
+        #[test]
+        fn network_outbound_filter_keeps_network_syscalls_allowed() {
+            let filter = seccomp_filter(true);
+            for syscall_number in (41u32..=55).chain([288, 299, 307, 425]) {
+                assert_eq!(
+                    evaluate_seccomp_filter(&filter, AUDIT_ARCH_X86_64, syscall_number, [0; 6],),
+                    SECCOMP_RET_ALLOW
+                );
+            }
+            assert_eacces(evaluate_seccomp_filter(
+                &filter,
+                AUDIT_ARCH_X86_64,
+                SYS_EXECVEAT as u32,
+                [0; 6],
+            ));
+            assert_eacces(evaluate_seccomp_filter(
+                &filter,
+                AUDIT_ARCH_X86_64,
+                SYS_MEMFD_CREATE as u32,
+                [0; 6],
+            ));
         }
 
         fn test_capture() -> Capture {

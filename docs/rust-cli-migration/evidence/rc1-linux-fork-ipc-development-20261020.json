@@ -1,0 +1,151 @@
+{
+  "schema": "ami-rust-rc1-linux-fork-ipc-development-v1",
+  "recorded_utc": "2026-10-20T14:11:35.265884+00:00",
+  "status": "LOCAL_COMPONENT_CHECKS_COMPLETE_NATIVE_LINUX_AND_RC1_PENDING",
+  "base_source": "5135254310dba8d7ad2886332fb888b9518c159c",
+  "source_files": {
+    "tools/consumer-enforcement-adapter/src/linux.rs": "7a307c7af4d0391a47b7c73fc32b57daf060d0aaa6ca4d7033df009ff4c9ed70",
+    "tools/consumer-enforcement-adapter/LINUX.md": "9f7d60e95df6e5e80b591b26634950fe7374127d30922c1e91df706e11a28318",
+    "tooling/crates/xtask/src/consumer_observe.rs": "a11ba4bb752426e921888b4347348c7686ba901299788f2c1f11d615c9857900",
+    "tooling/crates/xtask/src/cold_runtime_probe.rs": "bd9b3873e7f43849d9cb3409779df9667ccb338fd491170068ff1ced28c1e6a9",
+    "tooling/crates/xtask/src/fork_runtime_probe.rs": "d9a16ed45f68d21bce5f4b8d3a77836e785bec6970d47636d4d58298e34fc498",
+    "tooling/crates/xtask/tests/consumer_enforcement.rs": "c10f7b15de036da34eb9b5f2b70ba3f240bd7e1b38a4591f9a7cde10418ad402",
+    "release/native-tooling-inputs.json": "da1ab42fc81972ba298343430cc89a5508cba7500802364ff1754075015a9dc1",
+    ".github/workflows/rc1-linux-git-transport-diagnostic.yml": "8910a58337211142250beae15c1fa0dca01d9693cd4da4042a8998ebc6a71dad"
+  },
+  "observed_failure": {
+    "run": 39422283932,
+    "attempt": 1,
+    "source": "5135254310dba8d7ad2886332fb888b9518c159c",
+    "step": "14-package-offline-build",
+    "linux_lifecycle": "FAIL_CARGO_COULD_NOT_START_RUSTC_PERMISSION_DENIED",
+    "macos_lifecycle_job": "SUCCESS_NOT_CROSS_HOST_ACCEPTANCE",
+    "original_archives": 8,
+    "collection_manifest_sha256": "39678b99401e86fbfda9a2d1b7e35a1c2c866427b7f3a778ef49a5380a717624"
+  },
+  "source_rationale": {
+    "cargo_process_builder": {
+      "upstream_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+      "path": "crates/cargo-util/src/process_builder.rs",
+      "sha256": "225dad38fa80928269fcd572d55ff21384c365b043c39c6a6090434d995263ae",
+      "behavior": "Configures the inherited jobserver on the rustc command."
+    },
+    "fork_handshake": "The pinned Rust Unix process source uses AF_UNIX SOCK_SEQPACKET for the fork-path child handshake. Cargo jobserver pre_exec hooks select the fork path. The old offline seccomp filter denied socketpair(53). This source-based diagnosis still requires the actual Linux Cargo runtime probe and full SDK qualification.",
+    "correction": "Permit only socketpair(AF_UNIX, SOCK_SEQPACKET or SOCK_SEQPACKET|SOCK_CLOEXEC, protocol0) under network deny. Keep socket/connect/bind/listen/sendmsg/recvmsg/io_uring, x32, execveat and memfd denials. No additional /dev/null write or broad executable/library grant."
+  },
+  "new_hosted_probes": {
+    "kernel_controls": "Execute fork-based allowed descendant with exact marker-file effect, private socketpair roundtrips and three pair-argument/eighteen network syscall refusals. BPF unit cases cover argument forms, architecture, x32 and unchanged outbound profile.",
+    "actual_pinned_cargo": "Extract only the pinned Cargo component from the immutable v0.1.0 release bundle; verify its binary against the frozen Linux producer. Build one empty no_core host rlib with the paired pinned compiler under locked/offline/network-deny policy. Repeat first with only rustc exec-hash removed and require Cargo101/EACCES/no artifact. Exact raw captures, hashes, policy and valid adapter reports are required.",
+    "scope": "Cause-specific host probes; no AROS app, full SDK, RC1 or release acceptance."
+  },
+  "local_checks": {
+    "macos_workspace_tests_and_strict_clippy": {
+      "result": "PASS",
+      "raw_report_sha256": "98f48a505afe1bde4734b524876478ad7770589ea70739ed3ae98d5c7374e488",
+      "scope_mapping": {
+        "completed_labels": [
+          "linux-fork-macos-workspace-tests",
+          "linux-fork-macos-strict-clippy"
+        ],
+        "only_changed_source_since_then": [
+          "tooling/crates/xtask/src/fork_runtime_probe.rs"
+        ],
+        "reason": "Only the Linux-test-only Cargo probe changed; macOS excludes that included file entirely. Hosted both-platform CI is still required.",
+        "report_sha256": "98f48a505afe1bde4734b524876478ad7770589ea70739ed3ae98d5c7374e488"
+      }
+    },
+    "final_linux_workspace_strict_compile_clippy": "PASS_COMPILE_ONLY",
+    "linux_adapter_compile": "PASS_COMPILE_ONLY",
+    "source_material_tests": 10,
+    "workflow_actionlint": "PASS",
+    "empty_fixture_syntax": {
+      "artifact_sha256": "cdf1545fcfeb401b8a56e854cea8d32d1928e2ba554ddf129faf6aa95d421a70",
+      "rustc_sha256": "5bb7cf7ca89e240c2f97c00c94b5aa3576a84798def7d329b72cb12a20e6e6d0",
+      "scope": "Fixture syntax verified with paired macOS target compiler; not Linux runtime evidence.",
+      "source_sha256": "f877d457952bafb3566288e29dc211244bcab4b2b0ee0d6615ded8253b80e8ac"
+    },
+    "final_scoped_report_sha256": "90c73c46cb2c4c33dd006c401e5fb204a5a94797e0b6e041cda61dcafe7b8e5f",
+    "extra_adapter_lint_experiment": {
+      "disposition": "No lint suppression or production gate change. This extra strict experiment found two existing adapter lints; inherited adapter compilation/tests and strict CLI workspace gates remain required.",
+      "new_diagnostics": [],
+      "same_actual_baseline_and_candidate_diagnostics": [
+        {
+          "code": "clippy::chunks_exact_to_as_chunks",
+          "level": "warning",
+          "message": "using `chunks_exact` with a constant chunk size",
+          "primary_source": [
+            "        for (index, bytes) in block.chunks_exact(4).enumerate() {"
+          ]
+        },
+        {
+          "code": "clippy::chunks_exact_to_as_chunks",
+          "level": "warning",
+          "message": "using `chunks_exact` with a constant chunk size",
+          "primary_source": [
+            "        for (index, bytes) in block.chunks_exact(4).enumerate() {"
+          ]
+        },
+        {
+          "code": "clippy::too_many_arguments",
+          "level": "warning",
+          "message": "this function has too many arguments (22/7)",
+          "primary_source": [
+            "    fn report_json(\n        policy_path: &Path,\n        report_dir: &Path,\n        command: &Path,\n        args: &[String],\n        started: u128,\n        finished: u128,\n        elapsed_millis: u128,\n        pid: Option<u32>,\n        launch_error: Option<&str>,\n        exit_code: Option<i32>,\n        signal: Option<i32>,\n        stdout_path: &Path,\n        stderr_path: &Path,\n        out: &Capture,\n        err: &Capture,\n        replay_error: Option<&str>,\n        evidence_failures: &[String],\n        hash_checks: &[ExecHashCheck],\n        library_hash_checks: &[ReadLibraryHashCheck],\n        policy: &Policy,\n        abi: i32,\n        handled_fs: u64,\n    ) -> String {"
+          ]
+        },
+        {
+          "code": "clippy::too_many_arguments",
+          "level": "warning",
+          "message": "this function has too many arguments (22/7)",
+          "primary_source": [
+            "    fn report_json(\n        policy_path: &Path,\n        report_dir: &Path,\n        command: &Path,\n        args: &[String],\n        started: u128,\n        finished: u128,\n        elapsed_millis: u128,\n        pid: Option<u32>,\n        launch_error: Option<&str>,\n        exit_code: Option<i32>,\n        signal: Option<i32>,\n        stdout_path: &Path,\n        stderr_path: &Path,\n        out: &Capture,\n        err: &Capture,\n        replay_error: Option<&str>,\n        evidence_failures: &[String],\n        hash_checks: &[ExecHashCheck],\n        library_hash_checks: &[ReadLibraryHashCheck],\n        policy: &Policy,\n        abi: i32,\n        handled_fs: u64,\n    ) -> String {"
+          ]
+        }
+      ],
+      "strict_a1_failed": true
+    }
+  },
+  "resources": {
+    "macos_workspace": {
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      },
+      "peak_log_observed_bytes": 55294,
+      "peak_rss_observed_bytes": 1730723840,
+      "peak_workspace_observed_bytes": 2752475018
+    },
+    "final_scoped_checks": {
+      "limits": {
+        "log_bytes": 16777216,
+        "rss_bytes": 4294967296,
+        "seconds": 1200,
+        "workspace_bytes": 12884901888
+      },
+      "peak_log_observed_bytes": 31969,
+      "peak_rss_observed_bytes": 1007943680,
+      "peak_workspace_observed_bytes": 1553713496
+    },
+    "measurement_correction": "The intermediate a2 compile reused an old mutable target outside its workspace accounting. Its functional result is retained but its workspace peak is not full evidence. a3 repeats the short checks with every mutable target beneath its accounted work root."
+  },
+  "independent_reviews": [
+    {
+      "report_sha256": "e9182c300ad34b93c37593c484b38806ed25bea90888abc58cfbb6118b953f47",
+      "findings": [],
+      "scope": "Independent source review; reviewer did not run builds or Linux tests."
+    },
+    {
+      "report_sha256": "a1fb99148baab7452ecb3fd3cbaebb729ef54c6badd8cb723db394f84a4c84fb",
+      "findings": [],
+      "scope": "Independent source review; reviewer did not run builds or Linux tests."
+    }
+  ],
+  "unchanged": "Target Rust/Cargo/C-SDK inputs and flags, qualified ABI-v1/QEMU baseline, protected AROS checkouts and all published assets.",
+  "remaining": [
+    "Native Linux kernel and exact pinned Cargo execution; source-bound hosted artifact readbacks and counter-probes.",
+    "Protected exact-source both-host signed SDK lifecycle, two-root/five-variant matrix, unchanged raw metadata and criterion-by-criterion independent RC1-A1-A4 acceptance.",
+    "RC2-RC5 remain required; no SDK release or RC1 acceptance is established."
+  ]
+}

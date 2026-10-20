@@ -120,9 +120,18 @@ that path. Thus broad system library trees are unsuitable when a denied library
 sits inside them.
 
 network outbound permits ordinary network syscalls. The default and
-network deny block Linux x86-64 socket operations and io_uring_setup with
-seccomp. In all cases the filter also denies x32 syscall numbers,
-execveat, and memfd_create, following the accepted
+network-deny profiles block Linux x86-64 socket operations and io_uring_setup
+with seccomp, with one cause-specific exception: `socketpair` accepts only
+`AF_UNIX`, `SOCK_SEQPACKET`, protocol `0`, and the same type with optional
+`SOCK_CLOEXEC`. Rust's Unix process-spawn path uses this unnamed local pair for
+its private child handshake when a `pre_exec` hook requires `fork`. The
+exception creates no addressable or public-network socket. Other socketpair
+domains, types, and protocols still return `EACCES`; `socket`, `connect`,
+`bind`, `listen`, send/receive entry points, and `io_uring_setup` remain
+denied. The filter compares the low 32 bits of the three integer arguments,
+matching the kernel syscall parameters. Network-outbound behavior is
+unchanged. In all cases the filter also denies x32 syscall numbers,
+`execveat`, and `memfd_create`, following the accepted
 tools/linux-no-python-probe mechanism.
 
 The adapter requires Landlock ABI 2 or newer because its write policy handles
@@ -176,6 +185,8 @@ consumer command.
 The --control modes can be invoked through --run and the same policy:
 
     --control positive [--path /owned/work/positive-output]
+    --control positive-fork-spawn [--path /owned/work/positive-output]
+    --control socketpair-refusal
     --control direct --python /absolute/path/to/python3
     --control transitive --python /absolute/path/to/python3
     --control shebang --script /owned/work/python-shebang
@@ -197,6 +208,15 @@ The seccomp control checks execveat(AT_EMPTY_PATH) and memfd_create return
 EACCES. The future-materialize control exercises nested directory creation,
 execution under the designated subtree, and the report's transient-hash
 distinction.
+
+The positive-fork-spawn control installs an empty `pre_exec` hook to force
+Rust's fork-based subprocess path and prints
+`ADAPTER_NATIVE_FORK_DESCENDANT_POSITIVE` after its child succeeds. Its hook
+does no allocation or locking. The socketpair-refusal control verifies that
+the two permitted private local pair forms can exchange bytes through
+`read`/`write`; it then checks that disallowed socketpair arguments and the
+network socket syscalls return `EACCES`. Its denied calls use an invalid file
+descriptor or null address and do not contact an external endpoint.
 
 tools/linux-no-python-probe remains the accepted native direct, transitive,
 absolute-shebang, and embedded-library control harness. This adapter adds an

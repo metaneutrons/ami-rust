@@ -14,6 +14,7 @@ on:
       - tooling/crates/xtask/src/consumer_report.rs
       - tooling/crates/xtask/src/consumer_runtime.rs
       - tooling/crates/xtask/src/cold_runtime_probe.rs
+      - tooling/crates/xtask/src/fork_runtime_probe.rs
       - release/ci_native.py
       - release/ci_sdk.py
       - release/ci_cargo.py
@@ -204,6 +205,8 @@ jobs:
                       or probe.get("status") != "PASS"
                       or not isinstance(probe.get("counter_cleanup"), dict)
                       or probe["counter_cleanup"].get("gate_passed") is not True
+                      or not isinstance(probe.get("pinned_cargo_fork"), dict)
+                      or probe["pinned_cargo_fork"].get("status") != "PASS"
                       or any(probe.get(key) is not True for key in
                              ("counter_gate_passed", "positive_gate_passed", "source_bindings_unchanged"))):
                   raise RuntimeError("cold runtime positive and omission-control evidence is incomplete")
