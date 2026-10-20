@@ -218,6 +218,7 @@
     "tooling/crates/core/src/lib.rs",
     "tooling/crates/core/src/macos_process_snapshot.c",
     "tooling/crates/core/src/macos_process_snapshot.rs",
+    "tooling/crates/core/src/migration_process.rs",
     "tooling/crates/core/src/mutations.rs",
     "tooling/crates/core/src/native_build.rs",
     "tooling/crates/core/src/native_install.rs",

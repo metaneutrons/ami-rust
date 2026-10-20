@@ -469,6 +469,7 @@ def input_manifest_for_sdk(source, sdk_version):
                         "tooling/crates/core/build.rs",
                         "tooling/crates/core/src/macos_process_snapshot.c",
                         "tooling/crates/core/src/macos_process_snapshot.rs",
+                        "tooling/crates/core/src/migration_process.rs",
                         "tooling/crates/xtask/src/native_release.rs",
                         "tooling/crates/xtask/src/consumer_observe.rs",
                         "tooling/crates/xtask/src/consumer_report.rs",
