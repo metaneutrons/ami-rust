@@ -610,7 +610,19 @@ fn validate_legacy_project(
         .get("cargo")
         .ok_or_else(|| Refusal::new("legacy Cargo component root is missing"))?
         .join(&profile.cargo_binary);
-    let _cargo_executable = ownership::protected_regular_file(&cargo_binary, true)?;
+    // This historical executable is inspected as data and never launched.
+    // An effective X_OK probe would ask the observation sandbox for execution
+    // authority that this read-only operation deliberately does not have.
+    let cargo_file = ownership::protected_regular_file(&cargo_binary, false)?;
+    let cargo_mode = cargo_file
+        .metadata()
+        .map_err(|error| Refusal::new(format!("could not inspect legacy Cargo mode: {error}")))?
+        .mode();
+    if cargo_mode & 0o111 == 0 || cargo_mode & 0o6000 != 0 {
+        return Err(Refusal::new(
+            "legacy Cargo must have executable mode without set-ID bits",
+        ));
+    }
     let python_path = canonical_file(&lock.host.python, "legacy Python identity")?;
     let (_, python_sha256) = hash_legacy_python_identity(&python_path, signals)?;
     if python_sha256 != lock.host.python_sha256.as_str() {
@@ -1146,6 +1158,64 @@ mod tests {
         dry_run_refuses_changed_cargo_inputs_and_future_lock_schema();
         dry_run_refuses_linked_cargo_file();
         dry_run_refuses_changed_legacy_binding();
+        dry_run_checks_legacy_cargo_modes_without_launching_it();
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn read_only_migration_succeeds_with_legacy_execution_denied() {
+        let executable = std::env::current_exe().unwrap();
+        let escaped = executable
+            .to_str()
+            .unwrap()
+            .replace('\\', "\\\\")
+            .replace('"', "\\\"");
+        let policy = format!(
+            "(version 1)(allow default)(deny process-exec)(allow process-exec (literal \"{escaped}\"))"
+        );
+        let output = std::process::Command::new("/usr/bin/sandbox-exec")
+            .args(["-p", &policy])
+            .arg(&executable)
+            .args([
+                "--exact",
+                "native_migrate::tests::migration_no_exec_child_fixture",
+                "--ignored",
+                "--nocapture",
+            ])
+            .env_clear()
+            .env("HOME", std::env::var_os("HOME").unwrap())
+            .env("PATH", "/usr/bin:/bin")
+            .env("LC_ALL", "C")
+            .env(CHILD_MODE, "no-exec")
+            .output()
+            .expect("spawn sandboxed read-only migration fixture");
+        assert!(
+            output.status.success(),
+            "sandboxed migration failed\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[ignore = "run by the parent test under an actual process-execution sandbox"]
+    fn migration_no_exec_child_fixture() {
+        assert_eq!(std::env::var(CHILD_MODE).as_deref(), Ok("no-exec"));
+        let fixture = Fixture::new();
+        let project = fixture.build();
+        let cargo = fixture.0.join("component-cargo/bin/cargo");
+        let before = fs::read(&cargo).unwrap();
+        // Demonstrate the denied effective-access check on this exact path.
+        assert!(ownership::protected_regular_file(&cargo, true).is_err());
+        let signals = SigtermGuard::acquire().expect("signal guard");
+        let report = dry_run(&project, &signals).expect("read-only inspection needs no execution");
+        assert_eq!(report.status, "migration-required");
+        assert_eq!(fs::read(&cargo).unwrap(), before);
+        // Actual execution stays denied; metadata inspection grants no authority.
+        let error = std::process::Command::new(&cargo).status().unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+        signals.finish().expect("restore signal handler");
     }
 
     struct Fixture(PathBuf);
@@ -1267,7 +1337,12 @@ mod tests {
             let cargo_lock = b"version = 4\n";
             fs::write(project.join("Cargo.toml"), cargo_manifest).expect("Cargo.toml");
             fs::write(project.join("Cargo.lock"), cargo_lock).expect("Cargo.lock");
-            let python = std::env::current_exe().expect("test executable");
+            // Each fixture owns its inert interpreter identity. Permission
+            // controls must never mutate the shared running test executable.
+            let python = self.0.join("legacy-python-identity");
+            fs::write(&python, b"historical interpreter fixture\n").expect("inert interpreter");
+            fs::set_permissions(&python, fs::Permissions::from_mode(0o755))
+                .expect("interpreter fixture mode");
             let components = COMPONENT_NAMES
                 .into_iter()
                 .map(|name| {
@@ -1436,6 +1511,28 @@ mod tests {
             fs::read(&unrelated_sdk_sentinel).unwrap(),
             unrelated_sdk_bytes
         );
+        signals.finish().expect("restore signal handler");
+    }
+
+    fn dry_run_checks_legacy_cargo_modes_without_launching_it() {
+        let fixture = Fixture::new();
+        let project = fixture.build();
+        let cargo = fixture.0.join("component-cargo/bin/cargo");
+        let before = fs::read(&cargo).unwrap();
+        let signals = SigtermGuard::acquire().expect("signal guard");
+        for mode in [0o600, 0o4700, 0o2700, 0o722] {
+            fs::set_permissions(&cargo, fs::Permissions::from_mode(mode)).unwrap();
+            assert_eq!(fs::metadata(&cargo).unwrap().mode() & 0o7777, mode);
+            assert!(
+                dry_run(&project, &signals).is_err(),
+                "accepted Cargo mode {mode:o}"
+            );
+        }
+        fs::set_permissions(&cargo, fs::Permissions::from_mode(0o700)).unwrap();
+        dry_run(&project, &signals).expect("safe legacy Cargo mode");
+        assert_eq!(fs::read(&cargo).unwrap(), before);
+        fs::write(&cargo, b"changed Cargo identity\n").unwrap();
+        assert!(dry_run(&project, &signals).is_err());
         signals.finish().expect("restore signal handler");
     }
 
