@@ -1,7 +1,7 @@
 {
-  "schema": "ami-rust-rc1-linux-fork-ipc-development-v2",
-  "recorded_utc": "2026-10-20T14:44:06.402927+00:00",
-  "status": "LOCAL_CHECKS_COMPLETE_CORRECTED_NATIVE_LINUX_AND_RC1_PENDING",
+  "schema": "ami-rust-rc1-linux-fork-ipc-development-v3",
+  "recorded_utc": "2026-10-20T15:07:50.919089+00:00",
+  "status": "LINUX_RUNTIME_PROVEN_FIXTURE_CORRECTION_HOSTED_CI_PENDING",
   "base_source": "5135254310dba8d7ad2886332fb888b9518c159c",
   "source_files": {
     "tools/consumer-enforcement-adapter/src/linux.rs": "4c2647864dde6b79639420dca29972aebd5c5c3b83ca2d14bd313b123fd5b2f9",
@@ -11,7 +11,8 @@
     "tooling/crates/xtask/src/fork_runtime_probe.rs": "a8fac58aa6cb5d3c59b9c165b3f0d581b8c0f9d7968d061eec8658c8ef388b7c",
     "tooling/crates/xtask/tests/consumer_enforcement.rs": "362f11ad047e0576ed5363f98cab7af4afc114beefc24b6c322dd1fa07743f1f",
     "release/native-tooling-inputs.json": "da1ab42fc81972ba298343430cc89a5508cba7500802364ff1754075015a9dc1",
-    ".github/workflows/rc1-linux-git-transport-diagnostic.yml": "8910a58337211142250beae15c1fa0dca01d9693cd4da4042a8998ebc6a71dad"
+    ".github/workflows/rc1-linux-git-transport-diagnostic.yml": "8910a58337211142250beae15c1fa0dca01d9693cd4da4042a8998ebc6a71dad",
+    "release/test_prepare_sdk.py": "90920b24ec06a6a92aeaaacea11b69fba84bba91fd11cfe4423822f15e9e8313"
   },
   "original_full_sdk_failure": {
     "run": 39422283932,
@@ -158,6 +159,43 @@
   "remaining": [
     "Native Linux kernel and exact pinned Cargo execution; source-bound hosted artifact readbacks and counter-probes.",
     "Protected exact-source both-host signed SDK lifecycle, two-root/five-variant matrix, unchanged raw metadata and criterion-by-criterion independent RC1-A1-A4 acceptance.",
-    "RC2-RC5 remain required; no SDK release or RC1 acceptance is established."
-  ]
+    "RC2-RC5 remain required; no SDK release or RC1 acceptance is established.",
+    "RC1-A4 needs a native-to-native package upgrade preservation proof in addition to the existing published-Python-to-native transition/removal tests. RC3 package-manager client transactions remain a separate later gate."
+  ],
+  "additional_candidate": {
+    "source": "cdf1eae2a20413776dc3d546d5363e666b45b323",
+    "regular_ci": {
+      "run": 39442003504,
+      "conclusion": "failure",
+      "failure": "Ubuntu installer fixture teardown: .git directory not empty",
+      "both_native_migration_jobs": "success"
+    },
+    "focused_linux": {
+      "run": 39442003502,
+      "conclusion": "success",
+      "independent_readback_status": "PASS_EXACT_SOURCE_PINNED_CARGO_FORK_RUNTIME_AND_LIBDL_OMISSION",
+      "reader_sha256": "e68e78e00dafd253391e62638504c622fe295b883e87a3b76ba6841320df93d9",
+      "verified_report_sha256": "fa22421451a492e7de655679ebbea27850dbb15fc6562ccbcbd08999a9906c39",
+      "policy_counter_result_sha256": "f23d91331262aa929e110aaf94a615dedc6c86be79d94dd55897c60e423debb2"
+    },
+    "terminal_checkpoint_sha256": "58244c1878741632ec676f700cbda23b938300aadb55f11a39a41c8889ecd798",
+    "scope": "Cause-specific Linux proof is complete for the bound production/probe bytes. Overall CI, full SDK and RC1 remain unaccepted."
+  },
+  "installer_fixture_correction": {
+    "reason": "Disposable fixture commits were observed starting detached Git maintenance; concurrent writes could race recursive .git cleanup. The exact process causing the CI cleanup race was not captured.",
+    "change": "Set maintenance.auto=false and gc.auto=0 in the disposable repository immediately after git init; no global Git changes, cleanup retries or ignored errors.",
+    "local_fixture_tests": {
+      "count": 13,
+      "result": "PASS",
+      "report_sha256": "d59ca7e129f5a4adcba0bb7ba8a797ed0a5daa93efe7c9dae06ba46d48c3054b"
+    },
+    "actual_git_trace_control": {
+      "baseline_detached_maintenance_launches": 2,
+      "disabled_detached_maintenance_launches": 0,
+      "analysis_and_source_review_sha256": "01b933e418fdb2b76c09fd528ca8e6d750ae43fa19b02b378f90b5fcad4ebf59",
+      "limit": "Local Git 2.56 versus CI Git 2.55; corrected native CI remains required."
+    },
+    "scope": "Only internal Python fixture setup changes; no consumer implementation or target inputs change."
+  },
+  "acceptance_coverage_preflight_sha256": "e08213ec2e16e06d63b85a8cd37a1daedc6f4be60f90e59a8bc4b8ca3570d80b"
 }
