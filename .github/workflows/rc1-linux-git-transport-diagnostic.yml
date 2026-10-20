@@ -228,8 +228,18 @@ jobs:
               link_probe = json.loads((output / "host-link-probe/probe-result.json").read_text())
               if (link_probe.get("status") != "PASS"
                       or any(link_probe.get(key) is not True for key in
-                             ("counter_gate_passed", "positive_gate_passed", "source_bindings_unchanged"))):
+                             ("counter_gate_passed", "positive_gate_passed", "source_bindings_unchanged",
+                              "system_link_input_gate_passed"))):
                   raise RuntimeError("pinned host linker positive and omission-control evidence is incomplete")
+              controls = link_probe.get("system_link_input_controls")
+              if (not isinstance(controls, list) or len(controls) != 5
+                      or {row.get("name") for row in controls}
+                         != {"libutil.a", "librt.a", "libpthread.a", "libdl.a", "libmvec.so.1"}
+                      or any(row.get("gate_passed") is not True
+                             or row.get("no_elf_output") is not True
+                             or row.get("policy_omission", {}).get("all_other_policy_bytes_identical") is not True
+                             for row in controls)):
+                  raise RuntimeError("Rust host system-library read-rule omission controls are incomplete")
               native._check_limits(supervisor, "completed pinned host linker regression")
               status = "PASS_CAUSE_SPECIFIC_RUNTIME_AND_LINKER_PROBES_NOT_FULL_COLD_CLI_OR_RC1_ACCEPTANCE"
           finally:

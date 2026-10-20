@@ -766,10 +766,20 @@ fn discover_linux_build(discovery: &mut Discovery, work: &Path) -> Result<()> {
         "crtfastmath.o",
         "libgcc_eh.a",
         "libm.so",
+        // GNU libm.so linker scripts also inspect this AS_NEEDED input.
+        "libmvec.so.1",
         "libpthread.so",
         "libdl.so",
         "librt.so",
         "libutil.so",
+        // glibc 2.34+ folds these implementations into libc but retains empty
+        // compatibility archives for the unversioned -l names used by Rust's
+        // host standard library. Query each exact file; a readable shared
+        // object is not a grant for its static linker fallback.
+        "libpthread.a",
+        "libdl.a",
+        "librt.a",
+        "libutil.a",
         "libresolv.so",
         "libatomic.so",
         "libstdc++.so",

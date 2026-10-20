@@ -1,0 +1,70 @@
+{
+  "schema": "ami-rust-rc1-host-link-input-development-v1",
+  "stage": "LOCAL_COMPONENTS_PASS_NATIVE_LINUX_AND_FULL_SDK_PENDING",
+  "recorded_utc": "2026-10-20T21:05:17.269563+00:00",
+  "base_source": "4612857e72652211a006850e7e9ff6570c92ac40",
+  "previous_candidate": "f13f4269c491b10ae37f8630e4b6636643f4a5ac",
+  "acceptance_authority": "docs/rust-cli-cargo-migration-plan.md#rc1--rust-consumer-cli-with-equivalent-behaviour",
+  "milestone_issue": "https://github.com/metaneutrons/ami-rust/issues/71",
+  "observed_failure": {
+    "run": 39494427474,
+    "attempt": 1,
+    "conclusion": "failure",
+    "artifact": 12298350765,
+    "original_zip_sha256": "72d161029e748ce88408948c84bb262c3bb04481da624309f2850eeb38d3369e",
+    "raw_diagnostic": "rust-lld: error: cannot open /lib/x86_64-linux-gnu/libmvec.so.1: Permission denied",
+    "reason": "Expanded C-link positive reaches the additional GNU libm.so linker-script AS_NEEDED input. No positive or archive omission success is claimed for this failed run; the four original file controls were not reached.",
+    "ordinary_both_host_ci": {
+      "run": 39494427452,
+      "conclusion": "success"
+    },
+    "all_three_original_provider_archives_and_job_logs_preserved": true
+  },
+  "change": {
+    "runtime": "Add optional libmvec.so.1 query through the selected GCC driver and existing exact canonical regular-file read-input admission. Preserve the four compatibility-archive inputs and all .so discovery.",
+    "probe": "Keep the same Rust host-library-flag C link and wrapper omission; the existing per-file omission loop now proves four compatibility archives plus the fifth libm script shared-ELF input. Each counter requires the exact canonicalized LLD denial identity, raw adapter status, no ELF and empty derived parent.",
+    "scope": "C-source compiler/linker route proof only. Native Rust/Cargo/full SDK and RC1 acceptance remain separate."
+  },
+  "source_files": {
+    ".github/workflows/rc1-linux-git-transport-diagnostic.yml": "68ae9b6961139974ba1dd4863680e0576c222d0649f436326034e3c76da4c900",
+    "tooling/crates/xtask/src/consumer_runtime.rs": "8a55f8dac50375f5e5ec31356037caaa1661e0b644df95deaa6df49a33a86e19",
+    "tooling/crates/xtask/src/host_link_probe.rs": "0c662ebc9d09418c8a05848af0cd7157aa4dccfb9ab85fd2258f63251fe4b754"
+  },
+  "local_verification": {
+    "status": "PASS_HOST_LINK_COMPONENTS_LINUX_COMPILE_ONLY_NOT_NATIVE_OR_RC1_ACCEPTANCE",
+    "result_sha256": "6a3662ad37e712b7b81d02a3c848bbbb5539d83e297b3b98b3d938e532fdfe39",
+    "driver_sha256": "522aad452b2e612c5130edda8128404f64e5d6be9c932bb96d7a86a4520ee715",
+    "macos_core_tests_passed": 381,
+    "macos_core_tests_ignored": 19,
+    "macos_xtask_tests_passed": 53,
+    "full_workspace": "PASS",
+    "strict_macos_clippy": "PASS",
+    "strict_linux_cross_compile_clippy": "PASS_COMPILE_ONLY",
+    "native_coordinator_tests": 69,
+    "native_upgrade_coordinator_tests": 14,
+    "source_material_fixtures": 10,
+    "actionlint": "PASS",
+    "supervision_limits": {
+      "log_bytes": 16777216,
+      "rss_bytes": 4294967296,
+      "seconds": 1200,
+      "workspace_bytes": 12884901888
+    },
+    "conservative_rss_peak_bytes": 1744830464,
+    "workspace_peak_bytes": 2747599558,
+    "logs_peak_bytes": 54775
+  },
+  "independent_static_review": {
+    "result": "NO_CONCRETE_BLOCKER_FOUND",
+    "record_sha256": "0122d554cf07a40d6a3a6be862c7a9f3073c7824207256a5218a3478c807ced0"
+  },
+  "remaining": [
+    "Fresh exact-source ordinary both-host CI and focused standard Linux runner execution with all five system link-input omission controls.",
+    "Review original artifacts and raw capture/byte-policy/ELF-marker effects, then integrate only the qualified exact tree.",
+    "A complete protected both-host SDK campaign, current full acceptance readback and RC1-A1\u2013A4 remain open."
+  ],
+  "invariants": [
+    "Pinned target compiler/Cargo/C-SDK, ABI-v1/QEMU baseline, hosted limits and existing release assets are unchanged.",
+    "Protected AROS checkouts and nxpk remain excluded. RC2 implementation waits for accepted RC1."
+  ]
+}
