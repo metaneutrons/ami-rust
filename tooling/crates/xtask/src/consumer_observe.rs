@@ -1317,6 +1317,48 @@ mod tests {
     }
 
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn isolated_git_command(program: &Path, args: &[&str]) -> Vec<String> {
+        let mut command = vec![
+            "/usr/bin/env".to_owned(),
+            "GIT_CONFIG_NOSYSTEM=1".to_owned(),
+            "GIT_CONFIG_GLOBAL=/dev/null".to_owned(),
+            "GIT_TERMINAL_PROMPT=0".to_owned(),
+            program.to_string_lossy().into_owned(),
+        ];
+        command.extend(args.iter().map(|argument| (*argument).to_owned()));
+        command
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn run_linux_consumer_session_fetch_case(
+        output: &Path,
+        adapter: &Path,
+        policy: &Path,
+        spec: &Spec,
+        test_binary: &Path,
+    ) -> std::result::Result<Value, String> {
+        let test_name =
+            "consumer_observe::tests::linux_consumer_session_source_fetch_diagnostic_child";
+        run_raw_adapter_case(
+            "consumer-session-source-init-fetch",
+            output,
+            adapter,
+            policy,
+            spec,
+            &[
+                test_binary
+                    .to_str()
+                    .ok_or_else(|| "test binary path is not UTF-8".to_owned())?
+                    .to_owned(),
+                "--ignored".to_owned(),
+                "--exact".to_owned(),
+                test_name.to_owned(),
+                "--test-threads=1".to_owned(),
+            ],
+        )
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     fn run_linux_git_https_transport_diagnostic() -> std::result::Result<(), String> {
         const URL: &str = "https://github.com/metaneutrons/ami-rust";
         let artifact_root =
@@ -1342,18 +1384,17 @@ mod tests {
             return Err("configured consumer adapter is not a regular file".to_owned());
         }
         fixture.value["phase"] = json!("cold-prepare");
-        fixture.value["command"] = json!([
-            "/usr/bin/git",
-            "ls-remote",
-            "--exit-code",
-            URL,
-            "refs/heads/main"
-        ]);
+        fixture.value["command"] = json!(isolated_git_command(
+            Path::new("/usr/bin/git"),
+            &["ls-remote", "--exit-code", URL, "refs/heads/main"]
+        ));
         fixture.value["expected_exit"] = json!(0);
         fixture.value["cwd"] = json!(fixture.root);
         fixture.value["home"] = json!(home);
         fixture.value["tmp"] = json!(tmp);
-        fixture.value["executables"] = json!(["/usr/bin/env"]);
+        let test_binary = fs::canonicalize(std::env::current_exe().map_err(|e| e.to_string())?)
+            .map_err(|error| error.to_string())?;
+        fixture.value["executables"] = json!(["/usr/bin/env", "/usr/bin/git", test_binary]);
         fixture.value["write_trees"] = json!([{"role":"state", "path":write_root}]);
         fixture.value["derived"] = json!({"role":"consumer-state-parent", "path":derived});
         let raw = serde_json::to_vec_pretty(&fixture.value).map_err(|error| error.to_string())?;
@@ -1443,7 +1484,7 @@ mod tests {
             &adapter,
             &policy,
             &spec,
-            &["/usr/bin/git".into(), "--version".into()],
+            &isolated_git_command(Path::new("/usr/bin/git"), &["--version"]),
         )?;
         let canonical = run_raw_adapter_case(
             "canonical-http-helper-empty-stdin",
@@ -1451,12 +1492,7 @@ mod tests {
             &adapter,
             &policy,
             &spec,
-            &[
-                "/usr/bin/env".into(),
-                canonical_helper.display().to_string(),
-                "origin".into(),
-                URL.into(),
-            ],
+            &isolated_git_command(&canonical_helper, &["origin", URL]),
         )?;
         let alias = run_raw_adapter_case(
             "literal-https-alias-empty-stdin",
@@ -1464,12 +1500,14 @@ mod tests {
             &adapter,
             &policy,
             &spec,
-            &[
-                "/usr/bin/env".into(),
-                alias_helper.display().to_string(),
-                "origin".into(),
-                URL.into(),
-            ],
+            &isolated_git_command(&alias_helper, &["origin", URL]),
+        )?;
+        let consumer_session = run_linux_consumer_session_fetch_case(
+            &artifact_root.join("consumer-session-source-init-fetch"),
+            &adapter,
+            &policy,
+            &spec,
+            &test_binary,
         )?;
         write_diagnostic_json(
             &artifact_root.join("diagnostic-result.json"),
@@ -1480,9 +1518,9 @@ mod tests {
                 "spec_path":artifact_root.join("spec.json"),
                 "runtime_discovery_path":artifact_root.join("runtime-discovery.json"),
                 "helper_resolution_path":artifact_root.join("helper-resolution.json"),
-                "cases":[main_case, positive, canonical, alias],
+                "cases":[main_case, positive, canonical, alias, consumer_session],
                 "policy":"The direct controls reuse the exact policy written by the Git command observation.",
-                "claim":"This distinguishes real Git, a native positive spawn, the canonical HTTP helper and the literal HTTPS alias under one cold-prepare policy. It is diagnostic evidence only; it does not establish RC1 or resource acceptance.",
+                "claim":"This records real Git, a native positive spawn, the canonical HTTP helper, the literal HTTPS alias, and a nested ConsumerSession source-init/source-fetch under one cold-prepare policy. It is diagnostic evidence only; it does not establish RC1 or resource acceptance.",
             }),
         )?;
         Ok(())
@@ -1507,5 +1545,146 @@ mod tests {
             }
             panic!("Linux Git transport diagnostic setup failed; inspect retained output: {error}");
         }
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    #[test]
+    #[ignore = "child case for the PR-only Linux Git transport diagnostic"]
+    fn linux_consumer_session_source_fetch_diagnostic_child() {
+        use ami_rust_core::consumer_session::ConsumerSession;
+        use std::time::Instant;
+
+        const SOURCE_URL: &str = "https://github.com/metaneutrons/ami-rust.git";
+        const SOURCE_COMMIT: &str = "40b5e949651cf3a982b53c8bf953fa19d2ccb893";
+
+        let cwd = fs::canonicalize(std::env::current_dir().expect("diagnostic cwd"))
+            .expect("canonical diagnostic cwd");
+        let state = cwd.join("state-writes/derived/native-session");
+        assert!(
+            state.starts_with(cwd.join("state-writes/derived")),
+            "native session state must remain inside the declared derived state tree"
+        );
+        create_private_directory(&state).expect("fresh private native session state");
+        let report_path = state.join("native-session-child-result.json");
+        let started = Instant::now();
+        let mut commands = Vec::new();
+        let mut stage = "signal-guard";
+        let (mut status, mut error, signal_requested, guard_finish_error) =
+            match SigtermGuard::acquire() {
+                Err(error) => ("SIGNAL_GUARD_FAILED", Some(error.to_string()), false, None),
+                Ok(signals) => {
+                    let execution = (|| -> std::result::Result<(), String> {
+                        stage = "session-setup";
+                        let mut session = ConsumerSession::new(&state, &signals)
+                            .map_err(|error| error.to_string())?;
+
+                        stage = "source-init";
+                        let source = state.join("source");
+                        let init = session
+                            .run(
+                                "source-init",
+                                Path::new("/usr/bin/git"),
+                                vec![
+                                    "-c".into(),
+                                    "init.defaultBranch=main".into(),
+                                    "-c".into(),
+                                    "core.hooksPath=/dev/null".into(),
+                                    "init".into(),
+                                    "--template=".into(),
+                                    source.clone().into_os_string(),
+                                ],
+                                Duration::from_secs(15),
+                            )
+                            .map_err(|error| error.to_string())?;
+                        commands.push(json!({
+                            "label":"source-init",
+                            "exit_code":init.exit_code,
+                            "signal":init.signal,
+                            "log_directory":state.join("commands/0001-source-init"),
+                        }));
+
+                        stage = "source-fetch";
+                        let mut fetch = vec![
+                            "-C".into(),
+                            source.clone().into_os_string(),
+                            "-c".into(),
+                            "core.hooksPath=/dev/null".into(),
+                            "-c".into(),
+                            "core.fsmonitor=false".into(),
+                            "-c".into(),
+                            "submodule.recurse=false".into(),
+                            "-c".into(),
+                            "protocol.file.allow=never".into(),
+                        ];
+                        fetch.extend([
+                            "fetch".into(),
+                            "--depth=1".into(),
+                            "--no-tags".into(),
+                            SOURCE_URL.into(),
+                            SOURCE_COMMIT.into(),
+                        ]);
+                        let fetched = session
+                            .run(
+                                "source-fetch",
+                                Path::new("/usr/bin/git"),
+                                fetch,
+                                Duration::from_secs(55),
+                            )
+                            .map_err(|error| error.to_string())?;
+                        commands.push(json!({
+                            "label":"source-fetch",
+                            "exit_code":fetched.exit_code,
+                            "signal":fetched.signal,
+                            "log_directory":state.join("commands/0002-source-fetch"),
+                        }));
+                        Ok(())
+                    })();
+                    let requested = signals.requested();
+                    let finish = signals
+                        .finish_requested()
+                        .err()
+                        .map(|error| error.to_string());
+                    let status = if requested {
+                        "INTERRUPTED"
+                    } else if finish.is_some() {
+                        "SIGNAL_GUARD_RESTORE_FAILED"
+                    } else if execution.is_ok() {
+                        "SOURCE_FETCH_COMPLETED"
+                    } else {
+                        match stage {
+                            "session-setup" => "SESSION_SETUP_FAILED",
+                            "source-init" => "SOURCE_INIT_FAILED",
+                            "source-fetch" => "SOURCE_FETCH_FAILED",
+                            _ => "DIAGNOSTIC_FAILED",
+                        }
+                    };
+                    (status, execution.err(), requested, finish)
+                }
+            };
+        if started.elapsed() > Duration::from_secs(90) {
+            status = "CHILD_TIME_LIMIT_EXCEEDED";
+            error.get_or_insert_with(|| "native session child exceeded 90 seconds".to_owned());
+        }
+        let report = json!({
+            "schema":"ami-rust-linux-consumer-session-fetch-diagnostic-v1",
+            "status":status,
+            "source_url":SOURCE_URL,
+            "source_commit":SOURCE_COMMIT,
+            "state":state,
+            "commands":commands,
+            "error":error,
+            "sigterm_requested":signal_requested,
+            "sigterm_guard_finish_error":guard_finish_error,
+            "elapsed_seconds":started.elapsed().as_secs_f64(),
+            "claim":"Local diagnostic of the actual ConsumerSession and resource-capture stack for source-init and source-fetch only; no checkout, SDK build, or acceptance claim.",
+        });
+        write_diagnostic_json(&report_path, &report)
+            .expect("preserve native ConsumerSession diagnostic result");
+        assert_eq!(
+            report["status"],
+            "SOURCE_FETCH_COMPLETED",
+            "native ConsumerSession source-fetch diagnostic failed; inspect {}",
+            report_path.display()
+        );
     }
 }
