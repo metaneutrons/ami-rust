@@ -766,6 +766,8 @@ fn discover_linux_build(discovery: &mut Discovery, work: &Path) -> Result<()> {
         "crtfastmath.o",
         "libgcc_eh.a",
         "libm.so",
+        // GNU libm.so linker scripts also inspect this AS_NEEDED input.
+        "libmvec.so.1",
         "libpthread.so",
         "libdl.so",
         "librt.so",

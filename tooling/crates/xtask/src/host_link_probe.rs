@@ -261,13 +261,13 @@ fn run_linux_pinned_host_linker_probe_inner(
         if !runtime.executables.contains(&wrapper) || !runtime.executables.contains(&rust_lld) {
             return Err("runtime discovery omitted the wrapper or rust-lld executable".to_owned());
         }
-        let system_link_inputs = host_link_probe_gcc_archive_inputs(&runtime)?;
+        let system_link_inputs = host_link_probe_gcc_link_inputs(&runtime)?;
         write_diagnostic_json(
             &artifacts.join("system-link-inputs.json"),
             &json!({
                 "inputs":system_link_inputs,
                 "source":"runtime discovery build_inputs rows with kind gcc_link_input, independently checked as canonical regular files and admitted exact read_files",
-                "claim":"Four GCC-resolved Rust host link archives are individually identified by canonical path, byte length, and SHA-256.",
+                "claim":"Four GCC-resolved host-link archives and one GCC-resolved shared ELF input are individually identified by canonical path, byte length, and SHA-256.",
             }),
         )?;
         write_diagnostic_json(&artifacts.join("runtime-discovery.json"), &runtime.evidence)?;
@@ -317,7 +317,7 @@ fn run_linux_pinned_host_linker_probe_inner(
                 "explicit_rust_host_library_sequence":rust_host_library_sequence,
                 "positive_link":{"argv":positive_command,"purpose":"C-source link through the pinned GCC linker wrapper with the explicit Rust host-library sequence; this is not a Rust build"},
                 "counter_link":{"argv":counter_command,"purpose":"same C link route with only the wrapper exec-hash rule omitted"},
-                "system_link_input_controls":{"argv":system_link_command,"purpose":"same C link route with one exact GCC-resolved host archive read-file rule omitted per control"},
+                "system_link_input_controls":{"argv":system_link_command,"purpose":"same C link route with one exact GCC-resolved system link input read-file rule omitted per control"},
             }),
         )?;
 
@@ -626,7 +626,8 @@ fn run_linux_pinned_host_linker_probe_inner(
                 diagnostic_json_file(Path::new(case["report_path"].as_str().unwrap_or_default()));
             let stderr = read_raw_stderr(&case)?;
             let child_exit = report["child_exit_code"].as_i64();
-            let denial_diagnostic = host_link_probe_specific_archive_denial(&stderr, &input_path);
+            let denial_diagnostic =
+                host_link_probe_specific_link_input_denial(&stderr, &input_path);
             let specific_eacces = denial_diagnostic.is_some();
             let adapter_evidence_valid =
                 child_exit.is_some_and(|code| successful_linux_adapter_report(&report, code));
@@ -653,12 +654,12 @@ fn run_linux_pinned_host_linker_probe_inner(
                 "child_report":report,
                 "stderr":stderr,
                 "specific_denial_diagnostic":denial_diagnostic,
-                "specific_archive_path_and_eacces_observed":specific_eacces,
+                "specific_system_link_input_path_and_eacces_observed":specific_eacces,
                 "adapter_evidence_valid":adapter_evidence_valid,
                 "no_elf_output":no_elf_output,
                 "cleanup":cleanup,
                 "gate_passed":gate,
-                "claim":"The same C-source host link fails on this exact GCC-resolved archive after only its read-file rule is removed; adapter evidence is valid, the diagnostic names this path with Permission denied, and no ELF remains.",
+                "claim":"The same C-source host link fails on this exact GCC-resolved system link input after only its read-file rule is removed; adapter evidence is valid, the diagnostic names this path with Permission denied, and no ELF remains.",
             });
             write_diagnostic_json(
                 &artifacts.join(format!("system-link-{name}-counter.json")),
@@ -796,10 +797,16 @@ fn host_link_probe_cleanup(
 }
 
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-fn host_link_probe_gcc_archive_inputs(
+fn host_link_probe_gcc_link_inputs(
     runtime: &consumer_runtime::RuntimeInputs,
 ) -> std::result::Result<Vec<Value>, String> {
-    let expected_names = ["libutil.a", "librt.a", "libpthread.a", "libdl.a"];
+    let expected_names = [
+        "libutil.a",
+        "librt.a",
+        "libpthread.a",
+        "libdl.a",
+        "libmvec.so.1",
+    ];
     let rows = runtime.evidence["build_inputs"]
         .as_array()
         .ok_or_else(|| "runtime evidence omitted GCC build-input rows".to_owned())?;
@@ -923,7 +930,7 @@ fn verify_host_link_probe_system_input_policy(
 }
 
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-fn host_link_probe_specific_archive_denial(stderr: &str, expected: &Path) -> Option<Value> {
+fn host_link_probe_specific_link_input_denial(stderr: &str, expected: &Path) -> Option<Value> {
     let prefix = "rust-lld: error: cannot open ";
     let candidates = stderr
         .lines()
@@ -994,8 +1001,8 @@ mod host_link_probe_tests {
         fs::create_dir(&other).expect("create second library directory");
         let expected = library.join("libutil.a");
         let other_file = other.join("libutil.a");
-        fs::write(&expected, b"fixture archive").expect("write expected archive fixture");
-        fs::write(&other_file, b"different archive").expect("write other archive fixture");
+        fs::write(&expected, b"fixture input").expect("write expected input fixture");
+        fs::write(&other_file, b"different input").expect("write other input fixture");
         let expected = fs::canonicalize(expected).expect("canonicalize expected fixture");
         let noncanonical_operand = gcc.join("../x86_64-linux-gnu/libutil.a");
         assert_ne!(noncanonical_operand, expected);
@@ -1004,7 +1011,7 @@ mod host_link_probe_tests {
             "rust-lld: error: cannot open {}: Permission denied\n",
             noncanonical_operand.display()
         );
-        let parsed = host_link_probe_specific_archive_denial(&valid, &expected)
+        let parsed = host_link_probe_specific_link_input_denial(&valid, &expected)
             .expect("accept exact denial after canonicalizing GCC's operand");
         assert_eq!(parsed["canonical_path"], expected.display().to_string());
         assert_eq!(parsed["errno"], 13);
@@ -1013,19 +1020,19 @@ mod host_link_probe_tests {
             "rust-lld: error: cannot open {}: Permission denied\n",
             other_file.display()
         );
-        assert!(host_link_probe_specific_archive_denial(&wrong_file, &expected).is_none());
+        assert!(host_link_probe_specific_link_input_denial(&wrong_file, &expected).is_none());
 
         let wrong_error = format!(
             "rust-lld: error: cannot open {}: No such file or directory\n",
             noncanonical_operand.display()
         );
-        assert!(host_link_probe_specific_archive_denial(&wrong_error, &expected).is_none());
+        assert!(host_link_probe_specific_link_input_denial(&wrong_error, &expected).is_none());
 
         let wrong_program = format!(
             "collect2: error: cannot open {}: Permission denied\n",
             noncanonical_operand.display()
         );
-        assert!(host_link_probe_specific_archive_denial(&wrong_program, &expected).is_none());
+        assert!(host_link_probe_specific_link_input_denial(&wrong_program, &expected).is_none());
     }
 }
 

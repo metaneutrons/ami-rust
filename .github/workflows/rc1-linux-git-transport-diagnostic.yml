@@ -232,9 +232,9 @@ jobs:
                               "system_link_input_gate_passed"))):
                   raise RuntimeError("pinned host linker positive and omission-control evidence is incomplete")
               controls = link_probe.get("system_link_input_controls")
-              if (not isinstance(controls, list) or len(controls) != 4
+              if (not isinstance(controls, list) or len(controls) != 5
                       or {row.get("name") for row in controls}
-                         != {"libutil.a", "librt.a", "libpthread.a", "libdl.a"}
+                         != {"libutil.a", "librt.a", "libpthread.a", "libdl.a", "libmvec.so.1"}
                       or any(row.get("gate_passed") is not True
                              or row.get("no_elf_output") is not True
                              or row.get("policy_omission", {}).get("all_other_policy_bytes_identical") is not True
