@@ -1302,9 +1302,11 @@ mod tests {
             "outer_exit_code":outer_exit,
             "outer_signal":outer_signal,
             "capture_error":capture_error,
+            "backend":report.get("backend").cloned().unwrap_or(Value::Null),
             "child_exit_code":report.get("child_exit_code").cloned().unwrap_or(Value::Null),
             "child_signal":report.get("child_signal").cloned().unwrap_or(Value::Null),
             "launch_error":report.get("launch_error").cloned().unwrap_or(Value::Null),
+            "qualification_evidence_valid":report.get("qualification_evidence_valid").cloned().unwrap_or(Value::Null),
             "evidence_failures":report.get("evidence_failures").cloned().unwrap_or(Value::Null),
             "report_path":report_path,
             "stdout_path":output.join("reports/command/stdout.raw"),
@@ -1314,6 +1316,80 @@ mod tests {
         });
         write_diagnostic_json(&output.join("case.json"), &summary)?;
         Ok(summary)
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn successful_linux_adapter_report(report: &Value, expected_exit: i64) -> bool {
+        report["backend"] == "Landlock path-beneath allow rules and seccomp-BPF on Linux x86-64"
+            && report["child_exit_code"].as_i64() == Some(expected_exit)
+            && report["child_signal"].is_null()
+            && report["launch_error"].is_null()
+            && report["qualification_evidence_valid"].as_bool() == Some(true)
+            && report["evidence_failures"]
+                .as_array()
+                .is_some_and(Vec::is_empty)
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn copy_policy_omitting_one_exec_hash(
+        policy: &Path,
+        counter_policy: &Path,
+        executable: &Path,
+    ) -> std::result::Result<Value, String> {
+        let original =
+            read_regular_bounded(policy, 1024 * 1024).map_err(|error| error.to_string())?;
+        let original_text = std::str::from_utf8(&original)
+            .map_err(|error| format!("original policy is not UTF-8: {error}"))?;
+        let executable_sha256 = sha256_file(executable).map_err(|error| error.to_string())?;
+        let rule = format!(
+            "exec-hash {} {}",
+            printable(executable).map_err(|error| error.to_string())?,
+            executable_sha256
+        );
+        let rule_count = original_text
+            .lines()
+            .filter(|line| *line == rule.as_str())
+            .count();
+        if rule_count != 1 {
+            return Err(format!(
+                "original policy must contain exactly one selected helper Git rule; found {rule_count}"
+            ));
+        }
+        let removed_line_bytes = original_text
+            .split_inclusive('\n')
+            .find(|line| line.strip_suffix('\n').unwrap_or(line) == rule.as_str())
+            .ok_or_else(|| "selected helper Git rule is absent from original policy".to_owned())?
+            .len();
+        let counter_text = original_text
+            .split_inclusive('\n')
+            .filter(|line| line.strip_suffix('\n').unwrap_or(line) != rule.as_str())
+            .collect::<String>();
+        if counter_text.len() + removed_line_bytes != original.len() {
+            return Err(
+                "counterpolicy differs by more than the single selected exec-hash line".to_owned(),
+            );
+        }
+        write_new(counter_policy, counter_text.as_bytes()).map_err(|error| error.to_string())?;
+        Ok(json!({
+            "original_policy":policy,
+            "original_policy_sha256":sha256_file(policy).map_err(|error| error.to_string())?,
+            "counter_policy":counter_policy,
+            "counter_policy_sha256":sha256_file(counter_policy).map_err(|error| error.to_string())?,
+            "omitted_rule":rule,
+            "omitted_rule_count":rule_count,
+            "bytes_removed":removed_line_bytes,
+            "all_other_policy_bytes_identical":true,
+        }))
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn read_raw_stderr(case: &Value) -> std::result::Result<String, String> {
+        let path = case["stderr_path"]
+            .as_str()
+            .ok_or_else(|| "raw adapter case omitted its stderr path".to_owned())?;
+        let bytes = read_regular_bounded(Path::new(path), 1024 * 1024)
+            .map_err(|error| format!("could not read raw adapter stderr: {error}"))?;
+        Ok(String::from_utf8_lossy(&bytes).into_owned())
     }
 
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
@@ -1423,8 +1499,12 @@ mod tests {
             .map_err(|error| error.to_string())?;
         let alias_helper = helper_dir.join("git-remote-https");
         let alias_target = fs::canonicalize(&alias_helper).map_err(|error| error.to_string())?;
+        let helper_git = fs::canonicalize(helper_dir.join("git")).map_err(|error| {
+            format!("selected Git exec-directory binary is unavailable: {error}")
+        })?;
         if alias_target != canonical_helper
             || !runtime.executables.contains(&canonical_helper)
+            || !runtime.executables.contains(&helper_git)
             || !runtime
                 .executables
                 .contains(&fs::canonicalize("/usr/bin/env").map_err(|e| e.to_string())?)
@@ -1433,10 +1513,32 @@ mod tests {
                 "runtime discovery did not bind Git, env and the helper alias target".to_owned(),
             );
         }
+        use std::os::unix::fs::MetadataExt;
+        let frontend_git = fs::canonicalize("/usr/bin/git").map_err(|error| error.to_string())?;
+        let frontend_identity = fs::metadata(&frontend_git).map_err(|error| error.to_string())?;
+        let helper_git_identity = fs::metadata(&helper_git).map_err(|error| error.to_string())?;
+        if (frontend_identity.dev(), frontend_identity.ino())
+            == (helper_git_identity.dev(), helper_git_identity.ino())
+        {
+            return Err(
+                "selected Git exec-directory binary aliases the frontend inode; counterpolicy is not independent"
+                    .to_owned(),
+            );
+        }
+        let frontend_git_sha256 = sha256_file(&frontend_git).map_err(|error| error.to_string())?;
+        let helper_git_sha256 = sha256_file(&helper_git).map_err(|error| error.to_string())?;
         write_diagnostic_json(
             &artifact_root.join("helper-resolution.json"),
             &json!({
                 "git_exec_path":helper_dir,
+                "frontend_git":frontend_git,
+                "frontend_git_sha256":frontend_git_sha256,
+                "frontend_git_device":frontend_identity.dev(),
+                "frontend_git_inode":frontend_identity.ino(),
+                "selected_exec_directory_git":helper_git,
+                "selected_exec_directory_git_sha256":helper_git_sha256,
+                "selected_exec_directory_git_device":helper_git_identity.dev(),
+                "selected_exec_directory_git_inode":helper_git_identity.ino(),
                 "canonical_helper":canonical_helper,
                 "literal_https_alias":alias_helper,
                 "literal_https_alias_target":alias_target,
@@ -1457,23 +1559,29 @@ mod tests {
         }
         let main_report_path = main_output.join("reports/command/report.json");
         let main_report = diagnostic_json_file(&main_report_path);
+        let main_adapter_process = diagnostic_json_file(&main_output.join("adapter-process.json"));
+        let main_admitted = main_result.is_ok()
+            && main_adapter_process["exit_code"].as_i64() == Some(0)
+            && successful_linux_adapter_report(&main_report, 0);
         let main_case = json!({
             "label":"git-ls-remote",
             "command":spec.command,
             "expected_exit":0,
             "execute_result":main_result.as_ref().map(|_| "admitted").unwrap_or("not-admitted"),
             "execute_error":main_result.err().map(|error| error.to_string()),
-            "adapter_process":diagnostic_json_file(&main_output.join("adapter-process.json")),
+            "gate_passed":main_admitted,
+            "adapter_process":main_adapter_process,
             "child_exit_code":main_report.get("child_exit_code").cloned().unwrap_or(Value::Null),
             "child_signal":main_report.get("child_signal").cloned().unwrap_or(Value::Null),
             "launch_error":main_report.get("launch_error").cloned().unwrap_or(Value::Null),
             "evidence_failures":main_report.get("evidence_failures").cloned().unwrap_or(Value::Null),
+            "qualification_evidence_valid":main_report.get("qualification_evidence_valid").cloned().unwrap_or(Value::Null),
             "report_path":main_report_path,
             "stdout_path":main_output.join("reports/command/stdout.raw"),
             "stderr_path":main_output.join("reports/command/stderr.raw"),
             "executed_policy":policy,
             "executed_policy_sha256":sha256_file(&policy).map_err(|error| error.to_string())?,
-            "claim":"Raw observation only; the expected exit-0 result is not assumed.",
+            "claim":"Required positive control: the isolated Git observation must be admitted with child and adapter exit 0 and valid evidence.",
         });
         write_diagnostic_json(&main_output.join("case.json"), &main_case)?;
 
@@ -1509,26 +1617,106 @@ mod tests {
             &spec,
             &test_binary,
         )?;
+        let consumer_session_state = spec
+            .cwd
+            .join("state-writes/derived/native-session/native-session-child-result.json");
+        let consumer_session_report = diagnostic_json_file(&consumer_session_state);
+        let consumer_session_commands = consumer_session_report["commands"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        let consumer_session_steps_pass = consumer_session_report["status"]
+            == "SOURCE_FETCH_COMPLETED"
+            && consumer_session_commands.len() == 2
+            && consumer_session_commands[0]["label"] == "source-init"
+            && consumer_session_commands[0]["exit_code"] == 0
+            && consumer_session_commands[0]["signal"].is_null()
+            && consumer_session_commands[1]["label"] == "source-fetch"
+            && consumer_session_commands[1]["exit_code"] == 0
+            && consumer_session_commands[1]["signal"].is_null();
+        let consumer_session_gate = consumer_session["outer_exit_code"].as_i64() == Some(0)
+            && successful_linux_adapter_report(&consumer_session, 0)
+            && consumer_session["capture_error"].is_null()
+            && consumer_session_steps_pass;
+        let consumer_session_case = json!({
+            "gate_passed":consumer_session_gate,
+            "adapter_case":consumer_session,
+            "native_session_report_path":consumer_session_state,
+            "native_session_report":consumer_session_report,
+        });
+        write_diagnostic_json(
+            &artifact_root.join("consumer-session-source-init-fetch/gate-result.json"),
+            &consumer_session_case,
+        )?;
+
+        let counter_policy_path = artifact_root.join("counter-policy-git-execdir-git-omitted.txt");
+        let counter_policy_case =
+            copy_policy_omitting_one_exec_hash(&policy, &counter_policy_path, &helper_git)?;
+        let counter = run_raw_adapter_case(
+            "git-ls-remote-with-selected-execdir-git-omitted",
+            &artifact_root.join("counter-git-execdir-git-omitted"),
+            &adapter,
+            &counter_policy_path,
+            &spec,
+            &spec.command,
+        )?;
+        let counter_stderr = read_raw_stderr(&counter)?;
+        // Git's parent reports the logical subcommand, not the re-exec path.
+        // The pre-fix trace binds this exact diagnostic to exec-directory Git.
+        let fatal_cannot_exec =
+            counter_stderr.contains("fatal: cannot exec 'remote-https': Permission denied");
+        let counter_gate = counter["outer_exit_code"].as_i64() == Some(255)
+            && successful_linux_adapter_report(&counter, 255)
+            && counter["capture_error"].is_null()
+            && fatal_cannot_exec;
+        let counter_case = json!({
+            "gate_passed":counter_gate,
+            "adapter_case":counter,
+            "expected_child_exit_code":255,
+            "actual_child_exit_code":counter["child_exit_code"],
+            "actual_adapter_exit_code":counter["outer_exit_code"],
+            "stderr_contains_fatal_cannot_exec":fatal_cannot_exec,
+            "stderr_raw":counter_stderr,
+            "counter_policy":counter_policy_case,
+            "scope":"One exec-hash rule for the distinct canonical exec-directory Git file is omitted; all other policy bytes are preserved.",
+        });
+        write_diagnostic_json(
+            &artifact_root.join("counter-git-execdir-git-omitted/gate-result.json"),
+            &counter_case,
+        )?;
+
+        let diagnostic_passed = main_admitted && consumer_session_gate && counter_gate;
         write_diagnostic_json(
             &artifact_root.join("diagnostic-result.json"),
             &json!({
                 "schema":"ami-rust-linux-git-transport-diagnostic-v1",
-                "status":"DIAGNOSTIC_CASES_RECORDED_NO_ACCEPTANCE_CLAIM",
+                "status":if diagnostic_passed { "SCOPED_GIT_TRANSPORT_REGRESSION_PASS" } else { "SCOPED_GIT_TRANSPORT_REGRESSION_FAIL" },
                 "host":"linux-x86_64",
                 "spec_path":artifact_root.join("spec.json"),
                 "runtime_discovery_path":artifact_root.join("runtime-discovery.json"),
                 "helper_resolution_path":artifact_root.join("helper-resolution.json"),
-                "cases":[main_case, positive, canonical, alias, consumer_session],
-                "policy":"The direct controls reuse the exact policy written by the Git command observation.",
-                "claim":"This records real Git, a native positive spawn, the canonical HTTP helper, the literal HTTPS alias, and a nested ConsumerSession source-init/source-fetch under one cold-prepare policy. It is diagnostic evidence only; it does not establish RC1 or resource acceptance.",
+                "original_policy":policy,
+                "original_policy_sha256":sha256_file(&policy).map_err(|error| error.to_string())?,
+                "counter_policy":counter_policy_case,
+                "cases":[main_case, positive, canonical, alias, consumer_session_case, counter_case],
+                "gates":{"isolated_git_admitted_exit_0":main_admitted,"consumer_session_source_init_fetch_admitted":consumer_session_gate,"one_rule_counter_observed_eacces_effect":counter_gate},
+                "direct_helper_statuses":"Raw EOF helper outcomes are retained as observations; exit 1 is valid and is not a regression gate.",
+                "policy":"The positive Git observation, ConsumerSession fetch and helper controls reuse the preserved original policy; the counterpolicy differs only by the selected exec-directory Git exec-hash rule.",
+                "claim":"Scoped Linux Git transport regression only: a successful isolated Git observation and actual ConsumerSession source fetch must pass; removing only the selected exec-directory Git hash rule must reproduce the expected exec denial and captured fatal diagnostic. This is not RC1 acceptance or resource qualification.",
             }),
         )?;
+        if !diagnostic_passed {
+            return Err(format!(
+                "scoped Git transport regression failed; inspect retained cases under {}",
+                artifact_root.display()
+            ));
+        }
         Ok(())
     }
 
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     #[test]
-    #[ignore = "PR-only Linux Git HTTPS transport diagnostic; not an acceptance gate"]
+    #[ignore = "PR-only Linux Git HTTPS transport regression; not an acceptance gate"]
     fn linux_git_https_transport_diagnostic() {
         let artifact =
             std::env::var_os("AMI_RUST_LINUX_GIT_DIAGNOSTIC_ARTIFACT_ROOT").map(PathBuf::from);

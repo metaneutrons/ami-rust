@@ -540,6 +540,14 @@ fn add_git_transport_helpers(
         &directory,
         "selected OS Git helper lookup, including HTTPS helper aliases; execution remains exact and hash-bound",
     )?;
+    // Linux Git re-enters the Git executable selected from its own exec path
+    // before dispatching remote-https. That file can differ from /usr/bin/git.
+    #[cfg(target_os = "linux")]
+    add_executable(
+        discovery,
+        &directory.join("git"),
+        "selected Git re-execution program",
+    )?;
     for helper in ["git-remote-http", "git-remote-https"] {
         let requested = directory.join(helper);
         add_executable(discovery, &requested, "git HTTPS transport helper")?;
