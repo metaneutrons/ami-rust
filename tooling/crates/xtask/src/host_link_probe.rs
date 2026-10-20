@@ -40,6 +40,7 @@ fn run_linux_pinned_host_linker_probe() -> std::result::Result<(), String> {
                     "scope":"Cause-specific pinned Linux host-linker route check; it does not establish a Rust host build, full SDK build, or RC1 acceptance.",
                     "positive_gate_passed":false,
                     "counter_gate_passed":false,
+                    "system_link_input_gate_passed":false,
                     "source_bindings_unchanged":false,
                     "cleanup_gate_passed":false,
                     "error":error,
@@ -144,6 +145,7 @@ fn run_linux_pinned_host_linker_probe_inner(
     write_new(&source, source_bytes).map_err(|error| error.to_string())?;
     let positive_output = derived.join("host-link-positive");
     let counter_output = derived.join("host-link-counter");
+    let system_link_output = derived.join("host-link-system-input-counter");
     let wrapper_dir = wrapper_declared
         .parent()
         .ok_or_else(|| "pinned GCC linker wrapper has no parent directory".to_owned())?;
@@ -152,7 +154,18 @@ fn run_linux_pinned_host_linker_probe_inner(
     let source_text = cold_runtime_path_text(&source)?;
     let positive_output_text = cold_runtime_path_text(&positive_output)?;
     let counter_output_text = cold_runtime_path_text(&counter_output)?;
+    let system_link_output_text = cold_runtime_path_text(&system_link_output)?;
     let route = format!("-B{wrapper_dir_text}");
+    let rust_host_library_sequence = [
+        "-Wl,-Bdynamic",
+        "-lgcc_s",
+        "-lutil",
+        "-lrt",
+        "-lpthread",
+        "-lm",
+        "-ldl",
+        "-lc",
+    ];
     let query_command = vec![
         cc_text.clone(),
         route.clone(),
@@ -170,9 +183,17 @@ fn run_linux_pinned_host_linker_probe_inner(
             "-o".to_owned(),
             output.to_owned(),
         ]
+        .into_iter()
+        .chain(
+            rust_host_library_sequence
+                .iter()
+                .map(|argument| (*argument).to_owned()),
+        )
+        .collect::<Vec<_>>()
     };
     let positive_command = make_link_command(&positive_output_text);
     let counter_command = make_link_command(&counter_output_text);
+    let system_link_command = make_link_command(&system_link_output_text);
 
     let attempt = (|| -> std::result::Result<Value, String> {
         let mut fixture = Fixture::at(artifacts.join("fixture"), true);
@@ -240,12 +261,22 @@ fn run_linux_pinned_host_linker_probe_inner(
         if !runtime.executables.contains(&wrapper) || !runtime.executables.contains(&rust_lld) {
             return Err("runtime discovery omitted the wrapper or rust-lld executable".to_owned());
         }
+        let system_link_inputs = host_link_probe_gcc_archive_inputs(&runtime)?;
+        write_diagnostic_json(
+            &artifacts.join("system-link-inputs.json"),
+            &json!({
+                "inputs":system_link_inputs,
+                "source":"runtime discovery build_inputs rows with kind gcc_link_input, independently checked as canonical regular files and admitted exact read_files",
+                "claim":"Four GCC-resolved Rust host link archives are individually identified by canonical path, byte length, and SHA-256.",
+            }),
+        )?;
         write_diagnostic_json(&artifacts.join("runtime-discovery.json"), &runtime.evidence)?;
         let closure = json!({
             "schema":"ami-rust-linux-pinned-host-link-closure-v1",
             "spec_sha256":sha256_bytes(&raw_spec),
             "bindings":spec.bindings,
             "runtime":runtime.evidence,
+            "system_link_inputs":system_link_inputs,
             "gcc_linker_wrapper":{"declared_path":wrapper_declared,"canonical_path":wrapper,"sha256":wrapper_sha256},
             "rust_lld":{"canonical_path":rust_lld,"sha256":rust_lld_sha256},
             "scope":"Pinned Linux Rust component plus discovered GCC build inputs for the exact GCC -B/-fuse-ld=lld C-link route. This does not prove a rustc build script or full SDK build.",
@@ -278,12 +309,15 @@ fn run_linux_pinned_host_linker_probe_inner(
                 "positive policy must contain one exact linker-wrapper exec rule; found {wrapper_rule_count}"
             ));
         }
+        verify_host_link_probe_system_input_policy(&policy, &system_link_inputs)?;
         write_diagnostic_json(
             &artifacts.join("commands.json"),
             &json!({
                 "query":{"argv":query_command,"purpose":"GCC selection under the same -B and -fuse-ld=lld options"},
-                "positive_link":{"argv":positive_command,"purpose":"actual C link through the pinned GCC linker wrapper"},
-                "counter_link":{"argv":counter_command,"purpose":"identical link route with only the wrapper exec-hash rule omitted"},
+                "explicit_rust_host_library_sequence":rust_host_library_sequence,
+                "positive_link":{"argv":positive_command,"purpose":"C-source link through the pinned GCC linker wrapper with the explicit Rust host-library sequence; this is not a Rust build"},
+                "counter_link":{"argv":counter_command,"purpose":"same C link route with only the wrapper exec-hash rule omitted"},
+                "system_link_input_controls":{"argv":system_link_command,"purpose":"same C link route with one exact GCC-resolved host archive read-file rule omitted per control"},
             }),
         )?;
 
@@ -545,6 +579,106 @@ fn run_linux_pinned_host_linker_probe_inner(
             return Err("wrapper-execution counter did not produce the expected adapter-backed EACCES failure".to_owned());
         }
 
+        let wrapper_counter_cleanup = host_link_probe_cleanup(&derived, &[&counter_output])?;
+        write_diagnostic_json(
+            &artifacts.join("wrapper-counter-output-cleanup.json"),
+            &wrapper_counter_cleanup,
+        )?;
+        if wrapper_counter_cleanup["empty_after_cleanup"].as_bool() != Some(true) {
+            return Err(
+                "wrapper counter left an entry before system-library policy loads".to_owned(),
+            );
+        }
+
+        let mut system_link_input_controls = Vec::new();
+        for input in &system_link_inputs {
+            let empty_before = host_link_probe_cleanup(&derived, &[])?;
+            if empty_before["empty_after_cleanup"].as_bool() != Some(true) {
+                return Err(
+                    "derived linker output root is not empty before a system-library control"
+                        .to_owned(),
+                );
+            }
+            let name = input["name"]
+                .as_str()
+                .ok_or_else(|| "system-link input omitted its name".to_owned())?;
+            let input_path = PathBuf::from(
+                input["canonical_path"]
+                    .as_str()
+                    .ok_or_else(|| "system-link input omitted its canonical path".to_owned())?,
+            );
+            let counter_policy_path = artifacts.join(format!("counter-policy-{name}-omitted.txt"));
+            let policy_omission = copy_policy_omitting_one_read_file(
+                &policy_path,
+                &counter_policy_path,
+                &input_path,
+            )?;
+            let case_dir = artifacts.join(format!("system-link-{name}-counter-case"));
+            let case = run_raw_adapter_case(
+                &format!("same-gcc-link-with-only-{name}-read-rule-omitted"),
+                &case_dir,
+                &adapter,
+                &counter_policy_path,
+                &spec,
+                &system_link_command,
+            )?;
+            let report =
+                diagnostic_json_file(Path::new(case["report_path"].as_str().unwrap_or_default()));
+            let stderr = read_raw_stderr(&case)?;
+            let child_exit = report["child_exit_code"].as_i64();
+            let denial_diagnostic = host_link_probe_specific_archive_denial(&stderr, &input_path);
+            let specific_eacces = denial_diagnostic.is_some();
+            let adapter_evidence_valid =
+                child_exit.is_some_and(|code| successful_linux_adapter_report(&report, code));
+            let no_elf_output = !host_link_probe_has_elf(&system_link_output)?;
+            let cleanup = host_link_probe_cleanup(&derived, &[&system_link_output])?;
+            let gate = child_exit.is_some_and(|code| code != 0)
+                && case["outer_exit_code"].as_i64() == child_exit
+                && case["outer_signal"].is_null()
+                && case["capture_error"].is_null()
+                && report["child_signal"].is_null()
+                && report["launch_error"].is_null()
+                && adapter_evidence_valid
+                && specific_eacces
+                && no_elf_output
+                && cleanup["empty_after_cleanup"].as_bool() == Some(true)
+                && policy_omission["all_other_policy_bytes_identical"] == true;
+            let record = json!({
+                "name":name,
+                "expected_denial_path":input_path,
+                "expected_denial_sha256":input["sha256"],
+                "expected_denial_bytes":input["bytes"],
+                "policy_omission":policy_omission,
+                "adapter_case":case,
+                "child_report":report,
+                "stderr":stderr,
+                "specific_denial_diagnostic":denial_diagnostic,
+                "specific_archive_path_and_eacces_observed":specific_eacces,
+                "adapter_evidence_valid":adapter_evidence_valid,
+                "no_elf_output":no_elf_output,
+                "cleanup":cleanup,
+                "gate_passed":gate,
+                "claim":"The same C-source host link fails on this exact GCC-resolved archive after only its read-file rule is removed; adapter evidence is valid, the diagnostic names this path with Permission denied, and no ELF remains.",
+            });
+            write_diagnostic_json(
+                &artifacts.join(format!("system-link-{name}-counter.json")),
+                &record,
+            )?;
+            system_link_input_controls.push(record);
+            if !gate {
+                return Err(format!(
+                    "system-link input control for {name} did not produce the expected adapter-backed EACCES failure"
+                ));
+            }
+            if cleanup["empty_after_cleanup"].as_bool() != Some(true) {
+                return Err(format!(
+                    "system-link input control for {name} left an entry in the derived output root"
+                ));
+            }
+        }
+
+        verify_host_link_probe_system_input_hashes(&system_link_inputs)?;
+
         verify_bindings(&spec.bindings).map_err(|error| error.to_string())?;
         verify_bindings(&run_spec.bindings).map_err(|error| error.to_string())?;
         write_diagnostic_json(
@@ -557,6 +691,7 @@ fn run_linux_pinned_host_linker_probe_inner(
             "scope":"Cause-specific proof that GCC's exact -B<rust-component>/lib/rustlib/x86_64-unknown-linux-gnu/bin/gcc-ld -fuse-ld=lld route selects, executes, and links through the pinned ld.lld wrapper under the Linux enforcement adapter. The wrapper-only counter proves the missing exec-hash admission causes Permission denied. This is not a Rust host build, SDK build, or RC1 acceptance.",
             "positive_gate_passed":true,
             "counter_gate_passed":true,
+            "system_link_input_gate_passed":true,
             "source_bindings_unchanged":true,
             "cleanup_gate_passed":false,
             "component_root":component,
@@ -567,6 +702,8 @@ fn run_linux_pinned_host_linker_probe_inner(
             "runtime_discovery":artifacts.join("runtime-discovery.json"),
             "positive_policy":policy_path,
             "counter_policy":counter_policy_path,
+            "system_link_inputs":artifacts.join("system-link-inputs.json"),
+            "system_link_input_controls":system_link_input_controls,
             "positive_link_gate":artifacts.join("positive-link-gate.json"),
             "retained_positive_elf":retained_positive,
             "positive_output_cleanup":positive_cleanup,
@@ -578,7 +715,11 @@ fn run_linux_pinned_host_linker_probe_inner(
 
     let cleanup = host_link_probe_cleanup(
         &derived,
-        &[positive_output.as_path(), counter_output.as_path()],
+        &[
+            positive_output.as_path(),
+            counter_output.as_path(),
+            system_link_output.as_path(),
+        ],
     );
     match &cleanup {
         Ok(value) => write_diagnostic_json(&artifacts.join("cleanup.json"), value)?,
@@ -652,6 +793,320 @@ fn host_link_probe_cleanup(
         "remaining_entries":remaining,
         "empty_after_cleanup":remaining == 0,
     }))
+}
+
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn host_link_probe_gcc_archive_inputs(
+    runtime: &consumer_runtime::RuntimeInputs,
+) -> std::result::Result<Vec<Value>, String> {
+    let expected_names = ["libutil.a", "librt.a", "libpthread.a", "libdl.a"];
+    let rows = runtime.evidence["build_inputs"]
+        .as_array()
+        .ok_or_else(|| "runtime evidence omitted GCC build-input rows".to_owned())?;
+    let mut paths = BTreeSet::new();
+    let mut inputs = Vec::with_capacity(expected_names.len());
+    for name in expected_names {
+        let matches = rows
+            .iter()
+            .filter(|row| row["kind"] == "gcc_link_input" && row["name"] == name)
+            .collect::<Vec<_>>();
+        if matches.len() != 1 {
+            return Err(format!(
+                "runtime evidence must resolve exactly one GCC link input for {name}; found {}",
+                matches.len()
+            ));
+        }
+        let row = matches[0];
+        let raw_path = row["canonical_path"]
+            .as_str()
+            .ok_or_else(|| format!("GCC link-input row for {name} omitted canonical_path"))?;
+        let path = PathBuf::from(raw_path);
+        if !path.is_absolute() || !paths.insert(path.clone()) {
+            return Err(format!(
+                "GCC link-input path for {name} is nonabsolute or duplicated: {raw_path}"
+            ));
+        }
+        if fs::canonicalize(&path)
+            .map_err(|error| format!("resolve GCC link input {raw_path}: {error}"))?
+            != path
+        {
+            return Err(format!(
+                "GCC link input for {name} is not recorded by its canonical path"
+            ));
+        }
+        let metadata = fs::symlink_metadata(&path)
+            .map_err(|error| format!("inspect GCC link input {}: {error}", path.display()))?;
+        if !metadata.file_type().is_file() {
+            return Err(format!(
+                "GCC link input for {name} is not a regular non-symlink file: {}",
+                path.display()
+            ));
+        }
+        if !runtime.read_files.contains(&path) {
+            return Err(format!(
+                "runtime discovery did not admit GCC link input for {name}: {}",
+                path.display()
+            ));
+        }
+        let sha256 = sha256_file(&path)
+            .map_err(|error| format!("hash GCC link input {}: {error}", path.display()))?;
+        inputs.push(json!({
+            "name":name,
+            "canonical_path":path,
+            "bytes":metadata.len(),
+            "sha256":sha256,
+            "runtime_build_input_row":row,
+        }));
+    }
+    if inputs.len() != expected_names.len() {
+        return Err("GCC system-link input inventory is incomplete".to_owned());
+    }
+    Ok(inputs)
+}
+
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn verify_host_link_probe_system_input_policy(
+    policy: &str,
+    inputs: &[Value],
+) -> std::result::Result<(), String> {
+    for input in inputs {
+        let raw_path = input["canonical_path"]
+            .as_str()
+            .ok_or_else(|| "system-link input omitted canonical_path".to_owned())?;
+        let path = PathBuf::from(raw_path);
+        let rule = format!(
+            "read-file {}",
+            printable(&path).map_err(|error| error.to_string())?
+        );
+        let count = policy.lines().filter(|line| *line == rule.as_str()).count();
+        if count != 1 {
+            return Err(format!(
+                "positive policy must contain one exact read-file rule for {}; found {count}",
+                path.display()
+            ));
+        }
+        let library_rule_prefix = format!(
+            "read-library {} ",
+            printable(&path).map_err(|error| error.to_string())?
+        );
+        if policy
+            .lines()
+            .any(|line| line.starts_with(&library_rule_prefix))
+        {
+            return Err(format!(
+                "system-link input also has an alternate read-library grant: {}",
+                path.display()
+            ));
+        }
+        for line in policy.lines().filter(|line| line.starts_with("read-tree ")) {
+            let rest = &line["read-tree ".len()..];
+            let (_, raw_root) = rest
+                .split_once(' ')
+                .ok_or_else(|| format!("malformed read-tree rule in rendered policy: {line}"))?;
+            let root = PathBuf::from(raw_root);
+            if !root.is_absolute() || fs::canonicalize(&root).ok().as_ref() != Some(&root) {
+                return Err(format!(
+                    "read-tree root in rendered policy is not a canonical absolute path: {}",
+                    root.display()
+                ));
+            }
+            if path.starts_with(&root) {
+                return Err(format!(
+                    "system-link input {} is also granted by read-tree {}",
+                    path.display(),
+                    root.display()
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn host_link_probe_specific_archive_denial(stderr: &str, expected: &Path) -> Option<Value> {
+    let prefix = "rust-lld: error: cannot open ";
+    let candidates = stderr
+        .lines()
+        .filter(|line| line.starts_with(prefix) && line.contains(": Permission denied"))
+        .collect::<Vec<_>>();
+    if candidates.len() != 1 {
+        return None;
+    }
+    let diagnostic = candidates[0];
+    let (_, remainder) = diagnostic.split_once("error: cannot open ")?;
+    let (raw_path, trailing) = remainder.split_once(": Permission denied")?;
+    if !trailing.trim().is_empty() {
+        return None;
+    }
+    let raw_path = raw_path.trim();
+    let denied_path = PathBuf::from(raw_path);
+    if !denied_path.is_absolute() {
+        return None;
+    }
+    let canonical_path = fs::canonicalize(&denied_path).ok()?;
+    if canonical_path != expected {
+        return None;
+    }
+    Some(json!({
+        "raw_diagnostic":diagnostic,
+        "reported_path":raw_path,
+        "canonical_path":canonical_path,
+        "expected_canonical_path":expected,
+        "errno":13,
+        "error":"Permission denied",
+    }))
+}
+
+#[cfg(all(test, target_os = "linux", target_arch = "x86_64"))]
+mod host_link_probe_tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    struct Scratch(PathBuf);
+
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn scratch_root() -> Scratch {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock precedes Unix epoch")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "ami-rust-host-link-denial-parser-{}-{nonce}",
+            std::process::id()
+        ));
+        fs::create_dir(&root).expect("create denial parser scratch root");
+        Scratch(root)
+    }
+
+    #[test]
+    fn rust_lld_denial_parser_canonicalizes_gcc_operand_and_rejects_other_paths_or_errors() {
+        let scratch = scratch_root();
+        let gcc = scratch.0.join("gcc");
+        let library = scratch.0.join("x86_64-linux-gnu");
+        let other = scratch.0.join("other");
+        fs::create_dir(&gcc).expect("create gcc operand directory");
+        fs::create_dir(&library).expect("create canonical library directory");
+        fs::create_dir(&other).expect("create second library directory");
+        let expected = library.join("libutil.a");
+        let other_file = other.join("libutil.a");
+        fs::write(&expected, b"fixture archive").expect("write expected archive fixture");
+        fs::write(&other_file, b"different archive").expect("write other archive fixture");
+        let expected = fs::canonicalize(expected).expect("canonicalize expected fixture");
+        let noncanonical_operand = gcc.join("../x86_64-linux-gnu/libutil.a");
+        assert_ne!(noncanonical_operand, expected);
+
+        let valid = format!(
+            "rust-lld: error: cannot open {}: Permission denied\n",
+            noncanonical_operand.display()
+        );
+        let parsed = host_link_probe_specific_archive_denial(&valid, &expected)
+            .expect("accept exact denial after canonicalizing GCC's operand");
+        assert_eq!(parsed["canonical_path"], expected.display().to_string());
+        assert_eq!(parsed["errno"], 13);
+
+        let wrong_file = format!(
+            "rust-lld: error: cannot open {}: Permission denied\n",
+            other_file.display()
+        );
+        assert!(host_link_probe_specific_archive_denial(&wrong_file, &expected).is_none());
+
+        let wrong_error = format!(
+            "rust-lld: error: cannot open {}: No such file or directory\n",
+            noncanonical_operand.display()
+        );
+        assert!(host_link_probe_specific_archive_denial(&wrong_error, &expected).is_none());
+
+        let wrong_program = format!(
+            "collect2: error: cannot open {}: Permission denied\n",
+            noncanonical_operand.display()
+        );
+        assert!(host_link_probe_specific_archive_denial(&wrong_program, &expected).is_none());
+    }
+}
+
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn copy_policy_omitting_one_read_file(
+    policy: &Path,
+    counter_policy: &Path,
+    file: &Path,
+) -> std::result::Result<Value, String> {
+    let original = read_regular_bounded(policy, 1024 * 1024)
+        .map_err(|error| format!("read positive policy: {error}"))?;
+    let original_text = std::str::from_utf8(&original)
+        .map_err(|error| format!("positive policy is not UTF-8: {error}"))?;
+    let rule = format!(
+        "read-file {}",
+        printable(file).map_err(|error| error.to_string())?
+    );
+    let rule_count = original_text
+        .lines()
+        .filter(|line| *line == rule.as_str())
+        .count();
+    if rule_count != 1 {
+        return Err(format!(
+            "positive policy must contain exactly one selected read-file rule for {}; found {rule_count}",
+            file.display()
+        ));
+    }
+    let removed_line_bytes = original_text
+        .split_inclusive('\n')
+        .find(|line| line.strip_suffix('\n').unwrap_or(line) == rule.as_str())
+        .ok_or_else(|| "selected system-link read-file rule is absent".to_owned())?
+        .len();
+    let counter_text = original_text
+        .split_inclusive('\n')
+        .filter(|line| line.strip_suffix('\n').unwrap_or(line) != rule.as_str())
+        .collect::<String>();
+    if counter_text.len() + removed_line_bytes != original.len()
+        || counter_text.lines().any(|line| line == rule.as_str())
+    {
+        return Err("system-link counterpolicy differs beyond the exact omitted rule".to_owned());
+    }
+    write_new(counter_policy, counter_text.as_bytes()).map_err(|error| error.to_string())?;
+    Ok(json!({
+        "original_policy":policy,
+        "original_policy_sha256":sha256_file(policy).map_err(|error| error.to_string())?,
+        "counter_policy":counter_policy,
+        "counter_policy_sha256":sha256_file(counter_policy).map_err(|error| error.to_string())?,
+        "omitted_rule":rule,
+        "omitted_rule_count":rule_count,
+        "bytes_removed":removed_line_bytes,
+        "all_other_policy_bytes_identical":true,
+    }))
+}
+
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn verify_host_link_probe_system_input_hashes(inputs: &[Value]) -> std::result::Result<(), String> {
+    for input in inputs {
+        let path = PathBuf::from(
+            input["canonical_path"]
+                .as_str()
+                .ok_or_else(|| "system-link input omitted canonical_path".to_owned())?,
+        );
+        let expected_bytes = input["bytes"]
+            .as_u64()
+            .ok_or_else(|| "system-link input omitted byte length".to_owned())?;
+        let expected_sha256 = input["sha256"]
+            .as_str()
+            .ok_or_else(|| "system-link input omitted SHA-256".to_owned())?;
+        let metadata = fs::symlink_metadata(&path)
+            .map_err(|error| format!("reinspect system-link input {}: {error}", path.display()))?;
+        if !metadata.file_type().is_file()
+            || metadata.len() != expected_bytes
+            || sha256_file(&path).map_err(|error| error.to_string())? != expected_sha256
+        {
+            return Err(format!(
+                "system-link input changed during controls: {}",
+                path.display()
+            ));
+        }
+    }
+    Ok(())
 }
 
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]

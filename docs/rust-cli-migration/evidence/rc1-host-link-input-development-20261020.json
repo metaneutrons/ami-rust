@@ -1,0 +1,71 @@
+{
+  "schema": "ami-rust-rc1-host-link-input-development-v1",
+  "stage": "LOCAL_COMPONENTS_PASS_NATIVE_LINUX_AND_FULL_SDK_PENDING",
+  "recorded_utc": "2026-10-20T20:42:47.480027+00:00",
+  "acceptance_authority": "docs/rust-cli-cargo-migration-plan.md#rc1--rust-consumer-cli-with-equivalent-behaviour",
+  "milestone_issue": "https://github.com/metaneutrons/ami-rust/issues/71",
+  "base_source": "4612857e72652211a006850e7e9ff6570c92ac40",
+  "observed_failure": {
+    "run": 39479716647,
+    "attempt": 1,
+    "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39479716647",
+    "source_sha": "4612857e72652211a006850e7e9ff6570c92ac40",
+    "source_tree": "02dc7423f51486c6fa89257b922510f04aeecea1",
+    "job": 118832229324,
+    "phase": "14-package-offline-build",
+    "cause": "Pinned rustc reaches the compiler_builtins host build-script link; rust-lld cannot read libutil.a, librt.a, libpthread.a and libdl.a under the sandbox. GCC .so queries alone omit the compatibility archive fallbacks used on this Linux host.",
+    "original_transport_manifest_sha256": "84781842409376af3b7012a2a38b6fff4f8e029cb1eb2ecbca3a8d09ccfada56",
+    "all_eight_original_archives_and_job_logs_preserved": true
+  },
+  "change": {
+    "runtime": "Query the four .a compatibility names through the selected GCC driver and use the existing exact canonical regular-file read-input admission. No whole library-directory grant. Existing .so discovery remains for other supported host layouts.",
+    "regression": "Existing pinned GCC/LLD C-link route now includes the Rust host dynamic library link sequence. Retain linked ELF/marker and wrapper execution-omission control; add one exact read-rule omission per archive with unchanged remaining policy bytes, canonicalized specific rust-lld EACCES diagnostic, valid adapter status, no ELF and empty derived root.",
+    "parser_test": "Noncanonical GCC operand resolves to exact expected file; other file, errno text and diagnostic emitter are refused.",
+    "scope": "The focused probe uses C source to test the Rust host linker/library route. It is not a rustc build-script, Cargo or full SDK acceptance proof."
+  },
+  "source_files": {
+    ".github/workflows/rc1-linux-git-transport-diagnostic.yml": "cc4c73eadfb548adab0ae2f7fe3138398f0b5b9c9639fde5659aceef3296a11b",
+    "tooling/crates/xtask/src/consumer_runtime.rs": "29b6a04e78e617304ed5e648458d102471ff88145b1084d0b273f34ef420a4dd",
+    "tooling/crates/xtask/src/host_link_probe.rs": "8385fec4d47d86a6847c18f36873b2db2ce8d5f7621593cb508043b50a9f7bff"
+  },
+  "local_verification": {
+    "status": "PASS_HOST_LINK_COMPONENTS_LINUX_COMPILE_ONLY_NOT_NATIVE_OR_RC1_ACCEPTANCE",
+    "result_sha256": "077f50dedb9586a8b4655c8d6385a6640ea345387ca7bb11dc65438211901789",
+    "driver_sha256": "717fabbd248080edbe1ed956b766a0a3bfb2ed6d27b8fc1ec33b3a245b871b06",
+    "macos_core_tests_passed": 381,
+    "macos_core_tests_ignored": 19,
+    "macos_xtask_tests_passed": 53,
+    "full_workspace": "PASS",
+    "strict_macos_clippy": "PASS",
+    "strict_linux_cross_compile_clippy": "PASS_COMPILE_ONLY",
+    "native_coordinator_tests": 69,
+    "native_upgrade_coordinator_tests": 14,
+    "source_material_fixtures": 10,
+    "actionlint": "PASS",
+    "supervision_limits": {
+      "log_bytes": 16777216,
+      "rss_bytes": 4294967296,
+      "seconds": 1200,
+      "workspace_bytes": 12884901888
+    },
+    "conservative_rss_peak_bytes": 1702510592,
+    "workspace_peak_bytes": 2747591552,
+    "logs_peak_bytes": 54776
+  },
+  "independent_static_review": {
+    "result": "NO_CONCRETE_BLOCKER_FOUND",
+    "record_sha256": "8b574a18f0811ccac2072d4eb11d592ef2ad9c6bac31542e537a1406684289fe",
+    "runtime_not_claimed": true
+  },
+  "remaining": [
+    "Actual standard GitHub Linux runner execution of the expanded host-link positive and all five omission controls.",
+    "Exact-source regular CI on both supported hosts.",
+    "Reviewed protected integration, then a new complete both-host SDK qualification and current-source acceptance readback. RC1 remains open."
+  ],
+  "invariants": [
+    "Pinned target compiler, Cargo, C-SDK, x86-64 ABI-v1/QEMU baseline and hosted budgets are unchanged.",
+    "Existing public direct/APT/Homebrew releases and failed-run originals are preserved.",
+    "Protected AROS checkouts and nxpk remain outside scope.",
+    "RC2 implementation waits for RC1; isolated RC4 work is not RC1 acceptance."
+  ]
+}
