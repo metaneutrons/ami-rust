@@ -435,7 +435,7 @@ mod tests {
     };
 
     #[cfg(target_os = "macos")]
-    use std::path::Path;
+    use std::{os::fd::AsRawFd, path::Path, process::ChildStdin};
 
     const FIXTURE_NAME: &str = "process_lease::tests::child_fixture_entry";
     const FIXTURE_TOKEN: &str = "ami-rust-core-process-lease-v1";
@@ -474,6 +474,22 @@ mod tests {
         command
             .spawn()
             .expect("spawn root fixture with an inherited-stdin probe")
+    }
+
+    #[cfg(target_os = "macos")]
+    fn wait_for_fixture_stdin_pipe_close(
+        probe: &mut ChildStdin,
+        deadline: Instant,
+    ) -> Option<Instant> {
+        while Instant::now() < deadline {
+            if let Err(error) = probe.write(b"x")
+                && error.kind() == io::ErrorKind::BrokenPipe
+            {
+                return Some(Instant::now());
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        None
     }
 
     #[test]
@@ -542,9 +558,10 @@ mod tests {
                 ready
                     .write_all(b"ready")
                     .expect("write descendant readiness marker");
-                loop {
-                    thread::sleep(Duration::from_secs(30));
-                }
+                // Keep this live well beyond the root-wait and initial
+                // cleanup windows, but guarantee bounded test teardown if
+                // group signalling fails.
+                thread::sleep(Duration::from_secs(30));
             }
             other => panic!("unknown process-lease fixture mode: {other:?}"),
         }
@@ -664,8 +681,15 @@ mod tests {
 
     #[cfg(target_os = "macos")]
     #[test]
+    #[allow(
+        unsafe_code,
+        reason = "The fixture makes its private pipe writer nonblocking so cleanup polling cannot hang."
+    )]
     fn darwin_live_same_group_descendant_keeps_eperm_as_a_refusal() {
         ensure_waitable_sigchld().expect("test process must retain waitable child status");
+        let fixture_started_at = Instant::now();
+        let failsafe_not_before = fixture_started_at + Duration::from_secs(30);
+        let failsafe_deadline = fixture_started_at + Duration::from_secs(40);
         let nonce = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .expect("system time is after the epoch")
@@ -681,6 +705,17 @@ mod tests {
             .take()
             .expect("root fixture has a piped inherited-stdin probe");
         let mut lease = ChildLease::new(child, Duration::from_millis(20)).unwrap();
+
+        // SAFETY: the descriptor belongs to the private fixture writer and
+        // remains open for both fcntl calls; no pointer arguments are used.
+        let flags = unsafe { libc::fcntl(probe.as_raw_fd(), libc::F_GETFL) };
+        assert_ne!(flags, -1, "read fixture pipe flags");
+        // SAFETY: preserve its existing flags while enabling nonblocking writes.
+        assert_ne!(
+            unsafe { libc::fcntl(probe.as_raw_fd(), libc::F_SETFL, flags | libc::O_NONBLOCK) },
+            -1,
+            "make fixture pipe polling nonblocking"
+        );
 
         let ready_deadline = Instant::now() + Duration::from_secs(5);
         let mut descendant_ready = false;
@@ -716,23 +751,38 @@ mod tests {
             ))
         };
 
-        // Clean up only through the lease-owned root PGID, then use EOF on
-        // the inherited stdin pipe to observe descendant termination.
+        // Clean up only through the lease-owned root PGID, then use
+        // BrokenPipe on the inherited stdin pipe to observe termination. The
+        // 30-second fixture fallback can never satisfy the five-second
+        // signal-cleanup criterion.
+        let cleanup_started_at = Instant::now();
+        let signal_cleanup_deadline = cleanup_started_at + Duration::from_secs(5);
         let cleanup_signal = lease.signal_root_group(libc::SIGKILL);
-        let pipe_deadline = Instant::now() + Duration::from_secs(5);
-        let mut descendant_pipe_closed = false;
-        while Instant::now() < pipe_deadline {
-            match probe.write(b"x") {
-                Err(error) if error.kind() == io::ErrorKind::BrokenPipe => {
-                    descendant_pipe_closed = true;
-                    break;
-                }
-                Ok(1) => thread::sleep(Duration::from_millis(10)),
-                Ok(_) => break,
-                Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
-                Err(_) => break,
-            }
+        let pipe_closed_after_signal =
+            wait_for_fixture_stdin_pipe_close(&mut probe, signal_cleanup_deadline);
+        let descendant_stopped_within_bound = pipe_closed_after_signal.is_some_and(|closed_at| {
+            closed_at < failsafe_not_before && closed_at <= signal_cleanup_deadline
+        });
+        let descendant_pipe_closed = pipe_closed_after_signal.is_some()
+            || wait_for_fixture_stdin_pipe_close(&mut probe, failsafe_deadline).is_some();
+
+        if !descendant_pipe_closed {
+            let _ = std::fs::remove_file(&ready_path);
+            std::mem::forget(lease);
+            panic!(
+                "could not confirm group-reader termination by the fixture failsafe; retained the unreaped root lease and will issue no further PID/PGID signals"
+            );
         }
+
+        if !lease.observe_exit().unwrap_or(false) {
+            let _ = std::fs::remove_file(&ready_path);
+            std::mem::forget(lease);
+            panic!("root exit or wait ownership was not confirmed; refusing a blocking reap");
+        }
+
+        // Reap only after the inherited pipe confirms that the descendant has
+        // exited (from SIGKILL or its failsafe). A failsafe exit still fails
+        // the original five-second cleanup assertion below.
         let reap_result = lease.reap();
         let _ = std::fs::remove_file(&ready_path);
 
@@ -758,11 +808,11 @@ mod tests {
                 .raw_os_error(),
             Some(libc::EPERM)
         );
-        cleanup_signal.expect("lease cleanup signals only the owned root group");
         assert!(
-            descendant_pipe_closed,
-            "group SIGKILL must terminate the descendant holding the inherited pipe"
+            descendant_stopped_within_bound,
+            "group SIGKILL must close the inherited pipe within five seconds and before the failsafe"
         );
+        cleanup_signal.expect("lease cleanup signals only the owned root group");
         reap_result.expect("reap the wait-owned direct root after group cleanup");
     }
 
