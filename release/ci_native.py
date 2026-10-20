@@ -11,8 +11,9 @@ import argparse
 import io
 import hashlib
 import json
+import lzma
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import platform
 import pwd
 import re
@@ -23,13 +24,26 @@ import tarfile
 import tomllib
 import urllib.request
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "release"))
 import ci_auth as auth
 import ci_sdk
 
 NATIVE_LIMIT = 64 * 1024**2
 HOST_TRIPLES = {"linux-x86_64": "x86_64-unknown-linux-gnu", "macos-aarch64": "aarch64-apple-darwin"}
+PUBLISHED_V1_ARCHIVE_NAME = "ami-rust-0.1.0-packaging.2.tar.xz"
+PUBLISHED_V1_ARCHIVE_PIN = {
+    "url": "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0%2Bpackaging.2/"
+    + PUBLISHED_V1_ARCHIVE_NAME,
+    "bytes": 26_044_756,
+    "sha256": "6567abfb4e36a2bf82816f51512343f4d1232c97c866e648fdf68ab4cf7f2448",
+}
+PUBLISHED_V1_ARCHIVE_ROOT = "ami-rust-0.1.0-2"
+PUBLISHED_V1_PACKAGE_ROOT = "ami-rust-0.1.0-2/usr/libexec/ami-rust/0.1.0-2"
+PUBLISHED_V1_XZ_MEMORY_LIMIT = 256 * 1024**2
+PUBLISHED_V1_EXPANDED_LIMIT = 64 * 1024**2
+PUBLISHED_V1_TAR_MEMBER_LIMIT = 1_000
+PUBLISHED_V1_TAR_FILE_LIMIT = 32 * 1024**2
 
 
 def native_inputs():
@@ -304,6 +318,271 @@ def obtain_legacy(work, pin):
     return root
 
 
+def _download_published_v1_archive(work, supervisor):
+    """Download only the exact historical package archive into supervised work."""
+    work = Path(work).resolve(strict=True)
+    if work != Path(supervisor.work).resolve(strict=True):
+        raise ValueError("published-v1 archive destination differs from supervised work")
+    destination = work / PUBLISHED_V1_ARCHIVE_NAME
+    if destination.exists() or destination.is_symlink():
+        raise ValueError("published-v1 archive destination must be fresh")
+    with urllib.request.urlopen(PUBLISHED_V1_ARCHIVE_PIN["url"], timeout=120) as response:
+        raw = response.read(PUBLISHED_V1_ARCHIVE_PIN["bytes"] + 1)
+    if (len(raw) != PUBLISHED_V1_ARCHIVE_PIN["bytes"]
+            or auth.sha(raw) != PUBLISHED_V1_ARCHIVE_PIN["sha256"]):
+        raise ValueError("published-v1 package archive differs from its exact release pin")
+    write(destination, raw, 0o600)
+    _check_limits(supervisor, "downloaded exact published-v1 package archive")
+    return destination
+
+
+def _extract_published_v1_archive(raw: bytes, destination: Path) -> tuple[Path, int, int, int]:
+    """Validate the complete bounded tar before extracting any member."""
+    if destination.exists() or destination.is_symlink():
+        raise ValueError("published package extraction root must be fresh")
+    decoder = lzma.LZMADecompressor(format=lzma.FORMAT_XZ,
+                                    memlimit=PUBLISHED_V1_XZ_MEMORY_LIMIT)
+    plain = decoder.decompress(raw, max_length=PUBLISHED_V1_EXPANDED_LIMIT + 1)
+    if (len(plain) > PUBLISHED_V1_EXPANDED_LIMIT or not decoder.eof
+            or decoder.unused_data):
+        raise ValueError("published package XZ stream exceeds its bounded profile")
+
+    records = []
+    names = {}
+    total_files = 0
+    with tarfile.open(fileobj=io.BytesIO(plain), mode="r:") as archive:
+        for member in archive:
+            if len(records) == PUBLISHED_V1_TAR_MEMBER_LIMIT:
+                raise ValueError("published package tar exceeds its member bound")
+            is_directory = member.type == tarfile.DIRTYPE
+            is_regular = member.type in (tarfile.REGTYPE, tarfile.AREGTYPE)
+            if not (is_directory or is_regular):
+                raise ValueError("published package tar contains a link or special member")
+            name = member.name[:-1] if is_directory and member.name.endswith("/") else member.name
+            auth.rel(name)
+            if name in names:
+                raise ValueError("published package tar contains duplicate paths")
+            mode = member.mode
+            if mode < 0 or mode & ~0o7777 or mode & 0o7022:
+                raise ValueError("published package tar contains an unsafe mode")
+            if is_directory:
+                if member.size != 0:
+                    raise ValueError("published package directory has a payload")
+            else:
+                if not 0 <= member.size <= PUBLISHED_V1_TAR_FILE_LIMIT:
+                    raise ValueError("published package file exceeds its member bound")
+                total_files += member.size
+                if total_files > PUBLISHED_V1_EXPANDED_LIMIT:
+                    raise ValueError("published package files exceed their aggregate bound")
+            if not (name == PUBLISHED_V1_ARCHIVE_ROOT
+                    or name.startswith(PUBLISHED_V1_ARCHIVE_ROOT + "/")):
+                raise ValueError("published package archive has an entry outside its exact top-level root")
+            data = b""
+            if is_regular:
+                stream = archive.extractfile(member)
+                if stream is None:
+                    raise ValueError("published package regular member has no data")
+                data = stream.read(member.size + 1)
+                if len(data) != member.size:
+                    raise ValueError("published package member length differs from its header")
+            names[name] = "directory" if is_directory else "file"
+            records.append((name, is_directory, data, mode))
+
+    if names.get(PUBLISHED_V1_ARCHIVE_ROOT) != "directory":
+        raise ValueError("published package omits its exact archive top-level directory")
+    if names.get(PUBLISHED_V1_PACKAGE_ROOT) != "directory":
+        raise ValueError("published package omits the exact 0.1.0-2 package root")
+    for required in ("pins.json", "cli.py"):
+        if names.get(PUBLISHED_V1_PACKAGE_ROOT + "/" + required) != "file":
+            raise ValueError("published package root omits a required regular file: " + required)
+    for name in names:
+        parts = name.split("/")
+        for offset in range(1, len(parts)):
+            if names.get("/".join(parts[:offset])) == "file":
+                raise ValueError("published package file is an ancestor of another member")
+
+    destination.mkdir(mode=0o700)
+    directories = {name for name, is_directory, _, _ in records if is_directory}
+    directories.update("/".join(name.split("/")[:offset])
+                       for name, _, _, _ in records
+                       for offset in range(1, len(name.split("/"))))
+    directory_modes = {name: mode for name, is_directory, _, mode in records if is_directory}
+    for name in sorted(directories, key=lambda path: (path.count("/"), path)):
+        destination.joinpath(*PurePosixPath(name).parts).mkdir(mode=0o700)
+    for name, is_directory, data, mode in records:
+        if is_directory:
+            continue
+        target = destination.joinpath(*PurePosixPath(name).parts)
+        with target.open("xb") as stream:
+            stream.write(data)
+        target.chmod(mode)
+    for name, mode in sorted(directory_modes.items(), key=lambda row: row[0].count("/"), reverse=True):
+        destination.joinpath(*PurePosixPath(name).parts).chmod(mode)
+    package_root = destination.joinpath(*PUBLISHED_V1_PACKAGE_ROOT.split("/"))
+    return package_root, len(records), total_files, len(plain)
+
+
+def _prepare_published_legacy(work, output, supervisor, archive_source):
+    """Run the actual published 0.1.0-2 setup/build as a separate oracle."""
+    work = Path(work).resolve(strict=True)
+    output = Path(output).absolute()
+    if work != Path(supervisor.work).resolve(strict=True):
+        raise ValueError("published-v1 setup work differs from its supervisor")
+    if output.resolve(strict=False) != Path(supervisor.output).resolve(strict=False):
+        raise ValueError("published-v1 setup output differs from its supervisor")
+    area = fresh(work / "published-v1-rollback-setup")
+    report_path = output / "published-v1-rollback-setup.json"
+    archive_source = Path(archive_source).absolute()
+    if archive_source.is_symlink():
+        raise ValueError("published package archive source must not be a symlink")
+    archive_source = archive_source.resolve(strict=True)
+    archive_copy = area / PUBLISHED_V1_ARCHIVE_NAME
+    package_tree = area / "package-tree"
+    state_parent = area / "state-parent"
+    project_parent = area / "project-parent"
+    build_parent = area / "build-parent"
+    home, tmp = area / "home", area / "tmp"
+    for directory in (state_parent, project_parent, build_parent, home, tmp):
+        directory.mkdir(mode=0o700)
+    state = state_parent / "ami-rust-0.1.0-state"
+    project = project_parent / "hello-aros"
+    build = build_parent / "hello-aros-build"
+    current_state = work / "native-state-write-area/derived/native-ready-state"
+    operation_roots = (state, project, build)
+    if (any(_overlap(path, current_state) for path in operation_roots)
+            or any(_overlap(left, right) for index, left in enumerate(operation_roots)
+                   for right in operation_roots[index + 1:])):
+        raise ValueError("published-v1 state/project/build overlaps current native state")
+
+    result = {
+        "schema": "ami-rust-published-v1-rollback-setup-v1",
+        "status": "RUNNING",
+        "archive_pin": PUBLISHED_V1_ARCHIVE_PIN,
+        "scope": "Historical published 0.1.0-2 setup/build oracle only; not new-consumer no-Python evidence, signed-new-SDK evidence, or RC1 acceptance.",
+    }
+    command_start = len(supervisor.commands)
+    original_env = supervisor.env
+    try:
+        managed_roots = [ROOT.resolve(strict=True), work,
+                         Path(supervisor.output).resolve(strict=False),
+                         Path(supervisor.python_root).resolve(strict=True)]
+        source_is_managed = any(root == archive_source or root in archive_source.parents
+                                for root in managed_roots)
+        if not source_is_managed:
+            source_root = archive_source.parent.resolve(strict=True)
+            if any(_overlap(source_root, root) for root in managed_roots):
+                raise ValueError("external published archive parent overlaps a managed root")
+            existing_roots = [Path(row["resolved_path"]) for row in supervisor.native_static_roots]
+            covering = [root for root in existing_roots
+                        if root == source_root or root in source_root.parents]
+            overlapping = [root for root in existing_roots if _overlap(root, source_root)]
+            if overlapping and not covering:
+                raise ValueError("published archive source overlaps a partial static-input root")
+            if not covering:
+                _add_static_roots(supervisor, [("published-v1-package-archive", source_root)])
+        archive_raw = auth.read(archive_source, cap=PUBLISHED_V1_ARCHIVE_PIN["bytes"])
+        if (len(archive_raw) != PUBLISHED_V1_ARCHIVE_PIN["bytes"]
+                or auth.sha(archive_raw) != PUBLISHED_V1_ARCHIVE_PIN["sha256"]):
+            raise ValueError("retained published archive differs from its exact release pin")
+        write(archive_copy, archive_raw, 0o600)
+        package_root, member_count, package_file_bytes, expanded_bytes = _extract_published_v1_archive(
+            archive_raw, package_tree)
+        pins_path, cli = package_root / "pins.json", package_root / "cli.py"
+        pins = auth.parsed(auth.read(pins_path))
+        if (pins.get("sdk_version") != "0.1.0" or pins.get("package_version") != "0.1.0-2"
+                or pins.get("source_commit") != "b4ebb9cce5decd01616b75acf451d0eba9995ee3"):
+            raise ValueError("published package root differs from its historical version/source pins")
+        _check_limits(supervisor, "validated published-v1 archive and package")
+
+        python_inputs = auth.parsed(auth.read(ROOT / "release/ci-python-inputs.json"))
+        python_pin = python_inputs["hosts"][current_host()]
+        interpreter, python_bootstrap = ci_sdk.verify_python_bootstrap(
+            Path(supervisor.python_root), current_host())
+        python_relative = auth.rel(python_pin["runtime_relative_path"])
+        expected_interpreter = Path(supervisor.python_root) / "runtime" / python_relative
+        if interpreter.resolve(strict=True) != expected_interpreter.resolve(strict=True):
+            raise ValueError("verified Python interpreter differs from the host runtime pin path")
+        interpreter_raw = auth.read(interpreter, cap=python_pin["runtime_bytes"])
+        if (len(interpreter_raw) != python_pin["runtime_bytes"]
+                or auth.sha(interpreter_raw) != python_pin["runtime_sha256"]):
+            raise ValueError("verified Python interpreter bytes differ from the host runtime pin")
+        bootstrap_path = Path(supervisor.python_root) / "bootstrap.json"
+        bootstrap_raw = auth.read(bootstrap_path, cap=64 * 1024)
+        result.update({
+            "archive": {"source": str(archive_source), "copy": str(archive_copy),
+                        "bytes": len(archive_raw), "sha256": auth.sha(archive_raw)},
+            "package_root": str(package_root),
+            "package_version_pins": {key: pins[key] for key in
+                                      ("sdk_version", "package_version", "source_commit")},
+            "package_pins_sha256": auth.sha(auth.read(pins_path)),
+            "historical_cli_sha256": auth.sha(auth.read(cli)),
+            "package_tar": {"members": member_count, "regular_file_bytes": package_file_bytes,
+                             "expanded_bytes": expanded_bytes,
+                             "expanded_limit_bytes": PUBLISHED_V1_EXPANDED_LIMIT,
+                             "decoder_memory_limit_bytes": PUBLISHED_V1_XZ_MEMORY_LIMIT},
+            "interpreter": {"path": str(interpreter), "root": str(supervisor.python_root),
+                            "host": current_host(), "bytes": len(interpreter_raw),
+                            "sha256": auth.sha(interpreter_raw),
+                            "pin_bytes": python_pin["runtime_bytes"],
+                            "pin_sha256": python_pin["runtime_sha256"],
+                            "bootstrap_sha256": auth.sha(bootstrap_raw),
+                            "verified_bootstrap": python_bootstrap},
+            "state": str(state), "project": str(project), "build": str(build),
+            "home": str(home), "tmp": str(tmp),
+            "package_tree": str(package_tree),
+            "retained_root": str(state / "retained"),
+            "retained_launcher": str(state / "retained/bin/ami-rust"),
+        })
+
+        supervisor.env = {"PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "HOME": str(home),
+                          "TMPDIR": str(tmp), "LC_ALL": "C"}
+        commands = (
+            ("published-v1-verify-package", ["verify-package"]),
+            ("published-v1-prepare", ["prepare", "--state", state]),
+            ("published-v1-new-project", ["new", "--state", state, "--project", project]),
+            ("published-v1-build", ["build", "--state", state, "--project", project,
+                                      "--output-dir", build]),
+        )
+        command_rows = []
+        for label, arguments in commands:
+            row = _supervised_run(supervisor, [interpreter, "-I", "-B", cli, *arguments],
+                                  cwd=area, label=label, timeout=1200)
+            _check_limits(supervisor, label)
+            command_rows.append({key: row.get(key) for key in
+                                 ("label", "exit_code", "stdout_log", "stderr_log")})
+
+        ready_path = state / "ready.json"
+        lock_path = project / "ami-rust.lock.json"
+        executable = build / "artifacts/AMIRUST"
+        ready_raw, lock_raw, executable_raw = (auth.read(ready_path), auth.read(lock_path),
+                                                auth.read(executable))
+        ready, lock = auth.parsed(ready_raw), auth.parsed(lock_raw)
+        if (ready.get("schema") != "ami-rust-package-state-v1" or ready.get("status") != "READY"
+                or ready.get("package_version") != "0.1.0-2"
+                or lock.get("schema") != "ami-rust-project-lock-v1"):
+            raise ValueError("published-v1 setup omitted its READY state or legacy project lock")
+        result.update({
+            "status": "PASS_ACTUAL_PUBLISHED_V1_SETUP_ORACLE_NOT_RC1_ACCEPTANCE",
+            "ready_sha256": auth.sha(ready_raw),
+            "legacy_lock_sha256": auth.sha(lock_raw),
+            "native_executable": {"path": str(executable), "bytes": len(executable_raw),
+                                  "sha256": auth.sha(executable_raw)},
+            "commands": command_rows,
+        })
+        _check_limits(supervisor, "completed published-v1 setup oracle")
+        return result
+    except Exception as error:
+        result.update(status="FAIL", error=repr(error))
+        raise
+    finally:
+        supervisor.env = original_env
+        result.setdefault("commands", [
+            {key: row.get(key) for key in ("label", "exit_code", "stdout_log", "stderr_log")}
+            for row in supervisor.commands[command_start:]
+        ])
+        write(report_path, auth.encoded(result), 0o600)
+
+
 def producer(identity):
     return {"kind": "protected-github-actions", "repository": auth.REPO, "workflow": auth.WORKFLOW,
             **identity, "acceptance": "R1 acceptance and publication are separate gates"}
@@ -507,12 +786,14 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
         directory.mkdir(mode=0o700)
     commands = []
 
-    def command(label, arguments, expected=0, *, executable=cli, disposable_refusal_state=None):
+    def command(label, arguments, expected=0, *, executable=cli, disposable_refusal_state=None,
+                additional_deny_exec=(), inert_python_roots=()):
         stdout = output / (label + ".stdout.json")
         stderr = output / (label + ".stderr.log")
         spec = _consumer_observation_spec(work, python_root, executable, arguments, expected,
             policy_path, closure_path, [ROOT, *[row["resolved_path"] for row in supervisor.native_static_roots]],
-            disposable_refusal_state=disposable_refusal_state)
+            disposable_refusal_state=disposable_refusal_state,
+            additional_deny_exec=additional_deny_exec, inert_python_roots=inert_python_roots)
         spec_path = output / "observation-specs" / (label + ".json")
         write(spec_path, auth.encoded(spec), 0o600)
         observed = output / "observations" / label
@@ -586,7 +867,7 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
               "cli_sha256": auth.sha(auth.read(cli)), "receipt_sha256": receipt,
               "remaining_gates": ["complete both-host no-Python observation", "complete cold/warm and negative lifecycle matrix",
                                   "complete cross-host R1-A2 native output and raw-metadata comparison",
-                                  "complete migration, upgrade and retained replay R1-A4 matrix"],
+                                  "complete cross-host R1-A4 migration and side-by-side transition/removal with retained replay"],
               "claim": "Real inner/outer signatures, native direct and package preparation/build/removal/retained replay, plus the current-host two-root five-variant matrix; internal Python coordination is outside consumer scope. No-Python observation, cross-host R1-A2/A4 and RC1 acceptance remain open"}
     report_path = output / "native-direct-lifecycle.json"
     initial_report = auth.encoded(report)
@@ -607,8 +888,57 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
     return report
 
 
+def _partition_inert_runtime_reads(readonly_roots, excluded_roots):
+    """Keep ordinary sibling inputs readable without granting an inert runtime.
+
+    Landlock cannot subtract a denied file from an allowed ancestor. Walk only
+    the ancestors of explicit runtime exclusions, emitting literal directories
+    and safe sibling grants. Listing/stat failures propagate; no rglob omission
+    may silently turn an incomplete policy into a successful observation.
+    """
+    excluded = {Path(root).resolve(strict=True) for root in excluded_roots}
+    trees, files, directories = set(), set(), set()
+
+    def overlaps(left, right):
+        return left == right or left in right.parents or right in left.parents
+
+    def visit(path):
+        canonical = path.resolve(strict=True)
+        if any(canonical == root or root in canonical.parents for root in excluded):
+            return
+        info = canonical.lstat()
+        if not any(canonical in root.parents for root in excluded):
+            if stat.S_ISDIR(info.st_mode):
+                trees.add(canonical)
+            elif stat.S_ISREG(info.st_mode):
+                files.add(canonical)
+            else:
+                raise ValueError("inert runtime partition encountered a nonregular input")
+            return
+        if not stat.S_ISDIR(info.st_mode) or path.is_symlink():
+            raise ValueError("inert runtime partition ancestor must be a real directory")
+        directories.add(canonical)
+        with os.scandir(canonical) as entries:
+            children = sorted((Path(entry.path) for entry in entries), key=lambda item: item.name)
+        for child in children:
+            visit(child)
+        after = canonical.lstat()
+        if (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_ctime_ns) != (
+                after.st_dev, after.st_ino, after.st_mtime_ns, after.st_ctime_ns):
+            raise ValueError("inert runtime partition ancestor changed during policy construction")
+
+    for root in sorted({Path(path).resolve(strict=True) for path in readonly_roots}):
+        if not root.is_dir():
+            raise ValueError("consumer read-tree root must be an existing directory")
+        visit(root)
+    if any(overlaps(grant, denied) for grant in trees | files for denied in excluded):
+        raise ValueError("inert runtime partition retained an overlapping data grant")
+    return trees, files, directories
+
+
 def _consumer_observation_spec(work, python_root, executable, arguments, expected,
-                               policy_path, closure_path, readonly_roots, *, disposable_refusal_state=None):
+                               policy_path, closure_path, readonly_roots, *, disposable_refusal_state=None,
+                               additional_deny_exec=(), inert_python_roots=()):
     """Select each command's owned writes; Rust owns policy/runtime/report logic."""
     work = Path(work).resolve(strict=True)
     arguments = list(map(str, arguments))
@@ -638,8 +968,12 @@ def _consumer_observation_spec(work, python_root, executable, arguments, expecte
     legacy_python = None
     if verb == "migrate":
         record = option("--from-lock")
-        if record is None or option("--output") is None:
-            raise ValueError("observed migration requires an explicit legacy lock and output")
+        if record is None and option("--project") is not None:
+            candidate = option("--project") / "ami-rust.lock.json"
+            if candidate.is_file():
+                record = candidate
+        if record is None or (option("--from-lock") is not None and option("--output") is None):
+            raise ValueError("observed migration requires an explicit legacy lock and output or a conventional inspection lock")
         legacy = auth.parsed(auth.read(record))
         if legacy.get("schema") != "ami-rust-project-lock-v1":
             raise ValueError("observed migration requires the inert legacy v1 record")
@@ -655,7 +989,7 @@ def _consumer_observation_spec(work, python_root, executable, arguments, expecte
         writes.add(target.parent.parent)
     elif phase == "new-project":
         writes.add(option("--project").parent)
-    elif phase == "lock":
+    elif phase == "lock" and option("--output") is not None:
         writes.add(option("--output").parent)
     elif phase == "package-authentication":
         writes.add(option("--work").parent)
@@ -684,21 +1018,52 @@ def _consumer_observation_spec(work, python_root, executable, arguments, expecte
     interpreter = Path(python_root) / "runtime" / pin["runtime_relative_path"]
     library_name = "libpython3.12.dylib" if current_host() == "macos-aarch64" else "libpython3.12.so.1.0"
     library = Path(python_root) / "runtime/python/lib" / library_name
+    inert_roots = set()
+    inert_interpreters, inert_libraries = set(), set()
+    for root in map(Path, inert_python_roots):
+        if root.is_symlink() or root.absolute() != root.resolve(strict=True) or not root.is_dir():
+            raise ValueError("inert Python runtime must be a canonical real directory")
+        old_interpreter = root / "bin/python3.12"
+        old_library = root / "lib" / library_name
+        for path in (old_interpreter, old_library):
+            if path.is_symlink() or not path.is_file() or path.resolve(strict=True) != path:
+                raise ValueError("inert Python interpreter/library must be canonical regular files")
+        if any(root == writable or root in writable.parents or writable in root.parents
+               for writable in writes):
+            raise ValueError("consumer writes overlap an inert Python runtime")
+        inert_roots.add(root)
+        inert_interpreters.add(old_interpreter)
+        inert_libraries.add(old_library)
+    reads, read_files, read_directories = _partition_inert_runtime_reads(
+        {work, *map(Path, readonly_roots)}, inert_roots)
+    if legacy_python is not None:
+        read_files.add(legacy_python)
+    read_directories.add(Path(pwd.getpwuid(os.getuid()).pw_dir).resolve(strict=True))
+    denied_exec = {str(interpreter), *map(str, inert_interpreters),
+                   *[str(Path(path).resolve(strict=True)) for path in additional_deny_exec]}
+    if legacy_python is not None:
+        denied_exec.add(str(legacy_python))
+        if current_host() == "linux-x86_64":
+            # The reviewed Rust CLI installs its irreversible process-wide
+            # execve/execveat filter before rendering either migration form.
+            # Linux cannot subtract deny-exec from this exact inert byte read.
+            # Keep other interpreter/library denials and no derived execution.
+            denied_exec.discard(str(legacy_python))
     bindings = [Path(closure_path), Path(policy_path)] + ([record] if record else [])
     return {"schema": "ami-rust-consumer-observation-spec-v1", "phase": phase,
             "command": [str(Path(executable).resolve(strict=True)), *arguments], "expected_exit": expected,
             "cwd": str(work), "home": str(work / "home"), "tmp": str(work / "tmp"),
-            "read_trees": [{"role": "work", "path": str(root)} for root in sorted({work, *map(Path, readonly_roots)})],
+            "read_trees": [{"role": "work", "path": str(root)} for root in sorted(reads)],
             "write_trees": [{"role": "work", "path": str(root)} for root in sorted(writes)],
-            "read_files": [str(legacy_python)] if legacy_python else [],
+            "read_files": [str(path) for path in sorted(read_files)],
             # The CLI checks account-home ownership independently of sandbox HOME.
             # Grant this directory literally, without reading its contents recursively.
-            "read_directories": [str(Path(pwd.getpwuid(os.getuid()).pw_dir).resolve(strict=True))],
+            "read_directories": [str(path) for path in sorted(read_directories)],
             "executables": [policy[name]["path"] for name in ("gh", "cosign")]
                 + ([str(option("--frontend").resolve(strict=True))]
                    if verb == "native-prepare-interruption" else []),
-            "libraries": [], "deny_exec": sorted({str(interpreter), *([str(legacy_python)] if legacy_python else [])}),
-            "deny_library": [str(library)],
+            "libraries": [], "deny_exec": sorted(denied_exec),
+            "deny_library": sorted({str(library), *map(str, inert_libraries)}),
             "component_record": str(record) if record else None, "derived": derived,
             "bindings": [{"path": str(path), "sha256": auth.sha(auth.read(path))} for path in bindings]}
 
@@ -1107,8 +1472,263 @@ def _retained_preservation_guards(work):
     return roots
 
 
-def _qualify_native_migration(work, output, state, project, frontend, xtask, supervisor, command, original_elf, guards):
-    """Exercise public migration with real installed inputs and explicit synthetic v1 data."""
+def _published_v1_preservation_roots(legacy, guards):
+    report = legacy["report"]
+    return {
+        "published_v1_state": Path(report["state"]),
+        "published_v1_project": Path(report["project"]),
+        "published_v1_build": Path(report["build"]),
+        "published_v1_package_tree": Path(report["package_tree"]),
+        "published_v1_home": Path(report["home"]),
+        **guards,
+    }
+
+
+def _check_published_v1_preservation(legacy, guards, checkpoint):
+    current = _preservation_snapshot(_published_v1_preservation_roots(legacy, guards))
+    if current != legacy["baseline"]:
+        raise ValueError("published 0.1.0 state/project/build/package/home or preservation guards changed during "
+                         + checkpoint)
+    archive = Path(legacy["report"]["archive"]["copy"])
+    if auth.sha(auth.read(archive, cap=PUBLISHED_V1_ARCHIVE_PIN["bytes"])) != PUBLISHED_V1_ARCHIVE_PIN["sha256"]:
+        raise ValueError("published 0.1.0 archive changed during " + checkpoint)
+    legacy["checkpoints"].append({"name": checkpoint, "roots": current,
+                                  "archive_sha256": PUBLISHED_V1_ARCHIVE_PIN["sha256"]})
+    return current
+
+
+def _set_active_package_root(active_root, expected_current, target):
+    active_root, expected_current, target = map(Path, (active_root, expected_current, target))
+    if (active_root.is_symlink() is False or not active_root.exists()
+            or active_root.resolve(strict=True) != expected_current.resolve(strict=True)):
+        raise ValueError("active CLI root does not resolve to the expected current package")
+    if target.is_symlink() or not target.is_dir():
+        raise ValueError("active CLI target must be a real package root")
+    temporary = active_root.with_name(active_root.name + ".next")
+    if temporary.exists() or temporary.is_symlink():
+        raise ValueError("active CLI replacement link must be fresh")
+    temporary.symlink_to(target.resolve(strict=True), target_is_directory=True)
+    os.replace(temporary, active_root)
+    if active_root.resolve(strict=True) != target.resolve(strict=True):
+        raise ValueError("active CLI root did not resolve to the selected package")
+    return active_root.resolve(strict=True)
+
+
+def _published_v1_launcher_version(work, supervisor, active_root, label):
+    launcher = Path(active_root) / "bin/ami-rust"
+    if not launcher.is_file() or launcher.is_symlink():
+        raise ValueError("published 0.1.0 retained launcher is missing or not a regular file")
+    row = _supervised_run(supervisor, [launcher, "--version"], cwd=work,
+                          label=label, timeout=60)
+    raw = auth.read(Path(work) / row["stdout_log"], cap=4096)
+    expected = b"ami-rust 0.1.0 (packaging 2)\n"
+    if raw != expected:
+        raise ValueError("published 0.1.0 retained launcher did not report its exact package identity")
+    return {"launcher": str(launcher), "resolved_launcher": str(launcher.resolve(strict=True)),
+            "stdout_sha256": auth.sha(raw), "version_output": raw.decode("ascii")}
+
+
+def _validate_actual_published_v1_entry(report, legacy_state, legacy_project):
+    old_lock = legacy_project / "ami-rust.lock.json"
+    old_value = auth.parsed(auth.read(old_lock))
+    old_ready = auth.parsed(auth.read(legacy_state / "ready.json"))
+    old_sdk = old_value.get("sdk")
+    if (old_value.get("schema") != "ami-rust-project-lock-v1"
+            or type(old_sdk) is not dict or old_ready.get("schema") != "ami-rust-package-state-v1"
+            or old_ready.get("status") != "READY" or old_ready.get("sdk_version") != "0.1.0"
+            or old_ready.get("package_version") != "0.1.0-2"):
+        raise ValueError("published setup report does not contain the actual pinned v1 project and state")
+    old_sdk_root = Path(old_sdk.get("root", ""))
+    expected_old_sdk = legacy_state / ("sdk-" + old_ready["sdk_version"]) / "sdk"
+    if (old_sdk_root.resolve(strict=True) != expected_old_sdk.resolve(strict=True)
+            or not old_sdk_root.is_dir() or old_sdk_root.is_symlink()):
+        raise ValueError("published v1 project lock does not select its retained state SDK")
+    manifest_relative = PurePosixPath(auth.rel(old_sdk["manifest"]))
+    old_manifest = old_sdk_root.joinpath(*manifest_relative.parts)
+    if auth.sha(auth.read(old_manifest)) != old_sdk.get("manifest_sha256"):
+        raise ValueError("published v1 SDK manifest differs from its project lock")
+
+    old_host = old_value.get("host")
+    interpreter = report.get("interpreter")
+    bootstrap = interpreter.get("verified_bootstrap") if type(interpreter) is dict else None
+    relative_files = bootstrap.get("relative_files") if type(bootstrap) is dict else None
+    runtime = bootstrap.get("runtime") if type(bootstrap) is dict else None
+    runtime_pin = bootstrap.get("runtime_pin") if type(bootstrap) is dict else None
+    runtime_relative = (relative_files.get("runtime_executable")
+                        if type(relative_files) is dict else None)
+    expected_runtime_relative = "runtime/python/bin/python3.12"
+    expected_runtime_sha256 = interpreter.get("sha256") if type(interpreter) is dict else None
+    expected_runtime_bytes = interpreter.get("bytes") if type(interpreter) is dict else None
+    if (type(old_host) is not dict or type(interpreter) is not dict
+            or runtime_relative != expected_runtime_relative
+            or type(runtime) is not dict or runtime.get("path") != expected_runtime_relative
+            or runtime.get("sha256") != expected_runtime_sha256
+            or runtime.get("bytes") != expected_runtime_bytes
+            or type(runtime_pin) is not dict
+            or runtime_pin.get("relative_path") != "python/bin/python3.12"
+            or runtime_pin.get("sha256") != expected_runtime_sha256
+            or interpreter.get("pin_sha256") != expected_runtime_sha256
+            or interpreter.get("pin_bytes") != expected_runtime_bytes
+            or type(expected_runtime_sha256) is not str or len(expected_runtime_sha256) != 64
+            or any(c not in "0123456789abcdef" for c in expected_runtime_sha256)
+            or type(expected_runtime_bytes) is not int or expected_runtime_bytes <= 0):
+        raise ValueError("published setup report does not pin the retained v1 Python runtime layout")
+    expected_old_python = (legacy_state / "ami-rust-python-bootstrap"
+                           / Path(*PurePosixPath(auth.rel(runtime_relative)).parts))
+    if old_host.get("python") != str(expected_old_python):
+        raise ValueError("published v1 project lock does not select its retained state Python runtime")
+    old_python = Path(old_host["python"])
+    if old_python.is_symlink() or not old_python.is_file():
+        raise ValueError("published v1 retained Python runtime is missing or not a regular file")
+    if old_host.get("python_sha256") != expected_runtime_sha256:
+        raise ValueError("published v1 retained Python runtime differs from its pinned setup report")
+    old_python_raw = auth.read(old_python, cap=expected_runtime_bytes)
+    if (len(old_python_raw) != expected_runtime_bytes
+            or auth.sha(old_python_raw) != expected_runtime_sha256):
+        raise ValueError("published v1 retained Python runtime differs from its pinned setup report")
+
+    old_executable = Path(report["native_executable"]["path"])
+    old_executable_raw = auth.read(old_executable)
+    if (len(old_executable_raw) != report["native_executable"]["bytes"]
+            or auth.sha(old_executable_raw) != report["native_executable"]["sha256"]):
+        raise ValueError("published v1 native executable differs from its setup report")
+    return {"old_lock": old_lock, "old_value": old_value, "old_ready": old_ready,
+            "old_sdk": old_sdk, "old_sdk_root": old_sdk_root, "old_python": old_python,
+            "old_executable_raw": old_executable_raw}
+
+
+def _qualify_actual_published_v1_migration(work, output, state, project, frontend, supervisor,
+                                            command, original_elf, guards, legacy):
+    """Migrate and rebuild the real pinned 0.1.0 project with the native frontend."""
+    report = legacy["report"]
+    legacy_state, legacy_project = Path(report["state"]), Path(report["project"])
+    entry = _validate_actual_published_v1_entry(report, legacy_state, legacy_project)
+    old_lock, old_value, old_ready = entry["old_lock"], entry["old_value"], entry["old_ready"]
+    old_sdk, old_sdk_root = entry["old_sdk"], entry["old_sdk_root"]
+    old_python, old_executable_raw = entry["old_python"], entry["old_executable_raw"]
+
+    legacy_before = _check_published_v1_preservation(legacy, guards, "before native migration")
+    protected_inputs = {**_published_v1_preservation_roots(legacy, guards),
+                        "native_ready_state": state, "native_project": project,
+                        "native_first_build": Path(legacy["native_first_build"])}
+    before = _preservation_snapshot(protected_inputs)
+    command("20-published-v1-state-schema-refusal", ["check-inputs", "--state", legacy_state], 2,
+            executable=frontend, additional_deny_exec=[old_python])
+    refusal = auth.read(output / "20-published-v1-state-schema-refusal.stderr.log")
+    expected_refusal = b"ami-rust: unsupported or missing schema; expected ami-rust-package-state-v2\n"
+    if refusal != expected_refusal:
+        raise ValueError("native frontend did not refuse the actual published v1 state at the v2 schema boundary")
+    if _preservation_snapshot(_published_v1_preservation_roots(legacy, guards)) != legacy_before:
+        raise ValueError("read-only native v1 state refusal changed published inputs or preservation guards")
+
+    inspection = auth.parsed(command("20-published-v1-read-only-inspection",
+        ["migrate", "--project", legacy_project, "--dry-run"], executable=frontend))
+    if (inspection.get("legacy_lock", {}).get("sha256") != auth.sha(auth.read(old_lock))
+            or inspection.get("legacy_python", {}).get("path") != str(old_python)
+            or inspection.get("legacy_python", {}).get("sha256") != old_value["host"]["python_sha256"]
+            or inspection.get("migration_required") is not True
+            or _preservation_snapshot(protected_inputs) != before):
+        raise ValueError("native read-only published-v1 inspection omitted its exact identities or changed protected inputs")
+    prefix = state / ("sdk-" + auth.parsed(auth.read(state / "ready.json"))["sdk_version"])
+    pin = auth.sha(auth.read(prefix / "install-receipt.json"))
+    area = fresh(work / "published-v1-native-migration")
+    migrated_parent = area / "output"
+    migrated_parent.mkdir(mode=0o700)
+    migrated = migrated_parent / "migrated-v2-lock.json"
+    arguments = ["migrate", "--project", legacy_project, "--from-lock", old_lock,
+                 "--install-prefix", prefix, "--receipt-sha256", pin, "--output", migrated]
+    wrong = list(arguments)
+    wrong[wrong.index("--receipt-sha256") + 1] = "0" * 64
+    refused_before = _preservation_snapshot({"refused_output": migrated_parent})
+    command("21-published-migration-wrong-receipt", wrong, 2, executable=frontend)
+    if (_preservation_snapshot({"refused_output": migrated_parent}) != refused_before
+            or migrated.exists() or migrated.is_symlink()
+            or auth.read(output / "21-published-migration-wrong-receipt.stderr.log")
+                != b"ami-rust: installed receipt differs from the external pin\n"):
+        raise ValueError("refused published-v1 migration changed its output or missed the receipt refusal")
+    result = auth.parsed(command("22-migrate-published-v1-project", arguments, executable=frontend))
+    lock_bytes = auth.read(migrated)
+    migrated_value = auth.parsed(lock_bytes)
+    if (result.get("status") != "migrated"
+            or result.get("legacy_lock_sha256") != auth.sha(auth.read(old_lock))
+            or result.get("receipt_sha256") != pin
+            or migrated_value.get("schema") != "ami-rust-project-lock-v2"):
+        raise ValueError("native frontend did not migrate the exact published-v1 project into a separate v2 lock")
+    occupied_before = _preservation_snapshot({"existing_output": migrated_parent})
+    command("23-published-migration-occupied-output", arguments, 2, executable=frontend)
+    if (_preservation_snapshot({"existing_output": migrated_parent}) != occupied_before
+            or auth.read(migrated) != lock_bytes
+            or auth.read(output / "23-published-migration-occupied-output.stderr.log")
+                != b"ami-rust: output JSON path must be fresh\n"):
+        raise ValueError("refused published-v1 migration changed the existing native lock")
+    command("24-verify-published-migration-lock", ["verify", "--sdk-lock", migrated], executable=frontend)
+    build_area = area / "build-area"
+    build_area.mkdir(mode=0o700)
+    build_parent = build_area / "derived"
+    build_parent.mkdir(mode=0o700)
+    build = build_parent / "build"
+    built = auth.parsed(command("25-build-published-migrated-project", ["build", "--sdk-lock", migrated,
+        "--output-dir", build, "--", "build", "--manifest-path", legacy_project / "Cargo.toml",
+        "--package", "hello-aros", "--release", "--locked", "--offline"], executable=frontend))
+    migrated_elf = auth.read(build / "artifacts/AMIRUST")
+    if (built.get("status") != "PASS" or not (build / "build-receipt.json").is_file()
+            or migrated_elf != old_executable_raw):
+        raise ValueError("migrated published project did not reproduce its actual historical native executable")
+
+    def project_material(root):
+        rows = []
+        total = 0
+        for path in sorted(Path(root).rglob("*"), key=lambda item: item.as_posix()):
+            if path.is_symlink():
+                raise ValueError("published project material contains a symlink")
+            if path.is_dir():
+                continue
+            relative = path.relative_to(root).as_posix()
+            if relative == "ami-rust.lock.json":
+                continue
+            raw = auth.read(path, cap=16 * 1024**2)
+            total += len(raw)
+            if total > 64 * 1024**2 or len(rows) >= 10_000:
+                raise ValueError("published project source material exceeds its comparison bound")
+            rows.append({"path": relative, "bytes": len(raw), "sha256": auth.sha(raw)})
+        return rows
+
+    same_project_material = project_material(legacy_project) == project_material(project)
+    if same_project_material and migrated_elf != original_elf:
+        raise ValueError("identical published and native project material produced different migrated/native executables")
+    after = _preservation_snapshot(protected_inputs)
+    if before != after or _preservation_snapshot(_published_v1_preservation_roots(legacy, guards)) != legacy_before:
+        raise ValueError("migration changed published or native inputs after its actual migrated build")
+    _check_published_v1_preservation(legacy, guards, "native migration and migrated build")
+    migration = {"schema": "ami-rust-published-v1-to-native-v2-transition-v1",
+        "status": "PASS_ACTUAL_PUBLISHED_V1_MIGRATION_AND_EQUIVALENT_BUILD_NOT_RC1_ACCEPTANCE",
+        "historical_setup_oracle": report["status"],
+        "observed_consumer": "native Rust frontend only; historical Python was denied for v1 refusal and migration",
+        "published_versions": report["package_version_pins"],
+        "native_versions": {"cli_version": auth.parsed(auth.read(ROOT / "release/native-tooling-inputs.json"))["cli_version"],
+                            "sdk_version": auth.parsed(auth.read(state / "ready.json"))["sdk_version"]},
+        "legacy_state": str(legacy_state), "legacy_project": str(legacy_project),
+        "legacy_lock_sha256": auth.sha(auth.read(old_lock)),
+        "legacy_sdk_root": str(old_sdk_root), "legacy_sdk_manifest_sha256": old_sdk["manifest_sha256"],
+        "legacy_python_path_denied": str(old_python), "v1_state_refusal_stderr_sha256": auth.sha(refusal),
+        "inspection": inspection, "migration": result, "migrated_lock_sha256": auth.sha(lock_bytes),
+        "migrated_build_sha256": auth.sha(migrated_elf),
+        "published_build_sha256": report["native_executable"]["sha256"],
+        "native_original_build_sha256": auth.sha(original_elf),
+        "same_project_material_excluding_version_lock": same_project_material,
+        "before": before, "after": after, "migrated_lock": str(migrated),
+        "migrated_output_root": str(migrated_parent),
+        "migration_area": str(area), "migrated_build_root": str(build),
+        "scope": "Side-by-side published 0.1.0-2 to signed native 0.2 package migration/build evidence. This is not a package-manager or native-to-native upgrade and is not RC1 acceptance."}
+    write(output / "native-public-migration.json", auth.encoded(migration))
+    return migration
+
+
+def _qualify_native_migration(work, output, state, project, frontend, xtask, supervisor, command, original_elf, guards, legacy=None):
+    """Use published v1 inputs when supplied; keep the synthetic fallback for focused tests."""
+    if legacy is not None:
+        return _qualify_actual_published_v1_migration(work, output, state, project, frontend,
+            supervisor, command, original_elf, guards, legacy)
     ready = auth.parsed(auth.read(state / "ready.json"))
     prefix = state / ("sdk-" + ready["sdk_version"])
     pin = auth.sha(auth.read(prefix / "install-receipt.json"))
@@ -1274,7 +1894,48 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
         "--work", authentication_area / "work"], executable=xtask))
     if authentication.get("status") != "OUTER_AND_INNER_AUTHENTICATED":
         raise ValueError("native package outer/inner authentication did not complete")
-    interruption = _qualify_prepare_interruption(work, output, frontend, xtask, command)
+
+    # Preserve a genuine published 0.1.0 rollback population before any new
+    # consumer prepare/interruption command. Its historical Python is setup
+    # evidence only; all following observations use the packaged Rust CLI.
+    guards = _retained_preservation_guards(work)
+    archive = _download_published_v1_archive(work, supervisor)
+    legacy_report = _prepare_published_legacy(work, output, supervisor, archive)
+    if legacy_report.get("status") != "PASS_ACTUAL_PUBLISHED_V1_SETUP_ORACLE_NOT_RC1_ACCEPTANCE":
+        raise ValueError("published 0.1.0 rollback setup did not complete through its actual historical package")
+    # Every new consumer command from this point shares the same excluded
+    # historical runtime, including migrated-lock verification and builds.
+    observed_command = command
+    inert_runtime = Path(legacy_report["state"]) / "ami-rust-python-bootstrap/runtime/python"
+
+    def command(label, arguments, expected=0, **options):
+        return observed_command(label, arguments, expected,
+                                inert_python_roots=(inert_runtime,), **options)
+
+    legacy = {"report": legacy_report, "checkpoints": []}
+    legacy_roots = _published_v1_preservation_roots(legacy, guards)
+    legacy["baseline"] = _preservation_snapshot(legacy_roots)
+    archive_copy = Path(legacy_report["archive"]["copy"])
+    if auth.sha(auth.read(archive_copy, cap=PUBLISHED_V1_ARCHIVE_PIN["bytes"])) != PUBLISHED_V1_ARCHIVE_PIN["sha256"]:
+        raise ValueError("published 0.1.0 rollback setup did not retain the exact package archive")
+    legacy["checkpoints"].append({"name": "before-new-consumer-observations",
+        "roots": legacy["baseline"], "archive_sha256": PUBLISHED_V1_ARCHIVE_PIN["sha256"]})
+
+    active_root = work / "active-cli"
+    old_root = Path(legacy_report["retained_root"])
+    if active_root.exists() or active_root.is_symlink() or old_root.is_symlink() or not old_root.is_dir():
+        raise ValueError("private active CLI selector or published retained root is not fresh and regular")
+    selector_roots = {**legacy_roots, "native_package": package}
+    selector_before = _preservation_snapshot(selector_roots)
+    active_root.symlink_to(old_root.resolve(strict=True), target_is_directory=True)
+    if active_root.resolve(strict=True) != old_root.resolve(strict=True):
+        raise ValueError("initial active CLI root does not select the actual published retained launcher")
+    if _preservation_snapshot(selector_roots) != selector_before:
+        raise ValueError("initial active CLI selection changed published or native package inputs")
+    old_version_before = _published_v1_launcher_version(
+        work, supervisor, active_root, "published-v1-active-cli-version-before-native")
+    _check_published_v1_preservation(legacy, guards, "published retained launcher identity check")
+
     state_write_area = work / "native-state-write-area"
     state_write_area.mkdir(mode=0o700)
     state_parent = state_write_area / "derived"
@@ -1301,24 +1962,74 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
         "--project", project, "--output-dir", first], executable=frontend))
     if built.get("status") != "PASS" or not (first / "build-receipt.json").is_file():
         raise ValueError("native packaged build omitted its PASS receipt")
+    original_elf = auth.read(first / "artifacts/AMIRUST")
+    _check_published_v1_preservation(legacy, guards, "native cold prepare and first project build")
+
+    # Bind a private global selector to the new package, and use its resolved
+    # canonical launcher for subsequent observed operations, including SIGTERM.
+    selector_roots = {**legacy_roots, "native_package": package,
+                      "native_ready_state": state, "native_project": project,
+                      "native_first_build": first}
+    selector_before_activation = _preservation_snapshot(selector_roots)
+    selected_root = _set_active_package_root(active_root, old_root, package)
+    frontend = (active_root / "bin/ami-rust").resolve(strict=True)
+    if frontend != (package / "bin/ami-rust").resolve(strict=True):
+        raise ValueError("active CLI root does not resolve to the exact native package launcher")
+    selector_after_activation = _preservation_snapshot(selector_roots)
+    if selector_before_activation != selector_after_activation:
+        raise ValueError("native package activation changed old or new state, project, build, or preservation data")
+    activation = [{"action": "initial-published-retained-root", "selector": str(active_root),
+                   "resolved_root": str(old_root.resolve(strict=True)),
+                   "launcher": old_version_before},
+                  {"action": "activate-native-package", "selector": str(active_root),
+                   "previous_root": str(old_root.resolve(strict=True)),
+                   "selected_root": str(selected_root), "resolved_launcher": str(frontend),
+                   "preservation_before": selector_before_activation,
+                   "preservation_after": selector_after_activation}]
+
+    interruption = _qualify_prepare_interruption(work, output, frontend, xtask, command)
+    _check_published_v1_preservation(legacy, guards, "new native prepare interruption and refusal")
     native_matrix = _qualify_native_build_matrix(
         work, state, frontend, output, supervisor, config, command)
     # A later retained-launcher failure must not discard the completed matrix.
     write(output / "native-build-matrix.json", auth.encoded(native_matrix))
     _check_limits(supervisor, "preserved completed native build matrix")
-    original_elf = auth.read(first / "artifacts/AMIRUST")
-    guards = _retained_preservation_guards(work)
+    _check_published_v1_preservation(legacy, guards, "native build matrix")
+    legacy["native_first_build"] = str(first)
     migration = _qualify_native_migration(
-        work, output, state, project, frontend, xtask, supervisor, command, original_elf, guards)
+        work, output, state, project, frontend, xtask, supervisor, command, original_elf, guards, legacy=legacy)
+    _check_published_v1_preservation(legacy, guards, "native migration and migrated build")
+
+    rollback_roots = {**selector_roots,
+                      "native_migration_area": Path(migration["migration_area"])}
+    selector_before_rollback = _preservation_snapshot(rollback_roots)
+    rolled_back_root = _set_active_package_root(active_root, package, old_root)
+    if rolled_back_root != old_root.resolve(strict=True):
+        raise ValueError("active CLI rollback does not resolve to the published retained 0.1.0 root")
+    selector_after_rollback = _preservation_snapshot(rollback_roots)
+    if selector_before_rollback != selector_after_rollback:
+        raise ValueError("active CLI rollback changed old or new state, project, build, migration, or package data")
+    old_version_after = _published_v1_launcher_version(
+        work, supervisor, active_root, "published-v1-active-cli-version-after-rollback")
+    activation.append({"action": "rollback-to-published-retained-root", "selector": str(active_root),
+                      "previous_root": str(package.resolve(strict=True)),
+                      "selected_root": str(rolled_back_root),
+                      "resolved_launcher": str(active_root / "bin/ami-rust"),
+                      "launcher": old_version_after,
+                      "preservation_before": selector_before_rollback,
+                      "preservation_after": selector_after_rollback})
+    _check_published_v1_preservation(legacy, guards, "active CLI rollback")
+
     marker = work / "unrelated-user-file.txt"
     write(marker, b"preserve across package removal\n")
-    protected = {"ready_state_and_retained_tooling": state, "old_project": project,
-                 **guards}
-    migration_area = work / "native-legacy-migration-fixture"
-    for name in ("project", "legacy-sdk", "output"):
-        protected["migration_" + name] = migration_area / name
+    protected = {"ready_state_and_retained_tooling": state, "native_project": project,
+                 "native_first_build": first, "native_migration_area": Path(migration["migration_area"]),
+                 **legacy_roots}
     before_removal = _preservation_snapshot(protected)
+    package_before_removal = _preservation_snapshot({"native_package": package})
     shutil.rmtree(package)
+    if package.exists() or package.is_symlink() or active_root.resolve(strict=True) != old_root.resolve(strict=True):
+        raise ValueError("native package removal changed the rolled-back selector or retained a package root")
     retained = state / "retained/bin/ami-rust"
     if not retained.is_file() or auth.read(state / "ready.json") != ready:
         raise ValueError("native package removal did not preserve retained tooling and state")
@@ -1336,21 +2047,38 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
     after_removal = _preservation_snapshot(protected)
     if after_removal != before_removal:
         raise ValueError("package removal or retained replay changed protected state/project/global config/SDK/user data")
-    preservation = {"schema": "ami-rust-retained-removal-preservation-v1",
+    _check_published_v1_preservation(legacy, guards, "native package removal and retained replay")
+    preservation = {"schema": "ami-rust-published-v1-native-retained-removal-preservation-v1",
                     "status": "PASS_COMPLETE_RETAINED_REMOVAL_PRESERVATION",
                     "before": before_removal, "after": after_removal,
-                    "scope": "Owned package directory removal plus actual retained input recheck/offline build. This is not a cross-version upgrade or package-manager transaction."}
+                    "native_package_before_removal": package_before_removal,
+                    "active_cli_transitions": activation,
+                    "published_v1_preservation_checkpoints": legacy["checkpoints"],
+                    "scope": "Side-by-side published 0.1.0-2 to native 0.2 package activation/rollback/removal and retained replay. This is not a package-manager or native-to-native upgrade."}
     write(output / "native-retained-removal-preservation.json", auth.encoded(preservation))
-    return {"status": "PASS_SIGNED_PACKAGE_PREPARE_BUILD_AND_RETAINED_REPLAY",
+    transition = {"schema": "ami-rust-published-v1-native-package-transition-v1",
+        "status": "PASS_SIDE_BY_SIDE_PUBLISHED_0_1_TO_NATIVE_0_2_TRANSITION_NOT_RC1_ACCEPTANCE",
+        "historical_setup_oracle": legacy_report,
+        "active_cli": {"selector": str(active_root), "transitions": activation,
+                       "published_version_before_native": old_version_before,
+                       "published_version_after_rollback": old_version_after,
+                       "native_frontend": str(frontend),
+                       "native_package_version": pins["package_version"],
+                       "native_cli_version": pins["cli_version"]},
+        "preservation_checkpoints": legacy["checkpoints"],
+        "scope": "Private side-by-side published 0.1.0-2 to native 0.2 transition and removal. No package manager, native-to-native upgrade, or RC1 acceptance claim."}
+    write(output / "native-published-v1-transition.json", auth.encoded(transition))
+    return {"status": "PASS_SIDE_BY_SIDE_PUBLISHED_V1_TO_NATIVE_PACKAGE_TRANSITION_AND_RETAINED_REPLAY",
         "package_core_sha256": pins["core_sha256"], "authentication": authentication,
         "prepare_interruption": interruption,
         "public_migration": migration,
+        "published_v1_transition": transition,
         "native_executable_sha256": auth.sha(original_elf),
         "native_matrix": native_matrix,
         "retained_removal_preservation": preservation,
         "ready_sha256": auth.sha(ready),
-        "removal": "private owned package root removed; state, project and unrelated marker preserved",
-        "limitation": "Cargo offline mode exercised; OS network denial and complete no-Python observation remain unqualified"}
+        "removal": "private native 0.2 package root removed after selector rollback; both real old/new states, projects, builds and unrelated guards preserved",
+        "limitation": "Historical Python created the actual published 0.1.0 state/project/build and ran two retained --version rollback controls as separate internal oracles. Those invocations are outside the observed new Rust consumer tree. New Rust operations use the runtime-excluding policy; Linux migration additionally installs the process-wide no-exec guard before reading the inert interpreter. Cargo offline mode was exercised; OS network denial and complete no-Python observation remain unqualified; no package-manager transaction or RC1 acceptance is claimed"}
 
 
 def main():

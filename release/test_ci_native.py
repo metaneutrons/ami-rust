@@ -1,6 +1,8 @@
 """Native producer controls; synthetic fixtures are not publisher evidence."""
 import io
 import json
+import lzma
+import os
 from pathlib import Path
 import shutil
 import sys
@@ -8,7 +10,7 @@ import tarfile
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ci_auth as auth
@@ -420,7 +422,11 @@ class NativeMatrixTests(unittest.TestCase):
     def test_retained_removal_refuses_changed_global_configuration(self):
         self._run_signed_package_lifecycle_matrix_case(mutate_replay=True)
 
-    def _run_signed_package_lifecycle_matrix_case(self, *, fail_replay=False, mutate_replay=False):
+    def test_failed_published_setup_never_runs_new_consumer_commands(self):
+        self._run_signed_package_lifecycle_matrix_case(fail_setup=True)
+
+    def _run_signed_package_lifecycle_matrix_case(self, *, fail_replay=False, mutate_replay=False,
+                                                  fail_setup=False):
         (self.work / "home").mkdir(mode=0o700)
         outer = self.work / "outer"
         metadata = outer / "metadata"
@@ -429,7 +435,8 @@ class NativeMatrixTests(unittest.TestCase):
         identity = {"source_sha": "a" * 40, "run_id": 42, "run_attempt": 2}
         config = {"sdk_version": "0.2.0", "cli_version": "0.2.0-dev"}
         pins = {"source_commit": identity["source_sha"], "sdk_run_id": 42,
-                "sdk_run_attempt": 2, "host": host, **config, "core_sha256": "b" * 64}
+                "sdk_run_attempt": 2, "host": host, **config,
+                "package_version": "0.2.0-1", "core_sha256": "b" * 64}
         (metadata / ("native-package-inputs-" + host + ".json")).write_bytes(auth.encoded(pins))
         (metadata / "outer-verification.json").write_bytes(auth.encoded({
             "status": "OUTER_CRYPTO_VERIFIED_NOT_R1_ACCEPTED", "source_commit": identity["source_sha"],
@@ -437,15 +444,29 @@ class NativeMatrixTests(unittest.TestCase):
         package = self.work / "native-package"
         matrix_calls = []
         commands = []
+        observed_command_options = []
         prepared_state = None
+        legacy_report = {}
+        dummy_archive = b"inert published archive fixture; not an archive authenticity claim\n"
+        archive_input = self.work / "published-v1-archive-input.xz"
+        archive_input.write_bytes(dummy_archive)
+        archive_pin = {"bytes": len(dummy_archive), "sha256": auth.sha(dummy_archive)}
 
         def compose(*args, **kwargs):
             (package / "bin").mkdir(parents=True)
             (package / "bin/ami-rust").write_bytes(b"inert frontend fixture")
 
-        def command(label, arguments, expected=0, *, executable):
+        def command(label, arguments, expected=0, *, executable, **options):
             nonlocal prepared_state
             commands.append(label)
+            observed_command_options.append((label, options))
+            if legacy_report:
+                expected_inert_root = (Path(legacy_report["state"])
+                                       / "ami-rust-python-bootstrap/runtime/python")
+                self.assertEqual(options.get("inert_python_roots"), (expected_inert_root,),
+                                 "every post-setup consumer command must exclude the retained v1 runtime")
+            else:
+                self.assertNotIn("inert_python_roots", options)
             if arguments[0] == "native-package-verify":
                 self.assertEqual(label, "09-package-publisher-authentication")
                 self.assertEqual(executable, self.work / "xtask")
@@ -487,18 +508,133 @@ class NativeMatrixTests(unittest.TestCase):
             self.assertEqual(frontend, package / "bin/ami-rust")
             self.assertTrue(frontend.is_file(), "matrix must run before package removal")
             self.assertEqual(selected, config)
-            self.assertIs(callback, command)
+            self.assertIsNot(callback, command)
+            callback("matrix-inert-runtime-exclusion-probe", ["verify-package"], executable=frontend)
+            self.assertEqual(observed_command_options[-1][1].get("inert_python_roots"),
+                             (Path(legacy_report["state"])
+                              / "ami-rust-python-bootstrap/runtime/python",))
             self.assertIn("14-package-offline-build", commands)
             matrix_calls.append(True)
             return {"build_count": 10, "fixture": True}
 
-        def migration(*args):
+        def download_published_archive(work, supervisor):
+            self.assertEqual(work, self.work)
+            self.assertEqual(Path(supervisor.work), self.work)
+            return archive_input
+
+        def prepare_published_legacy(work, output, supervisor, archive_source):
+            self.assertEqual((work, output), (self.work, self.output))
+            self.assertEqual(Path(supervisor.work), self.work)
+            self.assertEqual(Path(archive_source), archive_input)
+            area = self.work / "inert-published-v1-setup"
+            state = area / "state-parent/ami-rust-0.1.0-state"
+            project = area / "project-parent/hello-aros"
+            build = area / "build-parent/hello-aros-build"
+            package_tree = area / "package-tree"
+            home = area / "home"
+            archive_copy = area / "ami-rust-0.1.0-packaging.2.tar.xz"
+            for directory in (state, project, build, package_tree, home):
+                directory.mkdir(mode=0o700, parents=True)
+            archive_copy.write_bytes(Path(archive_source).read_bytes())
+
+            ready = {"schema": "ami-rust-package-state-v1", "status": "READY",
+                     "sdk_version": "0.1.0", "package_version": "0.1.0-2"}
+            (state / "ready.json").write_bytes(auth.encoded(ready))
+            retained_root = state / "retained"
+            retained_launcher = retained_root / "bin/ami-rust"
+            retained_launcher.parent.mkdir(parents=True)
+            retained_launcher.write_bytes(b"inert retained v1 launcher identity\n")
+
+            runtime_root = state / "ami-rust-python-bootstrap/runtime/python"
+            (runtime_root / "bin").mkdir(parents=True)
+            (runtime_root / "lib").mkdir()
+            runtime_bytes = b"inert retained v1 Python identity; never executed\n"
+            retained_python = runtime_root / "bin/python3.12"
+            retained_python.write_bytes(runtime_bytes)
+            library_name = ("libpython3.12.dylib" if host == "macos-aarch64"
+                            else "libpython3.12.so.1.0")
+            (runtime_root / "lib" / library_name).write_bytes(b"inert retained runtime library identity\n")
+
+            sdk_root = state / "sdk-0.1.0/sdk"
+            sdk_manifest = sdk_root / "contract/sdk.json"
+            sdk_manifest.parent.mkdir(parents=True)
+            manifest_bytes = b'{"fixture":"published-v1"}\n'
+            sdk_manifest.write_bytes(manifest_bytes)
+            project_manifest = project / "Cargo.toml"
+            project_manifest.write_bytes(b"# inert published project fixture\n")
+            lock = {"schema": "ami-rust-project-lock-v1",
+                    "sdk": {"root": str(sdk_root), "manifest": "contract/sdk.json",
+                            "manifest_sha256": auth.sha(manifest_bytes)},
+                    "host": {"platform": host, "python": str(retained_python),
+                             "python_sha256": auth.sha(runtime_bytes)}}
+            lock_path = project / "ami-rust.lock.json"
+            lock_path.write_bytes(auth.encoded(lock))
+            old_executable = build / "artifacts/AMIRUST"
+            old_executable.parent.mkdir()
+            old_executable.write_bytes(b"inert published v1 executable fixture\n")
+            package_root = package_tree / "ami-rust-0.1.0-2/usr/libexec/ami-rust/0.1.0-2"
+            package_root.mkdir(mode=0o700, parents=True)
+            (package_root / "fixture.txt").write_bytes(b"inert extracted package fixture\n")
+            (home / "fixture.txt").write_bytes(b"inert published home fixture\n")
+
+            coordinator_python_root = self.work / "coordinator-python-bootstrap"
+            coordinator_python = coordinator_python_root / "runtime/python/bin/python3.12"
+            coordinator_python.parent.mkdir(mode=0o700, parents=True)
+            coordinator_python.write_bytes(runtime_bytes)
+            runtime_relative = "runtime/python/bin/python3.12"
+            verified_bootstrap = {
+                "schema": "ami-rust-ci-python-bootstrap-v1", "status": "READY_CI_RUNTIME_NOT_SDK_QUALIFICATION",
+                "host": host, "version": "3.12.15", "target": "aarch64-apple-darwin",
+                "relative_files": {"runtime_executable": runtime_relative, "runtime_root": "runtime"},
+                "runtime": {"path": runtime_relative, "bytes": len(runtime_bytes),
+                            "sha256": auth.sha(runtime_bytes), "version": "3.12.15"},
+                "runtime_pin": {"relative_path": "python/bin/python3.12",
+                                "sha256": auth.sha(runtime_bytes)},
+                "runtime_sha256": auth.sha(runtime_bytes)}
+            legacy_report.update({
+                "schema": "ami-rust-published-v1-rollback-setup-v1",
+                "status": "PASS_ACTUAL_PUBLISHED_V1_SETUP_ORACLE_NOT_RC1_ACCEPTANCE",
+                "archive": {"source": str(archive_source), "copy": str(archive_copy),
+                            "bytes": len(dummy_archive), "sha256": auth.sha(dummy_archive)},
+                "archive_pin": {"bytes": len(dummy_archive), "sha256": auth.sha(dummy_archive)},
+                "package_root": str(package_root),
+                "package_version_pins": {"sdk_version": "0.1.0", "package_version": "0.1.0-2",
+                                          "source_commit": "b4ebb9cce5decd01616b75acf451d0eba9995ee3"},
+                "package_pins_sha256": "c" * 64,
+                "historical_cli_sha256": auth.sha(b"inert published v1 launcher identity\n"),
+                "package_tar": {"members": 1, "regular_file_bytes": 35,
+                                "expanded_bytes": 35, "expanded_limit_bytes": 64 * 1024**2,
+                                "decoder_memory_limit_bytes": 256 * 1024**2},
+                "interpreter": {"path": str(coordinator_python),
+                                "root": str(coordinator_python_root), "host": host,
+                                "bytes": len(runtime_bytes), "sha256": auth.sha(runtime_bytes),
+                                "pin_bytes": len(runtime_bytes), "pin_sha256": auth.sha(runtime_bytes),
+                                "bootstrap_sha256": "d" * 64,
+                                "verified_bootstrap": verified_bootstrap},
+                "state": str(state), "project": str(project), "build": str(build),
+                "home": str(home), "tmp": str(area / "tmp"), "package_tree": str(package_tree),
+                "retained_root": str(retained_root), "retained_launcher": str(retained_launcher),
+                "ready_sha256": auth.sha(auth.encoded(ready)),
+                "legacy_lock_sha256": auth.sha(auth.encoded(lock)),
+                "native_executable": {"path": str(old_executable),
+                                      "bytes": old_executable.stat().st_size,
+                                      "sha256": auth.sha(old_executable.read_bytes())},
+                "commands": []})
+            (area / "tmp").mkdir(mode=0o700)
+            if fail_setup:
+                legacy_report["status"] = "FAIL_INERT_SETUP_FIXTURE"
+            return legacy_report
+
+        def migration(*args, **kwargs):
             self.assertEqual(len(matrix_calls), 1)
-            area = self.work / "native-legacy-migration-fixture"
+            self.assertEqual(kwargs.get("legacy", {}).get("report"), legacy_report)
+            area = self.work / "native-published-v1-migration"
             area.mkdir(mode=0o700)
             for name in ("project", "legacy-sdk", "output"):
                 (area / name).mkdir(mode=0o700)
-            return {"status": "SYNTHETIC_ORDER_FIXTURE_NO_MIGRATION_EVIDENCE"}
+            (area / "fixture.txt").write_bytes(b"inert v1 migration preservation root\n")
+            return {"status": "SYNTHETIC_ORDER_FIXTURE_NO_MIGRATION_EVIDENCE",
+                    "migration_area": str(area)}
 
         # Composition is a stub in this lifecycle-order fixture. Supply inert
         # notice data locally so the test also works in the narrow installer
@@ -510,12 +646,25 @@ class NativeMatrixTests(unittest.TestCase):
             (fixture_source / name).write_bytes(b"inert notice fixture\n")
         (licenses.parent / "THIRD-PARTY-NOTICES.md").write_bytes(b"inert third-party notice fixture\n")
         with patch.object(native, "ROOT", fixture_source), \
+                patch.object(native, "PUBLISHED_V1_ARCHIVE_PIN", archive_pin), \
+                patch.object(native, "_download_published_v1_archive",
+                             side_effect=download_published_archive) as archive_probe, \
+                patch.object(native, "_prepare_published_legacy",
+                             side_effect=prepare_published_legacy) as setup_probe, \
+                patch.object(native, "_published_v1_launcher_version", return_value={
+                    "version_output": "ami-rust 0.1.0 (packaging 2)\n"}), \
                 patch.object(native, "_supervised_run", side_effect=compose), \
                 patch.object(native, "_qualify_native_build_matrix", side_effect=matrix), \
                 patch.object(native, "_qualify_native_migration", side_effect=migration) as migration_probe, \
                 patch.object(native, "_qualify_prepare_interruption", return_value={
                     "status": "SYNTHETIC_MATRIX_ORDER_FIXTURE_NO_SIGTERM_EVIDENCE"}) as interruption_probe:
-            if fail_replay:
+            if fail_setup:
+                with self.assertRaisesRegex(ValueError, "published 0.1.0 rollback setup did not complete"):
+                    native._qualify_native_package(
+                        self.work, self.output, outer, self.work / "bundle", self.frontend,
+                        self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
+                        identity, config, command)
+            elif fail_replay:
                 with self.assertRaisesRegex(ValueError, "isolated retained replay refusal"):
                     native._qualify_native_package(
                         self.work, self.output, outer, self.work / "bundle", self.frontend,
@@ -536,15 +685,27 @@ class NativeMatrixTests(unittest.TestCase):
                 preservation = report["retained_removal_preservation"]
                 self.assertEqual(preservation["before"], preservation["after"])
                 self.assertEqual(set(preservation["before"]), {
-                    "ready_state_and_retained_tooling", "old_project", "global_cargo_config",
-                    "global_rustup_config", "unrelated_sdk", "user_data",
-                    "migration_project", "migration_legacy-sdk", "migration_output"})
-        self.assertEqual(auth.parsed(auth.read(self.output / "native-build-matrix.json")),
-                         {"build_count": 10, "fixture": True})
-        interruption_probe.assert_called_once()
-        migration_probe.assert_called_once()
-        self.assertEqual(commands[-2:], ["15-retained-input-recheck", "16-retained-offline-replay"])
-        self.assertFalse(package.exists())
+                    "ready_state_and_retained_tooling", "native_project", "native_first_build",
+                    "native_migration_area", "published_v1_state", "published_v1_project",
+                    "published_v1_build", "published_v1_package_tree", "published_v1_home",
+                    "global_cargo_config", "global_rustup_config", "unrelated_sdk", "user_data"})
+        if fail_setup:
+            self.assertFalse((self.output / "native-build-matrix.json").exists())
+        else:
+            self.assertEqual(auth.parsed(auth.read(self.output / "native-build-matrix.json")),
+                             {"build_count": 10, "fixture": True})
+        archive_probe.assert_called_once_with(self.work, ANY)
+        setup_probe.assert_called_once_with(self.work, self.output, ANY, archive_input)
+        if fail_setup:
+            self.assertEqual(commands, ["09-package-consistency", "09-package-publisher-authentication"])
+            interruption_probe.assert_not_called()
+            migration_probe.assert_not_called()
+            self.assertTrue(package.exists())
+        else:
+            interruption_probe.assert_called_once()
+            migration_probe.assert_called_once()
+            self.assertEqual(commands[-2:], ["15-retained-input-recheck", "16-retained-offline-replay"])
+            self.assertFalse(package.exists())
 
 
 class NativeObservationSpecTests(unittest.TestCase):
@@ -671,7 +832,10 @@ class NativeObservationSpecTests(unittest.TestCase):
         self.assertEqual(spec["component_record"], str(lock))
         self.assertIn({"path": str(lock), "sha256": auth.sha(lock.read_bytes())}, spec["bindings"])
         self.assertEqual(spec["read_files"], [str(interpreter)])
-        self.assertIn(str(interpreter), spec["deny_exec"])
+        if native.current_host() == "linux-x86_64":
+            self.assertNotIn(str(interpreter), spec["deny_exec"])
+        else:
+            self.assertIn(str(interpreter), spec["deny_exec"])
         self.assertNotIn(str(interpreter), spec["executables"])
         self.assertIn(str(destination), [row["path"] for row in spec["write_trees"]])
         self.assertNotIn(str(legacy), [row["path"] for row in spec["write_trees"]])
@@ -680,6 +844,21 @@ class NativeObservationSpecTests(unittest.TestCase):
             self.spec(args)
         with self.assertRaisesRegex(ValueError, "explicit legacy lock and output"):
             self.spec(["migrate", "--project", legacy])
+
+    def test_migration_inspection_binds_conventional_lock_without_output_writes(self):
+        project = self.work / "inspection-project"
+        project.mkdir(mode=0o700)
+        interpreter = project / "python"
+        interpreter.write_bytes(b"inert identity")
+        lock = project / "ami-rust.lock.json"
+        lock.write_bytes(auth.encoded({"schema": "ami-rust-project-lock-v1",
+                                      "host": {"python": str(interpreter)}}))
+        result = self.spec(["migrate", "--project", project, "--dry-run"])
+        self.assertEqual(result["component_record"], str(lock))
+        self.assertEqual({row["path"] for row in result["write_trees"]},
+                         {str(self.work / "home"), str(self.work / "tmp")})
+        self.assertIsNone(result["derived"])
+        self.assertIn(str(interpreter), result["read_files"])
 
     def test_preservation_snapshot_detects_same_bytes_replaced_output(self):
         root = self.work / "existing-output"
@@ -859,6 +1038,200 @@ class NativeSupervisorAdditionalTests(unittest.TestCase):
         (self.temporary / "ami-rust").write_bytes(b"same behavior, different bytes")
         with self.assertRaisesRegex(ValueError, "byte-for-byte"):
             native._check_local_launcher(local, payloads, "linux-x86_64")
+
+
+class InertRuntimePartitionTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="inert runtime partition ")
+        self.root = Path(self.temporary.name).resolve()
+        self.work = self.root / "work"
+        self.work.mkdir(mode=0o700)
+        for name in ("home", "tmp"):
+            (self.work / name).mkdir(mode=0o700)
+        self.runtime = self.work / "old-state/bootstrap/runtime/python"
+        for name in ("bin", "lib"):
+            (self.runtime / name).mkdir(mode=0o700, parents=True)
+        self.interpreter = self.runtime / "bin/python3.12"
+        self.library = self.runtime / ("lib/libpython3.12.dylib" if native.current_host() == "macos-aarch64" else "lib/libpython3.12.so.1.0")
+        self.interpreter.write_bytes(b"inert identity")
+        self.library.write_bytes(b"inert library")
+        (self.work / "old-state/ready.json").write_bytes(b"{}")
+        self.sibling = self.work / "old-state/sdk"
+        self.sibling.mkdir()
+        (self.sibling / "manifest.json").write_bytes(b"{}")
+        self.cli = self.work / "cli"
+        self.cli.write_bytes(b"native placeholder")
+        self.policy = self.root / "policy.json"
+        self.policy.write_bytes(native.auth.encoded({name: {"path": "/usr/bin/true"} for name in ("gh", "cosign")}))
+        self.closure = self.root / "closure.json"
+        self.closure.write_bytes(b"{}")
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def spec(self, args, **kwargs):
+        return native._consumer_observation_spec(self.work, self.root / "coordinator-python", self.cli,
+            args, 0, self.policy, self.closure, [], inert_python_roots=[self.runtime], **kwargs)
+
+    def test_sibling_data_is_granted_but_runtime_data_is_not(self):
+        trees, files, directories = native._partition_inert_runtime_reads([self.work], [self.runtime])
+        self.assertIn(self.sibling, trees)
+        self.assertIn(self.work / "old-state/ready.json", files)
+        self.assertIn(self.work / "old-state", directories)
+        self.assertFalse(any(grant == self.runtime or grant in self.runtime.parents or self.runtime in grant.parents
+                             for grant in trees | files))
+        self.assertNotIn(self.library, files)
+        self.assertNotIn(self.interpreter, files)
+
+    def test_every_phase_excludes_library_and_exact_interpreter_exec(self):
+        for args in (["verify-package"], ["check-inputs", "--state", self.work / "old-state"]):
+            result = self.spec(args)
+            self.assertIn(str(self.library), result["deny_library"])
+            self.assertIn(str(self.interpreter), result["deny_exec"])
+            self.assertNotIn(str(self.work), [row["path"] for row in result["read_trees"]])
+            self.assertIn(str(self.work), result["read_directories"])
+
+    def test_migration_keeps_only_exact_inert_interpreter_data(self):
+        lock = self.work / "old-state/old-lock.json"
+        lock.write_bytes(native.auth.encoded({"schema": "ami-rust-project-lock-v1", "host": {"python": str(self.interpreter)}}))
+        parent = self.work / "migration-output"
+        parent.mkdir()
+        result = self.spec(["migrate", "--from-lock", lock, "--output", parent / "new-lock.json"])
+        self.assertIn(str(self.interpreter), result["read_files"])
+        self.assertNotIn(str(self.library), result["read_files"])
+        if native.current_host() == "linux-x86_64":
+            self.assertNotIn(str(self.interpreter), result["deny_exec"])
+        else:
+            self.assertIn(str(self.interpreter), result["deny_exec"])
+        self.assertIsNone(result["derived"])
+
+    def test_write_ancestor_of_runtime_fails_before_consumer(self):
+        with self.assertRaisesRegex(ValueError, "writes overlap"):
+            self.spec(["native-package-verify", "--work", self.work / "authentication"])
+
+    def test_alias_into_excluded_runtime_never_grants_data(self):
+        (self.work / "runtime-alias").symlink_to(self.runtime, target_is_directory=True)
+        trees, files, _ = native._partition_inert_runtime_reads([self.work], [self.runtime])
+        self.assertNotIn(self.runtime, trees)
+        self.assertNotIn(self.interpreter, files)
+
+    def test_unlistable_partition_ancestor_propagates(self):
+        real_scandir = os.scandir
+        def failing(path):
+            if Path(path) == self.work / "old-state":
+                raise PermissionError("intentional unreadable partition")
+            return real_scandir(path)
+        with patch.object(native.os, "scandir", side_effect=failing):
+            with self.assertRaisesRegex(PermissionError, "intentional unreadable"):
+                native._partition_inert_runtime_reads([self.work], [self.runtime])
+
+    def test_missing_or_aliased_runtime_is_rejected(self):
+        (self.runtime / "bin/python3.12").unlink()
+        with self.assertRaisesRegex(ValueError, "canonical regular"):
+            self.spec(["verify-package"])
+
+
+
+class PublishedMigrationEntryTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="published entry fixture ")
+        self.root = Path(self.temporary.name).resolve()
+        self.state, self.project = self.root / "state", self.root / "project"
+        self.project.mkdir()
+        self.sdk = self.state / "sdk-0.1.0/sdk"
+        self.sdk.mkdir(parents=True)
+        (self.sdk / "manifest.json").write_bytes(b"inert SDK manifest fixture")
+        self.python = self.state / "ami-rust-python-bootstrap/runtime/python/bin/python3.12"
+        self.python.parent.mkdir(parents=True)
+        self.python.write_bytes(b"inert interpreter identity")
+        self.runtime_hash = auth.sha(self.python.read_bytes())
+        self.runtime_size = self.python.stat().st_size
+        self.executable = self.root / "native-executable"
+        self.executable.write_bytes(b"inert native output identity")
+        (self.state / "ready.json").write_bytes(auth.encoded({"schema": "ami-rust-package-state-v1",
+            "status": "READY", "sdk_version": "0.1.0", "package_version": "0.1.0-2"}))
+        relative = "runtime/python/bin/python3.12"
+        self.report = {"interpreter": {"path": str(self.root / "different-coordinator-python"),
+            "sha256": self.runtime_hash, "bytes": self.runtime_size,
+            "pin_sha256": self.runtime_hash, "pin_bytes": self.runtime_size,
+            "verified_bootstrap": {"relative_files": {"runtime_executable": relative},
+                "runtime": {"path": relative, "sha256": self.runtime_hash, "bytes": self.runtime_size},
+                "runtime_pin": {"relative_path": "python/bin/python3.12", "sha256": self.runtime_hash}}},
+            "native_executable": {"path": str(self.executable), "bytes": self.executable.stat().st_size,
+                                  "sha256": auth.sha(self.executable.read_bytes())}}
+        self.lock = {"schema": "ami-rust-project-lock-v1", "sdk": {"root": str(self.sdk),
+            "manifest": "manifest.json", "manifest_sha256": auth.sha((self.sdk / "manifest.json").read_bytes())},
+            "host": {"python": str(self.python), "python_sha256": self.runtime_hash}}
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def validate(self):
+        (self.project / "ami-rust.lock.json").write_bytes(auth.encoded(self.lock))
+        return native._validate_actual_published_v1_entry(self.report, self.state, self.project)
+
+    def test_real_retained_layout_can_differ_from_coordinator_interpreter(self):
+        self.assertEqual(self.validate()["old_python"], self.python)
+
+    def test_wrong_interpreter_path_and_digest_are_refused(self):
+        self.lock["host"]["python"] = self.report["interpreter"]["path"]
+        with self.assertRaisesRegex(ValueError, "retained state Python runtime"):
+            self.validate()
+        self.lock["host"]["python"] = str(self.python)
+        self.lock["host"]["python_sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "pinned setup report"):
+            self.validate()
+
+    def test_changed_runtime_bytes_are_refused(self):
+        self.python.write_bytes(b"changed")
+        with self.assertRaisesRegex(ValueError, "pinned setup report"):
+            self.validate()
+
+    def test_changed_manifest_is_refused(self):
+        self.lock["sdk"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "SDK manifest differs"):
+            self.validate()
+
+
+class PublishedArchiveTests(unittest.TestCase):
+    def archive(self, *, invalid=None):
+        rows = [(native.PUBLISHED_V1_ARCHIVE_ROOT, tarfile.DIRTYPE, 0o755),
+                (native.PUBLISHED_V1_PACKAGE_ROOT, tarfile.DIRTYPE, 0o755),
+                (native.PUBLISHED_V1_PACKAGE_ROOT + "/pins.json", tarfile.REGTYPE, 0o644),
+                (native.PUBLISHED_V1_PACKAGE_ROOT + "/cli.py", tarfile.REGTYPE, 0o644),
+                (native.PUBLISHED_V1_ARCHIVE_ROOT + "/usr/bin/ami-rust", tarfile.REGTYPE, 0o755)]
+        if invalid == "path": rows.append(("../escape", tarfile.REGTYPE, 0o644))
+        if invalid == "link": rows.append((native.PUBLISHED_V1_ARCHIVE_ROOT + "/link", tarfile.SYMTYPE, 0o644))
+        if invalid == "duplicate": rows.append(rows[-1])
+        if invalid == "mode": rows.append((native.PUBLISHED_V1_ARCHIVE_ROOT + "/writable", tarfile.REGTYPE, 0o777))
+        stream = io.BytesIO()
+        with tarfile.open(fileobj=stream, mode="w", format=tarfile.USTAR_FORMAT) as archive:
+            for name, kind, mode in rows:
+                member = tarfile.TarInfo(name)
+                member.type, member.mode, member.size = kind, mode, 0
+                if kind == tarfile.SYMTYPE: member.linkname = "/outside"
+                archive.addfile(member, io.BytesIO(b""))
+        raw = lzma.compress(stream.getvalue())
+        return raw + (b"trailing" if invalid == "trailing" else b"")
+
+    def test_complete_layout_including_external_wrapper_is_admitted(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve() / "package"
+            package, count, _, _ = native._extract_published_v1_archive(self.archive(), root)
+            self.assertEqual(package, root / native.PUBLISHED_V1_PACKAGE_ROOT)
+            self.assertEqual(count, 5)
+            self.assertTrue((root / native.PUBLISHED_V1_ARCHIVE_ROOT / "usr/bin/ami-rust").is_file())
+            with self.assertRaisesRegex(ValueError, "must be fresh"):
+                native._extract_published_v1_archive(self.archive(), root)
+
+    def test_unsafe_archive_refuses_before_any_extraction(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            for kind in ("path", "link", "duplicate", "mode", "trailing"):
+                with self.subTest(kind=kind):
+                    output = Path(temporary).resolve() / kind
+                    with self.assertRaises(ValueError):
+                        native._extract_published_v1_archive(self.archive(invalid=kind), output)
+                    self.assertFalse(output.exists())
 
 
 if __name__ == "__main__":

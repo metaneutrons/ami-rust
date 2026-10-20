@@ -25,6 +25,7 @@ pub mod json;
 #[cfg(target_os = "macos")]
 #[path = "../../../macos-host-selection.rs"]
 mod macos_host_selection;
+pub mod migration_process;
 mod mutations;
 pub mod native_build;
 pub mod native_install;

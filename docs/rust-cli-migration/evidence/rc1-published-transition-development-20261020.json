@@ -1,0 +1,101 @@
+{
+  "base_commit": "46dd100f1c4c615a120b660b1262daaa6dff3a92",
+  "current_components": {
+    "passed": [
+      "strict macOS workspace Clippy",
+      "complete macOS Rust workspace tests",
+      "native publisher material binding positive/counter controls",
+      "50 native Python transition fixtures",
+      "9 Python material fixtures",
+      "Linux x86-64 all-target workspace Clippy compile only"
+    ],
+    "post_gate_changes": "Only corrected historical-oracle scope text and Python continuation indentation; the 50+9 affected Python fixtures were re-run successfully. Rust/Cargo/native-input bytes remain identical to the gate report.",
+    "report_sha256": "265000932ae9f94d166ff37d1ed19c2b915dda36ea7d1ee9a5fb8d7dbf3d3ec5",
+    "source_files": {
+      "release/ci_auth.py": "d4c5050edb423936fedfdfc227c94ad68989eb1886c90c7bb54c51090b8d9d45",
+      "release/ci_native.py": "583ed608356d38dea95e06618170ae0be52a08bb292efcf5d817fcf5d1079703",
+      "release/native-tooling-inputs.json": "4295e47ce746336d637d459ce41f4844b0b85a52eba81e312033cb5494c03bb8",
+      "release/test_ci_native.py": "6e7532773634d2cb0148116233f32f16eb00cb4a299329b525767a2d1f6a3e14",
+      "release/test_native_tooling_materials.py": "8657f2293c9cc6835326d076639aa39dc85a22476debfdde766e27e2f386f936",
+      "tooling/crates/cli/src/main.rs": "a41b9858b455b25998ec5f60d8de9b4a61842374fbcdddf51d1ccb9769c9a65d",
+      "tooling/crates/core/src/lib.rs": "bca5037c40136a774a3a86344e80c7667685203bd66f7203981b797ecec78994",
+      "tooling/crates/core/src/migration_process.rs": "4c6ba0806a5b2c854e1a24325d080ba45ea34b6757f68990cb0c6e2557b09fc2",
+      "tooling/crates/core/src/publisher_materials.rs": "10ae79c3e2d785d45ab6d3fec9d696680c5ebe820b4d88c4cadb52d80d06d57d"
+    },
+    "status": "PASS_MACOS_TRANSITION_COMPONENTS_LINUX_GUARD_COMPILE_ONLY"
+  },
+  "linux_migration_guard": {
+    "design": "CLI entry for InspectMigration and MigrateProject installs architecture-checked, x32-rejecting, TSYNC process filter denying execve and execveat before rendering. Core APIs remain unchanged. Exact inert legacy interpreter read replaces its colliding path-only deny entry on Linux; all other denials remain.",
+    "required_native_tests": [
+      "unfiltered execve and execveat marker positives",
+      "filtered existing thread and fork descendants fail EACCES",
+      "ordinary file hashing succeeds",
+      "real published inspection/migration under final same policy"
+    ],
+    "state": "IMPLEMENTED_AND_CROSS_COMPILED_NOT_NATIVE_RUNTIME_QUALIFIED"
+  },
+  "macos_prototype_actual_published_migration": {
+    "limitation": "Current installation is a synthetic consistency-only fixture. The new Linux guard, current-candidate public cold prepare and publisher authentication are not covered by this runtime result.",
+    "native_replay": {
+      "build_receipt_sha256": "0e9784cff8bae44a7734b9c5c6de3a1bbfdb9000f40cffbaef136aea15f12be2",
+      "native_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69",
+      "reference_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69",
+      "status": "PASS_BYTE_EQUAL_TO_RETAINED_V1_NATIVE_EXECUTABLE"
+    },
+    "protected_entries": 17993,
+    "protected_roots": 7,
+    "report_sha256": "1ab74815d298a00dc481ff9130e4e0946a31be597b9234c43553e3e653a36c4d",
+    "status": "PASS_PUBLISHED_V1_MIGRATION_BUILD_LIBRARY_EXCLUSION_AND_COMPLETE_PRESERVATION"
+  },
+  "macos_prototype_library_and_rollback": {
+    "covered": [
+      "unconfined library load0",
+      "same-policy deliberately allowed library load0",
+      "denied direct library load child42",
+      "denied nested alias library load child42",
+      "actual old retained version oracle",
+      "active CLI switch and rollback",
+      "current native package check and incompatible native state refusal",
+      "older native retained state input check",
+      "complete protected input preservation"
+    ],
+    "library_control": {
+      "allowed_child_exit": 0,
+      "denied_child_exit": 42,
+      "scope": "Intentional detector controls, separate from supported Rust consumer commands; no Python initialization.",
+      "sha256": "ac2885dde0996f2ec73e265dc8c0d4e120c249f1bade575ba32adac8ddde1c6e",
+      "unrestricted_exit": 0
+    },
+    "limitation": "Uses the exact retained pre-guard macOS CLI and consistency-only current package; two old Python version commands are explicitly separate rollback oracles.",
+    "report_sha256": "62f16ae4a534875a397038237b1ffac85bc56fd302f9be664b2f51bf5453d760",
+    "status": "PASS_OLD_LIBRARY_MAPPING_DENIAL_ACTIVE_SWITCH_ROLLBACK_AND_NATIVE_RETAINED_CHECK"
+  },
+  "next_required": "Native candidate CI on both hosts, then fresh protected SDK production and complete signed supported-host lifecycle/native matrix. RC1-A1-A4 remain open; RC2-RC5 unchanged.",
+  "preserved_failures": [
+    {
+      "kind": "stale signed package cold prepare",
+      "report_sha256": "7bce689b1d7af148e12291f2e166077c188c55d810f1ccdd373b22f73012b2b3",
+      "result": "Correctly refused old c34 source inventory missing current required native producer inputs. No current candidate cold-prepare or complete matrix PASS."
+    },
+    {
+      "kind": "development cache clone",
+      "report_sha256": "4d9958da3997402280438ba8950223de742d8b1ecf47acf64f36c3c05b8c0846",
+      "result": "Stopped at unchanged 12GiB managed workspace budget. Replaced with fresh dependency compilation in a2, which passed."
+    },
+    {
+      "attempts": [
+        "migration-a4 missing report key",
+        "migration-a5 double-counted overlapping static roots"
+      ],
+      "kind": "driver pre-entry",
+      "result": "No consumer ran; corrected a6 passed."
+    }
+  ],
+  "published_input": {
+    "archive_sha256": "6567abfb4e36a2bf82816f51512343f4d1232c97c866e648fdf68ab4cf7f2448",
+    "package": "0.1.0-2"
+  },
+  "schema": "ami-rust-published-transition-development-v1",
+  "scope": "Local macOS prototype runtime measurements, current candidate component tests and Linux compile checks. No native Linux guard execution, fresh signed SDK lifecycle, package-manager transaction, RC1 acceptance or publication.",
+  "status": "DEVELOPMENT_EVIDENCE_ONLY_RC1_UNACCEPTED"
+}
