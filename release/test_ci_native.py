@@ -930,6 +930,108 @@ class PrepareInterruptionPairTests(unittest.TestCase):
             self.run_pair("changed-retry", retry_mutation=True)
 
 
+class NativeColdRuntimeReferenceTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="ami-rust cold reference ")
+        self.root = Path(self.temporary.name).resolve()
+        self.state, self.project, self.bundle = (self.root / name for name in ("old-state", "old-project", "bundle"))
+        for path in (self.state, self.project, self.bundle):
+            path.mkdir(mode=0o700)
+        self.host = patch.object(native, "current_host", return_value="linux-x86_64")
+        self.host.start()
+        self.addCleanup(self.host.stop)
+        self.addCleanup(self.temporary.cleanup)
+        self.baseline = auth.parsed(auth.read(native.ROOT / "tooling/fixtures/accepted-r1-inputs.json"))["sdk_target"]
+        self.components = []
+        for name in ("cargo", "collector", "csdk", "rust", "toolchain", "vendor"):
+            root = self.state / name
+            root.mkdir(mode=0o700)
+            self.components.append({"name": name, "root": str(root),
+                "manifest": f"host/profiles/linux-x86_64/{name}.json", "manifest_sha256": auth.sha(name.encode())})
+        self.lock = self.project / "ami-rust.lock.json"
+        self.lock.write_bytes(auth.encoded({"components": {r["name"]: r["root"] for r in self.components}}))
+        (self.state / "ready.json").write_bytes(b'{"fixture":"validated by native dry-run in production"}\n')
+        self.report = {"status": "PASS_ACTUAL_PUBLISHED_V1_SETUP_ORACLE_NOT_RC1_ACCEPTANCE",
+            "archive_pin": native.PUBLISHED_V1_ARCHIVE_PIN,
+            "package_version_pins": {"source_commit": self.baseline["source_identity"]},
+            "state": str(self.state), "project": str(self.project),
+            "legacy_lock_sha256": auth.sha(auth.read(self.lock)),
+            "ready_sha256": auth.sha(auth.read(self.state / "ready.json"))}
+        self.inspection = {"status": "migration-required", "host": "linux-x86_64", "migration_required": True,
+            "legacy_lock": {"path": str(self.lock), "sha256": self.report["legacy_lock_sha256"]},
+            "compiler": {key: self.baseline[key] for key in ("rust_commit", "rust_llvm", "source_date_epoch")},
+            "components": self.components}
+        self.manifest = {"sdk_files": [{"path": r["manifest"], "sha256": r["manifest_sha256"]}
+                                      for r in self.components]}
+        self.write_manifest()
+        for relative in ("release/ci-sdk-inputs.json", "release/ci-cargo-producers/linux-x86_64.json"):
+            path = self.state / "source" / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(auth.read(native.ROOT / relative))
+        self.writes = (self.root / "new-state-area",)
+        self.inert = (self.state / "ami-rust-python-bootstrap/runtime/python",)
+
+    def write_manifest(self):
+        (self.bundle / "release.json").write_bytes(auth.encoded(self.manifest))
+
+    def validate(self):
+        return native._validated_cold_runtime_reference(self.report, self.bundle, self.inspection,
+                                                       self.writes, self.inert)
+
+    def test_same_current_candidate_inventories_admit_only_the_bound_read_only_lock(self):
+        self.assertEqual(self.validate(), {"path": str(self.lock), "sha256": self.report["legacy_lock_sha256"]})
+        self.assertFalse(self.writes[0].exists())
+
+    def test_changed_compiler_or_current_candidate_manifest_refuses(self):
+        self.inspection["compiler"]["rust_commit"] = "0" * 40
+        with self.assertRaisesRegex(ValueError, "compiler differs"):
+            self.validate()
+        self.inspection["compiler"]["rust_commit"] = self.baseline["rust_commit"]
+        self.manifest["sdk_files"][0]["sha256"] = "0" * 64
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "components differ"):
+            self.validate()
+
+    def test_changed_lock_ready_and_source_pins_refuse_before_discovery(self):
+        for path in (self.lock, self.state / "ready.json",
+                     self.state / "source/release/ci-sdk-inputs.json"):
+            original = path.read_bytes()
+            with self.subTest(path=path):
+                path.write_bytes(original + b"\n")
+                with self.assertRaisesRegex(ValueError, "binding|source pins"):
+                    self.validate()
+                path.write_bytes(original)
+
+    def test_incomplete_duplicate_and_overlapping_component_references_refuse(self):
+        original = self.inspection["components"]
+        for rows in (original[:-1], [original[0], *original[1:-1], original[0]]):
+            self.inspection["components"] = rows
+            with self.assertRaisesRegex(ValueError, "exact six"):
+                self.validate()
+        self.inspection["components"] = original
+        self.writes = (self.state / "rust",)
+        with self.assertRaisesRegex(ValueError, "overlap"):
+            self.validate()
+        self.writes = (self.root / "new-state-area",)
+        self.inert = (self.state / "rust",)
+        with self.assertRaisesRegex(ValueError, "overlap"):
+            self.validate()
+
+    def test_wrong_host_source_and_duplicate_candidate_paths_refuse(self):
+        self.inspection["host"] = "macos-aarch64"
+        with self.assertRaisesRegex(ValueError, "published Linux"):
+            self.validate()
+        self.inspection["host"] = "linux-x86_64"
+        self.report["package_version_pins"]["source_commit"] = "0" * 40
+        with self.assertRaisesRegex(ValueError, "published Linux"):
+            self.validate()
+        self.report["package_version_pins"]["source_commit"] = self.baseline["source_identity"]
+        self.manifest["sdk_files"].append(self.manifest["sdk_files"][0])
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "duplicate paths"):
+            self.validate()
+
+
 class NativeObservationSpecTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="ami-rust-observed phase ")
@@ -977,6 +1079,20 @@ class NativeObservationSpecTests(unittest.TestCase):
         self.assertEqual(spec["read_directories"], [account_home])
         self.assertNotIn(account_home, [row["path"] for row in spec["read_trees"]])
         self.assertNotIn(account_home, [row["path"] for row in spec["write_trees"]])
+
+    def test_cold_runtime_reference_is_bound_without_changing_the_fresh_state(self):
+        record = self.work / "validated-old-lock.json"
+        record.write_bytes(b'{"components":{}}\n')
+        reference = {"path": str(record), "sha256": auth.sha(record.read_bytes())}
+        spec = self.spec(["prepare", "--state", self.state], cold_runtime_reference=reference)
+        self.assertEqual(spec["component_record"], str(record))
+        self.assertIn(reference, spec["bindings"])
+        self.assertEqual(spec["command"][-1], str(self.state))
+        self.assertFalse(self.state.exists())
+        self.assertNotIn(str(record.parent), [row["path"] for row in spec["write_trees"]])
+        record.write_bytes(b"changed after validation")
+        with self.assertRaisesRegex(ValueError, "reference changed"):
+            self.spec(["prepare", "--state", self.state], cold_runtime_reference=reference)
 
     def test_denied_interpreter_uses_the_actual_bootstrap_runtime_layout(self):
         spec = self.spec(["verify-package"])
@@ -1076,7 +1192,8 @@ class NativeObservationSpecTests(unittest.TestCase):
         lock.write_bytes(auth.encoded({"schema": "ami-rust-project-lock-v1",
                                       "host": {"python": str(interpreter)}}))
         result = self.spec(["migrate", "--project", project, "--dry-run"])
-        self.assertEqual(result["component_record"], str(lock))
+        self.assertIsNone(result["component_record"])
+        self.assertIn({"path": str(lock), "sha256": auth.sha(lock.read_bytes())}, result["bindings"])
         self.assertEqual({row["path"] for row in result["write_trees"]},
                          {str(self.work / "home"), str(self.work / "tmp")})
         self.assertIsNone(result["derived"])

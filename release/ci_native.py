@@ -787,13 +787,14 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
     commands = []
 
     def command(label, arguments, expected=0, *, executable=cli, disposable_refusal_state=None,
-                additional_deny_exec=(), inert_python_roots=()):
+                additional_deny_exec=(), inert_python_roots=(), cold_runtime_reference=None):
         stdout = output / (label + ".stdout.json")
         stderr = output / (label + ".stderr.log")
         spec = _consumer_observation_spec(work, python_root, executable, arguments, expected,
             policy_path, closure_path, [ROOT, *[row["resolved_path"] for row in supervisor.native_static_roots]],
             disposable_refusal_state=disposable_refusal_state,
-            additional_deny_exec=additional_deny_exec, inert_python_roots=inert_python_roots)
+            additional_deny_exec=additional_deny_exec, inert_python_roots=inert_python_roots,
+            cold_runtime_reference=cold_runtime_reference)
         spec_path = output / "observation-specs" / (label + ".json")
         write(spec_path, auth.encoded(spec), 0o600)
         observed = output / "observations" / label
@@ -938,7 +939,7 @@ def _partition_inert_runtime_reads(readonly_roots, excluded_roots):
 
 def _consumer_observation_spec(work, python_root, executable, arguments, expected,
                                policy_path, closure_path, readonly_roots, *, disposable_refusal_state=None,
-                               additional_deny_exec=(), inert_python_roots=()):
+                               additional_deny_exec=(), inert_python_roots=(), cold_runtime_reference=None):
     """Select each command's owned writes; Rust owns policy/runtime/report logic."""
     work = Path(work).resolve(strict=True)
     arguments = list(map(str, arguments))
@@ -981,6 +982,14 @@ def _consumer_observation_spec(work, python_root, executable, arguments, expecte
         if not legacy_python.is_file():
             raise ValueError("legacy Python identity is not a regular file")
     if phase == "cold-prepare":
+        if cold_runtime_reference is not None:
+            if (record is not None or type(cold_runtime_reference) is not dict
+                    or set(cold_runtime_reference) != {"path", "sha256"}):
+                raise ValueError("cold runtime reference requires a fresh state and exact validated binding")
+            record = Path(cold_runtime_reference["path"])
+            if (record.is_symlink() or record.resolve(strict=True) != record or not record.is_file()
+                    or auth.sha(auth.read(record)) != cold_runtime_reference["sha256"]):
+                raise ValueError("validated cold runtime reference changed before observation")
         derived = {"role": "consumer-state-parent", "path": str(state.parent)}
         writes.add(state.parent.parent)
     elif phase == "build":
@@ -1064,8 +1073,64 @@ def _consumer_observation_spec(work, python_root, executable, arguments, expecte
                    if verb == "native-prepare-interruption" else []),
             "libraries": [], "deny_exec": sorted(denied_exec),
             "deny_library": sorted({str(library), *map(str, inert_libraries)}),
-            "component_record": str(record) if record else None, "derived": derived,
+            # A dry-run only reads and validates the legacy inventories. Do not
+            # run ldd on their executables before that validation has passed.
+            "component_record": (str(record) if record and not (verb == "migrate" and "--dry-run" in arguments)
+                                 else None), "derived": derived,
             "bindings": [{"path": str(path), "sha256": auth.sha(auth.read(path))} for path in bindings]}
+
+
+def _validated_cold_runtime_reference(report, bundle, inspection, writes, inert_runtimes):
+    """Admit an inventory-checked native reference, never the new cold state."""
+    baseline = auth.parsed(auth.read(ROOT / "tooling/fixtures/accepted-r1-inputs.json"))["sdk_target"]
+    if (current_host() != "linux-x86_64"
+            or report.get("status") != "PASS_ACTUAL_PUBLISHED_V1_SETUP_ORACLE_NOT_RC1_ACCEPTANCE"
+            or report.get("archive_pin") != PUBLISHED_V1_ARCHIVE_PIN
+            or report.get("package_version_pins", {}).get("source_commit") != baseline["source_identity"]
+            or inspection.get("status") != "migration-required" or inspection.get("host") != current_host()
+            or inspection.get("migration_required") is not True):
+        raise ValueError("cold runtime reference requires the actual validated published Linux setup")
+    state, project = Path(report["state"]), Path(report["project"])
+    record = project / "ami-rust.lock.json"
+    if (record.is_symlink() or record.resolve(strict=True) != record
+            or auth.sha(auth.read(record)) != report["legacy_lock_sha256"]
+            or inspection.get("legacy_lock", {}).get("sha256") != report["legacy_lock_sha256"]
+            or inspection.get("legacy_lock", {}).get("path") != str(record)
+            or auth.sha(auth.read(state / "ready.json")) != report["ready_sha256"]):
+        raise ValueError("cold runtime reference lost its exact published setup binding")
+    for relative in ("release/ci-sdk-inputs.json", f"release/ci-cargo-producers/{current_host()}.json"):
+        if auth.read(state / "source" / relative) != auth.read(ROOT / relative):
+            raise ValueError("cold runtime reference native source pins differ from the candidate")
+    compiler = inspection.get("compiler")
+    if compiler != {key: baseline[key] for key in ("rust_commit", "rust_llvm", "source_date_epoch")}:
+        raise ValueError("cold runtime reference compiler differs from the immutable native baseline")
+    candidate = auth.parsed(auth.read(Path(bundle) / "release.json"))
+    files = candidate["sdk_files"]
+    current = {row["path"]: row["sha256"] for row in files}
+    if len(current) != len(files):
+        raise ValueError("candidate SDK inventory has duplicate paths")
+    components = inspection.get("components", [])
+    required = {"cargo", "collector", "csdk", "rust", "toolchain", "vendor"}
+    if len(components) != 6 or {row["name"] for row in components} != required:
+        raise ValueError("cold runtime reference omits the exact six native component inventories")
+    recorded_components = auth.parsed(auth.read(record))["components"]
+    if set(recorded_components) != required:
+        raise ValueError("cold runtime reference lock omits native components")
+    for row in components:
+        manifest = f'host/profiles/{current_host()}/{row["name"]}.json'
+        root = Path(row["root"])
+        selected = Path(recorded_components[row["name"]])
+        if not selected.is_absolute():
+            selected = record.parent / selected
+        if (row["manifest"] != manifest or current.get(manifest) != row["manifest_sha256"]
+                or root.is_symlink() or root.resolve(strict=True) != root or not root.is_dir()
+                or selected.resolve(strict=True) != root
+                or state not in root.parents
+                or any(_overlap(root, Path(path)) for path in (*writes, *inert_runtimes))):
+            raise ValueError("cold runtime reference components differ, alias unsafe roots, or overlap consumer writes")
+    if any(_overlap(record, Path(path)) for path in writes):
+        raise ValueError("cold runtime reference binding overlaps consumer writes")
+    return {"path": str(record), "sha256": report["legacy_lock_sha256"]}
 
 
 def _publish_cold_root_diagnostics(work, output):
@@ -2174,10 +2239,12 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
     observed_command = command
     inert_runtimes = (Path(legacy_report["state"]) / "ami-rust-python-bootstrap/runtime/python",
                       Path(historical_interruption["runtime_root"]))
+    cold_runtime_reference = None
 
     def command(label, arguments, expected=0, **options):
         return observed_command(label, arguments, expected,
-                                inert_python_roots=inert_runtimes, **options)
+                                inert_python_roots=inert_runtimes,
+                                cold_runtime_reference=cold_runtime_reference, **options)
 
     legacy = {"report": legacy_report, "interruption": historical_interruption, "checkpoints": []}
     legacy_roots = _published_v1_preservation_roots(legacy, guards)
@@ -2208,6 +2275,17 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
     state_parent = state_write_area / "derived"
     state_parent.mkdir(mode=0o700)
     state = state_parent / "native-ready-state"
+    if current_host() == "linux-x86_64":
+        inspection = auth.parsed(command("09-cold-runtime-reference-inspection",
+            ["migrate", "--project", legacy_report["project"], "--dry-run"], executable=frontend))
+        cold_runtime_reference = _validated_cold_runtime_reference(legacy_report, bundle, inspection,
+            (work / "home", work / "tmp", state_write_area), inert_runtimes)
+        write(output / "native-cold-runtime-reference.json", auth.encoded({
+            "schema": "ami-rust-cold-native-runtime-reference-v1", "binding": cold_runtime_reference,
+            "compiler": inspection["compiler"], "components": inspection["components"],
+            "candidate_manifest_sha256": auth.sha(auth.read(bundle / "release.json")),
+            "claim": "Validated same native component inventories for bounded host runtime discovery only; new preparation remains cold and separate."}))
+        _check_published_v1_preservation(legacy, guards, "validated cold runtime reference")
     prepared = auth.parsed(command("10-package-cold-prepare", ["prepare", "--state", state], executable=frontend))
     if prepared.get("status") != "READY":
         raise ValueError("native package preparation did not produce READY")
