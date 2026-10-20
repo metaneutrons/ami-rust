@@ -388,12 +388,15 @@ fn render_policy(
         ));
         ancestors.extend(executable.ancestors().skip(1).map(Path::to_path_buf));
     }
+    let library_targets = selected_library_targets(runtime)?;
     for library in &runtime.libraries {
-        lines.push(format!(
-            "read-library {} {}",
-            printable(library)?,
-            sha256_file(library)?
-        ));
+        let (_, digest) = library_targets
+            .get(library)
+            .ok_or_else(|| Refusal::new("runtime library has no discovered target binding"))?;
+        // The policy path must retain the lookup spelling so the adapter can
+        // resolve and verify aliases. Hash the canonical target instead: the
+        // no-follow file reader correctly refuses symlink ancestors.
+        lines.push(format!("read-library {} {}", printable(library)?, digest));
         ancestors.extend(
             library
                 .ancestors()
@@ -487,6 +490,111 @@ fn render_policy(
         }
     ));
     Ok(lines.join("\n") + "\n")
+}
+
+fn selected_library_targets(
+    runtime: &consumer_runtime::RuntimeInputs,
+) -> Result<BTreeMap<PathBuf, (PathBuf, String)>> {
+    if runtime.libraries.is_empty() {
+        return Ok(BTreeMap::new());
+    }
+
+    let rows = runtime
+        .evidence
+        .get("libraries")
+        .and_then(Value::as_array)
+        .ok_or_else(|| Refusal::new("runtime library discovery evidence is missing"))?;
+    if rows.len() != runtime.libraries.len() {
+        return Err(Refusal::new(
+            "runtime library discovery evidence is incomplete",
+        ));
+    }
+
+    let mut targets = BTreeMap::new();
+    for row in rows {
+        let object = row.as_object().filter(|object| {
+            object.len() == 3
+                && object.contains_key("lookup_path")
+                && object.contains_key("canonical_path")
+                && object.contains_key("sha256")
+        });
+        let object =
+            object.ok_or_else(|| Refusal::new("runtime library discovery row is malformed"))?;
+        let lookup_text = object["lookup_path"]
+            .as_str()
+            .ok_or_else(|| Refusal::new("runtime library lookup path is malformed"))?;
+        let canonical_text = object["canonical_path"]
+            .as_str()
+            .ok_or_else(|| Refusal::new("runtime library canonical path is malformed"))?;
+        let digest = object["sha256"]
+            .as_str()
+            .filter(|value| is_sha256_digest(value))
+            .ok_or_else(|| Refusal::new("runtime library digest is malformed"))?;
+        let lookup = PathBuf::from(lookup_text);
+        let canonical = PathBuf::from(canonical_text);
+        if !lookup.is_absolute()
+            || !canonical.is_absolute()
+            || lookup
+                .components()
+                .any(|component| matches!(component, std::path::Component::ParentDir))
+            || canonical
+                .components()
+                .any(|component| matches!(component, std::path::Component::ParentDir))
+            || !runtime.libraries.contains(&lookup)
+            || targets
+                .insert(lookup, (canonical, digest.to_owned()))
+                .is_some()
+        {
+            return Err(Refusal::new(
+                "runtime library discovery evidence has an invalid or duplicate path",
+            ));
+        }
+    }
+    if targets.len() != runtime.libraries.len()
+        || runtime
+            .libraries
+            .iter()
+            .any(|lookup| !targets.contains_key(lookup))
+    {
+        return Err(Refusal::new(
+            "runtime library discovery evidence does not match selected libraries",
+        ));
+    }
+
+    for (lookup, (canonical, expected_digest)) in &targets {
+        let resolved = fs::canonicalize(lookup).map_err(|error| {
+            Refusal::new(format!(
+                "could not recheck runtime library lookup {}: {error}",
+                lookup.display()
+            ))
+        })?;
+        if resolved != *canonical {
+            return Err(Refusal::new(format!(
+                "runtime library lookup target changed since discovery: {}",
+                lookup.display()
+            )));
+        }
+        let canonical_target = fs::canonicalize(canonical).map_err(|error| {
+            Refusal::new(format!(
+                "could not recheck runtime library target {}: {error}",
+                canonical.display()
+            ))
+        })?;
+        if canonical_target != *canonical {
+            return Err(Refusal::new(format!(
+                "runtime library target is no longer canonical: {}",
+                canonical.display()
+            )));
+        }
+        if sha256_file(canonical)? != *expected_digest {
+            return Err(Refusal::new(format!(
+                "runtime library target changed since discovery: {}",
+                canonical.display()
+            )));
+        }
+    }
+
+    Ok(targets)
 }
 
 fn component_inputs(
@@ -779,6 +887,37 @@ mod tests {
             parse_spec(&serde_json::to_vec(&self.value).expect("JSON"))
         }
     }
+
+    fn aliased_library_runtime(
+        fixture: &Fixture,
+    ) -> (PathBuf, PathBuf, consumer_runtime::RuntimeInputs) {
+        let target_dir = fixture.root.join("library-target");
+        fs::create_dir(&target_dir).expect("library target directory");
+        let target = target_dir.join("libfixture.so");
+        fs::write(&target, b"runtime library bytes\n").expect("library target");
+
+        let alias_dir = fixture.root.join("library-alias");
+        std::os::unix::fs::symlink(&target_dir, &alias_dir).expect("library alias directory");
+        let lookup = alias_dir.join("libfixture.so");
+        let canonical = fs::canonicalize(&lookup).expect("canonical library target");
+        let digest = sha256_file(&canonical).expect("canonical library digest");
+        let evidence = json!({"libraries":[{
+            "lookup_path":lookup,
+            "canonical_path":canonical,
+            "sha256":digest,
+        }]});
+        let runtime = consumer_runtime::RuntimeInputs {
+            executables: BTreeSet::new(),
+            libraries: BTreeSet::from([lookup.clone()]),
+            read_files: BTreeSet::new(),
+            read_directories: BTreeSet::new(),
+            read_lookup_metadata: BTreeSet::new(),
+            read_trees: BTreeSet::new(),
+            evidence,
+        };
+        (lookup, canonical, runtime)
+    }
+
     impl Drop for Fixture {
         fn drop(&mut self) {
             fs::remove_dir_all(&self.root).expect("remove own fixture");
@@ -832,6 +971,112 @@ mod tests {
         verify_driver(&file, &digest).expect("unchanged driver");
         fs::write(&file, b"changed driver").expect("change driver");
         assert!(verify_driver(&file, &digest).is_err());
+    }
+
+    #[test]
+    fn aliased_library_policy_keeps_lookup_spelling_and_binds_canonical_digest() {
+        let fixture = Fixture::new();
+        let (lookup, canonical, runtime) = aliased_library_runtime(&fixture);
+        let digest = sha256_file(&canonical).expect("canonical digest");
+
+        assert!(
+            sha256_file(&lookup)
+                .expect_err("no-follow file reader refuses alias ancestor")
+                .to_string()
+                .contains("could not open a path component without following links")
+        );
+        let policy = render_policy(
+            &fixture.parse().expect("spec"),
+            &runtime,
+            BTreeSet::new(),
+            &"a".repeat(64),
+        )
+        .expect("alias policy");
+        assert!(policy.contains(&format!("read-library {} {}\n", lookup.display(), digest)));
+        assert!(!policy.contains(&format!("read-library {} ", canonical.display())));
+    }
+
+    #[test]
+    fn aliased_library_policy_refuses_lookup_retargeting_after_discovery() {
+        let fixture = Fixture::new();
+        let (lookup, _, runtime) = aliased_library_runtime(&fixture);
+        let alias_dir = lookup.parent().expect("alias parent");
+        fs::remove_file(alias_dir).expect("remove alias");
+
+        let replacement_dir = fixture.root.join("replacement-target");
+        fs::create_dir(&replacement_dir).expect("replacement directory");
+        fs::write(
+            replacement_dir.join("libfixture.so"),
+            b"other library bytes\n",
+        )
+        .expect("replacement target");
+        std::os::unix::fs::symlink(&replacement_dir, alias_dir).expect("retarget alias");
+
+        let error = render_policy(
+            &fixture.parse().expect("spec"),
+            &runtime,
+            BTreeSet::new(),
+            &"a".repeat(64),
+        )
+        .expect_err("changed lookup must refuse");
+        assert!(
+            error
+                .to_string()
+                .contains("runtime library lookup target changed since discovery")
+        );
+    }
+
+    #[test]
+    fn aliased_library_policy_refuses_canonical_target_mutation_after_discovery() {
+        let fixture = Fixture::new();
+        let (_, canonical, runtime) = aliased_library_runtime(&fixture);
+        fs::write(&canonical, b"mutated library bytes\n").expect("mutate target");
+
+        let error = render_policy(
+            &fixture.parse().expect("spec"),
+            &runtime,
+            BTreeSet::new(),
+            &"a".repeat(64),
+        )
+        .expect_err("changed target must refuse");
+        assert!(
+            error
+                .to_string()
+                .contains("runtime library target changed since discovery")
+        );
+    }
+
+    #[test]
+    fn aliased_library_policy_requires_complete_well_formed_discovery_evidence() {
+        let fixture = Fixture::new();
+        let (_, _, mut runtime) = aliased_library_runtime(&fixture);
+        let original_evidence = runtime.evidence.clone();
+        runtime.evidence = json!({"libraries":[]});
+        assert!(
+            render_policy(
+                &fixture.parse().expect("spec"),
+                &runtime,
+                BTreeSet::new(),
+                &"a".repeat(64),
+            )
+            .expect_err("missing row must refuse")
+            .to_string()
+            .contains("runtime library discovery evidence is incomplete")
+        );
+
+        runtime.evidence = original_evidence;
+        runtime.evidence["libraries"][0]["sha256"] = json!("not-a-digest");
+        assert!(
+            render_policy(
+                &fixture.parse().expect("spec"),
+                &runtime,
+                BTreeSet::new(),
+                &"a".repeat(64),
+            )
+            .expect_err("malformed digest must refuse")
+            .to_string()
+            .contains("runtime library digest is malformed")
+        );
     }
 
     #[test]

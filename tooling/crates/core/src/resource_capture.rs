@@ -11,6 +11,8 @@
 #[path = "macos_process_snapshot.rs"]
 mod macos_process_snapshot;
 
+#[cfg(not(target_os = "macos"))]
+use crate::process_snapshot;
 use crate::{
     Refusal,
     directory::Directory,
@@ -19,7 +21,7 @@ use crate::{
         self, CaptureError, CaptureLimits, CaptureObservation, CaptureObservationPhase,
         CapturedProcess, CommandSpec,
     },
-    process_snapshot::{self, ProcessRow, ScopeSnapshot},
+    process_snapshot::{ProcessRow, ScopeSnapshot},
     workspace_accounting::{self, Accounting, ScanLimits},
 };
 use serde::Serialize;
@@ -409,9 +411,10 @@ impl ResourceObserver {
         self.report.incomplete_cleanup = false;
 
         #[cfg(target_os = "macos")]
-        let snapshot = self.query_process_table(event.direct_pid)?;
+        let scope = self.query_process_table(event.direct_pid)?;
         #[cfg(not(target_os = "macos"))]
         let snapshot = self.query_process_table()?;
+        #[cfg(not(target_os = "macos"))]
         let scope = process_snapshot::observe_scope(
             &snapshot,
             event.direct_pid,
@@ -505,11 +508,8 @@ impl ResourceObserver {
     }
 
     #[cfg(target_os = "macos")]
-    fn query_process_table(
-        &self,
-        target_pid: u32,
-    ) -> io::Result<process_snapshot::ProcessSnapshot> {
-        macos_process_snapshot::query_process_snapshot(
+    fn query_process_table(&self, target_pid: u32) -> io::Result<ScopeSnapshot> {
+        macos_process_snapshot::query_process_scope(
             target_pid,
             &self.previous_pids,
             &self.previous_groups,

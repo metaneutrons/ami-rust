@@ -128,6 +128,7 @@ unsafe extern "C" {
 struct Topology {
     snapshot: ProcessSnapshot,
     info_by_pid: BTreeMap<u32, ProcessInfo>,
+    missing_linked_pids: BTreeSet<u32>,
 }
 
 enum RssFailureAction {
@@ -137,23 +138,31 @@ enum RssFailureAction {
 
 enum TaskInfoEsrchResolution {
     KnownZombie,
+    Gone,
+    Live(String),
     Retry(String),
     Refuse(String),
 }
 
-/// Build a process snapshot with the same PPID/PGID closure used by the
+enum TaskRss {
+    Bytes(u64),
+    Gone,
+    RetryTopology(String),
+}
+
+/// Build a process scope with the same PPID/PGID closure used by the
 /// historical `ps` observer. `maximum_bytes` bounds the reusable libproc PID
 /// scratch buffer, and the effective row bound is no larger than either the
 /// caller's row limit or that byte budget can hold, including one overflow
 /// sentinel slot.
-pub(super) fn query_process_snapshot(
+pub(super) fn query_process_scope(
     target_pid: u32,
     previously_observed_pids: &[u32],
     previously_observed_groups: &[u32],
     maximum_bytes: usize,
     maximum_rows: usize,
     maximum_history_entries: usize,
-) -> io::Result<ProcessSnapshot> {
+) -> io::Result<process_snapshot::ScopeSnapshot> {
     if target_pid == 0 {
         return Err(input_error(
             "target PID must be a positive process identifier",
@@ -217,10 +226,14 @@ pub(super) fn query_process_snapshot(
             Err(failure) => return Err(failure.into_io()),
         };
 
-        let mut initial = process_snapshot::observe_scope(
+        let mut linkage_seeds = previously_observed_pids.to_vec();
+        linkage_seeds.extend(topology.missing_linked_pids.iter().copied());
+        linkage_seeds.sort_unstable();
+        linkage_seeds.dedup();
+        let initial = process_snapshot::observe_scope(
             &topology.snapshot,
             target_pid,
-            previously_observed_pids,
+            &linkage_seeds,
             previously_observed_groups,
             maximum_history_entries,
         )
@@ -238,6 +251,7 @@ pub(super) fn query_process_snapshot(
         }
 
         let mut rss_bytes_by_pid = BTreeMap::new();
+        let mut disappeared_during_rss = BTreeSet::new();
         let mut retry_for_vanished_scope_member = None;
         for row in &initial.rows {
             let info = topology.info_by_pid.get(&row.pid).ok_or_else(|| {
@@ -256,39 +270,32 @@ pub(super) fn query_process_snapshot(
                 continue;
             }
 
-            match query_task_info(row.pid, deadline) {
-                Ok(resident_bytes) => {
+            match read_task_rss(
+                row.pid,
+                info.uid,
+                effective_uid,
+                deadline,
+                || query_task_info(row.pid, deadline),
+                || resolve_taskinfo_esrch(row.pid, *info, deadline),
+            )? {
+                TaskRss::Bytes(resident_bytes) => {
                     rss_bytes_by_pid.insert(row.pid, resident_bytes);
                 }
-                Err(ProcQueryError::Vanished(errno)) => {
-                    match resolve_taskinfo_esrch(row.pid, *info, deadline) {
-                        TaskInfoEsrchResolution::KnownZombie => {
-                            rss_bytes_by_pid.insert(row.pid, 0_u64);
-                        }
-                        TaskInfoEsrchResolution::Retry(reason) => {
-                            retry_for_vanished_scope_member = Some(format!(
-                                "in-scope PID {} taskinfo vanished (errno={errno}); {reason}",
-                                row.pid
-                            ));
-                            break;
-                        }
-                        TaskInfoEsrchResolution::Refuse(reason) => {
-                            return Err(input_error(format!(
-                                "in-scope PID {} taskinfo vanished (errno={errno}); {reason}",
-                                row.pid
-                            )));
-                        }
-                    }
+                TaskRss::Gone if row.pid != target_pid => {
+                    // Confirmed absence is not a zero-RSS live row. Keep
+                    // the missing member's linkage and observed group.
+                    disappeared_during_rss.insert(row.pid);
                 }
-                Err(error) => {
-                    match classify_rss_query_error(error, row.pid, info.uid, effective_uid, attempt)
-                    {
-                        RssFailureAction::Retry(reason) => {
-                            retry_for_vanished_scope_member = Some(reason);
-                            break;
-                        }
-                        RssFailureAction::Refuse(reason) => return Err(input_error(reason)),
-                    }
+                TaskRss::Gone => {
+                    retry_for_vanished_scope_member = Some(format!(
+                        "required target PID {} disappeared during RSS collection",
+                        row.pid
+                    ));
+                    break;
+                }
+                TaskRss::RetryTopology(reason) => {
+                    retry_for_vanished_scope_member = Some(reason);
+                    break;
                 }
             }
         }
@@ -303,46 +310,74 @@ pub(super) fn query_process_snapshot(
             )));
         }
 
-        let mut snapshot = topology.snapshot;
-        for row in &mut snapshot.rows {
-            let resident_bytes = rss_bytes_by_pid.get(&row.pid).ok_or_else(|| {
-                input_error(format!(
-                    "linked PID {} has no successful or zombie RSS observation",
-                    row.pid
-                ))
-            })?;
-            row.rss_kib = resident_bytes / 1024;
-        }
-        let completed = process_snapshot::observe_scope(
-            &snapshot,
+        let result = project_rss_scope(
+            topology.snapshot,
+            &initial,
             target_pid,
-            previously_observed_pids,
-            previously_observed_groups,
+            &linkage_seeds,
+            &disappeared_during_rss,
+            &rss_bytes_by_pid,
             maximum_history_entries,
-        )
-        .map_err(|error| input_error(format!("could not finalize process scope: {error}")))?;
-        if initial.process_ids != completed.process_ids {
-            return Err(input_error(
-                "process scope changed between topology and RSS projection",
-            ));
-        }
-        if completed
-            .rows
-            .iter()
-            .any(|row| !rss_bytes_by_pid.contains_key(&row.pid))
-        {
-            return Err(input_error(
-                "completed scope contains a PID without successful RSS or known-zombie status",
-            ));
-        }
-        initial = completed;
+        )?;
         check_deadline(deadline).map_err(SampleFailure::into_io)?;
-        return Ok(ProcessSnapshot { rows: initial.rows });
+        return Ok(result);
     }
 
     Err(input_error(format!(
         "bounded native process sampling exhausted: {last_retry_reason}"
     )))
+}
+
+/// Remove only kernel-confirmed absent members, retaining their linkage and
+/// already observed groups so a surviving child in another group is not lost.
+fn project_rss_scope(
+    mut snapshot: ProcessSnapshot,
+    initial: &process_snapshot::ScopeSnapshot,
+    target_pid: u32,
+    linkage_seeds: &[u32],
+    disappeared: &BTreeSet<u32>,
+    rss_bytes_by_pid: &BTreeMap<u32, u64>,
+    maximum_history_entries: usize,
+) -> io::Result<process_snapshot::ScopeSnapshot> {
+    if disappeared.contains(&target_pid) {
+        return Err(input_error(
+            "required root cannot be omitted from an RSS sample",
+        ));
+    }
+    snapshot.rows.retain(|row| !disappeared.contains(&row.pid));
+    for row in &mut snapshot.rows {
+        let bytes = rss_bytes_by_pid.get(&row.pid).ok_or_else(|| {
+            input_error(format!(
+                "linked PID {} has no successful or zombie RSS observation",
+                row.pid
+            ))
+        })?;
+        row.rss_kib = bytes / 1024;
+    }
+    let mut seeds = linkage_seeds.to_vec();
+    seeds.extend(disappeared.iter().copied());
+    seeds.sort_unstable();
+    seeds.dedup();
+    let completed = process_snapshot::observe_scope(
+        &snapshot,
+        target_pid,
+        &seeds,
+        &initial.process_groups,
+        maximum_history_entries,
+    )
+    .map_err(|error| input_error(format!("could not finalize process scope: {error}")))?;
+    let expected_pids: Vec<_> = initial
+        .process_ids
+        .iter()
+        .copied()
+        .filter(|pid| !disappeared.contains(pid))
+        .collect();
+    if expected_pids != completed.process_ids || !completed.root_present {
+        return Err(input_error(
+            "process scope changed between topology and RSS projection",
+        ));
+    }
+    Ok(completed)
 }
 
 #[allow(
@@ -373,7 +408,6 @@ fn collect_topology(
         .checked_add(previously_observed_groups.len())
         .and_then(|count| count.checked_add(1))
         .ok_or_else(|| SampleFailure::fatal("linked process-group bound overflows"))?;
-    let previous_pid_set: BTreeSet<u32> = previously_observed_pids.iter().copied().collect();
     let mut pending = VecDeque::new();
     let mut seen_pids = BTreeSet::new();
     let mut seen_groups = BTreeSet::new();
@@ -459,13 +493,15 @@ fn collect_topology(
                                 "WNOWAIT confirms target PID {pid} exited, but native BSD topology is denied (errno={errno}); refusing to infer PPID/PGID"
                             )));
                         }
-                        Err(ProcQueryError::Vanished(_)) if previous_pid_set.contains(&pid) => {
+                        Err(ProcQueryError::Vanished(_)) => {
+                            // Child/group enumeration and KERN_PROC_PID are
+                            // separate kernel observations. A short-lived
+                            // non-root member can disappear between them,
+                            // including on its very first observation. Keep
+                            // its linkage seed but do not invent a live row
+                            // or zero RSS. The wait-owned root is handled
+                            // separately above and may never be omitted.
                             missing_previous.insert(pid);
-                        }
-                        Err(ProcQueryError::Vanished(errno)) => {
-                            return Err(SampleFailure::retryable(format!(
-                                "linked process PID {pid} vanished during BSD-info query (errno={errno})"
-                            )));
                         }
                         Err(other) => {
                             return Err(SampleFailure::fatal(format!(
@@ -476,6 +512,12 @@ fn collect_topology(
                     }
                 }
 
+                // A missing numeric PID is only a linkage seed. Do not
+                // query its children after confirming absence: the PID
+                // could have been reused by another process in between.
+                if missing_previous.contains(&pid) {
+                    continue;
+                }
                 let known_zombie = info_by_pid
                     .get(&pid)
                     .is_some_and(|info| info.status == libc::SZOMB);
@@ -496,8 +538,7 @@ fn collect_topology(
                             )?;
                         }
                     }
-                    Err(ProcQueryError::Vanished(_))
-                        if previous_pid_set.contains(&pid) && pid != target_pid => {}
+                    Err(ProcQueryError::Vanished(_)) if pid != target_pid => {}
                     Err(ProcQueryError::Vanished(errno)) => {
                         return Err(SampleFailure::retryable(format!(
                             "process parent PID {pid} vanished during child-list query (errno={errno})"
@@ -572,6 +613,7 @@ fn collect_topology(
             rows: snapshot_rows,
         },
         info_by_pid,
+        missing_linked_pids: missing_previous,
     })
 }
 
@@ -755,20 +797,60 @@ fn resolve_taskinfo_esrch(
             if current.status == libc::SZOMB {
                 TaskInfoEsrchResolution::KnownZombie
             } else {
-                TaskInfoEsrchResolution::Retry(format!(
-                    "PID {pid} taskinfo returned ESRCH while SDK topology still reports live status {}; restarting full topology sample",
+                TaskInfoEsrchResolution::Live(format!(
+                    "PID {pid} taskinfo returned ESRCH while SDK topology still reports live status {}; retrying this PID",
                     current.status
                 ))
             }
         }
-        Err(ProcQueryError::Vanished(errno)) => TaskInfoEsrchResolution::Retry(format!(
-            "PID {pid} disappeared before SDK topology could confirm a zombie (errno={errno}); restarting full topology sample"
-        )),
+        Err(ProcQueryError::Vanished(_)) => TaskInfoEsrchResolution::Gone,
         Err(error) => TaskInfoEsrchResolution::Refuse(format!(
             "could not validate PID {pid} topology after taskinfo ESRCH: {}",
             error.describe()
         )),
     }
+}
+
+/// Retry transient task-table transitions for this PID, rather than requiring
+/// an entire busy process tree to stop changing on the same three passes.
+/// Identity/linkage changes still require a fresh full topology observation.
+fn read_task_rss(
+    pid: u32,
+    uid: libc::uid_t,
+    effective_uid: libc::uid_t,
+    deadline: Instant,
+    mut query: impl FnMut() -> Result<u64, ProcQueryError>,
+    mut resolve: impl FnMut() -> TaskInfoEsrchResolution,
+) -> io::Result<TaskRss> {
+    for attempt in 1..=MAX_SAMPLE_ATTEMPTS {
+        check_deadline(deadline).map_err(SampleFailure::into_io)?;
+        match query() {
+            Ok(bytes) => return Ok(TaskRss::Bytes(bytes)),
+            Err(ProcQueryError::Vanished(_)) => match resolve() {
+                TaskInfoEsrchResolution::KnownZombie => return Ok(TaskRss::Bytes(0)),
+                TaskInfoEsrchResolution::Gone => return Ok(TaskRss::Gone),
+                TaskInfoEsrchResolution::Retry(reason) => {
+                    return Ok(TaskRss::RetryTopology(reason));
+                }
+                TaskInfoEsrchResolution::Refuse(reason) => return Err(input_error(reason)),
+                TaskInfoEsrchResolution::Live(reason) => {
+                    if attempt == MAX_SAMPLE_ATTEMPTS {
+                        return Err(input_error(format!(
+                            "{reason}; exhausted {MAX_SAMPLE_ATTEMPTS} bounded attempts for PID {pid}"
+                        )));
+                    }
+                    pause_for_process_transition(deadline).map_err(SampleFailure::into_io)?;
+                }
+            },
+            Err(error) => match classify_rss_query_error(error, pid, uid, effective_uid, attempt) {
+                RssFailureAction::Retry(reason) => {
+                    return Ok(TaskRss::RetryTopology(reason));
+                }
+                RssFailureAction::Refuse(reason) => return Err(input_error(reason)),
+            },
+        }
+    }
+    Err(input_error("bounded per-PID RSS observation exhausted"))
 }
 
 fn pause_for_process_transition(deadline: Instant) -> Result<(), SampleFailure> {
@@ -992,7 +1074,12 @@ mod tests {
     impl LiveTree {
         fn start() -> Self {
             let mut child = Command::new(env::current_exe().unwrap())
-                .args(["--ignored", "--nocapture", "live_tree_fixture"])
+                .args([
+                    "--ignored",
+                    "--nocapture",
+                    "--test-threads=2",
+                    "live_tree_fixture",
+                ])
                 .env("AMI_RUST_MACOS_PROCESS_FIXTURE", "root")
                 .stdin(Stdio::null())
                 .stdout(Stdio::piped())
@@ -1043,7 +1130,12 @@ mod tests {
     impl GroupHolder {
         fn start() -> Self {
             let mut child = Command::new(env::current_exe().unwrap())
-                .args(["--ignored", "--nocapture", "group_holder_fixture"])
+                .args([
+                    "--ignored",
+                    "--nocapture",
+                    "--test-threads=2",
+                    "group_holder_fixture",
+                ])
                 .env("AMI_RUST_MACOS_PROCESS_FIXTURE", "holder")
                 .stdin(Stdio::null())
                 .stdout(Stdio::piped())
@@ -1083,20 +1175,12 @@ mod tests {
     fn live_memory_child_in_distinct_group_is_observed_with_rss() {
         let fixture = LiveTree::start();
         assert_ne!(fixture.root_pgid, fixture.leaf_pgid);
-        let snapshot = query_process_snapshot(
+        let scope = query_process_scope(
             self::process_id_from_child(&fixture.root),
             &[],
             &[],
             2 * 1024 * 1024,
             32_768,
-            32_768,
-        )
-        .unwrap();
-        let scope = process_snapshot::observe_scope(
-            &snapshot,
-            self::process_id_from_child(&fixture.root),
-            &[],
-            &[],
             32_768,
         )
         .unwrap();
@@ -1119,7 +1203,12 @@ mod tests {
     fn exited_unreaped_root_retains_escaped_group_and_zero_rss() {
         let holder = GroupHolder::start();
         let mut child = Command::new(env::current_exe().unwrap())
-            .args(["--ignored", "--nocapture", "zombie_fixture"])
+            .args([
+                "--ignored",
+                "--nocapture",
+                "--test-threads=2",
+                "zombie_fixture",
+            ])
             .process_group(holder.pgid as libc::pid_t)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -1177,8 +1266,7 @@ mod tests {
         );
         assert_eq!(ps_fields[4].parse::<u64>().unwrap(), 0);
 
-        let snapshot =
-            query_process_snapshot(pid, &[], &[], 2 * 1024 * 1024, 32_768, 32_768).unwrap();
+        let snapshot = query_process_scope(pid, &[], &[], 2 * 1024 * 1024, 32_768, 32_768).unwrap();
         let row = snapshot.rows.iter().find(|row| row.pid == pid).unwrap();
         assert_eq!(row.ppid, ps_fields[1].parse::<u32>().unwrap());
         assert_eq!(row.pgid, ps_fields[2].parse::<u32>().unwrap());
@@ -1191,7 +1279,7 @@ mod tests {
             row.pgid,
             row.rss_kib
         );
-        let scope = process_snapshot::observe_scope(&snapshot, pid, &[], &[], 32_768).unwrap();
+        let scope = snapshot;
         assert!(scope.process_ids.contains(&holder.child.id()));
         assert!(scope.process_groups.contains(&holder.pgid));
         let exit_status = child.wait().unwrap();
@@ -1284,6 +1372,177 @@ mod tests {
     }
 
     #[test]
+    fn task_rss_retries_the_same_live_pid_and_never_fills_missing_rss() {
+        let mut attempts = 0;
+        let result = read_task_rss(
+            321,
+            501,
+            501,
+            Instant::now() + SAMPLE_BUDGET,
+            || {
+                attempts += 1;
+                if attempts < 3 {
+                    Err(ProcQueryError::Vanished(libc::ESRCH))
+                } else {
+                    Ok(8192)
+                }
+            },
+            || TaskInfoEsrchResolution::Live("live transition".to_owned()),
+        )
+        .unwrap();
+        assert!(matches!(result, TaskRss::Bytes(8192)));
+        assert_eq!(attempts, 3);
+
+        let mut attempts = 0;
+        let error = read_task_rss(
+            321,
+            501,
+            501,
+            Instant::now() + SAMPLE_BUDGET,
+            || {
+                attempts += 1;
+                Err(ProcQueryError::Vanished(libc::ESRCH))
+            },
+            || TaskInfoEsrchResolution::Live("persistently live".to_owned()),
+        )
+        .err()
+        .unwrap();
+        assert_eq!(attempts, 3);
+        assert!(
+            error
+                .to_string()
+                .contains("exhausted 3 bounded attempts for PID 321")
+        );
+
+        let result = read_task_rss(
+            321,
+            501,
+            501,
+            Instant::now() + SAMPLE_BUDGET,
+            || Err(ProcQueryError::Vanished(libc::ESRCH)),
+            || TaskInfoEsrchResolution::Gone,
+        )
+        .unwrap();
+        assert!(matches!(result, TaskRss::Gone));
+        let error = read_task_rss(
+            321,
+            501,
+            501,
+            Instant::now() + SAMPLE_BUDGET,
+            || Err(ProcQueryError::Denied(libc::EPERM)),
+            || panic!("denial must not be reclassified"),
+        )
+        .err()
+        .unwrap();
+        assert!(error.to_string().contains("undercount"));
+    }
+
+    #[test]
+    fn missing_parent_projection_preserves_live_child_in_another_group() {
+        let snapshot = ProcessSnapshot {
+            rows: vec![
+                ProcessRow {
+                    pid: 100,
+                    ppid: 1,
+                    pgid: 100,
+                    rss_kib: 0,
+                },
+                ProcessRow {
+                    pid: 101,
+                    ppid: 100,
+                    pgid: 100,
+                    rss_kib: 0,
+                },
+                ProcessRow {
+                    pid: 102,
+                    ppid: 101,
+                    pgid: 102,
+                    rss_kib: 0,
+                },
+            ],
+        };
+        let initial = process_snapshot::observe_scope(&snapshot, 100, &[], &[], 32).unwrap();
+        let missing = BTreeSet::from([101]);
+        let rss = BTreeMap::from([(100, 4096), (102, 8192)]);
+        let result =
+            project_rss_scope(snapshot.clone(), &initial, 100, &[], &missing, &rss, 32).unwrap();
+        assert_eq!(result.rss_bytes, 12 * 1024);
+        assert!(result.process_groups.contains(&102));
+        assert!(result.missing_previous_pids.contains(&101));
+        assert_eq!(
+            result
+                .rows
+                .iter()
+                .map(|row| (row.pid, row.rss_kib))
+                .collect::<Vec<_>>(),
+            vec![(100, 4), (102, 8)]
+        );
+        assert!(
+            project_rss_scope(
+                snapshot.clone(),
+                &initial,
+                100,
+                &[],
+                &BTreeSet::from([100]),
+                &rss,
+                32
+            )
+            .is_err()
+        );
+        assert!(
+            project_rss_scope(
+                snapshot,
+                &initial,
+                100,
+                &[],
+                &missing,
+                &BTreeMap::from([(100, 4096)]),
+                32
+            )
+            .is_err(),
+            "a live child with no RSS must refuse, not receive zero"
+        );
+    }
+
+    #[test]
+    fn short_lived_children_do_not_require_an_atomic_process_tree() {
+        struct UnreapedGroup(Child);
+        impl Drop for UnreapedGroup {
+            fn drop(&mut self) {
+                // No waiter has reaped this direct child; its PID reserves
+                // the group ID. Never signal a historical numeric group.
+                unsafe {
+                    libc::kill(-(self.0.id() as libc::pid_t), libc::SIGKILL);
+                }
+                let _ = self.0.wait();
+            }
+        }
+        let deadline = Instant::now() + Duration::from_secs(20);
+        for _ in 0..8 {
+            let root = UnreapedGroup(Command::new("/bin/bash")
+                .args(["-c", "i=0; while [ \"$i\" -lt 400 ]; do /usr/bin/true; i=$((i+1)); done; /bin/sleep 0.2"])
+                .process_group(0).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
+                .spawn().unwrap());
+            let mut pids = Vec::new();
+            let mut groups = Vec::new();
+            for _ in 0..80 {
+                assert!(
+                    Instant::now() < deadline,
+                    "churn fixture exceeded its bounded run"
+                );
+                let scope =
+                    query_process_scope(root.0.id(), &pids, &groups, 2 * 1024 * 1024, 32768, 32768)
+                        .expect("a vanished child must not require a globally stable process tree");
+                assert!(scope.root_present);
+                pids.extend(scope.process_ids);
+                pids.sort_unstable();
+                pids.dedup();
+                groups = scope.process_groups;
+            }
+        }
+    }
+
+    #[test]
     fn repeated_fast_failures_accept_only_matching_sdk_zombie_topology() {
         for _ in 0..12 {
             let mut child = Command::new("/bin/sh")
@@ -1308,7 +1567,7 @@ mod tests {
             assert!(
                 matches!(
                     resolve_taskinfo_esrch(pid, sampled_info, deadline),
-                    TaskInfoEsrchResolution::Retry(_)
+                    TaskInfoEsrchResolution::Live(_)
                 ),
                 "a live SDK status must never turn ESRCH into zero RSS"
             );
@@ -1349,7 +1608,7 @@ mod tests {
             }
 
             let snapshot =
-                query_process_snapshot(pid, &[], &[], 2 * 1024 * 1024, 32_768, 32_768).unwrap();
+                query_process_scope(pid, &[], &[], 2 * 1024 * 1024, 32_768, 32_768).unwrap();
             let row = snapshot.rows.iter().find(|row| row.pid == pid).unwrap();
             assert_eq!(row.ppid, sampled.ppid);
             assert_eq!(row.pgid, sampled.pgid);
@@ -1368,7 +1627,12 @@ mod tests {
         assert_eq!(unsafe { libc::setpgid(0, 0) }, 0);
         let root_pgid = unsafe { libc::getpgid(0) } as u32;
         let mut leaf = Command::new(env::current_exe().unwrap())
-            .args(["--ignored", "--nocapture", "live_leaf_fixture"])
+            .args([
+                "--ignored",
+                "--nocapture",
+                "--test-threads=2",
+                "live_leaf_fixture",
+            ])
             .env("AMI_RUST_MACOS_PROCESS_FIXTURE", "leaf")
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
