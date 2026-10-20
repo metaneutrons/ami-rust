@@ -860,6 +860,7 @@ mod tests {
     struct Fixture {
         root: PathBuf,
         value: Value,
+        preserve: bool,
     }
     impl Fixture {
         fn new() -> Self {
@@ -868,10 +869,14 @@ mod tests {
                 std::process::id(),
                 NEXT.fetch_add(1, Ordering::Relaxed)
             ));
+            Self::at(root, false)
+        }
+
+        fn at(root: PathBuf, preserve: bool) -> Self {
             fs::DirBuilder::new()
                 .mode(0o700)
                 .create(&root)
-                .expect("fixture root");
+                .expect("fixture root must be fresh");
             let root = root.canonicalize().expect("canonical root");
             let binding = root.join("reviewed-input");
             fs::write(&binding, b"reviewed input\n").expect("input");
@@ -881,7 +886,11 @@ mod tests {
                 "executables":[], "libraries":[], "deny_exec":[], "deny_library":[],
                 "component_record":null, "derived":null,
                 "bindings":[{"path":binding,"sha256":sha256_bytes(b"reviewed input\n")}]});
-            Self { root, value }
+            Self {
+                root,
+                value,
+                preserve,
+            }
         }
         fn parse(&self) -> Result<Spec> {
             parse_spec(&serde_json::to_vec(&self.value).expect("JSON"))
@@ -920,7 +929,9 @@ mod tests {
 
     impl Drop for Fixture {
         fn drop(&mut self) {
-            fs::remove_dir_all(&self.root).expect("remove own fixture");
+            if !self.preserve {
+                fs::remove_dir_all(&self.root).expect("remove own fixture");
+            }
         }
     }
     #[test]
@@ -1176,5 +1187,694 @@ mod tests {
         .expect("policy");
         assert!(policy.contains("network deny\n") && !policy.contains("exec-derived-tree "));
         assert!(!policy.contains("write-null "));
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn create_private_directory(path: &Path) -> std::result::Result<(), String> {
+        let parent = path
+            .parent()
+            .ok_or_else(|| format!("diagnostic path has no parent: {}", path.display()))?;
+        if !path.is_absolute()
+            || fs::canonicalize(parent).map_err(|error| error.to_string())? != parent
+            || fs::symlink_metadata(path).is_ok()
+        {
+            return Err(format!(
+                "diagnostic directory must be fresh under a canonical parent: {}",
+                path.display()
+            ));
+        }
+        fs::DirBuilder::new()
+            .mode(0o700)
+            .create(path)
+            .map_err(|error| error.to_string())
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn write_diagnostic_json(path: &Path, value: &Value) -> std::result::Result<(), String> {
+        let mut raw = serde_json::to_vec_pretty(value).map_err(|error| error.to_string())?;
+        raw.push(b'\n');
+        write_new(path, &raw).map_err(|error| error.to_string())
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn diagnostic_json_file(path: &Path) -> Value {
+        read_regular_bounded(path, 2 * 1024 * 1024)
+            .ok()
+            .and_then(|raw| serde_json::from_slice(&raw).ok())
+            .unwrap_or(Value::Null)
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn required_diagnostic_path(name: &str) -> std::result::Result<PathBuf, String> {
+        let path =
+            PathBuf::from(std::env::var_os(name).ok_or_else(|| {
+                format!("missing required diagnostic environment variable {name}")
+            })?);
+        if !path.is_absolute() {
+            return Err(format!("{name} must be an absolute path"));
+        }
+        Ok(path)
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn run_raw_adapter_case(
+        label: &str,
+        output: &Path,
+        adapter: &Path,
+        policy: &Path,
+        spec: &Spec,
+        command: &[String],
+    ) -> std::result::Result<Value, String> {
+        create_private_directory(output)?;
+        let report_dir = output.join("reports/command");
+        let arguments = [
+            OsString::from("--policy"),
+            policy.as_os_str().to_os_string(),
+            OsString::from("--report-dir"),
+            report_dir.as_os_str().to_os_string(),
+            OsString::from("--run"),
+            OsString::from("--"),
+        ]
+        .into_iter()
+        .chain(command.iter().map(OsString::from));
+        let adapter_command =
+            CommandSpec::new(adapter.as_os_str(), arguments, &spec.cwd, child_env(spec));
+        use std::os::unix::process::ExitStatusExt;
+        let captured = capture(
+            &adapter_command,
+            CaptureLimits {
+                timeout: Duration::from_secs(90),
+                stdout_bytes: 1024 * 1024,
+                stderr_bytes: 1024 * 1024,
+                termination_grace: Duration::from_secs(2),
+            },
+            || false,
+        );
+        let (outer_exit, outer_signal, stdout, stderr, capture_error) = match captured {
+            Ok(captured) => (
+                captured.exit_code(),
+                captured.signal(),
+                captured.stdout,
+                captured.stderr,
+                Value::Null,
+            ),
+            Err(error) => {
+                let message = error.to_string();
+                (
+                    error.status.as_ref().and_then(|status| status.code()),
+                    error.status.as_ref().and_then(ExitStatusExt::signal),
+                    error.stdout,
+                    error.stderr,
+                    json!(message),
+                )
+            }
+        };
+        write_new(&output.join("adapter.stdout.raw"), &stdout)
+            .map_err(|error| error.to_string())?;
+        write_new(&output.join("adapter.stderr.raw"), &stderr)
+            .map_err(|error| error.to_string())?;
+        let report_path = report_dir.join("report.json");
+        let report = diagnostic_json_file(&report_path);
+        let summary = json!({
+            "label":label,
+            "command":command,
+            "policy_path":policy,
+            "outer_exit_code":outer_exit,
+            "outer_signal":outer_signal,
+            "capture_error":capture_error,
+            "backend":report.get("backend").cloned().unwrap_or(Value::Null),
+            "child_exit_code":report.get("child_exit_code").cloned().unwrap_or(Value::Null),
+            "child_signal":report.get("child_signal").cloned().unwrap_or(Value::Null),
+            "launch_error":report.get("launch_error").cloned().unwrap_or(Value::Null),
+            "qualification_evidence_valid":report.get("qualification_evidence_valid").cloned().unwrap_or(Value::Null),
+            "evidence_failures":report.get("evidence_failures").cloned().unwrap_or(Value::Null),
+            "report_path":report_path,
+            "stdout_path":output.join("reports/command/stdout.raw"),
+            "stderr_path":output.join("reports/command/stderr.raw"),
+            "adapter_stdout_path":output.join("adapter.stdout.raw"),
+            "adapter_stderr_path":output.join("adapter.stderr.raw"),
+        });
+        write_diagnostic_json(&output.join("case.json"), &summary)?;
+        Ok(summary)
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn successful_linux_adapter_report(report: &Value, expected_exit: i64) -> bool {
+        report["backend"] == "Landlock path-beneath allow rules and seccomp-BPF on Linux x86-64"
+            && report["child_exit_code"].as_i64() == Some(expected_exit)
+            && report["child_signal"].is_null()
+            && report["launch_error"].is_null()
+            && report["qualification_evidence_valid"].as_bool() == Some(true)
+            && report["evidence_failures"]
+                .as_array()
+                .is_some_and(Vec::is_empty)
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn copy_policy_omitting_one_exec_hash(
+        policy: &Path,
+        counter_policy: &Path,
+        executable: &Path,
+    ) -> std::result::Result<Value, String> {
+        let original =
+            read_regular_bounded(policy, 1024 * 1024).map_err(|error| error.to_string())?;
+        let original_text = std::str::from_utf8(&original)
+            .map_err(|error| format!("original policy is not UTF-8: {error}"))?;
+        let executable_sha256 = sha256_file(executable).map_err(|error| error.to_string())?;
+        let rule = format!(
+            "exec-hash {} {}",
+            printable(executable).map_err(|error| error.to_string())?,
+            executable_sha256
+        );
+        let rule_count = original_text
+            .lines()
+            .filter(|line| *line == rule.as_str())
+            .count();
+        if rule_count != 1 {
+            return Err(format!(
+                "original policy must contain exactly one selected helper Git rule; found {rule_count}"
+            ));
+        }
+        let removed_line_bytes = original_text
+            .split_inclusive('\n')
+            .find(|line| line.strip_suffix('\n').unwrap_or(line) == rule.as_str())
+            .ok_or_else(|| "selected helper Git rule is absent from original policy".to_owned())?
+            .len();
+        let counter_text = original_text
+            .split_inclusive('\n')
+            .filter(|line| line.strip_suffix('\n').unwrap_or(line) != rule.as_str())
+            .collect::<String>();
+        if counter_text.len() + removed_line_bytes != original.len() {
+            return Err(
+                "counterpolicy differs by more than the single selected exec-hash line".to_owned(),
+            );
+        }
+        write_new(counter_policy, counter_text.as_bytes()).map_err(|error| error.to_string())?;
+        Ok(json!({
+            "original_policy":policy,
+            "original_policy_sha256":sha256_file(policy).map_err(|error| error.to_string())?,
+            "counter_policy":counter_policy,
+            "counter_policy_sha256":sha256_file(counter_policy).map_err(|error| error.to_string())?,
+            "omitted_rule":rule,
+            "omitted_rule_count":rule_count,
+            "bytes_removed":removed_line_bytes,
+            "all_other_policy_bytes_identical":true,
+        }))
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn read_raw_stderr(case: &Value) -> std::result::Result<String, String> {
+        let path = case["stderr_path"]
+            .as_str()
+            .ok_or_else(|| "raw adapter case omitted its stderr path".to_owned())?;
+        let bytes = read_regular_bounded(Path::new(path), 1024 * 1024)
+            .map_err(|error| format!("could not read raw adapter stderr: {error}"))?;
+        Ok(String::from_utf8_lossy(&bytes).into_owned())
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn isolated_git_command(program: &Path, args: &[&str]) -> Vec<String> {
+        let mut command = vec![
+            "/usr/bin/env".to_owned(),
+            "GIT_CONFIG_NOSYSTEM=1".to_owned(),
+            "GIT_CONFIG_GLOBAL=/dev/null".to_owned(),
+            "GIT_TERMINAL_PROMPT=0".to_owned(),
+            program.to_string_lossy().into_owned(),
+        ];
+        command.extend(args.iter().map(|argument| (*argument).to_owned()));
+        command
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn run_linux_consumer_session_fetch_case(
+        output: &Path,
+        adapter: &Path,
+        policy: &Path,
+        spec: &Spec,
+        test_binary: &Path,
+    ) -> std::result::Result<Value, String> {
+        let test_name =
+            "consumer_observe::tests::linux_consumer_session_source_fetch_diagnostic_child";
+        run_raw_adapter_case(
+            "consumer-session-source-init-fetch",
+            output,
+            adapter,
+            policy,
+            spec,
+            &[
+                test_binary
+                    .to_str()
+                    .ok_or_else(|| "test binary path is not UTF-8".to_owned())?
+                    .to_owned(),
+                "--ignored".to_owned(),
+                "--exact".to_owned(),
+                test_name.to_owned(),
+                "--test-threads=1".to_owned(),
+            ],
+        )
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn run_linux_git_https_transport_diagnostic() -> std::result::Result<(), String> {
+        const URL: &str = "https://github.com/metaneutrons/ami-rust";
+        let artifact_root =
+            required_diagnostic_path("AMI_RUST_LINUX_GIT_DIAGNOSTIC_ARTIFACT_ROOT")?;
+        create_private_directory(&artifact_root)?;
+        let mut fixture = Fixture::at(artifact_root.join("fixture"), true);
+        let home = fixture.root.join("home");
+        let tmp = fixture.root.join("tmp");
+        let write_root = fixture.root.join("state-writes");
+        let derived = write_root.join("derived");
+        for path in [&home, &tmp, &write_root, &derived] {
+            create_private_directory(path)?;
+        }
+
+        let adapter = fs::canonicalize(required_diagnostic_path(
+            "AMI_RUST_LINUX_GIT_DIAGNOSTIC_ADAPTER",
+        )?)
+        .map_err(|error| error.to_string())?;
+        if !fs::metadata(&adapter)
+            .map_err(|error| error.to_string())?
+            .is_file()
+        {
+            return Err("configured consumer adapter is not a regular file".to_owned());
+        }
+        fixture.value["phase"] = json!("cold-prepare");
+        fixture.value["command"] = json!(isolated_git_command(
+            Path::new("/usr/bin/git"),
+            &["ls-remote", "--exit-code", URL, "refs/heads/main"]
+        ));
+        fixture.value["expected_exit"] = json!(0);
+        fixture.value["cwd"] = json!(fixture.root);
+        fixture.value["home"] = json!(home);
+        fixture.value["tmp"] = json!(tmp);
+        let test_binary = fs::canonicalize(std::env::current_exe().map_err(|e| e.to_string())?)
+            .map_err(|error| error.to_string())?;
+        fixture.value["executables"] = json!(["/usr/bin/env", "/usr/bin/git", test_binary]);
+        fixture.value["write_trees"] = json!([{"role":"state", "path":write_root}]);
+        fixture.value["derived"] = json!({"role":"consumer-state-parent", "path":derived});
+        let raw = serde_json::to_vec_pretty(&fixture.value).map_err(|error| error.to_string())?;
+        write_new(&artifact_root.join("spec.json"), &raw).map_err(|error| error.to_string())?;
+        let spec = fixture.parse().map_err(|error| error.to_string())?;
+
+        let mut executables = spec.executables.clone();
+        executables.insert(fs::canonicalize(&spec.command[0]).map_err(|error| error.to_string())?);
+        let runtime =
+            consumer_runtime::discover(executables, spec.libraries.clone(), false, true, &spec.cwd)
+                .map_err(|error| error.to_string())?;
+        write_diagnostic_json(
+            &artifact_root.join("runtime-discovery.json"),
+            &runtime.evidence,
+        )?;
+        let exec_path = runtime.evidence["queries"]
+            .as_array()
+            .and_then(|rows| {
+                rows.iter()
+                    .find(|row| row["label"] == "system git --exec-path")
+            })
+            .and_then(|row| row["stdout"].as_str())
+            .ok_or_else(|| "runtime discovery omitted Git --exec-path evidence".to_owned())?;
+        let helper_dir = PathBuf::from(exec_path);
+        let canonical_helper = fs::canonicalize(helper_dir.join("git-remote-http"))
+            .map_err(|error| error.to_string())?;
+        let alias_helper = helper_dir.join("git-remote-https");
+        let alias_target = fs::canonicalize(&alias_helper).map_err(|error| error.to_string())?;
+        let helper_git = fs::canonicalize(helper_dir.join("git")).map_err(|error| {
+            format!("selected Git exec-directory binary is unavailable: {error}")
+        })?;
+        if alias_target != canonical_helper
+            || !runtime.executables.contains(&canonical_helper)
+            || !runtime.executables.contains(&helper_git)
+            || !runtime
+                .executables
+                .contains(&fs::canonicalize("/usr/bin/env").map_err(|e| e.to_string())?)
+        {
+            return Err(
+                "runtime discovery did not bind Git, env and the helper alias target".to_owned(),
+            );
+        }
+        use std::os::unix::fs::MetadataExt;
+        let frontend_git = fs::canonicalize("/usr/bin/git").map_err(|error| error.to_string())?;
+        let frontend_identity = fs::metadata(&frontend_git).map_err(|error| error.to_string())?;
+        let helper_git_identity = fs::metadata(&helper_git).map_err(|error| error.to_string())?;
+        if (frontend_identity.dev(), frontend_identity.ino())
+            == (helper_git_identity.dev(), helper_git_identity.ino())
+        {
+            return Err(
+                "selected Git exec-directory binary aliases the frontend inode; counterpolicy is not independent"
+                    .to_owned(),
+            );
+        }
+        let frontend_git_sha256 = sha256_file(&frontend_git).map_err(|error| error.to_string())?;
+        let helper_git_sha256 = sha256_file(&helper_git).map_err(|error| error.to_string())?;
+        write_diagnostic_json(
+            &artifact_root.join("helper-resolution.json"),
+            &json!({
+                "git_exec_path":helper_dir,
+                "frontend_git":frontend_git,
+                "frontend_git_sha256":frontend_git_sha256,
+                "frontend_git_device":frontend_identity.dev(),
+                "frontend_git_inode":frontend_identity.ino(),
+                "selected_exec_directory_git":helper_git,
+                "selected_exec_directory_git_sha256":helper_git_sha256,
+                "selected_exec_directory_git_device":helper_git_identity.dev(),
+                "selected_exec_directory_git_inode":helper_git_identity.ino(),
+                "canonical_helper":canonical_helper,
+                "literal_https_alias":alias_helper,
+                "literal_https_alias_target":alias_target,
+                "same_target":true,
+                "source":"consumer_runtime::discover query evidence",
+            }),
+        )?;
+
+        let main_output = artifact_root.join("git-ls-remote");
+        create_private_directory(&main_output)?;
+        let main_result = execute(&spec, &raw, &adapter, &main_output);
+        let policy = main_output.join("policy.txt");
+        if !policy.is_file() {
+            return Err(format!(
+                "Git observation did not write its exact policy; partial evidence remains in {}: {main_result:?}",
+                main_output.display()
+            ));
+        }
+        let main_report_path = main_output.join("reports/command/report.json");
+        let main_report = diagnostic_json_file(&main_report_path);
+        let main_adapter_process = diagnostic_json_file(&main_output.join("adapter-process.json"));
+        let main_admitted = main_result.is_ok()
+            && main_adapter_process["exit_code"].as_i64() == Some(0)
+            && successful_linux_adapter_report(&main_report, 0);
+        let main_case = json!({
+            "label":"git-ls-remote",
+            "command":spec.command,
+            "expected_exit":0,
+            "execute_result":main_result.as_ref().map(|_| "admitted").unwrap_or("not-admitted"),
+            "execute_error":main_result.err().map(|error| error.to_string()),
+            "gate_passed":main_admitted,
+            "adapter_process":main_adapter_process,
+            "child_exit_code":main_report.get("child_exit_code").cloned().unwrap_or(Value::Null),
+            "child_signal":main_report.get("child_signal").cloned().unwrap_or(Value::Null),
+            "launch_error":main_report.get("launch_error").cloned().unwrap_or(Value::Null),
+            "evidence_failures":main_report.get("evidence_failures").cloned().unwrap_or(Value::Null),
+            "qualification_evidence_valid":main_report.get("qualification_evidence_valid").cloned().unwrap_or(Value::Null),
+            "report_path":main_report_path,
+            "stdout_path":main_output.join("reports/command/stdout.raw"),
+            "stderr_path":main_output.join("reports/command/stderr.raw"),
+            "executed_policy":policy,
+            "executed_policy_sha256":sha256_file(&policy).map_err(|error| error.to_string())?,
+            "claim":"Required positive control: the isolated Git observation must be admitted with child and adapter exit 0 and valid evidence.",
+        });
+        write_diagnostic_json(&main_output.join("case.json"), &main_case)?;
+
+        let policy = main_output.join("policy.txt");
+        let positive = run_raw_adapter_case(
+            "git-version-positive-spawn",
+            &artifact_root.join("git-version"),
+            &adapter,
+            &policy,
+            &spec,
+            &isolated_git_command(Path::new("/usr/bin/git"), &["--version"]),
+        )?;
+        let canonical = run_raw_adapter_case(
+            "canonical-http-helper-empty-stdin",
+            &artifact_root.join("canonical-helper"),
+            &adapter,
+            &policy,
+            &spec,
+            &isolated_git_command(&canonical_helper, &["origin", URL]),
+        )?;
+        let alias = run_raw_adapter_case(
+            "literal-https-alias-empty-stdin",
+            &artifact_root.join("https-alias"),
+            &adapter,
+            &policy,
+            &spec,
+            &isolated_git_command(&alias_helper, &["origin", URL]),
+        )?;
+        // The policy requires an empty derived-execution parent at admission.
+        // Run this control before the native session creates retained state.
+        let counter_policy_path = artifact_root.join("counter-policy-git-execdir-git-omitted.txt");
+        let counter_policy_case =
+            copy_policy_omitting_one_exec_hash(&policy, &counter_policy_path, &helper_git)?;
+        let counter = run_raw_adapter_case(
+            "git-ls-remote-with-selected-execdir-git-omitted",
+            &artifact_root.join("counter-git-execdir-git-omitted"),
+            &adapter,
+            &counter_policy_path,
+            &spec,
+            &spec.command,
+        )?;
+        let counter_stderr = read_raw_stderr(&counter)?;
+        // Git's parent reports the logical subcommand, not the re-exec path.
+        // The pre-fix trace binds this exact diagnostic to exec-directory Git.
+        let fatal_cannot_exec =
+            counter_stderr.contains("fatal: cannot exec 'remote-https': Permission denied");
+        let counter_gate = counter["outer_exit_code"].as_i64() == Some(255)
+            && successful_linux_adapter_report(&counter, 255)
+            && counter["capture_error"].is_null()
+            && fatal_cannot_exec;
+        let counter_case = json!({
+            "gate_passed":counter_gate,
+            "adapter_case":counter,
+            "expected_child_exit_code":255,
+            "actual_child_exit_code":counter["child_exit_code"],
+            "actual_adapter_exit_code":counter["outer_exit_code"],
+            "stderr_contains_fatal_cannot_exec":fatal_cannot_exec,
+            "stderr_raw":counter_stderr,
+            "counter_policy":counter_policy_case,
+            "scope":"One exec-hash rule for the distinct canonical exec-directory Git file is omitted; all other policy bytes are preserved.",
+        });
+        write_diagnostic_json(
+            &artifact_root.join("counter-git-execdir-git-omitted/gate-result.json"),
+            &counter_case,
+        )?;
+
+        let consumer_session = run_linux_consumer_session_fetch_case(
+            &artifact_root.join("consumer-session-source-init-fetch"),
+            &adapter,
+            &policy,
+            &spec,
+            &test_binary,
+        )?;
+        let consumer_session_state = spec
+            .cwd
+            .join("state-writes/derived/native-session/native-session-child-result.json");
+        let consumer_session_report = diagnostic_json_file(&consumer_session_state);
+        let consumer_session_commands = consumer_session_report["commands"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        let consumer_session_steps_pass = consumer_session_report["status"]
+            == "SOURCE_FETCH_COMPLETED"
+            && consumer_session_commands.len() == 2
+            && consumer_session_commands[0]["label"] == "source-init"
+            && consumer_session_commands[0]["exit_code"] == 0
+            && consumer_session_commands[0]["signal"].is_null()
+            && consumer_session_commands[1]["label"] == "source-fetch"
+            && consumer_session_commands[1]["exit_code"] == 0
+            && consumer_session_commands[1]["signal"].is_null();
+        let consumer_session_gate = consumer_session["outer_exit_code"].as_i64() == Some(0)
+            && successful_linux_adapter_report(&consumer_session, 0)
+            && consumer_session["capture_error"].is_null()
+            && consumer_session_steps_pass;
+        let consumer_session_case = json!({
+            "gate_passed":consumer_session_gate,
+            "adapter_case":consumer_session,
+            "native_session_report_path":consumer_session_state,
+            "native_session_report":consumer_session_report,
+        });
+        write_diagnostic_json(
+            &artifact_root.join("consumer-session-source-init-fetch/gate-result.json"),
+            &consumer_session_case,
+        )?;
+
+        let diagnostic_passed = main_admitted && consumer_session_gate && counter_gate;
+        write_diagnostic_json(
+            &artifact_root.join("diagnostic-result.json"),
+            &json!({
+                "schema":"ami-rust-linux-git-transport-diagnostic-v1",
+                "status":if diagnostic_passed { "SCOPED_GIT_TRANSPORT_REGRESSION_PASS" } else { "SCOPED_GIT_TRANSPORT_REGRESSION_FAIL" },
+                "host":"linux-x86_64",
+                "spec_path":artifact_root.join("spec.json"),
+                "runtime_discovery_path":artifact_root.join("runtime-discovery.json"),
+                "helper_resolution_path":artifact_root.join("helper-resolution.json"),
+                "original_policy":policy,
+                "original_policy_sha256":sha256_file(&policy).map_err(|error| error.to_string())?,
+                "counter_policy":counter_policy_case,
+                "cases":[main_case, positive, canonical, alias, consumer_session_case, counter_case],
+                "gates":{"isolated_git_admitted_exit_0":main_admitted,"consumer_session_source_init_fetch_admitted":consumer_session_gate,"one_rule_counter_observed_eacces_effect":counter_gate},
+                "direct_helper_statuses":"Raw EOF helper outcomes are retained as observations; exit 1 is valid and is not a regression gate.",
+                "policy":"The positive Git observation, ConsumerSession fetch and helper controls reuse the preserved original policy; the counterpolicy differs only by the selected exec-directory Git exec-hash rule.",
+                "claim":"Scoped Linux Git transport regression only: a successful isolated Git observation and actual ConsumerSession source fetch must pass; removing only the selected exec-directory Git hash rule must reproduce the expected exec denial and captured fatal diagnostic. This is not RC1 acceptance or resource qualification.",
+            }),
+        )?;
+        if !diagnostic_passed {
+            return Err(format!(
+                "scoped Git transport regression failed; inspect retained cases under {}",
+                artifact_root.display()
+            ));
+        }
+        Ok(())
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    #[test]
+    #[ignore = "PR-only Linux Git HTTPS transport regression; not an acceptance gate"]
+    fn linux_git_https_transport_diagnostic() {
+        let artifact =
+            std::env::var_os("AMI_RUST_LINUX_GIT_DIAGNOSTIC_ARTIFACT_ROOT").map(PathBuf::from);
+        if let Err(error) = run_linux_git_https_transport_diagnostic() {
+            if let Some(artifact) = artifact.filter(|path| path.is_dir()) {
+                let _ = write_diagnostic_json(
+                    &artifact.join("diagnostic-failure.json"),
+                    &json!({
+                        "status":"DIAGNOSTIC_INCOMPLETE",
+                        "error":error,
+                        "claim":"No acceptance claim is established; partial evidence is retained.",
+                    }),
+                );
+            }
+            panic!("Linux Git transport diagnostic setup failed; inspect retained output: {error}");
+        }
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    #[test]
+    #[ignore = "child case for the PR-only Linux Git transport diagnostic"]
+    fn linux_consumer_session_source_fetch_diagnostic_child() {
+        use ami_rust_core::consumer_session::ConsumerSession;
+        use std::time::Instant;
+
+        const SOURCE_URL: &str = "https://github.com/metaneutrons/ami-rust.git";
+        const SOURCE_COMMIT: &str = "40b5e949651cf3a982b53c8bf953fa19d2ccb893";
+
+        let cwd = fs::canonicalize(std::env::current_dir().expect("diagnostic cwd"))
+            .expect("canonical diagnostic cwd");
+        let state = cwd.join("state-writes/derived/native-session");
+        assert!(
+            state.starts_with(cwd.join("state-writes/derived")),
+            "native session state must remain inside the declared derived state tree"
+        );
+        create_private_directory(&state).expect("fresh private native session state");
+        let report_path = state.join("native-session-child-result.json");
+        let started = Instant::now();
+        let mut commands = Vec::new();
+        let mut stage = "signal-guard";
+        let (mut status, mut error, signal_requested, guard_finish_error) =
+            match SigtermGuard::acquire() {
+                Err(error) => ("SIGNAL_GUARD_FAILED", Some(error.to_string()), false, None),
+                Ok(signals) => {
+                    let execution = (|| -> std::result::Result<(), String> {
+                        stage = "session-setup";
+                        let mut session = ConsumerSession::new(&state, &signals)
+                            .map_err(|error| error.to_string())?;
+
+                        stage = "source-init";
+                        let source = state.join("source");
+                        let init = session
+                            .run(
+                                "source-init",
+                                Path::new("/usr/bin/git"),
+                                vec![
+                                    "-c".into(),
+                                    "init.defaultBranch=main".into(),
+                                    "-c".into(),
+                                    "core.hooksPath=/dev/null".into(),
+                                    "init".into(),
+                                    "--template=".into(),
+                                    source.clone().into_os_string(),
+                                ],
+                                Duration::from_secs(15),
+                            )
+                            .map_err(|error| error.to_string())?;
+                        commands.push(json!({
+                            "label":"source-init",
+                            "exit_code":init.exit_code,
+                            "signal":init.signal,
+                            "log_directory":state.join("commands/0001-source-init"),
+                        }));
+
+                        stage = "source-fetch";
+                        let mut fetch = vec![
+                            "-C".into(),
+                            source.clone().into_os_string(),
+                            "-c".into(),
+                            "core.hooksPath=/dev/null".into(),
+                            "-c".into(),
+                            "core.fsmonitor=false".into(),
+                            "-c".into(),
+                            "submodule.recurse=false".into(),
+                            "-c".into(),
+                            "protocol.file.allow=never".into(),
+                        ];
+                        fetch.extend([
+                            "fetch".into(),
+                            "--depth=1".into(),
+                            "--no-tags".into(),
+                            SOURCE_URL.into(),
+                            SOURCE_COMMIT.into(),
+                        ]);
+                        let fetched = session
+                            .run(
+                                "source-fetch",
+                                Path::new("/usr/bin/git"),
+                                fetch,
+                                Duration::from_secs(55),
+                            )
+                            .map_err(|error| error.to_string())?;
+                        commands.push(json!({
+                            "label":"source-fetch",
+                            "exit_code":fetched.exit_code,
+                            "signal":fetched.signal,
+                            "log_directory":state.join("commands/0002-source-fetch"),
+                        }));
+                        Ok(())
+                    })();
+                    let requested = signals.requested();
+                    let finish = signals
+                        .finish_requested()
+                        .err()
+                        .map(|error| error.to_string());
+                    let status = if requested {
+                        "INTERRUPTED"
+                    } else if finish.is_some() {
+                        "SIGNAL_GUARD_RESTORE_FAILED"
+                    } else if execution.is_ok() {
+                        "SOURCE_FETCH_COMPLETED"
+                    } else {
+                        match stage {
+                            "session-setup" => "SESSION_SETUP_FAILED",
+                            "source-init" => "SOURCE_INIT_FAILED",
+                            "source-fetch" => "SOURCE_FETCH_FAILED",
+                            _ => "DIAGNOSTIC_FAILED",
+                        }
+                    };
+                    (status, execution.err(), requested, finish)
+                }
+            };
+        if started.elapsed() > Duration::from_secs(90) {
+            status = "CHILD_TIME_LIMIT_EXCEEDED";
+            error.get_or_insert_with(|| "native session child exceeded 90 seconds".to_owned());
+        }
+        let report = json!({
+            "schema":"ami-rust-linux-consumer-session-fetch-diagnostic-v1",
+            "status":status,
+            "source_url":SOURCE_URL,
+            "source_commit":SOURCE_COMMIT,
+            "state":state,
+            "commands":commands,
+            "error":error,
+            "sigterm_requested":signal_requested,
+            "sigterm_guard_finish_error":guard_finish_error,
+            "elapsed_seconds":started.elapsed().as_secs_f64(),
+            "claim":"Local diagnostic of the actual ConsumerSession and resource-capture stack for source-init and source-fetch only; no checkout, SDK build, or acceptance claim.",
+        });
+        write_diagnostic_json(&report_path, &report)
+            .expect("preserve native ConsumerSession diagnostic result");
+        assert_eq!(
+            report["status"],
+            "SOURCE_FETCH_COMPLETED",
+            "native ConsumerSession source-fetch diagnostic failed; inspect {}",
+            report_path.display()
+        );
     }
 }

@@ -1,0 +1,88 @@
+{
+  "schema": "ami-rust-linux-git-reexec-development-v1",
+  "recorded_utc": "2026-10-20T05:03:12.530066+00:00",
+  "status": "LOCAL_COMPONENT_PASS_HOSTED_REGRESSION_PENDING",
+  "milestone": "RC1",
+  "issue": "https://github.com/metaneutrons/ami-rust/issues/71",
+  "source_parent": "969c2a74d344800298133f6173ff62306101a760",
+  "source_files": {
+    "tooling/crates/xtask/src/consumer_runtime.rs": "542a535281dd03288d638bc329e69116771cb4a9486d8dd45f9e15b93c83fc97",
+    "tooling/crates/xtask/src/consumer_observe.rs": "59c66077342fc64ecb965036d3ce023bf9400f4da36b507141d955c7c45127e2"
+  },
+  "actual_pre_fix_reproduction": {
+    "run_url": "https://github.com/metaneutrons/ami-rust/actions/runs/39370558506",
+    "attempt": 1,
+    "source": "969c2a74d344800298133f6173ff62306101a760",
+    "provider_artifact_id": 12241163270,
+    "provider_zip_sha256": "f37d5654beeef387aa3f3784a0007f03cc03a2877143f1eddc39925bae578ec1",
+    "trace_sha256": "7550439dcf5262f84635bfc4b5da8f715388e1313c4f3840ac7a91cec777ff63",
+    "trace_truncated": false,
+    "denied_operations": [
+      {
+        "line": 14411,
+        "text": "6141  execve(\"/usr/lib/git-core/git\", [\"/usr/lib/git-core/git\", \"remote-https\", \"https://github.com/metaneutrons/ami-rust\", \"https://github.com/metaneutrons/ami-rust\"], 0x56242dca20a0 /* 11 vars */) = -1 EACCES (Permission denied)"
+      },
+      {
+        "line": 26692,
+        "text": "6236  execve(\"/usr/lib/git-core/git\", [\"/usr/lib/git-core/git\", \"remote-https\", \"https://github.com/metaneutrons/ami-rust.git\", \"https://github.com/metaneutrons/ami-rust.git\"], 0x55d63cae08a0 /* 13 vars */) = -1 EACCES (Permission denied)"
+      }
+    ],
+    "native_source_fetch_stderr": "fatal: cannot exec 'remote-https': Permission denied\n"
+  },
+  "change": "Discover the Linux Git selected exec-directory Git executable, hash-bind its exact execution rule and include its existing ELF runtime closure. No directory execution grant or Python permission changes.",
+  "regression_requirements": [
+    "Isolated Git ls-remote admitted with child and adapter exit 0 and valid evidence.",
+    "Actual ConsumerSession source-init and pinned source-fetch exit 0 with valid evidence.",
+    "An isolated policy copy omitting only the distinct exec-directory Git exec-hash rule returns child and adapter exit 255, valid evidence and the reproduced remote-https execution-denied diagnostic."
+  ],
+  "local_checks": {
+    "status": "PASS_COMPONENT_CHECKS_NOT_LINUX_RUNTIME_OR_RC1_ACCEPTANCE",
+    "report_sha256": "ce68e952cec01cea4bb5689981422bf713055562c5fb7275af40bca10fd11ea1",
+    "checks": [
+      {
+        "label": "format-check-diagnostic-source",
+        "exit_code": 0,
+        "elapsed_seconds": 0.223,
+        "stop_reason": null
+      },
+      {
+        "label": "linux-diagnostic-strict-compile-only",
+        "exit_code": 0,
+        "elapsed_seconds": 9.415,
+        "stop_reason": null
+      }
+    ],
+    "peak_rss_bytes": 582270976,
+    "limits": {
+      "log_bytes": 16777216,
+      "rss_bytes": 4294967296,
+      "seconds": 1200,
+      "workspace_bytes": 12884901888
+    }
+  },
+  "limitations": [
+    "Local Linux cross-compilation is not Linux execution.",
+    "Native hosted fix positive and omission-counterprobe results are pending.",
+    "No protected SDK or RC1 acceptance follows from this development report.",
+    "AROS ABI/boot/compiler/C-SDK baseline and protected AROS checkouts are unchanged."
+  ],
+  "test_order_followup": {
+    "source_base": "1c50625dbab28ad5faf8b2c0b39c5dc83b50b69a",
+    "run_url": "https://github.com/metaneutrons/ami-rust/actions/runs/39372946679",
+    "provider_artifact_id": 12241908741,
+    "provider_zip_sha256": "f47dd396aea43bc6a5fc4740e0122032d6d02d954c3f9d74392cab22c1335323",
+    "observed_positive_gates": {
+      "isolated_git_admitted_exit_0": true,
+      "actual_consumer_session_source_fetch": true
+    },
+    "counter_outcome": "Adapter refused policy load before executing the counter: the earlier native session had populated the derived-execution parent, which must be empty at admission. No omission-counter success was established.",
+    "change": "Run the unchanged single-rule omission control before the native session creates retained derived state. Preserve every case and policy; do not delete state or alter permission rules.",
+    "source_files": {
+      "tooling/crates/xtask/src/consumer_observe.rs": "7ded577aad7c404c1fa55fa7995997bb1f9f9f9fab08951e52746b1be3e5aa22",
+      "tooling/crates/xtask/src/consumer_runtime.rs": "542a535281dd03288d638bc329e69116771cb4a9486d8dd45f9e15b93c83fc97"
+    },
+    "local_component_result_sha256": "72ea20ffccb400c29ad28ff4b0a5aa2c965982d775e34eb949adf29391aa0059",
+    "local_component_status": "PASS_COMPONENT_CHECKS_NOT_LINUX_RUNTIME_OR_RC1_ACCEPTANCE",
+    "hosted_order_fix_result": "PENDING"
+  }
+}
