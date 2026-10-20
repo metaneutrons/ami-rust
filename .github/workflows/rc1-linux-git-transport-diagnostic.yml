@@ -202,8 +202,10 @@ jobs:
               probe = json.loads((output / "probe/probe-result.json").read_text())
               if (probe.get("schema") != "ami-rust-linux-cold-rustc-runtime-probe-v1"
                       or probe.get("status") != "PASS"
+                      or not isinstance(probe.get("counter_cleanup"), dict)
+                      or probe["counter_cleanup"].get("gate_passed") is not True
                       or any(probe.get(key) is not True for key in
-                             ("counter_gate_passed", "cleanup_gate_passed", "positive_gate_passed", "source_bindings_unchanged"))):
+                             ("counter_gate_passed", "positive_gate_passed", "source_bindings_unchanged"))):
                   raise RuntimeError("cold runtime positive and omission-control evidence is incomplete")
               native._check_limits(supervisor, "completed cold compiler runtime regression")
               status = "PASS_CAUSE_SPECIFIC_RUNTIME_PROBE_NOT_FULL_COLD_CLI_OR_RC1_ACCEPTANCE"
