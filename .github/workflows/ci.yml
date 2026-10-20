@@ -86,6 +86,7 @@ jobs:
           python3 -I -B release/test_ci_auth.py
           python3 -I -B release/test_native_tooling_materials.py
           python3 -I -B release/test_ci_native.py
+          python3 -I -B release/test_ci_native_upgrade.py
           python3 -I -B release/test_ci_native_outer.py
           python3 -I -B release/test_contract_probes.py
           python3 -I -B release/test_selection_probes.py

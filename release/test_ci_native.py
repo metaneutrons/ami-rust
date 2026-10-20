@@ -776,6 +776,7 @@ class NativeMatrixTests(unittest.TestCase):
                 patch.object(native, "_supervised_run", side_effect=compose), \
                 patch.object(native, "_qualify_native_build_matrix", side_effect=matrix), \
                 patch.object(native, "_qualify_native_migration", side_effect=migration) as migration_probe, \
+                patch.object(native, "_qualify_native_upgrade", return_value={"fixture": True}), \
                 patch.object(native, "_qualify_historical_prepare_interruption",
                              side_effect=historical_interruption) as historical_probe, \
                 patch.object(native, "_compare_prepare_interruptions", return_value={
@@ -789,30 +790,30 @@ class NativeMatrixTests(unittest.TestCase):
                     native._qualify_native_package(
                         self.work, self.output, outer, self.work / "bundle", self.frontend,
                         self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
-                        identity, config, command)
+                        identity, config, command, None, None)
             elif fail_historical_interruption:
                 with self.assertRaisesRegex(ValueError, "isolated historical interruption failure"):
                     native._qualify_native_package(
                         self.work, self.output, outer, self.work / "bundle", self.frontend,
                         self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
-                        identity, config, command)
+                        identity, config, command, None, None)
             elif fail_replay:
                 with self.assertRaisesRegex(ValueError, "isolated retained replay refusal"):
                     native._qualify_native_package(
                         self.work, self.output, outer, self.work / "bundle", self.frontend,
                         self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
-                        identity, config, command)
+                        identity, config, command, None, None)
             elif mutate_replay:
                 with self.assertRaisesRegex(ValueError, "changed protected state/project/global config"):
                     native._qualify_native_package(
                         self.work, self.output, outer, self.work / "bundle", self.frontend,
                         self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
-                        identity, config, command)
+                        identity, config, command, None, None)
             else:
                 report = native._qualify_native_package(
                     self.work, self.output, outer, self.work / "bundle", self.frontend,
                     self.work / "xtask", self._fixture_supervisor(), self.work / "policy.json",
-                    identity, config, command)
+                    identity, config, command, None, None)
                 self.assertEqual(report["native_matrix"], {"build_count": 10, "fixture": True})
                 preservation = report["retained_removal_preservation"]
                 self.assertEqual(preservation["before"], preservation["after"])

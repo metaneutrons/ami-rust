@@ -1,0 +1,139 @@
+{
+  "schema": "ami-rust-native-upgrade-development-v1",
+  "recorded_utc": "2026-10-20T15:48:17.986420+00:00",
+  "base_source": "7c2aed44aead0141cbc65cba7fdc2b2583c86874",
+  "status": "LOCAL_COORDINATOR_CHECKS_PASS_HOSTED_UPGRADE_NOT_YET_RUN",
+  "source_files": {
+    ".github/workflows/ci.yml": "179b9e4e6738e25d4e3824efeabe9e4a88458c32f67a3a1d3108bcd0edaa2ccb",
+    ".github/workflows/sdk-qualify.yml": "f9cf61305c0d9faf69575e7833a102e73fe47ed1169f7534704a8b3fcfed49c7",
+    "release/ci_native.py": "57a40ba81ef230b8e039cb69fbb0527622ba674a0a931f8406caba6b2ac81e20",
+    "release/ci_native_outer.py": "2a6b7c8bf3151f5478a2bf8cef00195e667ba98a3d2a7f4ef4e47b63a7227fba",
+    "release/test_ci_native.py": "ef8ed31bb06a09cc5eeff48e7239d54a3a13f39ab21cd047e66e3ed8057535d7",
+    "release/test_ci_native_outer.py": "f9eeda04d93a329a5bc69c2f18d7d83ee2ad1c1d9bf11b2b5ff447f744ea6158",
+    "release/test_ci_native_upgrade.py": "ead11e9b69043043594d046cae19e25d081cc08d30237dfed23431e32bafdb34",
+    "docs/rust-cli-migration/native-upgrade-qualification.md": "ccab7bdb8f3da1db962b8fccb57887ff078958a83601a207355ea905bbdbde4b"
+  },
+  "local_result_sha256": "79e1f2016a92bd856f30534a9d925c95fdbaa47a6723d069c745b1f618d9605e",
+  "local_checks": [
+    {
+      "argv": [
+        "python3",
+        "-I",
+        "-B",
+        "release/test_ci_native_upgrade.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "edf255e2787a8d1bc8d7622053c885f42301ec12c896a5d88d8016b23199be9d"
+    },
+    {
+      "argv": [
+        "python3",
+        "-I",
+        "-B",
+        "release/test_ci_native.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "cd7e006c563a6f52080756b26f589afc5edce7a135598139a9cbf2e80797ce4c"
+    },
+    {
+      "argv": [
+        "python3",
+        "-I",
+        "-B",
+        "release/test_ci_native_outer.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "5684d13977a1f6829bcd5f644c72b35ab6f8d42951d571a5f230c4cc35a359f3"
+    },
+    {
+      "argv": [
+        "python3",
+        "-I",
+        "-B",
+        "release/test_sdk_workflow.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "2f84dd5fbef75cea79ff2c0ccf6a1e0f2b8ac63aaebad7e9d8ced32cf7602fc6"
+    },
+    {
+      "argv": [
+        "python3",
+        "-I",
+        "-B",
+        "release/test_native_tooling_materials.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "95c5d09c826d2efa2a9d9c7d01b6e073bddda0dc36500d1560e0d7fb15e93d6f"
+    },
+    {
+      "argv": [
+        "python3",
+        "-I",
+        "-B",
+        "release/test_ci_artifact_admission.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "5f0635b83af38a6c5d516fcb60dc3fa63c9c6ca4854e51a6a29ca33c92ccef16"
+    },
+    {
+      "argv": [
+        "actionlint",
+        ".github/workflows/ci.yml",
+        ".github/workflows/sdk-qualify.yml"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "old_input_artifacts": [
+    {
+      "id": 12264163294,
+      "name": "sdk-release-candidate-39422283932-1",
+      "sha256": "06d2d6359c02696012e2840ee4edc0103d78d244b4c1a951e35ff9a6088ece12",
+      "bytes": 28173953,
+      "expires_at": "2026-10-27T12:40:02Z",
+      "run": 39422283932,
+      "local_digest_and_crc_verified": true
+    },
+    {
+      "id": 12264328204,
+      "name": "sdk-authenticated-linux-x86_64-39422283932-1",
+      "sha256": "89656376473bf2353e8542381caaef413d3abdc1a2c2f92d15fc53889500f3bd",
+      "bytes": 29441230,
+      "expires_at": "2026-10-27T12:34:47Z",
+      "run": 39422283932,
+      "local_digest_and_crc_verified": true
+    },
+    {
+      "id": 12265142248,
+      "name": "sdk-authenticated-macos-aarch64-39422283932-1",
+      "sha256": "8132af924c0c44a30a89e35c6de87447798778bbd9c4fb80e09f61bf5bc180a7",
+      "bytes": 29441150,
+      "expires_at": "2026-10-27T12:36:45Z",
+      "run": 39422283932,
+      "local_digest_and_crc_verified": true
+    }
+  ],
+  "criteria": [
+    "RC1-A4"
+  ],
+  "scope": "Real native package upgrade procedure implemented; synthetic local binding/ownership/preservation/output counters passed. Both-host protected signed SDK execution, current metadata eligibility and complete RC1-A1 through A4 acceptance remain open. No SDK published.",
+  "preserved_baseline": "Rust/Cargo/C-SDK/ABI-v1/QEMU/flags unchanged; protected AROS checkouts unchanged; nxpk excluded."
+}

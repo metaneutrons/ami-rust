@@ -44,6 +44,18 @@ PUBLISHED_V1_XZ_MEMORY_LIMIT = 256 * 1024**2
 PUBLISHED_V1_EXPANDED_LIMIT = 64 * 1024**2
 PUBLISHED_V1_TAR_MEMBER_LIMIT = 1_000
 PUBLISHED_V1_TAR_FILE_LIMIT = 32 * 1024**2
+NATIVE_UPGRADE_SOURCE = "5135254310dba8d7ad2886332fb888b9518c159c"
+NATIVE_UPGRADE_RUN = 39422283932
+NATIVE_UPGRADE_HOST_PINS = {
+    "linux-x86_64": {
+        "pins_sha256": "5a4c5a335a778557dfcc44e05be78bd5543c5a042dc7cfcc51d9b10cace6301b",
+        "authentication_sha256": "a89b0de38049c03b509d877ee0139c391805388ff2a62f4137f410e26109579f",
+    },
+    "macos-aarch64": {
+        "pins_sha256": "69903abce2fe278b19ca5409debfb9bdd5a4fdc59239abe53a877e4336039a68",
+        "authentication_sha256": "79ab31c84641d954ecc244f52c391efb9025631d4b77630a1485cc997f2ea9bb",
+    },
+}
 
 
 def native_inputs():
@@ -720,7 +732,7 @@ def audit(work, bundle, host_rust, payloads, python_root=None):
             "supervision": report["supervision"]}
 
 
-def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
+def verify_lifecycle(work, output, bundle, host_rust, python_root, outer, upgrade_outer, upgrade_bundle):
     """Real native verification/install/removal, with an independently built CLI.
 
     Internal Python coordinates this test. The Rust observer admits each
@@ -741,8 +753,11 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
     if outer.is_symlink() or not outer.is_dir():
         raise ValueError("native outer candidate must be a real directory")
     outer = outer.resolve(strict=True)
+    upgrade_outer = Path(upgrade_outer).absolute()
+    upgrade_bundle = Path(upgrade_bundle).absolute()
     cli, xtask, env, supervisor = build_tools(work, host_rust, output, python_root,
-                                          static_roots=[("signed-candidate", bundle), ("outer-candidate", outer)])
+        static_roots=[("signed-candidate", bundle), ("outer-candidate", outer),
+                      ("upgrade-old-outer", upgrade_outer), ("upgrade-old-bundle", upgrade_bundle)])
     _supervised_run(supervisor, [Path(host_rust) / "toolchain/bin/cargo", "build", "--release", "--locked", "--offline",
         "--manifest-path", ROOT / "tools/consumer-enforcement-adapter/Cargo.toml",
         "--target-dir", work / "consumer-adapter-target"], label="native-build-consumer-adapter")
@@ -787,11 +802,13 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
     commands = []
 
     def command(label, arguments, expected=0, *, executable=cli, disposable_refusal_state=None,
-                additional_deny_exec=(), inert_python_roots=(), cold_runtime_reference=None):
+                additional_deny_exec=(), inert_python_roots=(), cold_runtime_reference=None,
+                publisher_policy=None):
         stdout = output / (label + ".stdout.json")
         stderr = output / (label + ".stderr.log")
         spec = _consumer_observation_spec(work, python_root, executable, arguments, expected,
-            policy_path, closure_path, [ROOT, *[row["resolved_path"] for row in supervisor.native_static_roots]],
+            policy_path if publisher_policy is None else publisher_policy, closure_path,
+            [ROOT, *[row["resolved_path"] for row in supervisor.native_static_roots]],
             disposable_refusal_state=disposable_refusal_state,
             additional_deny_exec=additional_deny_exec, inert_python_roots=inert_python_roots,
             cold_runtime_reference=cold_runtime_reference)
@@ -857,7 +874,8 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
     if removed["status"] != "uninstalled" or prefix.exists() or pin.read_text().strip() != receipt:
         raise ValueError("native uninstall did not preserve the external pin and remove only its installation")
     package_lifecycle = _qualify_native_package(
-        work, output, outer, bundle, cli, xtask, supervisor, policy_path, identity, config, command)
+        work, output, outer, bundle, cli, xtask, supervisor, policy_path, identity, config, command,
+        upgrade_outer, upgrade_bundle)
     report = {"schema": "ami-rust-native-direct-lifecycle-v1", "status": "PASS_NATIVE_LIFECYCLE_NOT_RC1_ACCEPTANCE",
               "package_lifecycle": package_lifecycle,
               "native_matrix": package_lifecycle["native_matrix"],
@@ -868,7 +886,7 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer):
               "cli_sha256": auth.sha(auth.read(cli)), "receipt_sha256": receipt,
               "remaining_gates": ["complete both-host no-Python observation", "complete cold/warm and negative lifecycle matrix",
                                   "complete cross-host R1-A2 native output and raw-metadata comparison",
-                                  "complete cross-host R1-A4 migration and side-by-side transition/removal with retained replay"],
+                                  "complete cross-host RC1-A4 migration, native upgrade and retained replay"],
               "claim": "Real inner/outer signatures, native direct and package preparation/build/removal/retained replay, plus the current-host two-root five-variant matrix; internal Python coordination is outside consumer scope. No-Python observation, cross-host R1-A2/A4 and RC1 acceptance remain open"}
     report_path = output / "native-direct-lifecycle.json"
     initial_report = auth.encoded(report)
@@ -2181,7 +2199,8 @@ def _compare_prepare_interruptions(historical, native, identity, config):
             "scope": "One host, actual CLI interruptions at separately witnessed pre-checkout source-fetch stages. Both-host protected SDK and complete RC1 acceptance remain separate."}
 
 
-def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor, policy_path, identity, config, command):
+def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor, policy_path, identity, config, command,
+                            upgrade_outer, upgrade_bundle):
     """Exercise the actual packaged frontend and retained replay on signed inputs."""
     metadata = outer / "metadata"
     outer_report = auth.parsed(auth.read(metadata / "outer-verification.json"))
@@ -2415,7 +2434,12 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
         "preservation_checkpoints": legacy["checkpoints"],
         "scope": "Private side-by-side published 0.1.0-2 to native 0.2 transition and removal. No package manager, native-to-native upgrade, or RC1 acceptance claim."}
     write(output / "native-published-v1-transition.json", auth.encoded(transition))
+    upgrade = _qualify_native_upgrade(work, output, upgrade_outer, upgrade_bundle, outer, bundle,
+        state, project, first, original_elf, xtask, cli, supervisor, policy_path, command,
+        protected, notices, pins)
+    _check_published_v1_preservation(legacy, guards, "native-to-native package upgrade")
     return {"status": "PASS_SIDE_BY_SIDE_PUBLISHED_V1_TO_NATIVE_PACKAGE_TRANSITION_AND_RETAINED_REPLAY",
+        "native_upgrade": upgrade,
         "package_core_sha256": pins["core_sha256"], "authentication": authentication,
         "prepare_interruption": interruption,
         "historical_prepare_interruption": historical_interruption,
@@ -2427,7 +2451,241 @@ def _qualify_native_package(work, output, outer, bundle, cli, xtask, supervisor,
         "retained_removal_preservation": preservation,
         "ready_sha256": auth.sha(ready),
         "removal": "private native 0.2 package root removed after selector rollback; both real old/new states, projects, builds and unrelated guards preserved",
-        "limitation": "Historical Python created the published 0.1.0 state/project/build, ran its separate interrupted-prepare/retained-verification/retry oracle and two retained --version rollback controls. Those invocations are outside the observed new Rust consumer tree. New Rust operations use the runtime-excluding policy; Linux migration additionally installs the process-wide no-exec guard before reading the inert interpreter. Cargo offline mode was exercised; OS network denial and complete no-Python observation remain unqualified; no package-manager transaction or RC1 acceptance is claimed"}
+        "limitation": "Historical Python created the published 0.1.0 state/project/build, ran its separate interrupted-prepare/retained-verification/retry oracle and two retained --version rollback controls. Those invocations are outside the observed new Rust consumer tree. New Rust operations use the runtime-excluding policy; Linux migration additionally installs the process-wide no-exec guard before reading the inert interpreter. Cargo offline mode was exercised; OS network denial and complete no-Python observation remain unqualified; the separate native_upgrade report covers actual native revision replacement; no package-manager transaction or RC1 acceptance is claimed"}
+
+
+def _native_upgrade_inputs(outer, bundle, new_bundle, new_pins):
+    """Bind the real earlier preview, not a synthetic relabelling of this SDK."""
+    host = current_host()
+    expected = NATIVE_UPGRADE_HOST_PINS[host]
+    path = outer / "metadata" / f"native-package-inputs-{host}.json"
+    raw = auth.read(path)
+    if auth.sha(raw) != expected["pins_sha256"]:
+        raise ValueError("native upgrade old package pins differ from the archived preview")
+    old = auth.parsed(raw)
+    if (old.get("source_commit") != NATIVE_UPGRADE_SOURCE
+            or old.get("sdk_run_id") != NATIVE_UPGRADE_RUN or old.get("sdk_run_attempt") != 1
+            or old.get("host") != host or old.get("package_version") != "0.2.0-1"
+            or old.get("packaging_revision") != 1):
+        raise ValueError("native upgrade old package identity differs from its pinned source/run")
+    if (new_pins.get("sdk_version") != old["sdk_version"]
+            or new_pins.get("cli_version") != old["cli_version"]
+            or new_pins.get("host") != host or new_pins.get("package_version") != "0.2.0-2"
+            or new_pins.get("packaging_revision") != 2
+            or new_pins.get("source_commit") == old["source_commit"]
+            or new_pins.get("manifest_sha256") == old["manifest_sha256"]):
+        raise ValueError("native upgrade requires a distinct real revision-2 package and manifest")
+    if auth.sha(auth.read(bundle / ".auth/authentication.json")) != expected["authentication_sha256"]:
+        raise ValueError("native upgrade old host authentication differs from the original record")
+    manifest_raw = auth.read(bundle / "release.json")
+    manifest = auth.parsed(manifest_raw)
+    if (auth.sha(manifest_raw) != old["manifest_sha256"]
+            or manifest.get("producer", {}).get("source_sha") != NATIVE_UPGRADE_SOURCE
+            or manifest.get("producer", {}).get("run_id") != NATIVE_UPGRADE_RUN
+            or manifest.get("producer", {}).get("run_attempt") != 1):
+        raise ValueError("native upgrade old inner manifest lost its source/run binding")
+    # The generated SDK contract binds a different producer source identity.
+    # Every other SDK member, including all target/component inputs, must be
+    # identical before sharing the existing validated cold runtime reference.
+    new_manifest = auth.parsed(auth.read(new_bundle / "release.json"))
+    def baseline_rows(value):
+        rows = value.get("sdk_files")
+        if (not isinstance(rows, list) or len(rows) < 2
+                or len({row["path"] for row in rows}) != len(rows)
+                or sum(row["path"] == "contract/sdk.json" for row in rows) != 1):
+            raise ValueError("native upgrade baseline/component inventory is incomplete or duplicated")
+        return [row for row in rows if row["path"] != "contract/sdk.json"]
+    if baseline_rows(manifest) != baseline_rows(new_manifest):
+        raise ValueError("native upgrade baseline/component inventory changed")
+    launcher_pin = manifest["host_launchers"][host]
+    launcher = auth.below(bundle, launcher_pin["path"])
+    launcher_raw = auth.read(launcher)
+    if (len(launcher_raw) != launcher_pin["bytes"]
+            or auth.sha(launcher_raw) != old["core_sha256"]
+            or launcher_pin["sha256"] != old["core_sha256"]):
+        raise ValueError("native upgrade old launcher differs from its manifest/package pins")
+    return old, path, launcher
+
+
+def _qualify_native_upgrade(work, output, old_outer, old_bundle, new_outer, new_bundle,
+                            new_state, new_project, new_first, new_elf, xtask, cli,
+                            supervisor, policy_path, command, protected, notices, new_pins):
+    """Actual native revision-1 -> revision-2 replacement and retained replay.
+
+    This extends the existing internal test coordinator, not the consumer.
+    Every public invocation uses the same Rust observer and enforcement adapter.
+    Package-manager transactions remain a separate RC3 delivery gate.
+    """
+    old_pins, old_pins_path, old_launcher = _native_upgrade_inputs(
+        old_outer, old_bundle, new_bundle, new_pins)
+    policy = auth.parsed(auth.read(policy_path))
+    policy.update(source_sha=NATIVE_UPGRADE_SOURCE, workflow_sha=NATIVE_UPGRADE_SOURCE,
+                  inputs_manifest_sha256=auth.sha(auth.read(old_bundle / ".auth/inputs.json")))
+    old_policy = output / "native-upgrade-old-publisher-policy.json"
+    write(old_policy, auth.encoded(policy), 0o600)
+    checkpoints = []
+
+    def checkpoint(name, roots, expected):
+        actual = _preservation_snapshot(roots)
+        if actual != expected:
+            raise ValueError("native upgrade changed protected state/project/config/SDK/data during " + name)
+        checkpoints.append({"name": name, "roots": actual})
+
+    original = _preservation_snapshot(protected)
+    # This separately authenticates the original host-profiled inner proof.
+    # The package verifier below additionally authenticates the outer capsule's
+    # original common Linux inner proof, including on a macOS consumer.
+    command("17-upgrade-old-inner-authentication", ["verify", "--bundle", old_bundle,
+            "--policy", old_policy], executable=cli, publisher_policy=old_policy)
+    old_notices = work / "native-upgrade-old-notices"
+    old_notices.mkdir(mode=0o700)
+    for name in ("LICENSE-MIT", "LICENSE-APACHE"):
+        write(old_notices / name, auth.read(old_bundle / name))
+    write(old_notices / "THIRD-PARTY-NOTICES.md",
+          auth.read(old_bundle / "native-tooling/THIRD-PARTY-NOTICES.md"))
+    shutil.copytree(old_bundle / "native-tooling/licenses", old_notices / "licenses")
+
+    def compose(label, outer, pins_path, launcher, notice_root):
+        root = work / ("native-upgrade-" + label + "-package")
+        _supervised_run(supervisor, [xtask, "native-package", "--pins", pins_path,
+            "--proof-index", outer / "metadata/native-package-proofs.json",
+            "--launcher", launcher, "--assets", outer / "candidate",
+            "--proofs", outer / "metadata/gh", "--notices", notice_root, "--output", root],
+            label="native-upgrade-compose-" + label)
+        return root
+
+    old_package = compose("old", old_outer, old_pins_path, old_launcher, old_notices)
+    new_package = compose("new", new_outer,
+        new_outer / "metadata" / f"native-package-inputs-{current_host()}.json", cli, notices)
+    for label, package, selected_policy, bundle in (
+            ("old", old_package, old_policy, old_bundle),
+            ("new", new_package, policy_path, new_bundle)):
+        command("18-upgrade-" + label + "-consistency", ["verify-package"],
+                executable=package / "bin/ami-rust", publisher_policy=selected_policy)
+        area = work / ("native-upgrade-" + label + "-authentication-area")
+        area.mkdir(mode=0o700)
+        result = auth.parsed(command("18-upgrade-" + label + "-authentication",
+            ["native-package-verify", "--package", package, "--policy", selected_policy,
+             "--inputs", bundle / ".auth/inputs.json", "--work", area / "work"],
+            executable=xtask, publisher_policy=selected_policy))
+        if result.get("status") != "OUTER_AND_INNER_AUTHENTICATED":
+            raise ValueError("native upgrade package authentication did not complete: " + label)
+
+    area = work / "native-upgrade-old-state-area"
+    area.mkdir(mode=0o700)
+    parent = area / "derived"
+    parent.mkdir(mode=0o700)
+    state = parent / "state"
+    prepared = auth.parsed(command("19-upgrade-old-cold-prepare", ["prepare", "--state", state],
+                                  executable=old_package / "bin/ami-rust", publisher_policy=old_policy))
+    if prepared.get("status") != "READY" or prepared.get("package_version") != old_pins["package_version"]:
+        raise ValueError("native upgrade old package did not prepare its own real READY state")
+    ready = auth.read(state / "ready.json")
+    project_area = work / "native-upgrade-old-project-area"
+    project_area.mkdir(mode=0o700)
+    project = project_area / "project"
+    command("20-upgrade-old-new-project", ["new", "--state", state, "--project", project],
+            executable=old_package / "bin/ami-rust", publisher_policy=old_policy)
+
+    def build(label, executable, selected_state, selected_project):
+        area = work / label
+        area.mkdir(mode=0o700)
+        parent = area / "derived"
+        parent.mkdir(mode=0o700)
+        target = parent / "build"
+        result = auth.parsed(command(label, ["build", "--state", selected_state,
+            "--project", selected_project, "--output-dir", target], executable=executable))
+        if result.get("status") != "PASS" or not (target / "build-receipt.json").is_file():
+            raise ValueError("native upgrade build omitted its actual PASS receipt: " + label)
+        elf = auth.read(target / "artifacts/AMIRUST")
+        if elf != new_elf:
+            raise ValueError("native upgrade build changed the pinned canonical executable: " + label)
+        return target, elf
+
+    first, old_elf = build("21-upgrade-old-offline-build", old_package / "bin/ami-rust", state, project)
+    checkpoint("old-native-preparation-and-build", protected, original)
+    preserved = {**protected, "upgrade_old_state": state,
+                 "upgrade_old_project": project, "upgrade_old_build": first,
+                 "upgrade_new_package": new_package}
+    before = _preservation_snapshot(preserved)
+    selector = work / "native-upgrade-active-cli"
+    selector.symlink_to(old_package, target_is_directory=True)
+    old_package_identity = _preservation_snapshot({"old_package": old_package})
+    selected = _set_active_package_root(selector, old_package, new_package)
+    frontend = (selector / "bin/ami-rust").resolve(strict=True)
+    if selected != new_package or frontend != new_package / "bin/ami-rust":
+        raise ValueError("native upgrade did not activate the actual new package")
+    checkpoint("native-selector-replacement", preserved, before)
+    refusal = "state is incomplete or belongs to another SDK/package; use its retained launcher"
+    command("22-upgrade-new-refuses-old-state", ["check-inputs", "--state", state], 2,
+            executable=frontend)
+    if refusal not in (output / "22-upgrade-new-refuses-old-state.stderr.log").read_text():
+        raise ValueError("native upgrade refusal did not identify the old retained owner")
+    refusal_area = work / "native-upgrade-refused-build"
+    refusal_area.mkdir(mode=0o700)
+    refusal_parent = refusal_area / "derived"
+    refusal_parent.mkdir(mode=0o700)
+    command("23-upgrade-new-refuses-old-build", ["build", "--state", state,
+            "--project", project, "--output-dir", refusal_parent / "build"], 2, executable=frontend)
+    if (list(refusal_parent.iterdir()) or refusal not in
+            (output / "23-upgrade-new-refuses-old-build.stderr.log").read_text()):
+        raise ValueError("native upgrade incompatible build mutated output or hid its owner refusal")
+    checkpoint("new-native-owner-refusals", preserved, before)
+    shutil.rmtree(old_package)
+    if old_package.exists() or old_package.is_symlink() or selector.resolve(strict=True) != new_package:
+        raise ValueError("native upgrade did not remove only the replaced old package")
+    retained = state / "retained/bin/ami-rust"
+    if (auth.sha(auth.read(retained)) != old_pins["core_sha256"]
+            or auth.read(state / "ready.json") != ready):
+        raise ValueError("native upgrade lost the exact old retained tooling/READY state")
+    command("24-upgrade-old-retained-recheck", ["check-inputs", "--state", state], executable=retained)
+    replay, replay_elf = build("25-upgrade-old-retained-offline-replay", retained, state, project)
+    if replay_elf != old_elf:
+        raise ValueError("native upgrade old retained replay changed its original executable")
+    command("26-upgrade-new-current-recheck", ["check-inputs", "--state", new_state], executable=frontend)
+    new_build, _ = build("27-upgrade-new-offline-build", frontend, new_state, new_project)
+    checkpoint("removed-old-package-and-both-native-replays", preserved, before)
+    # CI retires mutable work after the job. Preserve the original ownership
+    # records, receipts and tiny executables so readback can inspect real bytes,
+    # rather than relying only on paths or this coordinator's PASS string.
+    evidence = {}
+    for name, source in {
+            "old-ready.json": state / "ready.json",
+            "new-ready.json": new_state / "ready.json",
+            "old-project-lock.json": project / "ami-rust.lock.json",
+            "new-project-lock.json": new_project / "ami-rust.lock.json",
+            "old-first-receipt.json": first / "build-receipt.json",
+            "old-replay-receipt.json": replay / "build-receipt.json",
+            "new-first-receipt.json": new_first / "build-receipt.json",
+            "new-upgrade-receipt.json": new_build / "build-receipt.json",
+            "old-first.AMIRUST": first / "artifacts/AMIRUST",
+            "old-replay.AMIRUST": replay / "artifacts/AMIRUST",
+            "new-first.AMIRUST": new_first / "artifacts/AMIRUST",
+            "new-upgrade.AMIRUST": new_build / "artifacts/AMIRUST",
+    }.items():
+        raw = auth.read(source)
+        destination = output / "native-upgrade-raw" / name
+        write(destination, raw)
+        evidence[name] = {"path": destination.relative_to(output).as_posix(),
+                          "bytes": len(raw), "sha256": auth.sha(raw)}
+    report = {"schema": "ami-rust-native-package-upgrade-v1",
+        "status": "PASS_NATIVE_REVISION_UPGRADE_AND_OLD_RETAINED_OFFLINE_REPLAY_NOT_RC1_ACCEPTANCE",
+        "host": current_host(), "old_pins": old_pins, "new_pins": new_pins,
+        "old_original_host_authentication_sha256": NATIVE_UPGRADE_HOST_PINS[current_host()]["authentication_sha256"],
+        "old_policy_sha256": auth.sha(auth.read(old_policy)),
+        "selector": str(selector), "selected_new_package": str(selected),
+        "removed_old_package": old_package_identity,
+        "old_ready_sha256": auth.sha(ready), "old_retained_launcher_sha256": auth.sha(auth.read(retained)),
+        "old_first_build": str(first), "old_retained_replay": str(replay),
+        "new_first_build": str(new_first), "new_upgrade_build": str(new_build),
+        "canonical_executable_sha256": auth.sha(new_elf),
+        "raw_evidence": evidence,
+        "preservation_before": before, "preservation_after": _preservation_snapshot(preserved),
+        "checkpoints": checkpoints,
+        "scope": "Actual privately installed native 0.2.0-1 to distinct authenticated 0.2.0-2 package replacement/removal; observed old retained and new builds deny network and Python. No APT/Homebrew transaction, publication or complete RC1 acceptance claim."}
+    write(output / "native-package-upgrade.json", auth.encoded(report))
+    _check_limits(supervisor, "native-to-native upgrade report")
+    return report
 
 
 def main():
@@ -2446,6 +2704,8 @@ def main():
     verify = subs.add_parser("verify")
     verify.add_argument("--bundle", type=Path, required=True)
     verify.add_argument("--outer", type=Path, required=True)
+    verify.add_argument("--upgrade-outer", type=Path, required=True)
+    verify.add_argument("--upgrade-bundle", type=Path, required=True)
     verify.add_argument("--output", type=Path, required=True)
     verify.add_argument("--python-bootstrap-root", type=Path, required=True)
     for sub in subs.choices.values():
@@ -2455,7 +2715,8 @@ def main():
     if args.command == "host":
         result = host_build(args.work, args.output, args.host_rust, args.host, args.python_bootstrap_root)
     elif args.command == "verify":
-        result = verify_lifecycle(args.work, args.output, args.bundle, args.host_rust, args.python_bootstrap_root, args.outer)
+        result = verify_lifecycle(args.work, args.output, args.bundle, args.host_rust, args.python_bootstrap_root, args.outer,
+                                  args.upgrade_outer, args.upgrade_bundle)
     else:
         payloads = {"linux-x86_64": args.linux, "macos-aarch64": args.macos}
         result = (compose(args.work, args.output, args.host_rust, payloads, args.python_bootstrap_root)
