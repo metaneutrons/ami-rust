@@ -288,8 +288,13 @@ class NativeUpgradeStateMachineTests(NativeUpgradeFixtures):
             elif label == "19-upgrade-old-cold-prepare":
                 state = Path(args[args.index("--state") + 1])
                 effects["state"] = state
-                (state / "retained/bin").mkdir(parents=True)
-                shutil.copyfile(executable, state / "retained/bin/ami-rust")
+                version = fixture["old_pins"]["package_version"]
+                core = state / "retained/libexec/ami-rust" / version / "bin/ami-rust"
+                core.parent.mkdir(parents=True)
+                shutil.copyfile(executable, core)
+                alias = state / "retained/bin/ami-rust"
+                alias.parent.mkdir(parents=True)
+                alias.symlink_to(f"../libexec/ami-rust/{version}/bin/ami-rust")
                 (state / "ready.json").write_bytes(b"synthetic old READY state\n")
                 result = {"status": "READY", "package_version": fixture["old_pins"]["package_version"]}
             elif label == "20-upgrade-old-new-project":
@@ -385,9 +390,11 @@ class NativeUpgradeStateMachineTests(NativeUpgradeFixtures):
             "old-replay.AMIRUST": old_replay / "artifacts/AMIRUST",
             "new-first.AMIRUST": new_first / "artifacts/AMIRUST",
             "new-upgrade.AMIRUST": new_upgrade / "artifacts/AMIRUST",
+            "old-retained-core": old_state / "retained/libexec/ami-rust"
+                                 / fixture["old_pins"]["package_version"] / "bin/ami-rust",
         }
         self.assertEqual(set(report["raw_evidence"]), set(sources))
-        self.assertEqual(len(report["raw_evidence"]), 12)
+        self.assertEqual(len(report["raw_evidence"]), 13)
         for name, source in sources.items():
             with self.subTest(raw_evidence=name):
                 indexed = report["raw_evidence"][name]

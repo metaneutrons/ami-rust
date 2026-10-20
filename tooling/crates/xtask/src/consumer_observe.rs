@@ -601,7 +601,10 @@ fn selected_library_targets(
 // pinned rustc also invokes rust-objcopy when stripping Darwin host binaries
 // (including compiler-builtins build scripts). Linux host stripping is handled
 // by its linker; the unused Linux rust-objcopy has an unresolved LLVM RUNPATH.
-// Keep the host-specific implicit compiler tool alongside rustc/rustdoc/lld.
+// Linux's GCC driver selects the distribution's LLD launcher with -B and
+// -fuse-ld=lld. It is a distinct executable from rust-lld and needs its own
+// exact-file admission, even though both belong to the same pinned component.
+// Keep these implicit compiler tools alongside rustc/rustdoc/lld.
 fn rust_component_executables(triple: &str) -> Vec<String> {
     let mut tools = vec![
         "bin/rustc".to_owned(),
@@ -610,6 +613,8 @@ fn rust_component_executables(triple: &str) -> Vec<String> {
     ];
     if triple == "aarch64-apple-darwin" {
         tools.push(format!("lib/rustlib/{triple}/bin/rust-objcopy"));
+    } else if triple == "x86_64-unknown-linux-gnu" {
+        tools.push(format!("lib/rustlib/{triple}/bin/gcc-ld/ld.lld"));
     }
     tools
 }
@@ -1160,12 +1165,18 @@ mod tests {
     }
 
     #[test]
-    fn selected_rust_tools_include_darwin_strip_helper_only_on_darwin() {
+    fn selected_rust_tools_include_host_specific_strip_and_link_helpers() {
         let linux = rust_component_executables("x86_64-unknown-linux-gnu");
         let macos = rust_component_executables("aarch64-apple-darwin");
-        assert_eq!(linux.len(), 3);
+        assert_eq!(linux.len(), 4);
         assert_eq!(macos.len(), 4);
         assert!(!linux.iter().any(|tool| tool.ends_with("/rust-objcopy")));
+        assert!(
+            linux
+                .iter()
+                .any(|tool| tool == "lib/rustlib/x86_64-unknown-linux-gnu/bin/gcc-ld/ld.lld")
+        );
+        assert!(!macos.iter().any(|tool| tool.ends_with("/gcc-ld/ld.lld")));
         assert!(
             macos
                 .iter()
@@ -1240,6 +1251,13 @@ mod tests {
         }
         assert!(executables.contains(&fixture.root.join("toolchain/bin/llvm-objcopy")));
         assert_eq!(reads.len(), 6);
+        if triple == "x86_64-unknown-linux-gnu" {
+            fs::remove_file(rust_bin.join("gcc-ld/ld.lld")).unwrap();
+            assert!(
+                component_inputs(&record, &mut executables, &mut libraries, &mut reads).is_err()
+            );
+            fs::write(rust_bin.join("gcc-ld/ld.lld"), b"tool identity fixture").unwrap();
+        }
         fs::remove_file(rust_bin.join("rust-lld")).unwrap();
         assert!(component_inputs(&record, &mut executables, &mut libraries, &mut reads).is_err());
     }
@@ -2037,4 +2055,7 @@ mod tests {
 
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     include!("fork_runtime_probe.rs");
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    include!("host_link_probe.rs");
 }

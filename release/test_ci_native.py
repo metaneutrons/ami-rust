@@ -518,9 +518,15 @@ class NativeMatrixTests(unittest.TestCase):
                 self.assertEqual(prepared_state.parent.stat().st_mode & 0o777, 0o700)
                 prepared_state.mkdir(mode=0o700)
                 (prepared_state / "ready.json").write_bytes(b"ready fixture\n")
+                retained_version = pins["package_version"]
+                retained_core = (prepared_state / "retained/libexec/ami-rust"
+                                 / retained_version / "bin/ami-rust")
+                retained_core.parent.mkdir(parents=True)
+                retained_core.write_bytes(b"inert retained fixture")
                 retained = prepared_state / "retained/bin/ami-rust"
                 retained.parent.mkdir(parents=True)
-                retained.write_bytes(b"inert retained fixture")
+                retained.symlink_to(
+                    f"../libexec/ami-rust/{retained_version}/bin/ami-rust")
                 return auth.encoded({"status": "READY"})
             if arguments[0] == "new":
                 Path(arguments[arguments.index("--project") + 1]).mkdir()
@@ -868,6 +874,63 @@ class NativeMatrixTests(unittest.TestCase):
             self.assertFalse(package.exists())
 
 
+class NativeRetainedCoreTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="ami-rust-retained-core-")
+        self.root = Path(self.temporary.name).resolve()
+        self.state = self.root / "state"
+        self.version = "0.2.0-1"
+        self.core = (self.state / "retained/libexec/ami-rust"
+                     / self.version / "bin/ami-rust")
+        self.core.parent.mkdir(parents=True)
+        self.core_bytes = b"inert pinned retained core fixture\n"
+        self.core.write_bytes(self.core_bytes)
+        self.alias = self.state / "retained/bin/ami-rust"
+        self.alias.parent.mkdir(parents=True)
+        self.alias.symlink_to(f"../libexec/ami-rust/{self.version}/bin/ami-rust")
+        self.pins = {"package_version": self.version,
+                     "core_sha256": auth.sha(self.core_bytes)}
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def test_exact_versioned_relative_alias_resolves_to_pinned_regular_core(self):
+        core, raw = native._verified_retained_native_core(self.state, self.pins)
+        self.assertEqual(core, self.core)
+        self.assertEqual(raw, self.core_bytes)
+        self.assertEqual(self.alias.readlink().as_posix(),
+                         f"../libexec/ami-rust/{self.version}/bin/ami-rust")
+
+    def test_missing_alias_is_refused(self):
+        self.alias.unlink()
+        with self.assertRaisesRegex(ValueError, "launcher alias is missing"):
+            native._verified_retained_native_core(self.state, self.pins)
+
+    def test_dangling_expected_alias_is_refused(self):
+        self.core.unlink()
+        with self.assertRaisesRegex(ValueError, "package core is missing"):
+            native._verified_retained_native_core(self.state, self.pins)
+
+    def test_foreign_relative_alias_is_refused_even_when_a_core_exists(self):
+        self.alias.unlink()
+        self.alias.symlink_to("../libexec/ami-rust/other-version/bin/ami-rust")
+        with self.assertRaisesRegex(ValueError, "exact relative target"):
+            native._verified_retained_native_core(self.state, self.pins)
+
+    def test_altered_retained_core_is_refused_by_authenticated_digest(self):
+        self.core.write_bytes(b"altered retained core fixture\n")
+        with self.assertRaisesRegex(ValueError, "authenticated old pin"):
+            native._verified_retained_native_core(self.state, self.pins)
+
+    def test_expected_core_path_never_follows_a_symlink_to_matching_external_bytes(self):
+        outside = self.root / "outside-core"
+        outside.write_bytes(self.core_bytes)
+        self.core.unlink()
+        self.core.symlink_to(outside)
+        with self.assertRaisesRegex(ValueError, "unsafe path"):
+            native._verified_retained_native_core(self.state, self.pins)
+
+
 class PrepareInterruptionPairTests(unittest.TestCase):
     """Synthetic adapter controls; no child execution or SDK acceptance claim."""
 
@@ -961,8 +1024,15 @@ class PrepareInterruptionPairTests(unittest.TestCase):
                 state = Path(arguments[arguments.index("--state") + 1])
                 driver = Path(arguments[arguments.index("--output") + 1])
                 state.mkdir(mode=0o700)
-                (state / "retained/bin").mkdir(parents=True)
-                (state / "retained/bin/ami-rust").write_bytes(frontend.read_bytes())
+                retained_version = "0.2.0-1"
+                retained_core = (state / "retained/libexec/ami-rust"
+                                 / retained_version / "bin/ami-rust")
+                retained_core.parent.mkdir(parents=True)
+                retained_core.write_bytes(frontend.read_bytes())
+                retained_alias = state / "retained/bin/ami-rust"
+                retained_alias.parent.mkdir(parents=True)
+                retained_alias.symlink_to(
+                    f"../libexec/ami-rust/{retained_version}/bin/ami-rust")
                 failure = {"schema": "ami-rust-prepare-failure-v1", "phase": "source-checkout",
                            "ready": False, "state_retained": True}
                 (state / "prepare-failure.json").write_bytes(auth.encoded(failure))
