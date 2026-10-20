@@ -816,6 +816,37 @@ mod tests {
     }
 
     #[test]
+    fn foreign_owned_output_parent_is_refused_without_writing_it() {
+        if super::current_uid() == 0 {
+            assert_refused(require_non_root(0));
+            return;
+        }
+        use std::os::unix::fs::{MetadataExt, PermissionsExt};
+        let parent = Path::new("/usr");
+        let metadata = fs::symlink_metadata(parent).unwrap();
+        assert!(metadata.is_dir() && !metadata.file_type().is_symlink());
+        assert_eq!(metadata.uid(), 0);
+        assert_eq!(metadata.permissions().mode() & 0o7777, 0o755);
+        let before = fs::read_dir(parent)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect::<std::collections::BTreeSet<_>>();
+        let output = parent.join(format!(".ami-rust-owner-test-{}", std::process::id()));
+        assert!(!output.exists());
+        let error = fresh_output(&output).expect_err("foreign parent must refuse");
+        assert_eq!(
+            error.to_string(),
+            "output parent must be owned by the current user"
+        );
+        assert!(!output.exists());
+        let after = fs::read_dir(parent)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(before, after);
+    }
+
+    #[test]
     fn preserves_state_package_retention_exception_and_checks_overlap() {
         let state = Path::new("/tmp/state");
         let package = state.join("retained/libexec/ami-rust/v1");
