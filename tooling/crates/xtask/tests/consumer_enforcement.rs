@@ -435,6 +435,98 @@ fn native_interpreter_controls_are_refused_under_the_adapter_policy() -> Result<
     cases.push(positive.case);
     save_progress(&result_path, &mut result, &inputs, &cases, "RUNNING")?;
 
+    if platform == Platform::Linux {
+        // Cargo's inherited jobserver installs a pre_exec callback. That
+        // selects Rust's fork/socketpair handshake instead of posix_spawn.
+        let fork_marker = child.join("native-fork-positive");
+        let args: Vec<OsString> = strings(["--control", "positive-fork-spawn", "--path"])
+            .into_iter()
+            .chain([fork_marker.as_os_str().to_os_string()])
+            .collect();
+        let fork = run_restricted(
+            "native_fork_positive",
+            &context,
+            &adapter,
+            &args,
+            &policy_path(
+                &input_dir,
+                "native-fork-positive",
+                &policy_text(&positive_execs, &context)?,
+            )?,
+            0,
+        )?;
+        require_text(
+            fork.stdout.as_bytes(),
+            "ADAPTER_NATIVE_FORK_DESCENDANT_POSITIVE",
+            "Linux fork descendant",
+        )?;
+        if fs::read(&fork_marker).map_err(display_error)? != b"adapter-positive\n" {
+            return Err("fork descendant did not produce the expected file effect".to_owned());
+        }
+        cases.push(fork.case);
+        save_progress(&result_path, &mut result, &inputs, &cases, "RUNNING")?;
+
+        let ipc = run_restricted(
+            "private_ipc_and_network_refusals",
+            &context,
+            &adapter,
+            &strings(["--control", "socketpair-refusal"]),
+            &policy_path(
+                &input_dir,
+                "private-ipc-network",
+                &policy_text(&positive_execs, &context)?,
+            )?,
+            0,
+        )?;
+        require_text(
+            ipc.stdout.as_bytes(),
+            "LOCAL_SOCKETPAIR_IO_OK",
+            "Linux private IPC exchange",
+        )?;
+        require_text(
+            ipc.stdout.as_bytes(),
+            "PRIVATE_HANDSHAKE_RECV_OK",
+            "Linux private eight-byte fork handshake",
+        )?;
+        for label in [
+            "bad-count",
+            "high-count",
+            "bad-flags",
+            "address-low",
+            "address-high",
+            "address-length-low",
+            "address-length-high",
+        ] {
+            require_text(
+                ipc.stdout.as_bytes(),
+                &format!("HANDSHAKE_RECV_REFUSED case={label} errno=13"),
+                "Linux fork handshake argument refusal",
+            )?;
+        }
+        require_text(
+            ipc.stdout.as_bytes(),
+            "ADAPTER_NETWORK_DENIAL_CONTROL",
+            "Linux network denial",
+        )?;
+        if ipc
+            .stdout
+            .lines()
+            .filter(|line| line.starts_with("SOCKETPAIR_REFUSED case="))
+            .count()
+            != 3
+            || ipc
+                .stdout
+                .lines()
+                .filter(|line| line.starts_with("NETWORK_SYSCALL_REFUSED number="))
+                .count()
+                != 18
+        {
+            return Err("Linux IPC/network refusal controls did not all execute".to_owned());
+        }
+        cases.push(ipc.case);
+        save_progress(&result_path, &mut result, &inputs, &cases, "RUNNING")?;
+    }
+
     let null_probe_args = strings(["--control", "write-null-probe"]);
     let null_probe_execs = vec![adapter.clone()];
     let no_null_write_policy = policy_text(&null_probe_execs, &context)?;

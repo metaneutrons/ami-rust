@@ -1,0 +1,201 @@
+{
+  "schema": "ami-rust-rc1-linux-fork-ipc-development-v3",
+  "recorded_utc": "2026-10-20T15:07:50.919089+00:00",
+  "status": "LINUX_RUNTIME_PROVEN_FIXTURE_CORRECTION_HOSTED_CI_PENDING",
+  "base_source": "5135254310dba8d7ad2886332fb888b9518c159c",
+  "source_files": {
+    "tools/consumer-enforcement-adapter/src/linux.rs": "4c2647864dde6b79639420dca29972aebd5c5c3b83ca2d14bd313b123fd5b2f9",
+    "tools/consumer-enforcement-adapter/LINUX.md": "2601b1ef3664c38349946cf56308d02a02879882f2cc2d1a0066d40717ab78dd",
+    "tooling/crates/xtask/src/consumer_observe.rs": "a11ba4bb752426e921888b4347348c7686ba901299788f2c1f11d615c9857900",
+    "tooling/crates/xtask/src/cold_runtime_probe.rs": "bd9b3873e7f43849d9cb3409779df9667ccb338fd491170068ff1ced28c1e6a9",
+    "tooling/crates/xtask/src/fork_runtime_probe.rs": "a8fac58aa6cb5d3c59b9c165b3f0d581b8c0f9d7968d061eec8658c8ef388b7c",
+    "tooling/crates/xtask/tests/consumer_enforcement.rs": "362f11ad047e0576ed5363f98cab7af4afc114beefc24b6c322dd1fa07743f1f",
+    "release/native-tooling-inputs.json": "da1ab42fc81972ba298343430cc89a5508cba7500802364ff1754075015a9dc1",
+    ".github/workflows/rc1-linux-git-transport-diagnostic.yml": "8910a58337211142250beae15c1fa0dca01d9693cd4da4042a8998ebc6a71dad",
+    "release/test_prepare_sdk.py": "90920b24ec06a6a92aeaaacea11b69fba84bba91fd11cfe4423822f15e9e8313"
+  },
+  "original_full_sdk_failure": {
+    "run": 39422283932,
+    "attempt": 1,
+    "source": "5135254310dba8d7ad2886332fb888b9518c159c",
+    "step": "14-package-offline-build",
+    "linux_lifecycle": "FAIL_CARGO_COULD_NOT_START_RUSTC_PERMISSION_DENIED",
+    "macos_lifecycle_job": "SUCCESS_NOT_CROSS_HOST_ACCEPTANCE",
+    "original_archives": 8,
+    "collection_manifest_sha256": "39678b99401e86fbfda9a2d1b7e35a1c2c866427b7f3a778ef49a5380a717624"
+  },
+  "previous_candidate": {
+    "source": "09190e940a9590edea91dc8869af7fe2bb979859",
+    "regular_ci": {
+      "run": 39437088347,
+      "conclusion": "failure",
+      "macos_migration": "success",
+      "linux_migration": "failure"
+    },
+    "focused_linux": {
+      "run": 39437088789,
+      "conclusion": "failure"
+    },
+    "original_archives": 3,
+    "retained_failure_checkpoint_sha256": "5ecf87343d3580c789275828a1f14d91ae58ae23c6a6ef5322b337c392b49046",
+    "observed_fork_failure": "Forced-fork descendant panicked in Rust CLOEXEC handshake with EACCES; no complete fork-positive pass.",
+    "observed_cargo_probe_failure": "Harness precreated derived/target; adapter correctly refused the nonempty private parent before Cargo launch."
+  },
+  "source_rationale": {
+    "cargo_process_builder": {
+      "upstream_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+      "path": "crates/cargo-util/src/process_builder.rs",
+      "sha256": "225dad38fa80928269fcd572d55ff21384c365b043c39c6a6090434d995263ae",
+      "behavior": "Configures the inherited jobserver on the rustc command."
+    },
+    "fork_handshake": "Pinned Rust Linux process source receives an eight-byte status through Socket::read, implemented by libc::recv with flags zero. The existing syscall45 block prevents the local socketpair handshake. This source-based diagnosis requires corrected native execution and full SDK qualification.",
+    "correction": "Allow only unnamed socketpair(AF_UNIX, SOCK_SEQPACKET with optional CLOEXEC, protocol0) and recvfrom(count8, flags0, addressNULL, address-lengthNULL). Both words of size_t and pointer arguments are checked; all other recvfrom calls remain denied. Socket/connect/bind/listen/sendto/sendmsg/recvmsg/io_uring, x32, execveat and memfd remain denied. No null-write or broad executable/library grant.",
+    "inherited_descriptor_limit": "As with already-permitted read/write, seccomp cannot revoke an inherited network socket or bind this receive to a prior socketpair. Existing clean Supervisor input-descriptor boundary remains required.",
+    "probe_setup": "Leave the private derived parent empty at policy load. Cargo creates its target child. After the expected compiler-execution omission counter, remove only that probe-owned child and require the identical empty 0700 parent before the positive. Prelaunch failures retain actual outer adapter diagnostics."
+  },
+  "new_hosted_probes": {
+    "kernel_controls": "Actual forced-fork descendant with exact marker-file effect; both private socketpair forms exchange bytes via read/write and raw recvfrom8; three bad socketpairs, seven bad receive arguments and all eighteen generic network syscall controls must return EACCES. BPF units include both pointer halves and unchanged outbound/x32/exec denials.",
+    "actual_pinned_cargo": "Extract only the pinned Cargo component from the immutable v0.1.0 release bundle; verify its binary against the frozen Linux producer. Build one empty no_core host rlib with the paired pinned compiler under locked/offline/network-deny policy. Repeat first with only rustc exec-hash removed and require Cargo101/EACCES/no artifact. Exact raw captures, hashes, policy and valid adapter reports are required.",
+    "scope": "Cause-specific host probes only; no AROS, full SDK, RC1 or release acceptance."
+  },
+  "local_checks": {
+    "workspace": {
+      "raw_report_sha256": "dd833f7b15287cb8e43fcbf186a1dae1cb2148aa08312e6fa5731b6b40d0b2c9",
+      "status": "PASS_LOCAL_MACOS_TESTS_AND_LINUX_COMPILE_ONLY",
+      "completed_commands": [
+        {
+          "label": "linux-fork-format",
+          "exit_code": 0
+        },
+        {
+          "label": "linux-fork-macos-workspace-tests",
+          "exit_code": 0
+        },
+        {
+          "label": "linux-fork-macos-strict-clippy",
+          "exit_code": 0
+        },
+        {
+          "label": "linux-fork-linux-strict-compile-only",
+          "exit_code": 0
+        },
+        {
+          "label": "linux-fork-source-material-tests",
+          "exit_code": 0
+        },
+        {
+          "label": "linux-fork-workflow-lint",
+          "exit_code": 0
+        }
+      ],
+      "resources": {
+        "limits": {
+          "log_bytes": 16777216,
+          "rss_bytes": 4294967296,
+          "seconds": 1200,
+          "workspace_bytes": 12884901888
+        },
+        "peak_log_observed_bytes": 53749,
+        "peak_rss_observed_bytes": 1737359360,
+        "peak_workspace_observed_bytes": 2746743273
+      }
+    },
+    "adapter": {
+      "raw_report_sha256": "771a00a057a72cbb7b6eac46f02b7a4ac908f4396163fda40c8245daa5550bf8",
+      "status": "PASS_FINAL_LINUX_ADAPTER_COMPILE_AND_UNCHANGED_BASELINE_DIAGNOSTICS",
+      "completed_commands": [
+        {
+          "label": "linux-fork-probe-final-format",
+          "exit_code": 0
+        },
+        {
+          "label": "linux-fork-adapter-current-clippy",
+          "exit_code": 0
+        },
+        {
+          "label": "linux-fork-adapter-linux-compile",
+          "exit_code": 0
+        }
+      ],
+      "resources": {
+        "limits": {
+          "log_bytes": 16777216,
+          "rss_bytes": 4294967296,
+          "seconds": 1200,
+          "workspace_bytes": 12884901888
+        },
+        "peak_log_observed_bytes": 15036,
+        "peak_rss_observed_bytes": 305201152,
+        "peak_workspace_observed_bytes": 1358971746
+      }
+    }
+  },
+  "local_source_mapping": {
+    "changed_after_workspace_checks": [
+      "tools/consumer-enforcement-adapter/src/linux.rs"
+    ],
+    "reason": "Only adapter comment and test-only constant conditional compilation changed after workspace checks; final adapter all-target compile and measured unchanged baseline diagnostics were checked separately. Consumer CLI/helper sources are identical."
+  },
+  "extra_adapter_clippy": {
+    "new_diagnostics": [],
+    "same_baseline_codes": [
+      "clippy::chunks_exact_to_as_chunks",
+      "clippy::too_many_arguments"
+    ],
+    "scope": "Inherited non-strict adapter gate; no suppression or gate change. Strict CLI workspace passes."
+  },
+  "independent_reviews": [
+    {
+      "report_sha256": "ddb19f0767c48c937c793b3d4b4eb1cdad773e2f8f1fe0f5591e49267e7ad3ab",
+      "scope": "Read-only independent source review; no native execution claimed."
+    },
+    {
+      "report_sha256": "dca9e4d112ffbdb84da888c25d3384562818120e85408a63d52f57feba22abc3",
+      "scope": "Read-only independent source review; no native execution claimed."
+    }
+  ],
+  "historical_development_report_sha256": "9839c55070342e626409da80275093388967bdeb175eb5307b56e26bb7360936",
+  "unchanged": "Target Rust/Cargo/C-SDK inputs and flags, qualified ABI-v1/QEMU baseline, protected AROS checkouts and all published assets.",
+  "remaining": [
+    "Native Linux kernel and exact pinned Cargo execution; source-bound hosted artifact readbacks and counter-probes.",
+    "Protected exact-source both-host signed SDK lifecycle, two-root/five-variant matrix, unchanged raw metadata and criterion-by-criterion independent RC1-A1-A4 acceptance.",
+    "RC2-RC5 remain required; no SDK release or RC1 acceptance is established.",
+    "RC1-A4 needs a native-to-native package upgrade preservation proof in addition to the existing published-Python-to-native transition/removal tests. RC3 package-manager client transactions remain a separate later gate."
+  ],
+  "additional_candidate": {
+    "source": "cdf1eae2a20413776dc3d546d5363e666b45b323",
+    "regular_ci": {
+      "run": 39442003504,
+      "conclusion": "failure",
+      "failure": "Ubuntu installer fixture teardown: .git directory not empty",
+      "both_native_migration_jobs": "success"
+    },
+    "focused_linux": {
+      "run": 39442003502,
+      "conclusion": "success",
+      "independent_readback_status": "PASS_EXACT_SOURCE_PINNED_CARGO_FORK_RUNTIME_AND_LIBDL_OMISSION",
+      "reader_sha256": "e68e78e00dafd253391e62638504c622fe295b883e87a3b76ba6841320df93d9",
+      "verified_report_sha256": "fa22421451a492e7de655679ebbea27850dbb15fc6562ccbcbd08999a9906c39",
+      "policy_counter_result_sha256": "f23d91331262aa929e110aaf94a615dedc6c86be79d94dd55897c60e423debb2"
+    },
+    "terminal_checkpoint_sha256": "58244c1878741632ec676f700cbda23b938300aadb55f11a39a41c8889ecd798",
+    "scope": "Cause-specific Linux proof is complete for the bound production/probe bytes. Overall CI, full SDK and RC1 remain unaccepted."
+  },
+  "installer_fixture_correction": {
+    "reason": "Disposable fixture commits were observed starting detached Git maintenance; concurrent writes could race recursive .git cleanup. The exact process causing the CI cleanup race was not captured.",
+    "change": "Set maintenance.auto=false and gc.auto=0 in the disposable repository immediately after git init; no global Git changes, cleanup retries or ignored errors.",
+    "local_fixture_tests": {
+      "count": 13,
+      "result": "PASS",
+      "report_sha256": "d59ca7e129f5a4adcba0bb7ba8a797ed0a5daa93efe7c9dae06ba46d48c3054b"
+    },
+    "actual_git_trace_control": {
+      "baseline_detached_maintenance_launches": 2,
+      "disabled_detached_maintenance_launches": 0,
+      "analysis_and_source_review_sha256": "01b933e418fdb2b76c09fd528ca8e6d750ae43fa19b02b378f90b5fcad4ebf59",
+      "limit": "Local Git 2.56 versus CI Git 2.55; corrected native CI remains required."
+    },
+    "scope": "Only internal Python fixture setup changes; no consumer implementation or target inputs change."
+  },
+  "acceptance_coverage_preflight_sha256": "e08213ec2e16e06d63b85a8cd37a1daedc6f4be60f90e59a8bc4b8ca3570d80b"
+}

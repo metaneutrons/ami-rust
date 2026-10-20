@@ -2034,4 +2034,7 @@ mod tests {
 
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     include!("cold_runtime_probe.rs");
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    include!("fork_runtime_probe.rs");
 }

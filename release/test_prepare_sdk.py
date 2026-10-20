@@ -373,6 +373,9 @@ class PrepareSdkTests(unittest.TestCase):
 
     def _commit_source(self):
         subprocess.run(["git", "-C", str(self.source), "init", "-q"], check=True)
+        # Keep all Git work synchronous inside this disposable fixture.
+        self._git("config", "maintenance.auto", "false")
+        self._git("config", "gc.auto", "0")
         self._git("config", "user.name", "Fixture")
         self._git("config", "user.email", "fixture@example.invalid")
         subprocess.run(["git", "-C", str(self.source), "remote", "add", "origin",
