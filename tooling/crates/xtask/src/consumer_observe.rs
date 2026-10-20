@@ -374,9 +374,10 @@ fn render_policy(
     closure_sha: &str,
 ) -> Result<String> {
     let mut lines = vec!["consumer-policy-v1".to_owned()];
-    // Upstream Rust install.sh redirects to this exact OS character device.
-    // Warm commands and ordinary native builds need no device-write grant.
-    if spec.phase == "cold-prepare" {
+    // Rust install.sh and build-script compiler feature probes redirect stderr
+    // to this exact OS character device. Denying the latter can silently change
+    // selected compiler features even when the enclosing build succeeds.
+    if matches!(spec.phase.as_str(), "cold-prepare" | "build") {
         lines.push("write-null /dev/null".to_owned());
     }
     let mut ancestors = BTreeSet::new();
@@ -1359,6 +1360,26 @@ mod tests {
         .expect("policy");
         assert!(policy.contains("network deny\n") && !policy.contains("exec-derived-tree "));
         assert!(!policy.contains("write-null "));
+
+        let mut fixture = Fixture::new();
+        fixture.value["phase"] = json!("build");
+        fixture.value["derived"] = json!({"role":"consumer-build-parent", "path":fixture.root});
+        let policy = render_policy(
+            &fixture.parse().expect("build spec"),
+            &runtime,
+            BTreeSet::new(),
+            &"c".repeat(64),
+        )
+        .expect("build policy");
+        assert_eq!(
+            policy
+                .lines()
+                .filter(|line| *line == "write-null /dev/null")
+                .count(),
+            1
+        );
+        assert!(policy.contains("network deny\n"));
+        assert!(policy.contains("exec-derived-tree consumer-build-parent "));
     }
 
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
@@ -2058,4 +2079,7 @@ mod tests {
 
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     include!("host_link_probe.rs");
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    include!("null_probe.rs");
 }

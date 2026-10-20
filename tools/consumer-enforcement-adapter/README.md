@@ -21,8 +21,10 @@ Evidence failures return 125 and preserve the original child status where a
 report can be written. The existing outer Supervisor must enforce deadlines,
 process cleanup and resource limits; this tool cannot attest to its caller.
 
-Use `write-null /dev/null` only when the reviewed command needs shell redirection
-to the null device, such as the cold upstream installer. The parser accepts only
+Use `write-null /dev/null` when the reviewed command needs output redirection
+to the null device, such as the cold upstream installer or a build-script
+compiler probe using `Stdio::null()`. The consumer observer selects it for cold
+preparation and builds; other command phases keep their existing policy. The parser accepts only
 that exact canonical character device, checks its OS device identity before
 launch and after completion, and records both identities without hashing device
 contents. Linux binds only `WRITE_FILE` and, on Landlock ABI 3 or later,
