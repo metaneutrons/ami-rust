@@ -509,7 +509,7 @@ fn run_linux_cold_rustc_runtime_probe() -> std::result::Result<(), String> {
     let marker_sha256 =
         sha256_file(&marker_path).map_err(|error| format!("hash child input marker: {error}"))?;
     let marker_binding = json!({"path":marker_path,"sha256":marker_sha256});
-    fixture.value["phase"] = json!("cold-prepare");
+    configure_cold_runtime_fixture_roots(&mut fixture, &work_root, &source_component);
     fixture.value["command"] = json!([
         env_path,
         "AMI_RUST_COLD_RUNTIME_CHILD=positive",
@@ -521,13 +521,7 @@ fn run_linux_cold_rustc_runtime_probe() -> std::result::Result<(), String> {
         "--quiet",
     ]);
     fixture.value["expected_exit"] = json!(0);
-    fixture.value["cwd"] = json!(work_root);
-    fixture.value["home"] = json!(home);
-    fixture.value["tmp"] = json!(tmp);
-    fixture.value["read_trees"] = json!([source_component]);
-    fixture.value["write_trees"] = json!([{"role":"state","path":state_writes}]);
     fixture.value["executables"] = json!([reference_rustc, cp_path, env_path, test_binary]);
-    fixture.value["derived"] = json!({"role":"consumer-state-parent","path":derived});
     fixture.value["bindings"]
         .as_array_mut()
         .ok_or_else(|| "fixture omitted bindings array".to_owned())?
