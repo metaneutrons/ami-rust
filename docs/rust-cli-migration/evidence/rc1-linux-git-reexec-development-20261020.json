@@ -65,5 +65,24 @@
     "Native hosted fix positive and omission-counterprobe results are pending.",
     "No protected SDK or RC1 acceptance follows from this development report.",
     "AROS ABI/boot/compiler/C-SDK baseline and protected AROS checkouts are unchanged."
-  ]
+  ],
+  "test_order_followup": {
+    "source_base": "1c50625dbab28ad5faf8b2c0b39c5dc83b50b69a",
+    "run_url": "https://github.com/metaneutrons/ami-rust/actions/runs/39372946679",
+    "provider_artifact_id": 12241908741,
+    "provider_zip_sha256": "f47dd396aea43bc6a5fc4740e0122032d6d02d954c3f9d74392cab22c1335323",
+    "observed_positive_gates": {
+      "isolated_git_admitted_exit_0": true,
+      "actual_consumer_session_source_fetch": true
+    },
+    "counter_outcome": "Adapter refused policy load before executing the counter: the earlier native session had populated the derived-execution parent, which must be empty at admission. No omission-counter success was established.",
+    "change": "Run the unchanged single-rule omission control before the native session creates retained derived state. Preserve every case and policy; do not delete state or alter permission rules.",
+    "source_files": {
+      "tooling/crates/xtask/src/consumer_observe.rs": "7ded577aad7c404c1fa55fa7995997bb1f9f9f9fab08951e52746b1be3e5aa22",
+      "tooling/crates/xtask/src/consumer_runtime.rs": "542a535281dd03288d638bc329e69116771cb4a9486d8dd45f9e15b93c83fc97"
+    },
+    "local_component_result_sha256": "72ea20ffccb400c29ad28ff4b0a5aa2c965982d775e34eb949adf29391aa0059",
+    "local_component_status": "PASS_COMPONENT_CHECKS_NOT_LINUX_RUNTIME_OR_RC1_ACCEPTANCE",
+    "hosted_order_fix_result": "PENDING"
+  }
 }

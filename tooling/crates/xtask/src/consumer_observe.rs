@@ -1610,6 +1610,44 @@ mod tests {
             &spec,
             &isolated_git_command(&alias_helper, &["origin", URL]),
         )?;
+        // The policy requires an empty derived-execution parent at admission.
+        // Run this control before the native session creates retained state.
+        let counter_policy_path = artifact_root.join("counter-policy-git-execdir-git-omitted.txt");
+        let counter_policy_case =
+            copy_policy_omitting_one_exec_hash(&policy, &counter_policy_path, &helper_git)?;
+        let counter = run_raw_adapter_case(
+            "git-ls-remote-with-selected-execdir-git-omitted",
+            &artifact_root.join("counter-git-execdir-git-omitted"),
+            &adapter,
+            &counter_policy_path,
+            &spec,
+            &spec.command,
+        )?;
+        let counter_stderr = read_raw_stderr(&counter)?;
+        // Git's parent reports the logical subcommand, not the re-exec path.
+        // The pre-fix trace binds this exact diagnostic to exec-directory Git.
+        let fatal_cannot_exec =
+            counter_stderr.contains("fatal: cannot exec 'remote-https': Permission denied");
+        let counter_gate = counter["outer_exit_code"].as_i64() == Some(255)
+            && successful_linux_adapter_report(&counter, 255)
+            && counter["capture_error"].is_null()
+            && fatal_cannot_exec;
+        let counter_case = json!({
+            "gate_passed":counter_gate,
+            "adapter_case":counter,
+            "expected_child_exit_code":255,
+            "actual_child_exit_code":counter["child_exit_code"],
+            "actual_adapter_exit_code":counter["outer_exit_code"],
+            "stderr_contains_fatal_cannot_exec":fatal_cannot_exec,
+            "stderr_raw":counter_stderr,
+            "counter_policy":counter_policy_case,
+            "scope":"One exec-hash rule for the distinct canonical exec-directory Git file is omitted; all other policy bytes are preserved.",
+        });
+        write_diagnostic_json(
+            &artifact_root.join("counter-git-execdir-git-omitted/gate-result.json"),
+            &counter_case,
+        )?;
+
         let consumer_session = run_linux_consumer_session_fetch_case(
             &artifact_root.join("consumer-session-source-init-fetch"),
             &adapter,
@@ -1647,42 +1685,6 @@ mod tests {
         write_diagnostic_json(
             &artifact_root.join("consumer-session-source-init-fetch/gate-result.json"),
             &consumer_session_case,
-        )?;
-
-        let counter_policy_path = artifact_root.join("counter-policy-git-execdir-git-omitted.txt");
-        let counter_policy_case =
-            copy_policy_omitting_one_exec_hash(&policy, &counter_policy_path, &helper_git)?;
-        let counter = run_raw_adapter_case(
-            "git-ls-remote-with-selected-execdir-git-omitted",
-            &artifact_root.join("counter-git-execdir-git-omitted"),
-            &adapter,
-            &counter_policy_path,
-            &spec,
-            &spec.command,
-        )?;
-        let counter_stderr = read_raw_stderr(&counter)?;
-        // Git's parent reports the logical subcommand, not the re-exec path.
-        // The pre-fix trace binds this exact diagnostic to exec-directory Git.
-        let fatal_cannot_exec =
-            counter_stderr.contains("fatal: cannot exec 'remote-https': Permission denied");
-        let counter_gate = counter["outer_exit_code"].as_i64() == Some(255)
-            && successful_linux_adapter_report(&counter, 255)
-            && counter["capture_error"].is_null()
-            && fatal_cannot_exec;
-        let counter_case = json!({
-            "gate_passed":counter_gate,
-            "adapter_case":counter,
-            "expected_child_exit_code":255,
-            "actual_child_exit_code":counter["child_exit_code"],
-            "actual_adapter_exit_code":counter["outer_exit_code"],
-            "stderr_contains_fatal_cannot_exec":fatal_cannot_exec,
-            "stderr_raw":counter_stderr,
-            "counter_policy":counter_policy_case,
-            "scope":"One exec-hash rule for the distinct canonical exec-directory Git file is omitted; all other policy bytes are preserved.",
-        });
-        write_diagnostic_json(
-            &artifact_root.join("counter-git-execdir-git-omitted/gate-result.json"),
-            &counter_case,
         )?;
 
         let diagnostic_passed = main_admitted && consumer_session_gate && counter_gate;
