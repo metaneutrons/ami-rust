@@ -416,11 +416,20 @@ class NativeMatrixTests(unittest.TestCase):
     def test_signed_package_lifecycle_runs_matrix_before_removal_and_keeps_replay(self):
         self._run_signed_package_lifecycle_matrix_case()
 
+    def test_linux_signed_package_lifecycle_inspects_cold_runtime_before_matrix(self):
+        self._run_signed_package_lifecycle_matrix_case(fixture_host="linux-x86_64")
+
     def test_completed_matrix_report_survives_later_retained_replay_failure(self):
         self._run_signed_package_lifecycle_matrix_case(fail_replay=True)
 
+    def test_linux_completed_matrix_report_survives_retained_replay_refusal(self):
+        self._run_signed_package_lifecycle_matrix_case(fail_replay=True, fixture_host="linux-x86_64")
+
     def test_retained_removal_refuses_changed_global_configuration(self):
         self._run_signed_package_lifecycle_matrix_case(mutate_replay=True)
+
+    def test_linux_retained_removal_refuses_changed_global_configuration(self):
+        self._run_signed_package_lifecycle_matrix_case(mutate_replay=True, fixture_host="linux-x86_64")
 
     def test_failed_published_setup_never_runs_new_consumer_commands(self):
         self._run_signed_package_lifecycle_matrix_case(fail_setup=True)
@@ -429,12 +438,20 @@ class NativeMatrixTests(unittest.TestCase):
         self._run_signed_package_lifecycle_matrix_case(fail_historical_interruption=True)
 
     def _run_signed_package_lifecycle_matrix_case(self, *, fail_replay=False, mutate_replay=False,
-                                                  fail_setup=False, fail_historical_interruption=False):
+                                                  fail_setup=False, fail_historical_interruption=False,
+                                                  fixture_host=None):
         (self.work / "home").mkdir(mode=0o700)
         outer = self.work / "outer"
         metadata = outer / "metadata"
         metadata.mkdir(parents=True)
-        host = native.current_host()
+        # Explicit Linux fixture cases exercise the new read-only reference step
+        # even when this suite runs on macOS. Default cases retain native-host coverage.
+        host = fixture_host or native.current_host()
+        baseline = auth.parsed(auth.read(native.ROOT / "tooling/fixtures/accepted-r1-inputs.json"))["sdk_target"]
+        bundle = self.work / "bundle"
+        bundle.mkdir(mode=0o700)
+        cold_component_rows = []
+        cold_reference_binding = None
         identity = {"source_sha": "a" * 40, "run_id": 42, "run_attempt": 2}
         config = {"sdk_version": "0.2.0", "cli_version": "0.2.0-dev"}
         pins = {"source_commit": identity["source_sha"], "sdk_run_id": 42,
@@ -476,6 +493,18 @@ class NativeMatrixTests(unittest.TestCase):
                 self.assertEqual(label, "09-package-publisher-authentication")
                 self.assertEqual(executable, self.work / "xtask")
                 return auth.encoded({"status": "OUTER_AND_INNER_AUTHENTICATED"})
+            if label == "09-cold-runtime-reference-inspection":
+                self.assertEqual(arguments, ["migrate", "--project", legacy_report["project"], "--dry-run"])
+                self.assertEqual(executable, package / "bin/ami-rust")
+                self.assertEqual(commands, ["09-package-consistency", "09-package-publisher-authentication",
+                                            "09-cold-runtime-reference-inspection"])
+                self.assertEqual(interruption_order, ["historical"])
+                self.assertEqual(matrix_calls, [], "cold reference inspection must precede the native matrix")
+                self.assertIsNone(options.get("cold_runtime_reference"))
+                return auth.encoded(cold_inspection())
+            if cold_reference_binding is not None:
+                self.assertEqual(options.get("cold_runtime_reference"), cold_reference_binding,
+                                 "validated cold lock binding must reach later consumer observations")
             if label == "16-retained-offline-replay" and fail_replay:
                 self.assertFalse(package.exists())
                 self.assertEqual(auth.parsed(auth.read(self.output / "native-build-matrix.json")),
@@ -564,15 +593,38 @@ class NativeMatrixTests(unittest.TestCase):
             sdk_root = state / "sdk-0.1.0/sdk"
             sdk_manifest = sdk_root / "contract/sdk.json"
             sdk_manifest.parent.mkdir(parents=True)
-            manifest_bytes = b'{"fixture":"published-v1"}\n'
-            sdk_manifest.write_bytes(manifest_bytes)
+            sdk_manifest_bytes = b'{"fixture":"published-v1"}\n'
+            sdk_manifest.write_bytes(sdk_manifest_bytes)
             project_manifest = project / "Cargo.toml"
             project_manifest.write_bytes(b"# inert published project fixture\n")
+            project_lock = project / "Cargo.lock"
+            project_lock.write_bytes(b"version = 4\n")
+            component_roots = {}
+            for name in ("rust", "cargo", "toolchain", "collector", "csdk", "vendor"):
+                component_root = state / "native-reference-components" / name
+                component_root.mkdir(mode=0o700, parents=True)
+                component_roots[name] = str(component_root)
+                manifest = f"host/profiles/{host}/{name}.json"
+                manifest_path = bundle / manifest
+                manifest_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                profile_bytes = auth.encoded({"fixture": "linux-cold-runtime-reference",
+                                              "host": host, "component": name})
+                manifest_path.write_bytes(profile_bytes)
+                cold_component_rows.append({"name": name, "root": str(component_root),
+                                            "manifest": manifest,
+                                            "manifest_sha256": auth.sha(profile_bytes)})
+            (bundle / "release.json").write_bytes(auth.encoded({
+                "schema": "ami-rust-release-v2", "version": "0.2.0",
+                "sdk_files": [{"path": row["manifest"], "sha256": row["manifest_sha256"]}
+                              for row in cold_component_rows]}))
             lock = {"schema": "ami-rust-project-lock-v1",
                     "sdk": {"root": str(sdk_root), "manifest": "contract/sdk.json",
-                            "manifest_sha256": auth.sha(manifest_bytes)},
+                            "manifest_sha256": auth.sha(sdk_manifest_bytes)},
                     "host": {"platform": host, "python": str(retained_python),
-                             "python_sha256": auth.sha(runtime_bytes)}}
+                            "python_sha256": auth.sha(runtime_bytes)},
+                    "components": component_roots,
+                    "cargo": {"manifest_sha256": auth.sha(project_manifest.read_bytes()),
+                              "lock_sha256": auth.sha(project_lock.read_bytes())}}
             lock_path = project / "ami-rust.lock.json"
             lock_path.write_bytes(auth.encoded(lock))
             old_executable = build / "artifacts/AMIRUST"
@@ -590,7 +642,8 @@ class NativeMatrixTests(unittest.TestCase):
             runtime_relative = "runtime/python/bin/python3.12"
             verified_bootstrap = {
                 "schema": "ami-rust-ci-python-bootstrap-v1", "status": "READY_CI_RUNTIME_NOT_SDK_QUALIFICATION",
-                "host": host, "version": "3.12.15", "target": "aarch64-apple-darwin",
+                "host": host, "version": "3.12.15",
+                "target": "x86_64-unknown-linux-gnu" if host == "linux-x86_64" else "aarch64-apple-darwin",
                 "relative_files": {"runtime_executable": runtime_relative, "runtime_root": "runtime"},
                 "runtime": {"path": runtime_relative, "bytes": len(runtime_bytes),
                             "sha256": auth.sha(runtime_bytes), "version": "3.12.15"},
@@ -631,6 +684,47 @@ class NativeMatrixTests(unittest.TestCase):
                 legacy_report["status"] = "FAIL_INERT_SETUP_FIXTURE"
             return legacy_report
 
+        def cold_inspection():
+            project = Path(legacy_report["project"])
+            state = Path(legacy_report["state"])
+            lock = project / "ami-rust.lock.json"
+            sdk_root = state / "sdk-0.1.0/sdk"
+            python = state / "ami-rust-python-bootstrap/runtime/python/bin/python3.12"
+            return {
+                "status": "migration-required", "project": str(project),
+                "legacy_lock": {"path": str(lock), "schema": "ami-rust-project-lock-v1",
+                                "sha256": legacy_report["legacy_lock_sha256"]},
+                "legacy_sdk": {"root": str(sdk_root), "version": "0.1.0",
+                               "manifest": "contract/sdk.json",
+                               "manifest_sha256": auth.sha(auth.read(sdk_root / "contract/sdk.json"))},
+                "legacy_python": {"path": str(python),
+                                  "sha256": legacy_report["interpreter"]["sha256"]},
+                "compiler": {key: baseline[key] for key in ("rust_commit", "rust_llvm", "source_date_epoch")},
+                "host": host,
+                "cargo": {"manifest_sha256": auth.sha(auth.read(project / "Cargo.toml")),
+                          "lock_sha256": auth.sha(auth.read(project / "Cargo.lock"))},
+                "components": cold_component_rows,
+                "selection_missing": False,
+                "selection_source": "components embedded in ami-rust-project-lock-v1",
+                "migration_required": True,
+                "claim": "synthetic lifecycle-order fixture; not migration or SDK evidence",
+            }
+
+        def validate_cold_runtime_reference(report, candidate_bundle, inspection, writes, inert_runtimes):
+            nonlocal cold_reference_binding
+            self.assertIs(report, legacy_report)
+            self.assertEqual(candidate_bundle, bundle)
+            self.assertEqual(inspection, cold_inspection())
+            self.assertEqual(tuple(writes), (self.work / "home", self.work / "tmp",
+                                             self.work / "native-state-write-area"))
+            self.assertEqual(tuple(inert_runtimes), (
+                Path(legacy_report["state"]) / "ami-rust-python-bootstrap/runtime/python",
+                self.work / "inert-interrupted-published-state/python-runtime"))
+            self.assertEqual(len(cold_component_rows), 6)
+            cold_reference_binding = {"path": str(Path(legacy_report["project"]) / "ami-rust.lock.json"),
+                                      "sha256": legacy_report["legacy_lock_sha256"]}
+            return cold_reference_binding
+
         def migration(*args, **kwargs):
             self.assertEqual(len(matrix_calls), 1)
             self.assertEqual(kwargs.get("legacy", {}).get("report"), legacy_report)
@@ -670,7 +764,8 @@ class NativeMatrixTests(unittest.TestCase):
         for name in ("LICENSE-MIT", "LICENSE-APACHE"):
             (fixture_source / name).write_bytes(b"inert notice fixture\n")
         (licenses.parent / "THIRD-PARTY-NOTICES.md").write_bytes(b"inert third-party notice fixture\n")
-        with patch.object(native, "ROOT", fixture_source), \
+        with patch.object(native, "current_host", return_value=host), \
+                patch.object(native, "ROOT", fixture_source), \
                 patch.object(native, "PUBLISHED_V1_ARCHIVE_PIN", archive_pin), \
                 patch.object(native, "_download_published_v1_archive",
                              side_effect=download_published_archive) as archive_probe, \
@@ -686,7 +781,9 @@ class NativeMatrixTests(unittest.TestCase):
                 patch.object(native, "_compare_prepare_interruptions", return_value={
                     "status": "SYNTHETIC_ORDER_FIXTURE_NOT_A_COMPARISON"}) as pair_probe, \
                 patch.object(native, "_qualify_prepare_interruption",
-                             side_effect=native_interruption) as interruption_probe:
+                             side_effect=native_interruption) as interruption_probe, \
+                patch.object(native, "_validated_cold_runtime_reference",
+                             side_effect=validate_cold_runtime_reference) as cold_reference_probe:
             if fail_setup:
                 with self.assertRaisesRegex(ValueError, "published 0.1.0 rollback setup did not complete"):
                     native._qualify_native_package(
@@ -727,9 +824,27 @@ class NativeMatrixTests(unittest.TestCase):
                     "global_cargo_config", "global_rustup_config", "unrelated_sdk", "user_data"})
         if fail_setup or fail_historical_interruption:
             self.assertFalse((self.output / "native-build-matrix.json").exists())
+            self.assertFalse((self.output / "native-cold-runtime-reference.json").exists())
+            cold_reference_probe.assert_not_called()
         else:
             self.assertEqual(auth.parsed(auth.read(self.output / "native-build-matrix.json")),
                              {"build_count": 10, "fixture": True})
+            if host == "linux-x86_64":
+                self.assertEqual(commands[:4], ["09-package-consistency",
+                                                "09-package-publisher-authentication",
+                                                "09-cold-runtime-reference-inspection",
+                                                "10-package-cold-prepare"])
+                cold_reference_probe.assert_called_once()
+                reference = auth.parsed(auth.read(self.output / "native-cold-runtime-reference.json"))
+                self.assertEqual(reference["schema"], "ami-rust-cold-native-runtime-reference-v1")
+                self.assertEqual(reference["binding"], cold_reference_binding)
+                self.assertEqual(reference["compiler"], cold_inspection()["compiler"])
+                self.assertEqual(reference["components"], cold_component_rows)
+                self.assertEqual(reference["candidate_manifest_sha256"],
+                                 auth.sha(auth.read(bundle / "release.json")))
+            else:
+                self.assertFalse((self.output / "native-cold-runtime-reference.json").exists())
+                cold_reference_probe.assert_not_called()
         archive_probe.assert_called_once_with(self.work, ANY)
         setup_probe.assert_called_once_with(self.work, self.output, ANY, archive_input)
         if fail_setup or fail_historical_interruption:
