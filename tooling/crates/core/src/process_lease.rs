@@ -110,13 +110,54 @@ impl ChildLease {
         signal: libc::c_int,
         mut send: impl FnMut(libc::pid_t, libc::c_int) -> io::Result<()>,
     ) -> io::Result<()> {
+        self.signal_root_group_with_classifier(signal, &mut send, posix::owned_zombie_only_group)
+    }
+
+    fn signal_root_group_with_classifier(
+        &mut self,
+        signal: libc::c_int,
+        mut send: impl FnMut(libc::pid_t, libc::c_int) -> io::Result<()>,
+        is_owned_zombie_only_group: impl Fn(libc::pid_t) -> bool,
+    ) -> io::Result<()> {
         // A true result still leaves the direct child unreaped, reserving its
         // PID/PGID while same-group descendants may need cleanup.
         let _ = self.observe_exit()?;
         if self.status.is_some() || self.reaping_lost {
             return Err(ownership_lost());
         }
-        send(self.root_group, signal)
+        match send(self.root_group, signal) {
+            Ok(()) => Ok(()),
+            Err(error) if error.raw_os_error() == Some(libc::EPERM) => {
+                #[cfg(target_os = "macos")]
+                {
+                    // EPERM is suppressible only for the narrow Darwin case
+                    // where WNOWAIT still owns this exited direct child and a
+                    // complete process-group query finds exactly that zombie.
+                    // Check once before classification and again afterwards;
+                    // neither snapshot is ever used as signal authority.
+                    let exited = self.observe_exit()?;
+                    if self.status.is_some() || self.reaping_lost || !exited {
+                        return Err(error);
+                    }
+                    let confirmed_group = is_owned_zombie_only_group(self.root_group);
+                    let still_wait_owned_and_exited = self.observe_exit()?;
+                    if self.status.is_some() || self.reaping_lost {
+                        return Err(ownership_lost());
+                    }
+                    if confirmed_group && still_wait_owned_and_exited {
+                        Ok(())
+                    } else {
+                        Err(error)
+                    }
+                }
+                #[cfg(not(target_os = "macos"))]
+                {
+                    let _ = is_owned_zombie_only_group;
+                    Err(error)
+                }
+            }
+            Err(error) => Err(error),
+        }
     }
 
     /// Kill the direct child only when WNOWAIT confirms it has not exited.
@@ -205,6 +246,69 @@ fn invalid_child_id(child: &mut Child, pid: u32) -> io::Error {
 
 mod posix {
     use std::{io, mem::MaybeUninit, ptr};
+
+    #[cfg(target_os = "macos")]
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    pub(super) struct OwnedZombieGroupObservation {
+        pub(super) group: libc::pid_t,
+        pub(super) effective_uid: u32,
+        pub(super) complete: libc::c_int,
+        pub(super) record_count: u32,
+        pub(super) member_pid: libc::pid_t,
+        pub(super) member_group: libc::pid_t,
+        pub(super) member_uid: u32,
+        pub(super) member_status: libc::c_int,
+    }
+
+    #[cfg(target_os = "macos")]
+    const _: [(); 32] = [(); std::mem::size_of::<OwnedZombieGroupObservation>()];
+
+    #[cfg(target_os = "macos")]
+    #[allow(
+        unsafe_code,
+        reason = "The C helper performs one bounded, fail-closed Darwin process-group query."
+    )]
+    unsafe extern "C" {
+        fn ami_rust_process_group_is_owned_zombie_only(group: libc::pid_t) -> libc::c_int;
+
+        #[cfg(test)]
+        fn ami_rust_classify_owned_zombie_group_observation(
+            observation: *const OwnedZombieGroupObservation,
+        ) -> libc::c_int;
+    }
+
+    #[cfg(target_os = "macos")]
+    #[allow(
+        unsafe_code,
+        reason = "The C helper returns affirmative only for the exact owned-zombie group case."
+    )]
+    pub(super) fn owned_zombie_only_group(group: libc::pid_t) -> bool {
+        if group <= 0 {
+            return false;
+        }
+        // SAFETY: the helper accepts only a positive group ID and performs a
+        // bounded read-only KERN_PROC_PGRP query with no borrowed pointers.
+        unsafe { ami_rust_process_group_is_owned_zombie_only(group) == 1 }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    pub(super) fn owned_zombie_only_group(_group: libc::pid_t) -> bool {
+        false
+    }
+
+    #[cfg(all(test, target_os = "macos"))]
+    #[allow(
+        unsafe_code,
+        reason = "The test calls the same C record classifier used by the Darwin query helper."
+    )]
+    pub(super) fn classify_owned_zombie_group_record_for_test(
+        observation: OwnedZombieGroupObservation,
+    ) -> bool {
+        // SAFETY: this pure classifier receives a valid pointer to the
+        // fixed-layout scalar test record for the duration of the call.
+        unsafe { ami_rust_classify_owned_zombie_group_observation(&observation) == 1 }
+    }
 
     #[allow(unsafe_code, reason = "POSIX sigaction requires libc structures.")]
     pub(super) fn ensure_waitable_sigchld() -> io::Result<()> {
@@ -321,13 +425,21 @@ mod posix {
 mod tests {
     use super::*;
     use std::{
+        cell::Cell,
+        fs::OpenOptions,
+        io::Write,
         os::unix::process::{CommandExt, ExitStatusExt},
+        path::PathBuf,
         process::{Command, Stdio},
         time::Instant,
     };
 
+    #[cfg(target_os = "macos")]
+    use std::{os::fd::AsRawFd, path::Path, process::ChildStdin};
+
     const FIXTURE_NAME: &str = "process_lease::tests::child_fixture_entry";
     const FIXTURE_TOKEN: &str = "ami-rust-core-process-lease-v1";
+    const FIXTURE_READY_PATH_ENV: &str = "AMI_PROCESS_LEASE_FIXTURE_READY_PATH";
 
     fn spawn_fixture(mode: &str) -> Child {
         let mut command = Command::new(std::env::current_exe().expect("test executable path"));
@@ -344,6 +456,42 @@ mod tests {
             .expect("spawn isolated process-lease fixture")
     }
 
+    #[cfg(target_os = "macos")]
+    fn spawn_fixture_with_live_same_group_descendant(ready_path: &Path) -> Child {
+        let mut command = Command::new(std::env::current_exe().expect("test executable path"));
+        command
+            .args(["--exact", FIXTURE_NAME, "--nocapture", "--test-threads=1"])
+            .env("AMI_PROCESS_LEASE_FIXTURE_TOKEN", FIXTURE_TOKEN)
+            .env(
+                "AMI_PROCESS_LEASE_FIXTURE_MODE",
+                "root-exits-after-descendant-ready",
+            )
+            .env(FIXTURE_READY_PATH_ENV, ready_path.as_os_str())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .process_group(0);
+        command
+            .spawn()
+            .expect("spawn root fixture with an inherited-stdin probe")
+    }
+
+    #[cfg(target_os = "macos")]
+    fn wait_for_fixture_stdin_pipe_close(
+        probe: &mut ChildStdin,
+        deadline: Instant,
+    ) -> Option<Instant> {
+        while Instant::now() < deadline {
+            if let Err(error) = probe.write(b"x")
+                && error.kind() == io::ErrorKind::BrokenPipe
+            {
+                return Some(Instant::now());
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        None
+    }
+
     #[test]
     fn child_fixture_entry() {
         if std::env::var("AMI_PROCESS_LEASE_FIXTURE_TOKEN")
@@ -358,6 +506,63 @@ mod tests {
                 thread::sleep(Duration::from_secs(30));
             },
             Ok("exit") => {}
+            Ok("root-exits-after-descendant-ready") => {
+                let ready_path = std::env::var_os(FIXTURE_READY_PATH_ENV)
+                    .map(PathBuf::from)
+                    .expect("same-group descendant readiness path");
+                let mut command =
+                    Command::new(std::env::current_exe().expect("test executable path"));
+                command
+                    .args(["--exact", FIXTURE_NAME, "--nocapture", "--test-threads=1"])
+                    .env("AMI_PROCESS_LEASE_FIXTURE_TOKEN", FIXTURE_TOKEN)
+                    .env(
+                        "AMI_PROCESS_LEASE_FIXTURE_MODE",
+                        "live-same-group-descendant",
+                    )
+                    .env(FIXTURE_READY_PATH_ENV, ready_path.as_os_str())
+                    .stdin(Stdio::inherit())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null());
+                // Do not set a process group: the descendant must inherit this
+                // owned root's PGID so the native query observes a live member.
+                let mut descendant = command
+                    .spawn()
+                    .expect("spawn same-group descendant fixture");
+                let deadline = Instant::now() + Duration::from_secs(5);
+                while !ready_path.exists() {
+                    if let Some(status) = descendant
+                        .try_wait()
+                        .expect("observe the fixture descendant")
+                    {
+                        panic!("descendant exited before readiness: {status}");
+                    }
+                    assert!(
+                        Instant::now() < deadline,
+                        "same-group descendant did not signal readiness"
+                    );
+                    thread::sleep(Duration::from_millis(10));
+                }
+                // Child::drop does not kill or wait; this fixture exits while
+                // leaving the ready same-group descendant running.
+                drop(descendant);
+            }
+            Ok("live-same-group-descendant") => {
+                let ready_path = std::env::var_os(FIXTURE_READY_PATH_ENV)
+                    .map(PathBuf::from)
+                    .expect("same-group descendant readiness path");
+                let mut ready = OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(ready_path)
+                    .expect("create descendant readiness marker");
+                ready
+                    .write_all(b"ready")
+                    .expect("write descendant readiness marker");
+                // Keep this live well beyond the root-wait and initial
+                // cleanup windows, but guarantee bounded test teardown if
+                // group signalling fails.
+                thread::sleep(Duration::from_secs(30));
+            }
             other => panic!("unknown process-lease fixture mode: {other:?}"),
         }
     }
@@ -438,6 +643,345 @@ mod tests {
                 .is_err()
         );
         assert!(!backend_called, "a reaped root group must not be signalled");
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn darwin_zombie_only_group_eperm_is_accepted_for_the_wait_owned_child() {
+        ensure_waitable_sigchld().expect("test process must retain waitable child status");
+        let child = spawn_fixture("exit");
+        let group = child.id() as libc::pid_t;
+        let mut lease = ChildLease::new(child, Duration::from_millis(20)).unwrap();
+
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !lease.observe_exit().expect("child remains wait-owned") {
+            assert!(Instant::now() < deadline, "exit fixture did not finish");
+            thread::sleep(Duration::from_millis(10));
+        }
+        assert_eq!(lease.status(), None, "WNOWAIT must retain the zombie");
+
+        let raw_error = posix::signal_group(group, libc::SIGTERM)
+            .expect_err("Darwin must report the zombie-only group as EPERM");
+        assert_eq!(raw_error.raw_os_error(), Some(libc::EPERM));
+
+        lease
+            .signal_root_group(libc::SIGTERM)
+            .expect("only the complete owned-zombie group result is empty");
+        assert!(lease.observe_exit().expect("final WNOWAIT check"));
+        assert_eq!(
+            lease.status(),
+            None,
+            "normalization must not reap the child"
+        );
+        lease
+            .reap()
+            .expect("reap the direct child after group cleanup");
+        assert!(!lease.reaping_lost());
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[allow(
+        unsafe_code,
+        reason = "The fixture makes its private pipe writer nonblocking so cleanup polling cannot hang."
+    )]
+    fn darwin_live_same_group_descendant_keeps_eperm_as_a_refusal() {
+        ensure_waitable_sigchld().expect("test process must retain waitable child status");
+        let fixture_started_at = Instant::now();
+        let failsafe_not_before = fixture_started_at + Duration::from_secs(30);
+        let failsafe_deadline = fixture_started_at + Duration::from_secs(40);
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time is after the epoch")
+            .as_nanos();
+        let ready_path = std::env::temp_dir().join(format!(
+            "ami-rust-process-lease-ready-{}-{nonce}.tmp",
+            std::process::id()
+        ));
+        let mut child = spawn_fixture_with_live_same_group_descendant(&ready_path);
+        let group = child.id() as libc::pid_t;
+        let mut probe = child
+            .stdin
+            .take()
+            .expect("root fixture has a piped inherited-stdin probe");
+        let mut lease = ChildLease::new(child, Duration::from_millis(20)).unwrap();
+
+        // SAFETY: the descriptor belongs to the private fixture writer and
+        // remains open for both fcntl calls; no pointer arguments are used.
+        let flags = unsafe { libc::fcntl(probe.as_raw_fd(), libc::F_GETFL) };
+        assert_ne!(flags, -1, "read fixture pipe flags");
+        // SAFETY: preserve its existing flags while enabling nonblocking writes.
+        assert_ne!(
+            unsafe { libc::fcntl(probe.as_raw_fd(), libc::F_SETFL, flags | libc::O_NONBLOCK) },
+            -1,
+            "make fixture pipe polling nonblocking"
+        );
+
+        let ready_deadline = Instant::now() + Duration::from_secs(5);
+        let mut descendant_ready = false;
+        while Instant::now() < ready_deadline {
+            if ready_path.exists() {
+                descendant_ready = true;
+                break;
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        let root_exit_deadline = Instant::now() + Duration::from_secs(5);
+        let mut root_exited = false;
+        while Instant::now() < root_exit_deadline {
+            if lease.observe_exit().expect("root remains wait-owned") {
+                root_exited = true;
+                break;
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+
+        // A successful write proves the ready descendant still has the
+        // inherited pipe open after its root has exited.
+        let descendant_holds_pipe = probe.write_all(b"alive").is_ok();
+        let native_query_refused_singleton = root_exited && !posix::owned_zombie_only_group(group);
+        let injected_error = if root_exited {
+            lease.signal_root_group_with(libc::SIGTERM, |_, _| {
+                Err(io::Error::from_raw_os_error(libc::EPERM))
+            })
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                "root fixture did not exit while descendant remained live",
+            ))
+        };
+
+        // Clean up only through the lease-owned root PGID, then use
+        // BrokenPipe on the inherited stdin pipe to observe termination. The
+        // 30-second fixture fallback can never satisfy the five-second
+        // signal-cleanup criterion.
+        let cleanup_started_at = Instant::now();
+        let signal_cleanup_deadline = cleanup_started_at + Duration::from_secs(5);
+        let cleanup_signal = lease.signal_root_group(libc::SIGKILL);
+        let pipe_closed_after_signal =
+            wait_for_fixture_stdin_pipe_close(&mut probe, signal_cleanup_deadline);
+        let descendant_stopped_within_bound = pipe_closed_after_signal.is_some_and(|closed_at| {
+            closed_at < failsafe_not_before && closed_at <= signal_cleanup_deadline
+        });
+        let descendant_pipe_closed = pipe_closed_after_signal.is_some()
+            || wait_for_fixture_stdin_pipe_close(&mut probe, failsafe_deadline).is_some();
+
+        if !descendant_pipe_closed {
+            let _ = std::fs::remove_file(&ready_path);
+            std::mem::forget(lease);
+            panic!(
+                "could not confirm group-reader termination by the fixture failsafe; retained the unreaped root lease and will issue no further PID/PGID signals"
+            );
+        }
+
+        if !lease.observe_exit().unwrap_or(false) {
+            let _ = std::fs::remove_file(&ready_path);
+            std::mem::forget(lease);
+            panic!("root exit or wait ownership was not confirmed; refusing a blocking reap");
+        }
+
+        // Reap only after the inherited pipe confirms that the descendant has
+        // exited (from SIGKILL or its failsafe). A failsafe exit still fails
+        // the original five-second cleanup assertion below.
+        let reap_result = lease.reap();
+        let _ = std::fs::remove_file(&ready_path);
+
+        assert!(
+            descendant_ready,
+            "same-group descendant must signal readiness before root exit"
+        );
+        assert!(
+            root_exited,
+            "root fixture must exit before the counterprobe"
+        );
+        assert!(
+            descendant_holds_pipe,
+            "same-group descendant must remain alive before cleanup"
+        );
+        assert!(
+            native_query_refused_singleton,
+            "KERN_PROC_PGRP must reject a live descendant beside the root zombie"
+        );
+        assert_eq!(
+            injected_error
+                .expect_err("injected EPERM remains a denial with a live same-group member")
+                .raw_os_error(),
+            Some(libc::EPERM)
+        );
+        assert!(
+            descendant_stopped_within_bound,
+            "group SIGKILL must close the inherited pipe within five seconds and before the failsafe"
+        );
+        cleanup_signal.expect("lease cleanup signals only the owned root group");
+        reap_result.expect("reap the wait-owned direct root after group cleanup");
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn darwin_group_record_classifier_fails_closed_for_unknown_or_mismatched_rows() {
+        let group = 4321;
+        let uid = 501;
+        let zombie_status =
+            libc::c_int::try_from(libc::SZOMB).expect("macOS process status fits in c_int");
+        let valid = posix::OwnedZombieGroupObservation {
+            group,
+            effective_uid: uid,
+            complete: 1,
+            record_count: 1,
+            member_pid: group,
+            member_group: group,
+            member_uid: uid,
+            member_status: zombie_status,
+        };
+        let classify = posix::classify_owned_zombie_group_record_for_test;
+        assert!(classify(valid));
+        assert!(
+            !classify(posix::OwnedZombieGroupObservation {
+                record_count: 0,
+                member_pid: 0,
+                member_group: 0,
+                member_uid: 0,
+                member_status: 0,
+                ..valid
+            }),
+            "empty group is not affirmative"
+        );
+        assert!(!classify(posix::OwnedZombieGroupObservation {
+            complete: 0,
+            ..valid
+        }));
+        assert!(!classify(posix::OwnedZombieGroupObservation {
+            record_count: 2,
+            ..valid
+        }));
+        assert!(!classify(posix::OwnedZombieGroupObservation {
+            member_pid: group + 1,
+            ..valid
+        }));
+        assert!(!classify(posix::OwnedZombieGroupObservation {
+            member_group: group + 1,
+            ..valid
+        }));
+        assert!(!classify(posix::OwnedZombieGroupObservation {
+            member_uid: uid + 1,
+            ..valid
+        }));
+        assert!(
+            !classify(posix::OwnedZombieGroupObservation {
+                member_status: 0,
+                ..valid
+            }),
+            "unknown status refuses"
+        );
+        assert!(!classify(posix::OwnedZombieGroupObservation {
+            member_status: zombie_status + 1,
+            ..valid
+        }));
+    }
+
+    #[test]
+    fn injected_group_eperm_while_owned_child_is_live_remains_a_denial() {
+        ensure_waitable_sigchld().expect("test process must retain waitable child status");
+        let child = spawn_fixture("hold");
+        let mut lease = ChildLease::new(child, Duration::from_millis(20)).unwrap();
+        assert!(!lease.observe_exit().expect("hold fixture remains live"));
+
+        let classifier_called = Cell::new(false);
+        let error = lease
+            .signal_root_group_with_classifier(
+                libc::SIGTERM,
+                |_, _| Err(io::Error::from_raw_os_error(libc::EPERM)),
+                |_| {
+                    classifier_called.set(true);
+                    true
+                },
+            )
+            .expect_err("a live root can never normalize EPERM");
+        assert_eq!(error.raw_os_error(), Some(libc::EPERM));
+        assert!(
+            !classifier_called.get(),
+            "zombie-only classification must not run while WNOWAIT reports live"
+        );
+
+        lease
+            .signal_root_group(libc::SIGKILL)
+            .expect("clean up the isolated live fixture");
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !lease.observe_exit().expect("fixture remains wait-owned") {
+            assert!(
+                Instant::now() < deadline,
+                "fixture did not exit after SIGKILL"
+            );
+            thread::sleep(Duration::from_millis(10));
+        }
+        lease.reap().expect("reap isolated fixture");
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn wait_ownership_loss_after_eperm_blocks_zombie_classification() {
+        ensure_waitable_sigchld().expect("test process must retain waitable child status");
+        let child = spawn_fixture("exit");
+        let pid = child.id();
+        let mut lease = ChildLease::new(child, Duration::from_millis(20)).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !lease.observe_exit().expect("child remains wait-owned") {
+            assert!(Instant::now() < deadline, "exit fixture did not finish");
+            thread::sleep(Duration::from_millis(10));
+        }
+
+        let signal_backend_called = Cell::new(false);
+        let classifier_called = Cell::new(false);
+        let error = lease
+            .signal_root_group_with_classifier(
+                libc::SIGTERM,
+                |_, _| {
+                    signal_backend_called.set(true);
+                    posix::reap_direct_child(pid as libc::pid_t)
+                        .expect("controlled fixture reaper consumes only its own child");
+                    Err(io::Error::from_raw_os_error(libc::EPERM))
+                },
+                |_| {
+                    classifier_called.set(true);
+                    true
+                },
+            )
+            .expect_err("fresh WNOWAIT must reject lost ownership after EPERM");
+        assert!(signal_backend_called.get());
+        assert_eq!(error.raw_os_error(), Some(libc::ECHILD));
+        assert!(lease.reaping_lost());
+        assert!(
+            !classifier_called.get(),
+            "an unowned process-group ID must not reach the classifier"
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn wait_ownership_loss_during_zombie_classification_is_caught_by_final_check() {
+        ensure_waitable_sigchld().expect("test process must retain waitable child status");
+        let child = spawn_fixture("exit");
+        let pid = child.id();
+        let mut lease = ChildLease::new(child, Duration::from_millis(20)).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !lease.observe_exit().expect("child remains wait-owned") {
+            assert!(Instant::now() < deadline, "exit fixture did not finish");
+            thread::sleep(Duration::from_millis(10));
+        }
+
+        let error = lease
+            .signal_root_group_with_classifier(
+                libc::SIGTERM,
+                |_, _| Err(io::Error::from_raw_os_error(libc::EPERM)),
+                |_| {
+                    posix::reap_direct_child(pid as libc::pid_t)
+                        .expect("controlled fixture reaper consumes only its own child");
+                    true
+                },
+            )
+            .expect_err("final WNOWAIT must reject normalization after ownership loss");
+        assert_eq!(error.raw_os_error(), Some(libc::ECHILD));
+        assert!(lease.reaping_lost());
     }
 
     #[test]

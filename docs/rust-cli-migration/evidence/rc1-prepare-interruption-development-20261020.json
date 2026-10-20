@@ -1,0 +1,142 @@
+{
+  "schema": "ami-rust-prepare-interruption-pair-development-v1",
+  "status": "PASS_LOCAL_COMPONENTS_AND_ACTUAL_MACOS_HISTORICAL_HALF_ONLY",
+  "scope": "Portable paired qualification integration is implemented; synthetic pair controls and one actual historical-half invocation pass locally. No complete actual pair, hosted Linux runtime, protected signed SDK or RC1 acceptance is claimed.",
+  "source_files": {
+    "release/ci_native.py": "1f4d832ecaf86cb0208488fe51f181d94bb55d7ef69d110fc8f686ca94d28a57",
+    "release/test_ci_native.py": "905456c4c00591862741cac20b08a003cf4d4f40f98cd548f82128576dc1a40a",
+    "tooling/crates/xtask/src/main.rs": "e87002319f9e7dcaa19fd1f3b5de6e998936d05d202941621486a5e02c63c231",
+    "tooling/crates/xtask/src/historical_prepare_sigterm.rs": "e6feca84de0940d119827d69f71a46a2950867f693b181929fd4191882a50105",
+    "tooling/crates/core/src/process_lease.rs": "3e5d0dfa8d71820116aaa99e47e3271cf81caee4d0e7b96b1c3a687591c5b084",
+    "tooling/crates/core/src/macos_process_snapshot.c": "a8196314bf5ce5afe34d20c1f1d8915c0e83f5dd7aea33d95f2160d8cef8609d"
+  },
+  "components": {
+    "report_sha256": "724f0be75e716e583e5e017c36af7973dad23442fd4dac1f8cca92f9694a4d29",
+    "status": "PASS_MACOS_INTERRUPTION_PAIR_COMPONENTS_LINUX_COMPILE_ONLY",
+    "macos_core_tests_passed": 380,
+    "macos_core_tests_ignored": 18,
+    "macos_xtask_tests_passed": 46,
+    "strict_workspace_clippy": "PASS",
+    "linux_cross_clippy": "PASS_COMPILE_ONLY",
+    "limits": {
+      "log_bytes": 16777216,
+      "rss_bytes": 4294967296,
+      "seconds": 1200,
+      "workspace_bytes": 12884901888
+    },
+    "peak_rss_observed_bytes": 1709146112,
+    "peak_workspace_observed_bytes": 3216206712
+  },
+  "final_adapter_controls": {
+    "report_sha256": "504554fc81a1c28d8b35baf416e8c47dd858f3c7e914412aeb065e60a0d71796",
+    "status": "PASS_PRIVATE_RUNTIME_COPY_ADAPTER_CONTROLS",
+    "native_adapter_tests_passed": 54,
+    "material_inventory_tests_passed": 9,
+    "rust_sources_unchanged_from_component_report": true
+  },
+  "historical_probe": {
+    "report_sha256": "41e032a25ef085abcf06e83abce984c7d471f2bfac9133ca2b074b4bc5165704",
+    "effects_sha256": "f853b64c08fb7cd19f77d39cefee079d8e7ac2171494522ae9669051222720da",
+    "capture_report_sha256": "cee26378d80f4b6da13194cb207f8b8202e29e64c81c6566d1be40d0ecaa45c9",
+    "status": "PASS_MACOS_PORTABLE_HISTORICAL_HALF_ONLY",
+    "cli_sha256": "c9ebf03734968a19a6ee9242fdb04a04e314b9da2dbdb682a762b610d81d6378",
+    "python_sha256": "aed8ed802d0387d6831dead5885840e4e2ff3a7984dd7297e9a5f4466e9cda1d",
+    "original_interpreter_mode": "0775",
+    "private_copy_interpreter_mode": "0755",
+    "original_input_unchanged": true,
+    "stage_witness": "Empty regular FETCH_HEAD before checkout/bootstrap markers; no Git argv/PID observation.",
+    "direct_child_raw_signal": 15,
+    "direct_child_exit_code": null,
+    "derived_shell_status": 143,
+    "shell_was_invoked": false,
+    "capture_cleanup_error": null,
+    "capture_accepted_path": "DescendantRetainedPipe-cleaned-and-reaped",
+    "raw_stdout_bytes": 227,
+    "raw_stderr_bytes": 0,
+    "retained_package_consistent": true,
+    "retry_exit_code": 2,
+    "state_and_sibling_unchanged": true,
+    "original_ready_sha256": "6192c74bb5948dfe5aa8757796deedbbbf1cdca10a9cd750afa96edb78fce3ac",
+    "unpublished": {
+      "installation_prefix_absent": true,
+      "installation_receipt_absent": true,
+      "python_bootstrap_absent": true,
+      "ready_absent": true,
+      "selection_absent": true
+    },
+    "limits": {
+      "log_bytes": 16777216,
+      "rss_bytes": 4294967296,
+      "seconds": 1200,
+      "workspace_bytes": 12884901888
+    },
+    "peak_rss_observed_bytes": 65945600
+  },
+  "integration": {
+    "historical_oracle": "Runs before new-consumer observation; its private runtime and original retained runtime are both excluded from all subsequent new-consumer commands.",
+    "preservation": "Complete historical interruption area joins published-v1 preservation roots through activation, migration, rollback and removal.",
+    "comparison": "Same visible private/unpublished/unchanged-refusal effects; distinct raw signal, receipt and diagnostic semantics remain explicit.",
+    "failure_evidence": "Fixed bounded raw captures are preserved even if driver or validation fails."
+  },
+  "independent_static_review": {
+    "report_sha256": "426f32cb9ccd75db1a630d39a9072dbc97e49173013a6f5e525530cdabfbd319",
+    "result": "No false-pass integration defect identified; no independent execution claimed."
+  },
+  "remaining": [
+    "Both-host hosted component CI for this exact candidate",
+    "Actual complete historical/native pair in protected SDK qualification",
+    "Complete signed native matrix and lifecycle, followed by RC1 acceptance",
+    "Unchanged RC2-RC5 scope"
+  ],
+  "resource_limit": "Per-stream caps remain bounded failure limits, not a promise that all maxima fit one artifact. Existing aggregate log/output limits remain required; real both-host artifact sizes are not yet measured.",
+  "provenance_and_readback_followup": {
+    "source_files": {
+      "release/ci_auth.py": "34ad4fdeb7fabe83279a7b28b57f6823d1d772392e9f28d3c4fd2a9b4322e9e1",
+      "release/ci_native.py": "fcd22f4c524d1c75023a809a171c8801f8d00ccd09906508c49336482352bfd5",
+      "release/native-tooling-inputs.json": "3556b642d7d4c2f54cadf310c51054cb8b4d9077bf2f97042118b980ef458571",
+      "release/test_ci_native.py": "1fce3abf94796a5933326d64646cc6871749b2ee9fc509741d2b30d4a0af878f",
+      "release/test_native_tooling_materials.py": "2d4d8a1b018ef86a11832cd4085ee5fbe7fd20a8b5700e306e8127c2e3afd11a"
+    },
+    "scope": "Explicit producer source pin and raw receipt evidence correction. Rust/native execution code is unchanged; original development measurements above retain their original source identities.",
+    "prior_candidate": "bd7c5af5a6b56112d02a647b32d29c68f21ea978",
+    "prior_ci": {
+      "run_id": 39359828442,
+      "attempt": 1,
+      "conclusion": "success",
+      "all_seven_jobs_verified": true,
+      "source_tree": "8906ff5e6c4d615a21019bcdd2ab3e3821507d56",
+      "verified_report_sha256": "c2f5cd18ae29be1e090a2196e8627b73372e67d7360b3781638853b44c497111",
+      "historical_comparison_pairs_per_host": 192,
+      "portable_historical_pin_stage_capture_tests_verified": true,
+      "darwin_actual_zombie_live_descendant_and_ownership_tests_verified": true
+    },
+    "missing_material": "historical_prepare_sigterm.rs is now mandatory and digest-bound in actual producer inputs and fixture validation; the embedded ci-python-inputs.json already belonged to the base input manifest.",
+    "raw_receipt": "The exact native prepare-failure.json bytes are preserved alongside raw streams for independent semantic/digest/snapshot readback.",
+    "local_controls": {
+      "status": "PASS_CHANGED_SOURCE_MATERIALS_AND_RAW_RECEIPT_CAPTURE",
+      "report_sha256": "c795eb68963a26c26728afcef22b9cfb6f94ad6eb8e485552bd6ea592e527903",
+      "test_counts": {
+        "native-adapter-controls": [
+          "Ran 54 tests in 0.857s"
+        ],
+        "native-source-material-controls": [
+          "Ran 10 tests in 0.098s"
+        ],
+        "publisher-auth-material-controls": [
+          "Ran 25 tests in 0.303s"
+        ]
+      }
+    },
+    "omission_counter": {
+      "status": "PASS_ISOLATED_REAL_CONFIG_OMISSION_REFUSED",
+      "report_sha256": "9335224b6a249ce616fb03cd7c8736b8ae4d404137dca04eadd87d31607bbd83"
+    },
+    "readback_controls": {
+      "status": "PASS_OFFLINE_READBACK_CONTROLS_ONLY",
+      "tests": 20,
+      "report_sha256": "b5f0eb650868f56f9200297eaf765418ca29c60813794ea1481c123e9c4c8eb8",
+      "limitation": "Synthetic new half; not actual protected SDK evidence."
+    },
+    "remaining": "New exact candidate hosted CI, full protected signed SDK and RC1 acceptance remain open."
+  }
+}
