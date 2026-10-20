@@ -597,16 +597,21 @@ fn selected_library_targets(
     Ok(targets)
 }
 
-// NativeBuildRecipe uses the AROS toolchain's llvm-objcopy. Rust's dormant
-// rust-objcopy is not a consumer executable; on the pinned Linux archive its
-// RUNPATH cannot locate the bundled LLVM library. Keep rust-lld because the
-// frozen AROS target selects it as its linker.
-fn rust_component_executables(triple: &str) -> [String; 3] {
-    [
+// Native AROS finalisation uses the C toolchain's llvm-objcopy, but the
+// pinned rustc also invokes rust-objcopy when stripping Darwin host binaries
+// (including compiler-builtins build scripts). Linux host stripping is handled
+// by its linker; the unused Linux rust-objcopy has an unresolved LLVM RUNPATH.
+// Keep the host-specific implicit compiler tool alongside rustc/rustdoc/lld.
+fn rust_component_executables(triple: &str) -> Vec<String> {
+    let mut tools = vec![
         "bin/rustc".to_owned(),
         "bin/rustdoc".to_owned(),
         format!("lib/rustlib/{triple}/bin/rust-lld"),
-    ]
+    ];
+    if triple == "aarch64-apple-darwin" {
+        tools.push(format!("lib/rustlib/{triple}/bin/rust-objcopy"));
+    }
+    tools
 }
 
 fn component_inputs(
@@ -641,7 +646,7 @@ fn component_inputs(
         reads.insert(root.clone());
         let relative = match kind.as_str() {
             "cargo" => vec!["bin/cargo".to_owned()],
-            "rust" => rust_component_executables(triple).into(),
+            "rust" => rust_component_executables(triple),
             "toolchain" => [
                 "clang",
                 "lld",
@@ -1155,7 +1160,25 @@ mod tests {
     }
 
     #[test]
-    fn component_inventory_requires_selected_tools_but_not_unused_rust_objcopy() {
+    fn selected_rust_tools_include_darwin_strip_helper_only_on_darwin() {
+        let linux = rust_component_executables("x86_64-unknown-linux-gnu");
+        let macos = rust_component_executables("aarch64-apple-darwin");
+        assert_eq!(linux.len(), 3);
+        assert_eq!(macos.len(), 4);
+        assert!(!linux.iter().any(|tool| tool.ends_with("/rust-objcopy")));
+        assert!(
+            macos
+                .iter()
+                .any(|tool| tool == "lib/rustlib/aarch64-apple-darwin/bin/rust-objcopy")
+        );
+        for tools in [linux, macos] {
+            assert!(tools.iter().any(|tool| tool.ends_with("/rust-lld")));
+            assert!(tools.iter().any(|tool| tool == "bin/rustc"));
+        }
+    }
+
+    #[test]
+    fn component_inventory_requires_host_specific_implicit_compiler_tools() {
         let fixture = Fixture::new();
         let triple = match (std::env::consts::OS, std::env::consts::ARCH) {
             ("macos", "aarch64") => "aarch64-apple-darwin",
@@ -1167,7 +1190,7 @@ mod tests {
             ("cargo", vec!["bin/cargo".to_owned()]),
             ("collector", vec!["bin/aros-collect".to_owned()]),
             ("csdk", vec![]),
-            ("rust", rust_component_executables(triple).into()),
+            ("rust", rust_component_executables(triple)),
             (
                 "toolchain",
                 [
@@ -1204,7 +1227,17 @@ mod tests {
         component_inputs(&record, &mut executables, &mut libraries, &mut reads).unwrap();
         let rust_bin = fixture.root.join(format!("rust/lib/rustlib/{triple}/bin"));
         assert!(executables.contains(&rust_bin.join("rust-lld")));
-        assert!(!executables.contains(&rust_bin.join("rust-objcopy")));
+        assert_eq!(
+            executables.contains(&rust_bin.join("rust-objcopy")),
+            triple == "aarch64-apple-darwin"
+        );
+        if triple == "aarch64-apple-darwin" {
+            fs::remove_file(rust_bin.join("rust-objcopy")).unwrap();
+            assert!(
+                component_inputs(&record, &mut executables, &mut libraries, &mut reads).is_err()
+            );
+            fs::write(rust_bin.join("rust-objcopy"), b"tool identity fixture").unwrap();
+        }
         assert!(executables.contains(&fixture.root.join("toolchain/bin/llvm-objcopy")));
         assert_eq!(reads.len(), 6);
         fs::remove_file(rust_bin.join("rust-lld")).unwrap();

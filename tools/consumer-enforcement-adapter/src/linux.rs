@@ -679,7 +679,8 @@ mod linux {
         let mut exec_seen = BTreeSet::new();
         let mut pending_exec_trees = Vec::new();
         let mut pending_exec_derived_trees = Vec::new();
-        let mut library_seen = BTreeSet::new();
+        let mut library_lookup_seen = BTreeSet::new();
+        let mut library_targets = BTreeMap::new();
         let mut future_exec = Vec::new();
         let mut future_derived = Vec::new();
 
@@ -798,14 +799,27 @@ mod linux {
                             path.display()
                         ));
                     }
-                    if !library_seen.insert(path.clone()) {
-                        return Err(format!("duplicate read-library path {}", path.display()));
+                    if !library_lookup_seen.insert(path_text.to_owned()) {
+                        return Err(format!("duplicate read-library lookup path {path_text}"));
                     }
-                    policy.read_libraries.push(ReadLibraryRule {
-                        path,
-                        expected_sha256: hash.to_ascii_lowercase(),
-                        pre_run_sha256: actual,
-                    });
+                    let expected_sha256 = hash.to_ascii_lowercase();
+                    match library_targets.get(&path) {
+                        Some(existing_hash) if existing_hash != &expected_sha256 => {
+                            return Err(format!(
+                                "read-library aliases disagree on canonical target hash: {}",
+                                path.display()
+                            ));
+                        }
+                        Some(_) => {}
+                        None => {
+                            library_targets.insert(path.clone(), expected_sha256.clone());
+                            policy.read_libraries.push(ReadLibraryRule {
+                                path,
+                                expected_sha256,
+                                pre_run_sha256: actual,
+                            });
+                        }
+                    }
                 }
                 "read-tree" => {
                     let (role, path) = rest
@@ -2768,6 +2782,103 @@ mod linux {
             fs::write(&library, b"changed library bytes").expect("mutate library fixture");
             assert!(!verify_read_library_hashes(&policy)[0].post_run_hash_matches);
             drop(plan);
+            fs::remove_dir_all(root).expect("remove private test directory");
+        }
+
+        #[test]
+        fn read_library_aliases_are_verified_and_share_one_enforcement_entry() {
+            let root = private_test_root("read-library-aliases");
+            let library = root.join("libfixture.so.11");
+            let alias_one = root.join("libfixture.so");
+            let alias_two = root.join("libfixture.so.1");
+            fs::write(&library, b"fixture library bytes").expect("write library fixture");
+            std::os::unix::fs::symlink(&library, &alias_one).expect("create first library alias");
+            std::os::unix::fs::symlink(&library, &alias_two).expect("create second library alias");
+
+            let canonical = fs::canonicalize(&library).expect("canonical library target");
+            let digest = sha256_file(&canonical).expect("hash canonical library");
+            let target_inode = fs::metadata(&canonical).expect("stat library target").ino();
+            assert_eq!(
+                fs::metadata(&alias_one)
+                    .expect("stat first library alias")
+                    .ino(),
+                target_inode
+            );
+            assert_eq!(
+                fs::metadata(&alias_two)
+                    .expect("stat second library alias")
+                    .ino(),
+                target_inode
+            );
+
+            let policy_text = format!(
+                "consumer-policy-v1\nexec /bin/true\nread-library {} {}\nread-library {} {}\nread-library {} {}\n",
+                canonical.display(),
+                digest,
+                alias_one.display(),
+                digest,
+                alias_two.display(),
+                digest
+            );
+            let policy = parse_policy(&policy_text).expect("accept distinct verified aliases");
+            assert_eq!(policy.read_libraries.len(), 1);
+            assert_eq!(policy.read_libraries[0].path, canonical);
+            assert_eq!(policy.read_libraries[0].expected_sha256, digest);
+            assert_eq!(verify_read_library_hashes(&policy).len(), 1);
+
+            let wrong_hash = "0".repeat(64);
+            let wrong_hash = if wrong_hash == digest {
+                "1".repeat(64)
+            } else {
+                wrong_hash
+            };
+            let alias_mismatch = format!(
+                "consumer-policy-v1\nexec /bin/true\nread-library {} {}\nread-library {} {}\n",
+                canonical.display(),
+                digest,
+                alias_one.display(),
+                wrong_hash
+            );
+            assert!(
+                parse_policy(&alias_mismatch)
+                    .expect_err("verify every alias digest before de-duplication")
+                    .contains("read-library hash mismatch")
+            );
+
+            let missing = root.join("missing-library.so");
+            let invalid_file = format!(
+                "consumer-policy-v1\nexec /bin/true\nread-library {} {}\n",
+                missing.display(),
+                digest
+            );
+            assert!(
+                parse_policy(&invalid_file)
+                    .expect_err("reject missing library path")
+                    .contains("resolve")
+            );
+
+            fs::remove_dir_all(root).expect("remove private test directory");
+        }
+
+        #[test]
+        fn read_library_rejects_repeated_original_lookup_spelling() {
+            let root = private_test_root("read-library-duplicate-lookup");
+            let library = root.join("libfixture.so");
+            fs::write(&library, b"fixture library bytes").expect("write library fixture");
+            let digest = sha256_file(&library).expect("hash library fixture");
+            let policy_text = format!(
+                "consumer-policy-v1\nexec /bin/true\nread-library {} {}\nread-library {} {}\n",
+                library.display(),
+                digest,
+                library.display(),
+                digest
+            );
+
+            assert!(
+                parse_policy(&policy_text)
+                    .expect_err("reject repeated lookup directive")
+                    .contains("duplicate read-library lookup path")
+            );
             fs::remove_dir_all(root).expect("remove private test directory");
         }
 

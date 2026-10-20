@@ -489,6 +489,18 @@ impl NativeBuildRecipe {
         if let Some((clang, sdk)) = &self.macos_host_paths {
             spec.env
                 .insert(OsString::from("SDKROOT"), sdk.as_os_str().to_os_string());
+            // The pinned Darwin rust-objcopy searches ../lib from its own bin
+            // directory, while its LLVM dylib is installed at the Rust root.
+            // Cargo preserves this explicit fallback for rustc and its tools.
+            let rust_libraries =
+                std::env::join_paths([self.paths.rust_root.join("lib")]).map_err(|_| {
+                    Refusal::new(
+                        "Rust library directory cannot be represented in the Darwin loader path",
+                    )
+                })?;
+            spec.env
+                .insert(OsString::from("DYLD_FALLBACK_LIBRARY_PATH"), rust_libraries);
+
             spec.env.insert(
                 OsString::from("CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER"),
                 clang.as_os_str().to_os_string(),
@@ -894,6 +906,13 @@ mod tests {
         let mut macos = recipe();
         macos.host = Host::MacosAarch64;
         let options = options("hello-aros", &[]);
+        assert!(
+            !linux
+                .cargo_spec(&options)
+                .unwrap()
+                .env
+                .contains_key(OsStr::new("DYLD_FALLBACK_LIBRARY_PATH"))
+        );
         let original = macos.c_compile_spec(&options, CSourceUnit::Entry).unwrap();
         let target_flags = macos.cargo_environment(&options).unwrap();
         assert!(
@@ -911,6 +930,11 @@ mod tests {
         assert_eq!(macos.cargo_environment(&options).unwrap(), target_flags);
         let cargo = macos.cargo_spec(&options).unwrap();
         assert_eq!(cargo.env[OsStr::new("SDKROOT")], OsStr::new("/Apple SDK"));
+        assert_eq!(
+            cargo.env[OsStr::new("DYLD_FALLBACK_LIBRARY_PATH")],
+            macos.paths.rust_root.join("lib").as_os_str()
+        );
+
         assert_eq!(
             cargo.env[OsStr::new("CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER")],
             OsStr::new("/Apple tools/clang")
