@@ -1,19 +1,19 @@
 {
-  "schema": "ami-rust-rc1-linux-fork-ipc-development-v1",
-  "recorded_utc": "2026-10-20T14:11:35.265884+00:00",
-  "status": "LOCAL_COMPONENT_CHECKS_COMPLETE_NATIVE_LINUX_AND_RC1_PENDING",
+  "schema": "ami-rust-rc1-linux-fork-ipc-development-v2",
+  "recorded_utc": "2026-10-20T14:44:06.402927+00:00",
+  "status": "LOCAL_CHECKS_COMPLETE_CORRECTED_NATIVE_LINUX_AND_RC1_PENDING",
   "base_source": "5135254310dba8d7ad2886332fb888b9518c159c",
   "source_files": {
-    "tools/consumer-enforcement-adapter/src/linux.rs": "7a307c7af4d0391a47b7c73fc32b57daf060d0aaa6ca4d7033df009ff4c9ed70",
-    "tools/consumer-enforcement-adapter/LINUX.md": "9f7d60e95df6e5e80b591b26634950fe7374127d30922c1e91df706e11a28318",
+    "tools/consumer-enforcement-adapter/src/linux.rs": "4c2647864dde6b79639420dca29972aebd5c5c3b83ca2d14bd313b123fd5b2f9",
+    "tools/consumer-enforcement-adapter/LINUX.md": "2601b1ef3664c38349946cf56308d02a02879882f2cc2d1a0066d40717ab78dd",
     "tooling/crates/xtask/src/consumer_observe.rs": "a11ba4bb752426e921888b4347348c7686ba901299788f2c1f11d615c9857900",
     "tooling/crates/xtask/src/cold_runtime_probe.rs": "bd9b3873e7f43849d9cb3409779df9667ccb338fd491170068ff1ced28c1e6a9",
-    "tooling/crates/xtask/src/fork_runtime_probe.rs": "d9a16ed45f68d21bce5f4b8d3a77836e785bec6970d47636d4d58298e34fc498",
-    "tooling/crates/xtask/tests/consumer_enforcement.rs": "c10f7b15de036da34eb9b5f2b70ba3f240bd7e1b38a4591f9a7cde10418ad402",
+    "tooling/crates/xtask/src/fork_runtime_probe.rs": "a8fac58aa6cb5d3c59b9c165b3f0d581b8c0f9d7968d061eec8658c8ef388b7c",
+    "tooling/crates/xtask/tests/consumer_enforcement.rs": "362f11ad047e0576ed5363f98cab7af4afc114beefc24b6c322dd1fa07743f1f",
     "release/native-tooling-inputs.json": "da1ab42fc81972ba298343430cc89a5508cba7500802364ff1754075015a9dc1",
     ".github/workflows/rc1-linux-git-transport-diagnostic.yml": "8910a58337211142250beae15c1fa0dca01d9693cd4da4042a8998ebc6a71dad"
   },
-  "observed_failure": {
+  "original_full_sdk_failure": {
     "run": 39422283932,
     "attempt": 1,
     "source": "5135254310dba8d7ad2886332fb888b9518c159c",
@@ -23,6 +23,23 @@
     "original_archives": 8,
     "collection_manifest_sha256": "39678b99401e86fbfda9a2d1b7e35a1c2c866427b7f3a778ef49a5380a717624"
   },
+  "previous_candidate": {
+    "source": "09190e940a9590edea91dc8869af7fe2bb979859",
+    "regular_ci": {
+      "run": 39437088347,
+      "conclusion": "failure",
+      "macos_migration": "success",
+      "linux_migration": "failure"
+    },
+    "focused_linux": {
+      "run": 39437088789,
+      "conclusion": "failure"
+    },
+    "original_archives": 3,
+    "retained_failure_checkpoint_sha256": "5ecf87343d3580c789275828a1f14d91ae58ae23c6a6ef5322b337c392b49046",
+    "observed_fork_failure": "Forced-fork descendant panicked in Rust CLOEXEC handshake with EACCES; no complete fork-positive pass.",
+    "observed_cargo_probe_failure": "Harness precreated derived/target; adapter correctly refused the nonempty private parent before Cargo launch."
+  },
   "source_rationale": {
     "cargo_process_builder": {
       "upstream_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
@@ -30,118 +47,113 @@
       "sha256": "225dad38fa80928269fcd572d55ff21384c365b043c39c6a6090434d995263ae",
       "behavior": "Configures the inherited jobserver on the rustc command."
     },
-    "fork_handshake": "The pinned Rust Unix process source uses AF_UNIX SOCK_SEQPACKET for the fork-path child handshake. Cargo jobserver pre_exec hooks select the fork path. The old offline seccomp filter denied socketpair(53). This source-based diagnosis still requires the actual Linux Cargo runtime probe and full SDK qualification.",
-    "correction": "Permit only socketpair(AF_UNIX, SOCK_SEQPACKET or SOCK_SEQPACKET|SOCK_CLOEXEC, protocol0) under network deny. Keep socket/connect/bind/listen/sendmsg/recvmsg/io_uring, x32, execveat and memfd denials. No additional /dev/null write or broad executable/library grant."
+    "fork_handshake": "Pinned Rust Linux process source receives an eight-byte status through Socket::read, implemented by libc::recv with flags zero. The existing syscall45 block prevents the local socketpair handshake. This source-based diagnosis requires corrected native execution and full SDK qualification.",
+    "correction": "Allow only unnamed socketpair(AF_UNIX, SOCK_SEQPACKET with optional CLOEXEC, protocol0) and recvfrom(count8, flags0, addressNULL, address-lengthNULL). Both words of size_t and pointer arguments are checked; all other recvfrom calls remain denied. Socket/connect/bind/listen/sendto/sendmsg/recvmsg/io_uring, x32, execveat and memfd remain denied. No null-write or broad executable/library grant.",
+    "inherited_descriptor_limit": "As with already-permitted read/write, seccomp cannot revoke an inherited network socket or bind this receive to a prior socketpair. Existing clean Supervisor input-descriptor boundary remains required.",
+    "probe_setup": "Leave the private derived parent empty at policy load. Cargo creates its target child. After the expected compiler-execution omission counter, remove only that probe-owned child and require the identical empty 0700 parent before the positive. Prelaunch failures retain actual outer adapter diagnostics."
   },
   "new_hosted_probes": {
-    "kernel_controls": "Execute fork-based allowed descendant with exact marker-file effect, private socketpair roundtrips and three pair-argument/eighteen network syscall refusals. BPF unit cases cover argument forms, architecture, x32 and unchanged outbound profile.",
+    "kernel_controls": "Actual forced-fork descendant with exact marker-file effect; both private socketpair forms exchange bytes via read/write and raw recvfrom8; three bad socketpairs, seven bad receive arguments and all eighteen generic network syscall controls must return EACCES. BPF units include both pointer halves and unchanged outbound/x32/exec denials.",
     "actual_pinned_cargo": "Extract only the pinned Cargo component from the immutable v0.1.0 release bundle; verify its binary against the frozen Linux producer. Build one empty no_core host rlib with the paired pinned compiler under locked/offline/network-deny policy. Repeat first with only rustc exec-hash removed and require Cargo101/EACCES/no artifact. Exact raw captures, hashes, policy and valid adapter reports are required.",
-    "scope": "Cause-specific host probes; no AROS app, full SDK, RC1 or release acceptance."
+    "scope": "Cause-specific host probes only; no AROS, full SDK, RC1 or release acceptance."
   },
   "local_checks": {
-    "macos_workspace_tests_and_strict_clippy": {
-      "result": "PASS",
-      "raw_report_sha256": "98f48a505afe1bde4734b524876478ad7770589ea70739ed3ae98d5c7374e488",
-      "scope_mapping": {
-        "completed_labels": [
-          "linux-fork-macos-workspace-tests",
-          "linux-fork-macos-strict-clippy"
-        ],
-        "only_changed_source_since_then": [
-          "tooling/crates/xtask/src/fork_runtime_probe.rs"
-        ],
-        "reason": "Only the Linux-test-only Cargo probe changed; macOS excludes that included file entirely. Hosted both-platform CI is still required.",
-        "report_sha256": "98f48a505afe1bde4734b524876478ad7770589ea70739ed3ae98d5c7374e488"
-      }
-    },
-    "final_linux_workspace_strict_compile_clippy": "PASS_COMPILE_ONLY",
-    "linux_adapter_compile": "PASS_COMPILE_ONLY",
-    "source_material_tests": 10,
-    "workflow_actionlint": "PASS",
-    "empty_fixture_syntax": {
-      "artifact_sha256": "cdf1545fcfeb401b8a56e854cea8d32d1928e2ba554ddf129faf6aa95d421a70",
-      "rustc_sha256": "5bb7cf7ca89e240c2f97c00c94b5aa3576a84798def7d329b72cb12a20e6e6d0",
-      "scope": "Fixture syntax verified with paired macOS target compiler; not Linux runtime evidence.",
-      "source_sha256": "f877d457952bafb3566288e29dc211244bcab4b2b0ee0d6615ded8253b80e8ac"
-    },
-    "final_scoped_report_sha256": "90c73c46cb2c4c33dd006c401e5fb204a5a94797e0b6e041cda61dcafe7b8e5f",
-    "extra_adapter_lint_experiment": {
-      "disposition": "No lint suppression or production gate change. This extra strict experiment found two existing adapter lints; inherited adapter compilation/tests and strict CLI workspace gates remain required.",
-      "new_diagnostics": [],
-      "same_actual_baseline_and_candidate_diagnostics": [
+    "workspace": {
+      "raw_report_sha256": "dd833f7b15287cb8e43fcbf186a1dae1cb2148aa08312e6fa5731b6b40d0b2c9",
+      "status": "PASS_LOCAL_MACOS_TESTS_AND_LINUX_COMPILE_ONLY",
+      "completed_commands": [
         {
-          "code": "clippy::chunks_exact_to_as_chunks",
-          "level": "warning",
-          "message": "using `chunks_exact` with a constant chunk size",
-          "primary_source": [
-            "        for (index, bytes) in block.chunks_exact(4).enumerate() {"
-          ]
+          "label": "linux-fork-format",
+          "exit_code": 0
         },
         {
-          "code": "clippy::chunks_exact_to_as_chunks",
-          "level": "warning",
-          "message": "using `chunks_exact` with a constant chunk size",
-          "primary_source": [
-            "        for (index, bytes) in block.chunks_exact(4).enumerate() {"
-          ]
+          "label": "linux-fork-macos-workspace-tests",
+          "exit_code": 0
         },
         {
-          "code": "clippy::too_many_arguments",
-          "level": "warning",
-          "message": "this function has too many arguments (22/7)",
-          "primary_source": [
-            "    fn report_json(\n        policy_path: &Path,\n        report_dir: &Path,\n        command: &Path,\n        args: &[String],\n        started: u128,\n        finished: u128,\n        elapsed_millis: u128,\n        pid: Option<u32>,\n        launch_error: Option<&str>,\n        exit_code: Option<i32>,\n        signal: Option<i32>,\n        stdout_path: &Path,\n        stderr_path: &Path,\n        out: &Capture,\n        err: &Capture,\n        replay_error: Option<&str>,\n        evidence_failures: &[String],\n        hash_checks: &[ExecHashCheck],\n        library_hash_checks: &[ReadLibraryHashCheck],\n        policy: &Policy,\n        abi: i32,\n        handled_fs: u64,\n    ) -> String {"
-          ]
+          "label": "linux-fork-macos-strict-clippy",
+          "exit_code": 0
         },
         {
-          "code": "clippy::too_many_arguments",
-          "level": "warning",
-          "message": "this function has too many arguments (22/7)",
-          "primary_source": [
-            "    fn report_json(\n        policy_path: &Path,\n        report_dir: &Path,\n        command: &Path,\n        args: &[String],\n        started: u128,\n        finished: u128,\n        elapsed_millis: u128,\n        pid: Option<u32>,\n        launch_error: Option<&str>,\n        exit_code: Option<i32>,\n        signal: Option<i32>,\n        stdout_path: &Path,\n        stderr_path: &Path,\n        out: &Capture,\n        err: &Capture,\n        replay_error: Option<&str>,\n        evidence_failures: &[String],\n        hash_checks: &[ExecHashCheck],\n        library_hash_checks: &[ReadLibraryHashCheck],\n        policy: &Policy,\n        abi: i32,\n        handled_fs: u64,\n    ) -> String {"
-          ]
+          "label": "linux-fork-linux-strict-compile-only",
+          "exit_code": 0
+        },
+        {
+          "label": "linux-fork-source-material-tests",
+          "exit_code": 0
+        },
+        {
+          "label": "linux-fork-workflow-lint",
+          "exit_code": 0
         }
       ],
-      "strict_a1_failed": true
+      "resources": {
+        "limits": {
+          "log_bytes": 16777216,
+          "rss_bytes": 4294967296,
+          "seconds": 1200,
+          "workspace_bytes": 12884901888
+        },
+        "peak_log_observed_bytes": 53749,
+        "peak_rss_observed_bytes": 1737359360,
+        "peak_workspace_observed_bytes": 2746743273
+      }
+    },
+    "adapter": {
+      "raw_report_sha256": "771a00a057a72cbb7b6eac46f02b7a4ac908f4396163fda40c8245daa5550bf8",
+      "status": "PASS_FINAL_LINUX_ADAPTER_COMPILE_AND_UNCHANGED_BASELINE_DIAGNOSTICS",
+      "completed_commands": [
+        {
+          "label": "linux-fork-probe-final-format",
+          "exit_code": 0
+        },
+        {
+          "label": "linux-fork-adapter-current-clippy",
+          "exit_code": 0
+        },
+        {
+          "label": "linux-fork-adapter-linux-compile",
+          "exit_code": 0
+        }
+      ],
+      "resources": {
+        "limits": {
+          "log_bytes": 16777216,
+          "rss_bytes": 4294967296,
+          "seconds": 1200,
+          "workspace_bytes": 12884901888
+        },
+        "peak_log_observed_bytes": 15036,
+        "peak_rss_observed_bytes": 305201152,
+        "peak_workspace_observed_bytes": 1358971746
+      }
     }
   },
-  "resources": {
-    "macos_workspace": {
-      "limits": {
-        "log_bytes": 16777216,
-        "rss_bytes": 4294967296,
-        "seconds": 1200,
-        "workspace_bytes": 12884901888
-      },
-      "peak_log_observed_bytes": 55294,
-      "peak_rss_observed_bytes": 1730723840,
-      "peak_workspace_observed_bytes": 2752475018
-    },
-    "final_scoped_checks": {
-      "limits": {
-        "log_bytes": 16777216,
-        "rss_bytes": 4294967296,
-        "seconds": 1200,
-        "workspace_bytes": 12884901888
-      },
-      "peak_log_observed_bytes": 31969,
-      "peak_rss_observed_bytes": 1007943680,
-      "peak_workspace_observed_bytes": 1553713496
-    },
-    "measurement_correction": "The intermediate a2 compile reused an old mutable target outside its workspace accounting. Its functional result is retained but its workspace peak is not full evidence. a3 repeats the short checks with every mutable target beneath its accounted work root."
+  "local_source_mapping": {
+    "changed_after_workspace_checks": [
+      "tools/consumer-enforcement-adapter/src/linux.rs"
+    ],
+    "reason": "Only adapter comment and test-only constant conditional compilation changed after workspace checks; final adapter all-target compile and measured unchanged baseline diagnostics were checked separately. Consumer CLI/helper sources are identical."
+  },
+  "extra_adapter_clippy": {
+    "new_diagnostics": [],
+    "same_baseline_codes": [
+      "clippy::chunks_exact_to_as_chunks",
+      "clippy::too_many_arguments"
+    ],
+    "scope": "Inherited non-strict adapter gate; no suppression or gate change. Strict CLI workspace passes."
   },
   "independent_reviews": [
     {
-      "report_sha256": "e9182c300ad34b93c37593c484b38806ed25bea90888abc58cfbb6118b953f47",
-      "findings": [],
-      "scope": "Independent source review; reviewer did not run builds or Linux tests."
+      "report_sha256": "ddb19f0767c48c937c793b3d4b4eb1cdad773e2f8f1fe0f5591e49267e7ad3ab",
+      "scope": "Read-only independent source review; no native execution claimed."
     },
     {
-      "report_sha256": "a1fb99148baab7452ecb3fd3cbaebb729ef54c6badd8cb723db394f84a4c84fb",
-      "findings": [],
-      "scope": "Independent source review; reviewer did not run builds or Linux tests."
+      "report_sha256": "dca9e4d112ffbdb84da888c25d3384562818120e85408a63d52f57feba22abc3",
+      "scope": "Read-only independent source review; no native execution claimed."
     }
   ],
+  "historical_development_report_sha256": "9839c55070342e626409da80275093388967bdeb175eb5307b56e26bb7360936",
   "unchanged": "Target Rust/Cargo/C-SDK inputs and flags, qualified ABI-v1/QEMU baseline, protected AROS checkouts and all published assets.",
   "remaining": [
     "Native Linux kernel and exact pinned Cargo execution; source-bound hosted artifact readbacks and counter-probes.",

@@ -485,6 +485,26 @@ fn native_interpreter_controls_are_refused_under_the_adapter_policy() -> Result<
         )?;
         require_text(
             ipc.stdout.as_bytes(),
+            "PRIVATE_HANDSHAKE_RECV_OK",
+            "Linux private eight-byte fork handshake",
+        )?;
+        for label in [
+            "bad-count",
+            "high-count",
+            "bad-flags",
+            "address-low",
+            "address-high",
+            "address-length-low",
+            "address-length-high",
+        ] {
+            require_text(
+                ipc.stdout.as_bytes(),
+                &format!("HANDSHAKE_RECV_REFUSED case={label} errno=13"),
+                "Linux fork handshake argument refusal",
+            )?;
+        }
+        require_text(
+            ipc.stdout.as_bytes(),
             "ADAPTER_NETWORK_DENIAL_CONTROL",
             "Linux network denial",
         )?;

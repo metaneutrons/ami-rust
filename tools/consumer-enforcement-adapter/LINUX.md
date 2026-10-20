@@ -121,15 +121,17 @@ sits inside them.
 
 network outbound permits ordinary network syscalls. The default and
 network-deny profiles block Linux x86-64 socket operations and io_uring_setup
-with seccomp, with one cause-specific exception: `socketpair` accepts only
-`AF_UNIX`, `SOCK_SEQPACKET`, protocol `0`, and the same type with optional
-`SOCK_CLOEXEC`. Rust's Unix process-spawn path uses this unnamed local pair for
-its private child handshake when a `pre_exec` hook requires `fork`. The
-exception creates no addressable or public-network socket. Other socketpair
-domains, types, and protocols still return `EACCES`; `socket`, `connect`,
-`bind`, `listen`, send/receive entry points, and `io_uring_setup` remain
-denied. The filter compares the low 32 bits of the three integer arguments,
-matching the kernel syscall parameters. Network-outbound behavior is
+with two narrow exceptions for Rust's fork-based child handshake. `socketpair`
+accepts only `AF_UNIX`, `SOCK_SEQPACKET`, protocol `0`, and the same type with
+optional `SOCK_CLOEXEC`. Rust's Unix process-spawn path uses this unnamed local
+pair when a `pre_exec` hook requires `fork`. The filter also permits syscall
+`recvfrom` only when its byte count is exactly 8, flags are 0, and both the
+source-address and address-length pointers are null. It checks both 32-bit
+halves of the count and pointers. Rust's Linux process-spawn path uses this
+shape to receive its private child-status handshake. All other `recvfrom`
+calls return `EACCES`. Other socketpair domains, types, and protocols still
+return `EACCES`; `socket`, `connect`, `bind`, `listen`, `sendto`, `sendmsg`,
+`recvmsg`, and `io_uring_setup` remain denied. Network-outbound behavior is
 unchanged. In all cases the filter also denies x32 syscall numbers,
 `execveat`, and `memfd_create`, following the accepted
 tools/linux-no-python-probe mechanism.
@@ -213,10 +215,12 @@ The positive-fork-spawn control installs an empty `pre_exec` hook to force
 Rust's fork-based subprocess path and prints
 `ADAPTER_NATIVE_FORK_DESCENDANT_POSITIVE` after its child succeeds. Its hook
 does no allocation or locking. The socketpair-refusal control verifies that
-the two permitted private local pair forms can exchange bytes through
-`read`/`write`; it then checks that disallowed socketpair arguments and the
-network socket syscalls return `EACCES`. Its denied calls use an invalid file
-descriptor or null address and do not contact an external endpoint.
+both permitted private local pair forms exchange bytes through `read`/`write`
+and the exact eight-byte `recvfrom` handshake, then checks malformed handshake
+arguments and denied socket operations. The accepted handshake prints
+`PRIVATE_HANDSHAKE_RECV_OK`; malformed count, flags, or pointer arguments print
+`HANDSHAKE_RECV_REFUSED` with their case and `EACCES`. Denied calls use an
+invalid file descriptor or null data buffer and do not contact an endpoint.
 
 tools/linux-no-python-probe remains the accepted native direct, transitive,
 absolute-shebang, and embedded-library control harness. This adapter adds an
@@ -231,11 +235,13 @@ file by a future byte hash. Source/build closure evidence is still required for
 all such generated or transient executables. The adapter does not claim a
 universal interpreter or embedded-runtime detector.
 
-The seccomp network-deny profile blocks socket syscalls created by the child;
-it does not revoke a network descriptor inherited from the caller. Run it
-inside the existing clean Supervisor process environment. Seccomp is not a
-general syscall sandbox. The child shares the Supervisor's process group so
-its established timeout and cleanup can stop the full command tree.
+The seccomp network-deny profile does not revoke a network descriptor
+inherited from the caller. Since seccomp cannot associate a `recvfrom` call
+with the earlier creation of a local socketpair, an inherited receive-capable
+network descriptor could also use the exact eight-byte, null-address form.
+Run it inside the existing clean Supervisor process environment. Seccomp is
+not a general syscall sandbox. The child shares the Supervisor's process group
+so its established timeout and cleanup can stop the full command tree.
 
 Cross-compilation checks Rust types and conditional compilation only. Qualify
 Landlock/seccomp behavior, the controls and actual consumer commands on native

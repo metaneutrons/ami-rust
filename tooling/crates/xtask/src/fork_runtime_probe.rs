@@ -227,7 +227,6 @@ fn run_pinned_cargo_fork_probe_inner(
         &project_src,
         &build_work,
         &derived,
-        &target_dir,
         &cargo_root,
     ] {
         create_private_directory(path)?;
@@ -586,6 +585,16 @@ fn run_pinned_cargo_fork_probe_inner(
     if target_rlib.symlink_metadata().is_ok() {
         return Err("Cargo probe started with an existing output artifact".to_owned());
     }
+    // The adapter admits this exact private parent only while it is empty.
+    // Cargo, rather than the harness, must create the target tree inside it.
+    let derived_before = cold_runtime_derived_identity(&derived)?;
+    if fs::read_dir(&derived)
+        .map_err(|error| format!("inspect Cargo derived parent: {error}"))?
+        .next()
+        .is_some()
+    {
+        return Err("Cargo probe derived parent is not empty before its counter".to_owned());
+    }
     let counter_policy_path = artifacts.join("cargo-counter-rustc-exec-omitted.txt");
     let counter_policy =
         copy_policy_omitting_one_exec_hash(&policy_path, &counter_policy_path, &rustc)?;
@@ -600,6 +609,22 @@ fn run_pinned_cargo_fork_probe_inner(
     let counter_report = diagnostic_json_file(Path::new(
         counter_case["report_path"].as_str().unwrap_or_default(),
     ));
+    if !successful_linux_adapter_report(&counter_report, 101) {
+        let adapter_stderr = read_regular_bounded(
+            Path::new(
+                counter_case["adapter_stderr_path"]
+                    .as_str()
+                    .unwrap_or_default(),
+            ),
+            1024 * 1024,
+        )
+        .map_err(|error| format!("read failed Cargo counter adapter diagnostic: {error}"))?;
+        return Err(format!(
+            "Cargo counter did not reach the expected child refusal (outer exit {}): {}",
+            counter_case["outer_exit_code"],
+            String::from_utf8_lossy(&adapter_stderr)
+        ));
+    }
     let counter_stderr = read_raw_stderr(&counter_case)?;
     let counter_gate = counter_case["outer_exit_code"].as_i64() == Some(101)
         && counter_case["outer_signal"].is_null()
@@ -623,6 +648,23 @@ fn run_pinned_cargo_fork_probe_inner(
             "pinned Cargo missing-compiler-execution counter did not refuse as expected".to_owned(),
         );
     }
+    // A refused compiler must leave no reusable build output. Remove only the
+    // known probe-owned target child, retaining the same private parent inode.
+    let cleanup = cold_runtime_remove_counter_stage(&derived, &target_dir)?;
+    let derived_after_counter = cold_runtime_derived_identity(&derived)?;
+    if derived_after_counter != derived_before {
+        return Err("Cargo counter changed its private derived parent identity".to_owned());
+    }
+    let counter_cleanup = json!({
+        "cleanup":cleanup,
+        "before":derived_before,
+        "after":derived_after_counter,
+        "same_parent_identity":true,
+    });
+    write_diagnostic_json(
+        &artifacts.join("cargo-counter-cleanup.json"),
+        &counter_cleanup,
+    )?;
     let adapter_case = run_raw_adapter_case(
         "pinned-linux-cargo-1.99-starts-paired-rustc-offline",
         &artifacts.join("cargo-build-case"),
@@ -727,6 +769,7 @@ fn run_pinned_cargo_fork_probe_inner(
         "adapter_report_sha256":sha256_bytes(&report_raw),
         "adapter_case":adapter_case,
         "compiler_execution_counter":counter,
+        "counter_cleanup":counter_cleanup,
         "child_output":{
             "stdout_path":report["stdout"]["path"],
             "stdout_bytes":child_stdout.0.len(),

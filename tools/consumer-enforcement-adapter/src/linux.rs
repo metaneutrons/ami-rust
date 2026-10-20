@@ -184,10 +184,10 @@ mod linux {
     const AT_EMPTY_PATH: i32 = 0x1000;
     const MFD_CLOEXEC: u32 = 1;
 
-    // Linux x86-64 syscall numbers for the network-deny profile. socketpair
-    // has a separate argument check below: only an unnamed AF_UNIX
-    // SOCK_SEQPACKET pair is allowed for Rust's private subprocess handshake.
-    // All other socket creation and network operations remain denied;
+    // Linux x86-64 syscall numbers for the network-deny profile. Separate
+    // argument checks permit an unnamed AF_UNIX/SOCK_SEQPACKET pair and its
+    // exact eight-byte, null-address receive for Rust's subprocess handshake.
+    // All other socket creation and addressing operations remain denied;
     // io_uring_setup is denied to close an asynchronous socket path.
     const NETWORK_SYSCALLS: &[u32] = &[
         41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 54, 55, 288, 299, 307, 425,
@@ -199,6 +199,9 @@ mod linux {
     const SOCK_SEQPACKET: i32 = 5;
     const SOCK_CLOEXEC: i32 = 0x0008_0000;
     const SYS_SOCKET: isize = 41;
+    #[cfg(test)]
+    const SYS_SENDTO: isize = 44;
+    const SYS_RECVFROM: isize = 45;
     const SYS_SOCKETPAIR: isize = 53;
 
     #[repr(C)]
@@ -1718,6 +1721,58 @@ mod linux {
             },
         ];
         if !network_outbound {
+            // Rust's Linux fork-based subprocess handshake receives one
+            // eight-byte status message through recvfrom on its private
+            // SOCK_SEQPACKET pair. Keep syscall 45 denied except for that
+            // exact shape. The argument checks preserve the syscall number
+            // accumulator when this is not recvfrom and inspect both halves
+            // of each 64-bit size or pointer argument.
+            filter.push(SockFilter {
+                code: BPF_JMP_JEQ_K,
+                jt: 0,
+                jf: 16,
+                k: SYS_RECVFROM as u32,
+            });
+            for (index, (offset, value)) in [
+                (32, 8), // args[2], count low word
+                (36, 0), // args[2], count high word
+                (40, 0), // args[3], flags
+                (48, 0), // args[4], address low word
+                (52, 0), // args[4], address high word
+                (56, 0), // args[5], address-length pointer low word
+                (60, 0), // args[5], address-length pointer high word
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                filter.push(SockFilter {
+                    code: BPF_LD_W_ABS,
+                    jt: 0,
+                    jf: 0,
+                    k: offset,
+                });
+                filter.push(SockFilter {
+                    code: BPF_JMP_JEQ_K,
+                    jt: 0,
+                    jf: (13 - index * 2) as u8,
+                    k: value,
+                });
+            }
+            filter.extend([
+                SockFilter {
+                    code: BPF_RET_K,
+                    jt: 0,
+                    jf: 0,
+                    k: SECCOMP_RET_ALLOW,
+                },
+                SockFilter {
+                    code: BPF_RET_K,
+                    jt: 0,
+                    jf: 0,
+                    k: SECCOMP_RET_ERRNO | EACCES as u32,
+                },
+            ]);
+
             // Rust's Unix subprocess backend uses a private, unnamed
             // AF_UNIX/SOCK_SEQPACKET socketpair for its child handshake.
             // This narrow exception grants no addressable socket or public
@@ -2548,6 +2603,26 @@ mod linux {
             local_socketpair_roundtrip(sock_type)?;
         }
         println!("LOCAL_SOCKETPAIR_IO_OK");
+        println!("PRIVATE_HANDSHAKE_RECV_OK");
+
+        for (label, arguments) in [
+            ("bad-count", [u64::MAX, 0, 7, 0, 0, 0]),
+            ("high-count", [u64::MAX, 0, 8 + (1 << 32), 0, 0, 0]),
+            ("bad-flags", [u64::MAX, 0, 8, 1, 0, 0]),
+            ("address-low", [u64::MAX, 0, 8, 0, 1, 0]),
+            ("address-high", [u64::MAX, 0, 8, 0, 1 << 32, 0]),
+            ("address-length-low", [u64::MAX, 0, 8, 0, 0, 1]),
+            ("address-length-high", [u64::MAX, 0, 8, 0, 0, 1 << 32]),
+        ] {
+            let result = syscall6(SYS_RECVFROM, arguments);
+            let errno = io::Error::last_os_error().raw_os_error();
+            if result != -1 || errno != Some(EACCES) {
+                return Err(format!(
+                    "recvfrom {label} expected EACCES; result={result} errno={errno:?}"
+                ));
+            }
+            println!("HANDSHAKE_RECV_REFUSED case={label} errno={EACCES}");
+        }
 
         for number in NETWORK_SYSCALLS {
             let arguments = if *number == SYS_SOCKET as u32 {
@@ -2602,13 +2677,40 @@ mod linux {
         if received != payload {
             return Err("local socketpair returned unexpected payload".to_owned());
         }
+
+        let handshake = b"FORKACK!";
+        (&sender)
+            .write_all(handshake)
+            .map_err(|error| format!("write allowed local handshake: {error}"))?;
+        let mut handshake_received = [0; 8];
+        let result = syscall6(
+            SYS_RECVFROM,
+            [
+                receiver.as_raw_fd() as u64,
+                handshake_received.as_mut_ptr() as usize as u64,
+                handshake_received.len() as u64,
+                0,
+                0,
+                0,
+            ],
+        );
+        if result != handshake_received.len() as isize {
+            return Err(format!(
+                "read allowed local handshake with recvfrom: result={result}, error={}",
+                io::Error::last_os_error()
+            ));
+        }
+        if handshake_received != *handshake {
+            return Err("local recvfrom handshake returned unexpected payload".to_owned());
+        }
         Ok(())
     }
 
     fn syscall6(number: isize, arguments: [u64; 6]) -> isize {
         // SAFETY: callers supply the argument layout for the named Linux
-        // syscall. The denial control uses null pointers and invalid fds, so
-        // no external network endpoint or user memory is accessed.
+        // syscall. Refusal controls use invalid fds and non-dereferenceable
+        // addresses; the positive recvfrom check uses a live private socket
+        // pair and an eight-byte local buffer.
         unsafe {
             syscall(
                 number,
@@ -2667,9 +2769,16 @@ mod linux {
                         accumulator = match instruction.k {
                             0 => syscall_number,
                             4 => arch,
-                            16 => arguments[0] as u32,
-                            24 => arguments[1] as u32,
-                            32 => arguments[2] as u32,
+                            offset if (16..64).contains(&offset) => {
+                                let argument = ((offset - 16) / 8) as usize;
+                                let high_word = (offset - 16) % 8 == 4;
+                                let value = arguments[argument];
+                                if high_word {
+                                    (value >> 32) as u32
+                                } else {
+                                    value as u32
+                                }
+                            }
                             offset => panic!("unexpected BPF data offset {offset}"),
                         };
                     }
@@ -2701,7 +2810,7 @@ mod linux {
         }
 
         #[test]
-        fn network_deny_filter_only_allows_private_seqpacket_socketpairs() {
+        fn network_deny_filter_only_allows_private_seqpacket_handshake() {
             let filter = seccomp_filter(false);
             for sock_type in [SOCK_SEQPACKET, SOCK_SEQPACKET | SOCK_CLOEXEC] {
                 let args = [AF_UNIX as u64, sock_type as u64, 0, 0, 0, 0];
@@ -2732,6 +2841,39 @@ mod linux {
                 SECCOMP_RET_ALLOW
             );
 
+            assert_eq!(
+                evaluate_seccomp_filter(
+                    &filter,
+                    AUDIT_ARCH_X86_64,
+                    SYS_RECVFROM as u32,
+                    [u64::MAX, 0xfeed_beef, 8, 0, 0, 0],
+                ),
+                SECCOMP_RET_ALLOW,
+                "the exact eight-byte recvfrom handshake shape is allowed"
+            );
+
+            for (label, arguments) in [
+                ("short count", [u64::MAX, 0, 7, 0, 0, 0]),
+                ("long count", [u64::MAX, 0, 9, 0, 0, 0]),
+                ("high count", [u64::MAX, 0, 8 + (1 << 32), 0, 0, 0]),
+                ("flags", [u64::MAX, 0, 8, 1, 0, 0]),
+                ("address low half", [u64::MAX, 0, 8, 0, 1, 0]),
+                ("address high half", [u64::MAX, 0, 8, 0, 1 << 32, 0]),
+                ("address-length low half", [u64::MAX, 0, 8, 0, 0, 1]),
+                ("address-length high half", [u64::MAX, 0, 8, 0, 0, 1 << 32]),
+            ] {
+                assert_eacces(evaluate_seccomp_filter(
+                    &filter,
+                    AUDIT_ARCH_X86_64,
+                    SYS_RECVFROM as u32,
+                    arguments,
+                ));
+                assert!(
+                    NETWORK_SYSCALLS.contains(&(SYS_RECVFROM as u32)),
+                    "recvfrom remains in the network-deny syscall list ({label})"
+                );
+            }
+
             for (domain, sock_type, protocol) in [
                 (AF_INET, SOCK_SEQPACKET, 0),
                 (AF_UNIX, SOCK_STREAM, 0),
@@ -2759,6 +2901,13 @@ mod linux {
                     [0; 6],
                 ));
             }
+            assert!(NETWORK_SYSCALLS.contains(&(SYS_SENDTO as u32)));
+            assert_eacces(evaluate_seccomp_filter(
+                &filter,
+                AUDIT_ARCH_X86_64,
+                SYS_SENDTO as u32,
+                [u64::MAX, 0, 8, 0x4000, 0, 0],
+            ));
             assert_eacces(evaluate_seccomp_filter(
                 &filter,
                 AUDIT_ARCH_X86_64,
