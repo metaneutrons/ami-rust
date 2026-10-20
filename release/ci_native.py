@@ -2507,6 +2507,64 @@ def _native_upgrade_inputs(outer, bundle, new_bundle, new_pins):
     return old, path, launcher
 
 
+def _verified_retained_native_core(state, old_pins):
+    """Verify the one supported retained launcher alias and read its pinned core."""
+    state = Path(state)
+    try:
+        if not stat.S_ISDIR(state.lstat().st_mode):
+            raise ValueError("retained native state must be a real directory")
+    except OSError as error:
+        raise ValueError("retained native state is missing or unsafe") from error
+
+    version = old_pins.get("package_version")
+    try:
+        auth.rel(version)
+    except (TypeError, ValueError) as error:
+        raise ValueError("retained native package version is unsafe") from error
+    if "/" in version:
+        raise ValueError("retained native package version cannot select a nested path")
+
+    alias_target = f"../libexec/ami-rust/{version}/bin/ami-rust"
+    try:
+        alias_parent = auth.below(state, "retained/bin")
+        alias = alias_parent / "ami-rust"
+        alias_before = alias.lstat()
+    except (OSError, ValueError) as error:
+        raise ValueError("retained native launcher alias is missing or unsafe") from error
+    if not stat.S_ISLNK(alias_before.st_mode):
+        raise ValueError("retained native launcher must be the expected relative alias")
+    try:
+        observed_target = os.readlink(alias)
+        alias_after = alias.lstat()
+    except OSError as error:
+        raise ValueError("retained native launcher alias could not be inspected") from error
+    if (observed_target != alias_target
+            or (alias_before.st_dev, alias_before.st_ino, alias_before.st_mode)
+            != (alias_after.st_dev, alias_after.st_ino, alias_after.st_mode)):
+        raise ValueError("retained native launcher alias differs from its exact relative target")
+
+    relative_core = f"retained/libexec/ami-rust/{version}/bin/ami-rust"
+    try:
+        core = auth.below(state, relative_core)
+        core_info = core.lstat()
+    except (OSError, ValueError) as error:
+        raise ValueError("retained native package core is missing or has an unsafe path") from error
+    if not stat.S_ISREG(core_info.st_mode):
+        raise ValueError("retained native package core is not a regular file")
+    try:
+        raw = auth.read(core)
+        resolved_alias = alias.resolve(strict=True)
+        resolved_core = core.resolve(strict=True)
+        resolved_alias.relative_to(state.resolve(strict=True))
+    except (OSError, ValueError) as error:
+        raise ValueError("retained native launcher does not resolve to its state package core") from error
+    if resolved_alias != resolved_core:
+        raise ValueError("retained native launcher does not resolve to its versioned package core")
+    if auth.sha(raw) != old_pins.get("core_sha256"):
+        raise ValueError("retained native package core differs from the authenticated old pin")
+    return core, raw
+
+
 def _qualify_native_upgrade(work, output, old_outer, old_bundle, new_outer, new_bundle,
                             new_state, new_project, new_first, new_elf, xtask, cli,
                             supervisor, policy_path, command, protected, notices, new_pins):
@@ -2635,8 +2693,8 @@ def _qualify_native_upgrade(work, output, old_outer, old_bundle, new_outer, new_
     if old_package.exists() or old_package.is_symlink() or selector.resolve(strict=True) != new_package:
         raise ValueError("native upgrade did not remove only the replaced old package")
     retained = state / "retained/bin/ami-rust"
-    if (auth.sha(auth.read(retained)) != old_pins["core_sha256"]
-            or auth.read(state / "ready.json") != ready):
+    retained_core, retained_core_raw = _verified_retained_native_core(state, old_pins)
+    if auth.read(state / "ready.json") != ready:
         raise ValueError("native upgrade lost the exact old retained tooling/READY state")
     command("24-upgrade-old-retained-recheck", ["check-inputs", "--state", state], executable=retained)
     replay, replay_elf = build("25-upgrade-old-retained-offline-replay", retained, state, project)
@@ -2662,8 +2720,9 @@ def _qualify_native_upgrade(work, output, old_outer, old_bundle, new_outer, new_
             "old-replay.AMIRUST": replay / "artifacts/AMIRUST",
             "new-first.AMIRUST": new_first / "artifacts/AMIRUST",
             "new-upgrade.AMIRUST": new_build / "artifacts/AMIRUST",
+            "old-retained-core": retained_core,
     }.items():
-        raw = auth.read(source)
+        raw = retained_core_raw if name == "old-retained-core" else auth.read(source)
         destination = output / "native-upgrade-raw" / name
         write(destination, raw)
         evidence[name] = {"path": destination.relative_to(output).as_posix(),
@@ -2675,7 +2734,7 @@ def _qualify_native_upgrade(work, output, old_outer, old_bundle, new_outer, new_
         "old_policy_sha256": auth.sha(auth.read(old_policy)),
         "selector": str(selector), "selected_new_package": str(selected),
         "removed_old_package": old_package_identity,
-        "old_ready_sha256": auth.sha(ready), "old_retained_launcher_sha256": auth.sha(auth.read(retained)),
+        "old_ready_sha256": auth.sha(ready), "old_retained_launcher_sha256": auth.sha(retained_core_raw),
         "old_first_build": str(first), "old_retained_replay": str(replay),
         "new_first_build": str(new_first), "new_upgrade_build": str(new_build),
         "canonical_executable_sha256": auth.sha(new_elf),
