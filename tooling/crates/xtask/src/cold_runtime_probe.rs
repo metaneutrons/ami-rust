@@ -521,7 +521,11 @@ fn run_linux_cold_rustc_runtime_probe() -> std::result::Result<(), String> {
         "--quiet",
     ]);
     fixture.value["expected_exit"] = json!(0);
-    fixture.value["executables"] = json!([reference_rustc, cp_path, env_path, test_binary]);
+    let selected_rust_tools = rust_component_executables(COLD_RUNTIME_TARGET)
+        .map(|relative| source_component.join(relative));
+    let mut declared_executables = selected_rust_tools.to_vec();
+    declared_executables.extend([cp_path.clone(), env_path.clone(), test_binary.clone()]);
+    fixture.value["executables"] = json!(declared_executables);
     fixture.value["bindings"]
         .as_array_mut()
         .ok_or_else(|| "fixture omitted bindings array".to_owned())?
@@ -541,9 +545,48 @@ fn run_linux_cold_rustc_runtime_probe() -> std::result::Result<(), String> {
 
     let mut executables = spec.executables.clone();
     executables.insert(fs::canonicalize(&spec.command[0]).map_err(|error| error.to_string())?);
+    let mut invalid_executables = executables.clone();
+    let unused_objcopy = source_component.join(format!(
+        "lib/rustlib/{COLD_RUNTIME_TARGET}/bin/rust-objcopy"
+    ));
+    invalid_executables.insert(unused_objcopy.clone());
+    let error = match consumer_runtime::discover(
+        invalid_executables,
+        spec.libraries.clone(),
+        false,
+        true,
+        &work_root,
+    ) {
+        Err(error) => error.to_string(),
+        Ok(_) => {
+            return Err(
+                "unused pinned rust-objcopy unexpectedly resolved its LLVM runtime".to_owned(),
+            );
+        }
+    };
+    if !error.contains(&cold_runtime_path_text(&unused_objcopy)?)
+        || !error.contains("libLLVM.so.23.1-rust-1.100.0-nightly => not found")
+    {
+        return Err(format!(
+            "unused Rust tool counter failed for the wrong reason: {error}"
+        ));
+    }
+    write_diagnostic_json(
+        &artifact_root.join("unused-rust-objcopy-counter.json"),
+        &json!({
+            "schema":"ami-rust-unused-rust-tool-runtime-counter-v1",
+            "path":unused_objcopy,
+            "sha256":sha256_file(&unused_objcopy).map_err(|error| error.to_string())?,
+            "error":error,
+            "status":"REFUSED_UNRESOLVED_LLVM_FOR_UNUSED_PINNED_TOOL",
+            "claim":"Strict dependency refusal remains enabled; the frozen recipe uses toolchain llvm-objcopy instead.",
+        }),
+    )?;
     let runtime =
         consumer_runtime::discover(executables, spec.libraries.clone(), false, true, &work_root)
-            .map_err(|error| format!("discover reference rustc runtime closure: {error}"))?;
+            .map_err(|error| {
+                format!("discover selected Rust component runtime closure: {error}")
+            })?;
     write_diagnostic_json(
         &artifact_root.join("runtime-discovery.json"),
         &runtime.evidence,
@@ -564,7 +607,10 @@ fn run_linux_cold_rustc_runtime_probe() -> std::result::Result<(), String> {
         .iter()
         .map(|path| cold_runtime_path_text(path))
         .collect::<std::result::Result<BTreeSet<_>, _>>()?;
-    for expected in [&reference_rustc, &cp_path, &env_path, &test_binary] {
+    for expected in selected_rust_tools
+        .iter()
+        .chain([&cp_path, &env_path, &test_binary])
+    {
         let canonical = fs::canonicalize(expected).map_err(|error| error.to_string())?;
         if !runtime_executables.contains(&cold_runtime_path_text(&canonical)?) {
             return Err(format!(

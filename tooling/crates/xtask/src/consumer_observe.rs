@@ -597,6 +597,18 @@ fn selected_library_targets(
     Ok(targets)
 }
 
+// NativeBuildRecipe uses the AROS toolchain's llvm-objcopy. Rust's dormant
+// rust-objcopy is not a consumer executable; on the pinned Linux archive its
+// RUNPATH cannot locate the bundled LLVM library. Keep rust-lld because the
+// frozen AROS target selects it as its linker.
+fn rust_component_executables(triple: &str) -> [String; 3] {
+    [
+        "bin/rustc".to_owned(),
+        "bin/rustdoc".to_owned(),
+        format!("lib/rustlib/{triple}/bin/rust-lld"),
+    ]
+}
+
 fn component_inputs(
     record: &Path,
     executables: &mut BTreeSet<PathBuf>,
@@ -629,12 +641,7 @@ fn component_inputs(
         reads.insert(root.clone());
         let relative = match kind.as_str() {
             "cargo" => vec!["bin/cargo".to_owned()],
-            "rust" => vec![
-                "bin/rustc".to_owned(),
-                "bin/rustdoc".to_owned(),
-                format!("lib/rustlib/{triple}/bin/rust-lld"),
-                format!("lib/rustlib/{triple}/bin/rust-objcopy"),
-            ],
+            "rust" => rust_component_executables(triple).into(),
             "toolchain" => [
                 "clang",
                 "lld",
@@ -1145,6 +1152,63 @@ mod tests {
             .to_string()
             .contains("runtime library digest is malformed")
         );
+    }
+
+    #[test]
+    fn component_inventory_requires_selected_tools_but_not_unused_rust_objcopy() {
+        let fixture = Fixture::new();
+        let triple = match (std::env::consts::OS, std::env::consts::ARCH) {
+            ("macos", "aarch64") => "aarch64-apple-darwin",
+            ("linux", "x86_64") => "x86_64-unknown-linux-gnu",
+            _ => return,
+        };
+        let mut components = serde_json::Map::new();
+        for (kind, relative) in [
+            ("cargo", vec!["bin/cargo".to_owned()]),
+            ("collector", vec!["bin/aros-collect".to_owned()]),
+            ("csdk", vec![]),
+            ("rust", rust_component_executables(triple).into()),
+            (
+                "toolchain",
+                [
+                    "clang",
+                    "lld",
+                    "llvm-objcopy",
+                    "llvm-objdump",
+                    "llvm-nm",
+                    "llvm-ar",
+                ]
+                .map(|name| format!("bin/{name}"))
+                .into(),
+            ),
+            ("vendor", vec![]),
+        ] {
+            let root = fixture.root.join(kind);
+            fs::create_dir(&root).unwrap();
+            for path in relative {
+                let path = root.join(path);
+                fs::create_dir_all(path.parent().unwrap()).unwrap();
+                fs::write(path, b"tool identity fixture").unwrap();
+            }
+            components.insert(kind.to_owned(), json!(root));
+        }
+        let record = fixture.root.join("components.json");
+        fs::write(
+            &record,
+            serde_json::to_vec(&json!({"components":components})).unwrap(),
+        )
+        .unwrap();
+        let mut executables = BTreeSet::new();
+        let mut libraries = BTreeSet::new();
+        let mut reads = BTreeSet::new();
+        component_inputs(&record, &mut executables, &mut libraries, &mut reads).unwrap();
+        let rust_bin = fixture.root.join(format!("rust/lib/rustlib/{triple}/bin"));
+        assert!(executables.contains(&rust_bin.join("rust-lld")));
+        assert!(!executables.contains(&rust_bin.join("rust-objcopy")));
+        assert!(executables.contains(&fixture.root.join("toolchain/bin/llvm-objcopy")));
+        assert_eq!(reads.len(), 6);
+        fs::remove_file(rust_bin.join("rust-lld")).unwrap();
+        assert!(component_inputs(&record, &mut executables, &mut libraries, &mut reads).is_err());
     }
 
     #[test]
