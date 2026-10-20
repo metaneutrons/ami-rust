@@ -23,6 +23,7 @@ REQUIRED_SOURCES = (
     "tooling/crates/core/src/macos_process_snapshot.c",
     "tooling/crates/core/src/macos_process_snapshot.rs",
     "tooling/crates/core/src/migration_process.rs",
+    "tooling/crates/xtask/src/cold_runtime_probe.rs",
     "tooling/crates/xtask/src/consumer_observe.rs",
     "tooling/crates/xtask/src/consumer_report.rs",
     "tooling/crates/xtask/src/consumer_runtime.rs",
