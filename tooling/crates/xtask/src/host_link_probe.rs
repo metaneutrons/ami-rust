@@ -478,6 +478,22 @@ fn run_linux_pinned_host_linker_probe_inner(
             );
         }
 
+        // Each policy load requires an initially empty derived-execution parent.
+        // Retain the exact positive ELF as evidence, then remove only that known
+        // output before loading the one-rule counterpolicy against the same root.
+        let retained_positive = artifacts.join("positive-linked.elf");
+        write_new(&retained_positive, &positive_bytes).map_err(|error| error.to_string())?;
+        let positive_cleanup = host_link_probe_cleanup(&derived, &[&positive_output])?;
+        write_diagnostic_json(
+            &artifacts.join("positive-output-cleanup.json"),
+            &positive_cleanup,
+        )?;
+        if positive_cleanup["empty_after_cleanup"].as_bool() != Some(true) {
+            return Err(
+                "positive linker output was not removed before counterpolicy load".to_owned(),
+            );
+        }
+
         let counter_policy_path = artifacts.join("counter-policy-wrapper-exec-omitted.txt");
         let counter_policy =
             copy_policy_omitting_one_exec_hash(&policy_path, &counter_policy_path, &wrapper)?;
@@ -552,6 +568,8 @@ fn run_linux_pinned_host_linker_probe_inner(
             "positive_policy":policy_path,
             "counter_policy":counter_policy_path,
             "positive_link_gate":artifacts.join("positive-link-gate.json"),
+            "retained_positive_elf":retained_positive,
+            "positive_output_cleanup":positive_cleanup,
             "positive_run_gate":artifacts.join("positive-run-gate.json"),
             "counter_gate":artifacts.join("counter-gate.json"),
             "claim":"The pinned Rust component's GCC linker wrapper passed the exact host link route and marker execution; removing only its exec rule reproduced Permission denied with valid adapter evidence.",
