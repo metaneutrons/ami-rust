@@ -34,6 +34,7 @@ MAX_TREE_ENTRIES = 16_384
 MAX_PROOF_BYTES = 16 * 1024**2
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
+NATIVE_PACKAGING_REVISION = 2
 _RUNTIME_STATE_KEYS = {
     "manifest", "manifest_raw", "launchers", "tool_receipt", "cli", "xtask",
     "policy_path", "verifier_work", "verifier_output", "python_bootstrap",
@@ -407,7 +408,7 @@ def _package_inputs(identity: dict, source_tree: str, manifest_raw: bytes, manif
         for subject in _proof_subjects(config["sdk_version"])
     }
     version = config["sdk_version"]
-    revision = 1
+    revision = NATIVE_PACKAGING_REVISION
     return {
         "schema": "ami-rust-package-inputs-v2",
         "cli_version": config["cli_version"],
@@ -968,7 +969,8 @@ def verify(bundle: Path, work: Path, output: Path, host_rust: Path,
         if (package_result.get("schema") != "ami-rust-native-package-draft-v1"
                 or package_result.get("status") != "BYTE_CONSISTENT_PACKAGE_DRAFT"
                 or package_result.get("host") != LINUX
-                or package_result.get("package_version") != config["sdk_version"] + "-1"):
+                or package_result.get("package_version") !=
+                f"{config['sdk_version']}-{NATIVE_PACKAGING_REVISION}"):
             raise ValueError("Rust native package composer returned an unexpected package")
         verify_raw = ci_native._supervised_text(
             supervisor, [state["xtask"], "native-package-verify", "--package", package,
