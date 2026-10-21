@@ -5,7 +5,10 @@
 //! manifest/archive/inventory bindings before invoking the transaction engine.
 //! Historical receipts are removal inputs only; their drivers never execute.
 
+#[cfg(test)]
+use crate::process_spawn::FixtureCommandExt;
 pub use crate::transaction::{InstallFailure, PublishedInstall, RemovalFailure};
+
 use crate::{
     Refusal, Result,
     compression::{DecodeLimits, copy_xz},
@@ -577,7 +580,7 @@ mod tests {
             .env("PATH", "/usr/bin:/bin")
             .env("LC_ALL", "C")
             .env("AMI_NATIVE_INSTALL_FIXTURE", "1")
-            .output()
+            .output_guarded()
             .unwrap();
         assert!(
             output.status.success(),

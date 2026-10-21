@@ -10,6 +10,8 @@
 //! output pipes may outlive it.
 
 use crate::process_lease::{self, ChildLease};
+#[cfg(test)]
+use crate::process_spawn::FixtureCommandExt;
 
 use std::{
     collections::BTreeMap,
@@ -254,7 +256,7 @@ fn capture_inner(
         .stderr(Stdio::piped());
     command.process_group(0);
 
-    let child = command.spawn().map_err(|error| CaptureError {
+    let child = crate::process_spawn::spawn(&mut command).map_err(|error| CaptureError {
         cause: CaptureCause::Io(error),
         stdout: Vec::new(),
         stderr: Vec::new(),
@@ -555,14 +557,6 @@ fn run_capture_loop(
                 .checked_add(OBSERVATION_SAMPLE_INTERVAL)
                 .unwrap_or(observed_at);
         }
-        observer(CaptureObservation {
-            direct_pid: child.lease.pid(),
-            elapsed: started.elapsed(),
-            stdout_bytes: stdout.len(),
-            stderr_bytes: stderr.len(),
-            phase: CaptureObservationPhase::Running { sample_due },
-        })
-        .map_err(CaptureCause::Observation)?;
         if cancelled() {
             return Err(CaptureCause::Cancelled);
         }
@@ -570,6 +564,8 @@ fn run_capture_loop(
             return Err(CaptureCause::Timeout);
         }
 
+        // Check the owned direct child immediately before reporting it as
+        // running. A WNOWAIT-observed exit gets only the final drain/sample.
         if child.exited_without_reaping().map_err(CaptureCause::Io)? {
             // The child can exit just after the first read pass. Once WNOWAIT
             // observes that exit, do a final read pass so its last buffered
@@ -604,6 +600,21 @@ fn run_capture_loop(
             }
             child.reap().map_err(CaptureCause::Io)?;
             return Ok(());
+        }
+
+        observer(CaptureObservation {
+            direct_pid: child.lease.pid(),
+            elapsed: started.elapsed(),
+            stdout_bytes: stdout.len(),
+            stderr_bytes: stderr.len(),
+            phase: CaptureObservationPhase::Running { sample_due },
+        })
+        .map_err(CaptureCause::Observation)?;
+        if cancelled() {
+            return Err(CaptureCause::Cancelled);
+        }
+        if Instant::now() >= deadline {
+            return Err(CaptureCause::Timeout);
         }
     }
 }
@@ -1091,7 +1102,9 @@ mod tests {
                 if let Some(marker) = std::env::var_os("AMI_CAPTURE_MARKER") {
                     descendant.env("AMI_CAPTURE_MARKER", marker);
                 }
-                descendant.spawn().expect("spawn same-group descendant");
+                descendant
+                    .spawn_guarded()
+                    .expect("spawn same-group descendant");
                 println!("parent fixture exits with descendant holding pipes");
             }
             "spawn_closed_descendant" => {
@@ -1106,7 +1119,7 @@ mod tests {
                     descendant.env("AMI_CAPTURE_MARKER", marker);
                 }
                 descendant
-                    .spawn()
+                    .spawn_guarded()
                     .expect("spawn descendant with closed pipes");
             }
             "grandchild" | "write_marker_after_delay" => {
@@ -1224,7 +1237,7 @@ mod tests {
     }
 
     #[test]
-    fn observed_capture_matches_noop_capture_and_samples_final_output_tail() {
+    fn observed_capture_matches_noop_capture_and_preserves_final_output_tail() {
         let temp = TempDirectory::new();
         let command = quiet_spec("observed_tail", &temp.0);
         let baseline = capture(&command, limits(), || false).unwrap();
@@ -1244,10 +1257,6 @@ mod tests {
         assert_eq!(observed.stdout, baseline.stdout);
         assert_eq!(observed.stderr, baseline.stderr);
         assert!(observed.elapsed > Duration::ZERO);
-        assert!(observations.iter().any(|event| matches!(
-            event.phase,
-            CaptureObservationPhase::Running { sample_due: true }
-        )));
         let final_sample = observations
             .iter()
             .rev()
@@ -1258,6 +1267,111 @@ mod tests {
         assert_eq!(final_sample.stderr_bytes, observed.stderr.len());
         assert!(observed.stdout.ends_with(b"out-tail"));
         assert!(observed.stderr.ends_with(b"err-tail"));
+    }
+
+    #[test]
+    fn already_exited_unreaped_child_skips_running_and_preserves_final_tail() {
+        let temp = TempDirectory::new();
+        let command = quiet_spec("observed_tail", &temp.0);
+        let baseline = capture(&command, limits(), || false).unwrap();
+        let mut process = FixtureCommand::new(&command.program);
+        process
+            .args(&command.args)
+            .current_dir(&command.cwd)
+            .env_clear()
+            .envs(&command.env)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .process_group(0);
+        let child = process.spawn_guarded().unwrap();
+        let mut child = RunningChild::new(child, limits().termination_grace).unwrap();
+        let mut pipes = Pipes {
+            stdout: child.lease.take_stdout(),
+            stderr: child.lease.take_stderr(),
+        };
+        set_nonblocking(&pipes).unwrap();
+
+        let exit_deadline = Instant::now() + limits().timeout;
+        loop {
+            if child.exited_without_reaping().unwrap() {
+                break;
+            }
+            assert!(
+                Instant::now() < exit_deadline,
+                "fixture child did not exit before the test bound"
+            );
+            thread::sleep(POLL_QUANTUM);
+        }
+        assert!(child.lease.status().is_none(), "child must remain unreaped");
+
+        let started = Instant::now();
+        let deadline = started + limits().timeout;
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
+        let mut observations = Vec::new();
+        run_capture_loop(
+            &mut child,
+            &mut pipes,
+            &mut stdout,
+            &mut stderr,
+            limits(),
+            started,
+            deadline,
+            &mut || false,
+            &mut |event| {
+                observations.push(event);
+                Ok(())
+            },
+        )
+        .unwrap();
+
+        let status = child
+            .lease
+            .status()
+            .expect("successful capture reaps the direct child");
+        assert_eq!(status.code(), Some(0));
+        // Preserve the complete raw stream, including the pinned test harness header.
+        assert_eq!(stdout, baseline.stdout);
+        assert_eq!(stderr, baseline.stderr);
+        assert!(stdout.ends_with(b"out-tail"));
+        assert!(stderr.ends_with(b"err-tail"));
+        assert_eq!(
+            observations
+                .iter()
+                .map(|event| event.phase)
+                .collect::<Vec<_>>(),
+            vec![CaptureObservationPhase::BeforeReap]
+        );
+        let final_sample = observations[0];
+        assert_eq!(final_sample.direct_pid, child.lease.pid());
+        assert_eq!(final_sample.stdout_bytes, stdout.len());
+        assert_eq!(final_sample.stderr_bytes, stderr.len());
+    }
+
+    #[test]
+    fn running_child_receives_positive_running_observation() {
+        let temp = TempDirectory::new();
+        let error = capture_observed(
+            &spec("sleep", &temp.0),
+            limits(),
+            || false,
+            |event| {
+                assert_eq!(
+                    event.phase,
+                    CaptureObservationPhase::Running { sample_due: true }
+                );
+                Err(io::Error::other("stop after live-child observation"))
+            },
+        )
+        .unwrap_err();
+
+        assert!(matches!(
+            error.cause,
+            CaptureCause::Observation(ref cause)
+                if cause.to_string() == "stop after live-child observation"
+        ));
+        assert!(error.status.is_some());
     }
 
     #[test]
@@ -1543,7 +1657,7 @@ mod tests {
     fn externally_reaped_child_refuses_further_numeric_group_signalling() {
         let child = FixtureCommand::new("/usr/bin/true")
             .process_group(0)
-            .spawn()
+            .spawn_guarded()
             .unwrap();
         let mut running = RunningChild::new(child, Duration::ZERO).unwrap();
         // Simulate an unsupported competing reaper, using this actual child.

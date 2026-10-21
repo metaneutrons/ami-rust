@@ -177,6 +177,7 @@ pub fn enter() -> Result<()> {
 #[cfg(all(test, target_os = "linux", target_arch = "x86_64"))]
 mod tests {
     use super::*;
+    use crate::process_spawn::FixtureCommandExt;
     use sha2::{Digest, Sha256};
     use std::{
         ffi::c_char,
@@ -304,7 +305,7 @@ mod tests {
                     "--ignored",
                     "--nocapture",
                 ])
-                .output()
+                .output_guarded()
                 .unwrap();
             assert_eq!(
                 control.status.code(),
@@ -319,7 +320,7 @@ mod tests {
                 "--ignored",
                 "--nocapture",
             ])
-            .output()
+            .output_guarded()
             .unwrap();
         assert!(
             output.status.success(),

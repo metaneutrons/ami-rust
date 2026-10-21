@@ -12,6 +12,9 @@
     reason = "macOS libproc and waitid FFI are used only for bounded read-only observation and focused controls."
 )]
 
+#[cfg(test)]
+use crate::process_spawn::FixtureCommandExt;
+
 use crate::process_snapshot::{self, ProcessRow, ProcessSnapshot};
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
@@ -1084,7 +1087,7 @@ mod tests {
                 .stdin(Stdio::null())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::null())
-                .spawn()
+                .spawn_guarded()
                 .unwrap();
             let stdout = child.stdout.take().unwrap();
             let mut reader = BufReader::new(stdout);
@@ -1140,7 +1143,7 @@ mod tests {
                 .stdin(Stdio::null())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::null())
-                .spawn()
+                .spawn_guarded()
                 .unwrap();
             let mut reader = BufReader::new(child.stdout.take().unwrap());
             let mut line = String::new();
@@ -1213,7 +1216,7 @@ mod tests {
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
-            .spawn()
+            .spawn_guarded()
             .unwrap();
         let pid = child.id();
         let mut status: libc::siginfo_t = unsafe { std::mem::zeroed() };
@@ -1247,7 +1250,7 @@ mod tests {
             .env_clear()
             .env("PATH", "/usr/bin:/bin")
             .env("LC_ALL", "C")
-            .output()
+            .output_guarded()
             .unwrap();
         assert!(
             ps_output.status.success(),
@@ -1323,7 +1326,7 @@ mod tests {
             query_bsd_info(0, deadline),
             Err(ProcQueryError::Other(libc::EINVAL))
         ));
-        let mut exited = Command::new("/usr/bin/true").spawn().unwrap();
+        let mut exited = Command::new("/usr/bin/true").spawn_guarded().unwrap();
         let absent_pid = exited.id();
         assert!(exited.wait().unwrap().success());
         let absent_result = query_bsd_info(absent_pid, deadline);
@@ -1522,7 +1525,7 @@ mod tests {
             let root = UnreapedGroup(Command::new("/bin/bash")
                 .args(["-c", "i=0; while [ \"$i\" -lt 400 ]; do /usr/bin/true; i=$((i+1)); done; /bin/sleep 0.2"])
                 .process_group(0).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
-                .spawn().unwrap());
+                .spawn_guarded().unwrap());
             let mut pids = Vec::new();
             let mut groups = Vec::new();
             for _ in 0..80 {
@@ -1551,7 +1554,7 @@ mod tests {
                 .stdin(Stdio::piped())
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
-                .spawn()
+                .spawn_guarded()
                 .unwrap();
             let pid = child.id();
             let deadline = Instant::now() + SAMPLE_BUDGET;
@@ -1637,7 +1640,7 @@ mod tests {
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
-            .spawn()
+            .spawn_guarded()
             .unwrap();
         let mut line = String::new();
         let mut reader = BufReader::new(leaf.stdout.take().unwrap());

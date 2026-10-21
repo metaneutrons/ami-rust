@@ -4,6 +4,9 @@
 //! They do not provide a snapshot against concurrent mutation by another
 //! process with access to the same directory.
 
+#[cfg(test)]
+use crate::process_spawn::FixtureCommandExt;
+
 use crate::{Refusal, Result, directory::Directory};
 use std::{
     ffi::{CString, OsStr, OsString},
@@ -624,7 +627,7 @@ mod tests {
             .arg("mutations::tests::restrictive_umask_isolated_child_process")
             .arg("--nocapture")
             .env(CHILD_ENV, "1")
-            .status()
+            .status_guarded()
             .unwrap();
         assert!(status.success(), "restrictive-umask child failed: {status}");
     }

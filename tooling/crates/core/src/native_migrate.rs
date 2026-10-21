@@ -5,6 +5,9 @@
 //! target compiler and all six local component inventories match the immutable
 //! initial baseline and a separately receipt-pinned native installation.
 
+#[cfg(test)]
+use crate::process_spawn::FixtureCommandExt;
+
 use crate::{
     Refusal, Result,
     baseline::InitialBaseline,
@@ -1139,7 +1142,7 @@ mod tests {
             .env("PATH", "/usr/bin:/bin")
             .env("LC_ALL", "C")
             .env(CHILD_MODE, "1")
-            .output()
+            .output_guarded()
             .expect("spawn isolated legacy migration tests");
         assert!(
             output.status.success(),
@@ -1187,7 +1190,7 @@ mod tests {
             .env("PATH", "/usr/bin:/bin")
             .env("LC_ALL", "C")
             .env(CHILD_MODE, "no-exec")
-            .output()
+            .output_guarded()
             .expect("spawn sandboxed read-only migration fixture");
         assert!(
             output.status.success(),
@@ -1213,7 +1216,9 @@ mod tests {
         assert_eq!(report.status, "migration-required");
         assert_eq!(fs::read(&cargo).unwrap(), before);
         // Actual execution stays denied; metadata inspection grants no authority.
-        let error = std::process::Command::new(&cargo).status().unwrap_err();
+        let error = std::process::Command::new(&cargo)
+            .status_guarded()
+            .unwrap_err();
         assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
         signals.finish().expect("restore signal handler");
     }
@@ -1457,7 +1462,7 @@ mod tests {
         // Prove the inert fixture is executable before checking dry_run.
         let status = std::process::Command::new(&interpreter)
             .env_clear()
-            .status()
+            .status_guarded()
             .expect("execute fixture interpreter countercontrol");
         assert!(
             status.success(),

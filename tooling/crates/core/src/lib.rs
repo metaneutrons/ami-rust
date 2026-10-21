@@ -38,6 +38,7 @@ pub mod package;
 pub mod package_records;
 pub mod process_capture;
 mod process_lease;
+mod process_spawn;
 pub mod process_snapshot;
 pub mod public_transport;
 pub mod publisher;

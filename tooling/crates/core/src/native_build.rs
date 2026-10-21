@@ -5,6 +5,9 @@
 //! tool, finalizes the ELF in process, and writes a PASS receipt only after the
 //! immutable inputs have been checked again.
 
+#[cfg(test)]
+use crate::process_spawn::FixtureCommandExt;
+
 use crate::{
     Refusal, Result,
     compact::{CompactionReport, compact_elf_sections_with_report},
@@ -1419,7 +1422,7 @@ mod tests {
             .env("PATH", "/usr/bin:/bin")
             .env("LC_ALL", "C")
             .env(RECEIPT_CHILD_MODE, "1")
-            .output()
+            .output_guarded()
             .expect("spawn isolated build receipt test");
         assert!(
             output.status.success(),
