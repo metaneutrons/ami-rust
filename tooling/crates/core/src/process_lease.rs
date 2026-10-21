@@ -11,6 +11,9 @@
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
+#[cfg(test)]
+use crate::process_spawn::FixtureCommandExt;
+
 use std::{
     io,
     process::{Child, ChildStderr, ChildStdout, ExitStatus},
@@ -452,7 +455,7 @@ mod tests {
             .stderr(Stdio::null())
             .process_group(0);
         command
-            .spawn()
+            .spawn_guarded()
             .expect("spawn isolated process-lease fixture")
     }
 
@@ -472,7 +475,7 @@ mod tests {
             .stderr(Stdio::null())
             .process_group(0);
         command
-            .spawn()
+            .spawn_guarded()
             .expect("spawn root fixture with an inherited-stdin probe")
     }
 
@@ -526,7 +529,7 @@ mod tests {
                 // Do not set a process group: the descendant must inherit this
                 // owned root's PGID so the native query observes a live member.
                 let mut descendant = command
-                    .spawn()
+                    .spawn_guarded()
                     .expect("spawn same-group descendant fixture");
                 let deadline = Instant::now() + Duration::from_secs(5);
                 while !ready_path.exists() {

@@ -1,0 +1,202 @@
+{
+  "schema": "ami-rust-rc2-capture-pipe-inheritance-development-v1",
+  "status": "PASS_LOCAL_MACOS_CAPTURE_FIX_DEVELOPMENT",
+  "source": {
+    "base": "498fe81d34df047e1825a8014e29a650cc82ef02",
+    "files": {
+      "tooling/crates/core/src/consumer_session.rs": "f8ed586616414ac24a06bba60760f08e912d4c4ee9d4f1ce71bb59bbe904e734",
+      "tooling/crates/core/src/frontend.rs": "84a23a4dc55d02b6b1ebe04c16cdc210bd9bd555195af9ec16ec504cffae7583",
+      "tooling/crates/core/src/lib.rs": "d8d8fa10f5ff1ad1db1cb07123b7e041307d9ef90a041ce41fedc185e9cad5d5",
+      "tooling/crates/core/src/macos_process_snapshot.rs": "a0ea552adc46aab8df3b6bcf9983932529ff85254639d30c669acc70a2e3e8a3",
+      "tooling/crates/core/src/migration_process.rs": "fcd8d34b9ce29e6448724f958a27ca187809b527127ef8dd0c0d7b404959f942",
+      "tooling/crates/core/src/mutations.rs": "a4a6da1523480f19fd73cd79c0287104cb29c9543b6a3c856001f85dcfa3e09a",
+      "tooling/crates/core/src/native_build.rs": "4eff3fec71783786997cb27c0153fd8297902cda075a118559c218a77d60fccb",
+      "tooling/crates/core/src/native_install.rs": "4f7279d7fac72f792f2b2401e264520e73d45867b48c49cc1a73f786237535e2",
+      "tooling/crates/core/src/native_migrate.rs": "ea6a1c54c02ca54cfa7e03f8a3dfff15ecce4db079b739c0c626f98e80ac0a75",
+      "tooling/crates/core/src/process_capture.rs": "0b28f78ec2f4bf782d2847b233e21e113ba51ab3b8bfc066272f6882827b06f7",
+      "tooling/crates/core/src/process_lease.rs": "10decc0c1eaf421c1518206c1cd92af2ecdb657f9202be660d74fc089e0b709c",
+      "tooling/crates/core/src/process_spawn.rs": "45a14a5546fedd848b9888f68292e0f992862d8d8d188296b40eba8a63f6ce2d",
+      "tooling/crates/core/src/publisher_home.rs": "4c9f98303ee26434e6bd369e3ae000ef9410feacc9bcbec7a952e3f23c8cd802",
+      "tooling/crates/core/src/signals.rs": "097a97e5d30fb70667cf321e5e3c09df80c9ba8f37f09608fc5707f7d1ad14ff",
+      "tooling/crates/core/src/transaction.rs": "524195dc5e0d39ac4d020b7bd27e27fe0de489421b63257e770d3c0da8d4a7ae",
+      "tooling/crates/xtask/src/cargo_storage_registry_fixture.rs": "de9d581ffa247a62651d14331cc9d51ad8220a345bf9dcba4b0c65b3cee62f41",
+      "tooling/crates/core/src/resource_capture.rs": "38fe9f9250dea876a3544de9daa9c261dff91cd3bd68c5257b5da878bd2e4e54"
+    },
+    "scope": "Capture observation/liveness and controlled-spawn creation, plus fail-closed bounded blocking accepted sockets, a total header deadline and accept-synchronized delayed-header/trickle regressions in the synthetic registry fixture. Excludes private native parser/activation and additional GC/fetch feature fixtures. Resource fixture requires the guaranteed complete pre-reap sample, without assuming a second periodic sample for a fast child."
+  },
+  "observed_failure": {
+    "receipt": {
+      "retained_receipt": "rc2-capture-pipe-holder-diagnostic-a2/output/campaign_result.json",
+      "sha256": "efcdca0c6cf4f04f221c16bb6a2f5cc8de292b8a7e56b71ae0115f8505504da7"
+    },
+    "exact_record_sha256": "1c01ad2e89c865f089b13ba8da2dd055f931e3e2b8c1dcbfdbdc6ffaf2d1d5ea",
+    "result": "Default-parallel batch15 failed on actual output-tail capture: directchild exit0, output retained, three matching stdout FWRITE descriptors without close-on-exec in sibling process branches.",
+    "scope": "The record proves matching sibling holders, not an unrestricted inventory or every possible acquisition path."
+  },
+  "fix": {
+    "production": "Serialize controlled Command pipe creation and spawn only; release before wait/observation/callback. Retain WNOWAIT liveness-first observation and strict EOF/timeout/lease cleanup.",
+    "fixtures": "Route all core Command starts through the same boundary. Output fixtures use their existing null-stdin/piped-output defaults; status fixtures inherit stdio. A piped-stdin child barrier verifies overlap independently of a fixed child duration."
+  },
+  "private_integration_build": {
+    "receipt": {
+      "retained_receipt": "rc2-storage-followup-checkout-build-a25/output/result.json",
+      "sha256": "aeda6423946d9fd143d925f46b5c197e2a24d71a92fbf5daac78db6ac85abe27"
+    },
+    "status": "PASS_BUILD_SNAPSHOT_TESTS_AND_CLIPPY",
+    "commands": [
+      {
+        "label": "build-probe",
+        "exit_code": 0,
+        "stop_reason": null,
+        "elapsed_seconds": 5.273
+      },
+      {
+        "label": "snapshot-positive-and-counter-tests",
+        "exit_code": 0,
+        "stop_reason": null,
+        "elapsed_seconds": 6.363
+      },
+      {
+        "label": "all-tooling-workspace-tests",
+        "exit_code": 0,
+        "stop_reason": null,
+        "elapsed_seconds": 44.88
+      },
+      {
+        "label": "workspace-clippy",
+        "exit_code": 0,
+        "stop_reason": null,
+        "elapsed_seconds": 4.277
+      },
+      {
+        "label": "linux-cfg-compile-and-clippy-not-runtime",
+        "exit_code": 0,
+        "stop_reason": null,
+        "elapsed_seconds": 4.006
+      }
+    ],
+    "scope": "Full tooling workspace tests and all-target Clippy on macOS; Linux configuration compile/lint only. This private integration also includes an unrelated unexposed native Cargo record parser, omitted from this PR. Exact public candidate CI remains required."
+  },
+  "actual_default_parallel_stress": {
+    "receipt": {
+      "retained_receipt": "rc2-capture-controlled-spawn-stress-a1/output/result.json",
+      "sha256": "4fe0f2bfdd6274988ab78dad1ae43d5f1b00da39583d728977f4842a5d96b965"
+    },
+    "status": "PASS_20_DEFAULT_PARALLEL_BATCHES_400_CAPTURE_TESTS_AFTER_SPAWN_FIX",
+    "batches": 20,
+    "capture_tests": 400,
+    "binary_sha256": "9a795c3a3d0bdf012b7b34b5ecd09ce660559e2942ce69a5639ad00e88b0e7f1",
+    "elapsed_seconds": 37.03954162518494
+  },
+  "creation_gate_and_counter": {
+    "receipt": {
+      "retained_receipt": "rc2-capture-controlled-spawn-lock-counter-a2/output/result.json",
+      "sha256": "c85cf44f9c86efc4d884b4acef45f48f87e4e5ba4d4ddfb56aa653fb7a667270"
+    },
+    "status": "PASS_ACTUAL_CREATION_GUARD_CHILD_CONCURRENCY_AND_LOCK_BYPASS_REFUSAL",
+    "scope": "Final helper source compiled standalone; valid locking/overlap test passes, isolated removal of only the lock acquisition fails with expected test cause and cleanup."
+  },
+  "six_mode_storage_development": {
+    "receipt": {
+      "retained_receipt": "rc2-storage-complete-local-suite-a5/output/result.json",
+      "sha256": "795c69c43aa5b8d56903b3f058b0068c9e2961b26d3b7797df87007416603043"
+    },
+    "status": "PASS_EXACT_SOURCE_MACOS_SIX_MODE_STORAGE_COMPONENT_DEVELOPMENT",
+    "commands": 195,
+    "checks": 272,
+    "receipt_controls": 39,
+    "scope": "Private integration includes additional unmerged concurrent fetch/GC features. This PR contains capture core plus the scoped accepted-socket/header-deadline fix; it is not selected SDK qualification."
+  },
+  "reviews": [
+    {
+      "retained_receipt": "rc2-capture-running-liveness-independent-review-a1/review.md",
+      "sha256": "d2c6b3a47e30cbf6c04d7b1fa03730f670a09eff1b06a7f31124e3f9f6371448"
+    },
+    {
+      "retained_receipt": "rc2-capture-controlled-spawn-independent-review-a1/review.md",
+      "sha256": "2779fa032e7948e9c1208825f0ac5236dce72ab9ee406214a1e1df4ae5c1ff55"
+    },
+    {
+      "retained_receipt": "rc2-capture-controlled-spawn-independent-review-a2/review.md",
+      "sha256": "63486425c36035d0dc6e8e4d87efe8c4155fa337e6d4a4a4c429661b988df568"
+    },
+    {
+      "retained_receipt": "rc2-capture-controlled-spawn-independent-review-a3/review.md",
+      "sha256": "f962ea25ef8b599d773edafc9d64ff247b990d4e7e04e45dca871c4591999203"
+    },
+    {
+      "retained_receipt": "rc2-capture-controlled-spawn-independent-review-a4/review.md",
+      "sha256": "4a22803ed53bc6abd0fa4432095ff005fc3e74741f30985e5a9482bd1e770465"
+    },
+    {
+      "retained_receipt": "rc2-capture-registry-followup-independent-review-a1/review.md",
+      "sha256": "b98c8b13942f8f240e0bf5230e58c11e729cf21cceb4c78bf82dad50a5547560"
+    },
+    {
+      "retained_receipt": "rc2-capture-registry-followup-independent-review-a2/review.md",
+      "sha256": "4f2161b8237976fbc6ee3b50379c3e72075b9ac8e8995aecc216d33e98922fb9"
+    }
+  ],
+  "limitations": [
+    "Public exact-candidate CI is required before merge.",
+    "No Linux full expanded fixture runtime, both-host fresh production, native AROS runtime/memory, RC2 acceptance or SDK publication.",
+    "This controls owned starts inside the process; unrelated libraries spawning without the boundary remain outside it."
+  ],
+  "rc2_accepted": false,
+  "sdk_published": false,
+  "registry_socket_followup": {
+    "previous_public_head": "efc4dbd6d5ea48d7d39618cbd78a545f7c478a4e",
+    "failed_ci_run": 39647947396,
+    "failed_macos_job": 119388468585,
+    "failed_raw_log_sha256": "72e5eca74072ad86b19bb52282a1d46c9b02b773e2510ed5bc768bd32f12de5d",
+    "diagnosis": "The old macOS CI log observes BrokenPipe while writing the RejectAll request. Accepted-socket nonblocking inheritance causing premature header parsing/connection closure is an inference, supported by the isolated local counter, not a direct observation of CI socket flags.",
+    "development_receipt": {
+      "retained_receipt": "rc2-public-registry-followup-check-a1/output/result.json",
+      "sha256": "3a9a280ae72ac6a0d19816b8e1df078c912d506a53cee399627564ff5b785501"
+    },
+    "local_result": "All four exact public standalone fixture tests pass. Removing only accepted-socket blocking fails the accept-synchronized delayed-header test (actual400/expected401, exit101). Replacing only the absolute header deadline with per-read timeouts fails the trickled-header deadline test (exit101). The primary verifies all eight raw streams and the exact public xtask passes all-target strict Clippy offline on macOS.",
+    "retained_harness_failures": "A1 lock graph and A2 missing core dependency failures preserved. A3 actual commands have expected0/0/101; its postprocessor incorrectly searched stderr for a Rust failure emitted on stdout. Corrected primary readback preserved separately. A4 independently executes the final four-test/two-counter candidate successfully.",
+    "qualification": "New exact-public-candidate CI required before merge. No old failure erased; no full workspace/SDK/RC2 result inferred from standalone fixture tests.",
+    "runtime_receipt": {
+      "retained_receipt": "rc2-capture-registry-followup-runtime-a4/output/result.json",
+      "sha256": "35465cb63571dfaee951c90c9ffee40d8aeeb1e556bf094646ab9a165426fca3"
+    },
+    "implementation": "Fail closed if blocking-mode or read/write-timeout setup fails; cap header collection by a two-second total deadline and each read by the smaller remaining time/400ms. Delayed headers wait for accepted-stream setup before a50ms pause. Trickle regression uses a180ms explicit deadline against the same helper.",
+    "review_resolution": "Independent review A1 identified ignored socket-setup errors, absence of a total header deadline and weak delay ordering. The final candidate resolves them; read-only A2 review finds no remaining material issue."
+  },
+  "resource_sampling_followup": {
+    "failed_ci_run": 39654377948,
+    "failed_macos_job": 119410718494,
+    "failed_head": "1fb869d3c3c220d9205ad8b89c50e913c3b945b5",
+    "failed_raw_log_sha256": "3ee6d7a77fb4479098494d9401fec99d34d747a4c0b3ad664948497e62bb1883",
+    "cause": "Fast echo may exit before a second periodic sample. Successful capture guarantees a complete BeforeReap sample, not sample_count>=2. This failure is an invalid test expectation; production resource limits and observation behavior remain unchanged.",
+    "fix": "Require sample_count>=1 and last_sample_complete. Retain exact disk3/pending4/peaklog7/workspace3 assertions and neighboring over-budget refusals.",
+    "local_receipt": {
+      "retained_receipt": "rc2-public-resource-fixture-check-a1/output/result.json",
+      "sha256": "b9a69808de75e704142e9ede81198f6e40e9d59047ee14a8324764d4d709a9e0"
+    },
+    "primary_readback": {
+      "retained_receipt": "rc2-resource-sampling-public-readback-a1/result.json",
+      "sha256": "df7d0f99fa0ef3545fc87e3299e0cfb7ec8a3b2e025a401683bb2e62a15f9883"
+    },
+    "independent_review": {
+      "retained_receipt": "rc2-resource-sampling-fixture-independent-review-a2/review.md",
+      "sha256": "9bc09a79ec13928b540ca93cc90187b0626581f82a21335f423db24c58151851"
+    },
+    "local_tests": {
+      "core_passed": 384,
+      "core_ignored": 19,
+      "xtask_passed": 67,
+      "resource_passed": 11,
+      "strict_core_clippy": "PASS",
+      "source_format": "PASS"
+    },
+    "measured": {
+      "elapsed_seconds": 56.79768033302389,
+      "child_peak_rss_bytes": 1408696320,
+      "driver_peak_rss_bytes": 61718528,
+      "workspace_peak_bytes": 978565751
+    },
+    "scope": "Exact public source local macOS workspace only. Ignored qualification/historical tests were not executed. New exact-head public both-host CI is required; no SDK qualification/publication or RC2 acceptance."
+  }
+}

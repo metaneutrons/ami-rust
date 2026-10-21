@@ -6,6 +6,9 @@
 //! is private against other UIDs; concurrent mutation by another process
 //! running as the same UID is outside this helper's protection.
 
+#[cfg(test)]
+use crate::process_spawn::FixtureCommandExt;
+
 use crate::{Refusal, Result, directory::Directory};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -339,7 +342,7 @@ mod tests {
             ])
             .env(CHILD_MARKER, "1")
             .env_remove("CARGO_REGISTRY_TOKEN")
-            .output()
+            .output_guarded()
             .unwrap();
         assert!(
             output.status.success(),

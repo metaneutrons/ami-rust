@@ -1,5 +1,8 @@
 //! One private consumer operation and its observed native child commands.
 //! Command environments never inherit registry credentials or user Git config.
+#[cfg(test)]
+use crate::process_spawn::FixtureCommandExt;
+
 use crate::{
     Refusal, Result,
     directory::Directory,
@@ -480,7 +483,7 @@ mod tests {
             .env("PATH", "/usr/bin:/bin")
             .env("LC_ALL", "C")
             .env("AMI_CONSUMER_SESSION_FIXTURE", "1")
-            .output()
+            .output_guarded()
             .unwrap();
         assert!(
             result.status.success(),

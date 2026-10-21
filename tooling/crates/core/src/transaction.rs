@@ -5,6 +5,9 @@
 //! authenticate release policy, signatures or receipt semantics. The consumer
 //! must do that before calling it; it is not a public CLI capability by itself.
 
+#[cfg(test)]
+use crate::process_spawn::FixtureCommandExt;
+
 use crate::{
     Refusal, Result,
     digest::sha256_bytes,
@@ -1308,7 +1311,7 @@ mod tests {
                 "--nocapture",
             ])
             .env("AMI_RUST_TRANSACTION_CHILD", "run")
-            .output()
+            .output_guarded()
             .unwrap();
         assert!(
             output.status.success(),

@@ -1,4 +1,7 @@
 //! The two executable names enter this same parser and dispatcher.
+#[cfg(test)]
+use crate::process_spawn::FixtureCommandExt;
+
 use crate::{Refusal, Result};
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -941,7 +944,7 @@ mod tests {
                 "--ignored",
             ])
             .env("AMI_RUST_BUILD_SIGNAL_CHILD", "run")
-            .output()
+            .output_guarded()
             .unwrap();
         assert!(
             output.status.success(),

@@ -5,6 +5,9 @@
 //! whether Authorization matched the synthetic value, never header contents.
 
 use ami_rust_core::digest;
+#[cfg(test)]
+use std::sync::atomic::AtomicUsize;
+
 use serde_json::{Value, json};
 use std::{
     io::{self, Read, Write},
@@ -14,7 +17,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
     thread::{self, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 pub const REGISTRY_NAME: &str = "rc2-fixture";
@@ -28,6 +31,7 @@ const DOWNLOAD_ROUTE: &str = "/api/rc2-fixture-leaf/0.1.0/download";
 const MAX_HEADER_BYTES: usize = 16 * 1024;
 const MAX_REQUESTS: usize = 64;
 const READ_TIMEOUT: Duration = Duration::from_millis(400);
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 const WRITE_TIMEOUT: Duration = Duration::from_millis(400);
 const ACCEPT_POLL: Duration = Duration::from_millis(5);
 
@@ -70,6 +74,8 @@ pub struct RegistryFixture {
     stop: Arc<AtomicBool>,
     observations: Arc<Mutex<Vec<Observation>>>,
     worker: Option<JoinHandle<()>>,
+    #[cfg(test)]
+    accepted_connections: Arc<AtomicUsize>,
 }
 
 impl RegistryFixture {
@@ -88,6 +94,10 @@ impl RegistryFixture {
         let observations = Arc::new(Mutex::new(Vec::new()));
         let (config_body, index_body) = response_bodies(address)?;
 
+        #[cfg(test)]
+        let accepted_connections = Arc::new(AtomicUsize::new(0));
+        #[cfg(test)]
+        let worker_accepted = Arc::clone(&accepted_connections);
         let worker_stop = Arc::clone(&stop);
         let worker_observations = Arc::clone(&observations);
         let worker = thread::Builder::new()
@@ -100,6 +110,8 @@ impl RegistryFixture {
                     policy,
                     config_body,
                     index_body,
+                    #[cfg(test)]
+                    worker_accepted,
                 );
             })?;
 
@@ -108,6 +120,8 @@ impl RegistryFixture {
             stop,
             observations,
             worker: Some(worker),
+            #[cfg(test)]
+            accepted_connections,
         })
     }
 
@@ -198,14 +212,23 @@ fn serve(
     policy: AuthPolicy,
     config_body: Vec<u8>,
     index_body: Vec<u8>,
+    #[cfg(test)] accepted_connections: Arc<AtomicUsize>,
 ) {
     let mut accepted = 0;
     while accepted < MAX_REQUESTS && !stop.load(Ordering::Acquire) {
         match listener.accept() {
             Ok((mut stream, _peer)) => {
                 accepted += 1;
-                let _ = stream.set_read_timeout(Some(READ_TIMEOUT));
-                let _ = stream.set_write_timeout(Some(WRITE_TIMEOUT));
+                // macOS accepts may inherit O_NONBLOCK from the listener.
+                // Header reads below require the configured bounded blocking timeout.
+                if stream.set_nonblocking(false).is_err()
+                    || stream.set_read_timeout(Some(READ_TIMEOUT)).is_err()
+                    || stream.set_write_timeout(Some(WRITE_TIMEOUT)).is_err()
+                {
+                    continue;
+                }
+                #[cfg(test)]
+                accepted_connections.fetch_add(1, Ordering::Release);
                 let _ = handle_connection(
                     &mut stream,
                     &observations,
@@ -315,6 +338,10 @@ struct Request {
 }
 
 fn read_request(stream: &mut TcpStream) -> io::Result<Request> {
+    read_request_before(stream, Instant::now() + REQUEST_TIMEOUT)
+}
+
+fn read_request_before(stream: &mut TcpStream, deadline: Instant) -> io::Result<Request> {
     let mut bytes = Vec::with_capacity(1024);
     let mut chunk = [0u8; 1024];
     let header_end = loop {
@@ -327,6 +354,14 @@ fn read_request(stream: &mut TcpStream) -> io::Result<Request> {
                 "request headers exceed fixture bound",
             ));
         }
+        let time_left = deadline.saturating_duration_since(Instant::now());
+        if time_left.is_zero() {
+            return Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                "fixture request deadline exceeded",
+            ));
+        }
+        stream.set_read_timeout(Some(time_left.min(READ_TIMEOUT)))?;
         let remaining = MAX_HEADER_BYTES - bytes.len();
         let read_limit = remaining.min(chunk.len());
         let count = stream.read(&mut chunk[..read_limit])?;
@@ -482,7 +517,28 @@ mod tests {
     use super::*;
 
     fn get(fixture: &RegistryFixture, route: &str, authorization: Option<&str>) -> (u16, Vec<u8>) {
+        get_after_delay(fixture, route, authorization, Duration::ZERO)
+    }
+
+    fn get_after_delay(
+        fixture: &RegistryFixture,
+        route: &str,
+        authorization: Option<&str>,
+        delay: Duration,
+    ) -> (u16, Vec<u8>) {
+        let expected_accept = fixture.accepted_connections.load(Ordering::Acquire) + 1;
         let mut stream = TcpStream::connect(fixture.address).unwrap();
+        if !delay.is_zero() {
+            let deadline = Instant::now() + Duration::from_secs(2);
+            while fixture.accepted_connections.load(Ordering::Acquire) < expected_accept {
+                assert!(
+                    Instant::now() < deadline,
+                    "server did not accept before the header delay"
+                );
+                thread::sleep(ACCEPT_POLL);
+            }
+        }
+        thread::sleep(delay);
         stream.set_read_timeout(Some(READ_TIMEOUT)).unwrap();
         stream.set_write_timeout(Some(WRITE_TIMEOUT)).unwrap();
         let authorization_header = authorization
@@ -509,6 +565,46 @@ mod tests {
             .map(|end| end + 4)
             .unwrap();
         (status, response[body_start..].to_vec())
+    }
+
+    #[test]
+    fn trickled_headers_cannot_extend_the_total_request_deadline() {
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let (ready, begin) = std::sync::mpsc::channel();
+        let writer = thread::spawn(move || {
+            let mut stream = TcpStream::connect(address).unwrap();
+            if begin.recv_timeout(Duration::from_secs(2)).is_err() {
+                return;
+            }
+            for _ in 0..50 {
+                if stream.write_all(b"x").is_err() {
+                    break;
+                }
+                thread::sleep(Duration::from_millis(20));
+            }
+        });
+        let (mut stream, _) = listener.accept().unwrap();
+        stream.set_nonblocking(false).unwrap();
+        ready.send(()).unwrap();
+        let result = read_request_before(&mut stream, Instant::now() + Duration::from_millis(180));
+        drop(stream);
+        writer.join().unwrap();
+        assert!(matches!(result, Err(ref error)
+            if matches!(error.kind(), io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock)));
+    }
+
+    #[test]
+    fn delayed_request_waits_for_headers_after_accept() {
+        let fixture = RegistryFixture::start(AuthPolicy::RejectAll).unwrap();
+        let (status, _) = get_after_delay(
+            &fixture,
+            INDEX_ROUTE,
+            Some(SYNTHETIC_AUTHORIZATION),
+            Duration::from_millis(50),
+        );
+        assert_eq!(status, 401);
+        assert_eq!(fixture.authorization_counts(), (1, 0));
     }
 
     #[test]

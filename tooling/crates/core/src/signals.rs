@@ -272,6 +272,7 @@ fn pthread_mask_error(operation: &str, status: libc::c_int) -> Refusal {
 
 #[cfg(test)]
 mod tests {
+    use crate::process_spawn::FixtureCommandExt;
     use std::{
         process::Command,
         sync::atomic::{AtomicBool, Ordering},
@@ -300,7 +301,7 @@ mod tests {
             .arg("--ignored")
             .arg("--nocapture")
             .env(CHILD_MODE, "run")
-            .output()
+            .output_guarded()
             .expect("spawn isolated SIGTERM fixture");
         assert!(
             output.status.success(),
