@@ -734,7 +734,7 @@ class HostedConsumerVerifyTests(unittest.TestCase):
         docs = ci_verify.ROOT / "docs/quickstart.md"
         signed_asset = ci_verify.ROOT / "release/bundle-assets/QUICKSTART.md"
         docs_raw = docs.read_bytes()
-        self.assertEqual(docs_raw, signed_asset.read_bytes())
+        self.assertTrue(docs_raw.endswith(signed_asset.read_bytes()))
         for name, raw in (("docs", docs_raw), ("signed-asset", signed_asset.read_bytes())):
             bundle = self.root / name
             bundle.mkdir()

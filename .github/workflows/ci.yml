@@ -64,7 +64,6 @@ jobs:
           python3 -I -B release/test_install.py
           python3 -I -B release/test_cargo_notice_inventory.py
           python3 -I -B host/test_contracts.py
-          python3 -I -B host/test_cli.py
           python3 -I -B host/tests/test_host_capacity.py
           python3 -I -B host/tests/test_allocation_layout.py
           python3 -I -B host/tests/test_elf_audit.py
@@ -75,7 +74,6 @@ jobs:
           python3 -I -B release/test_ci_artifact_admission.py
           python3 -I -B release/test_ci_sdk.py
           python3 -I -B release/test_sdk_storage_accounting.py
-          python3 -I -B release/test_sdk_workflow.py
           python3 -I -B release/test_ci_csdk.py
           python3 -I -B release/test_csdk_recipes.py
           python3 -I -B release/test_csdk_nouveau.py
@@ -89,11 +87,9 @@ jobs:
           python3 -I -B release/test_ci_native_upgrade.py
           python3 -I -B release/test_ci_native_outer.py
           python3 -I -B release/test_contract_probes.py
-          python3 -I -B release/test_selection_probes.py
           python3 -I -B release/test_ci_verify.py
           python3 -I -B release/test_public_transport.py
           python3 -I -B release/test_public_candidate.py
-          python3 -I -B release/test_public_replay_workflow.py
           python3 -I -B release/test_public_replay.py
           python3 -I -B release/test_stage_candidate.py
           python3 -I -B release/test_stage_draft.py
@@ -118,10 +114,10 @@ jobs:
             release/*.py
             release/ci-*.json
             LICENSE*
-      - name: Run isolated packaging fixture tests
+      - name: Run retained package verification library fixtures
         run: |
           python3 --version
-          for suite in packaging/test_*.py; do
+          for suite in packaging/test_auth.py packaging/test_control.py packaging/test_fetch.py packaging/test_measure.py packaging/test_verify_apt.py packaging/test_publish_tap.py; do
             python3 -I -B "$suite"
           done
 
@@ -232,44 +228,22 @@ jobs:
               --manifest-path "tools/$cli_probe/Cargo.toml" \
               --target-dir "$RUNNER_TEMP/ami-rust-rc0-$cli_probe"
           done
-          # Filesystem no-follow behavior and real Cargo plugin dispatch require
-          # both supported hosts; this is not native SDK/runtime qualification.
+          # Retained library/resource behavior is checked on both supported hosts;
+          # this is not replacement toolchain/SDK qualification.
           "$cli_rust/cargo" fetch --locked --manifest-path tooling/Cargo.toml
           "$cli_rust/cargo" test --workspace --locked --offline \
             --manifest-path tooling/Cargo.toml \
             --target-dir "$RUNNER_TEMP/ami-rust-host-core"
           RUST_TESTS
-      - name: Compare current Rust with historical Python (maintainer tests only)
+      - name: Check retained no-Python observer controls
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test -z "$(git status --porcelain --untracked-files=all)"
+          # Python is an intentional detector counter, not a consumer dependency.
           python3 -I -B release/ci_python.py \
             --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" \
             --inputs release/ci-python-inputs.json
           cli_rust="$RUNNER_TEMP/ami-rust-rc0-host/toolchain/bin"
-          historical_python="$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12"
-          export AMI_RUST_HISTORICAL_PYTHON="$historical_python"
-          "$historical_python" -I -B release/ci_historical.py \
-            --source-root "$GITHUB_WORKSPACE" --source-commit "$GITHUB_SHA" \
-            --rust-bin-dir "$cli_rust" --cargo-home "$RUNNER_TEMP/ami-rust-rc0-cargo-home" \
-            --output-dir "$RUNNER_TEMP/ami-rust-historical-parsers"
           mkdir -m 700 "$RUNNER_TEMP/ami-rust-historical-home" "$RUNNER_TEMP/ami-rust-historical-tmp"
-          for historical_test in transactions filesystem receipt_lifecycle; do
-            env -i PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin" \
-              HOME="$RUNNER_TEMP/ami-rust-historical-home" TMPDIR="$RUNNER_TEMP/ami-rust-historical-tmp" \
-              RUSTC="$cli_rust/rustc" RUSTDOC="$cli_rust/rustdoc" \
-              RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= CARGO_BUILD_JOBS=2 LC_ALL=C \
-              CARGO_HOME="$RUNNER_TEMP/ami-rust-rc0-cargo-home" \
-              AMI_RUST_HISTORICAL_PYTHON="$historical_python" \
-              AMI_RUST_DIFFERENTIAL_SOURCE="$GITHUB_WORKSPACE" \
-              AMI_RUST_DIFFERENTIAL_WORK="$RUNNER_TEMP/ami-rust-historical-$historical_test" \
-              "$cli_rust/cargo" test --package ami-rust-core --test "historical_$historical_test" \
-              --locked --offline --manifest-path tooling/Cargo.toml \
-              --target-dir "$RUNNER_TEMP/ami-rust-host-core" \
-              -- --ignored --exact "paired_historical_$historical_test"
-            test -f "$RUNNER_TEMP/ami-rust-historical-$historical_test/binding.json"
-          done
           env -i PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin" \
             HOME="$RUNNER_TEMP/ami-rust-historical-home" TMPDIR="$RUNNER_TEMP/ami-rust-historical-tmp" \
             RUSTC="$cli_rust/rustc" RUSTDOC="$cli_rust/rustdoc" \
@@ -292,45 +266,18 @@ jobs:
             --target-dir "$RUNNER_TEMP/ami-rust-host-core" \
             -- --ignored --exact native_interpreter_controls_are_refused_under_the_adapter_policy
           test -f "$RUNNER_TEMP/ami-rust-enforcement-controls-output/consumer-enforcement-controls.json"
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test -z "$(git status --porcelain --untracked-files=all)"
-      - name: Retain bounded historical comparison results
+      - name: Retain observer control evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: historical-comparison-${{ matrix.triple }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: observer-controls-${{ matrix.triple }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            ${{ runner.temp }}/ami-rust-python-bootstrap/bootstrap.json
-            ${{ runner.temp }}/ami-rust-historical-parsers/result.json
-            ${{ runner.temp }}/ami-rust-historical-parsers/failure.json
-            ${{ runner.temp }}/ami-rust-historical-parsers/work/current-rust-result.json
-            ${{ runner.temp }}/ami-rust-historical-parsers/work/logs/*.log
-            ${{ runner.temp }}/ami-rust-historical-transactions/report.json
-            ${{ runner.temp }}/ami-rust-historical-transactions/binding.json
-            ${{ runner.temp }}/ami-rust-historical-transactions/coordinator.*.log
-            ${{ runner.temp }}/ami-rust-historical-filesystem/report.json
-            ${{ runner.temp }}/ami-rust-historical-filesystem/binding.json
-            ${{ runner.temp }}/ami-rust-historical-filesystem/coordinator.*.raw
-            ${{ runner.temp }}/ami-rust-historical-receipt_lifecycle/report.json
-            ${{ runner.temp }}/ami-rust-historical-receipt_lifecycle/binding.json
-            ${{ runner.temp }}/ami-rust-historical-receipt_lifecycle/failure.json
-            ${{ runner.temp }}/ami-rust-historical-receipt_lifecycle/helper.*.raw
             ${{ runner.temp }}/ami-rust-enforcement-controls-output/**/*.json
             ${{ runner.temp }}/ami-rust-enforcement-controls-output/**/*.raw
             ${{ runner.temp }}/ami-rust-enforcement-controls-output/**/*.log
           if-no-files-found: error
           retention-days: 7
           compression-level: 9
-      - name: Build and check portable native frontends
-        run: |
-          set -euo pipefail
-          cli_rust="$RUNNER_TEMP/ami-rust-rc0-host/toolchain/bin"
-          env -i CLI_CARGO="$cli_rust/cargo" RUSTC="$cli_rust/rustc" RUSTDOC="$cli_rust/rustdoc" \
-            RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= \
-            HOME="$RUNNER_TEMP/ami-rust-core-home" TMPDIR="$RUNNER_TEMP/ami-rust-core-tmp" \
-            CARGO_HOME="$RUNNER_TEMP/ami-rust-rc0-cargo-home" \
-            PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin" LC_ALL=C \
-            /bin/bash tools/build-native-cli.sh "$RUNNER_TEMP/ami-rust-native-cli"
 
   ci-success:
     name: CI Success
@@ -340,8 +287,8 @@ jobs:
     steps:
       - name: Require every fixture job to pass
         env:
-          INSTALLER_RESULT: ${{ needs.installer-fixtures.result }}
           PACKAGING_RESULT: ${{ needs.packaging-fixtures.result }}
+          INSTALLER_RESULT: ${{ needs.installer-fixtures.result }}
           RUST_MIGRATION_RESULT: ${{ needs.rust-migration-fixtures.result }}
           RUST_MIGRATION_SCOPE_RESULT: ${{ needs.rust-migration-scope.result }}
           RUST_MIGRATION_AFFECTED: ${{ needs.rust-migration-scope.outputs.affected }}

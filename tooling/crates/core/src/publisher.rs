@@ -178,21 +178,6 @@ pub fn verify_publisher_bundle(
     native_bundle(checked)
 }
 
-pub(crate) fn verify_publisher_bundle_in_workspace(
-    bundle: &Path,
-    policy_path: &Path,
-    workspace: &Path,
-    cancelled: impl FnMut() -> bool,
-) -> Result<VerifiedPublisherBundle> {
-    native_bundle(check_publisher_bundle(
-        bundle,
-        policy_path,
-        ReleaseFlavor::Native,
-        Some(workspace),
-        cancelled,
-    )?)
-}
-
 fn native_bundle(checked: CheckedBundle) -> Result<VerifiedPublisherBundle> {
     let ParsedManifest::Native(manifest) = checked.manifest else {
         return Err(Refusal::new(

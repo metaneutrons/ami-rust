@@ -345,46 +345,6 @@ def _verify_pinned_publisher_proofs(
             raise BuildError(f"publisher proof bytes for {subject} differ from pins.json")
 
 
-def _source_files(source: Path) -> dict[str, tuple[bytes, int]]:
-    required = {
-        "packaging/cli.py": source / "packaging" / "cli.py",
-        "packaging/worker.py": source / "packaging" / "worker.py",
-        "packaging/pins.json": source / "packaging" / "pins.json",
-        "LICENSE-MIT": source / "LICENSE-MIT",
-        "LICENSE-APACHE": source / "LICENSE-APACHE",
-    }
-    _require_directory(source / "packaging", "source packaging")
-    result: dict[str, tuple[bytes, int]] = {}
-    total = 0
-    for relative, path in required.items():
-        data = _read_regular(path, f"source/{relative}", MAX_SOURCE_FILE_BYTES)
-        total += len(data)
-        destination = {
-            "packaging/cli.py": "cli.py",
-            "packaging/worker.py": "worker.py",
-            "packaging/pins.json": "pins.json",
-            "LICENSE-MIT": "LICENSE-MIT",
-            "LICENSE-APACHE": "LICENSE-APACHE",
-        }[relative]
-        result[destination] = (data, 0o644)
-    readme = source / "packaging" / "README.md"
-    try:
-        readme_info = readme.lstat()
-    except FileNotFoundError:
-        pass
-    except OSError as exc:
-        raise BuildError(f"cannot inspect optional packaging/README.md: {exc}") from exc
-    else:
-        if not stat.S_ISREG(readme_info.st_mode):
-            raise BuildError("optional packaging/README.md must be a regular, non-linked file")
-        readme_data = _read_regular(readme, "source/packaging/README.md", MAX_SOURCE_FILE_BYTES)
-        total += len(readme_data)
-        result["@readme"] = (readme_data, 0o644)
-    if total > MAX_TOTAL_SOURCE_BYTES:
-        raise BuildError("package source files exceed the total input limit")
-    return result
-
-
 def _write_file(root: Path, relative: str, data: bytes, mode: int) -> None:
     destination = root.joinpath(*PurePosixPath(relative).parts)
     destination.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
@@ -625,118 +585,12 @@ def _verify_readback(
         raise BuildError("generated Debian package failed file inventory readback")
 
 
-def _launcher(package_version: str) -> bytes:
-    text = (
-        "#!/usr/bin/python3\n"
-        "import os\n"
-        "import sys\n"
-        "from pathlib import Path\n"
-        "root = Path(__file__).resolve().parent.parent\n"
-        f"cli = root / 'libexec' / 'ami-rust' / {package_version!r} / 'cli.py'\n"
-        "os.execv(sys.executable, [sys.executable, '-I', '-B', str(cli), *sys.argv[1:]])\n"
+def build(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    """The CLI-package producer is retired; no files may be generated."""
+    raise BuildError(
+        "The ami-rust CLI package producer was retired on 2026-10-21. "
+        "The replacement rustup/Cargo toolchain and crate release is not yet qualified."
     )
-    return text.encode("utf-8")
-
-
-def build(
-    source: str | os.PathLike[str] | None = None,
-    assets: str | os.PathLike[str] | None = None,
-    proofs: str | os.PathLike[str] | None = None,
-    proof_index: str | os.PathLike[str] | None = None,
-    output: str | os.PathLike[str] | None = None,
-    epoch: int | None = None,
-) -> dict[str, Any]:
-    """Build packages in a fresh output directory and return the report."""
-    if assets is None or proofs is None or proof_index is None or output is None or epoch is None:
-        raise BuildError("assets, proofs, proof_index, output and epoch are required")
-    source_root = Path(source) if source is not None else Path(__file__).resolve().parent.parent
-    asset_root = Path(assets)
-    proof_root = Path(proofs)
-    index_path = Path(proof_index)
-    output_path = Path(output)
-    if not isinstance(epoch, int) or isinstance(epoch, bool) or epoch < 0 or epoch > MAX_EPOCH:
-        raise BuildError(f"epoch must be an integer from 0 through {MAX_EPOCH}")
-    _require_directory(source_root, "source")
-    pins, _pins_raw, pinned_assets = _load_pins(source_root)
-    asset_data = _read_assets(asset_root, pinned_assets)
-    subject_map = _asset_subject_map(asset_data)
-    proof_data, _proof_index_raw, normalized_index = _read_proofs(
-        proof_root, index_path, set(subject_map.values())
-    )
-    _verify_pinned_publisher_proofs(pins, subject_map, normalized_index)
-    source_files = _source_files(source_root)
-    package_version = pins["package_version"]
-    sdk_version = pins["sdk_version"]
-
-    parent = output_path.parent
-    parent.mkdir(parents=True, exist_ok=True)
-    if os.path.lexists(output_path):
-        raise BuildError(f"output path must be fresh: {output_path}")
-    stage = Path(tempfile.mkdtemp(prefix=f".{output_path.name}.stage-", dir=parent))
-    try:
-        tree = stage / "tree"
-        libexec_relative = f"usr/libexec/ami-rust/{package_version}"
-        libexec_root = tree.joinpath(*PurePosixPath(libexec_relative).parts)
-
-        _write_file(tree, "usr/bin/ami-rust", _launcher(package_version), 0o755)
-        for name, (data, mode) in source_files.items():
-            if name == "@readme":
-                _write_file(tree, "usr/share/doc/ami-rust/README.md", data, mode)
-            else:
-                _write_file(libexec_root, name, data, mode)
-        for name, data in asset_data.items():
-            _write_file(libexec_root, f"assets/{name}", data, 0o644)
-        for name, data in proof_data.items():
-            _write_file(libexec_root, f"proofs/{name}", data, 0o644)
-        _write_file(libexec_root, "proofs.json", _json_bytes(normalized_index), 0o644)
-
-        inventory = _inventory(libexec_root, sdk_version, package_version)
-        _write_file(libexec_root, "inventory.json", inventory, 0o644)
-
-        expected = _expected_install_files(tree)
-        package_tree = {name: value for name, value in expected.items()}
-        archive_prefix = f"ami-rust-{package_version}"
-        archive_data = _tar_bytes(package_tree, epoch, prefix=archive_prefix)
-
-        control = _debian_control(pins, package_tree)
-        control_data = _tar_bytes({"control": (control, 0o644)}, epoch, gzip_compression=True)
-        deb_data = _ar_bytes(
-            [
-                ("debian-binary", b"2.0\n"),
-                ("control.tar.gz", control_data),
-                ("data.tar.xz", _tar_bytes(package_tree, epoch)),
-            ],
-            epoch,
-        )
-        _verify_readback(archive_data, deb_data, expected, package_version, control)
-
-        archive_name = f"ami-rust-{sdk_version}-packaging.{pins['packaging_revision']}.tar.xz"
-        deb_name = f"ami-rust_{package_version}_amd64.deb"
-        _write_file(stage, archive_name, archive_data, 0o644)
-        _write_file(stage, deb_name, deb_data, 0o644)
-        report = {
-            "schema": REPORT_SCHEMA,
-            "sdk_version": sdk_version,
-            "package_version": package_version,
-            "packaging_tag": pins.get("packaging_tag"),
-            "epoch": epoch,
-            "outputs": {
-                archive_name: {"bytes": len(archive_data), "sha256": _sha256(archive_data)},
-                deb_name: {"bytes": len(deb_data), "sha256": _sha256(deb_data)},
-            },
-            "debian_control": control.decode("utf-8"),
-            "inventory_sha256": _sha256(inventory),
-            "inventory_files": len(json.loads(inventory)["files"]),
-        }
-        report_data = _json_bytes(report)
-        _write_file(stage, "packaging-report.json", report_data, 0o644)
-        shutil.rmtree(tree)
-        os.rename(stage, output_path)
-        return report
-    except Exception:
-        shutil.rmtree(stage, ignore_errors=True)
-        raise
-
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)

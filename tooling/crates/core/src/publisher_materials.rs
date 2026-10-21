@@ -1382,85 +1382,19 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     #[test]
-    fn native_materials_bind_the_locked_sources_and_refuse_changed_lock_or_capsule() {
+    fn retired_cli_producer_inputs_refuse_current_source() {
+        // The source-pinned CLI recipe remains historical. Removing its files
+        // must not silently turn that identity into a new toolchain producer.
         let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../..")
             .canonicalize()
             .unwrap();
-        let native = parse_json_value(
-            &std::fs::read(source.join("release/native-tooling-inputs.json")).unwrap(),
-            JsonProfile::SdkComponentManifest,
-        )
-        .unwrap();
+        assert!(!source.join("tooling/crates/cli").exists());
+        assert!(!source.join("tools/build-native-cli.sh").exists());
         let root = Directory::open(&source).unwrap();
-        let mut materials = BTreeMap::new();
-        append_native_materials(&root, "0.2.0", &mut materials, &mut || Ok(())).unwrap();
-        assert!(materials.contains_key(
-            "git+https://github.com/metaneutrons/ami-rust#tooling/crates/cli/src/main.rs"
-        ));
-        assert!(materials.contains_key(native["legacy_release"]["url"].as_str().unwrap()));
-        let mut cancelled = || Err(Refusal::new("cancelled native materials"));
         assert!(
-            append_native_materials(&root, "0.2.0", &mut BTreeMap::new(), &mut cancelled).is_err()
+            append_native_materials(&root, "0.2.0", &mut BTreeMap::new(), &mut || Ok(())).is_err()
         );
-        assert!(
-            append_native_materials(&root, "0.3.0", &mut BTreeMap::new(), &mut || Ok(())).is_err()
-        );
-
-        let temporary = std::env::temp_dir()
-            .canonicalize()
-            .unwrap()
-            .join(format!("ami-native-materials-{}", std::process::id()));
-        std::fs::create_dir(&temporary).unwrap();
-        {
-            for path in native["source_files"].as_array().unwrap() {
-                let path = path.as_str().unwrap();
-                let target = temporary.join(path);
-                std::fs::create_dir_all(target.parent().unwrap()).unwrap();
-                std::fs::copy(source.join(path), target).unwrap();
-            }
-            let config_path = temporary.join("release/native-tooling-inputs.json");
-            std::fs::create_dir_all(config_path.parent().unwrap()).unwrap();
-            std::fs::write(&config_path, serde_json::to_vec(&native).unwrap()).unwrap();
-            let root = Directory::open(&temporary).unwrap();
-            append_native_materials(&root, "0.2.0", &mut BTreeMap::new(), &mut || Ok(())).unwrap();
-
-            let selector_path = "tooling/macos-host-selection.rs";
-            let mut missing_selector = native.clone();
-            missing_selector["source_files"]
-                .as_array_mut()
-                .unwrap()
-                .retain(|path| path.as_str() != Some(selector_path));
-            std::fs::write(&config_path, serde_json::to_vec(&missing_selector).unwrap()).unwrap();
-            assert!(
-                append_native_materials(&root, "0.2.0", &mut BTreeMap::new(), &mut || Ok(()))
-                    .unwrap_err()
-                    .to_string()
-                    .contains("omits a required input")
-            );
-            std::fs::write(&config_path, serde_json::to_vec(&native).unwrap()).unwrap();
-
-            std::fs::write(temporary.join("tooling/Cargo.lock"), b"changed lock").unwrap();
-            assert!(
-                append_native_materials(&root, "0.2.0", &mut BTreeMap::new(), &mut || Ok(()))
-                    .unwrap_err()
-                    .to_string()
-                    .contains("source pin")
-            );
-            std::fs::copy(
-                source.join("tooling/Cargo.lock"),
-                temporary.join("tooling/Cargo.lock"),
-            )
-            .unwrap();
-            let mut bad = native.clone();
-            bad["legacy_release"]["sha256"] = Value::String("f".repeat(64));
-            std::fs::write(&config_path, serde_json::to_vec(&bad).unwrap()).unwrap();
-            assert!(
-                append_native_materials(&root, "0.2.0", &mut BTreeMap::new(), &mut || Ok(()))
-                    .is_err()
-            );
-        }
-        std::fs::remove_dir_all(temporary).unwrap();
     }
 
     #[test]

@@ -1,6 +1,6 @@
-# Rust CLI, Cargo integration and Python retirement — revision 2
+# Rust toolchain, Cargo crates and Python retirement — revision 3
 
-Date: 2026-10-18. Decision owner: Fabian Schmieder.
+Updated: 2026-10-21. Decision owner: Fabian Schmieder.
 
 **Authority:** this repository document defines the migration and its acceptance
 criteria. On 2026-10-18 Fabian authorised issue/milestone tracking and execution
@@ -16,13 +16,18 @@ inputs. This initiative is a subsequent SDK/tooling change.
 
 ## 1. Outcome and measured starting point
 
-Developers install a native host binary, prepare an authenticated SDK explicitly,
-and use Cargo to build native AROS applications. Neither the CLI nor its
-preparation, verification, linking or retained-project path requires Python.
-The medium-term completion condition also removes Python from the project's
-active tests, qualification, dependency preparation and release production.
-Keeping Python indefinitely as an internal implementation language is not the
-target architecture.
+Developers install a versioned AROS cross-toolchain, select it through rustup,
+and build with normal Cargo. AROS/Amiga APIs, runtime integration and necessary
+host utilities are Rust crates. There is no public `ami-rust` CLI or `cargo-ami`
+plugin. Package managers and rustup own installation/version selection; Cargo
+owns project/dependency/build operations. Neither these paths nor internal
+production may depend on Python at RC5.
+
+On 2026-10-21 Fabian explicitly replaced the earlier CLI product decision and
+instructed removal of its existing implementation. RC0/RC1 acceptance remains
+historical evidence for revision 2, not a reason to ship their CLI. RC2–RC5 are
+still required under the prospective criteria below. Previously qualified
+releases, tags, input identities and evidence remain immutable.
 
 Survey base: public source `8c5de39f26838d838b41dec5a89c9a888dbc20d5`.
 SDK `v0.1.0` and package release `v0.1.0+packaging.2` are the regression anchors.
@@ -30,7 +35,7 @@ The tracked tree contains 104 Python files: 14 under `host/`, 29 under
 `packaging/`, 59 under `release/`, and two under `qualification/`. This is a
 path inventory, not a count of every script inside third-party source archives.
 
-| Existing boundary | Current implementation | Migration responsibility |
+| Surveyed boundary | Implementation at the revision-1 survey | Migration responsibility |
 | --- | --- | --- |
 | Package CLI | `packaging/cli.py`, `worker.py` | Native launcher, preparation, package inventory and retained state |
 | SDK verification/build | `host/cli.py`, `contracts.py`, `build.py` | Shared Rust contract validation and build adapter |
@@ -39,7 +44,7 @@ path inventory, not a count of every script inside third-party source archives.
 | Compiler/C-SDK preparation | `release/consumer_inputs.py`, `ci_cargo.py`, `ci_csdk.py`, `csdk_*.py`, `host/cargo-repro/*.py` | Separate consumer acquisition from internal component production; ultimately replace both Python paths |
 | Production and acceptance | Other `release/*.py`, `packaging/*.py`, tests and qualification helpers | Rust maintainer tasks and integration tests |
 
-Today Cargo produces an application `staticlib`. `host/build.py` subsequently
+At the measured starting point Cargo produces an application `staticlib`. `host/build.py` subsequently
 compiles C bridge objects, adapts startup, calls the AROS collector, strips,
 finalises and audits ELF. A Rust replacement of the launcher alone therefore
 does not establish Cargo integration or remove Python. The pinned Cargo also
@@ -79,77 +84,98 @@ stock stable Cargo is not an established equivalent.
   project's executable boundary. Rebuilding those upstream tools would need a
   separate decision; do not claim that the entire upstream ecosystem is Python-free.
 
-## 3. Architecture to implement after authorisation
+## 3. Standard toolchain and crate architecture
 
-Use one host-side Rust core for manifests, locks, inventories, safe extraction,
-component selection, process supervision, build receipts and ELF checks. Keep it
-separate from target `no_std` crates. A small CLI crate exposes `ami-rust` and,
-where useful, Cargo's external-command entry point `cargo-ami`. Both call the
-same core. Internal `xtask` tasks reuse that core rather than growing another
-consumer implementation. Start with these three logical components; split more
-crates only for a demonstrated boundary.
+### Public surface
 
-Cargo owns dependency resolution, features, compilation, incremental state and
-artifact discovery. It remains the existing qualified Cargo until a replacement
-passes equivalence. Generate project-local Cargo configuration and use normal
-`build.rs` integration for target C objects/link directives where appropriate.
-A small Rust linker adapter may perform AROS collection, required finalisation
-and audit during Cargo's link operation. It must not implement another resolver
-or require a Python/post-Cargo finishing command. Host build scripts and proc
-macros must use host settings; target flags must not leak into them.
+Ship a complete, versioned host toolchain for each supported host, including its
+paired rustc and Cargo, target libraries/specification and the required C-SDK and
+link tools. APT, Homebrew and authenticated downloads provide those bytes.
+Explicit per-user `rustup toolchain link` registers an installed prefix; a
+project's `rust-toolchain.toml` selects its exact version. Do not change the global
+default, create a custom updater or operate a new distribution server. Local
+registration is now part of RC2/RC3 for the existing macOS/Ubuntu hosts; it no
+longer waits for AUR. Official `rustup target add` distribution remains a separate
+upstream goal, not a claim made by a local registration.
 
-RC0 freezes the exact activation/configuration recipe; it must select the pinned
-Cargo and rustc explicitly without changing global rustup defaults. Normal Cargo
-build/check/metadata commands are the RC2 goal. `cargo ami build` is a convenient
-frontend, not evidence by itself that normal Cargo builds the final executable.
-Local rustup registration remains a later distribution feature, not a dependency
-of this migration. Neither custom targets nor a plugin imply official
-`rustup target add` support.
+Use the actual selected Cargo interface for `metadata`, `check` and `build`.
+Do not make a copied application CLI masquerade as Cargo or require a mandatory
+`cargo ami` command. Include paired Cargo so rustup cannot silently choose an
+unrelated installed release. Evaluate every downstream Cargo/compiler patch for
+necessity against the standard interfaces; retain only narrowly justified,
+versioned and qualified changes. Removing a patch is an input change and needs
+equivalence evidence, not an assumption that stock stable Cargo already works.
 
-The proposed direct-Cargo route is explicit SDK preparation, input preflight,
-then the verified Cargo binary from the selected state with generated
-project-local configuration. That configuration selects the paired rustc,
-target/sysroot, isolated Cargo cache and Rust linker adapter; machine-local
-activation paths are regenerated after relocation, not committed into portable
-locks. RC0 must prove the exact environment/config precedence and reject
-conflicting ambient overrides. `metadata` produces a dependency graph, not an
-SDK-authentication result. `check` validates the selected compiler/SDK through
-the Rust compiler guard but has no final ELF to audit. `build` additionally
-revalidates link inputs and audits final ELF through the linker adapter. A
-`cargo-ami` plugin cannot provide those hooks for unrelated Cargo commands.
-These checks retain the existing local trust/concurrency model; they are not a
-sandbox against a user deliberately replacing the tools or overriding the recipe.
+There is no new public SDK manager: no `ami-rust prepare/new/build/install/doctor`
+or `cargo-ami` entry. Existing active Python and Rust CLI entrypoints and their
+launchers are retired. Preserve released source in immutable Git/release history,
+not as an executable fallback. Existing general validation, extraction, resource
+measurement and ELF libraries may be reused by crates or private maintainer tasks;
+keep no dispatcher or separate application build engine merely for compatibility.
 
-Consumer commands proposed for the compatibility contract:
+### Crate boundaries
 
-| Surface | Contract |
-| --- | --- |
-| `ami-rust --version`, `verify-package` | Report separate CLI, SDK and packaging identities; verify owned package bytes |
-| `prepare --state`, `new --state --project`, `check-inputs --state` | Preserve the current explicit lifecycle; no hidden first-build acquisition |
-| `build --state --project --output-dir [--package] -- …` | Preserve supported package CLI options and offline/locked selection |
-| `verify --sdk-lock`, `build --sdk-lock --output-dir -- …` | Preserve direct SDK operations for compatible contracts; legacy schemas are handled as below |
-| `ami-rust verify --bundle --policy`, `install --bundle --policy --prefix --receipt-pin`, `lock --prefix --selection --project --output`, `uninstall --prefix --receipt-sha256` | Rust replacements for the direct release-bundle installer; RC0 maps exact current options and receipts before implementation |
-| `cargo ami …` | Optional Cargo entry point to the same declared capabilities and core |
-| Normal Cargo `metadata`, `check`, `build` | After documented preparation/activation, use the qualified tools and produce the native executable without a subsequent finishing step |
-| `ami-rust migrate --dry-run`, then explicit migration | Proposed addition: inspect a legacy project, report identity changes and create a separate reviewed selection; never rewrite a lock silently |
+- **Target libraries:** use the existing `amiga-sys`, `amiga-os`, `amiga-alloc`
+  facade and `aros-*` implementation crates as the starting inventory. Preserve
+  ABI, ownership, task-affinity and optional-allocation contracts. Registry names
+  and publication eligibility are not assumed from workspace directory names.
+- **Runtime/build integration:** provide ordinary dependencies and `build.rs`
+  integration for startup, C bridge objects and native link directives. Compose
+  with developer build scripts; do not overwrite their source or implement a
+  second package/feature resolver. Crates must not download SDKs or tools during
+  builds. Cargo's normal explicit dependency fetch supplies crate sources; an
+  offline build uses the previously fetched/qualified dependency set.
+- **Necessary host tools:** expose narrowly scoped Rust binary crates for actual
+  AROS tasks, such as native link adaptation/finalisation/audit if still needed.
+  They are tools called through Cargo's target-linker/build interfaces, not a
+  general SDK CLI. Authenticate any prebuilt tool in the toolchain from that same
+  crate source; qualify source installation with `cargo install --locked` where
+  advertised. No host crate may leak host settings into target libraries.
+- **Maintainer operations:** internal `cargo xtask` and Rust integration tests
+  reuse relevant libraries for production, signatures, inventories and evidence.
+  They are not required public build commands.
 
-These are future interface requirements, not instructions that work in 0.1.0.
-RC0 records exact options, output schemas, supported Cargo arguments and exit
-mapping, including interrupted child processes. Unsupported/conflicting options
-fail before mutation. Do not broaden the current CLI into a general tool manager.
+Cargo owns dependency resolution, features, package selection, compilation,
+incremental state and artifact discovery. An AROS linker tool performs any
+required collection/finalisation/audit during Cargo's link operation. A normal
+build returns the final native ELF; there is no separate post-Cargo finishing
+engine. Preserve nonconflicting Cargo configuration and credentials and fail
+clearly on conflicting compiler, target/sysroot or linker selection. Keep the
+existing local trust/concurrency model; do not invent an arbitrary-code sandbox.
 
-New CLI binaries are built for both hosts and distributed through the existing
-direct, APT and Homebrew routes. No end-user Rust compiler is needed to install
-the launcher. Authentication reuses qualified standard tooling such as the
-existing pinned GitHub/Sigstore verifiers where appropriate; replacing Python
-does not justify implementing new cryptographic verification protocols. Freeze
-the Rust host compiler and dependencies separately from the target compiler;
-prefer the existing authenticated bootstrap compiler initially. Commit its exact
-selection and Cargo.lock before implementation builds, after licence/security review.
+### Installation, project configuration and migration
+
+Package installation provides complete usable components without root-time network
+provisioning or compilation. Any separate acquisition step must use existing
+standard tools, be explicit and documented before the first build, and have
+measured costs and authentication evidence. A first `cargo build` must not hide
+SDK provisioning. Toolchain registration is opt-in and per-user; package removal
+must not delete arbitrary rustup registrations or user projects.
+
+Use portable project configuration and versioned crate dependencies. Machine-local
+paths are local configuration, not committed into portable locks or templates.
+Migration from a staticlib/CLI project is a documented reviewed project edit:
+select the toolchain, add the runtime/build crates and configure the target/linker.
+Preserve original source, lockfiles and working versions. Do not supply a new
+migration CLI, silently rewrite locks, or execute an old Python launcher.
+
+Crate delivery requires real package manifests, versioned dependencies (no escaping
+workspace-only paths), preserved licences/source obligations, a verified registry
+publisher/name and a tested release order. Qualify `cargo package` archives and
+fresh consumers of the exact delivered crates; a local workspace build is not
+registry-distribution evidence. Do not publish while these gates are unmet.
+
+Rustup registration selects tools; it does not authenticate SDK contents, provide
+a C SDK or install arbitrary third-party toolchains from a name. Reuse existing
+qualified package/signature mechanisms rather than inventing cryptography. Host
+Rust and dependencies remain pinned separately from target Rust.
 
 ## 4. Deliveries and acceptance
 
-Dependencies below refer to stable milestone IDs. Each future acceptance maps every criterion
+Dependencies below refer to stable milestone IDs. RC0/RC1 below retain the
+revision-2 contracts for historical acceptance; they do not require a new CLI
+release after the owner decision. RC2–RC5 define the current delivery. Each
+future acceptance maps every criterion
 to exact source/input hashes, commands, outcomes and durable evidence.
 
 ### RC0 — Contracts, dependency closure and Cargo design
@@ -214,17 +240,22 @@ execution, not behind any newly accepted Rust consumer command.
 
 Execution: [#72](https://github.com/metaneutrons/ami-rust/issues/72); [delivery milestone](https://github.com/metaneutrons/ami-rust/milestone/3).
 
-Dependencies: RC1 and the RC0 Cargo design. Preserve the compatibility build
-command as a thin facade over the new path; retire the independent build engine.
+Dependencies: historical RC1 evidence and the RC0 Cargo findings, with the
+revision-3 architecture above. Remove the public CLI/plugin and independent
+build engine; preserve relevant library mechanisms and historical evidence.
 
-- **RC2-A1:** normal selected Cargo `metadata`, `check` and `build` work after
-  explicit preparation/activation on both hosts. `build --locked --offline`
+- **RC2-A1:** normal selected Cargo `metadata`, `check` and `build` work through a
+  versioned opt-in rustup-linked toolchain on both hosts, with the paired Cargo
+  and rustc. Project configuration selects the AROS target and crate integration. `build --locked --offline`
   produces the final native ELF through Cargo's link operation; no post-build
   Python or separate manual linking/finalisation step is required. Record the
   exact command recipe and returned artifact path. Target `cargo test/run` and
   rust-analyzer support are not claimed without separate evidence.
-- **RC2-A2:** both CLI frontends and direct Cargo share one target/link/validation
-  implementation. Features, package selection, dependency build scripts and host
+- **RC2-A2:** the target/runtime/build and necessary host-tool crates provide one
+  target/link/validation implementation through standard Cargo interfaces. No
+  public `ami-rust`/`cargo-ami` entrypoint or copied-CLI Cargo launcher remains.
+  Crate manifests/package archives work outside this workspace with versioned
+  dependencies; source-installed advertised tools pass their locked build. Features, package selection, dependency build scripts and host
   proc macros work; incremental rebuild and failed/retried build cases pass.
   Wrong Cargo/rustc/sysroot/linker, ambient conflicting configuration and stale
   target data fail. No fallback to ambient Cargo or global rustup modification.
@@ -247,15 +278,20 @@ Execution: [#73](https://github.com/metaneutrons/ami-rust/issues/73); [delivery 
 Dependencies: RC1 and RC2. This is the first independently releasable migration
 outcome, not completion of the medium-term Python-retirement objective.
 
-- **RC3-A1:** deliver signed/attested native CLI binaries and a new SDK inventory
-  on both hosts. No active consumer Python files, CPython bootstrap, libpython,
+- **RC3-A1:** deliver signed/attested versioned toolchains and a new SDK inventory
+  on both hosts, plus the qualified library/build/tool crates. Verify registry
+  namespace ownership, publisher authentication, licences, exact package archive
+  identity and dependency publication order before crate publication. No public
+  umbrella CLI/plugin or package-manager entrypoint for it is shipped. No active consumer Python files, CPython bootstrap, libpython,
   package-manager Python dependency or Python-based compiler/C-SDK preparation
   remains. The no-Python harness passes the complete cold/warm consumer path,
   with its direct/transitive negative controls. Historical 0.1.0 source capsules
   are inert references, never an execution fallback or the new active SDK payload.
 - **RC3-A2:** qualify direct install plus actual APT/Homebrew install, explicit
-  preparation, new project, offline build, upgrade, reinstall, removal, retained
-  replay and documented recovery on both hosts. Test package-owned versus user
+  per-user rustup registration, a fresh crate-based project, offline build,
+  upgrade, reinstall, removal, retained replay and documented recovery on both
+  hosts. Test exact tool selection, missing paired Cargo, moved/removed
+  registrations and preservation of global defaults and unrelated toolchains. Test package-owned versus user
   state, Cellar relocation, version coexistence and fresh project migration.
   Deny network during the documented offline build, including dependency scripts.
 - **RC3-A3:** complete the inherited release integrity/provenance, licence/source,
@@ -330,13 +366,13 @@ Dependencies: RC4. This milestone is mandatory for initiative completion.
 
 ## 5. Compatibility, migration and rollback
 
-CLI identity, SDK version, package revision and manifest/receipt schema are
+Toolchain, crate/tool version, SDK version, package revision and manifest/receipt schema are
 separate fields. Add new typed/versioned contracts; do not reinterpret a legacy
 hash that explicitly bound Python helpers as if it authenticated Rust binaries.
-Read legacy state only to validate, explain and propose a migration. Dry-run
-reports the old/new SDK, compiler and contract identities without mutation;
-explicit migration writes a fresh state/selection and preserves the original
-project, lock and receipts. It never automatically upgrades the compiler.
+Read legacy state only through reusable validation or documented inspection
+needed to explain migration. The migration guide records old/new SDK, compiler
+and contract identities; reviewed edits create separate configuration/selection
+and preserve the original project, lock and receipts. It never automatically upgrades the compiler.
 Neither inspection nor migration executes the legacy launcher, interpreter or
 Python-bound build driver. Preserved 0.1.0 bytes are rollback evidence/state,
 outside the new release's no-Python execution claim.
@@ -348,10 +384,10 @@ the old version usable. Never claim that a deliberately retained 0.1.0 Python
 environment has itself become Python-free. After migration, the new path must
 not invoke it. Reject unknown future schemas before mutation.
 
-Upgrade/rollback is side-by-side and versioned. Changing the active CLI does not
+Upgrade/rollback is side-by-side and versioned. Changing the selected toolchain/crates does not
 delete user state, rewrite shell startup files, replace global Rust installations
 or retire older working SDKs. Package removal only removes owned files; retained
-Rust tooling contains the binaries/manifests needed for its documented replay.
+toolchain and versioned crates contain the components needed for documented replay.
 
 ## 6. Verification sequence, risks and cost
 
@@ -369,8 +405,9 @@ their dependencies and prospectively recorded inputs are ready. Existing realist
 new binary/preparation costs and agree any necessary prospective revision before
 a campaign. There is no new overall project timer or arbitrary application cap.
 
-The high-risk work is consumer trust/bootstrap parity, the staticlib-to-Cargo
-link transition, receipt migration and transitive producer dependencies.
+The high-risk work is authenticated toolchain delivery, the staticlib-to-Cargo
+link transition, crate packaging/publication, migration and transitive producer
+dependencies.
 Rust does not make these disappear. Prefer established libraries and tools,
 bound untrusted parsing/extraction, and preserve failures. An upstream build
 dependency that still needs Python blocks RC5 until removed, replaced or
@@ -389,11 +426,20 @@ qualification. Closure is based on evidence, not the amount of code translated.
 - 2026-10-18: Fabian authorised the epic/milestone tracking and instructed execution.
   Revision 2 adds the actual issue/milestone links and execution authority;
   all 24 acceptance criteria and the qualified input boundaries are unchanged.
-- This proposal neither reopens accepted R1/D0/D1 nor changes the deferred
-  AUR/rustup delivery gates in [the distribution plan](distribution-channels-plan.md).
-  The migration does not depend on their implementation.
+- 2026-10-21: Fabian rejected a separate public CLI, selected standard rustup/Cargo
+  use with AROS/Amiga libraries and tools delivered as crates, and explicitly
+  instructed removal of existing CLI code. Revision 3 supersedes the CLI surface
+  in revision 2 prospectively; it does not invalidate or edit old acceptance
+  evidence. RC2-A1/A2 and RC3-A1/A2 now require the toolchain/crate delivery instead
+  of dual CLI compatibility. Native reproducibility, runtime/memory, integrity,
+  lifecycle and complete Python-retirement requirements remain required.
+- Local rustup selection on the existing hosts is now a core migration dependency.
+  [Distribution plan revision 5](distribution-channels-plan.md) separates it from
+  deferred AUR/Arch and official upstream rustup distribution. Accepted R1/D0/D1
+  identities and historical criteria remain unchanged.
 
-Primary interfaces checked on 2026-10-18:
+Primary interfaces checked on 2026-10-18; rustup/Cargo interfaces rechecked on
+2026-10-21:
 [Cargo build scripts](https://doc.rust-lang.org/cargo/reference/build-scripts.html),
 [Cargo configuration](https://doc.rust-lang.org/cargo/reference/config.html),
 [Cargo external commands](https://doc.rust-lang.org/cargo/commands/cargo.html),

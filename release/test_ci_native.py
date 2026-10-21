@@ -63,26 +63,10 @@ class NativeLifecycleReportRetentionTests(unittest.TestCase):
 
 
 class NativeProducerTests(unittest.TestCase):
-    def test_actual_native_lock_and_archive_selection_agree(self):
-        # This fixture checks the real committed lock/registry selection.
-        # Full source/material parity is exercised separately against the
-        # actual source checkout; the installer CI uses a sparse checkout.
-        with patch.object(auth, "input_manifest_for_sdk", return_value={}):
-            value = native.native_inputs()
-        self.assertEqual(value["sdk_version"], "0.2.0")
-        self.assertEqual(len(value["registry_crates"]), 29)
-        changed = json.loads(json.dumps(value))
-        changed["registry_crates"][0]["sha256"] = "f" * 64
-        original = auth.read
-
-        def read(path, *args):
-            if Path(path).name == "native-tooling-inputs.json":
-                return auth.encoded(changed)
-            return original(path, *args)
-
-        with patch.object(auth, "read", side_effect=read):
-            with self.assertRaisesRegex(ValueError, "reviewed Cargo lock"):
-                native.native_inputs()
+    def test_retired_cli_lock_cannot_be_admitted_from_current_workspace(self):
+        # Keep the sealed old lock identity; do not rebind it to a CLI-free tree.
+        with self.assertRaisesRegex(ValueError, "native Cargo lock differs from the producer pin"):
+            native.native_inputs()
 
     def test_host_payload_is_bound_to_source_host_lock_and_actual_bytes(self):
         with tempfile.TemporaryDirectory() as directory:

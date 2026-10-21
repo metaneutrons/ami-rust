@@ -12,6 +12,22 @@ criteria are in `docs/rust-cli-cargo-migration-plan.md`. Fabian subsequently
 authorised tracking and execution in milestone dependency order on 2026-10-18.
 Keep unmet acceptance gates open; no release is accepted merely by starting work.
 
+## Standard toolchain and crates; no public CLI
+
+Owner decision, 2026-10-21: do not build or retain a public `ami-rust` CLI or
+`cargo-ami` plugin. Use rustup for selecting versioned toolchains and normal Cargo
+for application builds. Deliver AROS/Amiga libraries and necessary focused tools
+as crates. Remove active Python/Rust CLI entrypoints, dispatchers and launchers;
+reuse shared libraries only for genuine crate/internal-task needs. Do not disguise
+the retired CLI as a Cargo executable or add a new general SDK manager.
+
+Direct/APT/Homebrew deliver authenticated toolchain components; opt-in per-user
+rustup linking on the existing supported hosts is core scope and does not wait
+for AUR. Official upstream rustup target distribution remains separate. Preserve
+old releases, tags and evidence; no Python fallback or automatic rewrite of user
+projects. The authoritative migration plan revision 3 retains full RC2–RC5 build,
+lifecycle, integrity, native runtime/memory and Python-retirement gates.
+
 ## Portability patches
 
 Owner decision, 2026-10-16: small, maintained patches are permitted when needed

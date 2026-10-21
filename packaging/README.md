@@ -1,5 +1,12 @@
 # ami-rust package installation
 
+> **Historical 0.1.0 interface.** These commands describe the immutable released
+> packages, not the current development tree. Their CLI implementation has been
+> retired here. Use the [released source](https://github.com/metaneutrons/ami-rust/tree/v0.1.0)
+> for historical replay. The next release uses rustup, normal Cargo and crates;
+> see the migration plan and issue #72.
+
+
 This package delivers SDK 0.1.0, packaging revision 2, for native PC x86-64
 AROS ABI-v1. The supported development hosts are Ubuntu 24.04 x86-64 and macOS
 26 on Apple Silicon. APT and Homebrew availability is recorded in the
