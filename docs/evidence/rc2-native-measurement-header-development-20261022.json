@@ -1,0 +1,142 @@
+{
+  "schema": "ami-rust-native-measurement-header-development-v1",
+  "status": "PASS_BOUNDED_MACOS_PACKAGED_DEVELOPMENT_NOT_RC2_ACCEPTANCE",
+  "source_commit": "809293de3b09d1864a9099ad10d8ad9ffeeae487",
+  "parent": "b45c60226b55d9f09fb4086a3eddfedf8cfb1510",
+  "problem": "The qualification-only diagnostic C bridge includes scripts/measurement/m1_measurement.h, which the new host build crate omitted from its packaged/staged source closure. Testing-enabled Cargo builds stopped before linking.",
+  "change": "Embed and package the byte-identical retained header; stage and verify its exact directories and contents. Scan actual quoted C includes in a new positive/missing-header/restoration test.",
+  "source_files": {
+    "tooling/crates/aros-native-build/src/build.rs": "129c866ef535b17b44c65716680f6c6439f572fbee5d635f59509705d443c94a",
+    "tooling/crates/aros-native-build/scripts/measurement/m1_measurement.h": "0bf0037d373c72bba88865c8202761dd2fcf310752ae7e12afe7f2775aa98a4c",
+    "scripts/measurement/m1_measurement.h": "0bf0037d373c72bba88865c8202761dd2fcf310752ae7e12afe7f2775aa98a4c",
+    "tooling/Cargo.lock": "9268b294c6d697a3914b735f775a0c2b0543e775de3f6bf10b2f964baf5de6cd"
+  },
+  "component_checks": {
+    "status": "PASS_MEASUREMENT_HEADER_CLOSURE_MISSING_RESTORE_AND_FOCUSED_TESTS_BOTH_CFG_CLIPPY",
+    "result_sha256": "0fc7450a17d088881c1505009d45d3e07e7f6e3c1f18e1c97640be7a4a79eb9b",
+    "tests_passed": 18,
+    "lint": [
+      "macOS native Clippy",
+      "Linux x86-64 cfg Clippy; not Linux execution"
+    ],
+    "elapsed_seconds": 3.8339132089167833,
+    "child_peak_rss_bytes": 452182016,
+    "driver_peak_rss_bytes": 31424512,
+    "workspace_peak_bytes": 1129631183
+  },
+  "independent_source_review": {
+    "status": "FOCUSED_FIX_PASS_A4_PENDING",
+    "review_sha256": "b66d17870338f8b82c4a65820145847986872a5c88da1edc48110f169bce3b3f"
+  },
+  "packaged_development": {
+    "status": "PASS_ELEVEN_REAL_ARCHIVES_AND_FIVE_ORDINARY_CARGO_NATIVE_REFERENCE_VARIANTS_MACOS",
+    "result_sha256": "0a06628f3fb85554cd657f23ae3a47844f949cace75031312bd6847057a59b56",
+    "host": "macOS Apple Silicon",
+    "description": "Actual fixed host crate archive and locked offline Cargo installation; eleven target/reference archives; five ordinary Cargo builds in isolated one-member consumer workspaces with exact registry-version dependencies supplied by a private offline directory source.",
+    "reference_fixture_boundary": "The four source-staticlib reference fixtures were mechanically converted to explicit Cargo binary targets in a private prototype, with versioned dependencies, additive build scripts and the no_main attribute. Those reference manifest/source changes are not implemented by this header-only fix commit. Their complete source/command/log identities remain retained with this result; the target-package integration is a subsequent delivery.",
+    "host_crate_archive": {
+      "bytes": 1053677,
+      "sha256": "d59c42334b0fad6dbcd98c11ed0b4b474161f2524be28cf40eb10f6987424e54",
+      "members": 37,
+      "vcs_commit": "809293de3b09d1864a9099ad10d8ad9ffeeae487",
+      "measurement_header_included": true
+    },
+    "installed_target_linker": {
+      "bytes": 3991152,
+      "sha256": "70b2de2b2025e95761e0b24eb9745a53ba5bfcdada001001a141da208eb09aa9"
+    },
+    "target_archive_count": 11,
+    "cargo_command_count": 25,
+    "all_commands_exit_zero": true,
+    "command_recording": "Captured driver argv/cwd/relevant non-secret environment and individual raw-log SHA-256; this is not independently observed spawned-process evidence.",
+    "variants": [
+      {
+        "variant": "minimal-noalloc",
+        "bytes": 359616,
+        "sha256": "4ff8421b63e67d374cf270e29b2c443e74f635365fbc071bece1129233e35912",
+        "native_objects_equal_original_reference": true,
+        "all_library_dependencies_from_archives": true
+      },
+      {
+        "variant": "minimal-alloc",
+        "bytes": 885856,
+        "sha256": "4a9e1b92de51b27ed5a4e6dbbb43f745edad9ee7e5a2113c142f85c19209da8a",
+        "native_objects_equal_original_reference": true,
+        "all_library_dependencies_from_archives": true
+      },
+      {
+        "variant": "sha256sum",
+        "bytes": 928208,
+        "sha256": "b02fef6491ff4e5871fcb7636979f72d067e8d5fa03dc171be8c31072a7bcf65",
+        "native_objects_equal_original_reference": true,
+        "all_library_dependencies_from_archives": true
+      },
+      {
+        "variant": "qualification",
+        "bytes": 1029880,
+        "sha256": "b5244eee317c5dab922b844bb89f045221dd2c6012fe979b3e767d98311f2a73",
+        "native_objects_equal_original_reference": true,
+        "all_library_dependencies_from_archives": true
+      },
+      {
+        "variant": "dependencies",
+        "bytes": 1501768,
+        "sha256": "759da8c0335f7856aa8ae968dd0e9a89e0d44403859a20a23ff6691d5958def2",
+        "native_objects_equal_original_reference": true,
+        "all_library_dependencies_from_archives": true
+      }
+    ],
+    "all_five_C_startup_object_sets_equal_pinned_reference": true,
+    "host_libc": "The added host build crate retains its exact existing libc0.2.191 pin, replacing the original conditional libc0.2.190 lock entry. All35other original registry identities are retained. Every variant logs libc only for the macOS host, checked by parsing actual compiler arguments.",
+    "elapsed_seconds": 131.84072974999435,
+    "child_peak_rss_bytes": 577372160,
+    "driver_peak_rss_bytes": 60129280,
+    "workspace_peak_bytes": 1616460457,
+    "original_selected_inputs_unchanged": true
+  },
+  "initial_R1_comparison": {
+    "status": "MEASURED_NOT_ACCEPTED",
+    "reference_map_sha256": "93894f48757802841e067fa31d6a1624a3d35a80060d2927670cecfc81c4544e",
+    "all_five_executable_allocated_section_byte_multisets_equal": true,
+    "comparison_key": [
+      "section type",
+      "flags",
+      "size",
+      "alignment",
+      "SHA-256",
+      "multiplicity"
+    ],
+    "scope": "Generated section labels/order can change with crate identities. Raw executable bytes as a multiset do not establish symbol/relocation association or full semantic equivalence.",
+    "entire_allocated_sections_equal_by_name": [
+      "minimal-noalloc",
+      "minimal-alloc"
+    ],
+    "remaining": [
+      "Complete symbol/relocation-aware comparison and explanation of readonly-data differences for sha256sum, qualification and dependencies.",
+      "Complete inherited AROS runtime/memory matrix for the new candidate on the unchanged baseline."
+    ],
+    "comparison_result_sha256": "b7cfdd87fee1e250db61165a6713d75e481675cd9b39f23aee1b9284f15e7ab0",
+    "executable_multiset_result_sha256": "5eee8512f1d146eb2ee912974c08d41e4f03f9ba70e189d6abec845fc57d236f"
+  },
+  "preserved_failures": [
+    {
+      "attempt": "a1",
+      "reason": "Initial lock-preservation assertion was too broad for the newly added exact host libc dependency."
+    },
+    {
+      "attempt": "a2",
+      "reason": "The extracted consumer discovered the unrelated ancestor evidence workspace; corrected by a fresh explicit outer consumer workspace."
+    },
+    {
+      "attempt": "a3",
+      "reason": "Actual testing-enabled native build exposed the omitted measurement header."
+    }
+  ],
+  "limits": [
+    "Current crates remain publish=false development candidates; no public registry availability, namespace ownership, publisher authentication or SDK publication is established.",
+    "No Linux execution, Linux ARM64 admission, three-host/two-root matrix, guest execution or RC2 acceptance.",
+    "The measurement protocol and bind.o remain qualification-only; production builds do not link bind.o. No production SDK payload is approved by this evidence.",
+    "Internal Python orchestrates these development checks; RC4 retirement is still required.",
+    "Default compiler/Cargo/C-SDK/target/ABI-v1/QEMU inputs and protected AROS checkouts are unchanged."
+  ]
+}
