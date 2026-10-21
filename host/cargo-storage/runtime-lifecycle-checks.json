@@ -1,0 +1,83 @@
+{
+  "schema": "ami-rust-cargo-storage-runtime-checks-v1",
+  "fixture_kind": "storage-analysis-build-directory",
+  "common": [
+    "control-absent-actual-build-directory-writes",
+    "control-absent-actual-executable",
+    "control-absent-analysis-disabled-refusal",
+    "control-absent-analysis-report-finds-session",
+    "control-absent-disabled-config-preserved",
+    "control-absent-enabled-jsonl-log-routing",
+    "control-absent-initial-config-preserved",
+    "control-absent-original-config-credentials-unchanged-by-Cargo",
+    "control-absent-store-root-identity-preserved",
+    "control-selected-actual-build-directory-writes",
+    "control-selected-actual-executable",
+    "control-selected-analysis-disabled-refusal",
+    "control-selected-analysis-report-finds-session",
+    "control-selected-disabled-config-preserved",
+    "control-selected-enabled-jsonl-log-routing",
+    "control-selected-initial-config-preserved",
+    "control-selected-original-config-credentials-unchanged-by-Cargo",
+    "control-selected-store-root-identity-preserved",
+    "derived-absent-actual-build-directory-writes",
+    "derived-absent-actual-executable",
+    "derived-absent-analysis-disabled-refusal",
+    "derived-absent-analysis-report-finds-session",
+    "derived-absent-disabled-config-preserved",
+    "derived-absent-enabled-jsonl-log-routing",
+    "derived-absent-initial-config-preserved",
+    "derived-absent-original-config-credentials-unchanged-by-Cargo",
+    "derived-absent-store-root-identity-preserved",
+    "derived-selected-actual-build-directory-writes",
+    "derived-selected-actual-executable",
+    "derived-selected-analysis-disabled-refusal",
+    "derived-selected-analysis-report-finds-session",
+    "derived-selected-disabled-config-preserved",
+    "derived-selected-enabled-jsonl-log-routing",
+    "derived-selected-initial-config-preserved",
+    "derived-selected-original-config-credentials-unchanged-by-Cargo",
+    "derived-selected-store-root-identity-preserved",
+    "selector-absent-build-analysis-summary-parity"
+  ],
+  "profiles": {
+    "macos-aarch64": [],
+    "linux-x86_64": []
+  },
+  "commands": {
+    "common": {
+      "control-absent-analysis-check": 0,
+      "control-absent-analysis-disabled-control": 0,
+      "control-absent-analysis-sessions": 0,
+      "control-absent-build": 0,
+      "control-absent-executable": 0,
+      "control-absent-lock": 0,
+      "control-selected-analysis-check": 0,
+      "control-selected-analysis-disabled-control": 0,
+      "control-selected-analysis-sessions": 0,
+      "control-selected-build": 0,
+      "control-selected-executable": 0,
+      "control-selected-lock": 0,
+      "derived-absent-analysis-check": 0,
+      "derived-absent-analysis-disabled-control": 0,
+      "derived-absent-analysis-sessions": 0,
+      "derived-absent-build": 0,
+      "derived-absent-executable": 0,
+      "derived-absent-lock": 0,
+      "derived-selected-analysis-check": 0,
+      "derived-selected-analysis-disabled-control": 0,
+      "derived-selected-analysis-sessions": 0,
+      "derived-selected-build": 0,
+      "derived-selected-executable": 0,
+      "derived-selected-lock": 0
+    },
+    "profiles": {
+      "macos-aarch64": {},
+      "linux-x86_64": {}
+    }
+  },
+  "additional_driver_files": [
+    "cargo_storage_lifecycle.rs"
+  ],
+  "scope": "Exact bounded synthetic host storage fixture; selector-absent comparisons are the stated observations, not full RC2/AROS/release acceptance."
+}

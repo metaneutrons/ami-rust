@@ -44,7 +44,9 @@
     "linux-x86_64": [
       "linux-non-utf8-root-preserves-bytes-and-routes-git-cache-owned-0755",
       "linux-non-utf8-cache-literal-build-dir-metadata-equivalence",
-      "linux-non-utf8-cache-template-check-uses-literal-OS-root"
+      "linux-pinned-rustc-non-utf8-argv-limitation",
+      "linux-original-cargo-non-utf8-target-same-compiler-limitation",
+      "linux-non-utf8-cache-template-preserves-OS-root-and-compiler-limitation"
     ]
   },
   "scope": "Exact host-component fixture receipt checks only; not complete RC2 acceptance.",
@@ -101,7 +103,10 @@
         "linux-non-utf8-root-local-fetch": 0,
         "linux-non-utf8-literal-build-dir-control": 0,
         "linux-non-utf8-literal-build-dir-derived": 0,
-        "linux-non-utf8-cache-template-check": 0
+        "linux-pinned-rustc-utf8-version": 0,
+        "linux-pinned-rustc-non-utf8-argv": 101,
+        "linux-original-cargo-non-utf8-target-check": 101,
+        "linux-non-utf8-cache-template-compiler-limitation": 101
       }
     }
   }

@@ -2,6 +2,7 @@
 from __future__ import annotations
 import argparse
 import datetime
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -36,17 +37,19 @@ def own_rss():
     return value if sys.platform == 'darwin' else value * 1024
 
 
+def unique_pairs(rows):
+    result = {}
+    for key, value in rows:
+        if key in result:
+            raise ValueError('duplicate component JSON key')
+        result[key] = value
+    return result
+
+
 def read_json(path):
     if path.is_symlink() or not path.is_file() or path.stat().st_size > 4 * MIB:
         raise ValueError('missing, linked or oversized component input')
-    def pairs(rows):
-        result = {}
-        for key, value in rows:
-            if key in result:
-                raise ValueError('duplicate component JSON key')
-            result[key] = value
-        return result
-    return json.loads(path.read_text(), object_pairs_hook=pairs,
+    return json.loads(path.read_text(), object_pairs_hook=unique_pairs,
                       parse_constant=lambda _: (_ for _ in ()).throw(ValueError('non-finite JSON')))
 
 
@@ -105,7 +108,7 @@ def managed_bytes(roots):
 
 def log_bytes(roots):
     return sum(info.st_size for root in roots for path, info in tree_files(root)
-               if stat.S_ISREG(info.st_mode) and path.name.endswith(('.log', '.stdout', '.stderr')))
+               if stat.S_ISREG(info.st_mode) and path.name.endswith(('.log', '.stdout', '.stderr', '.jsonl')))
 
 
 def source_symlinks(source):
@@ -129,8 +132,20 @@ def verify_derived_source(source, descriptor, supervisor, work, expected_symlink
     return files
 
 
-def validate_runtime(runtime, runtime_root, profile, expected_tools):
-    contract_path = ROOT/'host/cargo-storage/runtime-checks.json'
+def validate_runtime(runtime, runtime_root, profile, expected_tools, fixture='base'):
+    contracts = {'base':'runtime-checks.json', 'lifecycle':'runtime-lifecycle-checks.json',
+                 'registry':'runtime-registry-checks.json', 'nested':'runtime-nested-checks.json',
+                 'concurrent_gc':'runtime-concurrent-gc-checks.json',
+                 'git_helper':'runtime-git-helper-checks.json'}
+    if fixture not in contracts:
+        raise ValueError('unknown storage fixture selection')
+    # Runtime receipts and logs are untrusted inputs. A linked root must not
+    # escape the component's output/resource accounting tree.
+    root_info = runtime_root.lstat()
+    if (not stat.S_ISDIR(root_info.st_mode) or runtime_root.resolve(strict=True) != runtime_root):
+        raise ValueError('storage runtime root is not a canonical plain directory')
+    root_identity = (root_info.st_dev, root_info.st_ino)
+    contract_path = ROOT/'host/cargo-storage'/contracts[fixture]
     contract = read_json(contract_path)
     if contract.get('schema') != 'ami-rust-cargo-storage-runtime-checks-v1':
         raise ValueError('unknown storage fixture contract')
@@ -143,6 +158,15 @@ def validate_runtime(runtime, runtime_root, profile, expected_tools):
             or runtime.get('rc2_accepted') is not False
             or runtime.get('driver_source_sha256') != c.sha256(ROOT/'tooling/crates/xtask/src/cargo_storage_probe.rs')):
         raise ValueError('Rust storage fixture has an invalid identity or status')
+    if fixture != 'base':
+        if runtime.get('fixture_kind') != contract['fixture_kind']:
+            raise ValueError('Rust storage extension fixture kind differs')
+        additional = contract['additional_driver_files']
+        digests = [c.sha256(ROOT/'tooling/crates/xtask/src'/name) for name in additional]
+        expected_extra = (digests[0] if len(additional) == 1 else
+                          {fixture:digests[0], 'fixture':digests[1]})
+        if runtime.get('additional_driver_sha256') != expected_extra:
+            raise ValueError('Rust storage extension source differs')
     checks, commands = runtime.get('checks'), runtime.get('commands')
     if (not isinstance(checks, list) or not checks or not isinstance(commands, list) or not commands
             or runtime.get('check_count') != len(checks) or runtime.get('command_count') != len(commands)
@@ -194,8 +218,79 @@ def validate_runtime(runtime, runtime_root, profile, expected_tools):
     git = Path('/usr/bin/git').resolve(strict=True)
     if actual['git']['sha256'] != c.sha256(git) or actual['git']['path']['unix_bytes_hex'] != os.fsencode(git).hex():
         raise ValueError('storage fixture Git identity differs')
-    return {'contract_sha256':c.sha256(contract_path), 'checked_logs':2*len(commands),
-            'checked_commands':len(commands), 'checked_fixture_outcomes':len(checks)}
+    retained = validate_analysis_logs(runtime, runtime_root) if fixture == 'lifecycle' else None
+    after_root = runtime_root.lstat()
+    if (not stat.S_ISDIR(after_root.st_mode)
+            or (after_root.st_dev, after_root.st_ino) != root_identity
+            or runtime_root.resolve(strict=True) != runtime_root):
+        raise ValueError('storage runtime root changed during readback')
+    observation = {'contract_sha256':c.sha256(contract_path), 'checked_logs':2*len(commands),
+                   'checked_commands':len(commands), 'checked_fixture_outcomes':len(checks)}
+    if retained is not None:
+        observation['checked_retained_analysis_logs'] = retained
+    return observation
+
+
+def validate_analysis_logs(runtime, runtime_root):
+    expected_cases = {'control-selected', 'derived-selected', 'control-absent', 'derived-absent'}
+    observations = {row['name']:row for row in runtime['checks']}
+    paths = set()
+    for case in sorted(expected_cases):
+        observed = observations[case+'-enabled-jsonl-log-routing']['observation']
+        original, retained = observed['logs'], observed['retained_logs']
+        sessions = observations[case+'-analysis-report-finds-session']['observation']
+        if len(original) != 1 or len(retained) != 1 or sessions['retained_logs'] != retained:
+            raise ValueError('incomplete or contradictory retained analysis observations')
+        source, copy = original[0], retained[0]
+        relative = Path(copy['destination'])
+        if (relative.is_absolute() or len(relative.parts) != 3
+                or relative.parts[:2] != ('analysis-logs', case)
+                or relative.parts[2] != source['file_name']
+                or relative.parts[2] != source['session_id']+'.jsonl'
+                or copy['session_id'] != sessions['session_id']
+                or any(copy[key] != source[key] for key in ('session_id','bytes','sha256','json_lines'))
+                or str(relative) in paths):
+            raise ValueError('retained analysis path or source identity differs')
+        path = runtime_root
+        for part in relative.parts:
+            path /= part
+            if path.is_symlink():
+                raise ValueError('retained analysis path is linked')
+        before = path.lstat()
+        with path.open('rb') as stream:
+            opened = os.fstat(stream.fileno())
+            if (not stat.S_ISREG(opened.st_mode) or opened.st_size > 8*MIB
+                    or (before.st_dev, before.st_ino) != (opened.st_dev, opened.st_ino)):
+                raise ValueError('retained analysis file identity differs')
+            payload = stream.read(8*MIB+1)
+            after = os.fstat(stream.fileno())
+        current = path.lstat()
+        if (not stat.S_ISREG(current.st_mode)
+                or (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino)
+                or any(info.st_size != len(payload) for info in (before, opened, after, current))
+                or len(payload) > 8*MIB or len(payload) != copy['bytes']
+                or hashlib.sha256(payload).hexdigest() != copy['sha256']):
+            raise ValueError('retained analysis bytes differ')
+        # Hash and parse the same bounded read, never reopen after hashing.
+        lines = payload.splitlines()
+        try:
+            records = [json.loads(line, object_pairs_hook=unique_pairs, parse_constant=lambda _: (_ for _ in ()).throw(
+                ValueError('non-finite analysis JSON'))) for line in lines]
+        except ValueError as error:
+            raise ValueError('retained analysis JSONL records differ') from error
+        if (not lines or len(lines) != copy['json_lines']
+                or any(not isinstance(record, dict) for record in records)):
+            raise ValueError('retained analysis JSONL records differ')
+        paths.add(str(relative))
+    root = runtime_root/'analysis-logs'
+    actual = set()
+    for path, info in tree_files(root):
+        if stat.S_ISLNK(info.st_mode) or path.suffix != '.jsonl':
+            raise ValueError('unexpected retained analysis entry')
+        actual.add(str(path.relative_to(runtime_root)))
+    if actual != paths:
+        raise ValueError('retained analysis inventory differs')
+    return len(paths)
 
 
 def run(args):
@@ -350,6 +445,21 @@ def run(args):
                 cwd=work, label='actual-Rust-storage-fixtures')
         report['runtime_result'] = read_json(output/'runtime/result.json')
         report['runtime_readback'] = validate_runtime(report['runtime_result'], output/'runtime', control['host'], report['tools'])
+        report['extended_runtime_results'] = {}
+        report['extended_runtime_readbacks'] = {}
+        for name in ('lifecycle', 'registry', 'nested', 'concurrent_gc', 'git_helper'):
+            stage = 'Rust-'+name+'-fixtures'
+            runtime_root = output/('runtime-'+name)
+            sup.run([str(fixture), 'cargo-storage-'+name.replace('_','-')+'-probe',
+                     '--control', str(original_binary), '--derived', str(derived),
+                     '--rustc', str(host/'bin/rustc'), '--rustdoc', str(host/'bin/rustdoc'),
+                     '--work', str(work/('runtime '+name+' with spaces')), '--output', str(runtime_root)],
+                    cwd=work, label='actual-Rust-storage-'+name+'-fixtures')
+            result = read_json(runtime_root/'result.json')
+            report['extended_runtime_results'][name] = result
+            report['extended_runtime_readbacks'][name] = validate_runtime(
+                result, runtime_root, control['host'], report['tools'], name)
+
         if c.sha256(original_binary) != control_digest:
             raise ValueError('original Cargo control binary changed')
         if c.tree_inventory(vendor) != vendor_before or c.tree_inventory(host) != compiler_before:

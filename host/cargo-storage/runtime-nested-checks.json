@@ -1,0 +1,79 @@
+{
+  "schema": "ami-rust-cargo-storage-runtime-checks-v1",
+  "fixture_kind": "storage-nested-relative-home",
+  "common": [
+    "control-absent-distinct-cwd-config-and-credential-inputs",
+    "control-absent-nested-build-completed",
+    "control-absent-nested-home-marker-and-literal-cargo-home-observed",
+    "control-absent-outer-build-completed",
+    "control-absent-outer-home-and-literal-cargo-home-observed",
+    "control-absent-registry-auth-and-correct-storage-root",
+    "control-selected-distinct-cwd-config-and-credential-inputs",
+    "control-selected-nested-build-completed",
+    "control-selected-nested-home-marker-and-literal-cargo-home-observed",
+    "control-selected-outer-build-completed",
+    "control-selected-outer-home-and-literal-cargo-home-observed",
+    "control-selected-registry-auth-and-correct-storage-root",
+    "derived-absent-distinct-cwd-config-and-credential-inputs",
+    "derived-absent-nested-build-completed",
+    "derived-absent-nested-home-marker-and-literal-cargo-home-observed",
+    "derived-absent-outer-build-completed",
+    "derived-absent-outer-home-and-literal-cargo-home-observed",
+    "derived-absent-registry-auth-and-correct-storage-root",
+    "derived-selected-fresh-correct-token-retry-complete-relative-homes-preserved-and-locks-routed",
+    "derived-selected-fresh-correct-token-retry-distinct-cwd-config-and-credential-inputs",
+    "derived-selected-fresh-correct-token-retry-nested-build-completed",
+    "derived-selected-fresh-correct-token-retry-nested-home-marker-and-literal-cargo-home-observed",
+    "derived-selected-fresh-correct-token-retry-outer-build-completed",
+    "derived-selected-fresh-correct-token-retry-outer-home-and-literal-cargo-home-observed",
+    "derived-selected-fresh-correct-token-retry-registry-auth-and-correct-storage-root",
+    "nested-wrong-token-complete-relative-homes-preserved-and-locks-routed",
+    "nested-wrong-token-distinct-cwd-config-and-credential-inputs",
+    "nested-wrong-token-outer-build-completed",
+    "nested-wrong-token-outer-home-and-literal-cargo-home-observed",
+    "nested-wrong-token-registry-auth-and-correct-storage-root",
+    "nested-wrong-token-rejected-without-crate-and-fresh-retry-succeeds",
+    "selector-absent-stable-observation-parity"
+  ],
+  "profiles": {
+    "macos-aarch64": [],
+    "linux-x86_64": []
+  },
+  "commands": {
+    "common": {
+      "control-absent-nested-executable": 0,
+      "control-absent-nested-lock": 0,
+      "control-absent-outer-build": 0,
+      "control-absent-outer-executable": 0,
+      "control-absent-outer-lock": 0,
+      "control-selected-nested-executable": 0,
+      "control-selected-nested-lock": 0,
+      "control-selected-outer-build": 0,
+      "control-selected-outer-executable": 0,
+      "control-selected-outer-lock": 0,
+      "derived-absent-nested-executable": 0,
+      "derived-absent-nested-lock": 0,
+      "derived-absent-outer-build": 0,
+      "derived-absent-outer-executable": 0,
+      "derived-absent-outer-lock": 0,
+      "derived-selected-fresh-correct-token-retry-nested-executable": 0,
+      "derived-selected-fresh-correct-token-retry-nested-lock": 0,
+      "derived-selected-fresh-correct-token-retry-outer-build": 0,
+      "derived-selected-fresh-correct-token-retry-outer-executable": 0,
+      "derived-selected-fresh-correct-token-retry-outer-lock": 0,
+      "nested-wrong-token-nested-lock": 0,
+      "nested-wrong-token-outer-build": 0,
+      "nested-wrong-token-outer-executable": 0,
+      "nested-wrong-token-outer-lock": 0
+    },
+    "profiles": {
+      "macos-aarch64": {},
+      "linux-x86_64": {}
+    }
+  },
+  "additional_driver_files": [
+    "cargo_storage_nested.rs",
+    "cargo_storage_registry_fixture.rs"
+  ],
+  "scope": "Exact bounded synthetic host storage fixture; selector-absent comparisons are the stated observations, not full RC2/AROS/release acceptance."
+}

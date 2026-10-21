@@ -44,7 +44,16 @@ fn main() {
 fn run() -> Result<()> {
     let mut arguments = std::env::args_os().skip(1);
     match arguments.next().as_deref().and_then(|value| value.to_str()) {
+        Some("--cargo-plugin") => cargo_storage_probe::credential_provider(arguments),
+        Some("--rc2-git-credential") => cargo_storage_probe::git_credential_helper(arguments),
+        Some("cargo-storage-registry-probe") => cargo_storage_probe::run_registry(arguments),
         Some("cargo-storage-probe") => cargo_storage_probe::run(arguments),
+        Some("cargo-storage-lifecycle-probe") => cargo_storage_probe::run_lifecycle(arguments),
+        Some("cargo-storage-nested-probe") => cargo_storage_probe::run_nested(arguments),
+        Some("cargo-storage-git-helper-probe") => cargo_storage_probe::run_git_helper(arguments),
+        Some("cargo-storage-concurrent-gc-probe") => {
+            cargo_storage_probe::run_concurrent_gc(arguments)
+        }
         Some("native-sdk") => run_native_sdk(arguments),
         Some("native-release") => run_native_release(arguments),
         Some("native-package") => run_native_package(arguments),
@@ -56,7 +65,7 @@ fn run() -> Result<()> {
         Some("historical-prepare-interruption") => historical_prepare_sigterm::run(arguments),
         Some("native-legacy-migration-fixture") => legacy_migration_fixture::run(arguments),
         _ => Err(Refusal::new(
-            "usage: ami-rust-xtask {cargo-storage-probe|native-sdk|native-release|native-package|native-outer|native-outer-finalize|native-package-verify|native-consumer-observe|native-prepare-interruption|historical-prepare-interruption|native-legacy-migration-fixture} OPTIONS; composition does not accept a release",
+            "usage: ami-rust-xtask {cargo-storage-probe|cargo-storage-lifecycle-probe|cargo-storage-registry-probe|cargo-storage-nested-probe|cargo-storage-concurrent-gc-probe|cargo-storage-git-helper-probe|native-sdk|native-release|native-package|native-outer|native-outer-finalize|native-package-verify|native-consumer-observe|native-prepare-interruption|historical-prepare-interruption|native-legacy-migration-fixture} OPTIONS; composition does not accept a release",
         )),
     }
 }

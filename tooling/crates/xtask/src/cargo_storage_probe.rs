@@ -25,6 +25,19 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+#[path = "cargo_storage_concurrent_gc.rs"]
+mod concurrent_gc;
+#[path = "cargo_storage_git_helper.rs"]
+mod git_helper;
+#[path = "cargo_storage_lifecycle.rs"]
+mod lifecycle;
+#[path = "cargo_storage_nested.rs"]
+mod nested;
+#[path = "cargo_storage_registry.rs"]
+mod registry;
+#[path = "cargo_storage_registry_fixture.rs"]
+mod registry_fixture;
+
 const TIMEOUT: Duration = Duration::from_secs(1_200);
 const STREAM_LIMIT: usize = 8 * 1024 * 1024;
 const TERMINATION_GRACE: Duration = Duration::from_secs(2);
@@ -58,6 +71,38 @@ struct Probe<'a> {
 }
 
 pub(super) fn run(arguments: impl Iterator<Item = OsString>) -> Result<()> {
+    execute(arguments, 0)
+}
+
+pub(super) fn run_lifecycle(arguments: impl Iterator<Item = OsString>) -> Result<()> {
+    execute(arguments, 1)
+}
+
+pub(super) fn run_registry(arguments: impl Iterator<Item = OsString>) -> Result<()> {
+    execute(arguments, 2)
+}
+
+pub(super) fn run_nested(arguments: impl Iterator<Item = OsString>) -> Result<()> {
+    execute(arguments, 3)
+}
+
+pub(super) fn run_concurrent_gc(arguments: impl Iterator<Item = OsString>) -> Result<()> {
+    execute(arguments, 4)
+}
+
+pub(super) fn run_git_helper(arguments: impl Iterator<Item = OsString>) -> Result<()> {
+    execute(arguments, 5)
+}
+
+pub(super) fn git_credential_helper(arguments: impl Iterator<Item = OsString>) -> Result<()> {
+    git_helper::helper(arguments)
+}
+
+pub(super) fn credential_provider(arguments: impl Iterator<Item = OsString>) -> Result<()> {
+    registry::provider(arguments)
+}
+
+fn execute(arguments: impl Iterator<Item = OsString>, extended: u8) -> Result<()> {
     let arguments = parse_arguments(arguments)?;
     let output = prepare_fresh_directory(&arguments.output, "output")?;
     let logs = output.join("logs");
@@ -115,7 +160,33 @@ pub(super) fn run(arguments: impl Iterator<Item = OsString>) -> Result<()> {
         commands: Vec::new(),
         base_env: BTreeMap::new(),
     };
-    let execution = run_component(&mut probe, &mut report);
+    let execution = if extended == 5 {
+        report["fixture_kind"] = json!("storage-git-credential-helper");
+        report["additional_driver_sha256"] = json!(digest::sha256_bytes(include_bytes!(
+            "cargo_storage_git_helper.rs"
+        )));
+        git_helper::run(&mut probe, &mut report)
+    } else if extended == 4 {
+        report["fixture_kind"] = json!("storage-selected-concurrency-and-semantic-gc");
+        report["additional_driver_sha256"] = json!({"concurrent_gc":digest::sha256_bytes(include_bytes!("cargo_storage_concurrent_gc.rs")), "fixture":digest::sha256_bytes(include_bytes!("cargo_storage_registry_fixture.rs"))});
+        concurrent_gc::run(&mut probe, &mut report)
+    } else if extended == 3 {
+        report["fixture_kind"] = json!("storage-nested-relative-home");
+        report["additional_driver_sha256"] = json!({"nested":digest::sha256_bytes(include_bytes!("cargo_storage_nested.rs")), "fixture":digest::sha256_bytes(include_bytes!("cargo_storage_registry_fixture.rs"))});
+        nested::run(&mut probe, &mut report)
+    } else if extended == 2 {
+        report["fixture_kind"] = json!("storage-registry-credentials");
+        report["additional_driver_sha256"] = json!({"registry":digest::sha256_bytes(include_bytes!("cargo_storage_registry.rs")), "fixture":digest::sha256_bytes(include_bytes!("cargo_storage_registry_fixture.rs"))});
+        registry::run(&mut probe, &mut report)
+    } else if extended == 1 {
+        report["fixture_kind"] = json!("storage-analysis-build-directory");
+        report["additional_driver_sha256"] = json!(digest::sha256_bytes(include_bytes!(
+            "cargo_storage_lifecycle.rs"
+        )));
+        lifecycle::run(&mut probe, &mut report)
+    } else {
+        run_component(&mut probe, &mut report)
+    };
     report["commands"] = json!(&probe.commands);
     report["command_count"] = json!(probe.commands.len());
     let check_count = report["checks"].as_array().map_or(0, |checks| checks.len());
@@ -471,6 +542,23 @@ impl Probe<'_> {
             termination_grace: TERMINATION_GRACE,
         };
         let capture_result = process_capture::capture(&spec, limits, || self.guard.requested());
+        self.record_capture(label, &spec, expected_exit_code, capture_result)
+    }
+
+    fn record_capture(
+        &mut self,
+        label: &str,
+        spec: &CommandSpec,
+        expected_exit_code: i32,
+        capture_result: std::result::Result<
+            process_capture::CapturedProcess,
+            process_capture::CaptureError,
+        >,
+    ) -> Result<process_capture::CapturedProcess> {
+        let program = &spec.program;
+        let arguments = &spec.args;
+        let cwd = &spec.cwd;
+        let env = &spec.env;
         let sequence = self.commands.len() + 1;
         let stdout_path = self.logs.join(format!("{sequence:03}-{label}.stdout"));
         let stderr_path = self.logs.join(format!("{sequence:03}-{label}.stderr"));
@@ -1748,8 +1836,69 @@ fn run_linux_non_utf8_cases(
         }),
     )?;
 
+    // The pinned compiler itself requires UTF-8 argv. Characterize the same
+    // boundary through the original Cargo before checking raw template routing;
+    // exit101 here is not successful compilation or a derived-Cargo regression.
+    let rustc = probe
+        .tools
+        .iter()
+        .find(|tool| tool.name == "rustc")
+        .ok_or_else(|| Refusal::new("probe has no selected rustc"))?
+        .path
+        .clone();
+    let compiler_version = probe.command(
+        "linux-pinned-rustc-utf8-version",
+        &rustc,
+        strings(["--version"]),
+        project,
+        control_env,
+        0,
+    )?;
+    let compiler_raw = probe.command(
+        "linux-pinned-rustc-non-utf8-argv",
+        &rustc,
+        vec![
+            OsString::from("--version"),
+            OsString::from_vec(b"raw-\xff".to_vec()),
+        ],
+        project,
+        control_env,
+        101,
+    )?;
+    add_check(
+        report,
+        "linux-pinned-rustc-non-utf8-argv-limitation",
+        compiler_version.stdout.starts_with(b"rustc 1.98.1 ")
+            && pinned_non_utf8_compiler_panic(&compiler_raw.stderr),
+        json!({"utf8_version_exit":0,"non_utf8_argv_exit":101,
+            "unsupported_compiler_path":true,"successful_compilation":false}),
+    )?;
+    let mut original_raw_env = control_env.clone();
+    insert_env(
+        &mut original_raw_env,
+        "CARGO_TARGET_DIR",
+        non_utf8_cache.join("original compiler target").as_os_str(),
+    );
+    let original_raw = probe.cargo(
+        "linux-original-cargo-non-utf8-target-check",
+        control,
+        [cli.to_vec(), strings(["check", "--locked", "--offline"])].concat(),
+        project,
+        &original_raw_env,
+        101,
+    )?;
+    add_check(
+        report,
+        "linux-original-cargo-non-utf8-target-same-compiler-limitation",
+        pinned_non_utf8_compiler_panic(&original_raw.stderr),
+        json!({"original_cargo_exit":101,"same_pinned_compiler_panic":true,
+            "successful_compilation":false}),
+    )?;
+    // Original Cargo legitimately touched its original store. Snapshot after
+    // the control so only the subsequent derived command must preserve it.
+    let home_after_original = snapshot(cargo_home)?;
     let template_check = probe.cargo(
-        "linux-non-utf8-cache-template-check",
+        "linux-non-utf8-cache-template-compiler-limitation",
         derived,
         [
             strings([
@@ -1762,7 +1911,7 @@ fn run_linux_non_utf8_cases(
         .concat(),
         project,
         &same_target_env,
-        0,
+        101,
     )?;
     let intermediate = non_utf8_cache.join("intermediate");
     let intermediate_snapshot = snapshot(&intermediate)?;
@@ -1789,7 +1938,7 @@ fn run_linux_non_utf8_cases(
             .ends_with(b"private-cache-\xff/intermediate");
     add_check(
         report,
-        "linux-non-utf8-cache-template-check-uses-literal-OS-root",
+        "linux-non-utf8-cache-template-preserves-OS-root-and-compiler-limitation",
         routed_root
             && plain_directory(&intermediate)?
             && intermediate_has_build_effect
@@ -1797,8 +1946,9 @@ fn run_linux_non_utf8_cases(
             && cache_after_template
                 .iter()
                 .any(|row| row["path"] == "intermediate" && row["kind"] == "dir")
-            && template_check.status.code() == Some(0)
-            && home_before == snapshot(cargo_home)?
+            && template_check.status.code() == Some(101)
+            && pinned_non_utf8_compiler_panic(&template_check.stderr)
+            && home_after_original == snapshot(cargo_home)?
             && selected_cache_before == snapshot(cache)?,
         json!({
             "raw_cache_root": os_metadata(non_utf8_cache.as_os_str()),
@@ -1808,10 +1958,25 @@ fn run_linux_non_utf8_cases(
             "selected_cache_snapshot": cache_after_template,
             "check_stdout_sha256": digest::sha256_bytes(&template_check.stdout),
             "check_stderr_sha256": digest::sha256_bytes(&template_check.stderr),
-            "metadata_json_serialization_asserted": false
+            "metadata_json_serialization_asserted": false,
+            "successful_compilation": false,
+            "unsupported_compiler_path": true,
+            "unchanged_original_and_direct_compiler_share_failure": true
         }),
     )?;
     Ok(())
+}
+
+#[cfg(any(target_os = "linux", test))]
+fn pinned_non_utf8_compiler_panic(stderr: &[u8]) -> bool {
+    [
+        b"panicked at /rustc/48a229ceaefd4985c50990b14116b6d856af0985/".as_slice(),
+        b"library/std/src/env.rs:",
+        b"called `Result::unwrap()` on an `Err` value:",
+        b"\\xFF",
+    ]
+    .iter()
+    .all(|needle| stderr.windows(needle.len()).any(|window| window == *needle))
 }
 
 fn add_check(report: &mut Value, name: &str, passed: bool, details: Value) -> Result<()> {
@@ -2143,6 +2308,22 @@ mod tests {
         ));
         create_private_directory(&path).unwrap();
         path
+    }
+
+    #[test]
+    fn compiler_path_boundary_requires_exact_original_panic_cause() {
+        let actual = br#"thread 'main' (61) panicked at /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/std/src/env.rs:878:51:
+called `Result::unwrap()` on an `Err` value: "raw-\xFF"
+"#;
+        assert!(pinned_non_utf8_compiler_panic(actual));
+        assert!(!pinned_non_utf8_compiler_panic(
+            b"error: could not compile fixture"
+        ));
+        let other_source = String::from_utf8_lossy(actual)
+            .replace("48a229ceaefd4985c50990b14116b6d856af0985", "other-compiler");
+        assert!(!pinned_non_utf8_compiler_panic(other_source.as_bytes()));
+        let other_reason = String::from_utf8_lossy(actual).replace("raw-\\xFF", "normal-path");
+        assert!(!pinned_non_utf8_compiler_panic(other_reason.as_bytes()));
     }
 
     #[test]
