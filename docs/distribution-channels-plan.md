@@ -1,4 +1,4 @@
-# Distribution channels — revision 5
+# Distribution channels — revision 6
 
 Owner decision: 2026-10-18. D0, D1-APT and D1-BREW are accepted against the
 criteria below without removing or weakening any criterion. APT and Homebrew are
@@ -9,6 +9,13 @@ rustup toolchain selection on the existing Ubuntu/macOS hosts into the
 [`distribution-0.1.0.json`](evidence/distribution-0.1.0.json). Requirements
 authority: this file in `metaneutrons/ami-rust`; the external master plan is a
 derived summary.
+
+Owner expansion, 2026-10-21: the next toolchain/crate release additionally
+requires Ubuntu 24.04 ARM64 direct and APT delivery, under migration plan
+revision 4 and [platform gate L1](platform-roadmap.md#l1--linux-arm64-cross-development-host).
+D0/D1 acceptance below remains historical on its original amd64/macOS inputs;
+no arm64 release is claimed by updating this plan. Native AROS rustup on x86-64
+and AArch64 is separately gated in the platform roadmap.
 
 ## Outcome and sequence
 
@@ -30,8 +37,10 @@ their own acceptance records.
 
 D1-APT and D1-BREW can be developed independently after the shared contract is
 settled; neither has to wait for the other's implementation. Debian, older
-Ubuntu/macOS, macOS Intel, Linux ARM64 and Homebrew-on-Linux are not advertised
-as supported without their own host evidence. APT compatibility alone does not
+Ubuntu/macOS, macOS Intel and Homebrew-on-Linux remain outside advertised
+support. Linux ARM64 is required for the next release but remains unqualified
+until L1 and RC2/RC3 pass; its APT architecture is `arm64`, independently of
+the `x86_64-aros` application target. APT compatibility alone does not
 establish Debian SDK compatibility. The target remains PC x86-64 AROS ABI-v1;
 no new AROS CPU/ABI or physical-hardware claim is implied.
 
@@ -184,8 +193,8 @@ image and qualify its host ABI/prerequisites before claiming support.
 
 ## D3-RUSTUP — additional host/upstream integration
 
-Local toolchain registration on macOS 26 Apple Silicon and Ubuntu 24.04 x86-64
-is now required by migration RC2/RC3. It does not depend on D2 and is not evidence
+Local toolchain registration on macOS 26 Apple Silicon, Ubuntu 24.04 x86-64
+and Ubuntu 24.04 ARM64 is required by migration RC2/RC3. It does not depend on D2 and is not evidence
 that this deferred D3 delivery is accepted. D3 adds the Arch x86-64 profile
 accepted in D2 and records the separate upstream distribution outcome. Arch
 qualification remains a prerequisite to advertising Arch support.
@@ -238,7 +247,7 @@ document owns requirements, not a duplicate live CI status table.
 The [package contract](distribution-package-contract.md) records the accepted 0.1.0
 layout, version identities, explicit consumer commands and qualification scope.
 It is historical release authority, not the next toolchain/crate interface.
-The migration plan revision 3 owns that replacement and requires requalification
+The migration plan revision 4 owns that replacement and requires requalification
 of affected package/channel behavior before delivery; the old public CLI is
 not carried into the new payload.
 The immutable SDK release `v0.1.0` is preserved; the new packaging release is

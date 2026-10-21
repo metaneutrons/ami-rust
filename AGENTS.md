@@ -25,7 +25,7 @@ Direct/APT/Homebrew deliver authenticated toolchain components; opt-in per-user
 rustup linking on the existing supported hosts is core scope and does not wait
 for AUR. Official upstream rustup target distribution remains separate. Preserve
 old releases, tags and evidence; no Python fallback or automatic rewrite of user
-projects. The authoritative migration plan revision 3 retains full RC2–RC5 build,
+projects. The authoritative migration plan revision 4 retains full RC2–RC5 build,
 lifecycle, integrity, native runtime/memory and Python-retirement gates.
 
 ## Portability patches
@@ -114,3 +114,19 @@ again. The current qualified campaign remains pinned to its existing 64 MiB
 policy. Change future source-controlled policy and qualify affected retention
 behavior; never rewrite sealed inputs or historical receipts. Current measured
 consumer artifacts are about 29 MiB on macOS and 37.5 MiB on Linux, unpacked.
+
+## Host expansion and native AROS roadmap
+
+Owner decision, 2026-10-21: add Linux ARM64 as a cross-development host alongside
+macOS Apple Silicon and Linux x86-64 for the next RC2–RC5 delivery. Host binaries,
+APT architecture and target architecture are separate identities. Keep the
+`aros-<version>` rustup name portable across hosts; the project is ami-rust.
+Original two-host release evidence remains immutable and cannot qualify ARM64.
+
+The longer-term outcome is complete native Rust/Cargo/rustup on both AROS
+x86-64 and AArch64, including native application builds and authenticated
+installation/update/recovery. It requires separately qualified AArch64 target,
+AROS `std`/OS support, native compiler/Cargo and rustup/distribution work. It is
+not established by a rustup alias on macOS/Linux or by copying Linux ARM64
+binaries onto AROS. See `docs/platform-roadmap.md`. Do not add a public ami-rust
+CLI, alter the current ABI-v1/QEMU baseline, or edit protected AROS checkouts.

@@ -46,6 +46,10 @@ There will be no public `ami-rust` CLI or `cargo-ami` plugin. The active source 
 being migrated; the published 0.1.0 packages and their immutable source remain
 available. Use the [released source and instructions](https://github.com/metaneutrons/ami-rust/tree/v0.1.0)
 for that release. The new toolchain/crate setup is not yet qualified or published.
+The next release also requires **Linux ARM64** host support; it is not yet
+qualified. The [platform roadmap](docs/platform-roadmap.md) separately covers
+future AROS AArch64 applications and native Rust/Cargo/rustup on AROS x86-64
+and AArch64. These are planned capabilities, not support claims for 0.1.0.
 See the [migration plan](docs/rust-cli-cargo-migration-plan.md) and
 [execution issue](https://github.com/metaneutrons/ami-rust/issues/72).
 
