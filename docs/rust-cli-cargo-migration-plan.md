@@ -1,4 +1,4 @@
-# Rust toolchain, Cargo crates and Python retirement — revision 3
+# Rust toolchain, Cargo crates and Python retirement — revision 4
 
 Updated: 2026-10-21. Decision owner: Fabian Schmieder.
 
@@ -29,6 +29,14 @@ historical evidence for revision 2, not a reason to ship their CLI. RC2–RC5 ar
 still required under the prospective criteria below. Previously qualified
 releases, tags, input identities and evidence remain immutable.
 
+Owner expansion, 2026-10-21: add Ubuntu 24.04 ARM64 as a third cross-development
+host for the upcoming RC2–RC5 delivery. Use the same versioned `aros-<version>`
+rustup name on every host; the project remains ami-rust. Native AROS-hosted
+Rust/Cargo/rustup on x86-64 and AArch64 is a subsequent, separately gated
+initiative in the [platform roadmap](platform-roadmap.md), including a new
+AArch64 application target. None of these additions retroactively qualifies
+old releases or accepts a new host/target.
+
 Survey base: public source `8c5de39f26838d838b41dec5a89c9a888dbc20d5`.
 SDK `v0.1.0` and package release `v0.1.0+packaging.2` are the regression anchors.
 The tracked tree contains 104 Python files: 14 under `host/`, 29 under
@@ -53,15 +61,22 @@ stock stable Cargo is not an established equivalent.
 
 ## 2. Fixed boundaries and definitions
 
-- Hosts remain Ubuntu 24.04 x86-64 and macOS 26 Apple Silicon. Target remains
-  native PC x86-64 AROS ABI-v1 on the unchanged qualified QEMU baseline.
+- The prospective RC2–RC5 host matrix is Ubuntu 24.04 x86-64, Ubuntu 24.04
+  ARM64 (glibc), and macOS 26 Apple Silicon. ARM64 Linux remains unqualified
+  until platform gate L1 and the inherited per-host criteria pass. Original
+  RC0/RC1/R1 evidence retains its original two-host scope. The application target
+  remains native PC x86-64 AROS ABI-v1 on the unchanged qualified QEMU baseline.
 - Keep target Rust nightly-2026-09-18, its paired source, Cargo source/patches,
   native compiler, collector and portable C-SDK identities from
-  [compatibility](compatibility.md) as initial inputs. Retiring a patch or
+  [compatibility](compatibility.md) as initial inputs. Linux ARM64 requires its
+  own pinned native-host inputs, source/patch/producer identities and test
+  evidence under [L1](platform-roadmap.md#l1--linux-arm64-cross-development-host);
+  never reuse a different host binary hash or edit a sealed receipt. Retiring a patch or
   changing a compiler requires its own identified and qualified change.
 - No AROS-NX or aros-tools checkout changes, nxpk, other CPU/ABI support, native
   AROS-hosted compiler, full `std`, AUR delivery or official rustup target
-  distribution. Existing external tools remain pinned dependencies.
+  distribution in RC2–RC5. Those native AROS capabilities belong to the subsequent
+  platform initiative. Existing external tools remain pinned dependencies.
 - Do not modify, replace or delete `0.1.0` assets, tags, receipts or evidence.
   New tooling/payloads receive new identities and a normal future release;
   the initial version-reuse exception does not apply.
@@ -94,8 +109,8 @@ link tools. APT, Homebrew and authenticated downloads provide those bytes.
 Explicit per-user `rustup toolchain link` registers an installed prefix; a
 project's `rust-toolchain.toml` selects its exact version. Do not change the global
 default, create a custom updater or operate a new distribution server. Local
-registration is now part of RC2/RC3 for the existing macOS/Ubuntu hosts; it no
-longer waits for AUR. Official `rustup target add` distribution remains a separate
+registration is required in RC2/RC3 for macOS Apple Silicon and Ubuntu x86-64
+and ARM64; it does not wait for AUR. Official `rustup target add` distribution remains a separate
 upstream goal, not a claim made by a local registration.
 
 Use the actual selected Cargo interface for `metadata`, `check` and `build`.
@@ -241,12 +256,12 @@ execution, not behind any newly accepted Rust consumer command.
 Execution: [#72](https://github.com/metaneutrons/ami-rust/issues/72); [delivery milestone](https://github.com/metaneutrons/ami-rust/milestone/3).
 
 Dependencies: historical RC1 evidence and the RC0 Cargo findings, with the
-revision-3 architecture above. Remove the public CLI/plugin and independent
+revision-4 architecture and three-host scope above. Remove the public CLI/plugin and independent
 build engine; preserve relevant library mechanisms and historical evidence.
 
 - **RC2-A1:** normal selected Cargo `metadata`, `check` and `build` work through a
-  versioned opt-in rustup-linked toolchain on both hosts, with the paired Cargo
-  and rustc. Project configuration selects the AROS target and crate integration. `build --locked --offline`
+  versioned opt-in rustup-linked toolchain on all three prospective hosts, with the paired Cargo
+  and rustc. Platform gate L1 is required before ARM64 Linux acceptance. Project configuration selects the AROS target and crate integration. `build --locked --offline`
   produces the final native ELF through Cargo's link operation; no post-build
   Python or separate manual linking/finalisation step is required. Record the
   exact command recipe and returned artifact path. Target `cargo test/run` and
@@ -279,7 +294,7 @@ Dependencies: RC1 and RC2. This is the first independently releasable migration
 outcome, not completion of the medium-term Python-retirement objective.
 
 - **RC3-A1:** deliver signed/attested versioned toolchains and a new SDK inventory
-  on both hosts, plus the qualified library/build/tool crates. Verify registry
+  on all three hosts, plus the qualified library/build/tool crates. Verify registry
   namespace ownership, publisher authentication, licences, exact package archive
   identity and dependency publication order before crate publication. No public
   umbrella CLI/plugin or package-manager entrypoint for it is shipped. No active consumer Python files, CPython bootstrap, libpython,
@@ -287,10 +302,11 @@ outcome, not completion of the medium-term Python-retirement objective.
   remains. The no-Python harness passes the complete cold/warm consumer path,
   with its direct/transitive negative controls. Historical 0.1.0 source capsules
   are inert references, never an execution fallback or the new active SDK payload.
-- **RC3-A2:** qualify direct install plus actual APT/Homebrew install, explicit
+- **RC3-A2:** qualify direct install on all three hosts, actual APT on Ubuntu
+  amd64 and arm64, and Homebrew on macOS Apple Silicon, plus explicit
   per-user rustup registration, a fresh crate-based project, offline build,
-  upgrade, reinstall, removal, retained replay and documented recovery on both
-  hosts. Test exact tool selection, missing paired Cargo, moved/removed
+  upgrade, reinstall, removal, retained replay and documented recovery on all
+  three hosts. Test exact tool selection, missing paired Cargo, moved/removed
   registrations and preservation of global defaults and unrelated toolchains. Test package-owned versus user
   state, Cellar relocation, version coexistence and fresh project migration.
   Deny network during the documented offline build, including dependency scripts.
@@ -327,7 +343,7 @@ to `cargo xtask`/Rust integration tests, reusing the host core.
   and positive/counter-probes. No parallel Rust/Python production paths remain
   after this milestone, and no source-built component hides a Python generator.
 - **RC4-A3:** new component producer reports bind the Rust helpers and all new
-  dependencies; rebuild changed Cargo/C-SDK inputs on both hosts before SDK
+  dependencies; rebuild changed Cargo/C-SDK inputs on all three hosts before SDK
   acceptance. Old Python-bound producer receipts remain historical and are not
   edited to look current. Verify source obligations, path portability and the
   existing reproducibility contracts before switching CI to the new producers.
@@ -351,7 +367,7 @@ Dependencies: RC4. This milestone is mandatory for initiative completion.
   by identity and remain inert; there is no unowned "internal helper" exception.
 - **RC5-A2:** reproduce the supported source/component build, full Rust tests,
   protected SDK/package production, AROS runtime/memory acceptance, staging and
-  consumer replay without Python execution on both supported hosts. Linux also
+  consumer replay without Python execution on all three supported hosts. Linux also
   uses a Python-free build environment; macOS uses the RC0-qualified enforcement/
   observation harness. Merely hiding `python` in PATH or finding no `.py` files
   fails this criterion. Re-run the harness's positive and negative controls.
@@ -434,9 +450,16 @@ qualification. Closure is based on evidence, not the amount of code translated.
   of dual CLI compatibility. Native reproducibility, runtime/memory, integrity,
   lifecycle and complete Python-retirement requirements remain required.
 - Local rustup selection on the existing hosts is now a core migration dependency.
-  [Distribution plan revision 5](distribution-channels-plan.md) separates it from
+  [Distribution plan revision 6](distribution-channels-plan.md) separates it from
   deferred AUR/Arch and official upstream rustup distribution. Accepted R1/D0/D1
   identities and historical criteria remain unchanged.
+
+- 2026-10-21: Fabian added Linux ARM64 as a cross-development host and requested
+  subsequent native Rust/Cargo/rustup on AROS x86-64 and AArch64. Revision 4
+  expands prospective RC2–RC5 to three hosts and RC3 APT to amd64/arm64, with
+  platform gate L1. The separate N0–N4 native roadmap preserves the complete
+  later outcome without claiming it is provided by cross-toolchain registration.
+  Toolchain names use `aros-<version>`; host and target architecture stay separate.
 
 Primary interfaces checked on 2026-10-18; rustup/Cargo interfaces rechecked on
 2026-10-21:
