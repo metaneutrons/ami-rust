@@ -37,17 +37,19 @@ def own_rss():
     return value if sys.platform == 'darwin' else value * 1024
 
 
+def unique_pairs(rows):
+    result = {}
+    for key, value in rows:
+        if key in result:
+            raise ValueError('duplicate component JSON key')
+        result[key] = value
+    return result
+
+
 def read_json(path):
     if path.is_symlink() or not path.is_file() or path.stat().st_size > 4 * MIB:
         raise ValueError('missing, linked or oversized component input')
-    def pairs(rows):
-        result = {}
-        for key, value in rows:
-            if key in result:
-                raise ValueError('duplicate component JSON key')
-            result[key] = value
-        return result
-    return json.loads(path.read_text(), object_pairs_hook=pairs,
+    return json.loads(path.read_text(), object_pairs_hook=unique_pairs,
                       parse_constant=lambda _: (_ for _ in ()).throw(ValueError('non-finite JSON')))
 
 
@@ -272,7 +274,7 @@ def validate_analysis_logs(runtime, runtime_root):
         # Hash and parse the same bounded read, never reopen after hashing.
         lines = payload.splitlines()
         try:
-            records = [json.loads(line, parse_constant=lambda _: (_ for _ in ()).throw(
+            records = [json.loads(line, object_pairs_hook=unique_pairs, parse_constant=lambda _: (_ for _ in ()).throw(
                 ValueError('non-finite analysis JSON'))) for line in lines]
         except ValueError as error:
             raise ValueError('retained analysis JSONL records differ') from error

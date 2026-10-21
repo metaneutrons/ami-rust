@@ -11,7 +11,7 @@
     "host/cargo-storage/runtime-lifecycle-checks.json": "565e7185f5b9150262620e14e7517e2531a1eec3859d0d49cf97a2e95936014b",
     "host/cargo-storage/runtime-nested-checks.json": "be41dac61006f631df4fc1abc8ca9382a896f57c221c7ba22a2528668df845f1",
     "host/cargo-storage/runtime-registry-checks.json": "bf82e93fba24301ed0f2246af2f094cd44909d5b8331968ba9d73462f90c1db8",
-    "release/ci_cargo_storage.py": "c864a6a1f921776cca0b1689433a35548c55f9851cfd44995e2a52766339b74e",
+    "release/ci_cargo_storage.py": "5eeb6c33770c09d8d5246a0198669426dfe9c76a0526b7225decf4135780092c",
     "release/native-tooling-inputs.json": "d8d7042b784fd8f497eaf191fbc14b7dc2b5c89277f48331586a7cb04be69601",
     "tooling/crates/xtask/src/cargo_storage_concurrent_gc.rs": "87603639cc3486a595e91265ca67821f18a63884501fdb0c3e3d3215f2ed015c",
     "tooling/crates/xtask/src/cargo_storage_git_helper.rs": "87470872ba57f4914928248e04b43f45e4f560435349b34e501c144e59f4e611",
@@ -99,9 +99,9 @@
     "report_sha256": "6517af5017aa5a641e3527c3b7159a7a6938be41f682065dad8cd4381f3a2b07"
   },
   "readback_gates": {
-    "positive_and_counter_checks": 38,
-    "result_sha256": "4c99e9f24a14a37eedda5705923bbe798ba68b2e52e1e89849460d0a3c353c92",
-    "scope": "All six real receipts, exact commands/checks/expected exits/module/tool identities/raw streams, linked-root refusal and corrupt-raw/JSONL copies. Single bounded JSONL read is hashed and parsed."
+    "positive_and_counter_checks": 39,
+    "result_sha256": "1402e55c4fdd1f4fc4d46152983457b9571075523d341c33d741f68cd9597e68",
+    "scope": "All six real receipts, exact commands/checks/expected exits/module/tool identities/raw streams, linked-root refusal and corrupt-raw/JSONL copies. Single bounded JSONL read is hashed and parsed; duplicate object members refuse with an explicit cause-checked counter."
   },
   "policy_fixture_suites": {
     "status": "PASS",
@@ -141,5 +141,11 @@
     "AROS-NG",
     "AROS-NX",
     "aros-tools"
-  ]
+  ],
+  "independent_review": {
+    "reviewed_source": "5c8fd79de0bad54451dbf013ab943851ffd58ced",
+    "finding": "P3 duplicate object members in retained JSONL; fixed by sharing outer JSON unique-member hook.",
+    "review_report_sha256": "c6895dda12150f0cbf8da8bb94de40a3a4d8fd22d86c274c8b896b5f8f340e1c",
+    "delta_validation": "Current reader revalidates the retained unchanged six-mode Rust outputs and all 39 positive/corrupted-copy controls. No new child runtime or Linux execution is claimed."
+  }
 }

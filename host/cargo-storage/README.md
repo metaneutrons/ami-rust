@@ -117,7 +117,7 @@ criteria are still required before RC2 acceptance or a changed SDK release.
 
 The [extended development record](../../docs/rust-cli-migration/evidence/rc2-storage-extended-development-20261021.json)
 binds one exact-source macOS suite: 140 actual commands and 181 named checks,
-plus 38 receipt/raw-data positive and corrupted-copy controls. Pinned Rust build,
+plus 39 receipt/raw-data positive and corrupted-copy controls. Pinned Rust build,
 11 storage units and strict all-target Clippy pass; Linux configuration compiles
 and lints, but no expanded Linux runtime is claimed.
 
