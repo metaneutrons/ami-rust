@@ -46,6 +46,10 @@ const SOURCES: &[(&str, &[u8])] = &[
         "tests/measurement/ami_test_bind_diagnostics.c",
         include_bytes!("../tests/measurement/ami_test_bind_diagnostics.c"),
     ),
+    (
+        "scripts/measurement/m1_measurement.h",
+        include_bytes!("../scripts/measurement/m1_measurement.h"),
+    ),
 ];
 
 /// Options for the retained qualification-only native C hooks.
@@ -377,6 +381,8 @@ fn stage_sources(root: &Path) -> Result<()> {
     ensure_directory(&root.join("native"))?;
     ensure_directory(&root.join("tests"))?;
     ensure_directory(&root.join("tests/measurement"))?;
+    ensure_directory(&root.join("scripts"))?;
+    ensure_directory(&root.join("scripts/measurement"))?;
     for &(name, bytes) in SOURCES {
         let path = root.join(name);
         match fs::symlink_metadata(&path) {
@@ -409,9 +415,15 @@ fn verify_sources(root: &Path) -> Result<()> {
                 .map_err(|_| Refusal::new("native source escaped root"))?
                 .to_owned();
             if entry.file_type()?.is_dir() {
-                if !["native", "tests", "tests/measurement"]
-                    .iter()
-                    .any(|name| relative == Path::new(name))
+                if ![
+                    "native",
+                    "tests",
+                    "tests/measurement",
+                    "scripts",
+                    "scripts/measurement",
+                ]
+                .iter()
+                .any(|name| relative == Path::new(name))
                 {
                     return Err(Refusal::new("unexpected native source directory"));
                 }
@@ -621,6 +633,37 @@ mod tests {
         fn drop(&mut self) {
             fs::remove_dir_all(&self.0).unwrap();
         }
+    }
+
+    #[test]
+    fn quoted_c_includes_are_staged_and_missing_measurement_header_refuses() {
+        let temp = Temp::new();
+        let root = temp.0.join("source");
+        stage_sources(&root).unwrap();
+        let canonical_root = fs::canonicalize(&root).unwrap();
+        for &(name, bytes) in SOURCES {
+            let parent = root.join(name).parent().unwrap().to_owned();
+            for line in std::str::from_utf8(bytes).unwrap().lines() {
+                let Some(include) = line.trim_start().strip_prefix("#include \"") else {
+                    continue;
+                };
+                let (include, _) = include.split_once('"').unwrap();
+                let path = fs::canonicalize(parent.join(include)).unwrap_or_else(|error| {
+                    panic!("missing include {include} from {name}: {error}")
+                });
+                assert!(path.starts_with(&canonical_root));
+                assert!(path.is_file());
+            }
+        }
+        let header = root.join("scripts/measurement/m1_measurement.h");
+        fs::remove_file(&header).unwrap();
+        assert!(verify_sources(&root).is_err());
+        stage_sources(&root).unwrap();
+        assert_eq!(
+            fs::read(&header).unwrap(),
+            include_bytes!("../scripts/measurement/m1_measurement.h")
+        );
+        verify_sources(&root).unwrap();
     }
 
     fn fixture(root: &Path) -> NativeObjects {
