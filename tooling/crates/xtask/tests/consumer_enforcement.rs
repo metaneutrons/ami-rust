@@ -214,7 +214,8 @@ fn native_interpreter_controls_are_refused_under_the_adapter_policy() -> Result<
     // each binary's exact ELF interpreter separated as a hashed executable.
     let runtime_binaries = [adapter.clone(), fixture.clone()];
     let (runtime_libraries, runtime_interpreters) = if platform == Platform::Linux {
-        let interpreters = linux_runtime_interpreters(&runtime_binaries)?;
+        let expected_machine = linux_elf_machine_for_host(host_id)?;
+        let interpreters = linux_runtime_interpreters(&runtime_binaries, expected_machine)?;
         let mut libraries = linux_runtime_libraries(&runtime_binaries, &runner)?;
         for interpreter in &interpreters {
             if !libraries
@@ -877,6 +878,14 @@ fn selected_host() -> Result<(&'static str, Platform), String> {
     }
 }
 
+fn linux_elf_machine_for_host(host_id: &str) -> Result<u16, String> {
+    match host_id {
+        "linux-x86_64" => Ok(62),
+        "linux-aarch64" => Ok(183),
+        _ => Err(format!("no approved Linux ELF machine for host {host_id}")),
+    }
+}
+
 fn required_string<'a>(value: &'a Value, key: &str) -> Result<&'a str, String> {
     value
         .get(key)
@@ -1354,12 +1363,15 @@ fn policy_text(execs: &[PathBuf], context: &ReplayContext<'_>) -> Result<String,
     Ok(text)
 }
 
-fn linux_runtime_interpreters(binaries: &[PathBuf]) -> Result<Vec<RuntimeInterpreter>, String> {
+fn linux_runtime_interpreters(
+    binaries: &[PathBuf],
+    expected_machine: u16,
+) -> Result<Vec<RuntimeInterpreter>, String> {
     let mut interpreters = Vec::with_capacity(binaries.len());
     for binary in binaries {
         let bytes = fs::read(binary)
             .map_err(|error| format!("read native ELF {}: {error}", binary.display()))?;
-        let declared_path = parse_elf_pt_interp(&bytes)
+        let declared_path = parse_elf_pt_interp(&bytes, expected_machine)
             .map_err(|error| format!("inspect native ELF {}: {error}", binary.display()))?;
         let canonical_path = canonical_executable(&declared_path, "ELF PT_INTERP")?;
         interpreters.push(RuntimeInterpreter {
@@ -1374,7 +1386,7 @@ fn linux_runtime_interpreters(binaries: &[PathBuf]) -> Result<Vec<RuntimeInterpr
     Ok(interpreters)
 }
 
-fn parse_elf_pt_interp(bytes: &[u8]) -> Result<PathBuf, String> {
+fn parse_elf_pt_interp(bytes: &[u8], expected_machine: u16) -> Result<PathBuf, String> {
     const ELF_HEADER_SIZE: usize = 64;
     const ELF64_PROGRAM_HEADER_SIZE: usize = 56;
     const PT_INTERP: u32 = 3;
@@ -1391,8 +1403,10 @@ fn parse_elf_pt_interp(bytes: &[u8]) -> Result<PathBuf, String> {
         return Err(format!("unsupported ELF object type {object_type}"));
     }
     let machine = read_elf_u16(bytes, 18, "e_machine")?;
-    if machine != 62 {
-        return Err(format!("expected x86-64 ELF machine 62, got {machine}"));
+    if machine != expected_machine {
+        return Err(format!(
+            "expected Linux ELF machine {expected_machine}, got {machine}"
+        ));
     }
     if read_elf_u32(bytes, 20, "e_version")? != 1 {
         return Err("ELF header has an unsupported version".to_owned());
@@ -1601,63 +1615,99 @@ fn display_error(error: impl std::fmt::Display) -> String {
 
 #[cfg(test)]
 mod elf_pt_interp_tests {
-    use super::parse_elf_pt_interp;
+    use super::{linux_elf_machine_for_host, parse_elf_pt_interp};
     use std::path::PathBuf;
 
     #[test]
-    fn reads_the_single_absolute_elf_interpreter() {
-        let bytes = elf_with_interpreters(&["/lib64/ld-linux-x86-64.so.2"]);
-        assert_eq!(
-            parse_elf_pt_interp(&bytes).expect("valid ELF PT_INTERP"),
-            PathBuf::from("/lib64/ld-linux-x86-64.so.2")
-        );
+    fn reads_the_single_absolute_interpreter_for_each_supported_linux_host() {
+        for (host, path) in [
+            ("linux-x86_64", "/lib64/ld-linux-x86-64.so.2"),
+            ("linux-aarch64", "/lib/ld-linux-aarch64.so.1"),
+        ] {
+            let machine = linux_elf_machine_for_host(host).expect("supported Linux host");
+            let bytes = elf_with_interpreters(machine, &[path]);
+            assert_eq!(
+                parse_elf_pt_interp(&bytes, machine).expect("valid ELF PT_INTERP"),
+                PathBuf::from(path)
+            );
+        }
     }
 
     #[test]
-    fn rejects_missing_duplicate_truncated_and_relative_interpreters() {
-        let mut missing = elf_with_interpreters(&["/lib64/ld-linux-x86-64.so.2"]);
-        missing[64..68].copy_from_slice(&1_u32.to_le_bytes());
-        assert!(
-            parse_elf_pt_interp(&missing)
-                .expect_err("missing PT_INTERP must fail")
-                .contains("no PT_INTERP")
-        );
+    fn rejects_malformed_interpreters_for_each_supported_linux_machine() {
+        for (host, path) in [
+            ("linux-x86_64", "/lib64/ld-linux-x86-64.so.2"),
+            ("linux-aarch64", "/lib/ld-linux-aarch64.so.1"),
+        ] {
+            let machine = linux_elf_machine_for_host(host).expect("supported Linux host");
 
-        let duplicate =
-            elf_with_interpreters(&["/lib64/ld-linux-x86-64.so.2", "/lib64/ld-linux-x86-64.so.2"]);
-        assert!(
-            parse_elf_pt_interp(&duplicate)
-                .expect_err("duplicate PT_INTERP must fail")
-                .contains("more than one PT_INTERP")
-        );
+            let mut missing = elf_with_interpreters(machine, &[path]);
+            missing[64..68].copy_from_slice(&1_u32.to_le_bytes());
+            assert!(
+                parse_elf_pt_interp(&missing, machine)
+                    .expect_err("missing PT_INTERP must fail")
+                    .contains("no PT_INTERP"),
+                "missing PT_INTERP was accepted for {host}"
+            );
 
-        let mut truncated = elf_with_interpreters(&["/lib64/ld-linux-x86-64.so.2"]);
-        truncated.pop();
-        assert!(
-            parse_elf_pt_interp(&truncated)
-                .expect_err("truncated PT_INTERP must fail")
-                .contains("segment is truncated")
-        );
+            let duplicate = elf_with_interpreters(machine, &[path, path]);
+            assert!(
+                parse_elf_pt_interp(&duplicate, machine)
+                    .expect_err("duplicate PT_INTERP must fail")
+                    .contains("more than one PT_INTERP"),
+                "duplicate PT_INTERP was accepted for {host}"
+            );
 
-        let mut missing_terminator = elf_with_interpreters(&["/lib64/ld-linux-x86-64.so.2"]);
-        *missing_terminator
-            .last_mut()
-            .expect("path has a terminator") = b'x';
-        assert!(
-            parse_elf_pt_interp(&missing_terminator)
-                .expect_err("unterminated PT_INTERP must fail")
-                .contains("NUL-terminated")
-        );
+            let mut truncated = elf_with_interpreters(machine, &[path]);
+            truncated.pop();
+            assert!(
+                parse_elf_pt_interp(&truncated, machine)
+                    .expect_err("truncated PT_INTERP must fail")
+                    .contains("segment is truncated"),
+                "truncated PT_INTERP was accepted for {host}"
+            );
 
-        let relative = elf_with_interpreters(&["ld-linux-x86-64.so.2"]);
-        assert!(
-            parse_elf_pt_interp(&relative)
-                .expect_err("relative PT_INTERP must fail")
-                .contains("not absolute")
-        );
+            let mut missing_terminator = elf_with_interpreters(machine, &[path]);
+            *missing_terminator
+                .last_mut()
+                .expect("path has a terminator") = b'x';
+            assert!(
+                parse_elf_pt_interp(&missing_terminator, machine)
+                    .expect_err("unterminated PT_INTERP must fail")
+                    .contains("NUL-terminated"),
+                "unterminated PT_INTERP was accepted for {host}"
+            );
+
+            let relative = elf_with_interpreters(machine, &["ld-linux.so"]);
+            assert!(
+                parse_elf_pt_interp(&relative, machine)
+                    .expect_err("relative PT_INTERP must fail")
+                    .contains("not absolute"),
+                "relative PT_INTERP was accepted for {host}"
+            );
+        }
     }
 
-    fn elf_with_interpreters(paths: &[&str]) -> Vec<u8> {
+    #[test]
+    fn refuses_cross_machine_elf_and_unknown_host() {
+        for (host, path, other_machine) in [
+            ("linux-x86_64", "/lib64/ld-linux-x86-64.so.2", 183),
+            ("linux-aarch64", "/lib/ld-linux-aarch64.so.1", 62),
+        ] {
+            let expected_machine = linux_elf_machine_for_host(host).expect("supported Linux host");
+            let bytes = elf_with_interpreters(other_machine, &[path]);
+            let error = parse_elf_pt_interp(&bytes, expected_machine)
+                .expect_err("cross-machine ELF must fail");
+            let expected_error = format!("expected Linux ELF machine {expected_machine}");
+            assert!(
+                error.contains(expected_error.as_str()),
+                "unexpected cross-machine error for {host}: {error}"
+            );
+        }
+        assert!(linux_elf_machine_for_host("linux-riscv64").is_err());
+    }
+
+    fn elf_with_interpreters(machine: u16, paths: &[&str]) -> Vec<u8> {
         const ELF_HEADER_SIZE: usize = 64;
         const ELF64_PROGRAM_HEADER_SIZE: usize = 56;
         let table_end = ELF_HEADER_SIZE + paths.len() * ELF64_PROGRAM_HEADER_SIZE;
@@ -1667,7 +1717,7 @@ mod elf_pt_interp_tests {
         bytes[5] = 1;
         bytes[6] = 1;
         bytes[16..18].copy_from_slice(&3_u16.to_le_bytes());
-        bytes[18..20].copy_from_slice(&62_u16.to_le_bytes());
+        bytes[18..20].copy_from_slice(&machine.to_le_bytes());
         bytes[20..24].copy_from_slice(&1_u32.to_le_bytes());
         bytes[32..40].copy_from_slice(&(ELF_HEADER_SIZE as u64).to_le_bytes());
         bytes[52..54].copy_from_slice(&(ELF_HEADER_SIZE as u16).to_le_bytes());
