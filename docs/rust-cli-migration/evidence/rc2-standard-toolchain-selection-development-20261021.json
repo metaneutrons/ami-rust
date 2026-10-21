@@ -1,0 +1,141 @@
+{
+  "schema": "ami-rust-standard-toolchain-selection-development-v1",
+  "status": "PASS_STANDARD_RUSTUP_CARGO_SELECTION_MACOS",
+  "plan_revision": 3,
+  "scope": "Actual macOS local rustup registration, complete Rust component plus paired Cargo, standard host fixture only. Not AROS crate/link/SDK production, Linux runtime, authenticated distribution, no-Python observation or RC2 acceptance. Python outer driver is temporary RC4 work.",
+  "source_base": "ce6a872716b3d6a1bc56301a066cc54c43256115",
+  "raw_report_sha256": "e247cd46f3c08b7fc66976358d48289da33260d1c576b1d46265eed22b78f1a6",
+  "raw_stream_inventory_sha256": "08bddff6878bdda8ed4672ca42519ef1b316af6c80225d79397dcfb9ec5d6b2e",
+  "driver_sha256": "02e1dba01960817575a07915e404d28971a68a60a3693565d6becab018dff268",
+  "host": "aarch64-apple-darwin",
+  "rustc_version": "rustc 1.100.0-nightly (330d31712 2026-09-17)\nbinary: rustc\ncommit-hash: 330d317121e16b5db8e5adc63595910528ff2ee7\ncommit-date: 2026-09-17\nhost: aarch64-apple-darwin\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1\n",
+  "cargo_version": "cargo 1.99.0 (3efb1f477 2026-07-17)\nrelease: 1.99.0\ncommit-hash: 3efb1f477e99b42974b982d939fd100303cdf7db\ncommit-date: 2026-07-17\nhost: aarch64-apple-darwin\nlibgit2: 1.9.4 (sys:0.21.0 vendored)\nlibcurl: 8.7.1 (sys:0.4.90+curl-8.21.0 system ssl:(SecureTransport) LibreSSL/3.3.6)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Mac OS 26.5.1 [64-bit]\n",
+  "rustc_sha256": "5bb7cf7ca89e240c2f97c00c94b5aa3576a84798def7d329b72cb12a20e6e6d0",
+  "cargo_sha256": "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d",
+  "component_files_verified": 3882,
+  "commands": [
+    {
+      "label": "rustup-version",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "register-versioned-prefix",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "selected-rustc",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "selected-cargo",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "actual-rustc-version",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "actual-cargo-version",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "project-selected-sysroot",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "ordinary-cargo-lock",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "ordinary-cargo-metadata",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "ordinary-cargo-check",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "ordinary-cargo-build",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "missing-paired-cargo-refuses",
+      "exit_code": 1,
+      "stop_reason": null
+    },
+    {
+      "label": "stock-cargo-identity-control",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "moved-prefix-old-registration-refuses",
+      "exit_code": 1,
+      "stop_reason": null
+    },
+    {
+      "label": "register-relocated-prefix",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "relocated-selected-sysroot",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "relocated-ordinary-cargo-check",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "remove-only-registration",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "removed-registration-no-fallback",
+      "exit_code": 1,
+      "stop_reason": null
+    },
+    {
+      "label": "restore-isolated-registration",
+      "exit_code": 0,
+      "stop_reason": null
+    },
+    {
+      "label": "restored-ordinary-cargo-check",
+      "exit_code": 0,
+      "stop_reason": null
+    }
+  ],
+  "elapsed_seconds": 15.785741749918088,
+  "child_peak_rss_bytes": 154615808,
+  "driver_peak_rss_bytes": 33406976,
+  "workspace_peak_bytes": 744064848,
+  "global_configuration_unchanged": true,
+  "source_and_ready_unchanged": true,
+  "wrong_cargo_control": {
+    "observed_version": "cargo 1.100.0-nightly (495c385d0 2026-09-16)",
+    "sha256": "37e07284393e4c979d0cf8d0efc62e4c29b64424a0d10123a616aec790056333",
+    "expected_sha256": "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d",
+    "interpretation": "rustup executes a substituted Cargo; standard registration is not component authentication. Production crate/toolchain input validation remains required."
+  },
+  "limitations": [
+    "Host selection fixture only, not AROS final ELF.",
+    "Not Linux runtime, authenticated distribution, no-Python observation, crate packaging/publication or RC2 acceptance.",
+    "rustup selects executables but does not authenticate their contents; product input validation remains required.",
+    "A retained native-tooling inventory describes the separate stable host bootstrap, not the selected target compiler; actual rustc -vV is recorded here."
+  ]
+}

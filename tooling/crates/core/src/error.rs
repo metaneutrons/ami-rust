@@ -41,3 +41,9 @@ impl From<io::Error> for Refusal {
 }
 
 pub type Result<T> = std::result::Result<T, Refusal>;
+
+impl From<aros_elf::Refusal> for Refusal {
+    fn from(error: aros_elf::Refusal) -> Self {
+        Self::new(error.to_string()).with_exit_code(error.exit_code())
+    }
+}
