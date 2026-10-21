@@ -1,0 +1,145 @@
+{
+  "schema": "ami-rust-cargo-storage-extended-development-v1",
+  "date": "2026-10-21T13:35:05.531068+00:00",
+  "status": "LOCAL_MACOS_SIX_MODE_COMPONENT_DEVELOPMENT",
+  "rc2_accepted": false,
+  "sdk_publication": false,
+  "source": {
+    "host/cargo-storage/runtime-checks.json": "5dfca54f381f65887b19750a4325513dfbc5be19b1efb131279d0a66dc1e4222",
+    "host/cargo-storage/runtime-concurrent-gc-checks.json": "7ddf92532026fb73533bf786e329b66b6cebfcb9b6fb94a31e35488c9cb10e50",
+    "host/cargo-storage/runtime-git-helper-checks.json": "a405c4f12fb37e03da5a8808f18b6a9d62fbc47715ea08cc158416e74bbc2892",
+    "host/cargo-storage/runtime-lifecycle-checks.json": "565e7185f5b9150262620e14e7517e2531a1eec3859d0d49cf97a2e95936014b",
+    "host/cargo-storage/runtime-nested-checks.json": "be41dac61006f631df4fc1abc8ca9382a896f57c221c7ba22a2528668df845f1",
+    "host/cargo-storage/runtime-registry-checks.json": "bf82e93fba24301ed0f2246af2f094cd44909d5b8331968ba9d73462f90c1db8",
+    "release/ci_cargo_storage.py": "c864a6a1f921776cca0b1689433a35548c55f9851cfd44995e2a52766339b74e",
+    "release/native-tooling-inputs.json": "d8d7042b784fd8f497eaf191fbc14b7dc2b5c89277f48331586a7cb04be69601",
+    "tooling/crates/xtask/src/cargo_storage_concurrent_gc.rs": "87603639cc3486a595e91265ca67821f18a63884501fdb0c3e3d3215f2ed015c",
+    "tooling/crates/xtask/src/cargo_storage_git_helper.rs": "87470872ba57f4914928248e04b43f45e4f560435349b34e501c144e59f4e611",
+    "tooling/crates/xtask/src/cargo_storage_lifecycle.rs": "ff161fce19c125aebbc435ad4b8611ab16812b24703744bebaa25032844f202f",
+    "tooling/crates/xtask/src/cargo_storage_nested.rs": "c05d3e660b0174fe56d3a06b9829ccbaa196c525e4dd195b4615ee68ab5412f0",
+    "tooling/crates/xtask/src/cargo_storage_probe.rs": "e505c6c54d1a2c1d3581b105df33880afaf53bd56e389f83e5ded518976add98",
+    "tooling/crates/xtask/src/cargo_storage_registry.rs": "05ed7792df966209bc90a963c121037b28cec2e740801efb30daf5c804eb2e22",
+    "tooling/crates/xtask/src/cargo_storage_registry_fixture.rs": "b9cb41096e99a9c498eaba9d86e367503c110faa2fe415ed02e8f40b40b81dfa",
+    "tooling/crates/xtask/src/main.rs": "0328d7f3dc45cfd2f49c35d93c96c8cd67da2ae245148d771245f5f8acc864df"
+  },
+  "macos": {
+    "modes": {
+      "base": {
+        "result_sha256": "7b312344ba94677cd99f8e29cfcab29bb42574d4b7a0c72232cd56305713cc16",
+        "readback": {
+          "contract_sha256": "5dfca54f381f65887b19750a4325513dfbc5be19b1efb131279d0a66dc1e4222",
+          "checked_logs": 86,
+          "checked_commands": 43,
+          "checked_fixture_outcomes": 37
+        }
+      },
+      "lifecycle": {
+        "result_sha256": "67fbcd3e6584e590c5c2ed90340504f3e0087c18e25d4f6f8da7063fe4e5c72b",
+        "readback": {
+          "contract_sha256": "565e7185f5b9150262620e14e7517e2531a1eec3859d0d49cf97a2e95936014b",
+          "checked_logs": 48,
+          "checked_commands": 24,
+          "checked_fixture_outcomes": 37,
+          "checked_retained_analysis_logs": 4
+        }
+      },
+      "registry": {
+        "result_sha256": "e4d22553bcf36ccaa3d39058e86503d4321fefb790f3719499c7b46d8f623cdb",
+        "readback": {
+          "contract_sha256": "bf82e93fba24301ed0f2246af2f094cd44909d5b8331968ba9d73462f90c1db8",
+          "checked_logs": 52,
+          "checked_commands": 26,
+          "checked_fixture_outcomes": 33
+        }
+      },
+      "nested": {
+        "result_sha256": "f128f3f732217a190132cbf9313857702cc7c8d68d88a31afd1960558352d470",
+        "readback": {
+          "contract_sha256": "be41dac61006f631df4fc1abc8ca9382a896f57c221c7ba22a2528668df845f1",
+          "checked_logs": 48,
+          "checked_commands": 24,
+          "checked_fixture_outcomes": 32
+        }
+      },
+      "concurrent_gc": {
+        "result_sha256": "9bf987d3006e4e60516b8074480edd5cff92f3c915a68024a1f444500a1a567c",
+        "readback": {
+          "contract_sha256": "7ddf92532026fb73533bf786e329b66b6cebfcb9b6fb94a31e35488c9cb10e50",
+          "checked_logs": 18,
+          "checked_commands": 9,
+          "checked_fixture_outcomes": 9
+        }
+      },
+      "git_helper": {
+        "result_sha256": "78413ad4db3cb8556d9afeb0e79495cf4147d950e007bd690f41cc8172f6793b",
+        "readback": {
+          "contract_sha256": "a405c4f12fb37e03da5a8808f18b6a9d62fbc47715ea08cc158416e74bbc2892",
+          "checked_logs": 28,
+          "checked_commands": 14,
+          "checked_fixture_outcomes": 33
+        }
+      }
+    },
+    "total_observed_commands": 140,
+    "total_checks": 181,
+    "retained_jsonl_files": 4,
+    "suite_result_sha256": "b0257c18ad12c79b4b7ecbe4c581f79af5d6e190f4f9877885396b4899d59576",
+    "executed_xtask_sha256": "8fe505ce5fa887b172d01dcbc561c156cc4c6bb895b6c4110fde4abe39c9bae2",
+    "elapsed_seconds": 95.3282096250914,
+    "observed_child_peak_rss_bytes": 321568768,
+    "driver_peak_rss_bytes": 36061184,
+    "workspace_peak_bytes": 206733100,
+    "logs_bytes": 92133
+  },
+  "rust_checks": {
+    "pinned_host_build": "PASS",
+    "storage_units": 11,
+    "strict_workspace_all_targets_clippy": "PASS_MACOS_AND_LINUX_CFG",
+    "linux_execution": false,
+    "report_sha256": "6517af5017aa5a641e3527c3b7159a7a6938be41f682065dad8cd4381f3a2b07"
+  },
+  "readback_gates": {
+    "positive_and_counter_checks": 38,
+    "result_sha256": "4c99e9f24a14a37eedda5705923bbe798ba68b2e52e1e89849460d0a3c353c92",
+    "scope": "All six real receipts, exact commands/checks/expected exits/module/tool identities/raw streams, linked-root refusal and corrupt-raw/JSONL copies. Single bounded JSONL read is hashed and parsed."
+  },
+  "policy_fixture_suites": {
+    "status": "PASS",
+    "tests": [
+      "release/test_native_tooling_materials.py",
+      "release/test_ci_cargo.py"
+    ],
+    "report_sha256": "115b659634b01ddbb1682381bea900912f932b1693d0d58e0237035a613a099a"
+  },
+  "prior_protected_run": {
+    "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39590534011",
+    "source": "2e853275f5b527ddbad5b01292cb8d20f2c0809f",
+    "attempt": 1,
+    "status": "FAILURE_MACOS_PASS_LINUX_INVALID_UTF8_COMPILER_CASE",
+    "explanation": "Original Cargo and unchanged pinned compiler independently reproduce invalid-UTF8 compiler argument failure. Corrected fixture explicitly characterizes this limitation with direct/original controls, never successful raw-path compilation."
+  },
+  "git_fixture_corrections": [
+    "Use local-file Git URL rewrite to seed a real lock without --offline; pinned Cargo disallows a fresh offline checkout before transport handling.",
+    "Pinned git2 sends newline-terminated fields followed by EOF without an extra blank line; fixture accepts that form and retains malformed/duplicate/oversize controls.",
+    "Pinned git2 emits host only for a URL domain. Use localhost with checked loopback-only resolution and exact expected port; never accept a missing host."
+  ],
+  "retained_failures": [
+    "Initial nested candidate String/Value type mismatch and Git candidate path/borrow compilation failures; exact sources/logs retained.",
+    "Intermediate source drift was detected and not accepted as final-source qualification.",
+    "Initial Git-helper EOF and numeric-host assumptions failed against original Cargo; source-corrected and rerun.",
+    "One reader rerun correctly refused an older parent-source hash after new modes were added."
+  ],
+  "remaining": [
+    "Fresh protected both-host original/derived Cargo production and execution of all expanded modes; corrected Linux raw-byte/compiler controls are compile-checked only.",
+    "GC while cache readers remain active, concurrent fetch, control/selector-absent GC comparisons, and complete bounded absent-selector parity.",
+    "Shared typed activation/project/invocation and effective-input validation using Cargo resolver, compiler/build-script/linker roles.",
+    "Full two-host/two-root/five-variant/relocation/metadata/Serde and inherited AROS runtime/memory qualification.",
+    "RC3 signed distribution/direct/APT/Homebrew, RC4 internal Python retirement and RC5 full production/recovery/rollback."
+  ],
+  "baseline_changed": false,
+  "no_edits_to": [
+    "AROS-NG",
+    "AROS-NX",
+    "aros-tools"
+  ]
+}

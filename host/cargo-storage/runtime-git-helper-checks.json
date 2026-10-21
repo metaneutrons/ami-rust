@@ -1,0 +1,69 @@
+{
+  "schema": "ami-rust-cargo-storage-runtime-checks-v1",
+  "fixture_kind": "storage-git-credential-helper",
+  "common": [
+    "control-selected-cargo-authentication-refusal",
+    "control-selected-helper-get-followed-by-matching-protected-retry",
+    "control-selected-lock-generation-did-not-contact-loopback-server",
+    "control-selected-lockfile-identifies-local-git-source",
+    "control-selected-original-cargo-config-credentials-and-lock-preserved",
+    "control-selected-refusal-created-no-checkout",
+    "control-selected-versus-selector-absent",
+    "control-selector-absent-cargo-authentication-refusal",
+    "control-selector-absent-helper-get-followed-by-matching-protected-retry",
+    "control-selector-absent-lock-generation-did-not-contact-loopback-server",
+    "control-selector-absent-lockfile-identifies-local-git-source",
+    "control-selector-absent-original-cargo-config-credentials-and-lock-preserved",
+    "control-selector-absent-refusal-created-no-checkout",
+    "derived-no-helper-negative-cargo-authentication-refusal",
+    "derived-no-helper-negative-lock-generation-did-not-contact-loopback-server",
+    "derived-no-helper-negative-no-helper-get-and-no-matching-authorization",
+    "derived-no-helper-negative-lockfile-identifies-local-git-source",
+    "derived-no-helper-negative-original-cargo-config-credentials-and-lock-preserved",
+    "derived-no-helper-negative-refusal-created-no-checkout",
+    "derived-selected-cargo-authentication-refusal",
+    "derived-selected-helper-get-followed-by-matching-protected-retry",
+    "derived-selected-lock-generation-did-not-contact-loopback-server",
+    "derived-selected-lockfile-identifies-local-git-source",
+    "derived-selected-original-cargo-config-credentials-and-lock-preserved",
+    "derived-selected-refusal-created-no-checkout",
+    "derived-selected-versus-selector-absent",
+    "derived-selector-absent-cargo-authentication-refusal",
+    "derived-selector-absent-helper-get-followed-by-matching-protected-retry",
+    "derived-selector-absent-lock-generation-did-not-contact-loopback-server",
+    "derived-selector-absent-lockfile-identifies-local-git-source",
+    "derived-selector-absent-original-cargo-config-credentials-and-lock-preserved",
+    "derived-selector-absent-refusal-created-no-checkout",
+    "no-helper-negative-has-no-get-and-no-matching-authorization"
+  ],
+  "profiles": {
+    "macos-aarch64": [],
+    "linux-x86_64": []
+  },
+  "commands": {
+    "common": {
+      "control-selected-fetch-locked-refusal": 101,
+      "control-selected-local-file-lock-seed": 0,
+      "control-selector-absent-fetch-locked-refusal": 101,
+      "control-selector-absent-local-file-lock-seed": 0,
+      "derived-no-helper-negative-fetch-locked-refusal": 101,
+      "derived-no-helper-negative-local-file-lock-seed": 0,
+      "derived-selected-fetch-locked-refusal": 101,
+      "derived-selected-local-file-lock-seed": 0,
+      "derived-selector-absent-fetch-locked-refusal": 101,
+      "derived-selector-absent-local-file-lock-seed": 0,
+      "git-helper-source-add": 0,
+      "git-helper-source-commit": 0,
+      "git-helper-source-init": 0,
+      "git-helper-source-rev-parse": 0
+    },
+    "profiles": {
+      "macos-aarch64": {},
+      "linux-x86_64": {}
+    }
+  },
+  "additional_driver_files": [
+    "cargo_storage_git_helper.rs"
+  ],
+  "scope": "Original/derived libgit2 Git-helper lookup, protected matching retry and expected401/no-checkout; no successful authenticated smartHTTP clone or complete RC2 acceptance."
+}

@@ -1,0 +1,82 @@
+{
+  "schema": "ami-rust-cargo-storage-runtime-checks-v1",
+  "fixture_kind": "storage-registry-credentials",
+  "common": [
+    "credentials-file-control-absent-auth-and-storage-effects",
+    "credentials-file-control-absent-original-config-credentials-preserved",
+    "credentials-file-control-absent-provider-request-contract",
+    "credentials-file-control-selected-auth-and-storage-effects",
+    "credentials-file-control-selected-original-config-credentials-preserved",
+    "credentials-file-control-selected-provider-request-contract",
+    "credentials-file-derived-absent-auth-and-storage-effects",
+    "credentials-file-derived-absent-original-config-credentials-preserved",
+    "credentials-file-derived-absent-provider-request-contract",
+    "credentials-file-derived-selected-auth-and-storage-effects",
+    "credentials-file-derived-selected-original-config-credentials-preserved",
+    "credentials-file-derived-selected-provider-request-contract",
+    "credentials-file-selector-absent-stable-equivalence",
+    "matching-token-server-refusal-observed",
+    "provider-control-absent-auth-and-storage-effects",
+    "provider-control-absent-original-config-credentials-preserved",
+    "provider-control-absent-provider-request-contract",
+    "provider-control-selected-auth-and-storage-effects",
+    "provider-control-selected-original-config-credentials-preserved",
+    "provider-control-selected-provider-request-contract",
+    "provider-derived-absent-auth-and-storage-effects",
+    "provider-derived-absent-original-config-credentials-preserved",
+    "provider-derived-absent-provider-request-contract",
+    "provider-derived-selected-auth-and-storage-effects",
+    "provider-derived-selected-original-config-credentials-preserved",
+    "provider-derived-selected-provider-request-contract",
+    "provider-not-found-auth-and-storage-effects",
+    "provider-not-found-original-config-credentials-preserved",
+    "provider-not-found-provider-request-contract",
+    "provider-selector-absent-stable-equivalence",
+    "server-auth-refusal-auth-and-storage-effects",
+    "server-auth-refusal-original-config-credentials-preserved",
+    "server-auth-refusal-provider-request-contract"
+  ],
+  "profiles": {
+    "macos-aarch64": [],
+    "linux-x86_64": []
+  },
+  "commands": {
+    "common": {
+      "credentials-file-control-absent-check": 0,
+      "credentials-file-control-absent-fetch": 0,
+      "credentials-file-control-absent-lock": 0,
+      "credentials-file-control-selected-check": 0,
+      "credentials-file-control-selected-fetch": 0,
+      "credentials-file-control-selected-lock": 0,
+      "credentials-file-derived-absent-check": 0,
+      "credentials-file-derived-absent-fetch": 0,
+      "credentials-file-derived-absent-lock": 0,
+      "credentials-file-derived-selected-check": 0,
+      "credentials-file-derived-selected-fetch": 0,
+      "credentials-file-derived-selected-lock": 0,
+      "provider-control-absent-check": 0,
+      "provider-control-absent-fetch": 0,
+      "provider-control-absent-lock": 0,
+      "provider-control-selected-check": 0,
+      "provider-control-selected-fetch": 0,
+      "provider-control-selected-lock": 0,
+      "provider-derived-absent-check": 0,
+      "provider-derived-absent-fetch": 0,
+      "provider-derived-absent-lock": 0,
+      "provider-derived-selected-check": 0,
+      "provider-derived-selected-fetch": 0,
+      "provider-derived-selected-lock": 0,
+      "provider-not-found-lock": 101,
+      "server-auth-refusal-lock": 101
+    },
+    "profiles": {
+      "macos-aarch64": {},
+      "linux-x86_64": {}
+    }
+  },
+  "additional_driver_files": [
+    "cargo_storage_registry.rs",
+    "cargo_storage_registry_fixture.rs"
+  ],
+  "scope": "Exact bounded synthetic host storage fixture; selector-absent comparisons are the stated observations, not full RC2/AROS/release acceptance."
+}

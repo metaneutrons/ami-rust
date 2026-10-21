@@ -1,0 +1,41 @@
+{
+  "schema": "ami-rust-cargo-storage-runtime-checks-v1",
+  "fixture_kind": "storage-selected-concurrency-and-semantic-gc",
+  "common": [
+    "all-cache-commands-use-same-explicit-selected-root",
+    "both-overlapping-cargo-commands-succeeded",
+    "cargo-created-fresh-registry-index",
+    "cargo-created-old-registry-index",
+    "cargo-gc-deletes-expired-index-and-preserves-fresh-index",
+    "original-home-and-cargo-config-preserved",
+    "selected-database-and-cache-remain-usable",
+    "selected-root-is-owned-and-canonical-mode",
+    "two-derived-cargo-build-hooks-overlapped-live"
+  ],
+  "profiles": {
+    "macos-aarch64": [],
+    "linux-x86_64": []
+  },
+  "commands": {
+    "common": {
+      "concurrent-check-a": 0,
+      "concurrent-check-b": 0,
+      "concurrent-gc-fresh-fetch": 0,
+      "concurrent-gc-fresh-lock": 0,
+      "concurrent-gc-old-fetch": 0,
+      "concurrent-gc-old-lock": 0,
+      "concurrent-gc-post-gc-cache-read": 0,
+      "concurrent-gc-refresh-fresh-index": 0,
+      "concurrent-gc-semantic-age-policy": 0
+    },
+    "profiles": {
+      "macos-aarch64": {},
+      "linux-x86_64": {}
+    }
+  },
+  "additional_driver_files": [
+    "cargo_storage_concurrent_gc.rs",
+    "cargo_storage_registry_fixture.rs"
+  ],
+  "scope": "Derived-selected overlapping checks and actual registry-index age deletion/preservation only. Not stock/absent parity, concurrent fetch or GC contention while cache readers remain active; those remain open. No SDK/AROS/release acceptance."
+}
