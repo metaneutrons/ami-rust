@@ -71,14 +71,39 @@
     "tooling/crates/xtask/src/consumer_observe.rs": "78b67666edf03888b115f74950dbb05c84eb2fdd9c80c3cdebf19448e02c8122",
     "tools/consumer-enforcement-adapter/LINUX.md": "8f7d6256091be3a3994a68edd76caf2b496d53fc1aff6c6807cb39d97c118490",
     "tools/consumer-enforcement-adapter/README.md": "d134c32ce46360998bf6009224f05b9e2acd79d7ca9ee35b95a513b42727166e",
-    "tooling/crates/xtask/src/null_probe.rs": "a1825cb479c8357fdea9461bbed12a5a14723f0a52bc34afe7f4e2257fbaf68c"
+    "tooling/crates/xtask/src/null_probe.rs": "a1825cb479c8357fdea9461bbed12a5a14723f0a52bc34afe7f4e2257fbaf68c",
+    "release/native-tooling-inputs.json": "1c43fe0dfb01d5d203a82cc1a71b322131e7ca23c5a8966a200ebbf4e8755848"
   },
   "failures_retained": [
-    "Local a1 driver was refused before tests because it ran under an unpinned system interpreter; a2 ran under the exact required pinned interpreter."
+    "Local a1 driver was refused before tests because it ran under an unpinned system interpreter; a2 ran under the exact required pinned interpreter.",
+    "Initial candidate8d1f8c2 source inventory omitted the new null-probe test; the prospective SDK audit refused it before any SDK dispatch."
   ],
   "remaining": [
     "Native Linux pinned rustc stderr-null positive and exact-policy-omission control.",
     "Full both-host RC1 qualification and acceptance against plan revision2."
   ],
-  "acceptance_claimed": false
+  "acceptance_claimed": false,
+  "source_inventory_followup": {
+    "initial_candidate": "8d1f8c2d74c35d144188abf9978190aaa7b2a9f0",
+    "finding": "The complete tracked crate-source audit rejected the new ignored null-probe helper because its first-party source declaration was missing. The declaration is now added; no Rust source bytes changed.",
+    "native_tooling_inputs_sha256": "1c43fe0dfb01d5d203a82cc1a71b322131e7ca23c5a8966a200ebbf4e8755848",
+    "material_controls": "PASS_SOURCE_DECLARATION_AND_MATERIAL_CONTROLS_RUST_SOURCES_UNCHANGED",
+    "report_sha256": "7790229f12f352289aa080ac9794f25a34ddb1b4643ed80b20ba730d312cb1b1",
+    "commands": [
+      {
+        "label": "test_ci_native",
+        "exit_code": 0
+      },
+      {
+        "label": "test_ci_native_upgrade",
+        "exit_code": 0
+      },
+      {
+        "label": "test_native_tooling_materials",
+        "exit_code": 0
+      }
+    ],
+    "all_Rust_sources_unchanged_since_a2": true,
+    "qualification": "This is a new source/input identity; fresh normal PR CI and complete SDK qualification remain required."
+  }
 }
