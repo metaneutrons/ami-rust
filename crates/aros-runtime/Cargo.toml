@@ -2,11 +2,12 @@
 name = "aros-runtime"
 version.workspace = true
 edition.workspace = true
-publish.workspace = true
+publish = false
 license.workspace = true
+readme = "README.md"
 [features]
 default = []
 alloc = ["dep:aros-alloc"]
 [dependencies]
-aros-sys = { path = "../aros-sys" }
-aros-alloc = { path = "../aros-alloc", optional = true }
+aros-sys = { version = "=0.1.0", path = "../aros-sys" }
+aros-alloc = { version = "=0.1.0", path = "../aros-alloc", optional = true }

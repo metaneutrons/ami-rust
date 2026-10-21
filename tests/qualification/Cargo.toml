@@ -3,13 +3,20 @@ name = "ami-rust-qualification"
 version.workspace = true
 edition.workspace = true
 publish = false
+autolib = false
+autobins = false
 license.workspace = true
 
-[lib]
-crate-type = ["staticlib"]
+readme = "README.md"
+[[bin]]
+name = "ami-rust-qualification"
+path = "src/main.rs"
 
 [dependencies]
-aros-runtime = { path = "../../crates/aros-runtime", features = ["alloc"] }
-aros-sdk = { path = "../../crates/aros-sdk" }
-aros-sys = { path = "../../crates/aros-sys" }
-aros-alloc = { path = "../../crates/aros-alloc" }
+aros-runtime = { version = "=0.1.0", path = "../../crates/aros-runtime", features = ["alloc"] }
+aros-sdk = { version = "=0.1.0", path = "../../crates/aros-sdk" }
+aros-sys = { version = "=0.1.0", path = "../../crates/aros-sys" }
+aros-alloc = { version = "=0.1.0", path = "../../crates/aros-alloc" }
+
+[build-dependencies]
+aros-native-build = { version = "=0.2.0-dev", path = "../../tooling/crates/aros-native-build" }

@@ -2,7 +2,8 @@
 name = "amiga-sys"
 version.workspace = true
 edition.workspace = true
-publish.workspace = true
+publish = false
 license.workspace = true
+readme = "README.md"
 [dependencies]
-aros-sys = { path = "../../../crates/aros-sys" }
+aros-sys = { version = "=0.1.0", path = "../../../crates/aros-sys" }

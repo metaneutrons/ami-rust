@@ -2,7 +2,8 @@
 name = "amiga-alloc"
 version.workspace = true
 edition.workspace = true
-publish.workspace = true
+publish = false
 license.workspace = true
+readme = "README.md"
 [dependencies]
-aros-alloc = { path = "../../../crates/aros-alloc" }
+aros-alloc = { version = "=0.1.0", path = "../../../crates/aros-alloc" }

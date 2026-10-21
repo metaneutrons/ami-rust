@@ -3,12 +3,20 @@ name = "ami-rust-dependencies"
 version.workspace = true
 edition.workspace = true
 publish = false
+autolib = false
+autobins = false
 license.workspace = true
-[lib]
-crate-type = ["staticlib"]
+readme = "README.md"
+[[bin]]
+name = "ami-rust-dependencies"
+path = "src/main.rs"
+
 [dependencies]
-aros-runtime = { path = "../../crates/aros-runtime", features = ["alloc"] }
-aros-sys = { path = "../../crates/aros-sys" }
+aros-runtime = { version = "=0.1.0", path = "../../crates/aros-runtime", features = ["alloc"] }
+aros-sys = { version = "=0.1.0", path = "../../crates/aros-sys" }
 serde = { version = "=1.0.228", default-features = false, features = ["alloc", "derive"] }
 serde_json = { version = "=1.0.145", default-features = false, features = ["alloc"] }
 ed25519-dalek = { version = "=2.2.0", default-features = false, features = ["alloc"] }
+
+[build-dependencies]
+aros-native-build = { version = "=0.2.0-dev", path = "../../tooling/crates/aros-native-build" }
