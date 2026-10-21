@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import ast
+import contextlib
+import runpy
+import sys
+import urllib.request
 import hashlib
 import importlib.util
 import importlib.machinery
@@ -95,6 +99,35 @@ class PublicReplayWorkflowTests(unittest.TestCase):
         for relative in control_paths:
             with self.subTest(control=relative):
                 self.assertTrue((ROOT / relative).is_file())
+
+    def test_admission_uses_frozen_current_policy_instead_of_old_publisher_policy(self):
+        source = WORKFLOW.read_text()
+        block = source.split("name: Admit aggregate CI artifact retention", 1)[1].split("\n      - name:", 1)[0]
+        expected = 'python3 -I -B "$GITHUB_WORKSPACE/.git/ami-rust-public-controls/release/ci_artifact_admission.py"'
+        self.assertIn(expected, block)
+        self.assertNotIn("python3 -I -B release/ci_artifact_admission.py", block)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            controls = root / ".git/ami-rust-public-controls/release"
+            controls.mkdir(parents=True)
+            for name in ("ci_artifact_admission.py", "ci-artifact-policy.json"):
+                (controls / name).write_bytes((ROOT / "release" / name).read_bytes())
+            publisher = root / "release"
+            publisher.mkdir()
+            (publisher / "ci-resources.json").write_text(json.dumps({"retention": {"CI_artifact_pool_bytes": 512 * 1024**2}}))
+            # If selection accidentally uses the publisher helper, it fails visibly.
+            (publisher / "ci_artifact_admission.py").write_text("raise RuntimeError('wrong publisher helper')\n")
+            empty_inventory = json.dumps({"total_count": 0, "artifacts": []}).encode()
+            stdout = io.StringIO()
+            script = controls / "ci_artifact_admission.py"
+            with mock.patch.dict(os.environ, {"GITHUB_REPOSITORY": "metaneutrons/ami-rust", "GH_TOKEN": "fixture-only"}), \
+                    mock.patch.object(sys, "argv", [str(script)]), \
+                    mock.patch.object(urllib.request, "urlopen", return_value=io.BytesIO(empty_inventory)), \
+                    contextlib.redirect_stdout(stdout):
+                runpy.run_path(str(script), run_name="__main__")
+            report = json.loads(stdout.getvalue())
+            self.assertEqual(report["global_artifact_pool_bytes"], 768 * 1024**2)
+            self.assertEqual(report["pending_workflow_metadata_ceiling_bytes"], 64 * 1024**2)
 
     def test_download_step_fetches_exact_six_assets_in_order_without_unpacking(self):
         blocks = embedded_python_blocks(WORKFLOW.read_text(encoding="utf-8"))

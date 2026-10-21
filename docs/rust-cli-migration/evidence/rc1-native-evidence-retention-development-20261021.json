@@ -1,0 +1,281 @@
+{
+  "schema": "ami-rust-native-evidence-retention-development-v1",
+  "status": "PASS_LOCAL_COMPONENTS_NOT_RC1_ACCEPTANCE",
+  "source_base": "ed2674778c7389b7dddee7d1a05867657e1b3ac5",
+  "failed_campaign": {
+    "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39523584471",
+    "attempt": 1,
+    "source": "ed2674778c7389b7dddee7d1a05867657e1b3ac5",
+    "linux_job": 118978073875,
+    "last_command": "27-upgrade-new-offline-build",
+    "last_command_exit": 0,
+    "failure": "Final lifecycle report exceeds old 32 MiB retention cap; Linux upload absent. Original failure remains unaccepted.",
+    "linux_log_sha256": "9cf722cd1f831bd07d5006f2f1e916ca3b50f40eebadad6199d8bcbc27305d4b"
+  },
+  "owner_decision": "2026-10-21: 64 MiB native evidence per host; realistic aggregate retention; runtime budgets and AROS baseline unchanged. No new archive format.",
+  "policy": {
+    "schema": "ami-rust-ci-artifact-policy-v1",
+    "CI_artifact_pool_bytes": 805306368,
+    "native_consumer_artifact_bytes": 67108864,
+    "native_consumer_framing_reserve_bytes": 1048576,
+    "basis": "Owner approved 64 MiB per native consumer on 2026-10-21 after run 39523584471 completed the Linux command matrix but exceeded the old 32 MiB report bound. The 768 MiB pool admits a full 448 MiB native campaign alongside the existing 320 MiB legacy campaign reservation. Reserve 1 MiB per native consumer for cleanup and provider ZIP framing; command and guest budgets are unchanged."
+  },
+  "native_workflow_reservation_bytes": 469762048,
+  "legacy_workflow_reservation_bytes": 335544320,
+  "tests": [
+    {
+      "test": "release/test_ci_artifact_admission.py",
+      "exit": 0,
+      "seconds": 0.16724324994720519,
+      "stderr_sha256": "7113510254859a25fd51a67566b4a2edd527f7bf5883b8868a9383bb875d9cf9",
+      "tests": 10
+    },
+    {
+      "test": "release/test_ci_native.py",
+      "exit": 0,
+      "seconds": 1.2382529999595135,
+      "stderr_sha256": "7613c9e60d0a3f3b3ab86404ee0d10b44a5bc136e090026f250d868484697d01",
+      "tests": 74
+    },
+    {
+      "test": "release/test_sdk_workflow.py",
+      "exit": 0,
+      "seconds": 0.4498847078066319,
+      "stderr_sha256": "b16908891a104acb9cfa8e3d710c8f680a7d868e81f4dbf09a1c212db00a9160",
+      "tests": 25
+    },
+    {
+      "test": "release/test_ci_sdk.py",
+      "exit": 0,
+      "seconds": 6.708542916923761,
+      "stderr_sha256": "34273981bc1337c9daaf84d2dbb58c404f1b79b4e8dbb4f312ea040885567199",
+      "tests": 53,
+      "post_review_full_suite_exit": 0,
+      "terminal_output_sha256": "15b66d4919836ac4aa8b2cd959369f76e5c4aec0094f893f93f336812b4c927e",
+      "log_note": "stderr_sha256 identifies the retained initial 52-test suite. The subsequent 53-test suite including the new invalid-profile counter passed; its terminal tool-output portion is retained separately."
+    },
+    {
+      "test": "release/test_prepare_sdk.py",
+      "exit": 0,
+      "seconds": 8.40909175015986,
+      "stderr_sha256": "be18f77cee7518cf27565bc48b872f25af300e11bec477d6cdc9423eba93fae7",
+      "tests": 13
+    },
+    {
+      "test": "release/test_ci_auth.py",
+      "exit": 0,
+      "seconds": 0.4694193748291582,
+      "stderr_sha256": "7397cc363de490bcc4025a07937d3e118ba03d169bf1a9b1c908d3262267ab28",
+      "tests": 25
+    },
+    {
+      "test": "release/test_ci_native_outer.py",
+      "exit": 0,
+      "seconds": 0.153716207947582,
+      "stderr_sha256": "ca18ffc8e8fdc6b71e49e9b4fd64e04661daa3243fb767d57a64ce80ea2d7b63",
+      "tests": 9
+    },
+    {
+      "test": "qualification/test_hosted_capacity.py",
+      "exit": 0,
+      "seconds": 0.05928958300501108,
+      "stderr_sha256": "2d014bb427120fb1a5014d7499096989061fd0fdf40acb471c2e2667de60e71e",
+      "tests": 5
+    },
+    {
+      "test": "release/test_public_replay.py",
+      "exit": 0,
+      "seconds": 2.7925117078702897,
+      "stderr_sha256": "2b22404131879864e8c70aca37e8669884f945e0104cdc79b4c0ddf84fcb078d",
+      "tests": 32
+    },
+    {
+      "test": "release/test_public_replay_workflow.py",
+      "exit": 0,
+      "seconds": 0.10692016687244177,
+      "stderr_sha256": "c12abb957788e842f87142f815213f78a6f57b24be35c4a42b175e42410f4eb8",
+      "tests": 6
+    }
+  ],
+  "total_component_tests": 252,
+  "additional_checks": [
+    {
+      "argv": [
+        "actionlint",
+        ".github/workflows/sdk-qualify.yml",
+        ".github/workflows/cargo-qualify.yml",
+        ".github/workflows/cargo-context-probe.yml",
+        ".github/workflows/public-replay.yml"
+      ],
+      "exit": 0
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit": 0
+    }
+  ],
+  "changed_source_files": [
+    {
+      "path": ".github/workflows/cargo-context-probe.yml",
+      "bytes": 3903,
+      "sha256": "b8fd6043a12fee699d953f1204d8c0185c3690c16db575e5d7bfd54e8e735099"
+    },
+    {
+      "path": ".github/workflows/cargo-qualify.yml",
+      "bytes": 8735,
+      "sha256": "f67979defb0622c5d4ee6269e882f1e894b89a1e4f61daecae83054881f1b921"
+    },
+    {
+      "path": ".github/workflows/public-replay.yml",
+      "bytes": 30910,
+      "sha256": "8a5dde96e609c6dc3137849ea5394d50a50c4855e1a80748f4e94000ec06070e"
+    },
+    {
+      "path": ".github/workflows/sdk-qualify.yml",
+      "bytes": 81522,
+      "sha256": "3264701a8e245d8fa50eb22adbce170f58a95a6293ca7bcb4d0c24727e43e34b"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 5484,
+      "sha256": "74162f5a7d173257fbe5b4683016f3b1f984e23f8a05cc56e8d445c340f87290"
+    },
+    {
+      "path": "docs/hosted-cargo-context-probe.md",
+      "bytes": 5015,
+      "sha256": "f9eb4abc422a0cfee06813353421c312cc8e496225785b344f00aa459678164e"
+    },
+    {
+      "path": "docs/hosted-cargo-producer.md",
+      "bytes": 2720,
+      "sha256": "b6003673532ffed117bd12fccbf01f2ae75e04518c4d3fded1f357a1202e9fd9"
+    },
+    {
+      "path": "docs/local-storage-policy.md",
+      "bytes": 2185,
+      "sha256": "2f4a86175945a32a49728652a4c49a9511ed6f5fd19937cb19efa6881b53664f"
+    },
+    {
+      "path": "docs/public-release-replay.md",
+      "bytes": 8202,
+      "sha256": "540c4c32fd5218882b8bab7f77af8ba22ab998c1e41a6ea9a42fe4a29e2ad321"
+    },
+    {
+      "path": "docs/rust-cli-migration/native-producer.md",
+      "bytes": 12924,
+      "sha256": "359a8504f0ebc1fb65d3b0a25e753153784bed6a1d4d68593b34a33dbd10b3ca"
+    },
+    {
+      "path": "docs/rust-cli-migration/native-upgrade-qualification.md",
+      "bytes": 5792,
+      "sha256": "89962b38eb8da7170b8e6fee46796c68b6dc9ba3b0852d194d50f36f6ee029d3"
+    },
+    {
+      "path": "docs/staged-sdk-release.md",
+      "bytes": 6603,
+      "sha256": "114c0dd2f890761eb1789dce5a3c5356321408eb85b536b5cdf36eaf93e0d3d2"
+    },
+    {
+      "path": "release/ci-artifact-policy.json",
+      "bytes": 583,
+      "sha256": "7f3098b84d87a0b713be627cd0e7b3bdeb8d8e41133a56b3a64bcc6557749c1a"
+    },
+    {
+      "path": "release/ci_artifact_admission.py",
+      "bytes": 5977,
+      "sha256": "af266c2bfe26edfd724022eaac2c9dd9a42fde593ffdc27cb6af8eacf4b97000"
+    },
+    {
+      "path": "release/ci_native.py",
+      "bytes": 174981,
+      "sha256": "4138d6cdf0de084906affed69496d438b125566ae2603c04107d990c09ba10dc"
+    },
+    {
+      "path": "release/ci_sdk.py",
+      "bytes": 118034,
+      "sha256": "dfcccc8b5d8b6121ab9c60dbcb1c7b4db57f2c9bacb6ffa46059064a4de0ea50"
+    },
+    {
+      "path": "release/public_replay.py",
+      "bytes": 69626,
+      "sha256": "c17df8e964da4dedd0a1acd2580daa14f3e4333536814590635c0524adee508a"
+    },
+    {
+      "path": "release/test_ci_artifact_admission.py",
+      "bytes": 10390,
+      "sha256": "ed2415763766a253c307e7c5457ad2439f9340194717e4e83304610aacaab008"
+    },
+    {
+      "path": "release/test_ci_native.py",
+      "bytes": 109050,
+      "sha256": "b50e601fdbab9b4137f3ea7b1fe8eb3cb4b32777ead5e3d642a8c039f757ad24"
+    },
+    {
+      "path": "release/test_ci_sdk.py",
+      "bytes": 67648,
+      "sha256": "5800f9b34ef5970b152eeb9cf29e7c755e174ee969fdaa21de5c5288f43f9b17"
+    },
+    {
+      "path": "release/test_public_replay_workflow.py",
+      "bytes": 17206,
+      "sha256": "a3102b605ca817b20c609fac267ac26c66e1cf4534eb05ef9d4cfd72899cd32f"
+    },
+    {
+      "path": "release/test_sdk_workflow.py",
+      "bytes": 33879,
+      "sha256": "fa90b9c1412536520000a3e6ca7c04104368383f9c2d2b97d46116857f72fc61"
+    }
+  ],
+  "unchanged_inputs": [
+    {
+      "path": "release/ci-resources.json",
+      "sha256": "b9a5fbfff842847c30b5f56ea4e1d3a368f4bda30689f0407ed9d33610571646",
+      "unchanged": true
+    },
+    {
+      "path": "release/ci-sdk-inputs.json",
+      "sha256": "df4494bfc3590b97c5a8d5fe126842c56d801787ffb49dead0b9e58c9a3c3ded",
+      "unchanged": true
+    },
+    {
+      "path": "release/ci-bootstrap-inputs.json",
+      "sha256": "5c3557a2696457d76562f8883efa2c7d2c4cfc583f4f5814a722907a1f639f81",
+      "unchanged": true
+    },
+    {
+      "path": "release/native-reference.json",
+      "sha256": "93894f48757802841e067fa31d6a1624a3d35a80060d2927670cecfc81c4544e",
+      "unchanged": true
+    },
+    {
+      "path": "release/portable-csdk/spec.json",
+      "sha256": "7cb73dd7057feac1bf1a7f1bbf2172934cc06555e2b83938a93cb1b2bfe3178f",
+      "unchanged": true
+    },
+    {
+      "path": "inputs/budgets.json",
+      "sha256": "eb842c642fbed2f88433750c4c51dd493eb2ecb3d20d49b73cbea1c2176b8a39",
+      "unchanged": true
+    }
+  ],
+  "limitations": [
+    "Local component fixtures and actual workflow cleanup only; hosted candidate CI and a complete protected both-host SDK campaign remain required.",
+    "Initial failed development checks preserved: changing sealed resource bytes invalidated existing producer reports; a counter-test initially reached an earlier diagnostic-space refusal. Separate retention policy and correctly staged final-output overflow resolve these without altering old evidence.",
+    "No RC1 acceptance or SDK publication. No protected AROS checkout or nxpk changes."
+  ],
+  "review_corrections": [
+    "Freeze current admission helper and policy before selecting historical public-replay publisher checkout; actual frozen helper uses 768 MiB despite old publisher controls.",
+    "Native mismatch reports identify 64 MiB profile; legacy writer default remains 32 MiB.",
+    "Actual lifecycle report finalizer accepts 40 MiB existing output; initial overflow and final supervision-growth overflow refuse without dropping evidence.",
+    "No new archive format and no metadata rewriting."
+  ],
+  "independent_review": {
+    "result": "Previously identified blockers resolved; no new blocker",
+    "scope": "Read-only source review; no additional tests or full hosted replay executed",
+    "review_sha256": "8702a84be0570900b20f90f1bcc37d90a44147e082db3e91d05a7b62846d2dfd"
+  }
+}

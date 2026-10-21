@@ -21,7 +21,7 @@ NATIVE_ARTIFACT_CEILINGS = {
     'native-host-macos': 16 * MIB, 'native-host-linux': 16 * MIB,
     'unsigned-common': 64 * MIB,
     'authenticated-macos': 64 * MIB, 'authenticated-linux': 64 * MIB,
-    'consumer-macos': 32 * MIB, 'consumer-linux': 32 * MIB,
+    'consumer-macos': 64 * MIB, 'consumer-linux': 64 * MIB,
     'release-candidate-and-proofs': 96 * MIB,
 }
 
@@ -71,8 +71,11 @@ def main():
         parser.error('--reference-proposal requires --sdk-candidate')
     if args.native_tooling and (not args.sdk_candidate or args.reference_proposal):
         parser.error('--native-tooling requires --sdk-candidate without --reference-proposal')
-    policy = json.loads((Path(__file__).parent/'ci-resources.json').read_text())
-    ceiling = policy['retention']['CI_artifact_pool_bytes']
+    # Artifact retention is independent of the sealed compiler/build resource policy.
+    policy = json.loads((Path(__file__).parent/'ci-artifact-policy.json').read_text())
+    if policy.get('schema') != 'ami-rust-ci-artifact-policy-v1':
+        raise ValueError('invalid artifact retention policy schema')
+    ceiling = policy['CI_artifact_pool_bytes']
     # Admit the entire serialized DAG before either matrix producer uploads:
     ceilings = NATIVE_ARTIFACT_CEILINGS if args.native_tooling else SDK_ARTIFACT_CEILINGS
     selected = {key:value for key,value in ceilings.items()

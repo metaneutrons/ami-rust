@@ -86,12 +86,22 @@ existing authentication scripts. These internal Python tasks remain RC4 work;
 they are not a supported public preparation dependency. A complete port of
 compiler/C-SDK production is not a prerequisite for this RC1 producer branch.
 
-The native workflow admits its complete 384 MiB artifact ceiling before any
+The native workflow admits its complete 448 MiB artifact ceiling before any
 producer upload: two 16 MiB host outputs, one 64 MiB unsigned candidate, two
-64 MiB authenticated candidates, two 32 MiB consumer reports and one 96 MiB outer-candidate/proof artifact. These are
+64 MiB authenticated candidates, two 64 MiB consumer reports and one 96 MiB outer-candidate/proof artifact. These are
 prospective hosted artifact profiles, not local evidence or AROS application
 quotas. Native-v2 authentication uses its existing 64 MiB bundle profile;
 historical-v1 retains 32 MiB. No release or package channel is mutated.
+The current retention authority is `release/ci-artifact-policy.json`, separate
+from the byte-pinned build resource policy and its historical retention field.
+The shared Actions retention pool is 768 MiB: one complete 448 MiB native
+campaign plus the existing 320 MiB legacy campaign reservation. Each native
+consumer keeps at most 63 MiB of evidence, reserving 1 MiB for cleanup and ZIP
+framing. This owner-approved retention adjustment follows
+[run 39523584471](https://github.com/metaneutrons/ami-rust/actions/runs/39523584471):
+the Linux command matrix completed, but its final report exceeded the old
+32 MiB retention bound. The failed run remains failed and is preserved; it
+does not qualify RC1. Signed SDK/transport limits and command budgets are unchanged.
 The complete native consumer job uses the existing full-consumer 80-minute
 allowance rather than the earlier direct-verification-only 20 minutes. Its
 supervised commands retain the existing 1,200-second, 4 GiB RSS, 12 GiB workspace

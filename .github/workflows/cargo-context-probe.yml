@@ -31,6 +31,7 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             release/ci_artifact_admission.py
+            release/ci-artifact-policy.json
             release/ci-resources.json
       - name: Admit both diagnostic exports before production
         env:

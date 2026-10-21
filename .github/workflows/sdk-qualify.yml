@@ -1427,11 +1427,16 @@ jobs:
               if not stat.S_ISREG(info.st_mode):
                   raise SystemExit('nonregular native consumer evidence')
               total += info.st_size
-          if total > 32 * 1024**2 - 4096:
-              raise SystemExit('native consumer evidence exceeds its 32 MiB artifact ceiling')
+          policy = json.loads(Path('release/ci-artifact-policy.json').read_text())
+          evidence_limit = (policy['native_consumer_artifact_bytes']
+                            - policy['native_consumer_framing_reserve_bytes'])
+          if total > evidence_limit - 4096:
+              raise SystemExit('native consumer evidence exceeds its 64 MiB artifact ceiling')
           receipt = {'schema': 'ami-rust-native-consumer-cleanup-v1',
                      'verification_outcome': os.environ['VERIFY_RESULT'],
-                     'output_bytes': total, 'retired': list(retired)}
+                     'output_bytes': total, 'retired': list(retired),
+                     'artifact_ceiling_bytes': policy['native_consumer_artifact_bytes'],
+                     'framing_reserve_bytes': policy['native_consumer_framing_reserve_bytes']}
           (output / 'cleanup.json').write_text(json.dumps(receipt, sort_keys=True) + '\n')
           print(json.dumps(receipt))
           PY
