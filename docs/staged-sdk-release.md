@@ -84,7 +84,7 @@ The new artifact contains `candidate/` (exactly six release files) and
 96 MiB retention ceiling accounts for the bounded 32 MiB transport, duplicated
 SBOM and proofs with headroom. One protected admission job, before either producer starts, reserves seven
 existing 32 MiB artifacts plus this 96 MiB artifact, 320 MiB in total, against
-the unchanged 768 MiB provider pool. Matrix jobs do not reserve the same DAG a
+the current 768 MiB provider pool. Matrix jobs do not reserve the same DAG a
 second time after another producer has already uploaded. A reference proposal
 reserves only its two 32 MiB producer artifacts, because the remaining jobs are
 skipped and cannot upload. It remains ineligible for authentication. These are hosted retention requirements, not application

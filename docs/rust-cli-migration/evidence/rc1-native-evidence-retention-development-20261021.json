@@ -26,68 +26,86 @@
     {
       "test": "release/test_ci_artifact_admission.py",
       "exit": 0,
-      "seconds": 0.12777845794335008,
-      "stderr_sha256": "8e8c40f14485e374a450c9c5f2dd65b58e8b74300fa0563f8ed8dfc1b535ec9d",
+      "seconds": 0.16724324994720519,
+      "stderr_sha256": "7113510254859a25fd51a67566b4a2edd527f7bf5883b8868a9383bb875d9cf9",
       "tests": 10
     },
     {
       "test": "release/test_ci_native.py",
       "exit": 0,
-      "seconds": 1.0141167920082808,
-      "stderr_sha256": "2a167c9a30e098375f47cfbf066cbaec6ea49895009e40edcfc0bd89b0eb8816",
-      "tests": 71
+      "seconds": 1.2382529999595135,
+      "stderr_sha256": "7613c9e60d0a3f3b3ab86404ee0d10b44a5bc136e090026f250d868484697d01",
+      "tests": 74
     },
     {
       "test": "release/test_sdk_workflow.py",
       "exit": 0,
-      "seconds": 0.4409013749100268,
-      "stderr_sha256": "0c5053b81aa9f5b8a3b1f34941f557dad65fe1e845a38429f58500865e91a27c",
+      "seconds": 0.4498847078066319,
+      "stderr_sha256": "b16908891a104acb9cfa8e3d710c8f680a7d868e81f4dbf09a1c212db00a9160",
       "tests": 25
     },
     {
       "test": "release/test_ci_sdk.py",
       "exit": 0,
-      "seconds": 6.086962333880365,
-      "stderr_sha256": "533cf9538d8ccac1daf93119cf42a7c3e5ad9441cd151f7486baf742fa5ac564",
-      "tests": 52
+      "seconds": 6.708542916923761,
+      "stderr_sha256": "34273981bc1337c9daaf84d2dbb58c404f1b79b4e8dbb4f312ea040885567199",
+      "tests": 53,
+      "post_review_full_suite_exit": 0,
+      "terminal_output_sha256": "15b66d4919836ac4aa8b2cd959369f76e5c4aec0094f893f93f336812b4c927e",
+      "log_note": "stderr_sha256 identifies the retained initial 52-test suite. The subsequent 53-test suite including the new invalid-profile counter passed; its terminal tool-output portion is retained separately."
     },
     {
       "test": "release/test_prepare_sdk.py",
       "exit": 0,
-      "seconds": 3.773572583217174,
-      "stderr_sha256": "e39312137a68eb0e1cc66a6b947388ebc3b20bc15a0a9673e8459dd0b4f799bb",
+      "seconds": 8.40909175015986,
+      "stderr_sha256": "be18f77cee7518cf27565bc48b872f25af300e11bec477d6cdc9423eba93fae7",
       "tests": 13
     },
     {
       "test": "release/test_ci_auth.py",
       "exit": 0,
-      "seconds": 0.4234356249216944,
-      "stderr_sha256": "657e967f868a9f37b091a37f8a86bce7de5f65279323f000469f44404c4b01a6",
+      "seconds": 0.4694193748291582,
+      "stderr_sha256": "7397cc363de490bcc4025a07937d3e118ba03d169bf1a9b1c908d3262267ab28",
       "tests": 25
     },
     {
       "test": "release/test_ci_native_outer.py",
       "exit": 0,
-      "seconds": 0.16272658412344754,
-      "stderr_sha256": "542478c5e228cffe15731b293460e1c4bc97eab58d811a31f3775a96f09a3ee3",
+      "seconds": 0.153716207947582,
+      "stderr_sha256": "ca18ffc8e8fdc6b71e49e9b4fd64e04661daa3243fb767d57a64ce80ea2d7b63",
       "tests": 9
     },
     {
       "test": "qualification/test_hosted_capacity.py",
       "exit": 0,
-      "seconds": 0.19062249991111457,
-      "stderr_sha256": "baf49b59538192f3e136ca0404cac516ecb8dd2fe5ba1416604056f3080fa49c",
+      "seconds": 0.05928958300501108,
+      "stderr_sha256": "2d014bb427120fb1a5014d7499096989061fd0fdf40acb471c2e2667de60e71e",
       "tests": 5
+    },
+    {
+      "test": "release/test_public_replay.py",
+      "exit": 0,
+      "seconds": 2.7925117078702897,
+      "stderr_sha256": "2b22404131879864e8c70aca37e8669884f945e0104cdc79b4c0ddf84fcb078d",
+      "tests": 32
+    },
+    {
+      "test": "release/test_public_replay_workflow.py",
+      "exit": 0,
+      "seconds": 0.10692016687244177,
+      "stderr_sha256": "c12abb957788e842f87142f815213f78a6f57b24be35c4a42b175e42410f4eb8",
+      "tests": 6
     }
   ],
-  "total_component_tests": 210,
+  "total_component_tests": 252,
   "additional_checks": [
     {
       "argv": [
         "actionlint",
         ".github/workflows/sdk-qualify.yml",
         ".github/workflows/cargo-qualify.yml",
-        ".github/workflows/cargo-context-probe.yml"
+        ".github/workflows/cargo-context-probe.yml",
+        ".github/workflows/public-replay.yml"
       ],
       "exit": 0
     },
@@ -110,6 +128,11 @@
       "path": ".github/workflows/cargo-qualify.yml",
       "bytes": 8735,
       "sha256": "f67979defb0622c5d4ee6269e882f1e894b89a1e4f61daecae83054881f1b921"
+    },
+    {
+      "path": ".github/workflows/public-replay.yml",
+      "bytes": 30910,
+      "sha256": "8a5dde96e609c6dc3137849ea5394d50a50c4855e1a80748f4e94000ec06070e"
     },
     {
       "path": ".github/workflows/sdk-qualify.yml",
@@ -138,8 +161,8 @@
     },
     {
       "path": "docs/public-release-replay.md",
-      "bytes": 7984,
-      "sha256": "c1d44e9f986a56fcfd4335cb2a5000646570a050f3a262e75924c8d177c14203"
+      "bytes": 8202,
+      "sha256": "540c4c32fd5218882b8bab7f77af8ba22ab998c1e41a6ea9a42fe4a29e2ad321"
     },
     {
       "path": "docs/rust-cli-migration/native-producer.md",
@@ -153,8 +176,8 @@
     },
     {
       "path": "docs/staged-sdk-release.md",
-      "bytes": 6605,
-      "sha256": "30ec775b6cc4b1cd51a3166221c3229dd4626b260553a477a0e1c172222a2631"
+      "bytes": 6603,
+      "sha256": "114c0dd2f890761eb1789dce5a3c5356321408eb85b536b5cdf36eaf93e0d3d2"
     },
     {
       "path": "release/ci-artifact-policy.json",
@@ -168,8 +191,18 @@
     },
     {
       "path": "release/ci_native.py",
-      "bytes": 174522,
-      "sha256": "6ed0464c762ecaf80af7b3b6687e9b82c0c4ca10fe8b58afdf0459844d561aab"
+      "bytes": 174981,
+      "sha256": "4138d6cdf0de084906affed69496d438b125566ae2603c04107d990c09ba10dc"
+    },
+    {
+      "path": "release/ci_sdk.py",
+      "bytes": 118034,
+      "sha256": "dfcccc8b5d8b6121ab9c60dbcb1c7b4db57f2c9bacb6ffa46059064a4de0ea50"
+    },
+    {
+      "path": "release/public_replay.py",
+      "bytes": 69626,
+      "sha256": "c17df8e964da4dedd0a1acd2580daa14f3e4333536814590635c0524adee508a"
     },
     {
       "path": "release/test_ci_artifact_admission.py",
@@ -178,8 +211,18 @@
     },
     {
       "path": "release/test_ci_native.py",
-      "bytes": 106130,
-      "sha256": "5b5bc2920ca8040807d1975e097ed863ce1cc346b2618ca4bea17a7eba6a4333"
+      "bytes": 109050,
+      "sha256": "b50e601fdbab9b4137f3ea7b1fe8eb3cb4b32777ead5e3d642a8c039f757ad24"
+    },
+    {
+      "path": "release/test_ci_sdk.py",
+      "bytes": 67648,
+      "sha256": "5800f9b34ef5970b152eeb9cf29e7c755e174ee969fdaa21de5c5288f43f9b17"
+    },
+    {
+      "path": "release/test_public_replay_workflow.py",
+      "bytes": 17206,
+      "sha256": "a3102b605ca817b20c609fac267ac26c66e1cf4534eb05ef9d4cfd72899cd32f"
     },
     {
       "path": "release/test_sdk_workflow.py",
@@ -223,5 +266,16 @@
     "Local component fixtures and actual workflow cleanup only; hosted candidate CI and a complete protected both-host SDK campaign remain required.",
     "Initial failed development checks preserved: changing sealed resource bytes invalidated existing producer reports; a counter-test initially reached an earlier diagnostic-space refusal. Separate retention policy and correctly staged final-output overflow resolve these without altering old evidence.",
     "No RC1 acceptance or SDK publication. No protected AROS checkout or nxpk changes."
-  ]
+  ],
+  "review_corrections": [
+    "Freeze current admission helper and policy before selecting historical public-replay publisher checkout; actual frozen helper uses 768 MiB despite old publisher controls.",
+    "Native mismatch reports identify 64 MiB profile; legacy writer default remains 32 MiB.",
+    "Actual lifecycle report finalizer accepts 40 MiB existing output; initial overflow and final supervision-growth overflow refuse without dropping evidence.",
+    "No new archive format and no metadata rewriting."
+  ],
+  "independent_review": {
+    "result": "Previously identified blockers resolved; no new blocker",
+    "scope": "Read-only source review; no additional tests or full hosted replay executed",
+    "review_sha256": "8702a84be0570900b20f90f1bcc37d90a44147e082db3e91d05a7b62846d2dfd"
+  }
 }

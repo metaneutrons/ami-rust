@@ -293,12 +293,21 @@ class HostedSdkProducerTests(unittest.TestCase):
         diagnostic_root = self.work / "cold-root-diagnostics"
         report = ci_sdk.read_json(diagnostic_root / "report.json", 2 * 1024**2)
         self.assertEqual(report["status"], "COLD_ROOT_NATIVE_MISMATCH")
+        self.assertEqual(report["host_artifact_retention_limit_bytes"], 32 * 1024**2)
         self.assertEqual(report["first_canonical_artifacts"], first_rows)
         self.assertEqual(report["second_canonical_artifacts"], rows(second_artifacts))
         self.assertEqual([row["member"] for row in report["differing_members"]], [member])
         mismatch = report["differing_members"][0]
         self.assertEqual((diagnostic_root / mismatch["first"]["path"]).read_bytes(), first_rlib)
         self.assertEqual((diagnostic_root / mismatch["second"]["path"]).read_bytes(), second_rlib)
+
+    def test_unknown_diagnostic_retention_profile_refuses_before_writing(self):
+        for limit in (True, 0, 32 * 1024**2 + 1, 96 * 1024**2):
+            with self.subTest(limit=limit), self.assertRaisesRegex(ValueError, "host retention profile"):
+                ci_sdk._write_cold_root_diagnostics(
+                    self.work, "fixture", "first", "second", {}, {}, {}, self.work, {}, {},
+                    host_artifact_retention_limit_bytes=limit)
+            self.assertFalse((self.work / "cold-root-diagnostics").exists())
 
     def test_identical_cold_roots_pass_without_diagnostic_payload(self):
         artifacts = self.work / "identical-cold-artifacts"

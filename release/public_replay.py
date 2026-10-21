@@ -51,6 +51,8 @@ PUBLIC_REPLAY_CONTROL_PATHS = (
     "release/prepare_sdk.py",
     "release/consumer_inputs.py",
     "release/public_transport.py",
+    "release/ci_artifact_admission.py",
+    "release/ci-artifact-policy.json",
 )
 REQUIRED_CONSUMER_ASSETS = (
     "sdk.tar.xz", "SHAUTIL", "install.py", "install_publisher.py",

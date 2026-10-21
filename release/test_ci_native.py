@@ -18,6 +18,50 @@ import ci_native as native
 import ci_sdk
 
 
+class NativeLifecycleReportRetentionTests(unittest.TestCase):
+    def finalize(self, output, report, final_summary=None):
+        summary = {"fixture": "complete supervised commands"} if final_summary is None else final_summary
+        with patch.object(native, "_check_limits"), \
+                patch.object(native, "_supervision_summary", return_value=summary):
+            return native._finalize_native_lifecycle_report(output, report, object(), [], 0)
+
+    def test_final_lifecycle_report_preserves_complete_output_above_32_mib(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            payload = output / "command-evidence.bin"
+            with payload.open("wb") as stream:
+                stream.truncate(40 * 1024**2)
+            report = {"status": "PASS_NATIVE_LIFECYCLE_NOT_RC1_ACCEPTANCE", "commands": ["all completed"],
+                      "supervision": {"initial": True}}
+            self.finalize(output, report)
+            self.assertEqual(auth.parsed(auth.read(output / "native-direct-lifecycle.json")), report)
+            self.assertEqual(report["supervision"], {"fixture": "complete supervised commands"})
+            self.assertEqual(payload.stat().st_size, 40 * 1024**2)
+            self.assertLess(ci_sdk.directory_bytes(output), native.MAX_CONSUMER_OUTPUT_BYTES)
+
+    def test_initial_report_overflow_refuses_without_losing_existing_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            report = {"supervision": {}, "status": "fixture"}
+            with (output / "command-evidence.bin").open("wb") as stream:
+                stream.truncate(native.MAX_CONSUMER_OUTPUT_BYTES - len(auth.encoded(report)) + 1)
+            before = ci_sdk.directory_bytes(output)
+            with self.assertRaisesRegex(ValueError, "64 MiB consumer artifact ceiling"):
+                self.finalize(output, report)
+            self.assertFalse((output / "native-direct-lifecycle.json").exists())
+            self.assertEqual(ci_sdk.directory_bytes(output), before)
+
+    def test_larger_final_supervision_report_cannot_escape_retention_accounting(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            report = {"supervision": {}, "status": "fixture"}
+            with (output / "command-evidence.bin").open("wb") as stream:
+                stream.truncate(native.MAX_CONSUMER_OUTPUT_BYTES - len(auth.encoded(report)))
+            with self.assertRaisesRegex(ValueError, "64 MiB consumer artifact ceiling"):
+                self.finalize(output, report, {"final": "larger measured supervision"})
+            self.assertLessEqual(ci_sdk.directory_bytes(output), native.MAX_CONSUMER_OUTPUT_BYTES)
+
+
 class NativeProducerTests(unittest.TestCase):
     def test_actual_native_lock_and_archive_selection_agree(self):
         # This fixture checks the real committed lock/registry selection.
@@ -331,7 +375,7 @@ class NativeMatrixTests(unittest.TestCase):
 
         return command, invocations
 
-    def test_two_root_matrix_runs_all_frozen_variants_and_publishes_after_success(self):
+    def _run_complete_two_root_matrix(self):
         command, invocations = self._command()
         reference = {"hosts": {native.current_host(): self.rows}}
         with patch.object(native.ci_sdk, "validate_native_reference", return_value=reference):
@@ -365,12 +409,15 @@ class NativeMatrixTests(unittest.TestCase):
         self.assertFalse((self.work / "pending-native").exists())
         self.assertFalse((self.work / "pending-native-metadata").exists())
 
+    def test_two_root_matrix_runs_all_frozen_variants_and_publishes_after_success(self):
+        self._run_complete_two_root_matrix()
+
     def test_complete_matrix_can_retain_more_than_legacy_32_mib(self):
         # Reproduce the storage condition of the completed Linux campaign.
         previous = self.output / "previous-command-evidence.bin"
         with previous.open("wb") as stream:
             stream.truncate(40 * 1024**2)
-        self.test_two_root_matrix_runs_all_frozen_variants_and_publishes_after_success()
+        self._run_complete_two_root_matrix()
         self.assertGreater(ci_sdk.directory_bytes(self.output), 32 * 1024**2)
         self.assertLess(ci_sdk.directory_bytes(self.output), native.MAX_CONSUMER_OUTPUT_BYTES)
         self.assertEqual(previous.stat().st_size, 40 * 1024**2)
@@ -401,6 +448,7 @@ class NativeMatrixTests(unittest.TestCase):
         diagnostics = self.output / "cold-root-diagnostics"
         report = auth.parsed(auth.read(diagnostics / "report.json"))
         self.assertEqual(report["status"], "COLD_ROOT_NATIVE_MISMATCH")
+        self.assertEqual(report["host_artifact_retention_limit_bytes"], 64 * 1024**2)
         self.assertEqual(report["variant"], "qualification")
         self.assertEqual(report["first_layout"], "sdk-layout-a")
         self.assertEqual(report["second_layout"], "sdk-layout-b-with-spaces")

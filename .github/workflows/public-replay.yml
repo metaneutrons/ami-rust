@@ -177,6 +177,8 @@ jobs:
               "release/prepare_sdk.py",
               "release/consumer_inputs.py",
               "release/public_transport.py",
+              "release/ci_artifact_admission.py",
+              "release/ci-artifact-policy.json",
           )
           source_rows = {}
           for relative in control_sources:
@@ -251,7 +253,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          python3 -I -B release/ci_artifact_admission.py
+          python3 -I -B "$GITHUB_WORKSPACE/.git/ami-rust-public-controls/release/ci_artifact_admission.py"
 
       - name: Install pinned Python from selected publisher source
         id: python-runtime

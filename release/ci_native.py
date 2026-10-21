@@ -891,13 +891,19 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer, upgrad
                                   "complete cross-host R1-A2 native output and raw-metadata comparison",
                                   "complete cross-host RC1-A4 migration, native upgrade and retained replay"],
               "claim": "Real inner/outer signatures, native direct and package preparation/build/removal/retained replay, plus the current-host two-root five-variant matrix; internal Python coordination is outside consumer scope. No-Python observation, cross-host R1-A2/A4 and RC1 acceptance remain open"}
+    return _finalize_native_lifecycle_report(
+        output, report, supervisor, tools.get("commands", []), bootstrap_insert_at)
+
+
+def _finalize_native_lifecycle_report(output, report, supervisor, bootstrap_commands, bootstrap_insert_at):
+    """Retain the complete lifecycle report under the native evidence profile."""
     report_path = output / "native-direct-lifecycle.json"
     initial_report = auth.encoded(report)
     if ci_sdk.directory_bytes(output) + len(initial_report) > MAX_CONSUMER_OUTPUT_BYTES:
         raise ValueError("native lifecycle report would exceed the 64 MiB consumer artifact ceiling")
     write(report_path, initial_report)
     _check_limits(supervisor, "native direct lifecycle report")
-    report["supervision"] = _supervision_summary(supervisor, tools.get("commands", []),
+    report["supervision"] = _supervision_summary(supervisor, bootstrap_commands,
                                                   bootstrap_insert_at)
     final_report = auth.encoded(report)
     if (ci_sdk.directory_bytes(output) - report_path.stat().st_size + len(final_report)
@@ -1338,7 +1344,8 @@ def _qualify_native_build_matrix(work, state, frontend, output, supervisor, conf
                     build_output / "artifacts", diagnostic_first_native, {
                         "bytes": observed_native.stat().st_size,
                         "sha256": ci_sdk.sha256(observed_native)},
-                    raw_limit_bytes=_matrix_diagnostic_allowance(supervisor, output))
+                    raw_limit_bytes=_matrix_diagnostic_allowance(supervisor, output),
+                    host_artifact_retention_limit_bytes=64 * 1024**2)
                 _publish_cold_root_diagnostics(work, output)
                 raise
 
@@ -1359,7 +1366,8 @@ def _qualify_native_build_matrix(work, state, frontend, output, supervisor, conf
                     ci_sdk._assert_cold_roots_match(
                         work, variant, layouts[0]["name"], layout["name"], first,
                         result["artifacts"], build_output / "artifacts", native_row,
-                        diagnostic_raw_limit_bytes=_matrix_diagnostic_allowance(supervisor, output))
+                        diagnostic_raw_limit_bytes=_matrix_diagnostic_allowance(supervisor, output),
+                        host_artifact_retention_limit_bytes=64 * 1024**2)
                 except ValueError:
                     _publish_cold_root_diagnostics(work, output)
                     raise
