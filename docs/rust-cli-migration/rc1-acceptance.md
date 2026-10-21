@@ -55,6 +55,42 @@ execution subtree, denied interpreter-library loading and denied outbound
 network. macOS uses its explicit sandbox interpreter denial. This is a
 source/control/process-policy join; no raw syscall trace is claimed.
 
+## A4 refusal and no-fallback reconciliation
+
+The [current-source refusal map](evidence/rc1-acceptance-20261021/a4-refusal-reconciliation.json)
+resolves the failure contracts separately rather than inferring them from a
+successful replay:
+
+- **Package owner and incompatible state:** both SDK hosts actually run
+  `22-upgrade-new-refuses-old-state` and `23-upgrade-new-refuses-old-build`.
+  Each exits 2 with `state is incomplete or belongs to another SDK/package;
+  use its retained launcher`. Their qualified observer records bind the
+  current core, input/policy/report hashes, no Python executable grant and
+  preserved old state. `ReadyInputs::open` checks host, SDK/package version,
+  source, manifest and core identities before opening the installed SDK.
+- **Filesystem owner:** both current regular-CI logs uniquely record
+  `ownership::tests::foreign_owned_output_parent_is_refused_without_writing_it`.
+  The unprivileged test uses root-owned `/usr`, requires the exact ownership
+  diagnostic, asserts no output creation and compares all directory names
+  before/after. This is the shared core ownership contract, not a separately
+  observed foreign-UID SDK CLI invocation.
+- **Legacy executable driver:** both current regular-CI logs uniquely record
+  `sdk::tests::refuses_legacy_schema_driver_and_unknown_decision_keys`.
+  It rejects schema-v1, `driver: host/build.py` and an arbitrary command field.
+  The same `parse_sdk_v2` is called during authenticated SDK composition and
+  retained `installed_recipe` validation, before selected components can
+  execute. An unsupported recipe produces `unsupported SDK-v2 driver recipe`;
+  it never interprets the driver field as a command. The CLI renders the
+  resulting refusal on stderr with exit 2. The no-fallback argument here is
+  the tested core contract and reviewed pure control flow, joined to the
+  exact-source CLI and interpreter controls; a separate invalid-driver SDK
+  CLI process observation is not claimed.
+
+These are the literal A4 refusal requirements mapped to current evidence.
+They do not rely on the earlier diagnostic from another source. The mapping
+rereads the raw log and SDK observation hashes; removing a required refusal
+marker from an isolated in-memory log makes the mapping control refuse.
+
 ## Offline reader corrections and refusal controls
 
 The final reader corrects representation assumptions without changing the

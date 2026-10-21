@@ -1,0 +1,110 @@
+{
+  "criterion_scope": "Resolves the public record traceability finding for literal RC1-A4 without adding a new per-command PID/foreign-UID CLI gate or weakening required clear refusal/no fallback. Existing original reports remain unchanged.",
+  "foreign_owner_effect": "The actual unprivileged current-source core test uses root-owned /usr, requires the exact current-user ownership diagnostic, no output creation, and identical before/after directory entries on both supported hosts. It is not claimed as a separately observed SDK CLI row.",
+  "hosts": [
+    {
+      "actual_sdk_owner_refusals": [
+        {
+          "clear_retained_owner_diagnostic": true,
+          "exit": 2,
+          "label": "22-upgrade-new-refuses-old-state",
+          "observation_sha256": "4448aa78f56d8a7ef75f5337d6957a857dc5b6157feb720c75ca4fa6408f664b",
+          "qualified_no_python_exec_policy": true,
+          "report_sha256": "3c397bf8ada1f585f146ed89d23ff4a831dbecf6fc9172d8825318caecbef239",
+          "stderr_sha256": "4313c7ac80532aefe02603e729cbd3f4ecb1462e7dc6a40c7635cc1678bfdddc"
+        },
+        {
+          "clear_retained_owner_diagnostic": true,
+          "exit": 2,
+          "label": "23-upgrade-new-refuses-old-build",
+          "observation_sha256": "3cd095ef99665090f274ca594015ff6ee8883e1a980ae76992eae926d4a74c7a",
+          "qualified_no_python_exec_policy": true,
+          "report_sha256": "28ab5fee5a1ebfd8d8946eb8c02aa7f5c4e8b4ba907a83e6df8a1f2060327843",
+          "stderr_sha256": "4313c7ac80532aefe02603e729cbd3f4ecb1462e7dc6a40c7635cc1678bfdddc"
+        }
+      ],
+      "current_regular_ci_job": 119054750334,
+      "host": "linux-x86_64",
+      "raw_log_sha256": "3518fd302eeecbe12ddf588e9b5733decd8bec7ca1ee7cfb71600ae05ea25ba9",
+      "unique_passing_refusal_tests": [
+        "ownership::tests::foreign_owned_output_parent_is_refused_without_writing_it",
+        "sdk::tests::refuses_legacy_schema_driver_and_unknown_decision_keys"
+      ]
+    },
+    {
+      "actual_sdk_owner_refusals": [
+        {
+          "clear_retained_owner_diagnostic": true,
+          "exit": 2,
+          "label": "22-upgrade-new-refuses-old-state",
+          "observation_sha256": "17337cf1a6ec8f36ec818e28138d7b216ed815b57cf2ed03f6a200df555635a0",
+          "qualified_no_python_exec_policy": true,
+          "report_sha256": "b873566e32a08327f6f6bb3a5d10426ed3907ed037971dbf8d3a22b78e504664",
+          "stderr_sha256": "4313c7ac80532aefe02603e729cbd3f4ecb1462e7dc6a40c7635cc1678bfdddc"
+        },
+        {
+          "clear_retained_owner_diagnostic": true,
+          "exit": 2,
+          "label": "23-upgrade-new-refuses-old-build",
+          "observation_sha256": "a0748c4b6aef4d560cd452c01645be41f8c4359cc19ae486eb39c1e027999ed8",
+          "qualified_no_python_exec_policy": true,
+          "report_sha256": "26c28d4889ee25db8d9a25c22b317fcd4de6286b3b517102d0f4851bca8431f7",
+          "stderr_sha256": "4313c7ac80532aefe02603e729cbd3f4ecb1462e7dc6a40c7635cc1678bfdddc"
+        }
+      ],
+      "current_regular_ci_job": 119054750337,
+      "host": "macos-aarch64",
+      "raw_log_sha256": "665c021216208e48e099d1045857781302e865c408282114035eee755c87942e",
+      "unique_passing_refusal_tests": [
+        "ownership::tests::foreign_owned_output_parent_is_refused_without_writing_it",
+        "sdk::tests::refuses_legacy_schema_driver_and_unknown_decision_keys"
+      ]
+    }
+  ],
+  "legacy_driver_boundary": "The current-source sdk::tests::refuses_legacy_schema_driver_and_unknown_decision_keys rejects schema-v1, driver host/build.py and arbitrary_command. The same parse_sdk_v2 validates authenticated composition and retained installed_recipe before selected components can execute; unsupported driver returns the explicit Refusal without interpreting the driver as a command. Current CLI reports Refusal on stderr/exit 2. This is a tested core-contract and reviewed pure control-flow proof, not a separately observed invalid-driver SDK CLI invocation.",
+  "no_fallback_basis": "Actual package-owner refusal commands have source-bound complete observer/adapter records and no Python executable grant. Unsupported executable-driver data fails in the pure SDK parser, which has no execution/fallback branch; the same exact CLI/adapter source and both-host interpreter controls are separately joined by the full SDK/regular-CI readbacks.",
+  "offline_mapping_control": {
+    "expected_effect": "refusal test marker set incomplete",
+    "observed_effect": "REFUSED",
+    "original_raw_logs_unchanged": true,
+    "positive": "both actual raw logs each contain exactly one marker for both current-source refusal tests",
+    "synthetic_change": "remove only the legacy-driver test success marker from an isolated in-memory log string"
+  },
+  "recorded_utc": "2026-10-21T07:39:28.549403+00:00",
+  "regular_ci_run": 39549340970,
+  "schema": "ami-rust-rc1-a4-refusal-reconciliation-v1",
+  "sdk_run": 39553656864,
+  "source": "4350aeae331dbccb190bc7be6938306644e4d4af",
+  "source_pins": {
+    "tooling/crates/cli/src/main.rs": {
+      "bytes": 1179,
+      "sha256": "a41b9858b455b25998ec5f60d8de9b4a61842374fbcdddf51d1ccb9769c9a65d"
+    },
+    "tooling/crates/core/src/baseline.rs": {
+      "bytes": 9017,
+      "sha256": "74d6d4960657b80f26f2e24a624baad0fa9cd83cc167b5a789154296bdaf3b8f"
+    },
+    "tooling/crates/core/src/frontend.rs": {
+      "bytes": 56871,
+      "sha256": "4400fdbbbf62e04fe0a844ef4454aea31ba1c114d853a85d893ae5a9f285e83f"
+    },
+    "tooling/crates/core/src/ownership.rs": {
+      "bytes": 33223,
+      "sha256": "47ae16e5fa8a00868a238245c53374c5804909bf3ff4858d198e41fc5fb50ece"
+    },
+    "tooling/crates/core/src/ready_state.rs": {
+      "bytes": 4947,
+      "sha256": "c8087fe4fd254fa05690608fcbc2ee01f779a7da76ee92d9da2d98f8f3f1b99e"
+    },
+    "tooling/crates/core/src/sdk.rs": {
+      "bytes": 51708,
+      "sha256": "bb33f051490e2c511d0944cbba16e8357c6b4ce5cd4dba90e79bfb620291b43c"
+    },
+    "tooling/crates/core/src/selected_inputs.rs": {
+      "bytes": 11017,
+      "sha256": "c4a619d72fa022c37ea44937e2ecacd461123540859387232f4abff70b960d9d"
+    }
+  },
+  "source_tree": "25d3b14be3c779d34d713a47d405206b49cf9e82",
+  "status": "PASS_CURRENT_SOURCE_OWNER_STATE_AND_LEGACY_DRIVER_REFUSAL_EVIDENCE"
+}

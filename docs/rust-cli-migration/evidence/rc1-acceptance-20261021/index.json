@@ -39,6 +39,11 @@
       "bytes": 1212,
       "file": "capacity-measurement.json",
       "sha256": "8b30b062bac2c12908baafece76237282097452c902ef701b5c50b72d18f68c5"
+    },
+    {
+      "bytes": 6236,
+      "file": "a4-refusal-reconciliation.json",
+      "sha256": "b81cf80d5a13f0a88bdaa949409b1d5f440df3e66bb8ebb885e2d4f5456b0f59"
     }
   ],
   "plan_revision": "d7ac89004a8f805e6f1e3efaf9242fed976803ab",
