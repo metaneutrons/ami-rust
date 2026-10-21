@@ -115,11 +115,19 @@ criteria are still required before RC2 acceptance or a changed SDK release.
 
 ## Extended fixture development
 
-The [extended development record](../../docs/rust-cli-migration/evidence/rc2-storage-extended-development-20261021.json)
-binds one exact-source macOS suite: 140 actual commands and 181 named checks,
+The prior [extended development record](../../docs/rust-cli-migration/evidence/rc2-storage-extended-development-20261021.json)
+binds its original exact-source macOS suite: 140 actual commands and 181 named checks,
 plus 39 receipt/raw-data positive and corrupted-copy controls. Pinned Rust build,
 11 storage units and strict all-target Clippy pass; Linux configuration compiles
 and lints, but no expanded Linux runtime is claimed.
+
+The [GC parity development record](../../docs/rust-cli-migration/evidence/rc2-storage-gc-parity-development-20261021.json)
+binds the current six-mode macOS suite: 167 commands, 226 checks, all 39
+readback controls and an actual incomplete-prefix refusal/cleanup measurement control.
+The hold requires Cargo’s exact lock message within the initial observed
+stderr prefix, with a deliberate one-byte witness counter. The four GC cases
+cover original/derived Cargo and selector present/absent;
+Linux runtime and full RC2 acceptance remain open.
 
 | Internal maintainer operation | Commands | Checks | Scope |
 | --- | ---: | ---: | --- |
@@ -127,7 +135,7 @@ and lints, but no expanded Linux runtime is claimed.
 | `cargo-storage-lifecycle-probe` | 24 | 37 | Actual intermediates, executable, enabled/disabled analysis and sessions |
 | `cargo-storage-registry-probe` | 26 | 33 | Synthetic sparse registry, external Get(Read), original credential lookup and refusals |
 | `cargo-storage-nested-probe` | 24 | 32 | Literal relative homes, distinct config, nested fetch/build and wrong-token retry |
-| `cargo-storage-concurrent-gc-probe` | 9 | 9 | Two live same-store readers and actual expired-index deletion/fresh preservation |
+| `cargo-storage-concurrent-gc-probe` | 36 | 54 | Four original/derived and selected/absent cases, active-reader GC contention, index age deletion/preservation and semantic parity |
 | `cargo-storage-git-helper-probe` | 14 | 33 | libgit2 helper lookup, matching protected retry and 401/no-helper refusal |
 
 The lifecycle operation retains all four bounded original JSONL files under its
@@ -145,9 +153,8 @@ external service or successful authenticated smart-HTTP clone is claimed.
 
 The coordinator invokes all six operations with separate fresh work/output
 roots and exact checked-in command/exit/outcome contracts. This source is not a
-fresh two-host protected result or a selected SDK component. GC during active
-readers, concurrent fetch, GC control/absent comparisons, full bounded
-selector-absent parity, activation and complete AROS qualification remain open.
+fresh two-host protected result or a selected SDK component. Concurrent fetch, complete failure/retry, full bounded selector-absent parity
+beyond these GC cases, activation and complete AROS qualification remain open.
 
 ## Compiler-bound paths
 
