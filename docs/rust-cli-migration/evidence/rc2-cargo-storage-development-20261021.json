@@ -1,0 +1,173 @@
+{
+  "acceptance_authority": {
+    "criteria": [
+      "RC2-A1",
+      "RC2-A2",
+      "RC2-A3",
+      "RC2-A4"
+    ],
+    "execution_issue": "https://github.com/metaneutrons/ami-rust/issues/72",
+    "plan": "docs/rust-cli-cargo-migration-plan.md",
+    "plan_revision": "d7ac89004a8f805e6f1e3efaf9242fed976803ab"
+  },
+  "classification": "bounded macOS development evidence; experimental patch not selected by existing SDK producers",
+  "date": "2026-10-21",
+  "independent_source_review": {
+    "disposition": "F1 resolved statically; no concrete regression in bounded fix",
+    "final_report_sha256": "25c2138af50078fe4db22fbdc85eb1e1e00d8855fd6290787d44d9b160842f5d",
+    "inputs_sha256": "4df172f19e30b222be31ae6be83aa1bb93eb1a25c252169d4584f29f1aa0cede",
+    "limit": "Static source review only, not independent runtime replay or fullRC2 acceptance"
+  },
+  "input_preservation": {
+    "old_SDK_inputs_receipts_and_replay": true,
+    "original_cargo_source_and_metadata_patch": true,
+    "protected_AROS_checkouts": true,
+    "target_rust_CSDK_ABIv1_QEMU_baseline": true,
+    "vendor_overlay_unchanged": true
+  },
+  "limitations": [
+    "macOS aarch64 only; no native Linux execution",
+    "Linux non-UTF8 filesystem/custom-build-dir/embedded integration remains required; macOS units test raw OS bytes without creating an invalid UTF8 filesystem name",
+    "Synthetic file-backed Git dependency, not network/registry/provider authentication",
+    "No nested/concurrent Cargo, failure/retry/interruption or enabled-analysis-log qualification",
+    "Selector-absent comparison covers metadata, not complete equivalence",
+    "No shared activation/compiler/build-script/linker integration or effective-input acceptance",
+    "No AROS build/runtime/memory matrix or SDK publication",
+    "No complete RC2 acceptance; all plan criteria remain required"
+  ],
+  "observed_resources": {
+    "component_build": {
+      "conservative_driver_plus_child_peak_rss_bytes": 2308128768,
+      "logs_bytes": 13693,
+      "workspace_peak_bytes": 2767312673
+    },
+    "runtime_component": {
+      "conservative_driver_plus_child_peak_rss_bytes": 194068480,
+      "logs_bytes": 43443,
+      "workspace_peak_bytes": 1212571488
+    },
+    "scope": "Observed command process-group peak plus separately observed driver peak summed conservatively; local component scope, not full native production/AROS resource qualification."
+  },
+  "preserved_predecessors": {
+    "first_component_and_runtime_proof": {
+      "component_sha256": "876d61f6f54e3900bcf4042a562246c7668b8e79c505df4c897bb4307b7ff29a",
+      "runtime_sha256": "da6ca51714afccf082a0c26dca7ab4909aa1b415e78d38d62c295e8f554d4a77",
+      "scope": "Five units and 34commands/27checks; source was subsequently changed to fix independent F1 finding, so these are not final-source evidence."
+    },
+    "independent_F1_finding": {
+      "issue": "Non-UTF8 selected cache root failed eager build-dir conversion; embedded default could panic.",
+      "report_sha256": "b493d02d95b4b5aef809b06d0a3086f58f54b13cfefc55bf7d22cd506bb5798a"
+    },
+    "initial_type_inference_compile_failure": "Source, executed driver and raw logs retained; corrected before successful build"
+  },
+  "rc2_accepted": false,
+  "results": {
+    "actual_cargo_build": "PASS, fresh target directory and offline dependency closure",
+    "cached_executable_unchanged": true,
+    "different_selector_refuses": {
+      "before_workspace_output_mutation": true,
+      "commands": [
+        "metadata",
+        "check",
+        "build"
+      ],
+      "exit_code": 101,
+      "force_values": [
+        false,
+        true
+      ]
+    },
+    "evidence_countercontrols": [
+      "contradictory refusal exit rejected",
+      "equal-length file-content change with restored mtime detected",
+      "new empty directory detected",
+      "directory mode change detected"
+    ],
+    "expected_refusals": 14,
+    "fresh_patch_replay_source_files": 2928,
+    "invalid_roots_refuse": [
+      "empty",
+      "relative",
+      "missing",
+      "regular file",
+      "symlink",
+      "group-writable",
+      "noncanonical"
+    ],
+    "metadata_same_output_path_byte_equal": true,
+    "original_config_relative_origin_CLI_and_build_script_equivalent": true,
+    "original_home_unchanged_during_selected_operations": true,
+    "os_template_cases": [
+      "raw non-UTF8 OS bytes in standalone unit",
+      "literal/repeated replacement values and braces in unit",
+      "literal custom build-dir matches original Cargo metadata",
+      "selected cache path containing literal braces in actual metadata",
+      "unknown-template-variable actual exit101 and unchanged fixtures"
+    ],
+    "path_units": 8,
+    "primary_readback": "38 decisions/76 raw runtime logs, component logs, source/tool hashes and byte comparisons verified",
+    "runtime_checks": 30,
+    "runtime_commands": 38,
+    "same_selector_cases": [
+      "plain",
+      "force=true",
+      "absolute value with relative=true",
+      "true relative origin in explicit config file"
+    ],
+    "selected_store_effects": [
+      "Git db/checkouts",
+      ".package-cache",
+      ".package-cache-mutate",
+      ".global-cache"
+    ],
+    "selector_absent_equivalence": "metadata only; existing child-env semantics preserved"
+  },
+  "retained_report_identities": {
+    "initial_failed_build_sha256": "f90798e73e8a2f6ab5f96deafde416ad2478f0e261f80523def23f52cafd4df2",
+    "patch_replay_sha256": "c7a48a7c50ad0250c1499a302c6dd44f1549b3fe40fffd564c425c75405ce82f",
+    "primary_readback_sha256": "6731cf9ba19f923aa53babfbf62258150d7ed0fbb0ec4d6345b24755b85c8981",
+    "runtime_sha256": "85a40b3a73411fa721e7fcf6343288bd0fb0995a9b4f8bc69bf4006106288ce2",
+    "successful_component_sha256": "1524493c0e9c7bc8ab3b4d8103f9cbc09733b911061705e6ca6caa4233c73572"
+  },
+  "schema": "ami-rust-rc2-cargo-storage-development-v1",
+  "source": {
+    "additional_patch": {
+      "repository_path": "host/cargo-storage/cargo-storage.patch",
+      "sha256": "220b426e66497fbe8a4c5d9f1783848262e7e963261623019d5fb46cdacda497"
+    },
+    "base_patch": {
+      "repository_path": "host/cargo-repro/cargo-metadata.patch",
+      "sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f"
+    },
+    "changed_storage_files": [
+      "src/compiler/fingerprint/mod.rs",
+      "src/context/mod.rs",
+      "src/context/path.rs",
+      "src/ops/cargo_fix/mod.rs",
+      "src/ops/cargo_report/util.rs",
+      "src/util/cache_lock.rs",
+      "src/util/command_prelude.rs",
+      "src/util/logger.rs",
+      "src/workspace/global_cache_tracker.rs",
+      "src/workspace/workspace.rs",
+      "src/context/ami_storage.rs"
+    ],
+    "effective_source": {
+      "algorithm": "SHA-256 of sorted compact JSON relative-file-path to SHA-256 map, UTF-8",
+      "file_count": 2928,
+      "sha256": "8b929c761609c378c4cdfc0e8536deb21128b88b5681a41caa9c7caf56840e30"
+    },
+    "qualified_component": false,
+    "schema": "ami-rust-experimental-cargo-storage-source-v1",
+    "status": "experimental-patch-only-not-selected-by-existing-producers",
+    "upstream_commit": "3efb1f477e99b42974b982d939fd100303cdf7db"
+  },
+  "tools": {
+    "control_cargo_sha256": "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d",
+    "derived_cargo_bytes": 38203872,
+    "derived_cargo_sha256": "36364ee7e6b6beb2ca2e7a5782728962bffe91d58a39750598a537ed47f69ddc",
+    "derived_cargo_version": "cargo 1.99.0 (3efb1f477 2026-07-17)\nrelease: 1.99.0\ncommit-hash: 3efb1f477e99b42974b982d939fd100303cdf7db\ncommit-date: 2026-07-17\nhost: aarch64-apple-darwin\nlibgit2: 1.9.4 (sys:0.21.0 vendored)\nlibcurl: 8.7.1 (sys:0.4.90+curl-8.21.0 system ssl:(SecureTransport) LibreSSL/3.3.6)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Mac OS 26.5.1 [64-bit]\n",
+    "host_cargo_sha256": "6e17e865f3a20dd55a1d212f849f58b77124179f0de7c52973096d84ba34118d",
+    "host_rustc_sha256": "766eda9d8f53afd6fc7f27b3cd2e444dd22afacb5afa710a5625fc8e45b8c941"
+  }
+}

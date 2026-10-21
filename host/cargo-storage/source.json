@@ -1,0 +1,32 @@
+{
+  "additional_patch": {
+    "repository_path": "host/cargo-storage/cargo-storage.patch",
+    "sha256": "220b426e66497fbe8a4c5d9f1783848262e7e963261623019d5fb46cdacda497"
+  },
+  "base_patch": {
+    "repository_path": "host/cargo-repro/cargo-metadata.patch",
+    "sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f"
+  },
+  "changed_storage_files": [
+    "src/compiler/fingerprint/mod.rs",
+    "src/context/mod.rs",
+    "src/context/path.rs",
+    "src/ops/cargo_fix/mod.rs",
+    "src/ops/cargo_report/util.rs",
+    "src/util/cache_lock.rs",
+    "src/util/command_prelude.rs",
+    "src/util/logger.rs",
+    "src/workspace/global_cache_tracker.rs",
+    "src/workspace/workspace.rs",
+    "src/context/ami_storage.rs"
+  ],
+  "effective_source": {
+    "algorithm": "SHA-256 of sorted compact JSON relative-file-path to SHA-256 map, UTF-8",
+    "file_count": 2928,
+    "sha256": "8b929c761609c378c4cdfc0e8536deb21128b88b5681a41caa9c7caf56840e30"
+  },
+  "qualified_component": false,
+  "schema": "ami-rust-experimental-cargo-storage-source-v1",
+  "status": "experimental-patch-only-not-selected-by-existing-producers",
+  "upstream_commit": "3efb1f477e99b42974b982d939fd100303cdf7db"
+}
