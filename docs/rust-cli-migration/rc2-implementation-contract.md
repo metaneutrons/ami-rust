@@ -163,8 +163,11 @@ Resolve current applications through Cargo metadata and normal command selection
 Do not freeze starter manifest hashes or infer success from a guessed filename.
 Reject export basename collisions before build. The pinned source supports
 `build -Z unstable-options --artifact-dir <fresh-empty-directory>` for fresh and
-cached final outputs; actual packaged-binary behavior requires the bounded probe
-before using that route. Metadata/check have no final executable export claim.
+cached final outputs. The [bounded macOS host-fixture proof](evidence/rc2-cargo-export-design-20261021.json)
+confirms that the exact RC1 packaged Cargo exports fresh/cached selected binaries,
+selects multiple binaries and leaves an empty export for a failed build. It does
+not establish Linux, AROS or full RC2 behavior. Metadata/check have no final
+executable export claim.
 
 Each invocation owns a fresh export directory. Require the exact resolved native
 outputs and audit them read-only: Linux exports may hard-link Cargo's cache.
@@ -175,8 +178,9 @@ and retain honest failure/cleanup evidence.
 
 ## Delivery order and evidence
 
-1. Prove actual pinned Cargo fresh/cache-hit artifact export with isolated
-   failure controls; version the concrete result and its limitations.
+1. Use the versioned pinned-Cargo host export proof and its failure control as
+   bounded design evidence. Qualify the selected artifact route in the actual
+   both-host AROS build integration; preserve the proof's explicit limitations.
 2. Complete and review the effective-input/storage patch mapping, then implement
    and qualify the derived Cargo without changing existing accepted states.
 3. Implement typed project/activation/invocation records, shared role dispatch,

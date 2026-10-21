@@ -1,0 +1,85 @@
+{
+  "cargo": {
+    "asset_sha256": "195e8dd8c7c5f7f0893889ed33459911d53d5830eaba65945c66bc0a7e39b001",
+    "binding": "Authenticated package asset plus exact cargo_frontend/actual successful command in both original macOS first-build and native-upgrade receipts.",
+    "executable_bytes": 39348200,
+    "executable_sha256": "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d",
+    "existing_patch_sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f",
+    "qualification_attempt": 1,
+    "qualification_run": "https://github.com/metaneutrons/ami-rust/actions/runs/39553656864",
+    "qualified_source": "4350aeae331dbccb190bc7be6938306644e4d4af",
+    "rc4_local_producer_executable_sha256": "7262dc3e44dda431242e693fd79a301515fe24a2496ac4981ac79db01214ea34",
+    "release_manifest_sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+    "same_as_rc4_local_producer_executable": false,
+    "source_commit": "3efb1f477e99b42974b982d939fd100303cdf7db"
+  },
+  "date": "2026-10-21",
+  "host": "macos-aarch64",
+  "host_rust": {
+    "commit": "48a229ceaefd4985c50990b14116b6d856af0985",
+    "release": "1.98.1"
+  },
+  "observations": {
+    "cached_compiling_status_present": false,
+    "cached_selected": [
+      {
+        "bytes": 472616,
+        "name": "selected",
+        "sha256": "7fd2dc649a2a89a07eefbee7e331e7a5f200ecb5f9e6bfb9ecd88583bbdbb733"
+      }
+    ],
+    "cached_target_mtime_unchanged": true,
+    "commands": 8,
+    "failing_build_exit_code": 101,
+    "failing_build_exports": [],
+    "fresh_selected": [
+      {
+        "bytes": 472616,
+        "name": "selected",
+        "sha256": "7fd2dc649a2a89a07eefbee7e331e7a5f200ecb5f9e6bfb9ecd88583bbdbb733"
+      }
+    ],
+    "multiple_selected": [
+      {
+        "bytes": 471272,
+        "name": "alpha",
+        "sha256": "55d797554f5dc109e019708b6bf9266401fe6eaa382cb016d6055c70e264a572"
+      },
+      {
+        "bytes": 471256,
+        "name": "beta",
+        "sha256": "b74e0b3131b793ba02dee6771e91540895531ac5eb9c02a1bb44b82b6b872123"
+      }
+    ],
+    "selected_application_stderr_sha256": "65da864a28b02e7e7f73050233d3247b3662b1c2f6439224652efae0d57f0e2f",
+    "selected_application_stdout_sha256": "0f16c2d0c49555c9876198e220b78fec907fe57e324c145803c29dfd2f077bb2"
+  },
+  "preserved_failures": [
+    "Attempt001 stopped on fixture parent-workspace discovery, followed by a reporting-field error; raw logs and failure record retained. Its executed driver bytes were not copied before correction; only its recorded digest remains. No artifact-export conclusion uses that attempt.",
+    "Primary reader a1 assumed an absent exception for the intentionally failed Cargo command. Corrected a2 checks expected exit101/exception and original raw evidence; a1 source/failure retained."
+  ],
+  "rc2_accepted": false,
+  "recipe": {
+    "channel_or_bootstrap_overrides": false,
+    "fresh_and_cached": "cargo build -Z unstable-options --artifact-dir <different-fresh-empty-directory> --bin selected",
+    "multiple": "cargo build -Z unstable-options --artifact-dir <fresh-empty-directory> --bins",
+    "offline": "CARGO_NET_OFFLINE=true; dependency-free fixtures; no acquisition step",
+    "output_mode": "Normal Cargo human output; no forced JSON or re-rendering"
+  },
+  "resource_observation": {
+    "command_child_tree_peak_rss_bytes": 121454592,
+    "limitation": "Python orchestration-process RSS was not measured; this is not a complete driver-plus-child aggregate memory qualification.",
+    "logs_bytes": 1970,
+    "managed_workspace_peak_bytes": 1262169159,
+    "maximum_command_seconds": 0.797
+  },
+  "retained_evidence": {
+    "executed_driver_sha256": "f01ffc3ae97af2bdc199dacff31f110b76200f6dcb0d8c25a516c0d02255a6b4",
+    "original_result_sha256": "8efcbd4802f6dd8d50ee8af92c993ac1e1c3f6be07b43c62f9149c8502e8363b",
+    "primary_readback": "Eight command decisions,16 raw logs, exact exports and package/source bindings rechecked; isolated contradictory failure-exit reader control refused.",
+    "primary_readback_sha256": "2a149bdf97e192869a93d2bf20e8b12fa8c10a773674a31c13f653aa4c381762"
+  },
+  "schema": "ami-rust-rc2-cargo-export-design-v1",
+  "scope": "Dependency-free host application fixtures in paths containing spaces. No Linux or AROS build/runtime, full RC2 or release qualification.",
+  "status": "PASS_MACOS_HOST_EXPORT_DESIGN_ONLY"
+}
