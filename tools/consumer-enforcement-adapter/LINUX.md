@@ -113,6 +113,17 @@ Native subprocesses using null stdin also need exact `read-file /dev/null`
 access. Without it, `Command::output` can fail before attempting an exec, so
 that error alone cannot establish interpreter refusal. The native descendant
 positive and isolated missing-stdin counterprobe distinguish these cases.
+
+`write-null /dev/null` separately admits output redirection to the exact canonical
+character device, with its device/inode identity checked before and after the
+command. It grants `WRITE_FILE` and, where supported, `TRUNCATE` for that device;
+it does not admit writes to `/dev` or other devices. The consumer observer uses
+this existing directive for cold installation and builds. Compiler feature
+probes such as proc-macro2's redirect stderr through `Stdio::null()` and can
+silently select different features if opening null output is denied. The native
+pinned-compiler regression compares ordinary and observed metadata and removes
+only this directive in its refusal control.
+
 deny-library PATH is enforced by absence of a matching
 Landlock read allowance; the parser rejects a policy when a read-library
 mapping, read tree, write-tree, or executable rule would also grant access to

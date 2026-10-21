@@ -110,7 +110,7 @@ fn cargo_fork_probe_add_policy_environment(
     let body = policy.strip_suffix(&suffix).ok_or_else(|| {
         "generated policy does not end in the expected offline cwd suffix".to_owned()
     })?;
-    if policy.matches("network deny\n").count() != 1 || policy.contains("write-null ") {
+    if policy.matches("network deny\n").count() != 1 || !build_probe_has_exact_null_write(policy) {
         return Err(
             "generated build policy has an unexpected network or device-write rule".to_owned(),
         );
@@ -542,7 +542,7 @@ fn run_pinned_cargo_fork_probe_inner(
     let policy_sha256 = sha256_bytes(policy.as_bytes());
     if !policy.contains("network deny\n")
         || policy.contains("network outbound\n")
-        || policy.contains("write-null ")
+        || !build_probe_has_exact_null_write(&policy)
         || !policy.contains(&format!("env RUSTC={}\n", cargo_fork_probe_path(&rustc)?))
         || !policy.contains(&format!(
             "env RUSTDOC={}\n",

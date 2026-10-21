@@ -16,6 +16,7 @@ on:
       - tooling/crates/xtask/src/cold_runtime_probe.rs
       - tooling/crates/xtask/src/fork_runtime_probe.rs
       - tooling/crates/xtask/src/host_link_probe.rs
+      - tooling/crates/xtask/src/null_probe.rs
       - release/ci_native.py
       - release/ci_sdk.py
       - release/ci_cargo.py
@@ -189,7 +190,9 @@ jobs:
                  "AMI_RUST_HOST_LINK_COMPONENT": str(work / "case/extracted/rustc-nightly-x86_64-unknown-linux-gnu/rustc"),
                  "AMI_RUST_HOST_LINK_ADAPTER": str(root / "ami-rust-linux-git-adapter-target/debug/consumer-enforcement-adapter"),
                  "AMI_RUST_HOST_LINK_WORK_ROOT": str(work / "host-link"),
-                 "AMI_RUST_HOST_LINK_ARTIFACT_ROOT": str(output / "host-link-probe")}
+                 "AMI_RUST_HOST_LINK_ARTIFACT_ROOT": str(output / "host-link-probe"),
+                 "AMI_RUST_NULL_PROBE_WORK_ROOT": str(work / "null-stderr"),
+                 "AMI_RUST_NULL_PROBE_ARTIFACT_ROOT": str(output / "null-stderr-probe")}
           supervisor = native._make_supervisor(work, output, python, env,
               static_roots=[("pinned-host-rust", root / "ami-rust-linux-git-rust"),
                             ("adapter-build", root / "ami-rust-linux-git-adapter-target"),
@@ -241,7 +244,23 @@ jobs:
                              for row in controls)):
                   raise RuntimeError("Rust host system-library read-rule omission controls are incomplete")
               native._check_limits(supervisor, "completed pinned host linker regression")
-              status = "PASS_CAUSE_SPECIFIC_RUNTIME_AND_LINKER_PROBES_NOT_FULL_COLD_CLI_OR_RC1_ACCEPTANCE"
+              row = native._supervised_run(supervisor,
+                  [binary, "--ignored", "--exact", "consumer_observe::tests::linux_pinned_rustc_null_stderr_regression",
+                   "--test-threads=1"], label="linux-pinned-rustc-null-stderr-regression", timeout=1200)
+              stdout = (work / row["stdout_log"]).read_text()
+              if (stdout.splitlines().count("running 1 test") != 1
+                      or stdout.splitlines().count("test consumer_observe::tests::linux_pinned_rustc_null_stderr_regression ... ok") != 1
+                      or sum(line.startswith("test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured;")
+                             for line in stdout.splitlines()) != 1):
+                  raise RuntimeError("expected exactly one completed null-stderr regression test")
+              null_probe = json.loads((output / "null-stderr-probe/probe-result.json").read_text())
+              if (null_probe.get("status") != "PASS"
+                      or any(null_probe.get(key) is not True for key in
+                             ("positive_gate_passed", "counter_gate_passed", "ordinary_metadata_equal",
+                              "source_bindings_unchanged", "cleanup_gate_passed"))):
+                  raise RuntimeError("pinned compiler null-stderr positive/omission evidence is incomplete")
+              native._check_limits(supervisor, "completed pinned compiler null-stderr regression")
+              status = "PASS_CAUSE_SPECIFIC_RUNTIME_LINKER_AND_NULL_PROBES_NOT_FULL_COLD_CLI_OR_RC1_ACCEPTANCE"
           finally:
               for row in supervisor.commands:
                   for key in ("stdout_log", "stderr_log"):

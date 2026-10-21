@@ -1,0 +1,120 @@
+{
+  "schema": "ami-rust-rc1-null-stderr-development-v1",
+  "recorded_utc": "2026-10-20T23:56:30.202748+00:00",
+  "source_base": "fcfcd10ac08f302d450411650eb168bb0b6be78a",
+  "scope": "Existing exact null-device write directive is selected for builds so nested compiler stderr redirection does not silently disable feature probes. No compiler, Cargo, C-SDK, runtime baseline, canonical reference or published package changes.",
+  "prior_sdk_run": {
+    "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39501724105",
+    "outcome": "failure",
+    "failure": "Only curve25519_dalek, ed25519_dalek and serde raw archives differed at the first Linux canonical comparison; macOS full lifecycle passed."
+  },
+  "original_candidate_diagnosis": {
+    "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39515666339",
+    "source": "cde7b435232da1c47788dcb8572fe746c104426b",
+    "diagnostic_archive_sha256": "ef1bf0c3895b6e4a4c3f3832f5b6824ac87d1a2c7f5d75ff0fd03db0ff6e5874",
+    "ordinary_build_all_canonical_rows_equal_reference": true,
+    "two_observed_roots_mutually_identical": true,
+    "observed_root_differences_from_reference": 3,
+    "ordinary_only_proc_macro2_cfg": [
+      "proc_macro_span",
+      "proc_macro_span_location",
+      "proc_macro_span_file"
+    ],
+    "all_three_AROS_executables_sha256": "e9282cb51537e141f22c3e7d22059e64292e79679865d63f9499a63ad0342bb9",
+    "local_original_transport_readback_sha256": "f6920ef42de64c26bf782d9ff534c8252f59d403e6b3006c3a8a5000888fd510"
+  },
+  "local_verification": {
+    "status": "PASS_NULL_POLICY_COMPONENTS_LINUX_COMPILE_ONLY_NOT_NATIVE_OR_RC1_ACCEPTANCE",
+    "report_sha256": "9b14bfe40adcbb542a0ee5cc066948ee84a057f4598c46ed352840fc1f6f2673",
+    "commands": [
+      {
+        "label": "null-policy-format-check",
+        "exit_code": 0
+      },
+      {
+        "label": "repair-full-macos-workspace-tests",
+        "exit_code": 0
+      },
+      {
+        "label": "repair-macos-strict-clippy",
+        "exit_code": 0
+      },
+      {
+        "label": "repair-linux-strict-compile-only",
+        "exit_code": 0
+      },
+      {
+        "label": "test_native_tooling_materials",
+        "exit_code": 0
+      },
+      {
+        "label": "repair-workflow-syntax",
+        "exit_code": 0
+      }
+    ],
+    "core_tests": {
+      "passed": 381,
+      "ignored": 19
+    },
+    "xtask_tests": {
+      "passed": 54,
+      "ignored": 0
+    },
+    "native_macOS": true,
+    "linux_scope": "Strict all-target compilation only; native Linux positive/omission probe and complete SDK qualification pending.",
+    "conservative_peak_rss_upper_bound_bytes": 1744551936,
+    "peak_workspace_bytes": 2748219363,
+    "peak_logs_bytes": 53969
+  },
+  "changed_source_files": {
+    ".github/workflows/rc1-linux-git-transport-diagnostic.yml": "93f72445f46f06cc9ef6bb530b990d52d66a90ed6d054493253c977d19953437",
+    "tooling/crates/xtask/src/consumer_observe.rs": "994ba977ca0ce280a63e6b83f409eaa0348e8482c2ae7b1efe0e25619867cf79",
+    "tools/consumer-enforcement-adapter/LINUX.md": "8f7d6256091be3a3994a68edd76caf2b496d53fc1aff6c6807cb39d97c118490",
+    "tools/consumer-enforcement-adapter/README.md": "d134c32ce46360998bf6009224f05b9e2acd79d7ca9ee35b95a513b42727166e",
+    "tooling/crates/xtask/src/null_probe.rs": "a1825cb479c8357fdea9461bbed12a5a14723f0a52bc34afe7f4e2257fbaf68c",
+    "release/native-tooling-inputs.json": "1c43fe0dfb01d5d203a82cc1a71b322131e7ca23c5a8966a200ebbf4e8755848",
+    "tooling/crates/xtask/src/fork_runtime_probe.rs": "63aa28239ac99b98bb105dbdfbedaf1019e00523b9ef2c541b197e4a8e13ba22"
+  },
+  "failures_retained": [
+    "Local a1 driver was refused before tests because it ran under an unpinned system interpreter; a2 ran under the exact required pinned interpreter.",
+    "Initial candidate8d1f8c2 source inventory omitted the new null-probe test; the prospective SDK audit refused it before any SDK dispatch.",
+    "First native PR115 run39518343599 failed on the inherited Cargo fork probe's obsolete no-device-write assertion, before the new null compiler test. Both exact archive and raw logs remain preserved."
+  ],
+  "remaining": [
+    "Native Linux pinned rustc stderr-null positive and exact-policy-omission control.",
+    "Full both-host RC1 qualification and acceptance against plan revision2."
+  ],
+  "acceptance_claimed": false,
+  "source_inventory_followup": {
+    "initial_candidate": "8d1f8c2d74c35d144188abf9978190aaa7b2a9f0",
+    "finding": "The complete tracked crate-source audit rejected the new ignored null-probe helper because its first-party source declaration was missing. The declaration is now added; no Rust source bytes changed.",
+    "native_tooling_inputs_sha256": "1c43fe0dfb01d5d203a82cc1a71b322131e7ca23c5a8966a200ebbf4e8755848",
+    "material_controls": "PASS_SOURCE_DECLARATION_AND_MATERIAL_CONTROLS_RUST_SOURCES_UNCHANGED",
+    "report_sha256": "7790229f12f352289aa080ac9794f25a34ddb1b4643ed80b20ba730d312cb1b1",
+    "commands": [
+      {
+        "label": "test_ci_native",
+        "exit_code": 0
+      },
+      {
+        "label": "test_ci_native_upgrade",
+        "exit_code": 0
+      },
+      {
+        "label": "test_native_tooling_materials",
+        "exit_code": 0
+      }
+    ],
+    "all_Rust_sources_unchanged_since_a2": true,
+    "qualification": "This is a new source/input identity; fresh normal PR CI and complete SDK qualification remain required."
+  },
+  "inherited_probe_expectation_followup": {
+    "run": "https://github.com/metaneutrons/ami-rust/actions/runs/39518343599",
+    "outcome": "failure",
+    "source": "8d1f8c2d74c35d144188abf9978190aaa7b2a9f0",
+    "original_diagnostic_archive_sha256": "ee0a7a8798832ce3a3713602123df301ab8778e486babc9b0284cda968de24ee",
+    "failure": "The pre-existing Cargo fork probe rejected the intended exact build null-device rule before the new nested-compiler regression could run.",
+    "change": "Both Cargo fork policy checks now require exactly one write-null /dev/null line while retaining network denial. The shared predicate has a positive case and five missing/duplicate/other-device counterexamples, executed on macOS and subsequently required in normal Linux CI.",
+    "full_native_proof": "Pending current-candidate CI; no SDK publication or RC1 acceptance."
+  }
+}
