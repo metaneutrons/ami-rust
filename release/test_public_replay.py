@@ -586,14 +586,6 @@ class PublicReplayTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "canonical v-prefixed SemVer"):
                     public_replay.release_core(tag)
 
-    def test_transport_workflow_uses_shared_six_asset_names_and_external_pin(self):
-        tree = _public_candidate_download_workflow_tree()
-        self.assertIn("inventory_sha", ast.unparse(tree))
-        url_calls = [node for node in ast.walk(tree)
-                     if isinstance(node, ast.Call)
-                     and isinstance(node.func, ast.Name) and node.func.id == "download"]
-        self.assertEqual(len(url_calls), 1)
-        self.assertIn("quote(name", ast.unparse(url_calls[0]))
 
     def test_prerelease_tag_with_wrong_manifest_core_stops_before_preparation(self):
         helpers = FakeTrustedHelpers(self.source, self.commit, self.bundle_digest,

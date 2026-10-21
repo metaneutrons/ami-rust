@@ -1,3 +1,8 @@
+> **Historical 0.1.0 interface.** This guide describes the immutable released
+> packages. Their CLI implementation is retired in the development tree. Use the
+> [released source](https://github.com/metaneutrons/ami-rust/tree/v0.1.0) for replay.
+> The next release uses rustup, normal Cargo and crates; see the migration plan.
+
 # ami-rust production installation recipe
 
 This recipe documents consumer preparation and use for the initial PC x86-64

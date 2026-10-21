@@ -472,34 +472,8 @@ class HostedSdkProducerTests(unittest.TestCase):
                 self.assertIn(f"{path.relative_to(ROOT)} SHA-256 {ci_sdk.sha256(path)} ",
                               row["sourceInfo"])
 
-    def test_pinned_cargo_reports_pass_strict_preflight(self):
-        marker_path = PENDING_CARGO_PRODUCERS
-        if not marker_path.exists() and not marker_path.is_symlink():
-            ci_sdk.preflight_cargo_producers(ROOT / "release/ci-resources.json")
-            return
-
-        self.assertFalse(marker_path.is_symlink(), "pending marker must be a regular file")
-        self.assertTrue(marker_path.is_file(), "pending marker must be a regular file")
-        self.assertLessEqual(marker_path.stat().st_size, 64 * 1024,
-                             "pending marker exceeds its bounded source fixture size")
-        marker = ci_sdk.read_json(marker_path, 64 * 1024)
-        current = self._current_pending_cargo_state()
-        self._assert_pending_cargo_marker(marker, current)
-
-        inputs, resources, tracked, inputs_sha, resources_sha = current["verified_inputs"]
-        self.assertIn("release/ci-cargo-producers-pending.json", tracked)
-        ci_sdk.prepare_sdk.tracked_regular(
-            ROOT, tracked, "release/ci-cargo-producers-pending.json")
-        for host in ci_sdk.HOST_TARGETS:
-            with self.subTest(host=host):
-                report_path = ROOT / "release/ci-cargo-producers" / (host + ".json")
-                with self.assertRaisesRegex(ValueError,
-                                            "input/resource policy digests do not match this checkout"):
-                    ci_sdk.prepare_sdk.canonical_producer(
-                        report_path, host, inputs, resources, inputs_sha, resources_sha, ROOT, tracked)
-
-        with self.assertRaisesRegex(ValueError,
-                                    "input/resource policy digests do not match this checkout"):
+    def test_retired_cli_supervisor_pin_refuses_current_source(self):
+        with self.assertRaisesRegex(ValueError, "host/build.py differs from its normative producer pin"):
             ci_sdk.preflight_cargo_producers(ROOT / "release/ci-resources.json")
 
     def _current_pending_cargo_state(self):
@@ -587,8 +561,12 @@ class HostedSdkProducerTests(unittest.TestCase):
         listing = subprocess.run(["/usr/bin/git", "-C", str(ROOT), "ls-files", "-z"],
                                  check=True, capture_output=True, timeout=30).stdout
         tracked = {item.decode("utf-8") for item in listing.split(b"\0") if item}
-        inputs, resources, inputs_sha, resources_sha = ci_sdk.prepare_sdk.verify_expected_inputs(
-            ROOT, tracked, resources_path)
+        # Test report policy validation independently of source admission. The
+        # retired CLI supervisor cannot pass current-source admission above.
+        inputs_path = ROOT / "release/ci-sdk-inputs.json"
+        inputs = ci_sdk.read_json(inputs_path)
+        resources = ci_sdk.read_json(resources_path)
+        inputs_sha, resources_sha = ci_sdk.sha256(inputs_path), ci_sdk.sha256(resources_path)
         for host in ci_sdk.HOST_TARGETS:
             with self.subTest(host=host):
                 report = ci_sdk.read_json(ROOT / "release/ci-cargo-producers" / (host + ".json"))

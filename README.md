@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/metaneutrons/ami-rust/actions/workflows/ci.yml"><img src="https://github.com/metaneutrons/ami-rust/actions/workflows/ci.yml/badge.svg?branch=main" alt="Source CI"></a>
-  <a href="https://github.com/metaneutrons/ami-rust/actions/workflows/sdk-qualify.yml"><img src="https://github.com/metaneutrons/ami-rust/actions/workflows/sdk-qualify.yml/badge.svg?branch=main" alt="SDK qualification workflow"></a>
+  <a href="docs/rust-cli-cargo-migration-plan.md"><img src="https://img.shields.io/badge/toolchain%20%2B%20crates-in%20development-f2b84b?style=flat-square" alt="Toolchain and crates: in development"></a>
   <a href="https://github.com/metaneutrons/ami-rust/releases/latest"><img src="https://img.shields.io/github/v/release/metaneutrons/ami-rust?color=ff825e&amp;style=flat-square" alt="Latest SDK release"></a>
   <a href="packaging/INSTALL-APT.md"><img src="https://img.shields.io/badge/APT-available-398f4f?style=flat-square" alt="APT package available"></a>
   <a href="packaging/INSTALL-HOMEBREW.md"><img src="https://img.shields.io/badge/Homebrew-available-398f4f?style=flat-square" alt="Homebrew package available"></a>
@@ -37,6 +37,17 @@
 > [direct SDK guide](docs/quickstart.md). See [release evidence](docs/release-status.md)
 > and [package channel status](docs/distribution-status.md). Runtime support is
 > confined to the documented PC x86-64 ABI-v1 QEMU profile.
+
+## Next release: toolchain and crates
+
+The next SDK uses **rustup for toolchain selection and normal Cargo for builds**.
+AROS/Amiga libraries and necessary focused tools are delivered as Rust crates.
+There will be no public `ami-rust` CLI or `cargo-ami` plugin. The active source is
+being migrated; the published 0.1.0 packages and their immutable source remain
+available. Use the [released source and instructions](https://github.com/metaneutrons/ami-rust/tree/v0.1.0)
+for that release. The new toolchain/crate setup is not yet qualified or published.
+See the [migration plan](docs/rust-cli-cargo-migration-plan.md) and
+[execution issue](https://github.com/metaneutrons/ami-rust/issues/72).
 
 ## Modern Rust, native AROS
 
@@ -107,8 +118,8 @@ the original SDK release. Install with [APT on Ubuntu 24.04 amd64](packaging/INS
 or [Homebrew on macOS 26 Apple Silicon](packaging/INSTALL-HOMEBREW.md). Both
 package routes require the same [explicit user preparation before the first
 build](packaging/README.md). Read the [distribution status](docs/distribution-status.md)
-for acceptance evidence. AUR and rustup remain
-[later deliveries](docs/distribution-channels-plan.md).
+for acceptance evidence. AUR remains deferred; local rustup selection on the
+existing hosts is part of the next [toolchain/crate release](docs/rust-cli-cargo-migration-plan.md).
 
 **Supported package hosts:** APT on Ubuntu 24.04 amd64, and Homebrew on macOS 26
 Apple Silicon. These are the only qualified package-host profiles. Direct
@@ -163,7 +174,7 @@ machine's 512 MiB RAM is a test profile. See the [memory policy](docs/memory-pol
 
 ## Contributing
 
-The [Rust CLI and Cargo migration plan](docs/rust-cli-cargo-migration-plan.md)
+The [Toolchain, Cargo crates and Python-retirement plan](docs/rust-cli-cargo-migration-plan.md)
 defines a Python-free public SDK first, followed by complete retirement of
 Python from active tests, qualification and release production. Execution is
 tracked in [the migration epic](https://github.com/metaneutrons/ami-rust/issues/69);

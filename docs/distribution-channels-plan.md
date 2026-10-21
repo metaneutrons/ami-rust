@@ -1,17 +1,20 @@
-# Distribution channels — revision 4
+# Distribution channels — revision 5
 
 Owner decision: 2026-10-18. D0, D1-APT and D1-BREW are accepted against the
 criteria below without removing or weakening any criterion. APT and Homebrew are
-available for the supported hosts recorded here. D2 AUR and D3 rustup remain
-deferred. The acceptance record and criterion mapping are in
+available for the supported hosts recorded here. D2 AUR and additional D3
+Arch/upstream work remain deferred. Owner decision on 2026-10-21 brings local
+rustup toolchain selection on the existing Ubuntu/macOS hosts into the
+[core migration](rust-cli-cargo-migration-plan.md), independently of AUR. The acceptance record and criterion mapping are in
 [`distribution-0.1.0.json`](evidence/distribution-0.1.0.json). Requirements
 authority: this file in `metaneutrons/ami-rust`; the external master plan is a
 derived summary.
 
 ## Outcome and sequence
 
-APT and Homebrew now provide supported installation paths after R1. AUR remains
-the next delivery, followed by rustup feasibility and qualification. GitHub
+APT and Homebrew provide supported installation paths after R1. The next SDK
+uses rustup selection and normal Cargo with AROS/Amiga crates, without a public
+ami-rust CLI. AUR/Arch expansion remains a later, separately qualified delivery. GitHub
 Releases remains the canonical artifact and recovery channel. These are
 follow-up deliveries, not additional R1 gates. The accepted R1 release,
 qualified baseline and sealed evidence remain immutable; these channels have
@@ -23,7 +26,7 @@ their own acceptance records.
 | D1-APT | Signed APT archive delivers the qualified package | Ubuntu 24.04, `amd64` | D0 |
 | D1-BREW | Owner tap delivers a qualified formula/bottle | macOS Apple Silicon, macOS 26 | D0 |
 | D2-AUR | Reviewed AUR recipe installs qualified payloads | Arch Linux x86-64, newly qualified | D1-APT and D1-BREW accepted |
-| D3-RUSTUP | Versioned toolchain selection through rustup | macOS 26 Apple Silicon; Ubuntu 24.04 amd64; D2-qualified Arch x86-64 | D2-AUR accepted; design investigation may precede it |
+| D3-RUSTUP | Additional Arch rustup qualification and upstream distribution assessment | D2-qualified Arch x86-64; official upstream scope separately decided | D2-AUR for Arch only; existing-host local registration is RC2/RC3 and independent |
 
 D1-APT and D1-BREW can be developed independently after the shared contract is
 settled; neither has to wait for the other's implementation. Debian, older
@@ -179,12 +182,13 @@ image and qualify its host ABI/prerequisites before claiming support.
   public PKGBUILD and `.SRCINFO` bytes and indexed version afterwards. AUR holds
   the recipe, not uploaded SDK binaries; immutable releases hold the payloads.
 
-## D3-RUSTUP — later integration with explicit feasibility gates
+## D3-RUSTUP — additional host/upstream integration
 
-D3 covers exactly three host profiles: macOS 26 on Apple Silicon, Ubuntu 24.04
-on x86-64, and the Arch x86-64 profile accepted in D2. Arch qualification in D2
-is a prerequisite, not a claim that the current R1 supports Arch. Test optional
-rustup registration together with each profile's package-manager-owned files.
+Local toolchain registration on macOS 26 Apple Silicon and Ubuntu 24.04 x86-64
+is now required by migration RC2/RC3. It does not depend on D2 and is not evidence
+that this deferred D3 delivery is accepted. D3 adds the Arch x86-64 profile
+accepted in D2 and records the separate upstream distribution outcome. Arch
+qualification remains a prerequisite to advertising Arch support.
 
 Distinguish two outcomes. A versioned `rustup toolchain link` can register an
 authenticated ami-rust toolchain locally; that is the first implementation
@@ -197,7 +201,7 @@ commitments. It is not promised by local toolchain registration.
   Cargo patches, target/sysroot/linker packaging, ownership and recurring costs.
   Prefer local registration/upstream standard interfaces; operate no custom
   distribution server unless a concrete benefit justifies its maintenance.
-- **RUSTUP-A2:** on each of the three D3 host profiles, a versioned opt-in toolchain and
+- **RUSTUP-A2:** on the additional D2-qualified Arch host, a versioned opt-in toolchain and
   project selection invoke the exact pinned Rust and Cargo. Never fall back
   silently to ambient Cargo when the custom toolchain lacks it. A plain
   documented Cargo build produces the qualified AROS reference executable;
@@ -231,8 +235,12 @@ The [distribution initiative](https://github.com/metaneutrons/ami-rust/issues/60
 and its linked D0/D1 milestone issues own execution status and evidence. This
 document owns requirements, not a duplicate live CI status table.
 
-The [package contract](distribution-package-contract.md) records the selected
+The [package contract](distribution-package-contract.md) records the accepted 0.1.0
 layout, version identities, explicit consumer commands and qualification scope.
+It is historical release authority, not the next toolchain/crate interface.
+The migration plan revision 3 owns that replacement and requires requalification
+of affected package/channel behavior before delivery; the old public CLI is
+not carried into the new payload.
 The immutable SDK release `v0.1.0` is preserved; the new packaging release is
 `v0.1.0+packaging.2`, with Debian version `0.1.0-2` and Homebrew revision 2.
 Packaging publication keeps the SDK release as `latest`; all new channel
@@ -260,3 +268,11 @@ candidate or the acceptance criteria.
 Recheck mutable package-manager policies and actual infrastructure during D0.
 The architecture and gates above are ami-rust decisions; external documentation
 does not establish that any channel has already been implemented or accepted.
+
+## Revision 5 owner decision — 2026-10-21
+
+Use standard rustup/Cargo and crates instead of a public ami-rust CLI. Bring
+existing-host local registration forward without advertising official rustup
+download/target support. Existing D0/D1 acceptance and immutable 0.1.0 assets
+are unchanged; replacement toolchain/crate packages require migration RC3
+qualification. No custom package manager or distribution service is introduced.

@@ -437,59 +437,8 @@ class ContractSelectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "SDK manifest identity mismatch"):
             contracts.select(self.fixture.lock_path)
 
-    def _assert_build_refusal_has_no_output(self, cargo_arguments: list[str], expected: str) -> None:
-        app_root = self.fixture.project_root / "sample-app"
-        app_root.mkdir()
-        cargo_manifest = app_root / "Cargo.toml"
-        cargo_manifest.write_text("[package]\nname = \"sample-app\"\n", encoding="utf-8")
-        output_parent = self.fixture.project_root / "outputs"
-        output_parent.mkdir()
-        output = output_parent / "must-remain-absent"
-        argv = [
-            "build.py",
-            "--project-lock",
-            str(self.fixture.lock_path),
-            "--output-dir",
-            str(output),
-            "--",
-            *cargo_arguments,
-        ]
 
-        with patch.object(sys, "argv", argv), redirect_stdout(StringIO()), redirect_stderr(StringIO()):
-            with self.assertRaisesRegex(ValueError, expected):
-                build_backend.main()
-        self.assertFalse(output.exists(), "refused build created its output directory")
-        self.assertEqual(list(output_parent.iterdir()), [])
 
-    def test_missing_cargo_lock_is_rejected_before_output(self) -> None:
-        self._assert_build_refusal_has_no_output(
-            [
-                "build", "--manifest-path", str(self.fixture.project_root / "sample-app/Cargo.toml"),
-                "--package", "sample-app", "--release", "--locked", "--offline",
-            ],
-            "missing project Cargo.lock",
-        )
-
-    def test_target_override_is_rejected_before_output(self) -> None:
-        app_root = self.fixture.project_root / "sample-app"
-        app_root.mkdir()
-        (app_root / "Cargo.toml").write_text("[package]\nname = \"sample-app\"\n", encoding="utf-8")
-        (app_root / "Cargo.lock").write_text("# fixture lock\n", encoding="utf-8")
-        output_parent = self.fixture.project_root / "outputs"
-        output_parent.mkdir()
-        output = output_parent / "must-remain-absent"
-        argv = [
-            "build.py", "--project-lock", str(self.fixture.lock_path),
-            "--output-dir", str(output), "--", "build",
-            "--manifest-path", str(app_root / "Cargo.toml"), "--package", "sample-app",
-            "--release", "--locked", "--offline", "--target", "x86_64-unknown-linux-gnu",
-        ]
-
-        with patch.object(sys, "argv", argv), redirect_stdout(StringIO()), redirect_stderr(StringIO()):
-            with self.assertRaisesRegex(ValueError, "unsupported or SDK-owned Cargo option: --target"):
-                build_backend.main()
-        self.assertFalse(output.exists(), "target override refusal created its output directory")
-        self.assertEqual(list(output_parent.iterdir()), [])
 
 
 if __name__ == "__main__":

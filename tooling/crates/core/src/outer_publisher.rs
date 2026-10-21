@@ -118,23 +118,6 @@ pub fn verify_outer_package(
     verify_outer_package_scoped(package, policy_path, trusted_inputs, None, cancelled)
 }
 
-pub(crate) fn verify_outer_package_in_workspace(
-    package: &CheckedNativePackage,
-    policy_path: &Path,
-    trusted_inputs: &[u8],
-    workspace: &Path,
-    cancelled: impl FnMut() -> bool,
-) -> Result<VerifiedOuterPackage> {
-    crate::ownership::existing_private_state(workspace)?;
-    verify_outer_package_scoped(
-        package,
-        policy_path,
-        trusted_inputs,
-        Some(workspace),
-        cancelled,
-    )
-}
-
 fn verify_outer_package_scoped(
     package: &CheckedNativePackage,
     policy_path: &Path,

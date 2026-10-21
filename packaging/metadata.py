@@ -507,69 +507,6 @@ def _make_sbom(payload_name: str, payload: dict[str, Any], pins: dict[str, Any],
     return _canonical_json(document)
 
 
-def _homebrew_formula(archive_name: str, archive_sha: str, pins: dict[str, Any]) -> bytes:
-    release_url = (
-        f"https://github.com/{REPOSITORY}/releases/download/"
-        f"{quote(pins['packaging_tag'], safe='')}/{quote(archive_name, safe='')}"
-    )
-    formula = f'''require "json"
-
-class AmiRust < Formula
-  desc "Native PC x86-64 AROS ABI-v1 SDK"
-  homepage "https://github.com/{REPOSITORY}"
-  url "{release_url}"
-  version "{pins['sdk_version']}"
-  sha256 "{archive_sha}"
-
-  # This composite contains an adapter under MIT OR Apache-2.0 and upstream
-  # SDK components with their own terms, including custom AROS and libgit
-  # licenses. The included original publisher SPDX document preserves those
-  # per-component details; the declaration below describes the composite.
-  license :cannot_represent
-  revision {pins['packaging_revision']}
-
-  livecheck do
-    skip "This packaging release requires explicit qualification."
-  end
-
-  depends_on arch: :arm64
-  depends_on "git"
-  depends_on macos: :tahoe
-  depends_on "python@3.14"
-
-  def install
-    prefix.install Dir["usr/*"]
-    python = formula_opt_bin("python@3.14")/"python3.14"
-    inreplace bin/"ami-rust", "#!/usr/bin/python3", "#!#{{python}}"
-  end
-
-  def caveats
-    <<~EOS
-      Prepare the SDK explicitly with `ami-rust prepare --state PATH`.
-      Preparation requires at least 6 GiB of RAM and 24 GiB of free disk.
-      Installation leaves global compiler defaults unchanged.
-    EOS
-  end
-
-  test do
-    assert_equal(
-      "ami-rust {pins['sdk_version']} (packaging {pins['packaging_revision']})",
-      shell_output("#{{bin}}/ami-rust --version").strip,
-    )
-    assert_equal(
-      {{
-        "status"          => "VERIFIED_PACKAGE",
-        "sdk_version"     => "{pins['sdk_version']}",
-        "package_version" => "{pins['package_version']}",
-      }},
-      JSON.parse(shell_output("#{{bin}}/ami-rust verify-package")),
-    )
-  end
-end
-'''
-    return formula.encode("utf-8")
-
-
 def _write_new(path: Path, raw: bytes) -> dict[str, Any]:
     try:
         with path.open("xb") as stream:
@@ -580,96 +517,12 @@ def _write_new(path: Path, raw: bytes) -> dict[str, Any]:
     return {"path": path.name, "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
 
 
-def generate(source: str | os.PathLike[str], package_output: str | os.PathLike[str],
-             epoch: int) -> dict[str, Any]:
-    """Add a Homebrew formula and one SPDX 2.3 document per verified package payload."""
-    source_root = Path(source)
-    output_root = Path(package_output)
-    if type(epoch) is not int or not 0 <= epoch <= MAX_EPOCH:
-        raise MetadataError(f"epoch must be an integer from 0 through {MAX_EPOCH}")
-    try:
-        source_info = source_root.lstat()
-        output_info = output_root.lstat()
-    except OSError as error:
-        raise MetadataError("source and package output directories must exist") from error
-    if not stat.S_ISDIR(source_info.st_mode) or not stat.S_ISDIR(output_info.st_mode):
-        raise MetadataError("source and package output must be real directories")
-
-    pins, pins_raw, assets = _load_pins(source_root)
-    build_report, build_report_raw, payloads = _validate_build_report(output_root, pins, epoch)
-    archive_name, deb_name = _expected_names(pins)
-    archive_path = output_root / archive_name
-    original, original_sbom_raw, original_sbom_sha = _load_original_sdk_sbom(
-        archive_path, pins, assets, build_report
+def generate(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    """The former CLI formula producer is retired before any output mutation."""
+    raise MetadataError(
+        "The ami-rust CLI formula producer was retired on 2026-10-21. "
+        "The replacement toolchain/crate package is not yet qualified."
     )
-    if hashlib.sha256(original_sbom_raw).hexdigest() != original_sbom_sha:
-        raise MetadataError("original SDK SPDX bytes changed during generation")
-
-    formula_raw = _homebrew_formula(archive_name, payloads[archive_name]["sha256"], pins)
-    sbom_names = {
-        archive_name: archive_name + ".spdx.json",
-        deb_name: deb_name + ".spdx.json",
-    }
-    generated_raw: dict[str, bytes] = {"ami-rust.rb": formula_raw}
-    for payload_name in (archive_name, deb_name):
-        generated_raw[sbom_names[payload_name]] = _make_sbom(
-            payload_name, payloads[payload_name], pins, assets, original,
-            original_sbom_sha, epoch,
-        )
-
-    generated_files: dict[str, dict[str, Any]] = {}
-    for name in sorted(generated_raw):
-        generated_files[name] = {
-            "path": name,
-            "bytes": len(generated_raw[name]),
-            "sha256": hashlib.sha256(generated_raw[name]).hexdigest(),
-        }
-    report = {
-        "schema": REPORT_SCHEMA,
-        "epoch": epoch,
-        "source": {
-            "repository": pins["repository"],
-            "commit": pins["source_commit"],
-            "tree": pins["source_tree"],
-            "manifest_sha256": pins["manifest_sha256"],
-            "pins_sha256": hashlib.sha256(pins_raw).hexdigest(),
-            "build_report_sha256": hashlib.sha256(build_report_raw).hexdigest(),
-        },
-        "sdk": {
-            "version": pins["sdk_version"],
-            "tag": pins["sdk_tag"],
-            "run_id": pins["sdk_run_id"],
-            "run_attempt": pins["sdk_run_attempt"],
-            "package_version": pins["package_version"],
-            "packaging_revision": pins["packaging_revision"],
-            "packaging_tag": pins["packaging_tag"],
-            "transport_sha256": pins["transport_sha256"],
-        },
-        "original_sdk_sbom": {
-            "path": "assets/" + f"ami-rust-{pins['sdk_version']}-release.tar.xz.spdx.json",
-            "document_namespace": original["documentNamespace"],
-            "bytes": len(original_sbom_raw),
-            "sha256": original_sbom_sha,
-        },
-        "payloads": {
-            name: {
-                **payloads[name],
-                "spdx": {
-                    "path": sbom_names[name],
-                    "bytes": len(generated_raw[sbom_names[name]]),
-                    "sha256": hashlib.sha256(generated_raw[sbom_names[name]]).hexdigest(),
-                },
-            }
-            for name in (archive_name, deb_name)
-        },
-        "generated_files": generated_files,
-    }
-    report_raw = _canonical_json(report)
-
-    for name, raw in generated_raw.items():
-        _write_new(output_root / name, raw)
-    _write_new(output_root / "metadata-report.json", report_raw)
-    return report
 
 
 if __name__ == "__main__":
