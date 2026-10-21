@@ -1,0 +1,68 @@
+{
+  "archive": {
+    "bytes": 52391962,
+    "filename": "cpython-3.12.15+20261013-aarch64-unknown-linux-gnu-install_only.tar.gz",
+    "manifest_line": "34a43010cc05982d8b5debbad7d09f7b1200117ebf018f7acfd656895e408205  cpython-3.12.15+20261013-aarch64-unknown-linux-gnu-install_only.tar.gz",
+    "sha256": "34a43010cc05982d8b5debbad7d09f7b1200117ebf018f7acfd656895e408205",
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261013/cpython-3.12.15%2B20261013-aarch64-unknown-linux-gnu-install_only.tar.gz"
+  },
+  "archive_validation": {
+    "archive_inspection": {
+      "bytes": 1172,
+      "path": "evidence/rc1-native-qualification-flow-20261019/rc2-linux-aarch64-python-counter-input-a1/archive-inspection.json",
+      "sha256": "8d0c2f0c3757c750a7f54e086c5b12e6c04de49b56f8bfb507c1ace300d9d54c"
+    },
+    "expanded_inventory": {
+      "bytes": 994404,
+      "expanded_regular_bytes": 160524758,
+      "member_count": 4534,
+      "path": "evidence/rc1-native-qualification-flow-20261019/rc2-linux-aarch64-python-counter-input-a1/expanded-inventory.json",
+      "regular_file_count": 3485,
+      "safe_paths_types_and_symlink_closure": "PASS",
+      "sha256": "00b1ada8e1325fb9c675e86fab74764ca2cfb260a51ae3aec7c3b0df9f9ebfac",
+      "symlink_count": 1049
+    }
+  },
+  "host": "linux-aarch64",
+  "manifest": {
+    "bytes": 142015,
+    "sha256": "6f1da4ab940bfca4471b0816828f16942a149de31e7ac4745e90902d5e7d3ebd",
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261013/SHA256SUMS"
+  },
+  "retained_archive_evidence": {
+    "path": "evidence/rc1-native-qualification-flow-20261019/rc2-linux-aarch64-python-counter-input-a1/inputs.json",
+    "sha256": "c19f8560d055fdf3816a2db021a5a6c64464e2d8c7d23c12619576a437f53203"
+  },
+  "runtime": {
+    "elf": {
+      "class": "ELF64",
+      "endianness": "little",
+      "machine": 183,
+      "machine_name": "AArch64",
+      "needed": [
+        "libpthread.so.0",
+        "libdl.so.2",
+        "libutil.so.1",
+        "libm.so.6",
+        "librt.so.1",
+        "libc.so.6",
+        "ld-linux-aarch64.so.1"
+      ],
+      "pt_interp": "/lib/ld-linux-aarch64.so.1",
+      "rpath_runpath": [
+        "$ORIGIN/../lib"
+      ]
+    },
+    "runtime_bytes": 62839864,
+    "runtime_relative_path": "python/bin/python3.12",
+    "runtime_sha256": "a8dfeaae509054434bf7f6faf32402e35df03f72ad83ac6bb20af543b78f33ec"
+  },
+  "schema": "ami-rust-ci-python-counter-linux-aarch64-inputs-v1",
+  "source_inventory": {
+    "candidate_id": "python-3.12.15-linux-aarch64-test-countercontrol",
+    "path": "evidence/rc1-native-qualification-flow-20261019/rc2-linux-aarch64-input-inventory-a1/inputs.json",
+    "release_tag": "20261013",
+    "sha256": "ebf8ca7b49f07cfdddd0680fcdfaf3b9e6ebdc2ab521f197507045e7aaf22feb"
+  },
+  "status": "maintainer_only_negative_counter_candidate_not_canonical_python_or_host_admission"
+}

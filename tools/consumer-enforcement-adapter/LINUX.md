@@ -1,10 +1,13 @@
-# Linux consumer command enforcement adapter A1
+# Linux consumer command enforcement adapter
 
-This qualification adapter runs one real consumer command under a
-Linux x86-64 Landlock and seccomp policy. It reuses the policy vocabulary and
-report schema from the private macOS A1 adapter. It is intended for review and
-one native Ubuntu 24.04 x86-64 validation; a macOS cross-check is not runtime
-evidence.
+The x86-64 A1 adapter runs one real consumer command under Linux Landlock and
+seccomp, using the report schema shared with the private macOS A1 adapter. Its
+existing x86-64 behavior and A1 report identity remain unchanged.
+
+The source also contains a candidate Linux AArch64 LP64 port with its own A2
+report identity and native audit-architecture guard. That candidate is not
+qualified. It requires review and the complete native Linux AArch64 control
+suite below; a cross-compile or x86-64 execution is not runtime evidence.
 
 ## Build and run
 
@@ -14,6 +17,7 @@ from macOS:
 
     cargo build --locked --offline --release
     cargo check --locked --offline --target x86_64-unknown-linux-gnu
+    cargo check --locked --offline --target aarch64-unknown-linux-gnu
 
 The command mode is:
 
@@ -131,8 +135,8 @@ that path. Thus broad system library trees are unsuitable when a denied library
 sits inside them.
 
 network outbound permits ordinary network syscalls. The default and
-network-deny profiles block Linux x86-64 socket operations and io_uring_setup
-with two narrow exceptions for Rust's fork-based child handshake. `socketpair`
+network-deny profiles block the native architecture's socket operations and
+io_uring_setup with two narrow exceptions for Rust's fork-based child handshake. `socketpair`
 accepts only `AF_UNIX`, `SOCK_SEQPACKET`, protocol `0`, and the same type with
 optional `SOCK_CLOEXEC`. Rust's Unix process-spawn path uses this unnamed local
 pair when a `pre_exec` hook requires `fork`. The filter also permits syscall
@@ -143,9 +147,11 @@ shape to receive its private child-status handshake. All other `recvfrom`
 calls return `EACCES`. Other socketpair domains, types, and protocols still
 return `EACCES`; `socket`, `connect`, `bind`, `listen`, `sendto`, `sendmsg`,
 `recvmsg`, and `io_uring_setup` remain denied. Network-outbound behavior is
-unchanged. In all cases the filter also denies x32 syscall numbers,
-`execveat`, and `memfd_create`, following the accepted
-tools/linux-no-python-probe mechanism.
+unchanged. On x86-64 the filter also denies x32 syscall numbers; on AArch64 it
+kills syscalls whose audit architecture is not native, including the AArch32
+compat ABI. Both profiles deny `execveat` and `memfd_create`, following the
+accepted tools/linux-no-python-probe mechanism. The AArch64 behavior remains a
+candidate pending native controls.
 
 The adapter requires Landlock ABI 2 or newer because its write policy handles
 REFER. It requests the filesystem rights known through ABI 5, including device
@@ -255,5 +261,9 @@ not a general syscall sandbox. The child shares the Supervisor's process group
 so its established timeout and cleanup can stop the full command tree.
 
 Cross-compilation checks Rust types and conditional compilation only. Qualify
-Landlock/seccomp behavior, the controls and actual consumer commands on native
-Ubuntu 24.04 x86-64 before using their results as acceptance evidence.
+the A1 adapter on native Ubuntu 24.04 x86-64 before using its results as
+acceptance evidence. The AArch64 A2 candidate separately needs a native
+AArch64 run covering positive execution, direct and transitive syscall and
+filesystem controls, shebang and embedded interpreters, denied and allowed
+network behavior, `/dev/null`, ELF/compat-ABI handling, and failure/report
+integrity. Until those controls pass, A2 reports are not qualification evidence.

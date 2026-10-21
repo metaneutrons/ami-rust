@@ -1,0 +1,51 @@
+{
+  "host": "linux-aarch64",
+  "host_triple": "aarch64-unknown-linux-gnu",
+  "rust": {
+    "cargo_commit": "797e8a9bca276c1c9f9f738d2a20f484fa4eea9d",
+    "commit": "48a229ceaefd4985c50990b14116b6d856af0985",
+    "components": {
+      "aarch64-unknown-linux-gnu": {
+        "cargo": {
+          "hash_source": "Official channel-rust-1.98.1.toml xz_hash values",
+          "http_content_length": 11108572,
+          "sha256": "c09425a7f300af148c0bdfded0e7d5f1fe7c075b2b9674e8935afa769297b2f6",
+          "size_source": "HTTP HEAD Content-Length from static.rust-lang.org; archive bodies not fetched",
+          "url": "https://static.rust-lang.org/dist/2026-09-03/cargo-1.98.1-aarch64-unknown-linux-gnu.tar.xz"
+        },
+        "rust-std": {
+          "hash_source": "Official channel-rust-1.98.1.toml xz_hash values",
+          "http_content_length": 30815124,
+          "sha256": "9bf796a6ec5b004813ebd0b650775a7c6a4f3aae97ad362ae294798dca4f3b23",
+          "size_source": "HTTP HEAD Content-Length from static.rust-lang.org; archive bodies not fetched",
+          "url": "https://static.rust-lang.org/dist/2026-09-03/rust-std-1.98.1-aarch64-unknown-linux-gnu.tar.xz"
+        },
+        "rustc": {
+          "hash_source": "Official channel-rust-1.98.1.toml xz_hash values",
+          "http_content_length": 66438268,
+          "sha256": "89fb83041993b48816514815606f53a5264729b8b449671a6b291e6f0ae74f40",
+          "size_source": "HTTP HEAD Content-Length from static.rust-lang.org; archive bodies not fetched",
+          "url": "https://static.rust-lang.org/dist/2026-09-03/rustc-1.98.1-aarch64-unknown-linux-gnu.tar.xz"
+        }
+      }
+    },
+    "manifest": {
+      "archive_bodies_downloaded": false,
+      "bytes": 898637,
+      "sha256": "a7c8774a5fd8441c997d94c029776cbc5eb111e9d72ab5d256fa69866644347e",
+      "source_inventory_id": "rust-bootstrap-1.98.1-channel-manifest",
+      "url": "https://static.rust-lang.org/dist/channel-rust-1.98.1.toml"
+    },
+    "release": "1.98.1"
+  },
+  "schema": "ami-rust-ci-bootstrap-linux-aarch64-inputs-v1",
+  "source_inventory": {
+    "archive_bodies_downloaded": false,
+    "archive_hash_source": "Official channel-rust-1.98.1.toml xz_hash values",
+    "candidate_id": "rust-bootstrap-1.98.1-linux-aarch64-packages",
+    "package_sizes_source": "HTTP HEAD Content-Length from static.rust-lang.org; archive bodies not fetched",
+    "path": "evidence/rc1-native-qualification-flow-20261019/rc2-linux-aarch64-input-inventory-a1/inputs.json",
+    "sha256": "ebf8ca7b49f07cfdddd0680fcdfaf3b9e6ebdc2ab521f197507045e7aaf22feb"
+  },
+  "status": "maintainer_candidate_metadata_only_not_host_admission"
+}

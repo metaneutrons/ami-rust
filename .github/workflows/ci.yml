@@ -151,7 +151,7 @@ jobs:
           if ! git cat-file -e "$CLI_BASE^{commit}"; then
             git fetch --no-tags --filter=blob:none --depth=1 origin "$CLI_BASE"
           fi
-          if git diff --quiet "$CLI_BASE" "$GITHUB_SHA" -- Cargo.toml Cargo.lock crates/ examples/ tests/ targets/ tools/ tooling/ host/profiles/ host/contracts.py docs/rust-cli-migration/contracts-v1.json .github/workflows/ci.yml release/ci-bootstrap-inputs.json release/ci-sdk-inputs.json release/native-tooling-inputs.json release/ci-python-inputs.json release/ci_historical.py release/install.py release/test_install.py release/verify_publisher.py release/ci_native.py release/ci_sdk.py release/ci_auth.py release/ci_cargo.py release/prepare_sdk.py release/ci_python.py; then
+          if git diff --quiet "$CLI_BASE" "$GITHUB_SHA" -- Cargo.toml Cargo.lock crates/ examples/ tests/ targets/ tools/ tooling/ host/profiles/ host/contracts.py docs/rust-cli-migration/contracts-v1.json .github/workflows/ci.yml release/ci-bootstrap-inputs.json release/ci-bootstrap-linux-aarch64-inputs.json release/ci-python-counter-linux-aarch64-inputs.json release/ci-sdk-inputs.json release/native-tooling-inputs.json release/ci-python-inputs.json release/ci_historical.py release/install.py release/test_install.py release/verify_publisher.py release/ci_native.py release/ci_sdk.py release/ci_auth.py release/ci_cargo.py release/prepare_sdk.py release/ci_python.py; then
             printf 'affected=false\n' >> "$GITHUB_OUTPUT"
           else
             cli_diff_status=$?
@@ -286,10 +286,145 @@ jobs:
           retention-days: 7
           compression-level: 9
 
+  rust-migration-observer-linux-aarch64:
+    name: Rust migration observer (Linux AArch64)
+    needs: rust-migration-scope
+    if: needs.rust-migration-scope.outputs.affected == 'true'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - name: Check out observer and pinned inputs
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            tools/
+            tooling/
+            host/profiles/
+            docs/rust-cli-migration/contracts-v1.json
+            release/ci-bootstrap-linux-aarch64-inputs.json
+            release/ci-python-inputs.json
+            release/ci-python-counter-linux-aarch64-inputs.json
+            release/ci-sdk-inputs.json
+            release/ci-resources.json
+      - name: Measure host capacity and write observer scope
+        run: |
+          set -euo pipefail
+          cli_machine="$(uname -m)"
+          cli_cpus="$(getconf _NPROCESSORS_ONLN)"
+          cli_mem_kib="$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)"
+          cli_mem_bytes=$((cli_mem_kib * 1024))
+          cli_disk_bytes="$(df --output=avail -B1 "$RUNNER_TEMP" | tail -n 1 | tr -d ' ')"
+          cli_jobs="$(jq -er '.build.jobs' release/ci-resources.json)"
+          cli_min_ram="$(jq -er '.host_capacity.ram_minimum_bytes' release/ci-resources.json)"
+          cli_min_disk="$(jq -er '.host_capacity.disk_free_minimum_bytes' release/ci-resources.json)"
+          cli_policy_sha="$(shasum -a 256 release/ci-resources.json)"
+          cli_policy_sha="${cli_policy_sha%% *}"
+          mkdir -m 700 "$RUNNER_TEMP/ami-rust-aarch64-observer-preflight"
+          cli_preflight="$RUNNER_TEMP/ami-rust-aarch64-observer-preflight/host-preflight.json"
+          jq -n --arg machine "$cli_machine" --argjson cpus "$cli_cpus" \
+            --argjson ram_bytes "$cli_mem_bytes" --argjson disk_free_bytes "$cli_disk_bytes" \
+            --arg policy_sha "$cli_policy_sha" --argjson job_timeout_minutes 15 \
+            --slurpfile policy release/ci-resources.json '
+            {
+              schema: "ami-rust-observer-host-preflight-v1",
+              status: "MEASURED",
+              runner_label: "ubuntu-24.04-arm",
+              machine: $machine,
+              logical_cpus: $cpus,
+              memory_total_bytes: $ram_bytes,
+              runner_temp_free_bytes: $disk_free_bytes,
+              ci_resources_sha256: $policy_sha,
+              source_ci_scope: {
+                job_timeout_minutes: $job_timeout_minutes,
+                build: $policy[0].build,
+                host_capacity_minimums: $policy[0].host_capacity,
+                transient_ci: $policy[0].transient_CI,
+                observer_capture: {
+                  command_timeout_seconds: 60,
+                  max_visible_rss_bytes: 4294967296,
+                  max_workspace_bytes: 12884901888,
+                  max_log_bytes: 16777216
+                }
+              }
+            }' > "$cli_preflight"
+          if [ "$cli_machine" != aarch64 ] ||
+             [ "$cli_cpus" -lt "$cli_jobs" ] ||
+             [ "$cli_mem_bytes" -lt "$cli_min_ram" ] ||
+             [ "$cli_disk_bytes" -lt "$cli_min_disk" ]; then
+            echo "Linux AArch64 observer runner is below the existing source-CI capacity floor" >&2
+            exit 1
+          fi
+      - name: Install the hash-pinned Linux AArch64 Rust inputs
+        run: bash tools/bootstrap-host-rust.sh "$RUNNER_TEMP/ami-rust-aarch64-host" aarch64-unknown-linux-gnu
+      - name: Test only the ARM observer integration surfaces
+        run: |
+          set -euo pipefail
+          cli_rust="$RUNNER_TEMP/ami-rust-aarch64-host/toolchain/bin"
+          mkdir -m 700 "$RUNNER_TEMP/ami-rust-aarch64-observer-home" "$RUNNER_TEMP/ami-rust-aarch64-observer-tmp"
+          env -i CLI_RUST="$cli_rust" RUNNER_TEMP="$RUNNER_TEMP" \
+            HOME="$RUNNER_TEMP/ami-rust-aarch64-observer-home" TMPDIR="$RUNNER_TEMP/ami-rust-aarch64-observer-tmp" \
+            PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin" LC_ALL=C \
+            /bin/bash -euo pipefail <<'ARM_TESTS'
+          cli_rust="$CLI_RUST"
+          export RUSTC="$cli_rust/rustc"
+          export RUSTDOC="$cli_rust/rustdoc"
+          export CARGO_HOME="$RUNNER_TEMP/ami-rust-aarch64-cargo-home"
+          export CARGO_BUILD_JOBS=2
+          export PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin"
+          export RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER=
+          "$cli_rust/cargo" test --locked --offline \
+            --manifest-path tools/consumer-enforcement-adapter/Cargo.toml \
+            --target-dir "$RUNNER_TEMP/ami-rust-aarch64-adapter-tests"
+          "$cli_rust/cargo" fetch --locked --manifest-path tooling/Cargo.toml
+          "$cli_rust/cargo" test --locked --offline \
+            --manifest-path tooling/Cargo.toml \
+            --target-dir "$RUNNER_TEMP/ami-rust-aarch64-report-tests" \
+            --package ami-rust-xtask --bin ami-rust-xtask consumer_report::tests
+          "$cli_rust/cargo" build --locked --offline \
+            --manifest-path tools/consumer-enforcement-adapter/Cargo.toml \
+            --target-dir "$RUNNER_TEMP/ami-rust-aarch64-adapter"
+          ARM_TESTS
+      - name: Bootstrap the separately pinned ARM Python counter
+        run: bash tools/bootstrap-python-counter-linux-aarch64.sh "$RUNNER_TEMP/ami-rust-aarch64-python-counter"
+      - name: Run the retained native interpreter-control integration test
+        run: |
+          set -euo pipefail
+          cli_rust="$RUNNER_TEMP/ami-rust-aarch64-host/toolchain/bin"
+          mkdir -m 700 "$RUNNER_TEMP/ami-rust-aarch64-control-home" "$RUNNER_TEMP/ami-rust-aarch64-control-tmp"
+          env -i PATH="$cli_rust:/usr/bin:/bin:/usr/sbin:/sbin" \
+            HOME="$RUNNER_TEMP/ami-rust-aarch64-control-home" TMPDIR="$RUNNER_TEMP/ami-rust-aarch64-control-tmp" \
+            RUSTC="$cli_rust/rustc" RUSTDOC="$cli_rust/rustdoc" \
+            RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= CARGO_BUILD_JOBS=2 LC_ALL=C \
+            CARGO_HOME="$RUNNER_TEMP/ami-rust-aarch64-cargo-home" \
+            AMI_RUST_CONSUMER_ENFORCEMENT_ADAPTER="$RUNNER_TEMP/ami-rust-aarch64-adapter/debug/consumer-enforcement-adapter" \
+            AMI_RUST_CONSUMER_ENFORCEMENT_PYTHON_ROOT="$RUNNER_TEMP/ami-rust-aarch64-python-counter/runtime" \
+            AMI_RUST_CONSUMER_ENFORCEMENT_WORK="$RUNNER_TEMP/ami-rust-aarch64-control-work" \
+            AMI_RUST_CONSUMER_ENFORCEMENT_OUTPUT="$RUNNER_TEMP/ami-rust-aarch64-control-output" \
+            "$cli_rust/cargo" test --package ami-rust-xtask --test consumer_enforcement \
+            --locked --offline --manifest-path tooling/Cargo.toml \
+            --target-dir "$RUNNER_TEMP/ami-rust-aarch64-report-tests" \
+            -- --ignored --exact native_interpreter_controls_are_refused_under_the_adapter_policy
+          test -f "$RUNNER_TEMP/ami-rust-aarch64-control-output/consumer-enforcement-controls.json"
+      - name: Retain ARM observer evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: observer-controls-aarch64-unknown-linux-gnu-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/ami-rust-aarch64-observer-preflight/host-preflight.json
+            ${{ runner.temp }}/ami-rust-aarch64-control-output/**/*.json
+            ${{ runner.temp }}/ami-rust-aarch64-control-output/**/*.raw
+            ${{ runner.temp }}/ami-rust-aarch64-control-output/**/*.log
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
+
   ci-success:
     name: CI Success
     if: always()
-    needs: [installer-fixtures, packaging-fixtures, rust-migration-scope, rust-migration-fixtures]
+    needs: [installer-fixtures, packaging-fixtures, rust-migration-scope, rust-migration-fixtures, rust-migration-observer-linux-aarch64]
     runs-on: ubuntu-24.04
     steps:
       - name: Require every fixture job to pass
@@ -297,6 +432,7 @@ jobs:
           PACKAGING_RESULT: ${{ needs.packaging-fixtures.result }}
           INSTALLER_RESULT: ${{ needs.installer-fixtures.result }}
           RUST_MIGRATION_RESULT: ${{ needs.rust-migration-fixtures.result }}
+          RUST_MIGRATION_OBSERVER_RESULT: ${{ needs.rust-migration-observer-linux-aarch64.result }}
           RUST_MIGRATION_SCOPE_RESULT: ${{ needs.rust-migration-scope.result }}
           RUST_MIGRATION_AFFECTED: ${{ needs.rust-migration-scope.outputs.affected }}
         run: |
@@ -306,7 +442,9 @@ jobs:
           test "$RUST_MIGRATION_SCOPE_RESULT" = success
           if [ "$RUST_MIGRATION_AFFECTED" = true ]; then
             test "$RUST_MIGRATION_RESULT" = success
+            test "$RUST_MIGRATION_OBSERVER_RESULT" = success
           else
             test "$RUST_MIGRATION_AFFECTED" = false
             test "$RUST_MIGRATION_RESULT" = skipped
+            test "$RUST_MIGRATION_OBSERVER_RESULT" = skipped
           fi

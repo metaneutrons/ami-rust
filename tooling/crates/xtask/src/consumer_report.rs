@@ -20,9 +20,13 @@ use ami_rust_core::{
 };
 use serde_json::{Map, Value, json};
 
-const REPORT_SCHEMA: &str = "consumer-enforcement-adapter-a1";
+const REPORT_SCHEMA_A1: &str = "consumer-enforcement-adapter-a1";
+const REPORT_SCHEMA_A2: &str = "consumer-enforcement-adapter-a2";
 const MACOS_MECHANISM: &str = "/usr/bin/sandbox-exec, deny default, exact process-exec allowlist plus declared private derived-output subtrees";
-const LINUX_BACKEND: &str = "Landlock path-beneath allow rules and seccomp-BPF on Linux x86-64";
+const LINUX_X86_64_BACKEND: &str =
+    "Landlock path-beneath allow rules and seccomp-BPF on Linux x86-64";
+const LINUX_AARCH64_BACKEND: &str =
+    "Landlock path-beneath allow rules and seccomp-BPF on Linux aarch64";
 const MAX_REPORT_BYTES: usize = 2 * 1024 * 1024;
 const MAX_CAPTURE_BYTES: usize = 1024 * 1024;
 
@@ -112,7 +116,8 @@ pub(super) fn admit(expected: &ExpectedReport<'_>) -> Result<Value> {
         Refusal::new("consumer adapter admission: adapter report must be a JSON object")
     })?;
 
-    if string_field(report_object, "schema")? != REPORT_SCHEMA {
+    let schema = string_field(report_object, "schema")?;
+    if schema != REPORT_SCHEMA_A1 && schema != REPORT_SCHEMA_A2 {
         return Err(Refusal::new(
             "consumer adapter admission: unsupported adapter report schema",
         ));
@@ -154,12 +159,13 @@ pub(super) fn admit(expected: &ExpectedReport<'_>) -> Result<Value> {
         report_object.contains_key("backend"),
     ) {
         (true, false) => {
-            admit_macos_report(report_object, &report_dir, expected.expected_exit)?;
+            admit_macos_report(report_object, schema, &report_dir, expected.expected_exit)?;
             "macos"
         }
         (false, true) => {
             admit_linux_report(
                 report_object,
+                schema,
                 &report_dir,
                 expected.expected_exit,
                 expected.network_outbound,
@@ -168,7 +174,7 @@ pub(super) fn admit(expected: &ExpectedReport<'_>) -> Result<Value> {
         }
         _ => {
             return Err(Refusal::new(
-                "consumer adapter admission: report does not identify exactly one supported a1 backend",
+                "consumer adapter admission: report does not identify exactly one supported backend",
             ));
         }
     };
@@ -190,7 +196,7 @@ pub(super) fn admit(expected: &ExpectedReport<'_>) -> Result<Value> {
     Ok(json!({
         "path": report_path.display().to_string(),
         "report_sha256": sha256_bytes(&report_raw),
-        "schema": REPORT_SCHEMA,
+        "schema": schema,
         "backend": backend,
         "policy_path": policy.display().to_string(),
         "policy_sha256": policy_sha256,
@@ -210,10 +216,11 @@ pub(super) fn admit(expected: &ExpectedReport<'_>) -> Result<Value> {
 
 fn admit_macos_report(
     report: &Map<String, Value>,
+    schema: &str,
     report_dir: &Path,
     expected_exit: i32,
 ) -> Result<()> {
-    if string_field(report, "mechanism")? != MACOS_MECHANISM {
+    if schema != REPORT_SCHEMA_A1 || string_field(report, "mechanism")? != MACOS_MECHANISM {
         return Err(Refusal::new(
             "consumer adapter admission: unsupported macOS adapter mechanism",
         ));
@@ -234,14 +241,39 @@ fn admit_macos_report(
 
 fn admit_linux_report(
     report: &Map<String, Value>,
+    schema: &str,
     report_dir: &Path,
     expected_exit: i32,
     expected_network_outbound: bool,
 ) -> Result<()> {
-    if string_field(report, "backend")? != LINUX_BACKEND {
-        return Err(Refusal::new(
-            "consumer adapter admission: unsupported Linux adapter backend",
-        ));
+    let backend = string_field(report, "backend")?;
+    let seccomp = field(report, "seccomp")?.as_object().ok_or_else(|| {
+        Refusal::new("consumer adapter admission: Linux seccomp evidence must be an object")
+    })?;
+    match (schema, backend) {
+        (REPORT_SCHEMA_A1, LINUX_X86_64_BACKEND) => {
+            if seccomp.contains_key("non_native_audit_arch_killed")
+                || !bool_field(seccomp, "x32_syscalls_denied")?
+            {
+                return Err(Refusal::new(
+                    "consumer adapter admission: Linux x86-64 ABI guard is missing or mismatched",
+                ));
+            }
+        }
+        (REPORT_SCHEMA_A2, LINUX_AARCH64_BACKEND) => {
+            if seccomp.contains_key("x32_syscalls_denied")
+                || !bool_field(seccomp, "non_native_audit_arch_killed")?
+            {
+                return Err(Refusal::new(
+                    "consumer adapter admission: Linux AArch64 ABI guard is missing or mismatched",
+                ));
+            }
+        }
+        _ => {
+            return Err(Refusal::new(
+                "consumer adapter admission: Linux report schema and backend do not form a supported ABI pair",
+            ));
+        }
     }
     if string_field(report, "report_directory")? != report_dir.display().to_string() {
         return Err(Refusal::new(
@@ -260,15 +292,7 @@ fn admit_linux_report(
             "consumer adapter admission: Linux child status/signal differs from expected exit {expected_exit}"
         )));
     }
-    let seccomp = field(report, "seccomp")?.as_object().ok_or_else(|| {
-        Refusal::new("consumer adapter admission: Linux seccomp evidence must be an object")
-    })?;
-    for flag in [
-        "tsync",
-        "execveat_denied",
-        "memfd_create_denied",
-        "x32_syscalls_denied",
-    ] {
+    for flag in ["tsync", "execveat_denied", "memfd_create_denied"] {
         if !bool_field(seccomp, flag)? {
             return Err(Refusal::new(format!(
                 "consumer adapter admission: Linux seccomp evidence lacks required {flag} enforcement"
@@ -587,7 +611,10 @@ fn string_array_field(object: &Map<String, Value>, key: &str) -> Result<Vec<Stri
 
 #[cfg(test)]
 mod tests {
-    use super::{ExpectedReport, MAX_CAPTURE_BYTES, admit};
+    use super::{
+        ExpectedReport, LINUX_AARCH64_BACKEND, LINUX_X86_64_BACKEND, MAX_CAPTURE_BYTES,
+        REPORT_SCHEMA_A1, REPORT_SCHEMA_A2, admit,
+    };
     use ami_rust_core::digest::sha256_bytes;
     use serde_json::{Value, json};
     use std::{
@@ -602,7 +629,8 @@ mod tests {
     #[derive(Clone, Copy)]
     enum Backend {
         Macos,
-        Linux,
+        LinuxX86_64,
+        LinuxAarch64,
     }
 
     struct Fixture {
@@ -677,7 +705,10 @@ mod tests {
             let stdout = self.capture_value("stdout", b"child stdout");
             let stderr = self.capture_value("stderr", b"child stderr");
             let mut report = json!({
-                "schema": "consumer-enforcement-adapter-a1",
+                "schema": match self.backend {
+                    Backend::LinuxAarch64 => REPORT_SCHEMA_A2,
+                    Backend::Macos | Backend::LinuxX86_64 => REPORT_SCHEMA_A1,
+                },
                 "policy": self.policy.display().to_string(),
                 "command": self.command,
                 "stdout": stdout,
@@ -698,9 +729,8 @@ mod tests {
                     report["exit_code"] = json!(child_exit);
                     report["signal"] = Value::Null;
                 }
-                Backend::Linux => {
-                    report["backend"] =
-                        json!("Landlock path-beneath allow rules and seccomp-BPF on Linux x86-64");
+                Backend::LinuxX86_64 => {
+                    report["backend"] = json!(LINUX_X86_64_BACKEND);
                     report["report_directory"] = json!(self.report_dir.display().to_string());
                     report["launch_error"] = Value::Null;
                     report["child_exit_code"] = json!(child_exit);
@@ -710,6 +740,20 @@ mod tests {
                         "execveat_denied": true,
                         "memfd_create_denied": true,
                         "x32_syscalls_denied": true,
+                        "network_denied": !network_outbound,
+                    });
+                }
+                Backend::LinuxAarch64 => {
+                    report["backend"] = json!(LINUX_AARCH64_BACKEND);
+                    report["report_directory"] = json!(self.report_dir.display().to_string());
+                    report["launch_error"] = Value::Null;
+                    report["child_exit_code"] = json!(child_exit);
+                    report["child_signal"] = Value::Null;
+                    report["seccomp"] = json!({
+                        "tsync": true,
+                        "execveat_denied": true,
+                        "memfd_create_denied": true,
+                        "non_native_audit_arch_killed": true,
                         "network_denied": !network_outbound,
                     });
                 }
@@ -782,17 +826,24 @@ mod tests {
 
     #[test]
     fn admits_macos_and_linux_reports_for_exit_zero_and_two() {
-        for backend in [Backend::Macos, Backend::Linux] {
+        for backend in [Backend::Macos, Backend::LinuxX86_64, Backend::LinuxAarch64] {
             for child_exit in [0, 2] {
                 let fixture = Fixture::new(backend, child_exit);
                 let summary = admit(&fixture.expected(child_exit, child_exit)).unwrap();
                 assert_eq!(summary["child_exit_code"], child_exit);
                 assert_eq!(summary["outer_exit_code"], child_exit);
                 assert_eq!(
+                    summary["schema"],
+                    match backend {
+                        Backend::LinuxAarch64 => REPORT_SCHEMA_A2,
+                        Backend::Macos | Backend::LinuxX86_64 => REPORT_SCHEMA_A1,
+                    }
+                );
+                assert_eq!(
                     summary["backend"],
                     match backend {
                         Backend::Macos => "macos",
-                        Backend::Linux => "linux",
+                        Backend::LinuxX86_64 | Backend::LinuxAarch64 => "linux",
                     }
                 );
                 assert_eq!(summary["policy_sha256"], fixture.policy_sha256);
@@ -805,7 +856,7 @@ mod tests {
 
     #[test]
     fn preserves_an_empty_argument_after_a_nonempty_executable() {
-        let mut fixture = Fixture::new(Backend::Linux, 0);
+        let mut fixture = Fixture::new(Backend::LinuxX86_64, 0);
         fixture.command.push(String::new());
         let mut report = fixture.read_report();
         report["command"] = json!(fixture.command);
@@ -814,8 +865,74 @@ mod tests {
     }
 
     #[test]
+    fn rejects_linux_schema_backend_cross_pairings() {
+        let fixture = Fixture::new(Backend::LinuxX86_64, 0);
+        let mut report = fixture.read_report();
+        report["schema"] = json!(REPORT_SCHEMA_A2);
+        fixture.write_report(report);
+        assert!(admit(&fixture.expected(0, 0)).is_err());
+
+        let fixture = Fixture::new(Backend::LinuxAarch64, 0);
+        let mut report = fixture.read_report();
+        report["backend"] = json!(LINUX_X86_64_BACKEND);
+        fixture.write_report(report);
+        assert!(admit(&fixture.expected(0, 0)).is_err());
+
+        let fixture = Fixture::new(Backend::Macos, 0);
+        let mut report = fixture.read_report();
+        report["schema"] = json!(REPORT_SCHEMA_A2);
+        fixture.write_report(report);
+        assert!(admit(&fixture.expected(0, 0)).is_err());
+    }
+
+    #[test]
+    fn requires_only_the_exact_linux_abi_guard_for_each_pair() {
+        let fixture = Fixture::new(Backend::LinuxX86_64, 0);
+        let mut report = fixture.read_report();
+        report["seccomp"]
+            .as_object_mut()
+            .unwrap()
+            .remove("x32_syscalls_denied");
+        fixture.write_report(report);
+        assert!(admit(&fixture.expected(0, 0)).is_err());
+
+        let fixture = Fixture::new(Backend::LinuxX86_64, 0);
+        let mut report = fixture.read_report();
+        report["seccomp"]["x32_syscalls_denied"] = json!(false);
+        fixture.write_report(report);
+        assert!(admit(&fixture.expected(0, 0)).is_err());
+
+        let fixture = Fixture::new(Backend::LinuxX86_64, 0);
+        let mut report = fixture.read_report();
+        report["seccomp"]["non_native_audit_arch_killed"] = json!(false);
+        fixture.write_report(report);
+        assert!(admit(&fixture.expected(0, 0)).is_err());
+
+        let fixture = Fixture::new(Backend::LinuxAarch64, 0);
+        let mut report = fixture.read_report();
+        report["seccomp"]
+            .as_object_mut()
+            .unwrap()
+            .remove("non_native_audit_arch_killed");
+        fixture.write_report(report);
+        assert!(admit(&fixture.expected(0, 0)).is_err());
+
+        let fixture = Fixture::new(Backend::LinuxAarch64, 0);
+        let mut report = fixture.read_report();
+        report["seccomp"]["non_native_audit_arch_killed"] = json!(false);
+        fixture.write_report(report);
+        assert!(admit(&fixture.expected(0, 0)).is_err());
+
+        let fixture = Fixture::new(Backend::LinuxAarch64, 0);
+        let mut report = fixture.read_report();
+        report["seccomp"]["x32_syscalls_denied"] = json!(false);
+        fixture.write_report(report);
+        assert!(admit(&fixture.expected(0, 0)).is_err());
+    }
+
+    #[test]
     fn rejects_missing_report_even_when_outer_exit_is_two() {
-        let fixture = Fixture::new(Backend::Linux, 2);
+        let fixture = Fixture::new(Backend::LinuxX86_64, 2);
         fs::remove_file(fixture.report_dir.join("report.json")).expect("remove report");
         assert!(admit(&fixture.expected(2, 2)).is_err());
     }
@@ -843,7 +960,7 @@ mod tests {
         fixture.write_report(report);
         assert!(admit(&fixture.expected(0, 0)).is_err());
 
-        let fixture = Fixture::new(Backend::Linux, 0);
+        let fixture = Fixture::new(Backend::LinuxX86_64, 0);
         let mut report = fixture.read_report();
         report["seccomp"]["network_denied"] = json!(false);
         fixture.write_report(report);
@@ -852,13 +969,13 @@ mod tests {
 
     #[test]
     fn rejects_truncated_or_overlong_capture_evidence() {
-        let fixture = Fixture::new(Backend::Linux, 0);
+        let fixture = Fixture::new(Backend::LinuxX86_64, 0);
         let mut report = fixture.read_report();
         report["stdout"]["truncated"] = json!(true);
         fixture.write_report(report);
         assert!(admit(&fixture.expected(0, 0)).is_err());
 
-        let fixture = Fixture::new(Backend::Linux, 0);
+        let fixture = Fixture::new(Backend::LinuxX86_64, 0);
         let mut report = fixture.read_report();
         report["stdout"]["bytes_total"] = json!(MAX_CAPTURE_BYTES + 1);
         fixture.write_report(report);
@@ -867,20 +984,20 @@ mod tests {
 
     #[test]
     fn rejects_policy_tampering_after_the_prelaunch_digest() {
-        let fixture = Fixture::new(Backend::Linux, 0);
+        let fixture = Fixture::new(Backend::LinuxX86_64, 0);
         fs::write(&fixture.policy, b"changed after launch\n").expect("tamper policy");
         assert!(admit(&fixture.expected(0, 0)).is_err());
     }
 
     #[test]
     fn rejects_symlinked_or_public_report_evidence() {
-        let fixture = Fixture::new(Backend::Linux, 0);
+        let fixture = Fixture::new(Backend::LinuxX86_64, 0);
         let stdout = fixture.report_dir.join("stdout.raw");
         fs::remove_file(&stdout).expect("remove capture");
         symlink(fixture.policy.as_path(), &stdout).expect("replace capture with symlink");
         assert!(admit(&fixture.expected(0, 0)).is_err());
 
-        let fixture = Fixture::new(Backend::Linux, 0);
+        let fixture = Fixture::new(Backend::LinuxX86_64, 0);
         fs::set_permissions(&fixture.report_dir, fs::Permissions::from_mode(0o777))
             .expect("make report directory writable by others");
         assert!(admit(&fixture.expected(0, 0)).is_err());
