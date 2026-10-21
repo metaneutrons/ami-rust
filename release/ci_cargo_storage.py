@@ -23,6 +23,12 @@ BOOTSTRAP_NAME = 'ami-rust-python-bootstrap'
 OWNER_NAME = '.ami-rust-cargo-storage-owner.json'
 SCHEMA = 'ami-rust-cargo-storage-component-v1'
 RETAINED_BYTES = 31 * MIB
+CANCELLED = False
+
+
+def check_cancelled():
+    if CANCELLED:
+        raise InterruptedError('component coordinator cancellation requested')
 
 
 def own_rss():
@@ -145,6 +151,11 @@ def validate_runtime(runtime, runtime_root, profile, expected_tools):
     names = [row.get('name') for row in checks]
     if any(not isinstance(name, str) for name in names) or len(names) != len(set(names)) or set(names) != set(required):
         raise ValueError('storage fixture does not cover the exact required host checks')
+    command_contract = contract['commands']
+    common, host_commands = command_contract['common'], command_contract['profiles'][profile]
+    if set(common) & set(host_commands):
+        raise ValueError('duplicate required host command')
+    expected_commands = dict(common, **host_commands)
     labels = set()
     for command in commands:
         label, expected = command.get('label'), command.get('expected_exit_code')
@@ -154,6 +165,8 @@ def validate_runtime(runtime, runtime_root, profile, expected_tools):
                 or command.get('status') != {'exit_code':expected, 'signal':None, 'success':expected == 0}
                 or not command.get('argv') or not command.get('environment') or not command.get('cwd')):
             raise ValueError('storage command observation is contradictory or incomplete')
+        if label not in expected_commands or expected != expected_commands[label]:
+            raise ValueError('storage command differs from its required host contract')
         labels.add(label)
         for stream in ('stdout', 'stderr'):
             identity = command[stream]
@@ -166,6 +179,8 @@ def validate_runtime(runtime, runtime_root, profile, expected_tools):
                     or path.stat().st_size > 8*MIB or path.stat().st_size != identity['bytes']
                     or c.sha256(path) != identity['sha256']):
                 raise ValueError('storage fixture raw log identity mismatch')
+    if labels != set(expected_commands):
+        raise ValueError('storage fixture omitted required host command observations')
     tools = runtime.get('tools')
     if not isinstance(tools, list) or len(tools) != 5 or len({row['name'] for row in tools}) != 5:
         raise ValueError('storage fixture tool inventory is incomplete')
@@ -215,8 +230,10 @@ def run(args):
             super().__init__(*a, **kw)
             supervisors.append(self)
         def managed_bytes(self):
+            check_cancelled()
             return managed_bytes(roots)
         def logs_bytes(self):
+            check_cancelled()
             return log_bytes((work, output))
         def run(self, command, *, timeout=1200, **kw):
             remaining = 5400 - (time.monotonic() - start)
@@ -346,6 +363,7 @@ def run(args):
                 or log_bytes((work, output)) > 16*MIB
                 or time.monotonic() - start > 5400):
             raise ValueError('final component resource accounting exceeded its policy')
+        check_cancelled()
         report['status'] = 'PASS_HOST_CARGO_STORAGE_COMPONENT_ONLY'
     except BaseException as error:
         report.update(status='FAILED', failed_stage=stage, error=repr(error))
@@ -372,7 +390,7 @@ def run(args):
                                    'commands': [row for s in supervisors for row in s.commands],
                                    'limits': {'rss_bytes':4*1024**3, 'workspace_bytes':12*1024**3,
                                               'logs_bytes':16*MIB, 'command_seconds':1200, 'campaign_seconds':5400}})
-        violations = []
+        violations = ['component cancellation requested'] if CANCELLED else []
         measured = report['supervision']
         encoded_bytes = len((json.dumps(report, indent=2, sort_keys=True)+'\n').encode())
         measured['workspace_peak_bytes'] = max(measured['workspace_peak_bytes'], managed_bytes(roots)+encoded_bytes)
@@ -444,6 +462,7 @@ def cleanup(args):
 
 
 def main():
+    global CANCELLED
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--temporary', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
@@ -455,13 +474,17 @@ def main():
     elif args.python_bootstrap_root is None:
         parser.error('select the pinned internal CI Python bootstrap')
     else:
+        CANCELLED = False
         def interrupted(signum, frame):
-            raise InterruptedError('component coordinator received SIGTERM')
-        prior = signal.signal(signal.SIGTERM, interrupted)
+            global CANCELLED
+            CANCELLED = True
+        prior = {kind: signal.signal(kind, interrupted) for kind in (signal.SIGTERM, signal.SIGINT)}
         try:
             run(args)
+            check_cancelled()
         finally:
-            signal.signal(signal.SIGTERM, prior)
+            for kind, handler in prior.items():
+                signal.signal(kind, handler)
 
 if __name__ == '__main__':
     main()

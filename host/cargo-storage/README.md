@@ -66,7 +66,8 @@ ABI-v1 and QEMU baseline remain unchanged.
 `ami-rust-xtask cargo-storage-probe` is an internal Rust maintainer operation.
 It compares explicit original/derived Cargo binaries with local synthetic
 inputs, records actual command status and raw streams, and checks the exact
-host-specific outcomes in `runtime-checks.json`. It requires explicit
+host-specific outcomes and complete command/expected-exit inventory in
+`runtime-checks.json`. It requires explicit
 `--control`, `--derived`, `--rustc`, `--rustdoc`, `--work`, and `--output` paths;
 work/output must be fresh and separate from the selected tools.
 
@@ -86,8 +87,10 @@ an original-source control with unchanged pins, derives Cargo with the owned
 storage patch, verifies all 2,928 regular source files and unchanged original
 symlink targets, and builds the derived component offline. A fresh control is
 not claimed byte-identical to the older RC1 binary. The coordinator checks
-the Rust receipt, complete named outcomes, every raw stream and selected tool
-identity before reporting component success.
+the Rust receipt, complete named outcomes, the exact command inventory and
+expected exits, every raw stream and selected tool identity before reporting
+component success. Truncated or invented command lists refuse even if all
+reported outcome rows claim success.
 
 This workflow uploads bounded reports/source snapshots/logs, never Cargo or
 SDK packages. Each host reserves 32 MiB including cleanup/framing. Its
@@ -95,7 +98,10 @@ SDK packages. Each host reserves 32 MiB including cleanup/framing. Its
 The 4 GiB aggregate observed RSS, 12 GiB combined workspace and 16 MiB logs
 remain separate limits. Cleanup validates all ownership paths and a finalized
 receipt before deleting work. Abrupt termination without that receipt refuses
-retirement; it cannot produce an accepted component result.
+retirement; it cannot produce an accepted component result. SIGTERM/SIGINT
+cancellation is deferred through guarded process cleanup, including a signal
+during detached process creation. Four isolated cancellation controls retain
+failed receipts, leave no live child groups and permit owned cleanup.
 
 The temporary Python coordinator is internal release infrastructure and remains
 in the RC4 retirement scope. Both-host component qualification, activation,
