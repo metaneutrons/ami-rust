@@ -1,7 +1,7 @@
 diff --git a/src/bin/cargo/cli.rs b/src/bin/cargo/cli.rs
 --- a/src/bin/cargo/cli.rs
 +++ b/src/bin/cargo/cli.rs
-@@ -61,21 +61,39 @@
+@@ -61,21 +61,40 @@
          == Some("help")
      {
          // Don't let config errors get in the way of parsing arguments
@@ -36,6 +36,7 @@ diff --git a/src/bin/cargo/cli.rs b/src/bin/cargo/cli.rs
          let mut process = gctx.load_global_rustc(None)?.process();
          process.arg("--explain").arg(code).exec()?;
      } else if expanded_args.flag("list") {
++        gctx.check_ami_guard_command("--list")?;
          // Don't let config errors get in the way of parsing arguments
 -        let _ = configure_gctx(gctx, &expanded_args, None, global_args, None);
 +        let configured = configure_gctx(gctx, &expanded_args, None, global_args, None);
@@ -45,7 +46,7 @@ diff --git a/src/bin/cargo/cli.rs b/src/bin/cargo/cli.rs
          print_list(gctx, is_verbose);
      } else {
          let (cmd, subcommand_args) = match expanded_args.subcommand() {
-@@ -86,6 +104,7 @@
+@@ -86,6 +105,7 @@
                  return Ok(());
              }
          };
@@ -53,7 +54,7 @@ diff --git a/src/bin/cargo/cli.rs b/src/bin/cargo/cli.rs
          let exec = Exec::infer(cmd)?;
          configure_gctx(
              gctx,
-@@ -94,6 +113,7 @@
+@@ -94,6 +114,7 @@
              global_args,
              Some(&exec),
          )?;

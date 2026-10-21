@@ -41,8 +41,11 @@ TOML resolver. No source is loaded or fetched to construct that source record.
 A second callback runs before each supported `metadata`, `check` or `build`,
 including `metadata --no-deps` and unchanged builds. It records the actual
 workspace, output paths and command selection, including package, feature and
-target selectors. Unsupported commands and bypass routes refuse. The hook does
-not itself decide SDK policy, compile target C, link AROS or authenticate a role.
+target selectors. Unsupported commands and bypass routes refuse. When either
+private selector is present, `cargo --list` refuses before configuration setup,
+callback invocation or list output. Without selectors, normal Cargo listing
+continues. The hook does not itself decide SDK policy, compile target C, link
+AROS or authenticate a role.
 
 Each record is limited to 1 MiB. Callback delivery has a 30-second timeout,
 nonblocking writes, and child kill/reap on failure. Callback stdout/stderr are
@@ -59,6 +62,15 @@ fixture passes 46 checks over 43 actual commands, covering raw origins and
 one-time overlay merge, expected refusals, target selectors, cold/warm host
 builds and checks, preflight on cache hits, a real callback timeout and oversized
 record refusal. Earlier failures and raw local reports remain retained.
+
+The macOS regression and exact-source replay are summarized in the
+[development receipt](../../docs/rust-cli-migration/evidence/rc2-cargo-list-refusal-development-20261021.json).
+The behavior run covers guarded and partial-selector refusals, normal unselected
+listing, the selected metadata positive and the old-binary behavior counter. Its
+native binary is local development evidence only; no Linux or production
+qualification follows.
+Existing producers do not select this source, and `qualified_component` remains
+`false`.
 
 This proves local callback plumbing only. Native activation authentication and
 policy, portable project/local activation/invocation records, target/cfg graph
