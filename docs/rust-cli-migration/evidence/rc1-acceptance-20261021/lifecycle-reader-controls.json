@@ -1,0 +1,221 @@
+{
+  "driver_sha256": "0c6f5bc14048d42122162961664deb8a8c4b861576ecc70b05139b565f76a5ae",
+  "original_provider_evidence_unchanged": true,
+  "rows": [
+    {
+      "case": "original-positive",
+      "host": "linux-x86_64",
+      "outcome": "PASS",
+      "result_sha256": "f735fa9d47e89f4a8dcca2854a159ff78f1f5dfda14d6f5105501fde2586f9c9"
+    },
+    {
+      "case": "non-checkpoint-field",
+      "error": "standalone/final report non-checkpoint fields differ: published_v1_transition",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "035b0b22039445b3774ed7d64b1c22e7550778b4b22bfe22d55e183ca6ece7db"
+      }
+    },
+    {
+      "case": "missing-final-row",
+      "error": "final lifecycle must extend the exact standalone timeline by one unchanged upgrade checkpoint: published_v1_transition",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "ecde49d75f1ea46f890ada5ff509cc048ec4ea0aceb2e8716b21efbfcdcd6a04"
+      }
+    },
+    {
+      "case": "extra-final-row",
+      "error": "final lifecycle must extend the exact standalone timeline by one unchanged upgrade checkpoint: published_v1_transition",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "b3cd53b1be3bdf2ef92272a94ca735305ce8b1c17fdce085f64c2872d8972961"
+      }
+    },
+    {
+      "case": "wrong-final-name",
+      "error": "final lifecycle must extend the exact standalone timeline by one unchanged upgrade checkpoint: published_v1_transition",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "2b16470b76c4eaf00ec88e5b7f12e89d0504ec0f163b281dcb1cab84dc7cb2c3"
+      }
+    },
+    {
+      "case": "changed-final-roots",
+      "error": "final lifecycle must extend the exact standalone timeline by one unchanged upgrade checkpoint: published_v1_transition",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "3e259587df52d723cd543217495b49a8ca2049775b8d8fd992085f60a9b9406d"
+      }
+    },
+    {
+      "case": "changed-final-archive",
+      "error": "final lifecycle must extend the exact standalone timeline by one unchanged upgrade checkpoint: published_v1_transition",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "a0baa44e8ce35b99e499d786cd0dab5250fbad1fd3301e3d37fdf65564ec9e24"
+      }
+    },
+    {
+      "case": "changed-prefix",
+      "error": "final lifecycle must extend the exact standalone timeline by one unchanged upgrade checkpoint: published_v1_transition",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "940b7fcf6a89c156351bfbca15436a6f47c53005d54c3917d930d3e179686f34"
+      }
+    },
+    {
+      "case": "nested-migration",
+      "error": "standalone migration differs from final lifecycle",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "d85b47511f2edc4ed94bad8b35cec70aaa7cc3fad332d623b5dcc4f2b73972de"
+      }
+    },
+    {
+      "case": "adapter-child-exit",
+      "error": "Linux adapter exit/seccomp/library-denial evidence differs from its policy: 01-real-native-verify",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "01-real-native-verify.result.json": "ede53bf7db0ce3966c1d499c1a7b8abc9ef1ceb00d0aabb7593323b570915f84",
+        "native-direct-lifecycle.json": "0222da60973d44005e91dac1c5d14b4c592c1407d070da0794731983331cf815",
+        "observations/01-real-native-verify/observation.json": "8f595c0da2c80f1ffac2e34137292b58332935eb348521a51191f2512faba35b",
+        "observations/01-real-native-verify/reports/command/report.json": "12f9c5d8528b828492554f5777874832b490a18b9e382b9b810b0e5cf2d89604"
+      }
+    },
+    {
+      "case": "adapter-exec-identity",
+      "error": "Linux adapter lacks before/after command hash evidence: 01-real-native-verify",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "01-real-native-verify.result.json": "e7d1c0cba457645a5242965fa2cd43d8bdb81adbbce4d58de4e34a8251f4dfb7",
+        "native-direct-lifecycle.json": "354f3a34048b8ee210210d91379e25827849045aec00c1a03b11bd8596813284",
+        "observations/01-real-native-verify/observation.json": "51c39b591e311633f155aa44e2249a8be9a37e62f72547cf05047c0e48957f41",
+        "observations/01-real-native-verify/reports/command/report.json": "addef4b5cd535f7b47046d752421140b0ba5798fcd7e5e3b84228a73b2c8154d"
+      }
+    },
+    {
+      "case": "original-positive",
+      "host": "macos-aarch64",
+      "outcome": "PASS",
+      "result_sha256": "ef5e572dc87d34fdcf2510a46970cff7e0c1a1566e8ac6a3f5eb55a4a7af081d"
+    },
+    {
+      "case": "non-checkpoint-field",
+      "error": "standalone/final report non-checkpoint fields differ: published_v1_transition",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "5e6ac86f6a807c2782694b4d2f204c54579bdbbd1499421bc392726b81445144"
+      }
+    },
+    {
+      "case": "missing-final-row",
+      "error": "final lifecycle must extend the exact standalone timeline by one unchanged upgrade checkpoint: published_v1_transition",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "b286e1ae9e837298ea1ae8e4628f34a4521dff14c50a1c14f691e715514a8b21"
+      }
+    },
+    {
+      "case": "extra-final-row",
+      "error": "final lifecycle must extend the exact standalone timeline by one unchanged upgrade checkpoint: published_v1_transition",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "8b4b99b4dd6af4bbfd706a55982c8c1a939c123458a6813c0322983217286c08"
+      }
+    },
+    {
+      "case": "wrong-final-name",
+      "error": "final lifecycle must extend the exact standalone timeline by one unchanged upgrade checkpoint: published_v1_transition",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "f137240d27b0f3ed24cf1190bbcb3bb7dad5964d3d60692b34b4b01f8772eabb"
+      }
+    },
+    {
+      "case": "changed-final-roots",
+      "error": "final lifecycle must extend the exact standalone timeline by one unchanged upgrade checkpoint: published_v1_transition",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "69688468fe2120d478fc704c0cc98fe7fa9dc868a95541efdabc7590ff9084d9"
+      }
+    },
+    {
+      "case": "changed-final-archive",
+      "error": "final lifecycle must extend the exact standalone timeline by one unchanged upgrade checkpoint: published_v1_transition",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "d74d404d7ed30694cb14d118be25dc988d71d7da6e0469fe84127bdfa17079eb"
+      }
+    },
+    {
+      "case": "changed-prefix",
+      "error": "final lifecycle must extend the exact standalone timeline by one unchanged upgrade checkpoint: published_v1_transition",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "037e8b0fcf61ad7f0d228c8654576d8fbdf419f32e02c03be6e413413af214eb"
+      }
+    },
+    {
+      "case": "nested-migration",
+      "error": "standalone migration differs from final lifecycle",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "native-direct-lifecycle.json": "ad3efdc8226418e39c11a06df1ffe74386b2a3328a5f082f658d147bdfe56ad1"
+      }
+    },
+    {
+      "case": "adapter-child-exit",
+      "error": "macOS adapter exit/library-denial evidence differs from its policy: 01-real-native-verify",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "01-real-native-verify.result.json": "809ff0beabb953453c8185978e63ff59f78a6f495cce90c0710f8388938b2e98",
+        "native-direct-lifecycle.json": "896261c6d65b3731a8c7e1ebadec7e2b5fc5140cc945cd1e2b77bfeef3ef990a",
+        "observations/01-real-native-verify/observation.json": "0f7950f01d05beb24c2ab14edbf1f3ae6f3422d5dbb1add58053453057cbb9c6",
+        "observations/01-real-native-verify/reports/command/report.json": "7da5f692cbf788f9c2f1d6642ba6f54c0a52e4db5c165dd0052730dd44911530"
+      }
+    },
+    {
+      "case": "adapter-exec-identity",
+      "error": "macOS adapter lacks before/after command hash evidence: 01-real-native-verify",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_GATE",
+      "synthetic_member_pins": {
+        "01-real-native-verify.result.json": "37f4b4f1eba498046fbb5a051e35f8d6f5c257d5e31f00e55e02499c731c4dff",
+        "native-direct-lifecycle.json": "36d96f8d5b5f1310ebf9f84f8deb5dee00d425d822effb692cfd4241230e4b6f",
+        "observations/01-real-native-verify/observation.json": "ebce0c96ebf9cc08f5bc093e73b4e733695409680c05651df48acb4bc1ee1b87",
+        "observations/01-real-native-verify/reports/command/report.json": "518a20ea75954daa4a704ae2411e890c8c2efcb2b23b795ff61bc8d52113fbe5"
+      }
+    }
+  ],
+  "schema": "ami-rust-sdk-lifecycle-reader-semantic-controls-v1",
+  "scope": "Only lifecycle reader semantics. Provider transport, authentication, detailed upgrade and final criterion join remain separately required.",
+  "slice_sha256": "eeea079d51a0f21f9db6bbcb2dd8841c107e7eab7e193e065c61e08ee04c33b2",
+  "source": {
+    "run_attempt": 1,
+    "run_id": 39553656864,
+    "source_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+    "workflow_sha": "4350aeae331dbccb190bc7be6938306644e4d4af"
+  },
+  "source_tree": "25d3b14be3c779d34d713a47d405206b49cf9e82",
+  "status": "PASS_TWO_ACTUAL_HOST_POSITIVES_AND_TWENTY_ISOLATED_SEMANTIC_REFUSALS"
+}

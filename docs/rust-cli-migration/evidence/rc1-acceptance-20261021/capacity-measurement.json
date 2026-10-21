@@ -1,0 +1,28 @@
+{
+  "attempt": 1,
+  "decision": "Current both-host consumer evidence fits unchanged pinned 64 MiB artifact/63 MiB writer policy. No rerun or policy increase required. Future measured growth may use owner-approved additional retention with headroom.",
+  "manifest_sha256": "0baf349fd89830762d4a975a86cf86d91102dcb30f6034ff1e106bb47e8d0a09",
+  "measurements": [
+    {
+      "artifact": "sdk-native-consumer-macos-aarch64-39553656864-1",
+      "artifact_limit_bytes": 67108864,
+      "expanded_bytes": 30400420,
+      "provider_zip_bytes": 6131034,
+      "writer_headroom_bytes": 35659868,
+      "writer_limit_bytes": 66060288
+    },
+    {
+      "artifact": "sdk-native-consumer-linux-x86_64-39553656864-1",
+      "artifact_limit_bytes": 67108864,
+      "expanded_bytes": 39355847,
+      "provider_zip_bytes": 6570967,
+      "writer_headroom_bytes": 26704441,
+      "writer_limit_bytes": 66060288
+    }
+  ],
+  "owner_decision_sha256": "a3b6d3c32b7df37a74f6dcb158f4f1742e30a93304e0a4991f4640e6a07004f4",
+  "recorded_utc": "2026-10-21T07:24:29.871129+00:00",
+  "run": 39553656864,
+  "schema": "ami-rust-ci-evidence-measured-capacity-v1",
+  "scope": "CI artifact retention only, not SDK application or AROS memory."
+}

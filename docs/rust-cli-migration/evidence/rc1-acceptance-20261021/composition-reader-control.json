@@ -1,0 +1,14 @@
+{
+  "attempt": 1,
+  "collector_sha256": "cb332e835998bce2720302b0838101edb8d0c558bfda626eeb47ff5f9b5c1433",
+  "exit_code": 1,
+  "expected_refusal": "required producer/authentication/lifecycle job failed: Native signed lifecycle (linux-x86_64)",
+  "original_manifest_sha256": "0baf349fd89830762d4a975a86cf86d91102dcb30f6034ff1e106bb47e8d0a09",
+  "original_provider_jobs_sha256": "32784978274fcfb77520f947e0753bb9a699dca5a01c1fab9de0b55818ee9fbf",
+  "reader_sha256": "6cdd86d46be5faa1423c628065a5ef832cb6ae683cb9a19dd3b2896091b137a2",
+  "run": 39553656864,
+  "schema": "ami-rust-native-sdk-composition-counter-v1",
+  "scope": "One synthetic raw job conclusion is changed in an isolated copy after a genuine positive SDK readback. The control reaches and tests the strict raw-job gate before artifact or native-slice parsing; original provider evidence is preserved. No API or dispatch operation is performed.",
+  "status": "PASS_SYNTHETIC_FAILED_RAW_JOB_REFUSED_DESPITE_ALL_PASS_SUMMARY",
+  "synthetic_job": "Native signed lifecycle (linux-x86_64)"
+}

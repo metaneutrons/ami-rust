@@ -1,0 +1,651 @@
+{
+  "candidate": {
+    "base": "ed2674778c7389b7dddee7d1a05867657e1b3ac5",
+    "compiled_input_audit": {
+      "all_path_byte_hash_pairs_identical": true,
+      "compiled_path_count": 83,
+      "current_audit_sha256": "665c10122d83f7b726304041fee495a975279c036e41bb37560d450c8169464f",
+      "previous_audit_sha256": "bf172273cf6edb21147af454e35800ce8d50b4d50bb0eb2c4e9e860d0a5114bc",
+      "status": "PASS_83_COMPILED_INPUTS_BYTE_IDENTICAL_TO_PR115",
+      "verified_source_bytes": 2433233
+    },
+    "development_record_schema": "ami-rust-native-evidence-retention-development-v1",
+    "head": "4d5579a6ea0a264970e728b3e5ebb77fb609df99",
+    "source_files": {
+      ".github/workflows/cargo-context-probe.yml": {
+        "bytes": 3903,
+        "sha256": "b8fd6043a12fee699d953f1204d8c0185c3690c16db575e5d7bfd54e8e735099"
+      },
+      ".github/workflows/cargo-qualify.yml": {
+        "bytes": 8735,
+        "sha256": "f67979defb0622c5d4ee6269e882f1e894b89a1e4f61daecae83054881f1b921"
+      },
+      ".github/workflows/public-replay.yml": {
+        "bytes": 30910,
+        "sha256": "8a5dde96e609c6dc3137849ea5394d50a50c4855e1a80748f4e94000ec06070e"
+      },
+      ".github/workflows/rc1-linux-git-transport-diagnostic.yml": {
+        "bytes": 17608,
+        "sha256": "93f72445f46f06cc9ef6bb530b990d52d66a90ed6d054493253c977d19953437"
+      },
+      ".github/workflows/sdk-qualify.yml": {
+        "bytes": 81522,
+        "sha256": "3264701a8e245d8fa50eb22adbce170f58a95a6293ca7bcb4d0c24727e43e34b"
+      },
+      "AGENTS.md": {
+        "bytes": 5484,
+        "sha256": "74162f5a7d173257fbe5b4683016f3b1f984e23f8a05cc56e8d445c340f87290"
+      },
+      "docs/hosted-cargo-context-probe.md": {
+        "bytes": 5015,
+        "sha256": "f9eb4abc422a0cfee06813353421c312cc8e496225785b344f00aa459678164e"
+      },
+      "docs/hosted-cargo-producer.md": {
+        "bytes": 2720,
+        "sha256": "b6003673532ffed117bd12fccbf01f2ae75e04518c4d3fded1f357a1202e9fd9"
+      },
+      "docs/local-storage-policy.md": {
+        "bytes": 2185,
+        "sha256": "2f4a86175945a32a49728652a4c49a9511ed6f5fd19937cb19efa6881b53664f"
+      },
+      "docs/public-release-replay.md": {
+        "bytes": 8202,
+        "sha256": "540c4c32fd5218882b8bab7f77af8ba22ab998c1e41a6ea9a42fe4a29e2ad321"
+      },
+      "docs/rust-cli-migration/evidence/rc1-linux-null-stderr-development-20261021.json": {
+        "bytes": 6259,
+        "sha256": "22ac52bca650f75e977fa2fff65fa90d4ddace7c5b2cac15b918f68a2bbd257a"
+      },
+      "docs/rust-cli-migration/evidence/rc1-native-evidence-retention-development-20261021.json": {
+        "bytes": 10700,
+        "sha256": "cb7a14d39e618067fb10ee77bb87ac31b96dc24df43395869c16f3f09a9bfa3c"
+      },
+      "docs/rust-cli-migration/native-producer.md": {
+        "bytes": 12924,
+        "sha256": "359a8504f0ebc1fb65d3b0a25e753153784bed6a1d4d68593b34a33dbd10b3ca"
+      },
+      "docs/rust-cli-migration/native-upgrade-qualification.md": {
+        "bytes": 5792,
+        "sha256": "89962b38eb8da7170b8e6fee46796c68b6dc9ba3b0852d194d50f36f6ee029d3"
+      },
+      "docs/staged-sdk-release.md": {
+        "bytes": 6603,
+        "sha256": "114c0dd2f890761eb1789dce5a3c5356321408eb85b536b5cdf36eaf93e0d3d2"
+      },
+      "release/ci-artifact-policy.json": {
+        "bytes": 583,
+        "sha256": "7f3098b84d87a0b713be627cd0e7b3bdeb8d8e41133a56b3a64bcc6557749c1a"
+      },
+      "release/ci_artifact_admission.py": {
+        "bytes": 5977,
+        "sha256": "af266c2bfe26edfd724022eaac2c9dd9a42fde593ffdc27cb6af8eacf4b97000"
+      },
+      "release/ci_native.py": {
+        "bytes": 174981,
+        "sha256": "4138d6cdf0de084906affed69496d438b125566ae2603c04107d990c09ba10dc"
+      },
+      "release/ci_sdk.py": {
+        "bytes": 118034,
+        "sha256": "dfcccc8b5d8b6121ab9c60dbcb1c7b4db57f2c9bacb6ffa46059064a4de0ea50"
+      },
+      "release/native-tooling-inputs.json": {
+        "bytes": 28840,
+        "sha256": "1c43fe0dfb01d5d203a82cc1a71b322131e7ca23c5a8966a200ebbf4e8755848"
+      },
+      "release/public_replay.py": {
+        "bytes": 69626,
+        "sha256": "c17df8e964da4dedd0a1acd2580daa14f3e4333536814590635c0524adee508a"
+      },
+      "release/test_ci_artifact_admission.py": {
+        "bytes": 10390,
+        "sha256": "ed2415763766a253c307e7c5457ad2439f9340194717e4e83304610aacaab008"
+      },
+      "release/test_ci_native.py": {
+        "bytes": 109050,
+        "sha256": "b50e601fdbab9b4137f3ea7b1fe8eb3cb4b32777ead5e3d642a8c039f757ad24"
+      },
+      "release/test_ci_sdk.py": {
+        "bytes": 67648,
+        "sha256": "5800f9b34ef5970b152eeb9cf29e7c755e174ee969fdaa21de5c5288f43f9b17"
+      },
+      "release/test_public_replay_workflow.py": {
+        "bytes": 17206,
+        "sha256": "a3102b605ca817b20c609fac267ac26c66e1cf4534eb05ef9d4cfd72899cd32f"
+      },
+      "release/test_sdk_workflow.py": {
+        "bytes": 33879,
+        "sha256": "fa90b9c1412536520000a3e6ca7c04104368383f9c2d2b97d46116857f72fc61"
+      },
+      "tooling/crates/xtask/src/consumer_observe.rs": {
+        "bytes": 86508,
+        "sha256": "994ba977ca0ce280a63e6b83f409eaa0348e8482c2ae7b1efe0e25619867cf79"
+      },
+      "tooling/crates/xtask/src/fork_runtime_probe.rs": {
+        "bytes": 35361,
+        "sha256": "63aa28239ac99b98bb105dbdfbedaf1019e00523b9ef2c541b197e4a8e13ba22"
+      },
+      "tooling/crates/xtask/src/null_probe.rs": {
+        "bytes": 24607,
+        "sha256": "a1825cb479c8357fdea9461bbed12a5a14723f0a52bc34afe7f4e2257fbaf68c"
+      },
+      "tools/consumer-enforcement-adapter/LINUX.md": {
+        "bytes": 14975,
+        "sha256": "8f7d6256091be3a3994a68edd76caf2b496d53fc1aff6c6807cb39d97c118490"
+      },
+      "tools/consumer-enforcement-adapter/README.md": {
+        "bytes": 7854,
+        "sha256": "d134c32ce46360998bf6009224f05b9e2acd79d7ca9ee35b95a513b42727166e"
+      }
+    },
+    "tree": "25d3b14be3c779d34d713a47d405206b49cf9e82"
+  },
+  "focused_run": {
+    "all_jobs_terminal_success": true,
+    "artifact": {
+      "bytes": 7780831,
+      "id": 12323328269,
+      "member_count": 257,
+      "name": "rc1-linux-git-transport-39549340932-1",
+      "sha256": "bab6e45f761536574957e6df2f42c42a989f0698b6ed04e59258f39aa41ec7bd"
+    },
+    "attempt": 1,
+    "conclusion": "success",
+    "host_link": {
+      "final_cleanup_empty": true,
+      "library_sequence": [
+        "-Wl,-Bdynamic",
+        "-lgcc_s",
+        "-lutil",
+        "-lrt",
+        "-lpthread",
+        "-lm",
+        "-ldl",
+        "-lc"
+      ],
+      "linker_wrapper_sha256": "7f70580541f73167127f22c9e04b6b038af4febf06471dfb574f639830bf828a",
+      "marker": "ami-rust-host-link-ok",
+      "positive_elf_bytes": 6440,
+      "positive_elf_sha256": "9664a91f1a4d01e6816e508b3fda761ba2cf14e9eb74b354a6493780b2623a17",
+      "probe_status": "PASS",
+      "scope": "Cause-specific proof that GCC's exact -B<rust-component>/lib/rustlib/x86_64-unknown-linux-gnu/bin/gcc-ld -fuse-ld=lld route selects, executes, and links through the pinned ld.lld wrapper under the Linux enforcement adapter. The wrapper-only counter proves the missing exec-hash admission causes Permission denied. This is not a Rust host build, SDK build, or RC1 acceptance.",
+      "source_sha": "1ac5dd39312d769db03a8f9006046f0a5edc7246",
+      "supervised_test_logs": {
+        "linux-cold-rustc-runtime-regression": {
+          "stderr_bytes": 0,
+          "stderr_member": "cold-runtime-resource-output/linux-cold-rustc-runtime-regression.stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 199,
+          "stdout_member": "cold-runtime-resource-output/linux-cold-rustc-runtime-regression.stdout.log",
+          "stdout_sha256": "9feda2424aaf3d3bd686b7decbcd12f77d6caf181eff790bad03355457d9c3b5"
+        },
+        "linux-pinned-host-linker-regression": {
+          "stderr_bytes": 0,
+          "stderr_member": "cold-runtime-resource-output/linux-pinned-host-linker-regression.stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 188,
+          "stdout_member": "cold-runtime-resource-output/linux-pinned-host-linker-regression.stdout.log",
+          "stdout_sha256": "a8bdd8ebf382d46d97a9cd3e0410d46d51dc500c0400bb6112ba159c103987a9"
+        },
+        "linux-pinned-rustc-null-stderr-regression": {
+          "stderr_bytes": 0,
+          "stderr_member": "cold-runtime-resource-output/linux-pinned-rustc-null-stderr-regression.stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 194,
+          "stdout_member": "cold-runtime-resource-output/linux-pinned-rustc-null-stderr-regression.stdout.log",
+          "stdout_sha256": "d615dfb218d1401fdb0fc55934a03ee2ea7daea93d5bf68fe4021eef7a9f8a3b"
+        }
+      },
+      "system_archive_inputs_before_and_source_bound_after_check": [
+        {
+          "alternate_tree_or_library_grant": false,
+          "build_input_count": 1,
+          "bytes": 8,
+          "canonical_path": "/usr/lib/x86_64-linux-gnu/libutil.a",
+          "exact_read_file": true,
+          "name": "libutil.a",
+          "sha256": "f0a17a43c74d2fe5474fa2fd29c8f14799e777d7d75a2cc4d11c20a6e7b161c5"
+        },
+        {
+          "alternate_tree_or_library_grant": false,
+          "build_input_count": 1,
+          "bytes": 8,
+          "canonical_path": "/usr/lib/x86_64-linux-gnu/librt.a",
+          "exact_read_file": true,
+          "name": "librt.a",
+          "sha256": "f0a17a43c74d2fe5474fa2fd29c8f14799e777d7d75a2cc4d11c20a6e7b161c5"
+        },
+        {
+          "alternate_tree_or_library_grant": false,
+          "build_input_count": 1,
+          "bytes": 8,
+          "canonical_path": "/usr/lib/x86_64-linux-gnu/libpthread.a",
+          "exact_read_file": true,
+          "name": "libpthread.a",
+          "sha256": "f0a17a43c74d2fe5474fa2fd29c8f14799e777d7d75a2cc4d11c20a6e7b161c5"
+        },
+        {
+          "alternate_tree_or_library_grant": false,
+          "build_input_count": 1,
+          "bytes": 8,
+          "canonical_path": "/usr/lib/x86_64-linux-gnu/libdl.a",
+          "exact_read_file": true,
+          "name": "libdl.a",
+          "sha256": "f0a17a43c74d2fe5474fa2fd29c8f14799e777d7d75a2cc4d11c20a6e7b161c5"
+        },
+        {
+          "alternate_tree_or_library_grant": false,
+          "build_input_count": 1,
+          "bytes": 1018144,
+          "canonical_path": "/usr/lib/x86_64-linux-gnu/libmvec.so.1",
+          "exact_read_file": true,
+          "name": "libmvec.so.1",
+          "sha256": "57329ee0018b8fd8f8e51af5f87c723b6ecdf04679f4493134beab0f45d58ec5"
+        }
+      ],
+      "system_archive_omissions": [
+        {
+          "bytes": 8,
+          "canonical_path": "/usr/lib/x86_64-linux-gnu/libutil.a",
+          "child_exit_code": 1,
+          "cleanup_empty": true,
+          "name": "libutil.a",
+          "policy_omission": {
+            "bytes_removed": 46,
+            "counter_sha256": "ebe551495bfb645a81f1d122d6416a9529afbb55241e3694bcc47e8f550b186b",
+            "omitted_rule": "read-file /usr/lib/x86_64-linux-gnu/libutil.a",
+            "original_sha256": "0c6873e42f5fb50522d0ea13ec406278919f44f1f40ec9dbc5c8b79a4f9f6531"
+          },
+          "sha256": "f0a17a43c74d2fe5474fa2fd29c8f14799e777d7d75a2cc4d11c20a6e7b161c5",
+          "stderr_sha256": "2916d2e2560efefbef1c1d3dda11ce27f4816a86ddd204eab691452185e39589"
+        },
+        {
+          "bytes": 8,
+          "canonical_path": "/usr/lib/x86_64-linux-gnu/librt.a",
+          "child_exit_code": 1,
+          "cleanup_empty": true,
+          "name": "librt.a",
+          "policy_omission": {
+            "bytes_removed": 44,
+            "counter_sha256": "f850736b30ae71a06b6691738a603c82df04194b2d669d633018f156e0032b83",
+            "omitted_rule": "read-file /usr/lib/x86_64-linux-gnu/librt.a",
+            "original_sha256": "0c6873e42f5fb50522d0ea13ec406278919f44f1f40ec9dbc5c8b79a4f9f6531"
+          },
+          "sha256": "f0a17a43c74d2fe5474fa2fd29c8f14799e777d7d75a2cc4d11c20a6e7b161c5",
+          "stderr_sha256": "0c71e78a4c56240f005e024a11807efeb86bbfefaa8ce3912ca816649038d82f"
+        },
+        {
+          "bytes": 8,
+          "canonical_path": "/usr/lib/x86_64-linux-gnu/libpthread.a",
+          "child_exit_code": 1,
+          "cleanup_empty": true,
+          "name": "libpthread.a",
+          "policy_omission": {
+            "bytes_removed": 49,
+            "counter_sha256": "3a679b4330d5102472cd17a244442859ed5fd1e3996a270679c8a03bcf32de12",
+            "omitted_rule": "read-file /usr/lib/x86_64-linux-gnu/libpthread.a",
+            "original_sha256": "0c6873e42f5fb50522d0ea13ec406278919f44f1f40ec9dbc5c8b79a4f9f6531"
+          },
+          "sha256": "f0a17a43c74d2fe5474fa2fd29c8f14799e777d7d75a2cc4d11c20a6e7b161c5",
+          "stderr_sha256": "748896d3a3ecd68318b314fabdd95a0318dc4e0f5c9e678e34d03c30d1058388"
+        },
+        {
+          "bytes": 8,
+          "canonical_path": "/usr/lib/x86_64-linux-gnu/libdl.a",
+          "child_exit_code": 1,
+          "cleanup_empty": true,
+          "name": "libdl.a",
+          "policy_omission": {
+            "bytes_removed": 44,
+            "counter_sha256": "774d4cefbe92b8be1dad1762b24722f3b73f8682ca57af9c47b465b6a1313f5d",
+            "omitted_rule": "read-file /usr/lib/x86_64-linux-gnu/libdl.a",
+            "original_sha256": "0c6873e42f5fb50522d0ea13ec406278919f44f1f40ec9dbc5c8b79a4f9f6531"
+          },
+          "sha256": "f0a17a43c74d2fe5474fa2fd29c8f14799e777d7d75a2cc4d11c20a6e7b161c5",
+          "stderr_sha256": "0b939bdb2529b794bd9a14300f570c98a4a82ca0e744bceadb52d8ba3dc5a3dc"
+        },
+        {
+          "bytes": 1018144,
+          "canonical_path": "/usr/lib/x86_64-linux-gnu/libmvec.so.1",
+          "child_exit_code": 1,
+          "cleanup_empty": true,
+          "name": "libmvec.so.1",
+          "policy_omission": {
+            "bytes_removed": 49,
+            "counter_sha256": "cd896ed753f2f0e71554decd52e4090de8d9a9e440f87ff402a57815f48e40ec",
+            "omitted_rule": "read-file /usr/lib/x86_64-linux-gnu/libmvec.so.1",
+            "original_sha256": "0c6873e42f5fb50522d0ea13ec406278919f44f1f40ec9dbc5c8b79a4f9f6531"
+          },
+          "sha256": "57329ee0018b8fd8f8e51af5f87c723b6ecdf04679f4493134beab0f45d58ec5",
+          "stderr_sha256": "2d2a4f9a9640198aaced26f593b221f2d848ecb8dec59a9e9212d3cf97e49e0f"
+        }
+      ],
+      "wrapper_exec_omission": {
+        "bytes_removed": 247,
+        "counter_sha256": "192e2718ef0b2e862e2bd45bb4679c36d198cf69dc6e92798c0b2f6909738dfa",
+        "omitted_rule": "exec-hash /home/runner/work/_temp/ami-rust-linux-cold-runtime-work/case/extracted/rustc-nightly-x86_64-unknown-linux-gnu/rustc/lib/rustlib/x86_64-unknown-linux-gnu/bin/gcc-ld/ld.lld 7f70580541f73167127f22c9e04b6b038af4febf06471dfb574f639830bf828a",
+        "original_sha256": "0c6873e42f5fb50522d0ea13ec406278919f44f1f40ec9dbc5c8b79a4f9f6531"
+      }
+    },
+    "job_count": 1,
+    "null_stderr": {
+      "counter_denial": {
+        "kind": "PermissionDenied",
+        "metadata_exists": false,
+        "raw_os_error": 13
+      },
+      "invocation_equality": {
+        "argv": [
+          "/home/runner/work/_temp/ami-rust-linux-cold-runtime-work/case/extracted/rustc-nightly-x86_64-unknown-linux-gnu/rustc/bin/rustc",
+          "--crate-name",
+          "ami_rust_null_probe",
+          "--crate-type",
+          "lib",
+          "--emit",
+          "metadata",
+          "--edition",
+          "2021",
+          "/home/runner/work/_temp/ami-rust-linux-git-transport/cold-runtime-resource-output/null-stderr-probe/null-probe.rs",
+          "-o",
+          "/home/runner/work/_temp/ami-rust-linux-cold-runtime-work/null-stderr/build/null-probe.rmeta"
+        ],
+        "compiler": "/home/runner/work/_temp/ami-rust-linux-cold-runtime-work/case/extracted/rustc-nightly-x86_64-unknown-linux-gnu/rustc/bin/rustc",
+        "cwd": "/home/runner/work/_temp/ami-rust-linux-cold-runtime-work/null-stderr/build",
+        "ordinary_cwd_callsite_source_bound": true,
+        "positive_and_counter_child_fields_equal": true,
+        "source": "/home/runner/work/_temp/ami-rust-linux-git-transport/cold-runtime-resource-output/null-stderr-probe/null-probe.rs"
+      },
+      "observations_sha256": "642deb569fddb371c37e4ee15040d93160fe66c7977ce0d24b15fe6d3333e49e",
+      "ordinary_positive_metadata": {
+        "byte_identical": true,
+        "bytes": 1153,
+        "sha256": "00cbb631c1bcae67eedef11f4482883d517294957bbe751d2979b5ff16dd6da1"
+      },
+      "policy_omission": {
+        "all_other_policy_bytes_identical": true,
+        "bytes_removed": 21,
+        "rule": "write-null /dev/null"
+      },
+      "probe_sha256": "308ad3efdcbb954ba5ed88a48a6d2bbd18bdbbc4ff067b57c21fcf62380dc2de",
+      "raw_test_log": {
+        "stderr_bytes": 0,
+        "stderr_member": "cold-runtime-resource-output/linux-pinned-rustc-null-stderr-regression.stderr.log",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 194,
+        "stdout_member": "cold-runtime-resource-output/linux-pinned-rustc-null-stderr-regression.stdout.log",
+        "stdout_sha256": "d615dfb218d1401fdb0fc55934a03ee2ea7daea93d5bf68fe4021eef7a9f8a3b"
+      },
+      "scope": "Cause-specific pinned Linux rustc null-stderr process admission only; no full host build or RC1 acceptance claim.",
+      "status": "PASS"
+    },
+    "run": 39549340932
+  },
+  "inherited_interpreter_controls": {
+    "linux-x86_64": {
+      "adapter_report_count": 10,
+      "case_count": 15,
+      "case_names": [
+        "unconfined_direct",
+        "unconfined_transitive",
+        "unconfined_shebang",
+        "unconfined_embedded",
+        "native_descendant_missing_stdin",
+        "native_positive",
+        "native_fork_positive",
+        "private_ipc_and_network_refusals",
+        "null_write_omitted",
+        "null_write_allowed",
+        "invalid_null_write_directive",
+        "restricted_direct",
+        "restricted_transitive",
+        "restricted_shebang",
+        "restricted_embedded"
+      ],
+      "controls_sha256": "7e9364e89dd8138361c83af86f364153bef92b4419b796dbe6d4bb05a14a8d0a",
+      "linux_diagnostic": {
+        "case": "native_descendant_missing_stdin",
+        "native_fork_positive_stdout": "ADAPTER_NATIVE_FORK_DESCENDANT_POSITIVE",
+        "outer_exit_code": 2,
+        "private_ipc_network_denials": 18
+      },
+      "status": "PASS_NARROW_NATIVE_INTERPRETER_CONTROLS"
+    },
+    "macos-aarch64": {
+      "adapter_report_count": 7,
+      "case_count": 12,
+      "case_names": [
+        "unconfined_direct",
+        "unconfined_transitive",
+        "unconfined_shebang",
+        "unconfined_embedded",
+        "native_positive",
+        "null_write_omitted",
+        "null_write_allowed",
+        "invalid_null_write_directive",
+        "restricted_direct",
+        "restricted_transitive",
+        "restricted_shebang",
+        "restricted_embedded"
+      ],
+      "controls_sha256": "0cc4145e0a79dd71e345da50c7aa7ff322c51bff235bd33c6fe4344af2d9bb73",
+      "linux_diagnostic": null,
+      "status": "PASS_NARROW_NATIVE_INTERPRETER_CONTROLS"
+    }
+  },
+  "raw_job_logs": [
+    {
+      "bytes": 45165,
+      "job_id": 119054703610,
+      "name": "Installer fixtures (ubuntu-24.04)",
+      "run": 39549340970,
+      "sha256": "91a6b5210bf7eb5404e50799bdd2e18292c69892cdad5f79db9c16b29eb6faaf"
+    },
+    {
+      "bytes": 17798,
+      "job_id": 119054703776,
+      "name": "Select Rust migration checks",
+      "run": 39549340970,
+      "sha256": "043693bba7fdf04611b8e4aba1ab8d8a9607808bff3076025b154b08cb2f9152"
+    },
+    {
+      "bytes": 28831,
+      "job_id": 119054703848,
+      "name": "Packaging fixtures (Ubuntu 24.04)",
+      "run": 39549340970,
+      "sha256": "fb10d80fee3c0fbbefbb10a797edd5e8749e2a6304ebd7775a80983dfdccce9b"
+    },
+    {
+      "bytes": 44831,
+      "job_id": 119054703909,
+      "name": "Installer fixtures (macos-26)",
+      "run": 39549340970,
+      "sha256": "75e81580286b1aa52d892e7c32dc7f730e1c42e97932bee2cd7cd38e828d545c"
+    },
+    {
+      "bytes": 120945,
+      "job_id": 119054750334,
+      "name": "Rust migration fixtures (ubuntu-24.04)",
+      "run": 39549340970,
+      "sha256": "3518fd302eeecbe12ddf588e9b5733decd8bec7ca1ee7cfb71600ae05ea25ba9"
+    },
+    {
+      "bytes": 122572,
+      "job_id": 119054750337,
+      "name": "Rust migration fixtures (macos-26)",
+      "run": 39549340970,
+      "sha256": "665c021216208e48e099d1045857781302e865c408282114035eee755c87942e"
+    },
+    {
+      "bytes": 2991,
+      "job_id": 119055817199,
+      "name": "CI Success",
+      "run": 39549340970,
+      "sha256": "8904de709cb2ebdded82397fd610c3b259777798f5d1e154b906df892a9968aa"
+    },
+    {
+      "bytes": 48443,
+      "job_id": 119054703329,
+      "name": "Linux Git helper process observations",
+      "run": 39549340932,
+      "sha256": "d7bb6144e97724a95b4eb452a66fe81c4f5d6c6bbacb951c45fc272254de2574"
+    }
+  ],
+  "regular_ci": {
+    "all_jobs_terminal_success": true,
+    "attempt": 1,
+    "conclusion": "success",
+    "historical_checkout_commit": "1ac5dd39312d769db03a8f9006046f0a5edc7246",
+    "hosts": [
+      {
+        "bytes": 77506,
+        "checkout_commit": "1ac5dd39312d769db03a8f9006046f0a5edc7246",
+        "checkout_tree": "25d3b14be3c779d34d713a47d405206b49cf9e82",
+        "historical_pairs": [
+          {
+            "binding_sha256": "6c21d27e81a453981c63a59cfe8b49457d539003dd559755d3310419080feb52",
+            "cases": 9,
+            "kind": "transactions",
+            "report_sha256": "44c3c5f8b12c06cfccb868d7204041a34057d978ac05d360ebd08d083e992bee",
+            "source_file_count": 59
+          },
+          {
+            "binding_sha256": "d601ec3bbcd5993ff53f2438c0aa6b6fdc17cd3f109dc8a767b49e67d15f35d9",
+            "cases": 50,
+            "kind": "filesystem",
+            "report_sha256": "437655ef02ae73b53d479be1ec17e132e6968387863ef53a8c862850759f9c40",
+            "source_file_count": 59
+          },
+          {
+            "binding_sha256": "f64a8e53f7822f41093673a26abc075e130fd3175ca3180691ae488cb02c828f",
+            "cases": 2,
+            "kind": "receipt_lifecycle",
+            "report_sha256": "18e50bcbeb5837796eac53c0f0b350414abb6d0bec9bba1cb6c62152b57e6433",
+            "source_file_count": 62
+          }
+        ],
+        "host": "macos-aarch64",
+        "id": 12322033927,
+        "interpreter_controls": {
+          "adapter_report_count": 7,
+          "case_count": 12,
+          "case_names": [
+            "unconfined_direct",
+            "unconfined_transitive",
+            "unconfined_shebang",
+            "unconfined_embedded",
+            "native_positive",
+            "null_write_omitted",
+            "null_write_allowed",
+            "invalid_null_write_directive",
+            "restricted_direct",
+            "restricted_transitive",
+            "restricted_shebang",
+            "restricted_embedded"
+          ],
+          "controls_sha256": "0cc4145e0a79dd71e345da50c7aa7ff322c51bff235bd33c6fe4344af2d9bb73",
+          "linux_diagnostic": null,
+          "status": "PASS_NARROW_NATIVE_INTERPRETER_CONTROLS"
+        },
+        "member_count": 45,
+        "migration_job": "Rust migration fixtures (macos-26)",
+        "name": "historical-comparison-aarch64-apple-darwin-39549340970-1",
+        "parser_cases": 131,
+        "parser_log_members": [
+          "ami-rust-historical-parsers/work/logs/historical-parser-current-rust-131-cases.stderr.log",
+          "ami-rust-historical-parsers/work/logs/historical-parser-current-rust-131-cases.stdout.log",
+          "ami-rust-historical-parsers/work/logs/pinned-cargo-identity.stderr.log",
+          "ami-rust-historical-parsers/work/logs/pinned-cargo-identity.stdout.log",
+          "ami-rust-historical-parsers/work/logs/pinned-rustc-identity.stderr.log",
+          "ami-rust-historical-parsers/work/logs/pinned-rustc-identity.stdout.log",
+          "ami-rust-historical-parsers/work/logs/pinned-rustdoc-identity.stderr.log",
+          "ami-rust-historical-parsers/work/logs/pinned-rustdoc-identity.stdout.log"
+        ],
+        "sha256": "d9b30025ce453518f0a4d532f4ebff721f8928bdac22160d71edd119fa48fcd8",
+        "total_pairs": 192,
+        "triple": "aarch64-apple-darwin",
+        "verified_candidate_source_bytes": 5827032
+      },
+      {
+        "bytes": 85719,
+        "checkout_commit": "1ac5dd39312d769db03a8f9006046f0a5edc7246",
+        "checkout_tree": "25d3b14be3c779d34d713a47d405206b49cf9e82",
+        "historical_pairs": [
+          {
+            "binding_sha256": "def090ea0cf9958b18919841236c93e111010a7e9fa98ff9af024e924065f9c2",
+            "cases": 9,
+            "kind": "transactions",
+            "report_sha256": "9e712876cb1a6d711d914e91351dab89162e90ffafe8be532cf3c8e648fdaeca",
+            "source_file_count": 59
+          },
+          {
+            "binding_sha256": "43ba4efdefa3f0d1a04dafb421caabe1bbae158d72312fd37f03784fd767d456",
+            "cases": 50,
+            "kind": "filesystem",
+            "report_sha256": "90e613719093bbc551c742695ae31c72f182351bb5dff359c985ff313540643f",
+            "source_file_count": 59
+          },
+          {
+            "binding_sha256": "1118e027a2830516e65e7121aaa00e997f889621fc739585eb13cb9f0c0d302c",
+            "cases": 2,
+            "kind": "receipt_lifecycle",
+            "report_sha256": "2f49859e9e2f19f8c73dc1e351b87a9f88a9761c4c078337e1f63c7fb8a4499a",
+            "source_file_count": 62
+          }
+        ],
+        "host": "linux-x86_64",
+        "id": 12322838940,
+        "interpreter_controls": {
+          "adapter_report_count": 10,
+          "case_count": 15,
+          "case_names": [
+            "unconfined_direct",
+            "unconfined_transitive",
+            "unconfined_shebang",
+            "unconfined_embedded",
+            "native_descendant_missing_stdin",
+            "native_positive",
+            "native_fork_positive",
+            "private_ipc_and_network_refusals",
+            "null_write_omitted",
+            "null_write_allowed",
+            "invalid_null_write_directive",
+            "restricted_direct",
+            "restricted_transitive",
+            "restricted_shebang",
+            "restricted_embedded"
+          ],
+          "controls_sha256": "7e9364e89dd8138361c83af86f364153bef92b4419b796dbe6d4bb05a14a8d0a",
+          "linux_diagnostic": {
+            "case": "native_descendant_missing_stdin",
+            "native_fork_positive_stdout": "ADAPTER_NATIVE_FORK_DESCENDANT_POSITIVE",
+            "outer_exit_code": 2,
+            "private_ipc_network_denials": 18
+          },
+          "status": "PASS_NARROW_NATIVE_INTERPRETER_CONTROLS"
+        },
+        "member_count": 54,
+        "migration_job": "Rust migration fixtures (ubuntu-24.04)",
+        "name": "historical-comparison-x86_64-unknown-linux-gnu-39549340970-1",
+        "parser_cases": 131,
+        "parser_log_members": [
+          "ami-rust-historical-parsers/work/logs/historical-parser-current-rust-131-cases.stderr.log",
+          "ami-rust-historical-parsers/work/logs/historical-parser-current-rust-131-cases.stdout.log",
+          "ami-rust-historical-parsers/work/logs/pinned-cargo-identity.stderr.log",
+          "ami-rust-historical-parsers/work/logs/pinned-cargo-identity.stdout.log",
+          "ami-rust-historical-parsers/work/logs/pinned-rustc-identity.stderr.log",
+          "ami-rust-historical-parsers/work/logs/pinned-rustc-identity.stdout.log",
+          "ami-rust-historical-parsers/work/logs/pinned-rustdoc-identity.stderr.log",
+          "ami-rust-historical-parsers/work/logs/pinned-rustdoc-identity.stdout.log"
+        ],
+        "sha256": "4d773947a0eeb666aa2eeb619fe69d9c0851e5a06bc92aa13146c8d6091c870b",
+        "total_pairs": 192,
+        "triple": "x86_64-unknown-linux-gnu",
+        "verified_candidate_source_bytes": 5827032
+      }
+    ],
+    "job_count": 7,
+    "run": 39549340970
+  },
+  "schema": "ami-rust-pr116-native-evidence-ci-a1-offline-readback-v1",
+  "scope": "Exact PR116 source-bound regular CI, inherited both-host historical/interpreter controls, and cause-specific Linux pinned-rustc runtime/linker/null-stderr probes only. Full authenticated CLI cold preparation, Rust host build, Cargo or full SDK build, both-host SDK qualification, protected integration, and RC1 acceptance remain open.",
+  "status": "PASS_EXACT_SOURCE_REGULAR_CI_BOTH_HOSTS_AND_FOCUSED_NULL_STDERR_PROBE"
+}
