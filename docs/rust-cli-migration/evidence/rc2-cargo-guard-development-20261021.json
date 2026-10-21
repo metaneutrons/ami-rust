@@ -1,0 +1,795 @@
+{
+  "schema": "ami-rust-rc2-cargo-guard-development-evidence-v1",
+  "status": "PASS_LOCAL_MACOS_SYNTHETIC_CALLBACK_PLUMBING_ONLY",
+  "source": {
+    "schema": "ami-rust-experimental-cargo-guard-source-v1",
+    "upstream_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+    "base_patches": [
+      {
+        "repository_path": "host/cargo-repro/cargo-metadata.patch",
+        "sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f"
+      },
+      {
+        "repository_path": "host/cargo-storage/cargo-storage.patch",
+        "sha256": "220b426e66497fbe8a4c5d9f1783848262e7e963261623019d5fb46cdacda497"
+      }
+    ],
+    "additional_patch": {
+      "repository_path": "host/cargo-guard/cargo-guard.patch",
+      "sha256": "eb93de6493914e526b36c2cd21c1c78b03647cb14f2472b9954630b3e57b386d"
+    },
+    "changed_files": [
+      {
+        "path": "src/bin/cargo/cli.rs",
+        "before_sha256": "83f924ab914bdeebc182f77a8f3311b2be408a2a0aeac44d0e77020d66e2391e",
+        "after_sha256": "8b19a9b0953e0e1659dee9d8f26ac20d26a886566a1bd15e321fac65fae83e11"
+      },
+      {
+        "path": "src/bin/cargo/main.rs",
+        "before_sha256": "9d2d4045dbb45fdb62bc7d98f2d036d9d9ed9e6fe18037167d621e2f3b620808",
+        "after_sha256": "cb34946166c17168aac431c7ed461668e00366d5414816459a3cfc7b4b1deabf"
+      },
+      {
+        "path": "src/context/ami_guard.rs",
+        "before_sha256": null,
+        "after_sha256": "ab2b20e1fb1b988c4240e54daf501536674e3e2cb5357fe001c75b5ba4c97b29"
+      },
+      {
+        "path": "src/context/mod.rs",
+        "before_sha256": "5c4a89ac9ab4aaaa48af4cb11413b7d71e434d46f69a98f7e32247292011dc3b",
+        "after_sha256": "6977d871f0cd8d7c8ccd4c27219b30487a828e17bf9863787b9362305213869d"
+      },
+      {
+        "path": "src/sources/config.rs",
+        "before_sha256": "ec11e042d9d05e54e1395fff96dc6f699f0123112e4b8fe4a5c8c1402d1d65b2",
+        "after_sha256": "cb771913c46c76efbb09ccc67a73c28ca502dfc3807447eb047ba310b989faa8"
+      }
+    ],
+    "effective_source": {
+      "algorithm": "SHA-256 of sorted compact JSON relative-file-path to SHA-256 map, UTF-8",
+      "file_count": 2929,
+      "sha256": "e501d9c45ffbe62dad90cecd2c3fe63cead8ef48b833f1ba29ed022a2443e78d"
+    },
+    "symlink_count": 121,
+    "qualified_component": false,
+    "status": "experimental-patch-only-not-selected-by-existing-producers"
+  },
+  "host": "macos-aarch64",
+  "host_rustc_sha256": "766eda9d8f53afd6fc7f27b3cd2e444dd22afacb5afa710a5625fc8e45b8c941",
+  "host_cargo_sha256": "6e17e865f3a20dd55a1d212f849f58b77124179f0de7c52973096d84ba34118d",
+  "derived_cargo": {
+    "bytes": 38350512,
+    "sha256": "6ceb11a6d1a9c46b4ed19fb61b0ddc4d0754c7ed624035f5b89cbf378e4d136f",
+    "version": "cargo 1.99.0 (3efb1f477 2026-07-17)\nrelease: 1.99.0\ncommit-hash: 3efb1f477e99b42974b982d939fd100303cdf7db\ncommit-date: 2026-07-17\nhost: aarch64-apple-darwin\nlibgit2: 1.9.4 (sys:0.21.0 vendored)\nlibcurl: 8.7.1 (sys:0.4.90+curl-8.21.0 system ssl:(SecureTransport) LibreSSL/3.3.6)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Mac OS 26.5.1 [64-bit]\n"
+  },
+  "build": {
+    "receipt": {
+      "retained_receipt": "rc2-cargo-guard-hot-build-a3/result.json",
+      "sha256": "1ba2f1f2badb78145580d8ed1d26815656f0702ed52dfd3e940294d8029106b9"
+    },
+    "scope": "Local macOS early input guard development using cloned build cache and historical remap flags. Not fresh production, relocation, native activation policy, Linux, full RC2, native AROS, no-Python or release qualification.",
+    "existing_storage_path_units": 8,
+    "supervision": {
+      "command_child_tree_peak_rss_bytes": 2132819968,
+      "commands": [
+        {
+          "elapsed_seconds": 0.826,
+          "exit_code": 0,
+          "label": "compile-storage-path-units",
+          "managed_peak_observed_bytes": 2762557985,
+          "rss_peak_observed_bytes": 3145728,
+          "stderr_log": "logs/compile-storage-path-units.stderr.log",
+          "stdout_log": "logs/compile-storage-path-units.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 0.788,
+          "exit_code": 0,
+          "label": "storage-path-units",
+          "managed_peak_observed_bytes": 2762558765,
+          "rss_peak_observed_bytes": 32768,
+          "stderr_log": "logs/storage-path-units.stderr.log",
+          "stdout_log": "logs/storage-path-units.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 76.464,
+          "exit_code": 0,
+          "label": "build-derived-cargo",
+          "managed_peak_observed_bytes": 2796863714,
+          "rss_peak_observed_bytes": 2132819968,
+          "stderr_log": "logs/build-derived-cargo.stderr.log",
+          "stdout_log": "logs/build-derived-cargo.stdout.log",
+          "stop_reason": null
+        },
+        {
+          "elapsed_seconds": 1.382,
+          "exit_code": 0,
+          "label": "derived-cargo-version",
+          "managed_peak_observed_bytes": 2762632264,
+          "rss_peak_observed_bytes": 32768,
+          "stderr_log": "logs/derived-cargo-version.stderr.log",
+          "stdout_log": "logs/derived-cargo-version.stdout.log",
+          "stop_reason": null
+        }
+      ],
+      "conservative_driver_plus_child_peak_rss_bytes": 2221195264,
+      "driver_peak_rss_bytes": 88375296,
+      "limits": {
+        "aggregate_rss_bytes": 4294967296,
+        "command_seconds": 1200,
+        "log_bytes": 16777216,
+        "workspace_bytes": 12884901888
+      },
+      "logs_bytes": 1346,
+      "workspace_peak_bytes": 2796863714
+    }
+  },
+  "runtime": {
+    "receipt": {
+      "retained_receipt": "rc2-cargo-early-guard-runtime-a3/output/result.json",
+      "sha256": "b03a78980c32d4fcb920af7f91fb75a953bb560f3c5fa226558ba8ee4d025b92"
+    },
+    "scope": "macOS synthetic native callback transport and actual early Cargo configuration/command hooks. No native activation authentication/policy, target/cfg graph completion, Linux, AROS or RC2 acceptance.",
+    "command_count": 43,
+    "commands": [
+      {
+        "label": "compile-native-synthetic-callback",
+        "exit_code": 0,
+        "stop_reason": null,
+        "elapsed_seconds": 0.346,
+        "rss_peak_observed_bytes": 108707840,
+        "managed_peak_observed_bytes": 2215439760,
+        "stdout_log": "logs/compile-native-synthetic-callback.stdout.log",
+        "stderr_log": "logs/compile-native-synthetic-callback.stderr.log"
+      },
+      {
+        "label": "original-absent-selector-metadata",
+        "exit_code": 0,
+        "stop_reason": null,
+        "elapsed_seconds": 0.214,
+        "rss_peak_observed_bytes": 32768,
+        "managed_peak_observed_bytes": 2215442775,
+        "stdout_log": "logs/original-absent-selector-metadata.stdout.log",
+        "stderr_log": "logs/original-absent-selector-metadata.stderr.log"
+      },
+      {
+        "label": "derived-absent-selector-metadata",
+        "exit_code": 0,
+        "stop_reason": null,
+        "elapsed_seconds": 0.219,
+        "rss_peak_observed_bytes": 5718016,
+        "managed_peak_observed_bytes": 2215445111,
+        "stdout_log": "logs/derived-absent-selector-metadata.stdout.log",
+        "stderr_log": "logs/derived-absent-selector-metadata.stderr.log"
+      },
+      {
+        "label": "guarded-metadata-no-deps",
+        "exit_code": 0,
+        "stop_reason": null,
+        "elapsed_seconds": 0.341,
+        "rss_peak_observed_bytes": 15384576,
+        "managed_peak_observed_bytes": 2215457273,
+        "stdout_log": "logs/guarded-metadata-no-deps.stdout.log",
+        "stderr_log": "logs/guarded-metadata-no-deps.stderr.log"
+      },
+      {
+        "label": "configuration-refusal",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.212,
+        "rss_peak_observed_bytes": 4390912,
+        "managed_peak_observed_bytes": 2215461715,
+        "stdout_log": "logs/configuration-refusal.stdout.log",
+        "stderr_log": "logs/configuration-refusal.stderr.log"
+      },
+      {
+        "label": "command-refusal",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.208,
+        "rss_peak_observed_bytes": 6012928,
+        "managed_peak_observed_bytes": 2215471731,
+        "stdout_log": "logs/command-refusal.stdout.log",
+        "stderr_log": "logs/command-refusal.stderr.log"
+      },
+      {
+        "label": "version-refusal",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.215,
+        "rss_peak_observed_bytes": 5832704,
+        "managed_peak_observed_bytes": 2215476083,
+        "stdout_log": "logs/version-refusal.stdout.log",
+        "stderr_log": "logs/version-refusal.stderr.log"
+      },
+      {
+        "label": "list-refusal",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.217,
+        "rss_peak_observed_bytes": 5947392,
+        "managed_peak_observed_bytes": 2215480390,
+        "stdout_log": "logs/list-refusal.stdout.log",
+        "stderr_log": "logs/list-refusal.stderr.log"
+      },
+      {
+        "label": "unsupported-test",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.226,
+        "rss_peak_observed_bytes": 5750784,
+        "managed_peak_observed_bytes": 2215481129,
+        "stdout_log": "logs/unsupported-test.stdout.log",
+        "stderr_log": "logs/unsupported-test.stderr.log"
+      },
+      {
+        "label": "unsupported-external",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.223,
+        "rss_peak_observed_bytes": 5931008,
+        "managed_peak_observed_bytes": 2215481876,
+        "stdout_log": "logs/unsupported-external.stdout.log",
+        "stderr_log": "logs/unsupported-external.stderr.log"
+      },
+      {
+        "label": "unsupported-explain",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.215,
+        "rss_peak_observed_bytes": 5816320,
+        "managed_peak_observed_bytes": 2215482634,
+        "stdout_log": "logs/unsupported-explain.stdout.log",
+        "stderr_log": "logs/unsupported-explain.stderr.log"
+      },
+      {
+        "label": "duplicate-overlay-direct",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.224,
+        "rss_peak_observed_bytes": 5767168,
+        "managed_peak_observed_bytes": 2215483401,
+        "stdout_log": "logs/duplicate-overlay-direct.stdout.log",
+        "stderr_log": "logs/duplicate-overlay-direct.stderr.log"
+      },
+      {
+        "label": "duplicate-overlay-include",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.223,
+        "rss_peak_observed_bytes": 4096000,
+        "managed_peak_observed_bytes": 2215484519,
+        "stdout_log": "logs/duplicate-overlay-include.stdout.log",
+        "stderr_log": "logs/duplicate-overlay-include.stderr.log"
+      },
+      {
+        "label": "duplicate-overlay-hardlink",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.228,
+        "rss_peak_observed_bytes": 5832704,
+        "managed_peak_observed_bytes": 2215485664,
+        "stdout_log": "logs/duplicate-overlay-hardlink.stdout.log",
+        "stderr_log": "logs/duplicate-overlay-hardlink.stderr.log"
+      },
+      {
+        "label": "generated-overlay-include-refusal",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.218,
+        "rss_peak_observed_bytes": 5947392,
+        "managed_peak_observed_bytes": 2215491253,
+        "stdout_log": "logs/generated-overlay-include-refusal.stdout.log",
+        "stderr_log": "logs/generated-overlay-include-refusal.stderr.log"
+      },
+      {
+        "label": "check-selector-lib",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.219,
+        "rss_peak_observed_bytes": 5914624,
+        "managed_peak_observed_bytes": 2215501500,
+        "stdout_log": "logs/check-selector-lib.stdout.log",
+        "stderr_log": "logs/check-selector-lib.stderr.log"
+      },
+      {
+        "label": "check-selector-bins",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.229,
+        "rss_peak_observed_bytes": 5750784,
+        "managed_peak_observed_bytes": 2215511782,
+        "stdout_log": "logs/check-selector-bins.stdout.log",
+        "stderr_log": "logs/check-selector-bins.stderr.log"
+      },
+      {
+        "label": "check-selector-examples",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.263,
+        "rss_peak_observed_bytes": 5914624,
+        "managed_peak_observed_bytes": 2215522204,
+        "stdout_log": "logs/check-selector-examples.stdout.log",
+        "stderr_log": "logs/check-selector-examples.stderr.log"
+      },
+      {
+        "label": "check-selector-tests",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.231,
+        "rss_peak_observed_bytes": 5423104,
+        "managed_peak_observed_bytes": 2215532521,
+        "stdout_log": "logs/check-selector-tests.stdout.log",
+        "stderr_log": "logs/check-selector-tests.stderr.log"
+      },
+      {
+        "label": "check-selector-benches",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.236,
+        "rss_peak_observed_bytes": 4243456,
+        "managed_peak_observed_bytes": 2215542908,
+        "stdout_log": "logs/check-selector-benches.stdout.log",
+        "stderr_log": "logs/check-selector-benches.stderr.log"
+      },
+      {
+        "label": "check-selector-test",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.23,
+        "rss_peak_observed_bytes": 5832704,
+        "managed_peak_observed_bytes": 2215553220,
+        "stdout_log": "logs/check-selector-test.stdout.log",
+        "stderr_log": "logs/check-selector-test.stderr.log"
+      },
+      {
+        "label": "check-selector-bench",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.227,
+        "rss_peak_observed_bytes": 5668864,
+        "managed_peak_observed_bytes": 2215563562,
+        "stdout_log": "logs/check-selector-bench.stdout.log",
+        "stderr_log": "logs/check-selector-bench.stderr.log"
+      },
+      {
+        "label": "check-selector-example",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.238,
+        "rss_peak_observed_bytes": 5799936,
+        "managed_peak_observed_bytes": 2215573978,
+        "stdout_log": "logs/check-selector-example.stdout.log",
+        "stderr_log": "logs/check-selector-example.stderr.log"
+      },
+      {
+        "label": "check-selector-bin",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.226,
+        "rss_peak_observed_bytes": 5472256,
+        "managed_peak_observed_bytes": 2215584248,
+        "stdout_log": "logs/check-selector-bin.stdout.log",
+        "stderr_log": "logs/check-selector-bin.stderr.log"
+      },
+      {
+        "label": "build-selector-lib",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.23,
+        "rss_peak_observed_bytes": 6012928,
+        "managed_peak_observed_bytes": 2215594495,
+        "stdout_log": "logs/build-selector-lib.stdout.log",
+        "stderr_log": "logs/build-selector-lib.stderr.log"
+      },
+      {
+        "label": "build-selector-bins",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.237,
+        "rss_peak_observed_bytes": 5636096,
+        "managed_peak_observed_bytes": 2215604777,
+        "stdout_log": "logs/build-selector-bins.stdout.log",
+        "stderr_log": "logs/build-selector-bins.stderr.log"
+      },
+      {
+        "label": "build-selector-examples",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.229,
+        "rss_peak_observed_bytes": 6012928,
+        "managed_peak_observed_bytes": 2215615199,
+        "stdout_log": "logs/build-selector-examples.stdout.log",
+        "stderr_log": "logs/build-selector-examples.stderr.log"
+      },
+      {
+        "label": "build-selector-tests",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.224,
+        "rss_peak_observed_bytes": 5160960,
+        "managed_peak_observed_bytes": 2215625516,
+        "stdout_log": "logs/build-selector-tests.stdout.log",
+        "stderr_log": "logs/build-selector-tests.stderr.log"
+      },
+      {
+        "label": "build-selector-benches",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.229,
+        "rss_peak_observed_bytes": 6012928,
+        "managed_peak_observed_bytes": 2215635903,
+        "stdout_log": "logs/build-selector-benches.stdout.log",
+        "stderr_log": "logs/build-selector-benches.stderr.log"
+      },
+      {
+        "label": "build-selector-test",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.223,
+        "rss_peak_observed_bytes": 5832704,
+        "managed_peak_observed_bytes": 2215646215,
+        "stdout_log": "logs/build-selector-test.stdout.log",
+        "stderr_log": "logs/build-selector-test.stderr.log"
+      },
+      {
+        "label": "build-selector-bench",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.231,
+        "rss_peak_observed_bytes": 6012928,
+        "managed_peak_observed_bytes": 2215656557,
+        "stdout_log": "logs/build-selector-bench.stdout.log",
+        "stderr_log": "logs/build-selector-bench.stderr.log"
+      },
+      {
+        "label": "build-selector-example",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.242,
+        "rss_peak_observed_bytes": 2965504,
+        "managed_peak_observed_bytes": 2215666973,
+        "stdout_log": "logs/build-selector-example.stdout.log",
+        "stderr_log": "logs/build-selector-example.stderr.log"
+      },
+      {
+        "label": "build-selector-bin",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.256,
+        "rss_peak_observed_bytes": 5832704,
+        "managed_peak_observed_bytes": 2215677243,
+        "stdout_log": "logs/build-selector-bin.stdout.log",
+        "stderr_log": "logs/build-selector-bin.stderr.log"
+      },
+      {
+        "label": "host-fixture-lock-by-original-cargo",
+        "exit_code": 0,
+        "stop_reason": null,
+        "elapsed_seconds": 0.235,
+        "rss_peak_observed_bytes": 5357568,
+        "managed_peak_observed_bytes": 2215735437,
+        "stdout_log": "logs/host-fixture-lock-by-original-cargo.stdout.log",
+        "stderr_log": "logs/host-fixture-lock-by-original-cargo.stderr.log"
+      },
+      {
+        "label": "guarded-host-check-cold",
+        "exit_code": 0,
+        "stop_reason": null,
+        "elapsed_seconds": 0.256,
+        "rss_peak_observed_bytes": 4833280,
+        "managed_peak_observed_bytes": 2215746683,
+        "stdout_log": "logs/guarded-host-check-cold.stdout.log",
+        "stderr_log": "logs/guarded-host-check-cold.stderr.log"
+      },
+      {
+        "label": "guarded-host-check-warm",
+        "exit_code": 0,
+        "stop_reason": null,
+        "elapsed_seconds": 0.255,
+        "rss_peak_observed_bytes": 5816320,
+        "managed_peak_observed_bytes": 2215756533,
+        "stdout_log": "logs/guarded-host-check-warm.stdout.log",
+        "stderr_log": "logs/guarded-host-check-warm.stderr.log"
+      },
+      {
+        "label": "guarded-host-build-cold",
+        "exit_code": 0,
+        "stop_reason": null,
+        "elapsed_seconds": 0.51,
+        "rss_peak_observed_bytes": 161710080,
+        "managed_peak_observed_bytes": 2216711990,
+        "stdout_log": "logs/guarded-host-build-cold.stdout.log",
+        "stderr_log": "logs/guarded-host-build-cold.stderr.log"
+      },
+      {
+        "label": "guarded-host-build-warm",
+        "exit_code": 0,
+        "stop_reason": null,
+        "elapsed_seconds": 0.25,
+        "rss_peak_observed_bytes": 4276224,
+        "managed_peak_observed_bytes": 2216721840,
+        "stdout_log": "logs/guarded-host-build-warm.stdout.log",
+        "stderr_log": "logs/guarded-host-build-warm.stderr.log"
+      },
+      {
+        "label": "cached-build-still-refuses-guard",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.305,
+        "rss_peak_observed_bytes": 5718016,
+        "managed_peak_observed_bytes": 2216731671,
+        "stdout_log": "logs/cached-build-still-refuses-guard.stdout.log",
+        "stderr_log": "logs/cached-build-still-refuses-guard.stderr.log"
+      },
+      {
+        "label": "hidden-conflict-before-generated-override",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.235,
+        "rss_peak_observed_bytes": 5849088,
+        "managed_peak_observed_bytes": 2216736624,
+        "stdout_log": "logs/hidden-conflict-before-generated-override.stdout.log",
+        "stderr_log": "logs/hidden-conflict-before-generated-override.stderr.log"
+      },
+      {
+        "label": "partial-selection-refuses-version",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.233,
+        "rss_peak_observed_bytes": 5816320,
+        "managed_peak_observed_bytes": 2216737348,
+        "stdout_log": "logs/partial-selection-refuses-version.stdout.log",
+        "stderr_log": "logs/partial-selection-refuses-version.stderr.log"
+      },
+      {
+        "label": "actual-thirty-second-callback-timeout",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 30.2,
+        "rss_peak_observed_bytes": 16646144,
+        "managed_peak_observed_bytes": 2216741710,
+        "stdout_log": "logs/actual-thirty-second-callback-timeout.stdout.log",
+        "stderr_log": "logs/actual-thirty-second-callback-timeout.stderr.log"
+      },
+      {
+        "label": "oversized-control-record-refusal",
+        "exit_code": 101,
+        "stop_reason": null,
+        "elapsed_seconds": 0.26,
+        "rss_peak_observed_bytes": 5947392,
+        "managed_peak_observed_bytes": 2217791047,
+        "stdout_log": "logs/oversized-control-record-refusal.stdout.log",
+        "stderr_log": "logs/oversized-control-record-refusal.stderr.log"
+      }
+    ],
+    "check_count": 46,
+    "checks": [
+      {
+        "label": "selector-absent-metadata-parity",
+        "passed": true
+      },
+      {
+        "label": "unshadowed-base-flags-before-overlay",
+        "passed": true
+      },
+      {
+        "label": "owned-overlay-merged-once-without-array-replay",
+        "passed": true
+      },
+      {
+        "label": "metadata-no-deps-command-hook-and-effective-path",
+        "passed": true
+      },
+      {
+        "label": "typed-cli-and-overlay-origins-distinct",
+        "passed": true
+      },
+      {
+        "label": "metadata-no-output-lock-or-input-mutation",
+        "passed": true
+      },
+      {
+        "label": "configuration-refusal-exact-refusal-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "command-refusal-exact-refusal-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "version-refusal-exact-refusal-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "list-refusal-exact-refusal-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "unsupported-test-exact-refusal-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "unsupported-external-exact-refusal-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "unsupported-explain-exact-refusal-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "duplicate-overlay-direct-refused-before-callback-and-output",
+        "passed": true
+      },
+      {
+        "label": "duplicate-overlay-include-refused-before-callback-and-output",
+        "passed": true
+      },
+      {
+        "label": "duplicate-overlay-hardlink-refused-before-callback-and-output",
+        "passed": true
+      },
+      {
+        "label": "generated-overlay-cannot-reinclude-merged-user-config",
+        "passed": true
+      },
+      {
+        "label": "check-selector-lib-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "check-selector-bins-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "check-selector-examples-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "check-selector-tests-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "check-selector-benches-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "check-selector-test-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "check-selector-bench-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "check-selector-example-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "check-selector-bin-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "build-selector-lib-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "build-selector-bins-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "build-selector-examples-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "build-selector-tests-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "build-selector-benches-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "build-selector-test-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "build-selector-bench-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "build-selector-example-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "build-selector-bin-observed-and-refused-before-outputs",
+        "passed": true
+      },
+      {
+        "label": "guarded-host-check-cold-runs-both-preflights",
+        "passed": true
+      },
+      {
+        "label": "guarded-host-check-warm-runs-both-preflights",
+        "passed": true
+      },
+      {
+        "label": "guarded-host-build-cold-runs-both-preflights",
+        "passed": true
+      },
+      {
+        "label": "guarded-host-build-warm-runs-both-preflights",
+        "passed": true
+      },
+      {
+        "label": "cached-build-preserves-completed-host-output",
+        "passed": true
+      },
+      {
+        "label": "cached-build-cannot-skip-command-refusal",
+        "passed": true
+      },
+      {
+        "label": "hidden-user-compiler-conflict-visible-and-refused",
+        "passed": true
+      },
+      {
+        "label": "partial-selection-does-not-silently-ignore-error",
+        "passed": true
+      },
+      {
+        "label": "callback-timeout-killed-and-reaped-before-target-writes",
+        "passed": true
+      },
+      {
+        "label": "oversized-record-refused-before-callback",
+        "passed": true
+      },
+      {
+        "label": "source-binary-still-matches-built-input",
+        "passed": true
+      }
+    ],
+    "elapsed_seconds": 43.39806679193862,
+    "child_peak_rss_bytes": 161710080,
+    "driver_peak_rss_bytes": 71254016,
+    "workspace_peak_bytes": 2217791047,
+    "logs_bytes": 10636
+  },
+  "patch_replay": {
+    "receipt": {
+      "retained_receipt": "rc2-cargo-guard-patch-replay-a2/result.json",
+      "sha256": "42b14fc26d8cbd73db4ae910fd905493fb914103d53b69a6f7e58e09d0ea25ea"
+    },
+    "status": "PASS_FRESH_PINNED_SOURCE_THREE_PATCH_REPLAY_ALL_FILES_AND_SYMLINKS_MATCH",
+    "file_count": 2929,
+    "symlink_count": 121,
+    "source_sha256": "e501d9c45ffbe62dad90cecd2c3fe63cead8ef48b833f1ba29ed022a2443e78d"
+  },
+  "independent_review": [
+    {
+      "retained_receipt": "rc2-cargo-early-guard-independent-review-a1/review.md",
+      "sha256": "e1c141fd8d16771480f600c217b66e8c3c07efe39131634c06d84f82932e1a76"
+    },
+    {
+      "retained_receipt": "rc2-cargo-early-guard-independent-review-a2/review.md",
+      "sha256": "b7ec724ca49b8dcaed2a83dda96a51604dde3fbe8ad0fa6708a92901186e8390"
+    },
+    {
+      "retained_receipt": "rc2-cargo-early-guard-independent-review-a3/review.md",
+      "sha256": "4366090f9071229c3a874934643cb6788634014330242495d9046b368e6db901"
+    }
+  ],
+  "limitations": [
+    "Synthetic callback is not the native authenticated activation role.",
+    "No Linux runtime, fresh producer, relocation or no-Python acceptance.",
+    "No AROS target build/runtime/memory or RC2 acceptance."
+  ],
+  "historical_failures_retained": [
+    "rc2-cargo-early-guard-runtime-a1: invalid standalone fixture manifest corrected in a2/a3",
+    "rc2-cargo-guard-patch-replay-a1: nested git apply harness skipped files; isolated replay a2 passed"
+  ],
+  "rc2_accepted": false,
+  "sdk_published": false
+}
