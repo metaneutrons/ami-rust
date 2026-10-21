@@ -19,9 +19,10 @@
       "tooling/crates/core/src/publisher_home.rs": "4c9f98303ee26434e6bd369e3ae000ef9410feacc9bcbec7a952e3f23c8cd802",
       "tooling/crates/core/src/signals.rs": "097a97e5d30fb70667cf321e5e3c09df80c9ba8f37f09608fc5707f7d1ad14ff",
       "tooling/crates/core/src/transaction.rs": "524195dc5e0d39ac4d020b7bd27e27fe0de489421b63257e770d3c0da8d4a7ae",
-      "tooling/crates/xtask/src/cargo_storage_registry_fixture.rs": "de9d581ffa247a62651d14331cc9d51ad8220a345bf9dcba4b0c65b3cee62f41"
+      "tooling/crates/xtask/src/cargo_storage_registry_fixture.rs": "de9d581ffa247a62651d14331cc9d51ad8220a345bf9dcba4b0c65b3cee62f41",
+      "tooling/crates/core/src/resource_capture.rs": "38fe9f9250dea876a3544de9daa9c261dff91cd3bd68c5257b5da878bd2e4e54"
     },
-    "scope": "Capture observation/liveness and controlled-spawn creation, plus fail-closed bounded blocking accepted sockets, a total header deadline and accept-synchronized delayed-header/trickle regressions in the synthetic registry fixture. Excludes private native parser/activation and additional GC/fetch feature fixtures."
+    "scope": "Capture observation/liveness and controlled-spawn creation, plus fail-closed bounded blocking accepted sockets, a total header deadline and accept-synchronized delayed-header/trickle regressions in the synthetic registry fixture. Excludes private native parser/activation and additional GC/fetch feature fixtures. Resource fixture requires the guaranteed complete pre-reap sample, without assuming a second periodic sample for a fast child."
   },
   "observed_failure": {
     "receipt": {
@@ -162,5 +163,40 @@
     },
     "implementation": "Fail closed if blocking-mode or read/write-timeout setup fails; cap header collection by a two-second total deadline and each read by the smaller remaining time/400ms. Delayed headers wait for accepted-stream setup before a50ms pause. Trickle regression uses a180ms explicit deadline against the same helper.",
     "review_resolution": "Independent review A1 identified ignored socket-setup errors, absence of a total header deadline and weak delay ordering. The final candidate resolves them; read-only A2 review finds no remaining material issue."
+  },
+  "resource_sampling_followup": {
+    "failed_ci_run": 39654377948,
+    "failed_macos_job": 119410718494,
+    "failed_head": "1fb869d3c3c220d9205ad8b89c50e913c3b945b5",
+    "failed_raw_log_sha256": "3ee6d7a77fb4479098494d9401fec99d34d747a4c0b3ad664948497e62bb1883",
+    "cause": "Fast echo may exit before a second periodic sample. Successful capture guarantees a complete BeforeReap sample, not sample_count>=2. This failure is an invalid test expectation; production resource limits and observation behavior remain unchanged.",
+    "fix": "Require sample_count>=1 and last_sample_complete. Retain exact disk3/pending4/peaklog7/workspace3 assertions and neighboring over-budget refusals.",
+    "local_receipt": {
+      "retained_receipt": "rc2-public-resource-fixture-check-a1/output/result.json",
+      "sha256": "b9a69808de75e704142e9ede81198f6e40e9d59047ee14a8324764d4d709a9e0"
+    },
+    "primary_readback": {
+      "retained_receipt": "rc2-resource-sampling-public-readback-a1/result.json",
+      "sha256": "df7d0f99fa0ef3545fc87e3299e0cfb7ec8a3b2e025a401683bb2e62a15f9883"
+    },
+    "independent_review": {
+      "retained_receipt": "rc2-resource-sampling-fixture-independent-review-a2/review.md",
+      "sha256": "9bc09a79ec13928b540ca93cc90187b0626581f82a21335f423db24c58151851"
+    },
+    "local_tests": {
+      "core_passed": 384,
+      "core_ignored": 19,
+      "xtask_passed": 67,
+      "resource_passed": 11,
+      "strict_core_clippy": "PASS",
+      "source_format": "PASS"
+    },
+    "measured": {
+      "elapsed_seconds": 56.79768033302389,
+      "child_peak_rss_bytes": 1408696320,
+      "driver_peak_rss_bytes": 61718528,
+      "workspace_peak_bytes": 978565751
+    },
+    "scope": "Exact public source local macOS workspace only. Ignored qualification/historical tests were not executed. New exact-head public both-host CI is required; no SDK qualification/publication or RC2 acceptance."
   }
 }

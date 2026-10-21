@@ -836,7 +836,9 @@ mod tests {
         assert_eq!(captured.report.current_pending_output_bytes, 4);
         assert_eq!(captured.report.peak_log_bytes, 7);
         assert_eq!(captured.report.peak_workspace_bytes, 3);
-        assert!(captured.report.sample_count >= 2);
+        // The mandatory pre-reap sample is sufficient for this fast command.
+        assert!(captured.report.sample_count >= 1);
+        assert!(captured.report.last_sample_complete);
     }
 
     #[test]
