@@ -398,6 +398,7 @@
     "tooling/crates/core/tests/retained_cargo.rs",
     "tooling/crates/core/tests/retained_outer.rs",
     "tooling/crates/xtask/Cargo.toml",
+    "tooling/crates/xtask/src/cargo_storage_probe.rs",
     "tooling/crates/xtask/src/cold_runtime_probe.rs",
     "tooling/crates/xtask/src/consumer_observe.rs",
     "tooling/crates/xtask/src/consumer_report.rs",

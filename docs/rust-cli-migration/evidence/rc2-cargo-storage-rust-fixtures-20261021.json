@@ -1,0 +1,73 @@
+{
+  "schema": "ami-rust-cargo-storage-rust-development-v1",
+  "date": "2026-10-21",
+  "status": "LOCAL_MACOS_HOST_COMPONENT_ONLY",
+  "rc2_accepted": false,
+  "sdk_publication": false,
+  "source": {
+    "tooling/crates/xtask/src/cargo_storage_probe.rs": "00b2daf67edfd33ab2672dd6b9b787e70f70cd098ee190aa7028e123e1c6d907",
+    "tooling/crates/xtask/src/main.rs": "ccefb94ca215dd2298594524bdb7c7554de4547b0ae72ef6715068c3530362af",
+    "release/ci_cargo_storage.py": "c1cfce1d5533621ecb77ff4f5f1fff9b7fae9786e9a1a80656c13ba1682ce30f",
+    ".github/workflows/cargo-storage-qualify.yml": "ea1628ba2d5831749c409416dcb65370d5d7cdeec70b98ae12cd9bd061fc0355",
+    "host/cargo-storage/runtime-checks.json": "9422610f5dfb13fe26db07e0174a1f1db8771245ee8615ad6821879bef4235d4"
+  },
+  "macos_runtime": {
+    "commands": 43,
+    "checks": 37,
+    "report_sha256": "62cefb02ee2b27d96bac312f922382af32ab52ed3e82b68346f041a359a79a77",
+    "supervision_sha256": "efe6b2b7f93f69ac365c19ae28d7f6907fec9acb1db4455b4ddaa77bbe2f5dfb",
+    "observed_child_peak_rss_bytes": 161513472,
+    "observed_driver_peak_rss_bytes": 30949376,
+    "logs_bytes": 49271
+  },
+  "rust_checks": {
+    "build": "PASS",
+    "snapshot_units": 2,
+    "workspace_all_targets_strict_clippy": "PASS",
+    "report_sha256": "d2b7aa69239c49004191c25bab2a996ce2c0d9c6d1f8aa7e593808f32b1809d5"
+  },
+  "source_and_runtime_receipt_gates": {
+    "positive_and_counter_checks": 16,
+    "status": "PASS",
+    "report_sha256": "b4a3ce025779d253084dfcd732a8f797cc661e3296801482c3aac370d5bc7d69",
+    "tested_driver_sha256": "c1cfce1d5533621ecb77ff4f5f1fff9b7fae9786e9a1a80656c13ba1682ce30f"
+  },
+  "cleanup_measurement_and_original_pin_gates": {
+    "positive_and_counter_checks": 11,
+    "status": "PASS",
+    "report_sha256": "e7e073701ca4451b975718791a7561c0b24c540a94505e9e257969220cb35281",
+    "tested_driver_sha256": "c1cfce1d5533621ecb77ff4f5f1fff9b7fae9786e9a1a80656c13ba1682ce30f"
+  },
+  "retained_failures": [
+    "Initial artifact fixture omitted required -Z unstable-options; expected compiler-marker check correctly failed despite exit101.",
+    "Initial all-target Clippy rejected the explicit eight-argument internal fixture helper.",
+    "Initial cleanup retired work before rejecting linked bootstrap; corrected validation order passes the counter.",
+    "Initial source identity gate wrongly rejected valid upstream license/fixture symlinks; corrected gate preserves121 exact original targets.",
+    "The predecessor readback accepted a one-command subset despite complete PASS check rows; the exact per-host command/exit contract now rejects that copy, a self-consistent wrong exit and an invented command."
+  ],
+  "remaining": [
+    "Linux execution of the new Rust fixture including raw non-UTF-8 paths",
+    "Protected-main fresh original/derived Cargo production on both hosts",
+    "Provider and registry authentication, nested/concurrent Cargo and complete selector-absent equivalence",
+    "Activation integration, final AROS builds and runtime/memory matrix",
+    "RC3 publication and RC4/RC5 Python retirement/recovery gates"
+  ],
+  "qualified_baseline_changed": false,
+  "independent_static_review": {
+    "report_sha256": "bf49613dad2d31b4f59ebd2682bd7dad247657ed82b48602ef8acbb417ba22ce",
+    "inputs_sha256": "9d2943247be77570c33c8847c1f7ece6a1c525bbcc09dbda6c6116626c17ecf3",
+    "status": "No blocking static finding on exact four implementation files; not runtime or RC2 acceptance"
+  },
+  "coordinator_cancellation_gates": {
+    "status": "PASS",
+    "positive_and_counter_checks": 4,
+    "scope": "Fake producer: SIGTERM and SIGINT while running and during detached process creation; failed receipts preserved, no live child groups, owned cleanup succeeds. No real producer qualification.",
+    "report_sha256": "e9f29132c74b330c8a6f9511f25adfedc3d7324c3a79cd0cdf3495e8722cf848",
+    "tested_driver_sha256": "c1cfce1d5533621ecb77ff4f5f1fff9b7fae9786e9a1a80656c13ba1682ce30f"
+  },
+  "independent_final_delta_review": {
+    "report_sha256": "3f9d0ad2e7cfd9b1b6a80ec68c4c3f5c65404c1a1d6593d657da7d1f7dd35e28",
+    "inputs_sha256": "74fafbdd1f92cbcf40f2571c76b019e2ae89f3c43217618c7d3fbdd772cebaa4",
+    "status": "Bounded static review closes command-transcript and signal-cleanup gaps in the coordinator and private retained-artifact readers. Full two-host component collection remains unexecuted."
+  }
+}

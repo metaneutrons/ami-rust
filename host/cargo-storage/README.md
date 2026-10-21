@@ -60,3 +60,50 @@ selector-absent behavior, activation, final AROS linking or runtime/memory.
 Both-host component equivalence and producer closure must pass before selecting
 this new Cargo identity. Existing RC1 replay and the target compiler, C-SDK,
 ABI-v1 and QEMU baseline remain unchanged.
+
+## Reusable host component qualification
+
+`ami-rust-xtask cargo-storage-probe` is an internal Rust maintainer operation.
+It compares explicit original/derived Cargo binaries with local synthetic
+inputs, records actual command status and raw streams, and checks the exact
+host-specific outcomes and complete command/expected-exit inventory in
+`runtime-checks.json`. It requires explicit
+`--control`, `--derived`, `--rustc`, `--rustdoc`, `--work`, and `--output` paths;
+work/output must be fresh and separate from the selected tools.
+
+The [Rust development proof](../../docs/rust-cli-migration/evidence/rc2-cargo-storage-rust-fixtures-20261021.json)
+records the macOS run: 43 commands and 37 checks, including an actual compiler
+failure with empty fresh artifact export, a successful retry, an unchanged
+previous executable, and restored project inputs. The original failed fixture
+and its missing unstable-option switch remain recorded separately. Linux adds
+raw non-UTF-8 cache/template cases; those remain unqualified until executed on
+Linux. Registry resolution uses an empty local directory source; only the
+synthetic file-Git input is fetched. A registry-dependency counter must fail
+against that source. This is not a general network sandbox.
+
+The manual **RC2 Cargo storage component** workflow runs only on protected
+`main`, using standard Linux x86-64 and macOS ARM runners. It first produces
+an original-source control with unchanged pins, derives Cargo with the owned
+storage patch, verifies all 2,928 regular source files and unchanged original
+symlink targets, and builds the derived component offline. A fresh control is
+not claimed byte-identical to the older RC1 binary. The coordinator checks
+the Rust receipt, complete named outcomes, the exact command inventory and
+expected exits, every raw stream and selected tool identity before reporting
+component success. Truncated or invented command lists refuse even if all
+reported outcome rows claim success.
+
+This workflow uploads bounded reports/source snapshots/logs, never Cargo or
+SDK packages. Each host reserves 32 MiB including cleanup/framing. Its
+90-minute component campaign has 15 minutes of job setup/cleanup headroom.
+The 4 GiB aggregate observed RSS, 12 GiB combined workspace and 16 MiB logs
+remain separate limits. Cleanup validates all ownership paths and a finalized
+receipt before deleting work. Abrupt termination without that receipt refuses
+retirement; it cannot produce an accepted component result. SIGTERM/SIGINT
+cancellation is deferred through guarded process cleanup, including a signal
+during detached process creation. Four isolated cancellation controls retain
+failed receipts, leave no live child groups and permit owned cleanup.
+
+The temporary Python coordinator is internal release infrastructure and remains
+in the RC4 retirement scope. Both-host component qualification, activation,
+providers, nested/concurrent Cargo, complete AROS builds and runtime/memory
+criteria are still required before RC2 acceptance or a changed SDK release.
