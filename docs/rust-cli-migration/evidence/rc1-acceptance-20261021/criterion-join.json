@@ -1,0 +1,112 @@
+{
+  "acceptance_action": "Root must review criteria and publish durable source-bound acceptance documentation before closing #71. This program does not close issues, release SDKs or authorize a changed baseline.",
+  "additional_semantic_controls": [
+    {
+      "path": "native-sdk-39553656864-composition-counter-a2/result.json",
+      "sha256": "f6faae4188eaba58eab49c2620e45141a47196c61f286e53f28624993f76ac47",
+      "status": "PASS_SYNTHETIC_FAILED_RAW_JOB_REFUSED_DESPITE_ALL_PASS_SUMMARY"
+    },
+    {
+      "path": "native-sdk-39553656864-upgrade-controls-a1/result.json",
+      "sha256": "e637210c5c4e48067500f9d11088372eac08a2be3d7fdbb98baa268e4c09c594",
+      "status": "PASS_TWO_ACTUAL_UPGRADE_POSITIVES_AND_SIXTEEN_ISOLATED_REFUSALS"
+    },
+    {
+      "path": "native-sdk-39553656864-lifecycle-controls-a1/result.json",
+      "sha256": "fb0be77810e358fbead5264e6e89517f0ebb0e903d0543c16b4761fd5840cd34",
+      "status": "PASS_TWO_ACTUAL_HOST_POSITIVES_AND_TWENTY_ISOLATED_SEMANTIC_REFUSALS"
+    },
+    {
+      "path": "pr116-native-evidence-reader-controls-a1/result.json",
+      "sha256": "a8927331f83b94057f7e67657ef92a9de4e7cf147b4e441c56e8ebc85b37b742",
+      "status": "PASS_FOUR_ACTUAL_ARTIFACT_SEMANTIC_REFUSALS"
+    }
+  ],
+  "criteria": {
+    "RC1-A1": "PASS_EVIDENCE_JOIN",
+    "RC1-A2": "PASS_EVIDENCE_JOIN",
+    "RC1-A3": "PASS_EVIDENCE_JOIN",
+    "RC1-A4": "PASS_EVIDENCE_JOIN"
+  },
+  "criterion_join_controls": [
+    {
+      "case": "wrong-sdk-tree",
+      "error": "SDK source identity differs",
+      "outcome": "REFUSED"
+    },
+    {
+      "case": "missing-sdk-host",
+      "error": "both current SDK host slices required",
+      "outcome": "REFUSED"
+    },
+    {
+      "case": "missing-variant",
+      "error": "fresh-root variant coverage differs",
+      "outcome": "REFUSED"
+    },
+    {
+      "case": "wrong-pair-count",
+      "error": "historical pair counts or tree differ",
+      "outcome": "REFUSED"
+    },
+    {
+      "case": "metadata-byte-mismatch",
+      "error": "exact-byte metadata/runtime reuse unavailable",
+      "outcome": "REFUSED"
+    }
+  ],
+  "driver_sha256": "ca4ed5608662a85b30b153f0d1495e570345c7af9a4c26e1efed38154063b3e7",
+  "pinned_results": {
+    "native-sdk-39553656864-lifecycle-controls-a1/result.json": "fb0be77810e358fbead5264e6e89517f0ebb0e903d0543c16b4761fd5840cd34",
+    "native-sdk-39553656864-readback-a6/result.json": "b55d1b501c092db6dcc334a967f42bc8cff623dc7ac06b7611d924437d88b590",
+    "pr116-native-evidence-ci-a1/readback-full-result.json": "2ee4d27bab828acbae60a2bdaafa75c8e081929cc17fd934a71ca8666b3b6675",
+    "pr116-native-evidence-reader-controls-a1/result.json": "a8927331f83b94057f7e67657ef92a9de4e7cf147b4e441c56e8ebc85b37b742"
+  },
+  "plan_revision": "d7ac89004a8f805e6f1e3efaf9242fed976803ab",
+  "plan_sha256": "d7ded54d814d7d7327841eb8af6a38b9d7227f9c5ff4d3359ddfba8761a0b590",
+  "raw_ci_markers": [
+    {
+      "host": "linux-x86_64",
+      "job_id": 119054750334,
+      "linux_guard_control": true,
+      "sha256": "3518fd302eeecbe12ddf588e9b5733decd8bec7ca1ee7cfb71600ae05ea25ba9",
+      "unique_parent_and_schema_markers": [
+        "frontend::tests::capability_ledger_matches_normative_contract_and_refuses_pending_work",
+        "native_install::tests::native_installation_and_pinned_removal_are_isolated_in_a_child",
+        "receipts::tests::parses_all_three_schemas_and_never_promotes_historical_drivers",
+        "receipts::tests::exact_schema_fields_refuse_legacy_null_extensions_and_missing_native_identity",
+        "receipts::tests::publisher_reports_refuse_identity_subject_run_and_manifest_mismatch",
+        "receipts::tests::rejects_nested_unknown_keys_duplicate_keys_and_nonfinite_authentication"
+      ]
+    },
+    {
+      "host": "macos-aarch64",
+      "job_id": 119054750337,
+      "linux_guard_control": false,
+      "sha256": "665c021216208e48e099d1045857781302e865c408282114035eee755c87942e",
+      "unique_parent_and_schema_markers": [
+        "frontend::tests::capability_ledger_matches_normative_contract_and_refuses_pending_work",
+        "native_install::tests::native_installation_and_pinned_removal_are_isolated_in_a_child",
+        "receipts::tests::parses_all_three_schemas_and_never_promotes_historical_drivers",
+        "receipts::tests::exact_schema_fields_refuse_legacy_null_extensions_and_missing_native_identity",
+        "receipts::tests::publisher_reports_refuse_identity_subject_run_and_manifest_mismatch",
+        "receipts::tests::rejects_nested_unknown_keys_duplicate_keys_and_nonfinite_authentication"
+      ]
+    }
+  ],
+  "receipt_boundary": "Historical v1/v2 common-field and receipt-v1 differential oracle; native v3 deliberate fields documented and covered by source-bound both-host parser/owned-installation tests plus actual SDK install/wrong-pin/uninstall/migration effects and digest. Raw native install-receipt-v3 JSON is not duplicated in the SDK artifact.",
+  "recorded_utc": "2026-10-21T07:31:10.529856+00:00",
+  "regular_ci_run": 39549340970,
+  "retained_removal_boundary": "Source-pinned coordinator removal assertion and actual versioned retained recheck/offline replay; no separate post-removal filesystem scan claimed.",
+  "runtime_boundary": "Exact-byte eligible historical metadata/Serde/runtime reuse, current both-host canonical matrix/raw archive pins. No fresh AROS runtime claim; no rlib metadata editing.",
+  "schema": "ami-rust-rc1-final-criterion-evidence-join-v1",
+  "sdk_run": 39553656864,
+  "sdk_source": "4350aeae331dbccb190bc7be6938306644e4d4af",
+  "source_file_readback": {
+    "compiled": 83,
+    "compiled_plus_declared": 89,
+    "regular_ci_source_map": 31
+  },
+  "source_tree": "25d3b14be3c779d34d713a47d405206b49cf9e82",
+  "status": "PASS_ALL_RC1_A1_A4_EVIDENCE_JOIN_PUBLIC_ACCEPTANCE_PENDING"
+}

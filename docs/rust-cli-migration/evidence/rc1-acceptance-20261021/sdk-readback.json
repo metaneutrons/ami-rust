@@ -1,0 +1,946 @@
+{
+  "artifact_policy": {
+    "generic_diagnostic_limit_bytes": {
+      "legacy": 33554432,
+      "native": 67108864
+    },
+    "native_consumer_artifact_reservation_bytes": 67108864,
+    "native_consumer_framing_reserve_bytes": 1048576,
+    "native_consumer_output_limit_bytes": 66060288,
+    "native_dag_reservation_bytes": 469762048,
+    "provider_zip_and_expanded_artifact_limit_bytes": 67108864
+  },
+  "authentication_providers": {
+    "linux-x86_64": {
+      "authentication_host": "linux-x86_64",
+      "inputs_manifest_sha256": "43da78947518104f01cc36a9020c92a72af20aaab51cd534d353e770a2dd8281",
+      "manifest_sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+      "proof_members": {
+        "cosign": {
+          "SHAUTIL": {
+            "bundle_sha256": "6738fcc3de7415ff521b253830053cc41ff0b4dfe763c17282e1ad6619f4e6aa",
+            "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162",
+            "subject": "SHAUTIL"
+          },
+          "release.json": {
+            "bundle_sha256": "0fe5da7acc2d9f161807fbe58b178ca5b52475313e0e1eabdecd68935cf78340",
+            "sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+            "subject": "release.json"
+          },
+          "sdk.tar.xz": {
+            "bundle_sha256": "b8efcecb2e953f358da6cb4f8b9da2570851f8e2cee71fc0d77dd7db01a124a6",
+            "sha256": "1c2e83f7ffa1962303c30fd15986b988ae0235380e40f54f810a63dfa56f4884",
+            "subject": "sdk.tar.xz"
+          }
+        },
+        "gh": {
+          "SHAUTIL": {
+            "publisher_host": "linux-x86_64",
+            "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162",
+            "statement_sha256": "11c44da8743285ddca5fb8d14a787bd0e7624e11939b114efd1becb812b64546",
+            "subject": "SHAUTIL"
+          },
+          "release.json": {
+            "publisher_host": "linux-x86_64",
+            "sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+            "statement_sha256": "78d50a895ee95d938bfb3a58d5563d466e648030b3230b24be949f457bf265c5",
+            "subject": "release.json"
+          },
+          "sdk.tar.xz": {
+            "publisher_host": "linux-x86_64",
+            "sha256": "1c2e83f7ffa1962303c30fd15986b988ae0235380e40f54f810a63dfa56f4884",
+            "statement_sha256": "cb77a498965d19ecd201ed8440c39c8a4500f897c69306f4fd114ff14332dfbc",
+            "subject": "sdk.tar.xz"
+          }
+        }
+      },
+      "provider_artifact_name": "sdk-authenticated-linux-x86_64-39553656864-1",
+      "provider_input_sha256": "43da78947518104f01cc36a9020c92a72af20aaab51cd534d353e770a2dd8281",
+      "schema": "ami-rust-authentication-provider-bundle-readback-v2",
+      "scope": "Structural/source/subject/input binding of one authenticated publisher bundle plus the externally collected protected signer-job success record. The caller must first authenticate the exact provider ZIP digest and complete member inventory. The recorded signer job ran the frozen source workflow; this readback does not rerun GitHub attestation or Cosign cryptography, and it does not show a consumer used this bundle. A consumer-verifier trace is required for consumed-provider evidence.",
+      "signer_job": {
+        "conclusion": "success",
+        "head_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+        "id": 119070416588,
+        "name": "Authenticate candidate (linux-x86_64)",
+        "run_attempt": 1,
+        "run_id": 39553656864,
+        "status": "completed"
+      },
+      "source": {
+        "run_attempt": 1,
+        "run_id": 39553656864,
+        "source_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+        "workflow_sha": "4350aeae331dbccb190bc7be6938306644e4d4af"
+      },
+      "status": "PASS_PROVIDER_BUNDLE_BINDINGS_NOT_CONSUMER_VERIFICATION_OR_RC1_ACCEPTANCE"
+    },
+    "macos-aarch64": {
+      "authentication_host": "macos-aarch64",
+      "inputs_manifest_sha256": "43da78947518104f01cc36a9020c92a72af20aaab51cd534d353e770a2dd8281",
+      "manifest_sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+      "proof_members": {
+        "cosign": {
+          "SHAUTIL": {
+            "bundle_sha256": "34c8db262f1821a708396ad74386fa29b7ace1f9c80b07dd6509c02fb1309466",
+            "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162",
+            "subject": "SHAUTIL"
+          },
+          "release.json": {
+            "bundle_sha256": "fa899dc50962c5bd35cba6aceac855b65dc2f8882076194f47a6289df3aa5097",
+            "sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+            "subject": "release.json"
+          },
+          "sdk.tar.xz": {
+            "bundle_sha256": "fe9e582dcc40f4fefadc56de9ac96572f553231dd506f13b9f593777e78887c3",
+            "sha256": "1c2e83f7ffa1962303c30fd15986b988ae0235380e40f54f810a63dfa56f4884",
+            "subject": "sdk.tar.xz"
+          }
+        },
+        "gh": {
+          "SHAUTIL": {
+            "publisher_host": "macos-aarch64",
+            "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162",
+            "statement_sha256": "12ff90e48b8e9dbf5b2edd07b1844324478d8fd2db1141008b130d6d287207ae",
+            "subject": "SHAUTIL"
+          },
+          "release.json": {
+            "publisher_host": "macos-aarch64",
+            "sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+            "statement_sha256": "3e56cf1f2e45c3951f241e9252b5559447784c79f3211d6b040ef6e7967deb90",
+            "subject": "release.json"
+          },
+          "sdk.tar.xz": {
+            "publisher_host": "macos-aarch64",
+            "sha256": "1c2e83f7ffa1962303c30fd15986b988ae0235380e40f54f810a63dfa56f4884",
+            "statement_sha256": "b1ba79fb4256752fbdddef43009c3b7f336042d85847fa7051c0a1623b3b4402",
+            "subject": "sdk.tar.xz"
+          }
+        }
+      },
+      "provider_artifact_name": "sdk-authenticated-macos-aarch64-39553656864-1",
+      "provider_input_sha256": "43da78947518104f01cc36a9020c92a72af20aaab51cd534d353e770a2dd8281",
+      "schema": "ami-rust-authentication-provider-bundle-readback-v2",
+      "scope": "Structural/source/subject/input binding of one authenticated publisher bundle plus the externally collected protected signer-job success record. The caller must first authenticate the exact provider ZIP digest and complete member inventory. The recorded signer job ran the frozen source workflow; this readback does not rerun GitHub attestation or Cosign cryptography, and it does not show a consumer used this bundle. A consumer-verifier trace is required for consumed-provider evidence.",
+      "signer_job": {
+        "conclusion": "success",
+        "head_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+        "id": 119070416723,
+        "name": "Authenticate candidate (macos-aarch64)",
+        "run_attempt": 1,
+        "run_id": 39553656864,
+        "status": "completed"
+      },
+      "source": {
+        "run_attempt": 1,
+        "run_id": 39553656864,
+        "source_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+        "workflow_sha": "4350aeae331dbccb190bc7be6938306644e4d4af"
+      },
+      "status": "PASS_PROVIDER_BUNDLE_BINDINGS_NOT_CONSUMER_VERIFICATION_OR_RC1_ACCEPTANCE"
+    }
+  },
+  "authentication_scope": "Both protected signer bundles are source/subject/input bound to their own successful jobs. Both consumer hosts actually verify the shared Linux-authenticated bundle; outer and inner verification observations remain host-bound. The offline reader does not rerun Cosign or GH cryptography.",
+  "ci_auth_sha256": "34ad4fdeb7fabe83279a7b28b57f6823d1d772392e9f28d3c4fd2a9b4322e9e1",
+  "ci_native_sha256": "4138d6cdf0de084906affed69496d438b125566ae2603c04107d990c09ba10dc",
+  "ci_sdk_sha256": "dfcccc8b5d8b6121ab9c60dbcb1c7b4db57f2c9bacb6ffa46059064a4de0ea50",
+  "collection_manifest_sha256": "0baf349fd89830762d4a975a86cf86d91102dcb30f6034ff1e106bb47e8d0a09",
+  "collector_sha256": "cb332e835998bce2720302b0838101edb8d0c558bfda626eeb47ff5f9b5c1433",
+  "compiled_source_inventory_count": 83,
+  "consumer_authentication_route": {
+    "linux-x86_64": "linux-x86_64",
+    "macos-aarch64": "linux-x86_64"
+  },
+  "current_green_claim": false,
+  "dispatch_sha256": "9580a10e0298eca6f9a5934c40386ea61571170994e8e84dd48e6fcef79b6e31",
+  "host_slices": {
+    "linux-x86_64": {
+      "actual_native_lifecycle_commands": {
+        "cold_runtime_reference": {
+          "binding": {
+            "path": "/home/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/project-parent/hello-aros/ami-rust.lock.json",
+            "sha256": "73d017ab2c98bf517c9be63b93c7f15042388bbc704242efb10fb5f4f6243a31"
+          },
+          "candidate_manifest_sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+          "compiler": {
+            "rust_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
+            "rust_llvm": "23.1.1",
+            "source_date_epoch": 1791936000
+          },
+          "component_manifest_sha256": {
+            "cargo": "85f5bb754c7f11429dc1a58a2adc1256b9ad4da1f7a47926629e1f94dd92ead8",
+            "collector": "0e97967a63d6ec868edcf26e2b2c08a9c36a292416aa0f7ae016564369551caa",
+            "csdk": "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337",
+            "rust": "e409faec69a97407fbbfa40188644e7032b19824118994160aed80c3d50850bb",
+            "toolchain": "a68f0d3d6b6d9e9678dca0af25b083d6b00f67fd4f806adcb6a2e16af1a19a6d",
+            "vendor": "f5fcdd2d3daaae4d2f40d69269c49533fc40adc807c555f2213238b2c3557ad6"
+          },
+          "component_roots": {
+            "cargo": "/home/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/state-parent/ami-rust-0.1.0-state/preparation/component-staging/cargo",
+            "collector": "/home/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/state-parent/ami-rust-0.1.0-state/preparation/component-staging/collector",
+            "csdk": "/home/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/state-parent/ami-rust-0.1.0-state/preparation/component-staging/csdk",
+            "rust": "/home/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/state-parent/ami-rust-0.1.0-state/preparation/component-staging/rust",
+            "toolchain": "/home/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/state-parent/ami-rust-0.1.0-state/preparation/component-staging/toolchain",
+            "vendor": "/home/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/state-parent/ami-rust-0.1.0-state/preparation/component-staging/vendor"
+          },
+          "inspection_stdout_sha256": "93a9c02bd8c96b13e47d3e0cc22bc7f66b4e762f54ea751b9b4a02fa4231929d"
+        },
+        "direct_receipt_sha256": "87a529cb3a1ad55b491e7c6694a13c26fc2d4bff76f4dac96542b8fb2ee256ce",
+        "expected_negative_rows": [
+          "02-altered-gh-signature",
+          "03-altered-cosign-signature",
+          "04-altered-sdk",
+          "06-occupied-install",
+          "07-wrong-removal-pin",
+          "09-interrupted-state-retry-refusal",
+          "12-occupied-state-refusal",
+          "20-published-v1-state-schema-refusal",
+          "21-published-migration-wrong-receipt",
+          "23-published-migration-occupied-output"
+        ],
+        "host": "linux-x86_64",
+        "legacy_migration_execution_boundary": {
+          "backend": "source-pinned TSYNC no-exec before inert read",
+          "raw_guard_syscall_trace_claim": false,
+          "source_bound_linux_guard_controls_required_in_final_regular_ci_join": true
+        },
+        "lifecycle_sha256": "140577357a5b2ee1beda2f1b70b0c20045362eac00fa1c2184984f372da91723",
+        "manifest_sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+        "migration": {
+          "legacy_lock_sha256": "73d017ab2c98bf517c9be63b93c7f15042388bbc704242efb10fb5f4f6243a31",
+          "migrated_build_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69",
+          "migrated_lock_sha256": "65c959321747e58d42edfc2410fa5251465a3f3da051665d7c97786995d51ba1",
+          "native_original_build_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69",
+          "native_receipt_sha256": "8a8f1154642955b7e7e7e9a0a806843ec00b2a25e9bea6c8103fa3b7b5cb09a0",
+          "published_build_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69"
+        },
+        "native_frontend": "/home/runner/work/_temp/ami-rust-native-consumer-work/native-package/bin/ami-rust",
+        "native_frontend_sha256": "e05ffb53f07484b3ac68284bc09ab3841325f9df2c0fd7bf7314890fd5b50c45",
+        "observed_command_count": 54,
+        "preservation_roots": [
+          "global_cargo_config",
+          "global_rustup_config",
+          "native_first_build",
+          "native_migration_area",
+          "native_project",
+          "published_v1_build",
+          "published_v1_home",
+          "published_v1_interrupted_prepare",
+          "published_v1_package_tree",
+          "published_v1_project",
+          "published_v1_state",
+          "ready_state_and_retained_tooling",
+          "unrelated_sdk",
+          "user_data"
+        ],
+        "publisher_authentication_status": "OUTER_AND_INNER_AUTHENTICATED",
+        "report_serialization_timeline": {
+          "all_other_report_fields_exactly_equal": true,
+          "final_checkpoint": {
+            "archive_sha256": "6567abfb4e36a2bf82816f51512343f4d1232c97c866e648fdf68ab4cf7f2448",
+            "name": "native-to-native package upgrade",
+            "roots": {
+              "global_cargo_config": {
+                "entries": 3,
+                "file_bytes": 21,
+                "root": "/home/runner/work/_temp/ami-rust-native-consumer-work/home/.cargo",
+                "sha256": "3a39a0bf818d56d40a80f74d2036c378dc6a03f75c5fe12464b3af46b647c412"
+              },
+              "global_rustup_config": {
+                "entries": 3,
+                "file_bytes": 15,
+                "root": "/home/runner/work/_temp/ami-rust-native-consumer-work/home/.rustup",
+                "sha256": "96013e6560e4ac552ec907299a59bbbbfd44bb091175da4ab46a1014fe3cc040"
+              },
+              "published_v1_build": {
+                "entries": 81,
+                "file_bytes": 85983500,
+                "root": "/home/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/build-parent/hello-aros-build",
+                "sha256": "905d34dd23d46827fbbde2b9cd960842c27340192a90ac6e9e92e5be17dde3c0"
+              },
+              "published_v1_home": {
+                "entries": 1,
+                "file_bytes": 0,
+                "root": "/home/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/home",
+                "sha256": "fe7b8915e1bb56031a2e06f239a1cfaf45de81622120d863fb2e7fb2e41d6e83"
+              },
+              "published_v1_interrupted_prepare": {
+                "entries": 4776,
+                "file_bytes": 249468791,
+                "root": "/home/runner/work/_temp/ami-rust-native-consumer-work/published-interrupted-prepare-area",
+                "sha256": "48a6eecda64d5524591460a0546cdc51c7a1cb9ecf2acfe4200b80a8ff2ae43e"
+              },
+              "published_v1_package_tree": {
+                "entries": 31,
+                "file_bytes": 27175095,
+                "root": "/home/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/package-tree",
+                "sha256": "59b7e0d6607e1e28124d0fef2acbae5599bffd80c50a07e6c9a82135f40f3cbf"
+              },
+              "published_v1_project": {
+                "entries": 142,
+                "file_bytes": 5008520,
+                "root": "/home/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/project-parent/hello-aros",
+                "sha256": "5f0a4f49e0ac62feacd5b79072725b8c5b820f668f723cbf899a0364b42f06ea"
+              },
+              "published_v1_state": {
+                "entries": 20615,
+                "file_bytes": 1965356071,
+                "root": "/home/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/state-parent/ami-rust-0.1.0-state",
+                "sha256": "44fb6427a3d5578dd15a456b8ab474a611de38fdea264de758aa7ddc39a4fc8e"
+              },
+              "unrelated_sdk": {
+                "entries": 3,
+                "file_bytes": 44,
+                "root": "/home/runner/work/_temp/ami-rust-native-consumer-work/unrelated-sdk",
+                "sha256": "501373b19bca21f41ded411271c4496084d752c86089a9c16e347011d7ab13b1"
+              },
+              "user_data": {
+                "entries": 3,
+                "file_bytes": 50,
+                "root": "/home/runner/work/_temp/ami-rust-native-consumer-work/unrelated-user-data",
+                "sha256": "c55dbc40a43baf1bba01ae42188c1e36d17f37265df749c5571eb797abc71ef8"
+              }
+            }
+          },
+          "final_checkpoint_count": 12,
+          "frozen_producer_sha256": "4138d6cdf0de084906affed69496d438b125566ae2603c04107d990c09ba10dc",
+          "schema": "ami-rust-lifecycle-report-timeline-join-v1",
+          "scope": "Strict two-time serialization join only; the independently required upgrade slice validates actual upgrade operations and raw observations. No report bytes are normalized or replaced.",
+          "standalone_checkpoint_count": 11
+        },
+        "retained_replay": {
+          "digest_binding": "Cross-bound to the producer's first-build and migration reports; the replay ELF itself is not a standalone artifact member.",
+          "launcher": "/home/runner/work/_temp/ami-rust-native-consumer-work/native-state-write-area/derived/native-ready-state/retained/bin/ami-rust",
+          "raw_stdout_sha256": "e243b23a81c7b5069bbf1eb6e66bced021a36f06e754c443437ecdafe361c0a1",
+          "reported_replay_executable_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69"
+        },
+        "schema": "ami-rust-native-lifecycle-readback-v1",
+        "scope": "One host's authenticated native lifecycle and original command prefix, published 0.1.0-2 to native 0.2 transition, migration, package removal and retained replay. The 14-command upgrade tail is label/order-bound here; detailed evidence is delegated to the separately required verify-native-upgrade-readback-a1.py. Interruption and matrix detail belong to their dedicated readback modules. This result does not authenticate the provider artifact or grant RC1 acceptance.",
+        "selector_sequence": [
+          "initial-published-retained-root",
+          "activate-native-package",
+          "rollback-to-published-retained-root"
+        ],
+        "source": {
+          "run_attempt": 1,
+          "run_id": 39553656864,
+          "source_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+          "workflow_sha": "4350aeae331dbccb190bc7be6938306644e4d4af"
+        },
+        "source_tree": "25d3b14be3c779d34d713a47d405206b49cf9e82",
+        "status": "PASS_NATIVE_LIFECYCLE_RAW_BINDINGS_NOT_RC1_ACCEPTANCE",
+        "versions": {
+          "cli": "0.2.0-dev",
+          "native_package": "0.2.0-2",
+          "published_package": "0.1.0-2",
+          "published_sdk": "0.1.0",
+          "sdk": "0.2.0"
+        }
+      },
+      "interruption_pair": {
+        "host": "linux-x86_64",
+        "pair_sha256": "9d2de3c5d57ce3588bfadd041d42b7752978bba3067dcf7637c5bdf75f9f720e",
+        "raw_child_capture_bytes": 596,
+        "schema": "ami-rust-interruption-readback-v1",
+        "scope": "One archived actual-pair slice only. Caller authenticates transport/source; signatures, all other consumer observations, matrix, cross-host and RC1 acceptance remain separate.",
+        "source": {
+          "run_attempt": 1,
+          "run_id": 39553656864,
+          "source_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+          "workflow_sha": "4350aeae331dbccb190bc7be6938306644e4d4af"
+        },
+        "source_tree": "25d3b14be3c779d34d713a47d405206b49cf9e82",
+        "status": "PASS_INTERRUPTION_BINDINGS_NOT_RC1_ACCEPTANCE"
+      },
+      "native_upgrade_and_retained_replay": {
+        "canonical_executable_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69",
+        "commands": [
+          "17-upgrade-old-inner-authentication",
+          "18-upgrade-old-consistency",
+          "18-upgrade-old-authentication",
+          "18-upgrade-new-consistency",
+          "18-upgrade-new-authentication",
+          "19-upgrade-old-cold-prepare",
+          "20-upgrade-old-new-project",
+          "21-upgrade-old-offline-build",
+          "22-upgrade-new-refuses-old-state",
+          "23-upgrade-new-refuses-old-build",
+          "24-upgrade-old-retained-recheck",
+          "25-upgrade-old-retained-offline-replay",
+          "26-upgrade-new-current-recheck",
+          "27-upgrade-new-offline-build"
+        ],
+        "host": "linux-x86_64",
+        "identity": {
+          "run_attempt": 1,
+          "run_id": 39553656864,
+          "source_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+          "workflow_sha": "4350aeae331dbccb190bc7be6938306644e4d4af"
+        },
+        "manifest_identity_boundary": {
+          "new": {
+            "release_manifest_sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+            "sdk_contract_manifest_sha256": "1c2eae776d80c3fcc6c1f183db59953dc5716c3acd2c453b24427ff6116ef382"
+          },
+          "old": {
+            "release_manifest_sha256": "8131e606fbff17d17fc75034f25f4da1ab294f2c5fd55e80701861a23dd658a3",
+            "sdk_contract_manifest_sha256": "434936bb1c61ee02f4fd282e7c1fb040e5a0daa86da3c5850aabfc17c8acf4d8"
+          }
+        },
+        "new_package": {
+          "manifest_sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+          "package_version": "0.2.0-2",
+          "packaging_revision": 2,
+          "run_attempt": 1,
+          "run_id": 39553656864,
+          "source_commit": "4350aeae331dbccb190bc7be6938306644e4d4af"
+        },
+        "old_package": {
+          "host_authentication_sha256": "a89b0de38049c03b509d877ee0139c391805388ff2a62f4137f410e26109579f",
+          "package_version": "0.2.0-1",
+          "packaging_revision": 1,
+          "run_attempt": 1,
+          "run_id": 39422283932,
+          "source_commit": "5135254310dba8d7ad2886332fb888b9518c159c"
+        },
+        "old_package_absence": "coordinator assertion and observed retained/new command paths only; the artifact has no post-removal filesystem scan",
+        "preservation_checkpoints": [
+          "old-native-preparation-and-build",
+          "native-selector-replacement",
+          "new-native-owner-refusals",
+          "removed-old-package-and-both-native-replays"
+        ],
+        "raw_records": [
+          "new-first-receipt.json",
+          "new-first.AMIRUST",
+          "new-project-lock.json",
+          "new-ready.json",
+          "new-upgrade-receipt.json",
+          "new-upgrade.AMIRUST",
+          "old-first-receipt.json",
+          "old-first.AMIRUST",
+          "old-project-lock.json",
+          "old-ready.json",
+          "old-replay-receipt.json",
+          "old-replay.AMIRUST",
+          "old-retained-core"
+        ],
+        "schema": "ami-rust-native-upgrade-readback-a1",
+        "scope_limitations": [
+          "The result ZIP does not duplicate raw old host-authentication bytes; source-pinned hashes, observed authentication commands, and separately preserved authenticated input artifacts provide the provenance boundary.",
+          "The refused-build output directory emptiness and final old-package filesystem absence are coordinator assertions, not independently captured filesystem inventories.",
+          "This verifies readback coherence, not the provider signature, original source inputs, package publication, or complete RC1 acceptance."
+        ],
+        "source_contract_commit": "fcfcd10ac08f302d450411650eb168bb0b6be78a",
+        "status": "PASS_SCOPED_NATIVE_REVISION_UPGRADE_READBACK_NOT_RC1_ACCEPTANCE"
+      },
+      "outer_inner_authentication_join": {
+        "authentication_host": "linux-x86_64",
+        "consumer_artifact_name": "sdk-native-consumer-linux-x86_64-39553656864-1",
+        "consumer_host": "linux-x86_64",
+        "inputs_manifest_sha256": "43da78947518104f01cc36a9020c92a72af20aaab51cd534d353e770a2dd8281",
+        "lifecycle_sha256": "140577357a5b2ee1beda2f1b70b0c20045362eac00fa1c2184984f372da91723",
+        "manifest_sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+        "observed_verifier": {
+          "consumer_host_backend": "linux",
+          "consumer_result_sha256": "8b47bde22da5efa114b43be4f4339c0f91fb45a86837f7bf611581e86703124c",
+          "consumer_stdout_sha256": "377c161ab4075f158f242f7f888fbb707d1a4e36c949ecb254c16b1b1bb90b00",
+          "policy_sha256": "90af0dc04918ba84c479564b29cd444e108bfd8d5539ce573b64c23fe8f63627",
+          "publisher_report_canonical_sha256": "8d48c0f1f640f96dc85566c3d5adfb181569eec4df78942eebcf40866b4ad70c",
+          "reviewed_inputs_sha256": "dc6041e39f1c56e4ece33642d101be6fcca5005a0eeea201b4290c1326f3dd25",
+          "schema": "ami-rust-publisher-verification-v2",
+          "status": "verified",
+          "verification_mode": "offline pinned GH bundle/custom root and Cosign bundle/trusted root"
+        },
+        "proof_members": {
+          "cosign": {
+            "SHAUTIL": {
+              "bundle_sha256": "6738fcc3de7415ff521b253830053cc41ff0b4dfe763c17282e1ad6619f4e6aa",
+              "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162",
+              "subject": "SHAUTIL"
+            },
+            "release.json": {
+              "bundle_sha256": "0fe5da7acc2d9f161807fbe58b178ca5b52475313e0e1eabdecd68935cf78340",
+              "sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+              "subject": "release.json"
+            },
+            "sdk.tar.xz": {
+              "bundle_sha256": "b8efcecb2e953f358da6cb4f8b9da2570851f8e2cee71fc0d77dd7db01a124a6",
+              "sha256": "1c2e83f7ffa1962303c30fd15986b988ae0235380e40f54f810a63dfa56f4884",
+              "subject": "sdk.tar.xz"
+            }
+          },
+          "gh": {
+            "SHAUTIL": {
+              "publisher_host": "linux-x86_64",
+              "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162",
+              "statement_sha256": "11c44da8743285ddca5fb8d14a787bd0e7624e11939b114efd1becb812b64546",
+              "subject": "SHAUTIL"
+            },
+            "release.json": {
+              "publisher_host": "linux-x86_64",
+              "sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+              "statement_sha256": "78d50a895ee95d938bfb3a58d5563d466e648030b3230b24be949f457bf265c5",
+              "subject": "release.json"
+            },
+            "sdk.tar.xz": {
+              "publisher_host": "linux-x86_64",
+              "sha256": "1c2e83f7ffa1962303c30fd15986b988ae0235380e40f54f810a63dfa56f4884",
+              "statement_sha256": "cb77a498965d19ecd201ed8440c39c8a4500f897c69306f4fd114ff14332dfbc",
+              "subject": "sdk.tar.xz"
+            }
+          }
+        },
+        "provider_artifact_name": "sdk-authenticated-linux-x86_64-39553656864-1",
+        "schema": "ami-rust-native-authentication-join-readback-v2",
+        "scope": "Joins the compositor-authenticated provider archive to exact publisher subject and source/run/workflow/host records, consumer reviewed input and policy bytes, the current consumer lifecycle/tree record and its recorded successful verifier trace. Cryptography is observed from the pinned consumer verifier trace and is not rerun by this reader. The current Cosign verifier checks subject digest and pinned workflow identity/source/ref, but not certificate run ID or host profile; RC1 acceptance remains a separate decision.",
+        "source": {
+          "run_attempt": 1,
+          "run_id": 39553656864,
+          "source_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+          "workflow_sha": "4350aeae331dbccb190bc7be6938306644e4d4af"
+        },
+        "source_tree": "25d3b14be3c779d34d713a47d405206b49cf9e82",
+        "status": "PASS_AUTHENTICATION_JOIN_NOT_RC1_ACCEPTANCE"
+      }
+    },
+    "macos-aarch64": {
+      "actual_native_lifecycle_commands": {
+        "cold_runtime_reference": null,
+        "direct_receipt_sha256": "b1ac6100d0674fd1a0ff8eb7f662dff8e6348a72a7ccd012b1743c9c7d0df92b",
+        "expected_negative_rows": [
+          "02-altered-gh-signature",
+          "03-altered-cosign-signature",
+          "04-altered-sdk",
+          "06-occupied-install",
+          "07-wrong-removal-pin",
+          "09-interrupted-state-retry-refusal",
+          "12-occupied-state-refusal",
+          "20-published-v1-state-schema-refusal",
+          "21-published-migration-wrong-receipt",
+          "23-published-migration-occupied-output"
+        ],
+        "host": "macos-aarch64",
+        "legacy_migration_execution_boundary": {
+          "backend": "sandbox executable denial",
+          "raw_guard_syscall_trace_claim": false,
+          "source_bound_linux_guard_controls_required_in_final_regular_ci_join": false
+        },
+        "lifecycle_sha256": "4a6843b4d3a020ca8cb58223141bf5949aa37596c1333b8e5cc2b5da7bfb9eb3",
+        "manifest_sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+        "migration": {
+          "legacy_lock_sha256": "87b279eb70b40f009d00e092551525e895a33075363c5f652400826dc92552d3",
+          "migrated_build_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69",
+          "migrated_lock_sha256": "1fbe58141fe0ece1068129bfc7cd7653ef9c6c5c3773c37ac0be6ff252a3d22a",
+          "native_original_build_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69",
+          "native_receipt_sha256": "cd1585589e33b2625c6b8ef8dd1fe0e1a0826b7a0e184f19857c002ab165caab",
+          "published_build_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69"
+        },
+        "native_frontend": "/Users/runner/work/_temp/ami-rust-native-consumer-work/native-package/bin/ami-rust",
+        "native_frontend_sha256": "80b8bd134e7d81989eb7b770051f3419d1e98414c34fa8eabec6863ab01ff364",
+        "observed_command_count": 53,
+        "preservation_roots": [
+          "global_cargo_config",
+          "global_rustup_config",
+          "native_first_build",
+          "native_migration_area",
+          "native_project",
+          "published_v1_build",
+          "published_v1_home",
+          "published_v1_interrupted_prepare",
+          "published_v1_package_tree",
+          "published_v1_project",
+          "published_v1_state",
+          "ready_state_and_retained_tooling",
+          "unrelated_sdk",
+          "user_data"
+        ],
+        "publisher_authentication_status": "OUTER_AND_INNER_AUTHENTICATED",
+        "report_serialization_timeline": {
+          "all_other_report_fields_exactly_equal": true,
+          "final_checkpoint": {
+            "archive_sha256": "6567abfb4e36a2bf82816f51512343f4d1232c97c866e648fdf68ab4cf7f2448",
+            "name": "native-to-native package upgrade",
+            "roots": {
+              "global_cargo_config": {
+                "entries": 3,
+                "file_bytes": 21,
+                "root": "/Users/runner/work/_temp/ami-rust-native-consumer-work/home/.cargo",
+                "sha256": "d7fcf30b9b22d5b6376827487eafe138127d3912a641d915223efd555b9498a8"
+              },
+              "global_rustup_config": {
+                "entries": 3,
+                "file_bytes": 15,
+                "root": "/Users/runner/work/_temp/ami-rust-native-consumer-work/home/.rustup",
+                "sha256": "539f80086c6d95a1413207ac8980cdee0c96aea426cd5f0d162fc7765c8faf34"
+              },
+              "published_v1_build": {
+                "entries": 81,
+                "file_bytes": 85664214,
+                "root": "/Users/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/build-parent/hello-aros-build",
+                "sha256": "5e0c0c0c71d963226bea0cc605e7f251bea46ae2d3e4e00a35d6793eab4e60e1"
+              },
+              "published_v1_home": {
+                "entries": 1,
+                "file_bytes": 0,
+                "root": "/Users/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/home",
+                "sha256": "3ff0d99eca0c64816efefb262e7d44c5ffef6f1f8522fe6abf961dbb8e7f1c47"
+              },
+              "published_v1_interrupted_prepare": {
+                "entries": 1862,
+                "file_bytes": 93507693,
+                "root": "/Users/runner/work/_temp/ami-rust-native-consumer-work/published-interrupted-prepare-area",
+                "sha256": "6744a046dceffc54f7a4cf21d66901ade59ae142dd6c8d2f4ee7f82851450cb3"
+              },
+              "published_v1_package_tree": {
+                "entries": 31,
+                "file_bytes": 27175095,
+                "root": "/Users/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/package-tree",
+                "sha256": "9eda7c1d6bfa25f7ce6494085f7c275a92a3ddec6b42c56de272972b5154b14d"
+              },
+              "published_v1_project": {
+                "entries": 142,
+                "file_bytes": 5008529,
+                "root": "/Users/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/project-parent/hello-aros",
+                "sha256": "e9b871c1723e4da82d5a3660bcdde8426a5eabca20f069a8b00bf6fb8aafc647"
+              },
+              "published_v1_state": {
+                "entries": 17574,
+                "file_bytes": 1521846728,
+                "root": "/Users/runner/work/_temp/ami-rust-native-consumer-work/published-v1-rollback-setup/state-parent/ami-rust-0.1.0-state",
+                "sha256": "4b85b201feb1d648255626490c945a8d3af88977728a772572a8e902ecb031e7"
+              },
+              "unrelated_sdk": {
+                "entries": 3,
+                "file_bytes": 44,
+                "root": "/Users/runner/work/_temp/ami-rust-native-consumer-work/unrelated-sdk",
+                "sha256": "8f48dad8217e6df8efb57443a2f5eba9c36ed21c7ffa3a79b556d16c849fe644"
+              },
+              "user_data": {
+                "entries": 3,
+                "file_bytes": 50,
+                "root": "/Users/runner/work/_temp/ami-rust-native-consumer-work/unrelated-user-data",
+                "sha256": "04c6f6b908c5f14a0731cd3fb96c52ebe180cc0346363b5c724387a69afa86df"
+              }
+            }
+          },
+          "final_checkpoint_count": 11,
+          "frozen_producer_sha256": "4138d6cdf0de084906affed69496d438b125566ae2603c04107d990c09ba10dc",
+          "schema": "ami-rust-lifecycle-report-timeline-join-v1",
+          "scope": "Strict two-time serialization join only; the independently required upgrade slice validates actual upgrade operations and raw observations. No report bytes are normalized or replaced.",
+          "standalone_checkpoint_count": 10
+        },
+        "retained_replay": {
+          "digest_binding": "Cross-bound to the producer's first-build and migration reports; the replay ELF itself is not a standalone artifact member.",
+          "launcher": "/Users/runner/work/_temp/ami-rust-native-consumer-work/native-state-write-area/derived/native-ready-state/retained/bin/ami-rust",
+          "raw_stdout_sha256": "8ce4793952c832a5e95c5865b25acfabbca3b6d5c438a622c80ee3b7b7ab53bf",
+          "reported_replay_executable_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69"
+        },
+        "schema": "ami-rust-native-lifecycle-readback-v1",
+        "scope": "One host's authenticated native lifecycle and original command prefix, published 0.1.0-2 to native 0.2 transition, migration, package removal and retained replay. The 14-command upgrade tail is label/order-bound here; detailed evidence is delegated to the separately required verify-native-upgrade-readback-a1.py. Interruption and matrix detail belong to their dedicated readback modules. This result does not authenticate the provider artifact or grant RC1 acceptance.",
+        "selector_sequence": [
+          "initial-published-retained-root",
+          "activate-native-package",
+          "rollback-to-published-retained-root"
+        ],
+        "source": {
+          "run_attempt": 1,
+          "run_id": 39553656864,
+          "source_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+          "workflow_sha": "4350aeae331dbccb190bc7be6938306644e4d4af"
+        },
+        "source_tree": "25d3b14be3c779d34d713a47d405206b49cf9e82",
+        "status": "PASS_NATIVE_LIFECYCLE_RAW_BINDINGS_NOT_RC1_ACCEPTANCE",
+        "versions": {
+          "cli": "0.2.0-dev",
+          "native_package": "0.2.0-2",
+          "published_package": "0.1.0-2",
+          "published_sdk": "0.1.0",
+          "sdk": "0.2.0"
+        }
+      },
+      "interruption_pair": {
+        "host": "macos-aarch64",
+        "pair_sha256": "2934c91b1a11356a4cbcc2a82ce36f8a7e4621df4780b47bbef46b74a988dec8",
+        "raw_child_capture_bytes": 407,
+        "schema": "ami-rust-interruption-readback-v1",
+        "scope": "One archived actual-pair slice only. Caller authenticates transport/source; signatures, all other consumer observations, matrix, cross-host and RC1 acceptance remain separate.",
+        "source": {
+          "run_attempt": 1,
+          "run_id": 39553656864,
+          "source_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+          "workflow_sha": "4350aeae331dbccb190bc7be6938306644e4d4af"
+        },
+        "source_tree": "25d3b14be3c779d34d713a47d405206b49cf9e82",
+        "status": "PASS_INTERRUPTION_BINDINGS_NOT_RC1_ACCEPTANCE"
+      },
+      "native_upgrade_and_retained_replay": {
+        "canonical_executable_sha256": "6899474fbb668220e49b28c61f27d616cf51e5890dc51a8f47d5d48112bacf69",
+        "commands": [
+          "17-upgrade-old-inner-authentication",
+          "18-upgrade-old-consistency",
+          "18-upgrade-old-authentication",
+          "18-upgrade-new-consistency",
+          "18-upgrade-new-authentication",
+          "19-upgrade-old-cold-prepare",
+          "20-upgrade-old-new-project",
+          "21-upgrade-old-offline-build",
+          "22-upgrade-new-refuses-old-state",
+          "23-upgrade-new-refuses-old-build",
+          "24-upgrade-old-retained-recheck",
+          "25-upgrade-old-retained-offline-replay",
+          "26-upgrade-new-current-recheck",
+          "27-upgrade-new-offline-build"
+        ],
+        "host": "macos-aarch64",
+        "identity": {
+          "run_attempt": 1,
+          "run_id": 39553656864,
+          "source_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+          "workflow_sha": "4350aeae331dbccb190bc7be6938306644e4d4af"
+        },
+        "manifest_identity_boundary": {
+          "new": {
+            "release_manifest_sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+            "sdk_contract_manifest_sha256": "1c2eae776d80c3fcc6c1f183db59953dc5716c3acd2c453b24427ff6116ef382"
+          },
+          "old": {
+            "release_manifest_sha256": "8131e606fbff17d17fc75034f25f4da1ab294f2c5fd55e80701861a23dd658a3",
+            "sdk_contract_manifest_sha256": "434936bb1c61ee02f4fd282e7c1fb040e5a0daa86da3c5850aabfc17c8acf4d8"
+          }
+        },
+        "new_package": {
+          "manifest_sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+          "package_version": "0.2.0-2",
+          "packaging_revision": 2,
+          "run_attempt": 1,
+          "run_id": 39553656864,
+          "source_commit": "4350aeae331dbccb190bc7be6938306644e4d4af"
+        },
+        "old_package": {
+          "host_authentication_sha256": "79ab31c84641d954ecc244f52c391efb9025631d4b77630a1485cc997f2ea9bb",
+          "package_version": "0.2.0-1",
+          "packaging_revision": 1,
+          "run_attempt": 1,
+          "run_id": 39422283932,
+          "source_commit": "5135254310dba8d7ad2886332fb888b9518c159c"
+        },
+        "old_package_absence": "coordinator assertion and observed retained/new command paths only; the artifact has no post-removal filesystem scan",
+        "preservation_checkpoints": [
+          "old-native-preparation-and-build",
+          "native-selector-replacement",
+          "new-native-owner-refusals",
+          "removed-old-package-and-both-native-replays"
+        ],
+        "raw_records": [
+          "new-first-receipt.json",
+          "new-first.AMIRUST",
+          "new-project-lock.json",
+          "new-ready.json",
+          "new-upgrade-receipt.json",
+          "new-upgrade.AMIRUST",
+          "old-first-receipt.json",
+          "old-first.AMIRUST",
+          "old-project-lock.json",
+          "old-ready.json",
+          "old-replay-receipt.json",
+          "old-replay.AMIRUST",
+          "old-retained-core"
+        ],
+        "schema": "ami-rust-native-upgrade-readback-a1",
+        "scope_limitations": [
+          "The result ZIP does not duplicate raw old host-authentication bytes; source-pinned hashes, observed authentication commands, and separately preserved authenticated input artifacts provide the provenance boundary.",
+          "The refused-build output directory emptiness and final old-package filesystem absence are coordinator assertions, not independently captured filesystem inventories.",
+          "This verifies readback coherence, not the provider signature, original source inputs, package publication, or complete RC1 acceptance."
+        ],
+        "source_contract_commit": "fcfcd10ac08f302d450411650eb168bb0b6be78a",
+        "status": "PASS_SCOPED_NATIVE_REVISION_UPGRADE_READBACK_NOT_RC1_ACCEPTANCE"
+      },
+      "outer_inner_authentication_join": {
+        "authentication_host": "linux-x86_64",
+        "consumer_artifact_name": "sdk-native-consumer-macos-aarch64-39553656864-1",
+        "consumer_host": "macos-aarch64",
+        "inputs_manifest_sha256": "43da78947518104f01cc36a9020c92a72af20aaab51cd534d353e770a2dd8281",
+        "lifecycle_sha256": "4a6843b4d3a020ca8cb58223141bf5949aa37596c1333b8e5cc2b5da7bfb9eb3",
+        "manifest_sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+        "observed_verifier": {
+          "consumer_host_backend": "macos",
+          "consumer_result_sha256": "6e7e1f269e8e72320b88e3e05e5c5b7d3290a156bc8c1e99bbc90df926a3cf08",
+          "consumer_stdout_sha256": "a260a89faac3e5671650e829652bfb62371de8185daad624caf0f959116ad4dd",
+          "policy_sha256": "9b266ce94e3a690f4cf4b6b2daf6d8c6d64d573e85313590465dda27bb054d82",
+          "publisher_report_canonical_sha256": "da13d46dca47d8de3e6330d487ebfc548e7cfd12e2b655adf19b3db876dc88b0",
+          "reviewed_inputs_sha256": "dc6041e39f1c56e4ece33642d101be6fcca5005a0eeea201b4290c1326f3dd25",
+          "schema": "ami-rust-publisher-verification-v2",
+          "status": "verified",
+          "verification_mode": "offline pinned GH bundle/custom root and Cosign bundle/trusted root"
+        },
+        "proof_members": {
+          "cosign": {
+            "SHAUTIL": {
+              "bundle_sha256": "6738fcc3de7415ff521b253830053cc41ff0b4dfe763c17282e1ad6619f4e6aa",
+              "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162",
+              "subject": "SHAUTIL"
+            },
+            "release.json": {
+              "bundle_sha256": "0fe5da7acc2d9f161807fbe58b178ca5b52475313e0e1eabdecd68935cf78340",
+              "sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+              "subject": "release.json"
+            },
+            "sdk.tar.xz": {
+              "bundle_sha256": "b8efcecb2e953f358da6cb4f8b9da2570851f8e2cee71fc0d77dd7db01a124a6",
+              "sha256": "1c2e83f7ffa1962303c30fd15986b988ae0235380e40f54f810a63dfa56f4884",
+              "subject": "sdk.tar.xz"
+            }
+          },
+          "gh": {
+            "SHAUTIL": {
+              "publisher_host": "linux-x86_64",
+              "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162",
+              "statement_sha256": "11c44da8743285ddca5fb8d14a787bd0e7624e11939b114efd1becb812b64546",
+              "subject": "SHAUTIL"
+            },
+            "release.json": {
+              "publisher_host": "linux-x86_64",
+              "sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217",
+              "statement_sha256": "78d50a895ee95d938bfb3a58d5563d466e648030b3230b24be949f457bf265c5",
+              "subject": "release.json"
+            },
+            "sdk.tar.xz": {
+              "publisher_host": "linux-x86_64",
+              "sha256": "1c2e83f7ffa1962303c30fd15986b988ae0235380e40f54f810a63dfa56f4884",
+              "statement_sha256": "cb77a498965d19ecd201ed8440c39c8a4500f897c69306f4fd114ff14332dfbc",
+              "subject": "sdk.tar.xz"
+            }
+          }
+        },
+        "provider_artifact_name": "sdk-authenticated-linux-x86_64-39553656864-1",
+        "schema": "ami-rust-native-authentication-join-readback-v2",
+        "scope": "Joins the compositor-authenticated provider archive to exact publisher subject and source/run/workflow/host records, consumer reviewed input and policy bytes, the current consumer lifecycle/tree record and its recorded successful verifier trace. Cryptography is observed from the pinned consumer verifier trace and is not rerun by this reader. The current Cosign verifier checks subject digest and pinned workflow identity/source/ref, but not certificate run ID or host profile; RC1 acceptance remains a separate decision.",
+        "source": {
+          "run_attempt": 1,
+          "run_id": 39553656864,
+          "source_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+          "workflow_sha": "4350aeae331dbccb190bc7be6938306644e4d4af"
+        },
+        "source_tree": "25d3b14be3c779d34d713a47d405206b49cf9e82",
+        "status": "PASS_AUTHENTICATION_JOIN_NOT_RC1_ACCEPTANCE"
+      }
+    }
+  },
+  "matrix": {
+    "different_raw_archive_paths": [
+      "target/release/deps/libcurve25519_dalek-e6b2baccf7ea5fa1.rlib",
+      "target/release/deps/libed25519_dalek-a8ddfcdaa73c5d6b.rlib",
+      "target/release/deps/libserde-b024f4eba383325c.rlib"
+    ],
+    "hosts": {
+      "linux-x86_64": {
+        "build_count": 10,
+        "canonical_rows": 208,
+        "lifecycle_sha256": "140577357a5b2ee1beda2f1b70b0c20045362eac00fa1c2184984f372da91723",
+        "matrix_sha256": "be2bb9eb90437818b9ba32171128cd4efea43db9be635c50f18975acce05c81e",
+        "retained_raw_files": 8,
+        "root_count": 2,
+        "variant_count": 5
+      },
+      "macos-aarch64": {
+        "build_count": 10,
+        "canonical_rows": 208,
+        "lifecycle_sha256": "4a6843b4d3a020ca8cb58223141bf5949aa37596c1333b8e5cc2b5da7bfb9eb3",
+        "matrix_sha256": "95aa4bec11d987dc62331c249bc917d8ed9af7fa42d03474da784198180df58c",
+        "retained_raw_files": 8,
+        "root_count": 2,
+        "variant_count": 5
+      }
+    },
+    "metadata_obligation": "Every non-lib.rmeta member must match cross-host; all raw lib.rmeta differences require separately bound review. No archive may be edited or normalized.",
+    "reference_sha256": "93894f48757802841e067fa31d6a1624a3d35a80060d2927670cecfc81c4544e",
+    "schema": "ami-rust-native-matrix-readback-v1",
+    "scope": "Provider/source authentication, complete process observation, metadata/Serde, lifecycle effects and RC1 acceptance are separate obligations.",
+    "source": {
+      "run_attempt": 1,
+      "run_id": 39553656864,
+      "source_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+      "workflow_sha": "4350aeae331dbccb190bc7be6938306644e4d4af"
+    },
+    "status": "PASS_MATRIX_REFERENCE_AND_RAW_BINDINGS_NOT_METADATA_OR_RC1_ACCEPTANCE"
+  },
+  "metadata_reuse": {
+    "changed_paths_in_eligible_scope": [],
+    "current_canonical_matrix": "Both hosts, two fresh roots per host, five variants, all 208 canonical artifact rows, with strict raw byte bindings.",
+    "current_raw_archive_pins_match": true,
+    "current_reference_sha256": "93894f48757802841e067fa31d6a1624a3d35a80060d2927670cecfc81c4544e",
+    "eligibility_sha256": "85e5004404a6cac2d7cdadf36115f7276c1b32b586602a0237e3a3b0698a37e5",
+    "eligibility_source": "fcfcd10ac08f302d450411650eb168bb0b6be78a",
+    "fresh_aros_runtime_claim": false,
+    "historical_runtime_basis_sha256": "8230127240d4671e3ecc5983efc5f38fd56b87c509dadc5bfc8a4a5842018796",
+    "mismatch_policy": "Any source/input, canonical reference or raw archive pin mismatch refuses; no normalization or mismatch waiver.",
+    "scope": "Historical runtime/memory data is eligible for exact-byte reuse only after the unchanged accepted code/input scope and current raw archive pins plus canonical native matrix match. No current or fresh AROS guest runtime is claimed.",
+    "unchanged_code_input_scope": [
+      "Cargo.toml",
+      "Cargo.lock",
+      "crates",
+      "bridge",
+      "targets",
+      "tests",
+      "inputs",
+      "host",
+      "release/ci-sdk-inputs.json",
+      "release/native-reference.json",
+      "release/cargo-repro-inputs.json"
+    ]
+  },
+  "provider_jobs_sha256": "32784978274fcfb77520f947e0753bb9a699dca5a01c1fab9de0b55818ee9fbf",
+  "rc1_acceptance": "NOT_EVALUATED",
+  "reader_sha256": "6cdd86d46be5faa1423c628065a5ef832cb6ae683cb9a19dd3b2896091b137a2",
+  "recorded_utc": "2026-10-21T07:26:12.460597+00:00",
+  "remaining_join": "The final criterion join must attach the exact regular-CI both-host 192-pair reports and interpreter-control records to this source and SDK evidence. This reader does not add a PID-tree gate or decide RC1-A1\u2013A4.",
+  "required_job_outcomes": {
+    "Admit complete workflow artifact retention": "success",
+    "Assemble native common candidate": "success",
+    "Authenticate candidate (linux-x86_64)": "success",
+    "Authenticate candidate (macos-aarch64)": "success",
+    "Authenticate complete release transport": "success",
+    "Native signed lifecycle (linux-x86_64)": "success",
+    "Native signed lifecycle (macos-aarch64)": "success",
+    "Native tooling producer (linux-x86_64)": "success",
+    "Native tooling producer (macos-aarch64)": "success"
+  },
+  "schema": "ami-rust-protected-native-sdk-readback-v5",
+  "scope": "Exact current protected SDK provider transport, source, actual both-host outer/inner authentication, command/lifecycle, upgrade, interruption and canonical matrix readback. Final regular-CI source join and RC1 acceptance remain separate.",
+  "slice_reader_sha256": {
+    "authentication_join": "d3c8947e46857916a54a44e5fd6b7015ff4a7a37d4c57c89aac4e2ab8b867443",
+    "interruption": "326cd5897848e6e37646cb99acaa157df8c0807ec47864a9b0447f13a8938ff2",
+    "lifecycle": "eeea079d51a0f21f9db6bbcb2dd8841c107e7eab7e193e065c61e08ee04c33b2",
+    "matrix": "324fbc9c46ccc89113edad8f815a3ddd5e12fd4c19e5d7051c091043833c8996",
+    "native_upgrade": "0e64eb8201c17b87d22181a44a136fb8388bd4fa0f84f703632722f30a30c3c1"
+  },
+  "source": {
+    "run_attempt": 1,
+    "run_id": 39553656864,
+    "source_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+    "workflow_sha": "4350aeae331dbccb190bc7be6938306644e4d4af"
+  },
+  "source_audit_sha256": "8252e37003164bcee52958da80737e64d3fdecbdeb772848b379b62d833fa092",
+  "source_tree": "25d3b14be3c779d34d713a47d405206b49cf9e82",
+  "status": "COMPLETE_EXACT_CURRENT_SDK_READBACK_RC1_ACCEPTANCE_NOT_EVALUATED",
+  "universal_provider_subjects": {
+    ".auth/inputs.json": {
+      "bytes": 87034,
+      "sha256": "43da78947518104f01cc36a9020c92a72af20aaab51cd534d353e770a2dd8281"
+    },
+    "SHAUTIL": {
+      "bytes": 928208,
+      "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162"
+    },
+    "release.json": {
+      "bytes": 37576,
+      "sha256": "62ca6132a49f9bd01402384db9bf012f07d0b936e862ebd1e7737e89db6df217"
+    },
+    "sdk.tar.xz": {
+      "bytes": 565860,
+      "sha256": "1c2e83f7ffa1962303c30fd15986b988ae0235380e40f54f810a63dfa56f4884"
+    }
+  },
+  "workflow_sha256": "3264701a8e245d8fa50eb22adbce170f58a95a6293ca7bcb4d0c24727e43e34b"
+}

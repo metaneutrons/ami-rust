@@ -1,0 +1,124 @@
+{
+  "driver_sha256": "b903c771de73d489f7eb850837d6f4548d7af413a57e6471e11983b6b5fc3f06",
+  "original_provider_evidence_unchanged": true,
+  "results": [
+    {
+      "case": "original-full-upgrade",
+      "command_count": 14,
+      "host": "linux-x86_64",
+      "outcome": "PASS"
+    },
+    {
+      "case": "old-wrong-release-manifest",
+      "error": "old READY record does not belong to its pinned package",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_OWNER_GATE"
+    },
+    {
+      "case": "old-wrong-component-root",
+      "error": "old component root differs from its exact READY state's provisioning staging path",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_OWNER_GATE"
+    },
+    {
+      "case": "old-release-hash-substituted-for-contract",
+      "error": "old-first-receipt.json is not owned by the corresponding host/project/SDK",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_OWNER_GATE"
+    },
+    {
+      "case": "new-wrong-release-manifest",
+      "error": "new READY record does not belong to its pinned package",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_OWNER_GATE"
+    },
+    {
+      "case": "new-wrong-component-root",
+      "error": "new component root differs from its exact READY state's provisioning staging path",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_OWNER_GATE"
+    },
+    {
+      "case": "new-release-hash-substituted-for-contract",
+      "error": "new-first-receipt.json is not owned by the corresponding host/project/SDK",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_OWNER_GATE"
+    },
+    {
+      "case": "changed-retained-core",
+      "error": "raw retained core differs from authenticated old host core",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_OWNER_GATE"
+    },
+    {
+      "case": "unversioned-retained-core-substitution",
+      "error": "observed argv differs from the pinned native-upgrade contract: 24-upgrade-old-retained-recheck",
+      "host": "linux-x86_64",
+      "outcome": "REFUSED_AT_EXPECTED_ARGV_GATE"
+    },
+    {
+      "case": "original-full-upgrade",
+      "command_count": 14,
+      "host": "macos-aarch64",
+      "outcome": "PASS"
+    },
+    {
+      "case": "old-wrong-release-manifest",
+      "error": "old READY record does not belong to its pinned package",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_OWNER_GATE"
+    },
+    {
+      "case": "old-wrong-component-root",
+      "error": "old component root differs from its exact READY state's provisioning staging path",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_OWNER_GATE"
+    },
+    {
+      "case": "old-release-hash-substituted-for-contract",
+      "error": "old-first-receipt.json is not owned by the corresponding host/project/SDK",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_OWNER_GATE"
+    },
+    {
+      "case": "new-wrong-release-manifest",
+      "error": "new READY record does not belong to its pinned package",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_OWNER_GATE"
+    },
+    {
+      "case": "new-wrong-component-root",
+      "error": "new component root differs from its exact READY state's provisioning staging path",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_OWNER_GATE"
+    },
+    {
+      "case": "new-release-hash-substituted-for-contract",
+      "error": "new-first-receipt.json is not owned by the corresponding host/project/SDK",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_OWNER_GATE"
+    },
+    {
+      "case": "changed-retained-core",
+      "error": "raw retained core differs from authenticated old host core",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_OWNER_GATE"
+    },
+    {
+      "case": "unversioned-retained-core-substitution",
+      "error": "observed argv differs from the pinned native-upgrade contract: 24-upgrade-old-retained-recheck",
+      "host": "macos-aarch64",
+      "outcome": "REFUSED_AT_EXPECTED_ARGV_GATE"
+    }
+  ],
+  "schema": "ami-rust-native-upgrade-reader-controls-v1",
+  "scope": "Both actual full upgrade reader positives, then owner-record helper and exact-argv counterprobes using captured successful call inputs. This does not claim each semantic mutation was repackaged or reauthenticated as a provider ZIP. Full composition/transport controls are separate.",
+  "slice_sha256": "0e64eb8201c17b87d22181a44a136fb8388bd4fa0f84f703632722f30a30c3c1",
+  "source": {
+    "run_attempt": 1,
+    "run_id": 39553656864,
+    "source_sha": "4350aeae331dbccb190bc7be6938306644e4d4af",
+    "workflow_sha": "4350aeae331dbccb190bc7be6938306644e4d4af"
+  },
+  "status": "PASS_TWO_ACTUAL_UPGRADE_POSITIVES_AND_SIXTEEN_ISOLATED_REFUSALS"
+}

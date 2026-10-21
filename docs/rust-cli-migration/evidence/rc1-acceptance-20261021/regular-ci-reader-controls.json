@@ -1,0 +1,39 @@
+{
+  "schema": "ami-rust-pr116-native-evidence-reader-controls-v1",
+  "status": "PASS_FOUR_ACTUAL_ARTIFACT_SEMANTIC_REFUSALS",
+  "candidate": "4d5579a6ea0a264970e728b3e5ebb77fb609df99",
+  "reader_sha256": "e7c9765f949e13ef883e1241c280157ce75f4141310e1b83a896cbc0e8662cbc",
+  "positive_readback_sha256": "2ee4d27bab828acbae60a2bdaafa75c8e081929cc17fd934a71ca8666b3b6675",
+  "originals_unchanged": true,
+  "cases": [
+    {
+      "case": "different-positive-argv",
+      "status": "REFUSED_FOR_EXPECTED_SEMANTIC_REASON",
+      "exit_code": 1,
+      "expected_reason": "positive child recorded invocation differs from child input: rustc_args",
+      "synthetic_archive_sha256": "43f2397f31fb5f2f8460878847f9c56c9e7ff89f7d747c2a10760cf3339dbbed"
+    },
+    {
+      "case": "changed-positive-metadata",
+      "status": "REFUSED_FOR_EXPECTED_SEMANTIC_REASON",
+      "exit_code": 1,
+      "expected_reason": "ordinary and confined positive compiler metadata are empty or differ byte-for-byte",
+      "synthetic_archive_sha256": "04874e76e7bf37ea8722ce53563dbf5125b724fd11fc74ed32fb705cdf5e6599"
+    },
+    {
+      "case": "wrong-counter-errno",
+      "status": "REFUSED_FOR_EXPECTED_SEMANTIC_REASON",
+      "exit_code": 1,
+      "expected_reason": "write-null omission did not preserve the raw compiler EACCES/no-metadata outcome",
+      "synthetic_archive_sha256": "78cf95f2ed9a2c6c4f4184aa9c0fd84b016484fc85c6faf612c4fc2641d23003"
+    },
+    {
+      "case": "wrong-closure-map-binding",
+      "status": "REFUSED_FOR_EXPECTED_SEMANTIC_REASON",
+      "exit_code": 1,
+      "expected_reason": "null-probe closure, spec, runtime discovery and observations do not join",
+      "synthetic_archive_sha256": "e5f3346dc358a0e3804bb516500ef4f0d6adade829ba5beadf024a806c9e4b8a"
+    }
+  ],
+  "scope": "Isolated synthetic evidence copies only; no SDK or RC1 acceptance."
+}

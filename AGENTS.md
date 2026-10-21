@@ -91,3 +91,10 @@ sealed build-resource policy and its historical retention field. These
 are evidence storage limits, independent of command RAM/log/workspace/time
 budgets, signed SDK input limits and the AROS baseline. Do not introduce a new
 archive format solely to fit the former 32 MiB consumer retention limit.
+
+Owner clarification, 2026-10-21: future measured evidence growth may use a
+larger retention limit with reasonable headroom without asking the owner
+again. The current qualified campaign remains pinned to its existing 64 MiB
+policy. Change future source-controlled policy and qualify affected retention
+behavior; never rewrite sealed inputs or historical receipts. Current measured
+consumer artifacts are about 29 MiB on macOS and 37.5 MiB on Linux, unpacked.
