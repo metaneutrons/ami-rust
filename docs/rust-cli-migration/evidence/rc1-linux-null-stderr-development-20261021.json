@@ -25,7 +25,7 @@
   },
   "local_verification": {
     "status": "PASS_NULL_POLICY_COMPONENTS_LINUX_COMPILE_ONLY_NOT_NATIVE_OR_RC1_ACCEPTANCE",
-    "report_sha256": "4f1a88d399ce9899cd493a4e0f5577251bc5163a9d8deeb00fbb41a67ea1ac15",
+    "report_sha256": "9b14bfe40adcbb542a0ee5cc066948ee84a057f4598c46ed352840fc1f6f2673",
     "commands": [
       {
         "label": "null-policy-format-check",
@@ -57,26 +57,28 @@
       "ignored": 19
     },
     "xtask_tests": {
-      "passed": 53,
+      "passed": 54,
       "ignored": 0
     },
     "native_macOS": true,
     "linux_scope": "Strict all-target compilation only; native Linux positive/omission probe and complete SDK qualification pending.",
-    "conservative_peak_rss_upper_bound_bytes": 1747206144,
-    "peak_workspace_bytes": 2747930417,
-    "peak_logs_bytes": 53886
+    "conservative_peak_rss_upper_bound_bytes": 1744551936,
+    "peak_workspace_bytes": 2748219363,
+    "peak_logs_bytes": 53969
   },
   "changed_source_files": {
     ".github/workflows/rc1-linux-git-transport-diagnostic.yml": "93f72445f46f06cc9ef6bb530b990d52d66a90ed6d054493253c977d19953437",
-    "tooling/crates/xtask/src/consumer_observe.rs": "78b67666edf03888b115f74950dbb05c84eb2fdd9c80c3cdebf19448e02c8122",
+    "tooling/crates/xtask/src/consumer_observe.rs": "994ba977ca0ce280a63e6b83f409eaa0348e8482c2ae7b1efe0e25619867cf79",
     "tools/consumer-enforcement-adapter/LINUX.md": "8f7d6256091be3a3994a68edd76caf2b496d53fc1aff6c6807cb39d97c118490",
     "tools/consumer-enforcement-adapter/README.md": "d134c32ce46360998bf6009224f05b9e2acd79d7ca9ee35b95a513b42727166e",
     "tooling/crates/xtask/src/null_probe.rs": "a1825cb479c8357fdea9461bbed12a5a14723f0a52bc34afe7f4e2257fbaf68c",
-    "release/native-tooling-inputs.json": "1c43fe0dfb01d5d203a82cc1a71b322131e7ca23c5a8966a200ebbf4e8755848"
+    "release/native-tooling-inputs.json": "1c43fe0dfb01d5d203a82cc1a71b322131e7ca23c5a8966a200ebbf4e8755848",
+    "tooling/crates/xtask/src/fork_runtime_probe.rs": "63aa28239ac99b98bb105dbdfbedaf1019e00523b9ef2c541b197e4a8e13ba22"
   },
   "failures_retained": [
     "Local a1 driver was refused before tests because it ran under an unpinned system interpreter; a2 ran under the exact required pinned interpreter.",
-    "Initial candidate8d1f8c2 source inventory omitted the new null-probe test; the prospective SDK audit refused it before any SDK dispatch."
+    "Initial candidate8d1f8c2 source inventory omitted the new null-probe test; the prospective SDK audit refused it before any SDK dispatch.",
+    "First native PR115 run39518343599 failed on the inherited Cargo fork probe's obsolete no-device-write assertion, before the new null compiler test. Both exact archive and raw logs remain preserved."
   ],
   "remaining": [
     "Native Linux pinned rustc stderr-null positive and exact-policy-omission control.",
@@ -105,5 +107,14 @@
     ],
     "all_Rust_sources_unchanged_since_a2": true,
     "qualification": "This is a new source/input identity; fresh normal PR CI and complete SDK qualification remain required."
+  },
+  "inherited_probe_expectation_followup": {
+    "run": "https://github.com/metaneutrons/ami-rust/actions/runs/39518343599",
+    "outcome": "failure",
+    "source": "8d1f8c2d74c35d144188abf9978190aaa7b2a9f0",
+    "original_diagnostic_archive_sha256": "ee0a7a8798832ce3a3713602123df301ab8778e486babc9b0284cda968de24ee",
+    "failure": "The pre-existing Cargo fork probe rejected the intended exact build null-device rule before the new nested-compiler regression could run.",
+    "change": "Both Cargo fork policy checks now require exactly one write-null /dev/null line while retaining network denial. The shared predicate has a positive case and five missing/duplicate/other-device counterexamples, executed on macOS and subsequently required in normal Linux CI.",
+    "full_native_proof": "Pending current-candidate CI; no SDK publication or RC1 acceptance."
   }
 }

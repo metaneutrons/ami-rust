@@ -873,6 +873,32 @@ fn overlaps(left: &Path, right: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn build_probe_has_exact_null_write(policy: &str) -> bool {
+        policy
+            .lines()
+            .filter(|line| line.starts_with("write-null "))
+            .eq(["write-null /dev/null"])
+    }
+
+    #[test]
+    fn build_probe_null_rule_requires_one_exact_device() {
+        assert!(build_probe_has_exact_null_write(
+            "consumer-policy-v1\nwrite-null /dev/null\nnetwork deny\n"
+        ));
+        for policy in [
+            "consumer-policy-v1\nnetwork deny\n",
+            "write-null /dev/null\nwrite-null /dev/null\n",
+            "write-null /dev/zero\n",
+            "write-null /dev/null/child\n",
+            "write-null /dev/null\nwrite-null /dev/zero\n",
+        ] {
+            assert!(
+                !build_probe_has_exact_null_write(policy),
+                "unexpected device rule accepted: {policy}"
+            );
+        }
+    }
     use std::sync::atomic::{AtomicU64, Ordering};
     static NEXT: AtomicU64 = AtomicU64::new(0);
     struct Fixture {
