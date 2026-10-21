@@ -1,4 +1,5 @@
 //! Maintainer operations. Producing a draft never authorizes signing/publication.
+mod cargo_storage_probe;
 mod consumer_observe;
 mod consumer_report;
 mod consumer_runtime;
@@ -43,6 +44,7 @@ fn main() {
 fn run() -> Result<()> {
     let mut arguments = std::env::args_os().skip(1);
     match arguments.next().as_deref().and_then(|value| value.to_str()) {
+        Some("cargo-storage-probe") => cargo_storage_probe::run(arguments),
         Some("native-sdk") => run_native_sdk(arguments),
         Some("native-release") => run_native_release(arguments),
         Some("native-package") => run_native_package(arguments),
@@ -54,7 +56,7 @@ fn run() -> Result<()> {
         Some("historical-prepare-interruption") => historical_prepare_sigterm::run(arguments),
         Some("native-legacy-migration-fixture") => legacy_migration_fixture::run(arguments),
         _ => Err(Refusal::new(
-            "usage: ami-rust-xtask {native-sdk|native-release|native-package|native-outer|native-outer-finalize|native-package-verify|native-consumer-observe|native-prepare-interruption|historical-prepare-interruption|native-legacy-migration-fixture} OPTIONS; composition does not accept a release",
+            "usage: ami-rust-xtask {cargo-storage-probe|native-sdk|native-release|native-package|native-outer|native-outer-finalize|native-package-verify|native-consumer-observe|native-prepare-interruption|historical-prepare-interruption|native-legacy-migration-fixture} OPTIONS; composition does not accept a release",
         )),
     }
 }

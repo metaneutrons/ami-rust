@@ -1,0 +1,59 @@
+{
+  "schema": "ami-rust-cargo-storage-rust-development-v1",
+  "date": "2026-10-21",
+  "status": "LOCAL_MACOS_HOST_COMPONENT_ONLY",
+  "rc2_accepted": false,
+  "sdk_publication": false,
+  "source": {
+    "tooling/crates/xtask/src/cargo_storage_probe.rs": "00b2daf67edfd33ab2672dd6b9b787e70f70cd098ee190aa7028e123e1c6d907",
+    "tooling/crates/xtask/src/main.rs": "ccefb94ca215dd2298594524bdb7c7554de4547b0ae72ef6715068c3530362af",
+    "release/ci_cargo_storage.py": "0187c3d4ec8f04778fbd86d0d495c6f352f07dfcded1e9ad51d4abecb396d764",
+    ".github/workflows/cargo-storage-qualify.yml": "ea1628ba2d5831749c409416dcb65370d5d7cdeec70b98ae12cd9bd061fc0355",
+    "host/cargo-storage/runtime-checks.json": "eb9a6da178c89c0661c69f8ba01dbb74fc5f3de756d18aa7d84e64fa65043924"
+  },
+  "macos_runtime": {
+    "commands": 43,
+    "checks": 37,
+    "report_sha256": "62cefb02ee2b27d96bac312f922382af32ab52ed3e82b68346f041a359a79a77",
+    "supervision_sha256": "efe6b2b7f93f69ac365c19ae28d7f6907fec9acb1db4455b4ddaa77bbe2f5dfb",
+    "observed_child_peak_rss_bytes": 161513472,
+    "observed_driver_peak_rss_bytes": 30949376,
+    "logs_bytes": 49271
+  },
+  "rust_checks": {
+    "build": "PASS",
+    "snapshot_units": 2,
+    "workspace_all_targets_strict_clippy": "PASS",
+    "report_sha256": "d2b7aa69239c49004191c25bab2a996ce2c0d9c6d1f8aa7e593808f32b1809d5"
+  },
+  "source_and_runtime_receipt_gates": {
+    "positive_and_counter_checks": 13,
+    "status": "PASS",
+    "report_sha256": "55587f8c1a87ab30ba0e9cc8c388d4ca0c479fe9b9e528dc3e8188af21a8429f"
+  },
+  "cleanup_measurement_and_original_pin_gates": {
+    "positive_and_counter_checks": 11,
+    "status": "PASS",
+    "report_sha256": "79570a59c0cd1b071ba88b345f8e604fea255e36d535757da78aa07d6ab0ed00",
+    "tested_driver_sha256": "0187c3d4ec8f04778fbd86d0d495c6f352f07dfcded1e9ad51d4abecb396d764"
+  },
+  "retained_failures": [
+    "Initial artifact fixture omitted required -Z unstable-options; expected compiler-marker check correctly failed despite exit101.",
+    "Initial all-target Clippy rejected the explicit eight-argument internal fixture helper.",
+    "Initial cleanup retired work before rejecting linked bootstrap; corrected validation order passes the counter.",
+    "Initial source identity gate wrongly rejected valid upstream license/fixture symlinks; corrected gate preserves121 exact original targets."
+  ],
+  "remaining": [
+    "Linux execution of the new Rust fixture including raw non-UTF-8 paths",
+    "Protected-main fresh original/derived Cargo production on both hosts",
+    "Provider and registry authentication, nested/concurrent Cargo and complete selector-absent equivalence",
+    "Activation integration, final AROS builds and runtime/memory matrix",
+    "RC3 publication and RC4/RC5 Python retirement/recovery gates"
+  ],
+  "qualified_baseline_changed": false,
+  "independent_static_review": {
+    "report_sha256": "bf49613dad2d31b4f59ebd2682bd7dad247657ed82b48602ef8acbb417ba22ce",
+    "inputs_sha256": "9d2943247be77570c33c8847c1f7ece6a1c525bbcc09dbda6c6116626c17ecf3",
+    "status": "No blocking static finding on exact four implementation files; not runtime or RC2 acceptance"
+  }
+}

@@ -1,0 +1,100 @@
+name: RC2 Cargo storage component
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ami-rust-protected-builds
+  cancel-in-progress: false
+
+jobs:
+  admission:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: release
+    steps:
+      - name: Require protected main and the designated repository
+        env:
+          SOURCE_IS_PROTECTED: ${{ github.ref_protected }}
+        run: |
+          test "$GITHUB_REPOSITORY" = metaneutrons/ami-rust
+          test "$GITHUB_REF" = refs/heads/main
+          test "$SOURCE_IS_PROTECTED" = true
+      - name: Check out exact admission inputs
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            release/ci_artifact_admission.py
+            release/ci-artifact-policy.json
+      - name: Admit both 32 MiB diagnostic artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -I -B release/ci_artifact_admission.py
+
+  component:
+    needs: admission
+    name: Cargo storage (${{ matrix.profile }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 105
+    environment: release
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            profile: linux-x86_64
+          - os: macos-26
+            profile: macos-aarch64
+    steps:
+      - name: Check out the exact component source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            host/
+            tooling/
+            docs/rust-cli-migration/contracts-v1.json
+            release/ci_cargo.py
+            release/ci_cargo_storage.py
+            release/native-tooling-inputs.json
+            release/ci_python.py
+            release/ci-python-inputs.json
+            release/ci-bootstrap-inputs.json
+            release/ci-resources.json
+      - name: Install pinned internal CI Python
+        run: |
+          python3 -I -B release/ci_python.py \
+            --prefix "$RUNNER_TEMP/ami-rust-python-bootstrap" \
+            --inputs release/ci-python-inputs.json
+      - name: Build original and derived Cargo and run Rust storage fixtures
+        id: component
+        run: |
+          "$RUNNER_TEMP/ami-rust-python-bootstrap/runtime/python/bin/python3.12" -I -B release/ci_cargo_storage.py \
+            --temporary "$RUNNER_TEMP" \
+            --output "$RUNNER_TEMP/ami-rust-cargo-storage-output" \
+            --python-bootstrap-root "$RUNNER_TEMP/ami-rust-python-bootstrap"
+      - name: Retire marker-owned work and preserve diagnostic evidence
+        id: cleanup
+        if: always() && steps.component.outcome != 'skipped'
+        run: |
+          python3 -I -B release/ci_cargo_storage.py \
+            --temporary "$RUNNER_TEMP" \
+            --output "$RUNNER_TEMP/ami-rust-cargo-storage-output" \
+            --cleanup
+      - name: Preserve component reports and raw logs only
+        if: always() && steps.cleanup.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cargo-storage-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-cargo-storage-output
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9

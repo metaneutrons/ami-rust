@@ -1,0 +1,51 @@
+{
+  "schema": "ami-rust-cargo-storage-runtime-checks-v1",
+  "common": [
+    "all-cache-lock-database-and-Git-roots-use-selected-store",
+    "artifact-failure-retry-restores-project-inputs",
+    "artifact-retry-executable-has-valid-fixture-output",
+    "cached-build-reuses-executable",
+    "conflict-false-build-refused-before-mutation",
+    "conflict-false-check-refused-before-mutation",
+    "conflict-false-metadata-refused-before-mutation",
+    "conflict-true-build-refused-before-mutation",
+    "conflict-true-check-refused-before-mutation",
+    "conflict-true-metadata-refused-before-mutation",
+    "conflicting-relative-origin-refused-before-mutation",
+    "control-original-config-origin-and-CLI-precedence",
+    "custom-build-dir-cache-path-is-literal-not-template-input",
+    "custom-build-dir-literal-stock-equivalence",
+    "fresh-artifact-compile-failure-101-preserves-prior-and-emits-no-artifact",
+    "immutable-tools-and-executed-source-still-match",
+    "invalid-root-empty-refused-before-mutation",
+    "invalid-root-file-refused-before-mutation",
+    "invalid-root-group-writable-refused-before-mutation",
+    "invalid-root-missing-refused-before-mutation",
+    "invalid-root-noncanonical-refused-before-mutation",
+    "invalid-root-relative-refused-before-mutation",
+    "invalid-root-symlink-refused-before-mutation",
+    "original-home-unchanged-under-selected-cargo",
+    "owned-0755-selected-root-accepted",
+    "project-inputs-unchanged-under-selected-cargo",
+    "registry-dependency-refused-by-empty-local-source",
+    "same-selector-force-read-only",
+    "same-selector-plain-read-only",
+    "same-selector-relative-read-only",
+    "same-selector-true-relative-origin-read-only",
+    "selected-config-home-relative-origin-CLI-and-build-script-equivalent",
+    "selected-metadata-byte-equal-with-same-output-path",
+    "selector-absent-legacy-env-metadata-byte-equivalence",
+    "synthetic-lockfile-has-no-registry-dependencies",
+    "unknown-template-variable-keeps-Cargo-refusal",
+    "valid-artifact-retry-exports-after-failure"
+  ],
+  "profiles": {
+    "macos-aarch64": [],
+    "linux-x86_64": [
+      "linux-non-utf8-root-preserves-bytes-and-routes-git-cache-owned-0755",
+      "linux-non-utf8-cache-literal-build-dir-metadata-equivalence",
+      "linux-non-utf8-cache-template-check-uses-literal-OS-root"
+    ]
+  },
+  "scope": "Exact host-component fixture receipt checks only; not complete RC2 acceptance."
+}
