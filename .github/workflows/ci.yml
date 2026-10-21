@@ -37,6 +37,7 @@ jobs:
             host/
             native/sdk.h
             release/*.py
+            release/fixtures/
             release/ci-*.json
             release/native-tooling-inputs.json
             tooling/Cargo.lock

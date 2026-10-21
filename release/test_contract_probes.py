@@ -245,14 +245,9 @@ class CompileContractProbeTests(unittest.TestCase):
             supervisor=self.supervisor, python=self.python_path, bundle=self.bundle,
             consumer=self.consumer, host=self.host, sdk=self.sdk, components=self.components)
 
-    def test_standalone_compile_fail_manifest_has_explicit_license_and_loads_in_cargo(self):
-        cargo = shutil.which("cargo")
-        if cargo is None:
-            self.skipTest("Cargo is required to check the real standalone fixture manifest")
+    def test_published_compile_fail_manifest_and_bundle_inventory_are_preserved(self):
         source_root = Path(__file__).resolve().parents[1]
-        manifest = source_root / "tests/compile-fail/Cargo.toml"
-        self.assertIn('license = "MIT OR Apache-2.0"', manifest.read_text())
-        fixture_raw = manifest.read_bytes()
+        fixture_raw = (source_root / "release/fixtures/v0.1.0-compile-fail.Cargo.toml").read_bytes()
         sdk_contract = json.loads((source_root / "contract/sdk.json").read_text())
         fixture_rows = [row for row in sdk_contract["files"]
                         if row.get("path") == "tests/compile-fail/Cargo.toml"]
@@ -267,6 +262,14 @@ class CompileContractProbeTests(unittest.TestCase):
         self.assertEqual(quickstart_rows[0]["bytes"], len(quickstart))
         self.assertEqual(quickstart_rows[0]["sha256"], sha(quickstart))
         self.assertTrue((source_root / "docs/quickstart.md").read_bytes().endswith(quickstart))
+
+    def test_current_compile_fail_manifest_has_explicit_license_and_loads_in_cargo(self):
+        cargo = shutil.which("cargo")
+        if cargo is None:
+            self.skipTest("Cargo is required to check the real standalone fixture manifest")
+        source_root = Path(__file__).resolve().parents[1]
+        manifest = source_root / "tests/compile-fail/Cargo.toml"
+        self.assertIn('license = "MIT OR Apache-2.0"', manifest.read_text())
         env = dict(os.environ)
         env.update({"CARGO_NET_OFFLINE": "true", "CARGO_TERM_COLOR": "never"})
         result = subprocess.run(
@@ -278,6 +281,11 @@ class CompileContractProbeTests(unittest.TestCase):
         package = next(item for item in metadata["packages"]
                        if item["name"] == "m1-compile-fail-fixtures")
         self.assertEqual(package["license"], "MIT OR Apache-2.0")
+        dependencies = [item for item in package["dependencies"] if item["name"] == "aros-sdk"]
+        self.assertEqual(len(dependencies), 1)
+        self.assertEqual(dependencies[0]["req"], "=0.1.0")
+        self.assertEqual(Path(dependencies[0]["path"]).resolve(),
+                         (source_root / "crates/aros-sdk").resolve())
 
     def test_valid_eight_case_pass_binds_flags_and_restores_environment(self):
         environment = self.supervisor.env
