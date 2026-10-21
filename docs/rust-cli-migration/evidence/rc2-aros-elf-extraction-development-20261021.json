@@ -1,0 +1,35 @@
+{
+  "schema": "ami-rust-aros-elf-extraction-development-v1",
+  "source_base": "ce6a872716b3d6a1bc56301a066cc54c43256115",
+  "status": "PASS_PACKAGED_AROS_ELF_FRESH_CONSUMER_AND_REAL_ELF_EQUIVALENCE",
+  "scope": "macOS actual Cargo archive consumed outside the workspace, exact retained native ELF/audit/compaction comparison and isolated wrong-ABI refusal. Not registry publication, source-installed linker tool, new AROS build/runtime, Linux runtime or RC2 acceptance.",
+  "implementation_equivalence": "compact.rs byte-for-byte; elf.rs changes only the two SHA helper module paths. Original unit tests move intact. The existing core delegates to the crate and translates its errors preserving message and exit code.",
+  "source_files": {
+    "tooling/crates/aros-elf/Cargo.toml": "fe3b31436e9ba57c62c50d14119a3a51106428cd70ccc0ddfd7da00646eb52d1",
+    "tooling/crates/aros-elf/LICENSE-APACHE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "tooling/crates/aros-elf/LICENSE-MIT": "d305a4cc8ade83fde897ea29a83fb4fb3e7ac5e3858f85845613dd7af1036abf",
+    "tooling/crates/aros-elf/README.md": "4719b08b0db753b887cde6b25a3a73e224985d2cbbcd5600938d8e4636025122",
+    "tooling/crates/aros-elf/src/compact.rs": "bf641b7118cc42cb14ed67e7de89392e4fe6dbdd0dcc67f7f7058fcaf34e5953",
+    "tooling/crates/aros-elf/src/elf.rs": "7ee840aa3f53fa551533289a24e105672aa1398678e19a107bf15d3bba10ce54",
+    "tooling/crates/aros-elf/src/error.rs": "271f002cc0595204b2a329910492355aa4d9afe80b3dde1e794b516bc25c5750",
+    "tooling/crates/aros-elf/src/lib.rs": "c172188284fa522ac04034de2e36a88f23ea624539087234173f7da7a5465216"
+  },
+  "development_checks_status": "PASS_SHARED_AROS_ELF_CRATE_WORKSPACE_BOTH_CFG_CLIPPY_AND_PACKAGE",
+  "development_checks_report_sha256": "ca6f2b538406236006453b35e7b3fed1eb20738afde12bd9e4e7e76977e21540",
+  "external_consumer_report_sha256": "6a3f00b00755091b21cb5c55fbdb3f388b40da0fcf3e0cc808e3cc111cf4fb86",
+  "package_sha256": "c3cfcfb1de891b16eea53416b9968f9f5810b21692731f30b4c5985b8722e2af",
+  "package_bytes": 21486,
+  "native_output_sha256": "048e09bd17b53b95cf6ed8829331f9dc4c93756f9b9eb98c74bb23fcfd5c9aed",
+  "native_output_bytes": 342136,
+  "comparison": "Packaged crate consumed outside source workspace; full audit JSON and section-compaction report equal retained prior proof, final native bytes exactly equal. An isolated wrong-ABI copy fails before success. Original inputs unchanged.",
+  "budgets": {
+    "elapsed_seconds": 4.931149291107431,
+    "child_peak_rss_bytes": 533757952,
+    "driver_peak_rss_bytes": 32374784,
+    "workspace_peak_bytes": 221716186
+  },
+  "limitations": [
+    "Development archive only; no registry publisher/namespace acceptance or publication.",
+    "No new compiler/C-SDK/native output, full AROS runtime matrix, authenticated SDK distribution, Linux runtime or RC2 acceptance."
+  ]
+}
