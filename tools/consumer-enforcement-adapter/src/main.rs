@@ -6,17 +6,30 @@
 #[path = "macos.rs"]
 mod backend;
 
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(any(
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "linux", target_arch = "aarch64")
+))]
 #[path = "linux.rs"]
 mod backend;
 
-#[cfg(any(target_os = "macos", all(target_os = "linux", target_arch = "x86_64")))]
+#[cfg(any(
+    target_os = "macos",
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "linux", target_arch = "aarch64")
+))]
 fn main() {
     backend::main();
 }
 
-#[cfg(not(any(target_os = "macos", all(target_os = "linux", target_arch = "x86_64"))))]
+#[cfg(not(any(
+    target_os = "macos",
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "linux", target_arch = "aarch64")
+)))]
 fn main() {
-    eprintln!("consumer enforcement requires a supported macOS or Linux x86-64 host");
+    eprintln!(
+        "consumer enforcement requires a supported macOS, Linux x86-64, or Linux AArch64 host"
+    );
     std::process::exit(2);
 }

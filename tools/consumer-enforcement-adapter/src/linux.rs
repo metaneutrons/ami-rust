@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 #![deny(unsafe_op_in_unsafe_fn)]
 #![cfg_attr(
-    not(all(target_os = "linux", target_arch = "x86_64")),
+    not(any(
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64")
+    )),
     allow(dead_code, unused_imports)
 )]
 #![cfg_attr(test, allow(dead_code))]
@@ -19,6 +22,11 @@ use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const MAX_CAPTURE_BYTES: usize = 1024 * 1024;
+
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+const LINUX_ERROR_PREFIX: &str = "consumer-enforcement-adapter-linux-a1";
+#[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+const LINUX_ERROR_PREFIX: &str = "consumer-enforcement-adapter-linux-a2";
 
 #[derive(Clone, Debug)]
 struct ExecRule {
@@ -110,7 +118,10 @@ struct ReadLibraryHashCheck {
     post_run_hash_matches: bool,
 }
 
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(any(
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "linux", target_arch = "aarch64")
+))]
 pub(crate) fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     if args.first().map(String::as_str) == Some("--control") {
@@ -123,28 +134,45 @@ pub(crate) fn main() {
     match linux::run(&args) {
         Ok(code) => process::exit(code),
         Err(error) => {
-            eprintln!("consumer-enforcement-adapter-linux-a1: {error}");
+            eprintln!("{LINUX_ERROR_PREFIX}: {error}");
             process::exit(2);
         }
     }
 }
 
-#[cfg(not(all(target_os = "linux", target_arch = "x86_64")))]
+#[cfg(not(any(
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "linux", target_arch = "aarch64")
+)))]
 pub(crate) fn main() {
-    eprintln!("consumer-enforcement-adapter-linux-a1: native Linux x86-64 execution is required");
+    eprintln!(
+        "consumer-enforcement-adapter: native macOS, Linux x86-64, or Linux AArch64 is required"
+    );
     process::exit(2);
 }
 
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(any(
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "linux", target_arch = "aarch64")
+))]
 mod linux {
     use super::*;
     use std::os::fd::{AsRawFd, FromRawFd};
     use std::time::Instant;
 
     const EACCES: i32 = 13;
+    #[cfg(target_arch = "x86_64")]
     const SYS_SECCOMP: isize = 317;
+    #[cfg(target_arch = "aarch64")]
+    const SYS_SECCOMP: isize = 277;
+    #[cfg(target_arch = "x86_64")]
     const SYS_MEMFD_CREATE: isize = 319;
+    #[cfg(target_arch = "aarch64")]
+    const SYS_MEMFD_CREATE: isize = 279;
+    #[cfg(target_arch = "x86_64")]
     const SYS_EXECVEAT: isize = 322;
+    #[cfg(target_arch = "aarch64")]
+    const SYS_EXECVEAT: isize = 281;
     const SYS_LANDLOCK_CREATE_RULESET: isize = 444;
     const SYS_LANDLOCK_ADD_RULE: isize = 445;
     const SYS_LANDLOCK_RESTRICT_SELF: isize = 446;
@@ -169,13 +197,36 @@ mod linux {
     const PR_SET_NO_NEW_PRIVS: i32 = 38;
     const SECCOMP_SET_MODE_FILTER: u32 = 1;
     const SECCOMP_FILTER_FLAG_TSYNC: u32 = 1;
-    const AUDIT_ARCH_X86_64: u32 = 0xc000_003e;
+    #[cfg(target_arch = "x86_64")]
+    const NATIVE_ARCH: &str = "x86_64";
+    #[cfg(target_arch = "aarch64")]
+    const NATIVE_ARCH: &str = "aarch64";
+    #[cfg(target_arch = "x86_64")]
+    const AUDIT_ARCH_NATIVE: u32 = 0xc000_003e;
+    #[cfg(target_arch = "aarch64")]
+    const AUDIT_ARCH_NATIVE: u32 = 0xc000_00b7;
+    #[cfg(target_arch = "x86_64")]
     const X32_SYSCALL_BIT: u32 = 0x4000_0000;
+    #[cfg(target_arch = "x86_64")]
+    const REPORT_SCHEMA: &str = "consumer-enforcement-adapter-a1";
+    #[cfg(target_arch = "aarch64")]
+    const REPORT_SCHEMA: &str = "consumer-enforcement-adapter-a2";
+    #[cfg(target_arch = "x86_64")]
+    const REPORT_BACKEND: &str =
+        "Landlock path-beneath allow rules and seccomp-BPF on Linux x86-64";
+    #[cfg(target_arch = "aarch64")]
+    const REPORT_BACKEND: &str =
+        "Landlock path-beneath allow rules and seccomp-BPF on Linux aarch64";
+    #[cfg(target_arch = "x86_64")]
+    const REPORT_ABI_GUARD: &str = "\"x32_syscalls_denied\":true,";
+    #[cfg(target_arch = "aarch64")]
+    const REPORT_ABI_GUARD: &str = "\"non_native_audit_arch_killed\":true,";
     const SECCOMP_RET_KILL_PROCESS: u32 = 0x8000_0000;
     const SECCOMP_RET_ERRNO: u32 = 0x0005_0000;
     const SECCOMP_RET_ALLOW: u32 = 0x7fff_0000;
     const BPF_LD_W_ABS: u16 = 0x20;
     const BPF_JMP_JEQ_K: u16 = 0x15;
+    #[cfg(any(test, target_arch = "x86_64"))]
     const BPF_JMP_JSET_K: u16 = 0x45;
     const BPF_RET_K: u16 = 0x06;
     const O_PATH: i32 = 0x0020_0000;
@@ -184,25 +235,44 @@ mod linux {
     const AT_EMPTY_PATH: i32 = 0x1000;
     const MFD_CLOEXEC: u32 = 1;
 
-    // Linux x86-64 syscall numbers for the network-deny profile. Separate
-    // argument checks permit an unnamed AF_UNIX/SOCK_SEQPACKET pair and its
-    // exact eight-byte, null-address receive for Rust's subprocess handshake.
-    // All other socket creation and addressing operations remain denied;
-    // io_uring_setup is denied to close an asynchronous socket path.
+    // Architecture-specific Linux syscall numbers for the network-deny
+    // profile. The policy and argument checks are shared across LP64 ABIs.
+    // Native AArch64 values follow asm-generic; socketpair is the sole local
+    // socket exception and io_uring_setup remains denied.
+    #[cfg(target_arch = "x86_64")]
     const NETWORK_SYSCALLS: &[u32] = &[
         41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 54, 55, 288, 299, 307, 425,
     ];
+    #[cfg(target_arch = "aarch64")]
+    const NETWORK_SYSCALLS: &[u32] = &[
+        198, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 242, 243, 269, 425,
+    ];
+    #[cfg(target_arch = "x86_64")]
+    const RETURNING_FD_NETWORK_SYSCALLS: &[u32] = &[41, 43, 288, 425];
+    #[cfg(target_arch = "aarch64")]
+    const RETURNING_FD_NETWORK_SYSCALLS: &[u32] = &[198, 202, 242, 425];
 
     const AF_UNIX: i32 = 1;
     const AF_INET: i32 = 2;
     const SOCK_STREAM: i32 = 1;
     const SOCK_SEQPACKET: i32 = 5;
     const SOCK_CLOEXEC: i32 = 0x0008_0000;
+    #[cfg(target_arch = "x86_64")]
     const SYS_SOCKET: isize = 41;
-    #[cfg(test)]
+    #[cfg(target_arch = "aarch64")]
+    const SYS_SOCKET: isize = 198;
+    #[cfg(all(test, target_arch = "x86_64"))]
     const SYS_SENDTO: isize = 44;
+    #[cfg(all(test, target_arch = "aarch64"))]
+    const SYS_SENDTO: isize = 206;
+    #[cfg(target_arch = "x86_64")]
     const SYS_RECVFROM: isize = 45;
+    #[cfg(target_arch = "aarch64")]
+    const SYS_RECVFROM: isize = 207;
+    #[cfg(target_arch = "x86_64")]
     const SYS_SOCKETPAIR: isize = 53;
+    #[cfg(target_arch = "aarch64")]
+    const SYS_SOCKETPAIR: isize = 199;
 
     #[repr(C)]
     struct LandlockRulesetAttr {
@@ -232,7 +302,7 @@ mod linux {
     unsafe extern "C" {
         fn syscall(number: isize, ...) -> isize;
         fn prctl(option: i32, ...) -> i32;
-        fn open(path: *const i8, flags: i32, ...) -> i32;
+        fn open(path: *const std::ffi::c_char, flags: i32, ...) -> i32;
         fn close(fd: i32) -> i32;
         fn geteuid() -> u32;
     }
@@ -415,9 +485,9 @@ mod linux {
     }
 
     pub(super) fn run(args: &[String]) -> Result<i32, String> {
-        if env::consts::OS != "linux" || env::consts::ARCH != "x86_64" {
+        if env::consts::OS != "linux" || env::consts::ARCH != NATIVE_ARCH {
             return Err(format!(
-                "Linux x86-64 only; host is {}-{}",
+                "Linux {NATIVE_ARCH} only; host is {}-{}",
                 env::consts::OS,
                 env::consts::ARCH
             ));
@@ -1693,7 +1763,7 @@ mod linux {
                 code: BPF_JMP_JEQ_K,
                 jt: 1,
                 jf: 0,
-                k: AUDIT_ARCH_X86_64,
+                k: AUDIT_ARCH_NATIVE,
             },
             SockFilter {
                 code: BPF_RET_K,
@@ -1707,6 +1777,9 @@ mod linux {
                 jf: 0,
                 k: 0,
             },
+        ];
+        #[cfg(target_arch = "x86_64")]
+        filter.extend([
             SockFilter {
                 code: BPF_JMP_JSET_K,
                 jt: 0,
@@ -1719,11 +1792,11 @@ mod linux {
                 jf: 0,
                 k: SECCOMP_RET_ERRNO | EACCES as u32,
             },
-        ];
+        ]);
         if !network_outbound {
             // Rust's Linux fork-based subprocess handshake receives one
-            // eight-byte status message through recvfrom on its private
-            // SOCK_SEQPACKET pair. Keep syscall 45 denied except for that
+            // eight-byte status message through the native recvfrom syscall
+            // on its private SOCK_SEQPACKET pair. Other receive shapes stay denied except for that
             // exact shape. The argument checks preserve the syscall number
             // accumulator when this is not recvfrom and inspect both halves
             // of each 64-bit size or pointer argument.
@@ -2170,7 +2243,7 @@ mod linux {
             .collect::<Vec<_>>()
             .join(",");
         format!(
-            "{{\n  \"schema\":\"consumer-enforcement-adapter-a1\",\n  \"backend\":\"Landlock path-beneath allow rules and seccomp-BPF on Linux x86-64\",\n  \"policy\":{},\n  \"report_directory\":{},\n  \"landlock_abi\":{},\n  \"landlock_fs_rights_reviewed_through_abi\":5,\n  \"landlock_handled_fs_rights_mask\":{},\n  \"seccomp\":{{\"tsync\":true,\"execveat_denied\":true,\"memfd_create_denied\":true,\"x32_syscalls_denied\":true,\"network_denied\":{}}},\n  \"command\":[{}],\n  \"started_unix_micros\":{},\n  \"finished_unix_micros\":{},\n  \"elapsed_millis\":{},\n  \"pid\":{},\n  \"launch_error\":{},\n  \"child_exit_code\":{},\n  \"child_signal\":{},\n  \"stdout\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"stderr\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"network_outbound_allowed\":{},\n  \"exec_allowlist\":[{}],\n  \"exec_identity_checks\":[{}],\n  \"read_library_mappings\":[{}],\n  \"exec_trees\":[{}],\n  \"exec_derived_trees\":[{}],\n  \"deny_exec\":[{}],\n  \"deny_library\":{{\"paths\":[{}],\"enforcement\":\"no overlapping Landlock READ_FILE/EXECUTE allowance\"}},\n  \"read_files\":[{}],\n  \"read_directories\":[{}],\n  \"read_trees\":[{}],\n  \"write_trees\":[{}],\n  \"write_null\":{},\n  \"environment_names\":[{}],\n  \"cwd\":{},\n  \"output_replay_error\":{},\n  \"qualification_evidence_valid\":{},\n  \"evidence_failures\":[{}],\n  \"outer_supervisor_timeout_cleanup_required\":true,\n  \"outer_supervisor_timeout_cleanup_verified_by_adapter\":false\n}}\n",
+            "{{\n  \"schema\":\"{REPORT_SCHEMA}\",\n  \"backend\":\"{REPORT_BACKEND}\",\n  \"policy\":{},\n  \"report_directory\":{},\n  \"landlock_abi\":{},\n  \"landlock_fs_rights_reviewed_through_abi\":5,\n  \"landlock_handled_fs_rights_mask\":{},\n  \"seccomp\":{{\"tsync\":true,\"execveat_denied\":true,\"memfd_create_denied\":true,{REPORT_ABI_GUARD}\"network_denied\":{}}},\n  \"command\":[{}],\n  \"started_unix_micros\":{},\n  \"finished_unix_micros\":{},\n  \"elapsed_millis\":{},\n  \"pid\":{},\n  \"launch_error\":{},\n  \"child_exit_code\":{},\n  \"child_signal\":{},\n  \"stdout\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"stderr\":{{\"path\":{},\"bytes_captured\":{},\"bytes_total\":{},\"truncated\":{},\"write_error\":{}}},\n  \"network_outbound_allowed\":{},\n  \"exec_allowlist\":[{}],\n  \"exec_identity_checks\":[{}],\n  \"read_library_mappings\":[{}],\n  \"exec_trees\":[{}],\n  \"exec_derived_trees\":[{}],\n  \"deny_exec\":[{}],\n  \"deny_library\":{{\"paths\":[{}],\"enforcement\":\"no overlapping Landlock READ_FILE/EXECUTE allowance\"}},\n  \"read_files\":[{}],\n  \"read_directories\":[{}],\n  \"read_trees\":[{}],\n  \"write_trees\":[{}],\n  \"write_null\":{},\n  \"environment_names\":[{}],\n  \"cwd\":{},\n  \"output_replay_error\":{},\n  \"qualification_evidence_valid\":{},\n  \"evidence_failures\":[{}],\n  \"outer_supervisor_timeout_cleanup_required\":true,\n  \"outer_supervisor_timeout_cleanup_verified_by_adapter\":false\n}}\n",
             json(&policy_path.display().to_string()),
             json(&report_dir.display().to_string()),
             abi,
@@ -2533,7 +2606,7 @@ mod linux {
         // SAFETY: These are valid null-terminated argv/envp vectors. The
         // syscall is expected to fail with EACCES under the accepted filter.
         let argv = [target.as_ptr(), std::ptr::null()];
-        let envp: [*const i8; 1] = [std::ptr::null()];
+        let envp: [*const std::ffi::c_char; 1] = [std::ptr::null()];
         let exec_result = unsafe {
             syscall(
                 SYS_EXECVEAT,
@@ -2634,7 +2707,7 @@ mod linux {
             };
             let result = syscall6(*number as isize, arguments);
             let errno = io::Error::last_os_error().raw_os_error();
-            if result >= 0 && [41, 43, 288, 425].contains(number) {
+            if result >= 0 && RETURNING_FD_NETWORK_SYSCALLS.contains(number) {
                 // socket, accept, accept4, and io_uring_setup return one
                 // owned descriptor if unexpectedly allowed.
                 // SAFETY: result is the descriptor returned by that syscall.
@@ -2809,15 +2882,85 @@ mod linux {
             assert_eq!(result, SECCOMP_RET_ERRNO | EACCES as u32);
         }
 
+        #[repr(C)]
+        struct SeccompDataLayout {
+            nr: i32,
+            arch: u32,
+            instruction_pointer: u64,
+            args: [u64; 6],
+        }
+
+        #[test]
+        fn native_linux_syscall_tables_match_the_supported_lp64_abis() {
+            #[cfg(target_arch = "x86_64")]
+            {
+                assert_eq!(AUDIT_ARCH_NATIVE, 0xc000_003e);
+                assert_eq!(SYS_SECCOMP, 317);
+                assert_eq!(SYS_MEMFD_CREATE, 319);
+                assert_eq!(SYS_EXECVEAT, 322);
+                assert_eq!(SYS_SOCKET, 41);
+                assert_eq!(SYS_SOCKETPAIR, 53);
+                assert_eq!(SYS_RECVFROM, 45);
+                assert_eq!(
+                    NETWORK_SYSCALLS,
+                    &[41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 54, 55, 288, 299, 307, 425]
+                );
+            }
+            #[cfg(target_arch = "aarch64")]
+            {
+                assert_eq!(AUDIT_ARCH_NATIVE, 0xc000_00b7);
+                assert_eq!(SYS_SECCOMP, 277);
+                assert_eq!(SYS_MEMFD_CREATE, 279);
+                assert_eq!(SYS_EXECVEAT, 281);
+                assert_eq!(SYS_SOCKET, 198);
+                assert_eq!(SYS_SOCKETPAIR, 199);
+                assert_eq!(SYS_RECVFROM, 207);
+                assert_eq!(
+                    NETWORK_SYSCALLS,
+                    &[
+                        198, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 242,
+                        243, 269, 425
+                    ]
+                );
+                assert!(!NETWORK_SYSCALLS.contains(&199));
+            }
+        }
+
+        #[test]
+        fn linux_uapi_layouts_match_the_lp64_syscall_contract() {
+            use std::mem::{offset_of, size_of};
+
+            assert_eq!(size_of::<SockFilter>(), 8);
+            assert_eq!(size_of::<SockFprog>(), 16);
+            assert_eq!(offset_of!(SockFprog, len), 0);
+            assert_eq!(offset_of!(SockFprog, filter), 8);
+            assert_eq!(size_of::<SeccompDataLayout>(), 64);
+            assert_eq!(offset_of!(SeccompDataLayout, nr), 0);
+            assert_eq!(offset_of!(SeccompDataLayout, arch), 4);
+            assert_eq!(offset_of!(SeccompDataLayout, instruction_pointer), 8);
+            assert_eq!(offset_of!(SeccompDataLayout, args), 16);
+            assert_eq!(size_of::<LandlockRulesetAttr>(), 8);
+            assert_eq!(offset_of!(LandlockRulesetAttr, handled_access_fs), 0);
+            assert_eq!(offset_of!(LandlockPathBeneathAttr, allowed_access), 0);
+            assert_eq!(offset_of!(LandlockPathBeneathAttr, parent_fd), 8);
+        }
+
         #[test]
         fn network_deny_filter_only_allows_private_seqpacket_handshake() {
             let filter = seccomp_filter(false);
+            assert!(!NETWORK_SYSCALLS.contains(&(SYS_SOCKETPAIR as u32)));
+            assert!(NETWORK_SYSCALLS.contains(&(SYS_SOCKET as u32)));
+            assert!(NETWORK_SYSCALLS.contains(&(SYS_RECVFROM as u32)));
+            assert!(
+                NETWORK_SYSCALLS.contains(&425),
+                "io_uring_setup stays denied"
+            );
             for sock_type in [SOCK_SEQPACKET, SOCK_SEQPACKET | SOCK_CLOEXEC] {
                 let args = [AF_UNIX as u64, sock_type as u64, 0, 0, 0, 0];
                 assert_eq!(
                     evaluate_seccomp_filter(
                         &filter,
-                        AUDIT_ARCH_X86_64,
+                        AUDIT_ARCH_NATIVE,
                         SYS_SOCKETPAIR as u32,
                         args,
                     ),
@@ -2837,14 +2980,14 @@ mod linux {
                 0,
             ];
             assert_eq!(
-                evaluate_seccomp_filter(&filter, AUDIT_ARCH_X86_64, SYS_SOCKETPAIR as u32, args,),
+                evaluate_seccomp_filter(&filter, AUDIT_ARCH_NATIVE, SYS_SOCKETPAIR as u32, args,),
                 SECCOMP_RET_ALLOW
             );
 
             assert_eq!(
                 evaluate_seccomp_filter(
                     &filter,
-                    AUDIT_ARCH_X86_64,
+                    AUDIT_ARCH_NATIVE,
                     SYS_RECVFROM as u32,
                     [u64::MAX, 0xfeed_beef, 8, 0, 0, 0],
                 ),
@@ -2864,7 +3007,7 @@ mod linux {
             ] {
                 assert_eacces(evaluate_seccomp_filter(
                     &filter,
-                    AUDIT_ARCH_X86_64,
+                    AUDIT_ARCH_NATIVE,
                     SYS_RECVFROM as u32,
                     arguments,
                 ));
@@ -2882,21 +3025,22 @@ mod linux {
             ] {
                 assert_eacces(evaluate_seccomp_filter(
                     &filter,
-                    AUDIT_ARCH_X86_64,
+                    AUDIT_ARCH_NATIVE,
                     SYS_SOCKETPAIR as u32,
                     [domain as u64, sock_type as u64, protocol as u64, 0, 0, 0],
                 ));
             }
 
             assert!(!NETWORK_SYSCALLS.contains(&(SYS_SOCKETPAIR as u32)));
-            for syscall_number in (41u32..=55)
-                .filter(|number| *number != SYS_SOCKETPAIR as u32)
-                .chain([288, 299, 307, 425])
+            for syscall_number in NETWORK_SYSCALLS
+                .iter()
+                .copied()
+                .filter(|number| *number != SYS_RECVFROM as u32)
             {
                 assert!(NETWORK_SYSCALLS.contains(&syscall_number));
                 assert_eacces(evaluate_seccomp_filter(
                     &filter,
-                    AUDIT_ARCH_X86_64,
+                    AUDIT_ARCH_NATIVE,
                     syscall_number,
                     [0; 6],
                 ));
@@ -2904,20 +3048,27 @@ mod linux {
             assert!(NETWORK_SYSCALLS.contains(&(SYS_SENDTO as u32)));
             assert_eacces(evaluate_seccomp_filter(
                 &filter,
-                AUDIT_ARCH_X86_64,
+                AUDIT_ARCH_NATIVE,
                 SYS_SENDTO as u32,
                 [u64::MAX, 0, 8, 0x4000, 0, 0],
             ));
-            assert_eacces(evaluate_seccomp_filter(
-                &filter,
-                AUDIT_ARCH_X86_64,
-                SYS_SOCKETPAIR as u32 | X32_SYSCALL_BIT,
-                [AF_UNIX as u64, SOCK_SEQPACKET as u64, 0, 0, 0, 0],
-            ));
+            #[cfg(target_arch = "x86_64")]
+            {
+                assert_eacces(evaluate_seccomp_filter(
+                    &filter,
+                    AUDIT_ARCH_NATIVE,
+                    SYS_SOCKETPAIR as u32 | X32_SYSCALL_BIT,
+                    [AF_UNIX as u64, SOCK_SEQPACKET as u64, 0, 0, 0, 0],
+                ));
+            }
+            #[cfg(target_arch = "x86_64")]
+            let foreign_arch = 0x4000_0003; // AUDIT_ARCH_I386
+            #[cfg(target_arch = "aarch64")]
+            let foreign_arch = 0x4000_0028; // AUDIT_ARCH_ARM compat ABI
             assert_eq!(
                 evaluate_seccomp_filter(
                     &filter,
-                    0x4000_0003,
+                    foreign_arch,
                     SYS_SOCKETPAIR as u32,
                     [AF_UNIX as u64, SOCK_SEQPACKET as u64, 0, 0, 0, 0],
                 ),
@@ -2928,21 +3079,21 @@ mod linux {
         #[test]
         fn network_outbound_filter_keeps_network_syscalls_allowed() {
             let filter = seccomp_filter(true);
-            for syscall_number in (41u32..=55).chain([288, 299, 307, 425]) {
+            for syscall_number in NETWORK_SYSCALLS.iter().copied() {
                 assert_eq!(
-                    evaluate_seccomp_filter(&filter, AUDIT_ARCH_X86_64, syscall_number, [0; 6],),
+                    evaluate_seccomp_filter(&filter, AUDIT_ARCH_NATIVE, syscall_number, [0; 6],),
                     SECCOMP_RET_ALLOW
                 );
             }
             assert_eacces(evaluate_seccomp_filter(
                 &filter,
-                AUDIT_ARCH_X86_64,
+                AUDIT_ARCH_NATIVE,
                 SYS_EXECVEAT as u32,
                 [0; 6],
             ));
             assert_eacces(evaluate_seccomp_filter(
                 &filter,
-                AUDIT_ARCH_X86_64,
+                AUDIT_ARCH_NATIVE,
                 SYS_MEMFD_CREATE as u32,
                 [0; 6],
             ));
@@ -3053,27 +3204,29 @@ mod linux {
             let regular = root.join("regular-null");
             fs::write(&regular, b"not a device").expect("write regular-file fixture");
             let regular_metadata = fs::symlink_metadata(&regular).expect("stat regular fixture");
-            assert!(
-                validated_null_identity("/dev/null", Path::new("/dev/null"), &regular_metadata)
-                    .expect_err("reject regular replacement")
-                    .contains("not a character device")
-            );
+            assert!(validated_null_identity(
+                "/dev/null",
+                Path::new("/dev/null"),
+                &regular_metadata
+            )
+            .expect_err("reject regular replacement")
+            .contains("not a character device"));
             let symlink = root.join("null-link");
             std::os::unix::fs::symlink("/dev/null", &symlink).expect("create null symlink");
             let symlink_metadata = fs::symlink_metadata(&symlink).expect("lstat null symlink");
-            assert!(
-                validated_null_identity("/dev/null", Path::new("/dev/null"), &symlink_metadata)
-                    .expect_err("reject symlink replacement")
-                    .contains("not a character device")
-            );
+            assert!(validated_null_identity(
+                "/dev/null",
+                Path::new("/dev/null"),
+                &symlink_metadata
+            )
+            .expect_err("reject symlink replacement")
+            .contains("not a character device"));
             assert!(inspect_write_null_policy_path(&symlink.to_string_lossy()).is_err());
-            assert!(
-                parse_policy(&format!(
-                    "consumer-policy-v1\nexec /bin/true\nwrite-null {}\n",
-                    symlink.display()
-                ))
-                .is_err()
-            );
+            assert!(parse_policy(&format!(
+                "consumer-policy-v1\nexec /bin/true\nwrite-null {}\n",
+                symlink.display()
+            ))
+            .is_err());
             fs::remove_dir_all(root).expect("remove private test root");
         }
 
@@ -3354,11 +3507,9 @@ mod linux {
                 alias_one.display(),
                 wrong_hash
             );
-            assert!(
-                parse_policy(&alias_mismatch)
-                    .expect_err("verify every alias digest before de-duplication")
-                    .contains("read-library hash mismatch")
-            );
+            assert!(parse_policy(&alias_mismatch)
+                .expect_err("verify every alias digest before de-duplication")
+                .contains("read-library hash mismatch"));
 
             let missing = root.join("missing-library.so");
             let invalid_file = format!(
@@ -3366,11 +3517,9 @@ mod linux {
                 missing.display(),
                 digest
             );
-            assert!(
-                parse_policy(&invalid_file)
-                    .expect_err("reject missing library path")
-                    .contains("resolve")
-            );
+            assert!(parse_policy(&invalid_file)
+                .expect_err("reject missing library path")
+                .contains("resolve"));
 
             fs::remove_dir_all(root).expect("remove private test directory");
         }
@@ -3389,11 +3538,9 @@ mod linux {
                 digest
             );
 
-            assert!(
-                parse_policy(&policy_text)
-                    .expect_err("reject repeated lookup directive")
-                    .contains("duplicate read-library lookup path")
-            );
+            assert!(parse_policy(&policy_text)
+                .expect_err("reject repeated lookup directive")
+                .contains("duplicate read-library lookup path"));
             fs::remove_dir_all(root).expect("remove private test directory");
         }
 
@@ -3408,11 +3555,9 @@ mod linux {
                 library.display(),
                 wrong_hash
             );
-            assert!(
-                parse_policy(&mismatch)
-                    .expect_err("reject mismatching library hash")
-                    .contains("read-library hash mismatch")
-            );
+            assert!(parse_policy(&mismatch)
+                .expect_err("reject mismatching library hash")
+                .contains("read-library hash mismatch"));
 
             let digest = sha256_file(&library).expect("hash library fixture");
             let overlap = format!(
@@ -3421,22 +3566,18 @@ mod linux {
                 digest,
                 library.display()
             );
-            assert!(
-                parse_policy(&overlap)
-                    .expect_err("reject explicitly denied mapped library")
-                    .contains("Landlock cannot subtract it")
-            );
+            assert!(parse_policy(&overlap)
+                .expect_err("reject explicitly denied mapped library")
+                .contains("Landlock cannot subtract it"));
 
             let file_overlap = format!(
                 "consumer-policy-v1\nexec /bin/true\nread-file {}\ndeny-library {}\n",
                 library.display(),
                 library.display()
             );
-            assert!(
-                parse_policy(&file_overlap)
-                    .expect_err("reject file-data allowance for denied library")
-                    .contains("Landlock cannot subtract it")
-            );
+            assert!(parse_policy(&file_overlap)
+                .expect_err("reject file-data allowance for denied library")
+                .contains("Landlock cannot subtract it"));
             fs::remove_dir_all(root).expect("remove private test directory");
         }
 
@@ -3594,11 +3735,9 @@ mod linux {
                 nonempty.display(),
                 digest
             );
-            assert!(
-                parse_policy(&policy_text)
-                    .expect_err("reject nonempty parent")
-                    .contains("must be empty")
-            );
+            assert!(parse_policy(&policy_text)
+                .expect_err("reject nonempty parent")
+                .contains("must be empty"));
 
             let broad = work.join("broad-parent");
             fs::create_dir(&broad).expect("create broad parent");
@@ -3610,11 +3749,9 @@ mod linux {
                 broad.display(),
                 digest
             );
-            assert!(
-                parse_policy(&policy_text)
-                    .expect_err("reject broad parent mode")
-                    .contains("mode 0700")
-            );
+            assert!(parse_policy(&policy_text)
+                .expect_err("reject broad parent mode")
+                .contains("mode 0700"));
 
             let outside = root.join("outside-parent");
             create_private_directory(&outside);
@@ -3624,11 +3761,9 @@ mod linux {
                 outside.display(),
                 digest
             );
-            assert!(
-                parse_policy(&policy_text)
-                    .expect_err("reject parent outside declared write-tree")
-                    .contains("strict descendant")
-            );
+            assert!(parse_policy(&policy_text)
+                .expect_err("reject parent outside declared write-tree")
+                .contains("strict descendant"));
             fs::remove_dir_all(root).expect("remove private test directory");
         }
     }
@@ -3829,7 +3964,7 @@ impl Sha256 {
 
 #[cfg(test)]
 mod tests {
-    use super::{Sha256, hex};
+    use super::{hex, Sha256};
 
     #[test]
     fn sha256_streaming_known_vectors() {
