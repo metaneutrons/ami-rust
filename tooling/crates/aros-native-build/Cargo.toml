@@ -1,0 +1,23 @@
+[package]
+name = "aros-native-build"
+version = "0.2.0-dev"
+edition = "2024"
+rust-version = "1.98.1"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/metaneutrons/ami-rust"
+description = "Cargo build-script integration and focused target linker for AROS ABI-v1"
+readme = "README.md"
+publish = false
+
+[dependencies]
+aros-elf = { version = "=0.2.0-dev", path = "../aros-elf" }
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "=1.0.145"
+sha2 = "=0.11.1"
+libc = "=0.2.191"
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }

@@ -1,0 +1,7 @@
+{
+  "schema": "aros-native-build-target-v1",
+  "target": "x86_64-aros",
+  "source_date_epoch": 1791936000,
+  "spec_sha256": "de7a0024aa94269641e3e6d480ce8cd334962bf7e02592b0652e19e56b5fba71",
+  "status": "DEVELOPMENT_CANDIDATE_NOT_RELEASE_QUALIFICATION"
+}

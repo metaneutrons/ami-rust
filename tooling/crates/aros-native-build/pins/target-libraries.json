@@ -1,0 +1,24 @@
+{
+  "schema": "aros-target-library-candidate-v1",
+  "target": "x86_64-aros",
+  "rustc_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
+  "origin": "Retained shared-native A2 exact pinned compiler/recipe; packaging as sysroot libraries is a new candidate requiring full per-host qualification.",
+  "files": [
+    {
+      "path": "liballoc-fdc13dd8ec57eb82.rlib",
+      "bytes": 8501678,
+      "sha256": "9abb60e44dca9f621530478465b0ae8024291331effd8d8cfc32c7df326fd691"
+    },
+    {
+      "path": "libcompiler_builtins-e338c14d9dc031f6.rlib",
+      "bytes": 2447068,
+      "sha256": "7f6fb1d30ad93b2e0fe70ca4096df86733fbddfe295a0fd8436a0a42d0e6fc60"
+    },
+    {
+      "path": "libcore-141bfcd02ef2299c.rlib",
+      "bytes": 68234814,
+      "sha256": "bc299428fda7c4e0b59d149487183cc1f982a9fea1aca91bf27624db543cb6de"
+    }
+  ],
+  "symlinks": []
+}

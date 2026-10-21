@@ -1,0 +1,216 @@
+{
+  "schema": "ami-rust-standard-cargo-native-development-evidence-v1",
+  "recorded_utc": "2026-10-21T21:44:30.267981+00:00",
+  "status": "PASS_BOUNDED_MACOS_DEVELOPMENT_PROOF_NOT_RC2_ACCEPTANCE",
+  "source_base": "b1e8fb0ea47cf476c11e654b72df5025d2c5a0ff",
+  "source_hashes": {
+    "tooling/crates/aros-native-build/LICENSE-APACHE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "tooling/crates/aros-native-build/Cargo.toml": "50185f3510603a89868f69b03b399b7164bac6ecdf09e7d1c19c597187e5147e",
+    "tooling/crates/aros-native-build/LICENSE-MIT": "d305a4cc8ade83fde897ea29a83fb4fb3e7ac5e3858f85845613dd7af1036abf",
+    "tooling/crates/aros-native-build/README.md": "3b76f4a6de0c1914886c3e08341c33e79272e57ac59e2edb1b7ca8bfd9f950c7",
+    "tooling/crates/aros-native-build/pins/target.json": "33fdd3d97053370eb3db9e05ea75721dafcfc7f4b5f8c218acaab1911984c341",
+    "tooling/crates/aros-native-build/pins/target-libraries.json": "3bc55e3dcfb3c4f88fb528a8a9c2855622c74c8a38e4840445ad96f4de05ca56",
+    "tooling/crates/aros-native-build/native/layout.c": "01ac3478b1950affd3328d2508bef5a8f0ee3c3b483c1b4ab0508cabc5be0f71",
+    "tooling/crates/aros-native-build/native/test-stderr-controls.h": "4694aed8d5782cd2347988233bf100184bf326cec5f94feb061513333e8115d3",
+    "tooling/crates/aros-native-build/native/sdk.c": "66ee66b3888a998abf99026a6e16320c8af9840b0d37c2bd239e203c11ce189c",
+    "tooling/crates/aros-native-build/native/test-controls.h": "d3db2929b77c1a8ade09cf160a81701b3c01c8fda36c259a83ddd9125dfb34cc",
+    "tooling/crates/aros-native-build/native/test-file-controls.h": "266f73d10c34844b544cad9900b80e9e4d8a9678f5bd6e94eb35d1fd82c813c4",
+    "tooling/crates/aros-native-build/native/compatibility-gates.h": "6be572122966216b963258405d883ad89bbcd7e2710e4ad739df9044a64dea14",
+    "tooling/crates/aros-native-build/native/sdk.h": "5bfa5447c5d2f8d1a5abc9bd4ba2cb968d74ed5c9d7bdaf4ef2a523799e30799",
+    "tooling/crates/aros-native-build/native/entry.c": "5c9ccb3353d5ea1cac13f126b07ea0ac1bcb746b651c22eb8ba7b86fd42c4cda",
+    "tooling/crates/aros-native-build/native/stack-probe.h": "5bc1e980aafd723063e2ee309aed70109134d088478d93872157178558bfd502",
+    "tooling/crates/aros-native-build/src/lib.rs": "f9623e022dd94522cfa346d560cee0c722ade63d50ab2b511bfe313897633a45",
+    "tooling/crates/aros-native-build/src/build.rs": "64986fdc8ba03f5c957a4e8669d46fb46ce6351a0e185dff69e4ed614e0e2edd",
+    "tooling/crates/aros-native-build/src/link.rs": "3c3dfce0d168816e020564ab661265145599829e51cf80762eef90fad537cd24",
+    "tooling/crates/aros-native-build/src/recipe.rs": "010f688a89b66fb7e0b2b55913434f865b89e7e625e8e027035b57c51372c931",
+    "tooling/crates/aros-native-build/src/link_args.rs": "3098def2ffa88fa8916a3cc09e9241a36627df1a84e2837d6cd19b6bb4aada8e",
+    "tooling/crates/aros-native-build/src/inputs.rs": "5d7fad6dc6f57f3a393cecdefa8fe631ebb5de7af0ac137b9476e9d3ab18384b",
+    "tooling/crates/aros-native-build/src/bin/aros-link.rs": "caa788ad678118845d1ed98fcf6f98290664f7b4ff831fed0a74ba9bf4760b50",
+    "tooling/crates/aros-native-build/tests/measurement/ami_test_bind_diagnostics.c": "6b90f9d5f95ace3d50f3347e7301cdcf9c6b8de461319c2b60bf3f60f15129ac",
+    "tooling/crates/aros-native-build/pins/macos-aarch64/csdk.json": "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337",
+    "tooling/crates/aros-native-build/pins/macos-aarch64/cargo.json": "2f081118d19e93b95304c95440d82d1f3d022fb063e4ae7ad1b89285ceddbe39",
+    "tooling/crates/aros-native-build/pins/macos-aarch64/collector.json": "34e7e069a72ac84d980f15c797b4250f324eee19088f55d135c9e4eafa0d88de",
+    "tooling/crates/aros-native-build/pins/macos-aarch64/rust.json": "21d2c186d5ed597f31fed82c306ac790dc11a5cb2f136e52e237bd15f4a55c18",
+    "tooling/crates/aros-native-build/pins/macos-aarch64/toolchain.json": "28237af9576e852451fcdf0470a904edb34a70232feb41d0c56be246313baadf",
+    "tooling/crates/aros-native-build/pins/linux-x86_64/csdk.json": "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337",
+    "tooling/crates/aros-native-build/pins/linux-x86_64/cargo.json": "85f5bb754c7f11429dc1a58a2adc1256b9ad4da1f7a47926629e1f94dd92ead8",
+    "tooling/crates/aros-native-build/pins/linux-x86_64/collector.json": "0e97967a63d6ec868edcf26e2b2c08a9c36a292416aa0f7ae016564369551caa",
+    "tooling/crates/aros-native-build/pins/linux-x86_64/rust.json": "e409faec69a97407fbbfa40188644e7032b19824118994160aed80c3d50850bb",
+    "tooling/crates/aros-native-build/pins/linux-x86_64/toolchain.json": "a68f0d3d6b6d9e9678dca0af25b083d6b00f67fd4f806adcb6a2e16af1a19a6d",
+    "tooling/Cargo.toml": "13ac0ca9ac4437c7ac77b066b5a044ea30f935ffef0446dad7146132eda12a3f",
+    "tooling/Cargo.lock": "9268b294c6d697a3914b735f775a0c2b0543e775de3f6bf10b2f964baf5de6cd"
+  },
+  "source_scope": "New aros-native-build crate and workspace manifests; evidence document itself is excluded from its own source identity.",
+  "platform": {
+    "execution_host": "macOS Apple Silicon",
+    "application_target": "x86_64-aros",
+    "abi": "AROS x86-64 ABI-v1; unchanged qualified baseline"
+  },
+  "tools": {
+    "host_tooling_bootstrap_rustc_sha256": "766eda9d8f53afd6fc7f27b3cd2e444dd22afacb5afa710a5625fc8e45b8c941",
+    "host_tooling_bootstrap_cargo_sha256": "6e17e865f3a20dd55a1d212f849f58b77124179f0de7c52973096d84ba34118d",
+    "selected_target_rustc_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
+    "selected_target_rustc_sha256": "5bb7cf7ca89e240c2f97c00c94b5aa3576a84798def7d329b72cb12a20e6e6d0",
+    "selected_paired_cargo_sha256": "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d",
+    "new_linker_binary": {
+      "path": "bin/aros-link",
+      "bytes": 3941104,
+      "sha256": "327574ac238878975c0fc767d366d8a2759cfe59cf9ff0971d16484fcbe6fb2c"
+    },
+    "input_manifests": "tooling/crates/aros-native-build/pins"
+  },
+  "demonstrated": [
+    "Actual cargo install --path with --locked --offline builds and installs the focused target linker into an isolated root.",
+    "Private rustup registration selects the complete composed Rust prefix and paired Cargo; ordinary cargo build --release --locked --offline produces the final native ELF inside its target-link operation.",
+    "The build-script library stages embedded source under OUT_DIR and compiles the unchanged C/startup bridge. All four native object hashes match the prior retained A2 proof.",
+    "Changed native-object content refuses with exit 2; an explicit compiler wrapper and wrong target linker refuse through Cargo with exit 101. Restored ordinary builds succeed and reproduce the same output.",
+    "No new successful ELF is published by the failed invocations. The prior successful application is preserved, not relabelled as a result of a failed invocation.",
+    "Selected target-linker size/SHA-256 is recorded and rechecked; local hash consistency is not publisher authentication.",
+    "All 1035 selected source-file hashes, original READY/selection/producer input records, and user global Rustup/Cargo configuration remained unchanged through the bounded run."
+  ],
+  "native_objects": [
+    {
+      "path": "startup.o",
+      "bytes": 3832,
+      "sha256": "0ca30233bb169b694f552929627962f8be7935f0674565e6ed1114a86d00d99b"
+    },
+    {
+      "path": "entry.o",
+      "bytes": 1488,
+      "sha256": "a2b6b80ccad4a3c459bb95f33904d90b0f9f99a94b61f6600667194b007eb7b2"
+    },
+    {
+      "path": "sdk.o",
+      "bytes": 26704,
+      "sha256": "1a803009479ab98b25c3562bee206b5fcf764591260f71be6cb4dbd8b5bd6fc5"
+    },
+    {
+      "path": "layout.o",
+      "bytes": 1648,
+      "sha256": "de661b23f7725307138a6c4358af8f90c1c9a1b6aa097ac193a5afcf93af874c"
+    }
+  ],
+  "native_output": {
+    "bytes": 342136,
+    "sha256": "9367da0ac4086380ae2e238f680d6ea125fc850087e8d981b7f5903fc6540c53",
+    "matches_old_full_elf": false
+  },
+  "comparison_to_prior_prototype": {
+    "reference_kind": "Retained shared-native A2 development proof, not the complete R1 application matrix",
+    "reference_sha256": "048e09bd17b53b95cf6ed8829331f9dc4c93756f9b9eb98c74bb23fcfd5c9aed",
+    "all_allocated_sections_identical": true,
+    "only_changed_elf_section": ".strtab",
+    "observed_runtime_symbol_identity_changes": [
+      {
+        "before": "_RNvCs4dfpLCvU3nO_12aros_runtime7___fatal",
+        "after": "_RNvCsaQcaDQg1dOt_12aros_runtime7___fatal",
+        "target_section": ".r16",
+        "offset": 3
+      },
+      {
+        "before": "_RNvCs4dfpLCvU3nO_12aros_runtime8dispatch",
+        "after": "_RNvCsaQcaDQg1dOt_12aros_runtime8dispatch",
+        "target_section": ".ltext.rust_sdk_main",
+        "offset": 12
+      }
+    ],
+    "explanation": "Ordinary Cargo dependencies have different source/package identities from the earlier private prototype tree. Five retained Rust runtime symbol names share a changed runtime-crate disambiguator; two relocation references name changed symbols. Only .strtab differs, and every allocated code/data section remains byte-identical. No compiler metadata or final binary was rewritten to hide that difference.",
+    "earlier_current_path_result_sha256": "9367da0ac4086380ae2e238f680d6ea125fc850087e8d981b7f5903fc6540c53",
+    "earlier_scope_limit": "The earlier normal-Cargo root used an older host build-script guard. Matching output across those attempts does not constitute the same-candidate two-root/five-variant RC2 matrix.",
+    "runtime_symbol_name_changes": {
+      "before": [
+        "_RNvCs4dfpLCvU3nO_12aros_runtime7___fatal",
+        "_RNvCs4dfpLCvU3nO_12aros_runtime8dispatch",
+        "_RNvMCs4dfpLCvU3nO_12aros_runtimeNtB2_7Context10diagnostic",
+        "_RNvMCs4dfpLCvU3nO_12aros_runtimeNtB2_7Context10statistics",
+        "_RNvXs_Cs4dfpLCvU3nO_12aros_runtimeNtB4_4ArgsNtNtNtNtCscG7acP9OGhA_4core4iter6traits8iterator8Iterator4next"
+      ],
+      "after": [
+        "_RNvCsaQcaDQg1dOt_12aros_runtime7___fatal",
+        "_RNvCsaQcaDQg1dOt_12aros_runtime8dispatch",
+        "_RNvMCsaQcaDQg1dOt_12aros_runtimeNtB2_7Context10diagnostic",
+        "_RNvMCsaQcaDQg1dOt_12aros_runtimeNtB2_7Context10statistics",
+        "_RNvXs_CsaQcaDQg1dOt_12aros_runtimeNtB4_4ArgsNtNtNtNtCscG7acP9OGhA_4core4iter6traits8iterator8Iterator4next"
+      ]
+    }
+  },
+  "commands": [
+    {
+      "label": "source-install-focused-linker",
+      "exit_code": 0,
+      "elapsed_seconds": 7.327
+    },
+    {
+      "label": "register-complete-candidate-prefix",
+      "exit_code": 0,
+      "elapsed_seconds": 0.51
+    },
+    {
+      "label": "normal-cargo-lock",
+      "exit_code": 0,
+      "elapsed_seconds": 3.062
+    },
+    {
+      "label": "normal-cargo-native-application-build",
+      "exit_code": 0,
+      "elapsed_seconds": 35.957
+    },
+    {
+      "label": "changed-object-refusal",
+      "exit_code": 2,
+      "elapsed_seconds": 0.476
+    },
+    {
+      "label": "restored-normal-cargo-native-rebuild",
+      "exit_code": 0,
+      "elapsed_seconds": 2.462
+    },
+    {
+      "label": "explicit-compiler-wrapper-refusal",
+      "exit_code": 101,
+      "elapsed_seconds": 5.178
+    },
+    {
+      "label": "compiler-selection-restored-build",
+      "exit_code": 0,
+      "elapsed_seconds": 12.064
+    },
+    {
+      "label": "wrong-linker-refusal",
+      "exit_code": 101,
+      "elapsed_seconds": 5.901
+    },
+    {
+      "label": "linker-selection-restored-build",
+      "exit_code": 0,
+      "elapsed_seconds": 12.209
+    }
+  ],
+  "measured_resources": {
+    "elapsed_seconds": 91.49683120800182,
+    "child_peak_rss_bytes": 522485760,
+    "driver_peak_rss_bytes": 35553280,
+    "workspace_peak_bytes": 1192354580
+  },
+  "budgets": {
+    "campaign_seconds": 5400,
+    "command_seconds": 1200,
+    "aggregate_rss_bytes": 4294967296,
+    "workspace_bytes": 12884901888,
+    "logs_bytes": 16777216
+  },
+  "source_checks": {
+    "earlier_unchanged_workspace_suite": "a51: all remaining workspace macOS tests and macOS/Linux-x86-64 cfg Clippy passed",
+    "final_changed_crate": "a54: focused tests and both macOS/Linux-x86-64 cfg Clippy passed; cfg compilation is not Linux execution",
+    "independent_static_review": "Original review plus a53-to-a54 delta; all 35 final source hashes verified; local linker-identity and explicit override issues resolved in the tested scenarios."
+  },
+  "retained_result_sha256": "350d4f602b8b54c667757bcd28474c9600faee31f86c41b7bf67056bc167e9f0",
+  "remaining": [
+    "Full exact-candidate two-root/five-variant matrix, actual Linux x86-64 execution and required Linux ARM64 L1 input/observer qualification.",
+    "Packaged/versioned crate consumers outside the workspace, complete metadata/check/configuration/relocation/offline/cache/failure coverage and proc-macro/Serde cases.",
+    "Full R1 reference comparison and inherited AROS runtime/memory matrix; this proof performs no new AROS guest execution.",
+    "Authenticated new host-tool and target-library production plus Direct/APT/Homebrew distribution/lifecycle under RC3. Candidate common target libraries are macOS-derived, not independently admitted for every host.",
+    "Complete active Python retirement and final RC4/RC5 production/channel/recovery acceptance. The private outer development evidence driver still uses Python.",
+    "Native Rust/Cargo/rustup on AROS x86-64/AArch64 remains the separate N0-N4 initiative."
+  ]
+}
