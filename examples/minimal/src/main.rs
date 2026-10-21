@@ -1,3 +1,4 @@
+#![no_main]
 #![no_std]
 use aros_runtime::{AppStatus,Context};
 #[cfg(feature="alloc")]

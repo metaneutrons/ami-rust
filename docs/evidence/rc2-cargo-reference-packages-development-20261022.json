@@ -1,0 +1,38 @@
+{
+  "schema": "ami-rust-cargo-reference-package-development-v1",
+  "status": "PASS_PRIVATE_MACOS_PROTOTYPE_NOT_RC2_ACCEPTANCE",
+  "integration_base_commit": "79b43a49000057edc7ec1c1cf79751c00053df9b",
+  "implementation": "Seven target libraries and four reference binary packages carry exact versioned local dependencies, package-local README and licence files. Four former staticlib roots are explicit binary roots with no_main and additive native bridge build scripts. No target library Rust implementation or ABI declaration is changed.",
+  "source_proof": "The integrated Cargo manifests, root lock, build scripts and application Rust source match the retained A4 prototype. Package README wording is subsequently updated to report the private package/archive check status and link this evidence; CI source selection now also includes root Cargo/target/reference paths. Archive metadata for the final committed source requires fresh qualification.",
+  "prototype_result_sha256": "0a06628f3fb85554cd657f23ae3a47844f949cace75031312bd6847057a59b56",
+  "independent_review_sha256": "006e9a20365ef13b4bf6669f6b1da567d61d185cff9154f51f80477f7333256c",
+  "independent_review_status": "PASS_WITH_REFERENCE_VARIATION_QUALIFICATION",
+  "root_lock_sha256": "1f77911ff0c9fcb5328babbb7cf5b01d2598c961061b75bb50307a56026ec00d",
+  "package_archive_count": 11,
+  "cargo_command_count": 25,
+  "all_five_native_variants_built": true,
+  "native_C_startup_object_sets_match_original_reference": true,
+  "host_only_libc": "Existing host helper pins libc0.2.191. It replaces the prior conditional0.2.190 lock entry; all35other original registry identities remain. A4 compiler argv confirms libc is compiled only for the host.",
+  "resources": {
+    "elapsed_seconds": 131.84072974999435,
+    "child_peak_rss_bytes": 577372160,
+    "driver_peak_rss_bytes": 60129280,
+    "workspace_peak_bytes": 1616460457
+  },
+  "comparison_evidence": "See rc2-native-measurement-header-development-20261022.json for exact artifact hashes and initial R1 comparisons. Executable section byte multisets match; complete symbol/relocation association and readonly-data difference analysis remain open.",
+  "limits": [
+    "All crates remain publish=false; no public registry source or namespace ownership is asserted.",
+    "No Linux native execution, ARM64 host admission, three-host/two-root matrix or new SDK publication.",
+    "No new guest runtime/memory matrix; no RC2 acceptance.",
+    "Existing release fixtures, baseline, compiler/CSDK/target inputs and protected AROS checkouts are preserved.",
+    "Internal Python still runs development supervision; RC4 retirement remains open."
+  ],
+  "integrated_static_review_sha256": "83aad294d0506873aeb40c4ecc4909de980541cc1da4b04ac8e21e8ef20ac98d",
+  "current_source_fixture_checks": {
+    "status": "PASS_CURRENT_CARGO_REFERENCE_SOURCE_CONTRACT_AND_NATIVE_COORDINATOR_FIXTURES",
+    "result_sha256": "8df5a9dcb4af4c3ae66506575db1fc04d421c291a87b8cb96cde0a06abb54002",
+    "tests": 115,
+    "workflow_lint": "PASS",
+    "real_git_diff_selector_controls": 10
+  }
+}

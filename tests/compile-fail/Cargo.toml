@@ -10,7 +10,7 @@ license = "MIT OR Apache-2.0"
 autobins = false
 
 [dependencies]
-aros-sdk = { path = "../../crates/aros-sdk" }
+aros-sdk = { version = "=0.1.0", path = "../../crates/aros-sdk" }
 
 [[bin]]
 name = "positive-safe"

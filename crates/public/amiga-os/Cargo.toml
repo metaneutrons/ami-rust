@@ -2,11 +2,12 @@
 name = "amiga-os"
 version.workspace = true
 edition.workspace = true
-publish.workspace = true
+publish = false
 license.workspace = true
+readme = "README.md"
 [features]
 default = ["alloc"]
 alloc = ["aros-runtime/alloc"]
 [dependencies]
-aros-runtime = { path = "../../../crates/aros-runtime" }
-aros-sdk = { path = "../../../crates/aros-sdk" }
+aros-runtime = { version = "=0.1.0", path = "../../../crates/aros-runtime" }
+aros-sdk = { version = "=0.1.0", path = "../../../crates/aros-sdk" }

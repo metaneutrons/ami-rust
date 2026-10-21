@@ -1,3 +1,4 @@
+#![no_main]
 //! Bounded native qualification fixture for M1-T03 through M1-T11.
 //!
 //! The host harness selects one ASCII mode in argument 1. Assertions are

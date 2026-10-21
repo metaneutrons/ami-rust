@@ -21,4 +21,7 @@ Pure formatting tests cover lowercase digest output, paths with spaces, the SDK
 path-length bound, signed native error boundaries and raw non-UTF-8 path bytes.
 The package is a workspace member. The retained development native stderr probe
 checks actual separate stdout/stderr, usage and missing-file behavior on the
-pinned ABI-v1 image. Full R1 application/error/memory qualification remains open.
+pinned ABI-v1 image. The retained R1 application/error/memory evidence predates this ordinary Cargo package-integration candidate and does not qualify its package/archive path.
+## Ordinary Cargo integration boundary
+
+This package is a development candidate for ordinary Cargo binary integration. Its additive build script requires the pinned `x86_64-aros` target-library candidate and exact `aros-native-build = 0.2.0-dev` host helper. The helper remains an in-workspace `publish = false` crate and currently admits macOS AArch64 and Linux x86_64 only. Private package/archive checks and macOS Cargo builds are recorded in [the development evidence](../../docs/evidence/rc2-cargo-reference-packages-development-20261022.json). They do not replace the outstanding three-host runtime qualification; Linux AArch64 host admission is still missing.

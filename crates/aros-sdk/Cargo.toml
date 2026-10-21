@@ -6,9 +6,10 @@ publish = false
 license.workspace = true
 description = "Task-affine, allocation-free safe wrappers for the bounded AROS M1 SDK"
 
+readme = "README.md"
 [dependencies]
-aros-runtime = { path = "../aros-runtime", default-features = false }
-aros-sys = { path = "../aros-sys", default-features = false }
+aros-runtime = { version = "=0.1.0", path = "../aros-runtime", default-features = false }
+aros-sys = { version = "=0.1.0", path = "../aros-sys", default-features = false }
 
 [features]
 default = []
