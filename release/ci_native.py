@@ -30,6 +30,9 @@ import ci_auth as auth
 import ci_sdk
 
 NATIVE_LIMIT = 64 * 1024**2
+# Native qualification evidence is separate from the legacy 32 MiB SDK output.
+# Keep 1 MiB of each 64 MiB reservation for cleanup and provider ZIP framing.
+MAX_CONSUMER_OUTPUT_BYTES = 63 * 1024**2
 HOST_TRIPLES = {"linux-x86_64": "x86_64-unknown-linux-gnu", "macos-aarch64": "aarch64-apple-darwin"}
 PUBLISHED_V1_ARCHIVE_NAME = "ami-rust-0.1.0-packaging.2.tar.xz"
 PUBLISHED_V1_ARCHIVE_PIN = {
@@ -890,19 +893,19 @@ def verify_lifecycle(work, output, bundle, host_rust, python_root, outer, upgrad
               "claim": "Real inner/outer signatures, native direct and package preparation/build/removal/retained replay, plus the current-host two-root five-variant matrix; internal Python coordination is outside consumer scope. No-Python observation, cross-host R1-A2/A4 and RC1 acceptance remain open"}
     report_path = output / "native-direct-lifecycle.json"
     initial_report = auth.encoded(report)
-    if ci_sdk.directory_bytes(output) + len(initial_report) > ci_sdk.MAX_OUTPUT_BYTES:
-        raise ValueError("native lifecycle report would exceed the 32 MiB consumer artifact ceiling")
+    if ci_sdk.directory_bytes(output) + len(initial_report) > MAX_CONSUMER_OUTPUT_BYTES:
+        raise ValueError("native lifecycle report would exceed the 64 MiB consumer artifact ceiling")
     write(report_path, initial_report)
     _check_limits(supervisor, "native direct lifecycle report")
     report["supervision"] = _supervision_summary(supervisor, tools.get("commands", []),
                                                   bootstrap_insert_at)
     final_report = auth.encoded(report)
     if (ci_sdk.directory_bytes(output) - report_path.stat().st_size + len(final_report)
-            > ci_sdk.MAX_OUTPUT_BYTES):
-        raise ValueError("native lifecycle report would exceed the 32 MiB consumer artifact ceiling")
+            > MAX_CONSUMER_OUTPUT_BYTES):
+        raise ValueError("native lifecycle report would exceed the 64 MiB consumer artifact ceiling")
     report_path.write_bytes(final_report)
-    if ci_sdk.directory_bytes(output) > ci_sdk.MAX_OUTPUT_BYTES:
-        raise ValueError("native lifecycle output exceeded the 32 MiB consumer artifact ceiling")
+    if ci_sdk.directory_bytes(output) > MAX_CONSUMER_OUTPUT_BYTES:
+        raise ValueError("native lifecycle output exceeded the 64 MiB consumer artifact ceiling")
     _check_limits(supervisor, "native direct lifecycle report")
     return report
 
@@ -1169,14 +1172,14 @@ def _publish_cold_root_diagnostics(work, output):
         if path.is_symlink() or not (path.is_file() or path.is_dir()):
             raise ValueError("cold-root diagnostics contain a nonregular entry")
     diagnostic_bytes = ci_sdk.directory_bytes(diagnostics)
-    if ci_sdk.directory_bytes(output) + diagnostic_bytes > ci_sdk.MAX_OUTPUT_BYTES:
-        raise ValueError("cold-root diagnostics would exceed the 32 MiB consumer artifact ceiling")
+    if ci_sdk.directory_bytes(output) + diagnostic_bytes > MAX_CONSUMER_OUTPUT_BYTES:
+        raise ValueError("cold-root diagnostics would exceed the 64 MiB consumer artifact ceiling")
     inventory = ci_sdk.component_inventory(diagnostics)
     # Both roots share the runner filesystem. Rename the evidence so preserving
     # a failure does not duplicate up to 26 MiB of managed workspace.
     diagnostics.rename(destination)
     if (ci_sdk.component_inventory(destination) != inventory
-            or ci_sdk.directory_bytes(output) > ci_sdk.MAX_OUTPUT_BYTES):
+            or ci_sdk.directory_bytes(output) > MAX_CONSUMER_OUTPUT_BYTES):
         raise ValueError("cold-root diagnostics changed or exceeded the consumer artifact ceiling")
 
 
@@ -1211,7 +1214,7 @@ def _preserve_matrix_metadata(artifacts, rows, work):
 def _matrix_diagnostic_allowance(supervisor, output):
     # Reserve the complete structured mismatch report even when raw evidence
     # must be omitted. Moving it to output adds no second workspace copy.
-    available = min(ci_sdk.MAX_OUTPUT_BYTES - ci_sdk.directory_bytes(output),
+    available = min(MAX_CONSUMER_OUTPUT_BYTES - ci_sdk.directory_bytes(output),
                     ci_sdk.MAX_WORK_BYTES - supervisor.managed_bytes())
     if available < ci_sdk.MAX_COLD_ROOT_DIAGNOSTIC_REPORT_BYTES:
         raise ValueError("insufficient managed headroom for the native matrix diagnostic report")
@@ -1437,8 +1440,8 @@ def _qualify_native_build_matrix(work, state, frontend, output, supervisor, conf
     retained_bytes = sum(row["bytes"] for row in retained_native + retained_metadata)
     report_reserve = 2 * 1024**2
     if (output_bytes + retained_bytes + len(auth.encoded(matrix)) + report_reserve
-            > ci_sdk.MAX_OUTPUT_BYTES):
-        raise ValueError("native matrix outputs would exceed the 32 MiB consumer artifact ceiling")
+            > MAX_CONSUMER_OUTPUT_BYTES):
+        raise ValueError("native matrix outputs would exceed the 64 MiB consumer artifact ceiling")
     if ((output / "native").exists() or (output / "native").is_symlink()
             or (output / "metadata").exists() or (output / "metadata").is_symlink()):
         raise ValueError("native matrix output destinations must be fresh")
@@ -1449,8 +1452,8 @@ def _qualify_native_build_matrix(work, state, frontend, output, supervisor, conf
         metadata_stage, metadata_rows, output)
     if published_native != retained_native or published_metadata != retained_metadata:
         raise ValueError("published native matrix outputs differ from their verified staging rows")
-    if ci_sdk.directory_bytes(output) > ci_sdk.MAX_OUTPUT_BYTES:
-        raise ValueError("native matrix outputs exceeded the 32 MiB consumer artifact ceiling")
+    if ci_sdk.directory_bytes(output) > MAX_CONSUMER_OUTPUT_BYTES:
+        raise ValueError("native matrix outputs exceeded the 64 MiB consumer artifact ceiling")
 
     for layout in layouts:
         shutil.rmtree(layout["root"])

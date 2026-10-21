@@ -80,3 +80,14 @@ and tag; this was completed and the original tag protection restored. No public
 archive release is required. Keep already retained local historical evidence;
 bind the corrected candidate to fresh source, checksums and provenance. All R1
 criteria remain required. See `docs/release-version-exception-20261018.md`.
+
+## Native CI evidence retention
+
+Owner decision, 2026-10-21: retain up to 64 MiB per native consumer host
+artifact, with 1 MiB reserved for cleanup and ZIP framing. The full native
+workflow reserves 448 MiB; the shared Actions artifact pool is 768 MiB.
+`release/ci-artifact-policy.json` owns current retention independently of the
+sealed build-resource policy and its historical retention field. These
+are evidence storage limits, independent of command RAM/log/workspace/time
+budgets, signed SDK input limits and the AROS baseline. Do not introduce a new
+archive format solely to fit the former 32 MiB consumer retention limit.

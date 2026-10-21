@@ -365,6 +365,30 @@ class NativeMatrixTests(unittest.TestCase):
         self.assertFalse((self.work / "pending-native").exists())
         self.assertFalse((self.work / "pending-native-metadata").exists())
 
+    def test_complete_matrix_can_retain_more_than_legacy_32_mib(self):
+        # Reproduce the storage condition of the completed Linux campaign.
+        previous = self.output / "previous-command-evidence.bin"
+        with previous.open("wb") as stream:
+            stream.truncate(40 * 1024**2)
+        self.test_two_root_matrix_runs_all_frozen_variants_and_publishes_after_success()
+        self.assertGreater(ci_sdk.directory_bytes(self.output), 32 * 1024**2)
+        self.assertLess(ci_sdk.directory_bytes(self.output), native.MAX_CONSUMER_OUTPUT_BYTES)
+        self.assertEqual(previous.stat().st_size, 40 * 1024**2)
+
+    def test_matrix_refuses_insufficient_final_report_space_without_publishing_payloads(self):
+        with (self.output / "previous-command-evidence.bin").open("wb") as stream:
+            stream.truncate(native.MAX_CONSUMER_OUTPUT_BYTES
+                            - ci_sdk.MAX_COLD_ROOT_DIAGNOSTIC_REPORT_BYTES)
+        command, _ = self._command()
+        reference = {"hosts": {native.current_host(): self.rows}}
+        with patch.object(native.ci_sdk, "validate_native_reference", return_value=reference):
+            with self.assertRaisesRegex(ValueError, "64 MiB consumer artifact ceiling"):
+                native._qualify_native_build_matrix(
+                    self.work, self.state, self.frontend, self.output, self._fixture_supervisor(),
+                    {"sdk_version": "0.2.0"}, command)
+        self.assertFalse((self.output / "native").exists())
+        self.assertFalse((self.output / "metadata").exists())
+
     def test_reference_mismatch_copies_bounded_diagnostics_before_failing(self):
         command, _ = self._command(mismatching=("sdk-layout-b-with-spaces", "qualification"))
         reference = {"hosts": {native.current_host(): self.rows}}
@@ -398,7 +422,7 @@ class NativeMatrixTests(unittest.TestCase):
 
     def test_mismatch_keeps_structured_evidence_when_raw_retention_has_no_headroom(self):
         with (self.output / "previous-command.stdout.json").open("wb") as stream:
-            stream.truncate(ci_sdk.MAX_OUTPUT_BYTES - ci_sdk.MAX_COLD_ROOT_DIAGNOSTIC_REPORT_BYTES)
+            stream.truncate(native.MAX_CONSUMER_OUTPUT_BYTES - ci_sdk.MAX_COLD_ROOT_DIAGNOSTIC_REPORT_BYTES)
         command, _ = self._command(mismatching=("sdk-layout-b-with-spaces", "qualification"))
         reference = {"hosts": {native.current_host(): self.rows}}
         with patch.object(native.ci_sdk, "validate_native_reference", return_value=reference):
@@ -410,7 +434,7 @@ class NativeMatrixTests(unittest.TestCase):
         self.assertEqual(report["raw_retention_limit_bytes"], 0)
         self.assertEqual(report["raw_retained_bytes"], 0)
         self.assertGreater(report["raw_omitted_bytes"], 0)
-        self.assertLessEqual(ci_sdk.directory_bytes(self.output), ci_sdk.MAX_OUTPUT_BYTES)
+        self.assertLessEqual(ci_sdk.directory_bytes(self.output), native.MAX_CONSUMER_OUTPUT_BYTES)
         self.assertFalse((self.work / "cold-root-diagnostics").exists())
 
     def test_signed_package_lifecycle_runs_matrix_before_removal_and_keeps_replay(self):

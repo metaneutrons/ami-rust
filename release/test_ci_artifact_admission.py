@@ -14,7 +14,7 @@ from ci_artifact_admission import admit
 
 
 MIB = 1024 ** 2
-POOL = 512 * MIB
+POOL = 768 * MIB
 TEST_ENV = {
     'GITHUB_REPOSITORY': ci_artifact_admission.REPOSITORY,
     'GH_TOKEN': 'fixture-only-token',
@@ -87,8 +87,8 @@ class MainAdmission(unittest.TestCase):
         page = {
             'total_count': 2,
             'artifacts': [
-                {'id': 1, 'size_in_bytes': 96 * MIB},
-                {'id': 2, 'size_in_bytes': 96 * MIB},
+                {'id': 1, 'size_in_bytes': (POOL - 320 * MIB) // 2},
+                {'id': 2, 'size_in_bytes': (POOL - 320 * MIB) // 2},
             ],
         }
         output, calls, response = self.run_main(['--sdk-candidate'], TEST_ENV, page)
@@ -110,13 +110,13 @@ class MainAdmission(unittest.TestCase):
         self.assertNotIn(TEST_ENV['GH_TOKEN'], output)
 
     def test_sdk_candidate_denied_when_complete_candidate_reservation_exceeds_pool(self):
-        existing = 225 * MIB
+        existing = POOL - 320 * MIB + 1
         page = {
             'total_count': 3,
             'artifacts': [
-                {'id': 1, 'size_in_bytes': 75 * MIB},
-                {'id': 2, 'size_in_bytes': 75 * MIB},
-                {'id': 3, 'size_in_bytes': 75 * MIB},
+                {'id': 1, 'size_in_bytes': existing // 3},
+                {'id': 2, 'size_in_bytes': existing // 3},
+                {'id': 3, 'size_in_bytes': existing - 2 * (existing // 3)},
             ],
         }
         self.assertLessEqual(existing + 2 * 32 * MIB, POOL)
@@ -155,7 +155,7 @@ class MainAdmission(unittest.TestCase):
                 self.assertEqual(output.getvalue(), '')
 
     def test_proposal_reserves_only_its_two_producer_artifacts(self):
-        page = {'total_count':1, 'artifacts':[{'id':1,'size_in_bytes':448 * MIB}]}
+        page = {'total_count':1, 'artifacts':[{'id':1,'size_in_bytes':POOL - 64 * MIB}]}
         output, _, _ = self.run_main(['--sdk-candidate','--reference-proposal'], TEST_ENV, page)
         report = json.loads(output)
         self.assertEqual(report['pending_workflow_metadata_ceiling_bytes'], 64 * MIB)
@@ -181,9 +181,24 @@ class MainAdmission(unittest.TestCase):
         self.assertEqual(response.read_limits, [2 * MIB + 1])
         self.assertNotIn(unprotected_env['GH_TOKEN'], output)
 
+    def test_native_policy_reservation_and_consumer_guard_agree(self):
+        import ci_native
+        import ci_sdk
+        policy = json.loads((Path(__file__).parent / "ci-artifact-policy.json").read_text())
+        self.assertEqual(policy["CI_artifact_pool_bytes"], POOL)
+        self.assertEqual(policy["native_consumer_artifact_bytes"], 64 * MIB)
+        self.assertEqual(ci_native.MAX_CONSUMER_OUTPUT_BYTES,
+                         policy["native_consumer_artifact_bytes"]
+                         - policy["native_consumer_framing_reserve_bytes"])
+        for host in ("macos", "linux"):
+            self.assertEqual(ci_artifact_admission.NATIVE_ARTIFACT_CEILINGS["consumer-" + host],
+                             policy["native_consumer_artifact_bytes"])
+            self.assertEqual(ci_artifact_admission.SDK_ARTIFACT_CEILINGS["consumer-" + host], 32 * MIB)
+        self.assertEqual(ci_sdk.MAX_OUTPUT_BYTES, 32 * MIB - 64 * 1024)
+
     def test_native_workflow_reserves_the_entire_selected_dag(self):
         pending = sum(ci_artifact_admission.NATIVE_ARTIFACT_CEILINGS.values())
-        self.assertEqual(pending, 384 * MIB)
+        self.assertEqual(pending, 448 * MIB)
         page = {'total_count': 1, 'artifacts': [{'id': 1, 'size_in_bytes': POOL - pending}]}
         output, _, _ = self.run_main(['--sdk-candidate', '--native-tooling'], TEST_ENV, page)
         report = json.loads(output)

@@ -1,0 +1,227 @@
+{
+  "schema": "ami-rust-native-evidence-retention-development-v1",
+  "status": "PASS_LOCAL_COMPONENTS_NOT_RC1_ACCEPTANCE",
+  "source_base": "ed2674778c7389b7dddee7d1a05867657e1b3ac5",
+  "failed_campaign": {
+    "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39523584471",
+    "attempt": 1,
+    "source": "ed2674778c7389b7dddee7d1a05867657e1b3ac5",
+    "linux_job": 118978073875,
+    "last_command": "27-upgrade-new-offline-build",
+    "last_command_exit": 0,
+    "failure": "Final lifecycle report exceeds old 32 MiB retention cap; Linux upload absent. Original failure remains unaccepted.",
+    "linux_log_sha256": "9cf722cd1f831bd07d5006f2f1e916ca3b50f40eebadad6199d8bcbc27305d4b"
+  },
+  "owner_decision": "2026-10-21: 64 MiB native evidence per host; realistic aggregate retention; runtime budgets and AROS baseline unchanged. No new archive format.",
+  "policy": {
+    "schema": "ami-rust-ci-artifact-policy-v1",
+    "CI_artifact_pool_bytes": 805306368,
+    "native_consumer_artifact_bytes": 67108864,
+    "native_consumer_framing_reserve_bytes": 1048576,
+    "basis": "Owner approved 64 MiB per native consumer on 2026-10-21 after run 39523584471 completed the Linux command matrix but exceeded the old 32 MiB report bound. The 768 MiB pool admits a full 448 MiB native campaign alongside the existing 320 MiB legacy campaign reservation. Reserve 1 MiB per native consumer for cleanup and provider ZIP framing; command and guest budgets are unchanged."
+  },
+  "native_workflow_reservation_bytes": 469762048,
+  "legacy_workflow_reservation_bytes": 335544320,
+  "tests": [
+    {
+      "test": "release/test_ci_artifact_admission.py",
+      "exit": 0,
+      "seconds": 0.12777845794335008,
+      "stderr_sha256": "8e8c40f14485e374a450c9c5f2dd65b58e8b74300fa0563f8ed8dfc1b535ec9d",
+      "tests": 10
+    },
+    {
+      "test": "release/test_ci_native.py",
+      "exit": 0,
+      "seconds": 1.0141167920082808,
+      "stderr_sha256": "2a167c9a30e098375f47cfbf066cbaec6ea49895009e40edcfc0bd89b0eb8816",
+      "tests": 71
+    },
+    {
+      "test": "release/test_sdk_workflow.py",
+      "exit": 0,
+      "seconds": 0.4409013749100268,
+      "stderr_sha256": "0c5053b81aa9f5b8a3b1f34941f557dad65fe1e845a38429f58500865e91a27c",
+      "tests": 25
+    },
+    {
+      "test": "release/test_ci_sdk.py",
+      "exit": 0,
+      "seconds": 6.086962333880365,
+      "stderr_sha256": "533cf9538d8ccac1daf93119cf42a7c3e5ad9441cd151f7486baf742fa5ac564",
+      "tests": 52
+    },
+    {
+      "test": "release/test_prepare_sdk.py",
+      "exit": 0,
+      "seconds": 3.773572583217174,
+      "stderr_sha256": "e39312137a68eb0e1cc66a6b947388ebc3b20bc15a0a9673e8459dd0b4f799bb",
+      "tests": 13
+    },
+    {
+      "test": "release/test_ci_auth.py",
+      "exit": 0,
+      "seconds": 0.4234356249216944,
+      "stderr_sha256": "657e967f868a9f37b091a37f8a86bce7de5f65279323f000469f44404c4b01a6",
+      "tests": 25
+    },
+    {
+      "test": "release/test_ci_native_outer.py",
+      "exit": 0,
+      "seconds": 0.16272658412344754,
+      "stderr_sha256": "542478c5e228cffe15731b293460e1c4bc97eab58d811a31f3775a96f09a3ee3",
+      "tests": 9
+    },
+    {
+      "test": "qualification/test_hosted_capacity.py",
+      "exit": 0,
+      "seconds": 0.19062249991111457,
+      "stderr_sha256": "baf49b59538192f3e136ca0404cac516ecb8dd2fe5ba1416604056f3080fa49c",
+      "tests": 5
+    }
+  ],
+  "total_component_tests": 210,
+  "additional_checks": [
+    {
+      "argv": [
+        "actionlint",
+        ".github/workflows/sdk-qualify.yml",
+        ".github/workflows/cargo-qualify.yml",
+        ".github/workflows/cargo-context-probe.yml"
+      ],
+      "exit": 0
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit": 0
+    }
+  ],
+  "changed_source_files": [
+    {
+      "path": ".github/workflows/cargo-context-probe.yml",
+      "bytes": 3903,
+      "sha256": "b8fd6043a12fee699d953f1204d8c0185c3690c16db575e5d7bfd54e8e735099"
+    },
+    {
+      "path": ".github/workflows/cargo-qualify.yml",
+      "bytes": 8735,
+      "sha256": "f67979defb0622c5d4ee6269e882f1e894b89a1e4f61daecae83054881f1b921"
+    },
+    {
+      "path": ".github/workflows/sdk-qualify.yml",
+      "bytes": 81522,
+      "sha256": "3264701a8e245d8fa50eb22adbce170f58a95a6293ca7bcb4d0c24727e43e34b"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 5484,
+      "sha256": "74162f5a7d173257fbe5b4683016f3b1f984e23f8a05cc56e8d445c340f87290"
+    },
+    {
+      "path": "docs/hosted-cargo-context-probe.md",
+      "bytes": 5015,
+      "sha256": "f9eb4abc422a0cfee06813353421c312cc8e496225785b344f00aa459678164e"
+    },
+    {
+      "path": "docs/hosted-cargo-producer.md",
+      "bytes": 2720,
+      "sha256": "b6003673532ffed117bd12fccbf01f2ae75e04518c4d3fded1f357a1202e9fd9"
+    },
+    {
+      "path": "docs/local-storage-policy.md",
+      "bytes": 2185,
+      "sha256": "2f4a86175945a32a49728652a4c49a9511ed6f5fd19937cb19efa6881b53664f"
+    },
+    {
+      "path": "docs/public-release-replay.md",
+      "bytes": 7984,
+      "sha256": "c1d44e9f986a56fcfd4335cb2a5000646570a050f3a262e75924c8d177c14203"
+    },
+    {
+      "path": "docs/rust-cli-migration/native-producer.md",
+      "bytes": 12924,
+      "sha256": "359a8504f0ebc1fb65d3b0a25e753153784bed6a1d4d68593b34a33dbd10b3ca"
+    },
+    {
+      "path": "docs/rust-cli-migration/native-upgrade-qualification.md",
+      "bytes": 5792,
+      "sha256": "89962b38eb8da7170b8e6fee46796c68b6dc9ba3b0852d194d50f36f6ee029d3"
+    },
+    {
+      "path": "docs/staged-sdk-release.md",
+      "bytes": 6605,
+      "sha256": "30ec775b6cc4b1cd51a3166221c3229dd4626b260553a477a0e1c172222a2631"
+    },
+    {
+      "path": "release/ci-artifact-policy.json",
+      "bytes": 583,
+      "sha256": "7f3098b84d87a0b713be627cd0e7b3bdeb8d8e41133a56b3a64bcc6557749c1a"
+    },
+    {
+      "path": "release/ci_artifact_admission.py",
+      "bytes": 5977,
+      "sha256": "af266c2bfe26edfd724022eaac2c9dd9a42fde593ffdc27cb6af8eacf4b97000"
+    },
+    {
+      "path": "release/ci_native.py",
+      "bytes": 174522,
+      "sha256": "6ed0464c762ecaf80af7b3b6687e9b82c0c4ca10fe8b58afdf0459844d561aab"
+    },
+    {
+      "path": "release/test_ci_artifact_admission.py",
+      "bytes": 10390,
+      "sha256": "ed2415763766a253c307e7c5457ad2439f9340194717e4e83304610aacaab008"
+    },
+    {
+      "path": "release/test_ci_native.py",
+      "bytes": 106130,
+      "sha256": "5b5bc2920ca8040807d1975e097ed863ce1cc346b2618ca4bea17a7eba6a4333"
+    },
+    {
+      "path": "release/test_sdk_workflow.py",
+      "bytes": 33879,
+      "sha256": "fa90b9c1412536520000a3e6ca7c04104368383f9c2d2b97d46116857f72fc61"
+    }
+  ],
+  "unchanged_inputs": [
+    {
+      "path": "release/ci-resources.json",
+      "sha256": "b9a5fbfff842847c30b5f56ea4e1d3a368f4bda30689f0407ed9d33610571646",
+      "unchanged": true
+    },
+    {
+      "path": "release/ci-sdk-inputs.json",
+      "sha256": "df4494bfc3590b97c5a8d5fe126842c56d801787ffb49dead0b9e58c9a3c3ded",
+      "unchanged": true
+    },
+    {
+      "path": "release/ci-bootstrap-inputs.json",
+      "sha256": "5c3557a2696457d76562f8883efa2c7d2c4cfc583f4f5814a722907a1f639f81",
+      "unchanged": true
+    },
+    {
+      "path": "release/native-reference.json",
+      "sha256": "93894f48757802841e067fa31d6a1624a3d35a80060d2927670cecfc81c4544e",
+      "unchanged": true
+    },
+    {
+      "path": "release/portable-csdk/spec.json",
+      "sha256": "7cb73dd7057feac1bf1a7f1bbf2172934cc06555e2b83938a93cb1b2bfe3178f",
+      "unchanged": true
+    },
+    {
+      "path": "inputs/budgets.json",
+      "sha256": "eb842c642fbed2f88433750c4c51dd493eb2ecb3d20d49b73cbea1c2176b8a39",
+      "unchanged": true
+    }
+  ],
+  "limitations": [
+    "Local component fixtures and actual workflow cleanup only; hosted candidate CI and a complete protected both-host SDK campaign remain required.",
+    "Initial failed development checks preserved: changing sealed resource bytes invalidated existing producer reports; a counter-test initially reached an earlier diagnostic-space refusal. Separate retention policy and correctly staged final-output overflow resolve these without altering old evidence.",
+    "No RC1 acceptance or SDK publication. No protected AROS checkout or nxpk changes."
+  ]
+}

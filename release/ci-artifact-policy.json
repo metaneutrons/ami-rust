@@ -1,0 +1,7 @@
+{
+  "schema": "ami-rust-ci-artifact-policy-v1",
+  "CI_artifact_pool_bytes": 805306368,
+  "native_consumer_artifact_bytes": 67108864,
+  "native_consumer_framing_reserve_bytes": 1048576,
+  "basis": "Owner approved 64 MiB per native consumer on 2026-10-21 after run 39523584471 completed the Linux command matrix but exceeded the old 32 MiB report bound. The 768 MiB pool admits a full 448 MiB native campaign alongside the existing 320 MiB legacy campaign reservation. Reserve 1 MiB per native consumer for cleanup and provider ZIP framing; command and guest budgets are unchanged."
+}

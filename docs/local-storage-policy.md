@@ -37,7 +37,7 @@ The following are independent operational or product limits and are unchanged:
 
 - Standard hosted CI: 4 GiB observed aggregate RSS, 12 GiB generated workspace,
   16 MiB logs, 20 minutes per command, 90 minutes per campaign, and the
-  512 MiB remote artifact pool.
+  768 MiB remote artifact pool.
 - AROS boot, ABI, guest memory, stack, heap, and code-size limits.
 
 This local policy does not qualify the native SDK for release. Existing release

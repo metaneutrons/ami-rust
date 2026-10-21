@@ -78,7 +78,7 @@ test coordination is outside the consumer tree and remains RC4 retirement work.
 The existing aggregate limits remain **4 GiB RSS, 12 GiB managed workspace,
 16 MiB logs and 1200 seconds per command**. Old input roots are charged alongside
 all existing live work; no additional runner or independent unaccounted build is
-introduced. Evidence stays within the existing 32 MiB per-host consumer artifact
+introduced. Evidence stays within the 64 MiB per-host native consumer artifact
 ceiling. The coordinator preserves completed earlier matrix evidence if a later
 upgrade step fails.
 

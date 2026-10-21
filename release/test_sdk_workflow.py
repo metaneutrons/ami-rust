@@ -156,6 +156,44 @@ class WorkflowProposalTests(unittest.TestCase):
         self.assertIn("needs: authenticate", SOURCE)
 
 
+class NativeConsumerRetentionTests(unittest.TestCase):
+    def run_cleanup(self, size):
+        block = SOURCE.split("\n  native-consumer:\n", 1)[1].split("\n  consumer:\n", 1)[0]
+        cleanup = textwrap.dedent(block.split(
+            "name: Retire native consumer inputs and bound retained evidence", 1)[1]
+            .split("python3 -I -B - <<'PY'\n", 1)[1].split("          PY", 1)[0])
+        with tempfile.TemporaryDirectory(prefix="native-retention-") as directory:
+            root = Path(directory)
+            output = root / "ami-rust-native-consumer-output"
+            output.mkdir()
+            payload = output / "original-evidence.bin"
+            with payload.open("wb") as stream:
+                stream.truncate(size)
+            result = subprocess.run([sys.executable, "-I", "-B", "-c", cleanup],
+                cwd=WORKFLOW.parents[2], capture_output=True, text=True,
+                env={**os.environ, "RUNNER_TEMP": str(root), "VERIFY_RESULT": "success"})
+            receipt = output / "cleanup.json"
+            return result, json.loads(receipt.read_text()) if receipt.is_file() else None, payload.stat().st_size
+
+    def test_real_cleanup_keeps_complete_40_mib_evidence(self):
+        result, receipt, size = self.run_cleanup(40 * 1024**2)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(receipt["output_bytes"], size)
+        self.assertEqual(receipt["artifact_ceiling_bytes"], 64 * 1024**2)
+        self.assertEqual(receipt["framing_reserve_bytes"], 1024**2)
+
+    def test_actual_cleanup_boundary_and_one_byte_overflow(self):
+        limit = 63 * 1024**2 - 4096
+        result, receipt, size = self.run_cleanup(limit)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(receipt["output_bytes"], size)
+        result, receipt, size = self.run_cleanup(limit + 1)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("64 MiB artifact ceiling", result.stderr)
+        self.assertIsNone(receipt)
+        self.assertEqual(size, limit + 1)
+
+
 class NativeWorkflowTests(unittest.TestCase):
     @staticmethod
     def assert_native_contract(source):
