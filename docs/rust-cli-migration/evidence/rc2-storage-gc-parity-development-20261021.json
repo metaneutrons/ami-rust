@@ -1,0 +1,161 @@
+{
+  "schema": "ami-rust-cargo-storage-gc-parity-development-v1",
+  "date": "2026-10-21T14:31:36.164560+00:00",
+  "status": "LOCAL_MACOS_SIX_MODE_WITH_FOUR_CASE_GC_PARITY",
+  "rc2_accepted": false,
+  "sdk_publication": false,
+  "source": {
+    "host/cargo-storage/runtime-checks.json": "5dfca54f381f65887b19750a4325513dfbc5be19b1efb131279d0a66dc1e4222",
+    "host/cargo-storage/runtime-lifecycle-checks.json": "565e7185f5b9150262620e14e7517e2531a1eec3859d0d49cf97a2e95936014b",
+    "host/cargo-storage/runtime-registry-checks.json": "bf82e93fba24301ed0f2246af2f094cd44909d5b8331968ba9d73462f90c1db8",
+    "host/cargo-storage/runtime-nested-checks.json": "be41dac61006f631df4fc1abc8ca9382a896f57c221c7ba22a2528668df845f1",
+    "host/cargo-storage/runtime-concurrent-gc-checks.json": "1e729eeb37f99f3086db5d27460e6c19dc36f418c00dfae122e64c5fa47379c6",
+    "host/cargo-storage/runtime-git-helper-checks.json": "a405c4f12fb37e03da5a8808f18b6a9d62fbc47715ea08cc158416e74bbc2892",
+    "tooling/crates/xtask/src/cargo_storage_git_helper.rs": "87470872ba57f4914928248e04b43f45e4f560435349b34e501c144e59f4e611",
+    "tooling/crates/xtask/src/cargo_storage_lifecycle.rs": "ff161fce19c125aebbc435ad4b8611ab16812b24703744bebaa25032844f202f",
+    "tooling/crates/xtask/src/cargo_storage_concurrent_gc.rs": "43464a5a15a6f7d44a0b791a4c860321808ecf76c140db5ee68e9b82824f0452",
+    "tooling/crates/xtask/src/cargo_storage_probe.rs": "e505c6c54d1a2c1d3581b105df33880afaf53bd56e389f83e5ded518976add98",
+    "tooling/crates/xtask/src/cargo_storage_nested.rs": "c05d3e660b0174fe56d3a06b9829ccbaa196c525e4dd195b4615ee68ab5412f0",
+    "tooling/crates/xtask/src/main.rs": "0328d7f3dc45cfd2f49c35d93c96c8cd67da2ae245148d771245f5f8acc864df",
+    "tooling/crates/xtask/src/cargo_storage_registry.rs": "05ed7792df966209bc90a963c121037b28cec2e740801efb30daf5c804eb2e22",
+    "tooling/crates/xtask/src/cargo_storage_registry_fixture.rs": "b9cb41096e99a9c498eaba9d86e367503c110faa2fe415ed02e8f40b40b81dfa",
+    "release/ci_cargo_storage.py": "5eeb6c33770c09d8d5246a0198669426dfe9c76a0526b7225decf4135780092c",
+    "release/native-tooling-inputs.json": "d8d7042b784fd8f497eaf191fbc14b7dc2b5c89277f48331586a7cb04be69601",
+    "tooling/crates/core/src/process_capture.rs": "ccbb5f9f9bb2699bafe6c98b572954c7b9b3c8841e0c16ca24bcb4765aea83c3",
+    "tooling/crates/core/src/signals.rs": "683850c8d837ce16f9248557a5783974c6362af6fd62477235afa91e2e2d91e6"
+  },
+  "macos": {
+    "suite_sha256": "085cee40c34b27c4c6eb244a4735ab527107a1b950fcf27021b2b794ffc0c246",
+    "modes": {
+      "base": {
+        "result_sha256": "dee2babc9363ca8cdffd21d3a7d26dab66f0366f89b41987267c89de123b2a03",
+        "readback": {
+          "contract_sha256": "5dfca54f381f65887b19750a4325513dfbc5be19b1efb131279d0a66dc1e4222",
+          "checked_logs": 86,
+          "checked_commands": 43,
+          "checked_fixture_outcomes": 37
+        }
+      },
+      "lifecycle": {
+        "result_sha256": "57597775ac417939df4b405b00641a459d08a4d3681b3080967a0a37c3aa478c",
+        "readback": {
+          "contract_sha256": "565e7185f5b9150262620e14e7517e2531a1eec3859d0d49cf97a2e95936014b",
+          "checked_logs": 48,
+          "checked_commands": 24,
+          "checked_fixture_outcomes": 37,
+          "checked_retained_analysis_logs": 4
+        }
+      },
+      "registry": {
+        "result_sha256": "ad1ce9c7e7d91a13ce3ecdc02291edfe7c3aeac975b73db0452039e088195304",
+        "readback": {
+          "contract_sha256": "bf82e93fba24301ed0f2246af2f094cd44909d5b8331968ba9d73462f90c1db8",
+          "checked_logs": 52,
+          "checked_commands": 26,
+          "checked_fixture_outcomes": 33
+        }
+      },
+      "nested": {
+        "result_sha256": "036f5fb4f424aa1d49bad718a97076753b092f22ac14733df58f2a936334693e",
+        "readback": {
+          "contract_sha256": "be41dac61006f631df4fc1abc8ca9382a896f57c221c7ba22a2528668df845f1",
+          "checked_logs": 48,
+          "checked_commands": 24,
+          "checked_fixture_outcomes": 32
+        }
+      },
+      "concurrent_gc": {
+        "result_sha256": "997d65cff0e34c728954660cc09cffe3f0e2e9170a8324917640b8a084c4b8eb",
+        "readback": {
+          "contract_sha256": "1e729eeb37f99f3086db5d27460e6c19dc36f418c00dfae122e64c5fa47379c6",
+          "checked_logs": 72,
+          "checked_commands": 36,
+          "checked_fixture_outcomes": 54
+        }
+      },
+      "git_helper": {
+        "result_sha256": "0366eac3b5357eaee352bd71b59ad52961e1f1fc4875e42501c38f516375df39",
+        "readback": {
+          "contract_sha256": "a405c4f12fb37e03da5a8808f18b6a9d62fbc47715ea08cc158416e74bbc2892",
+          "checked_logs": 28,
+          "checked_commands": 14,
+          "checked_fixture_outcomes": 33
+        }
+      }
+    },
+    "total_commands": 167,
+    "total_checks": 226,
+    "retained_raw_streams": 334,
+    "retained_analysis_jsonl": 4,
+    "executed_xtask_sha256": "826c4ee47806a3b97ba96bc3b9e9755d67e3c9e12c7e341665dd92a18fd55d45",
+    "resources": {
+      "elapsed_seconds": 157.06659187516198,
+      "observed_child_peak_rss_bytes": 414089216,
+      "driver_peak_rss_bytes": 36175872,
+      "workspace_peak_bytes": 220070883,
+      "logs_bytes": 96996
+    }
+  },
+  "rust_checks": {
+    "pinned_host_build": "PASS",
+    "storage_units": 11,
+    "strict_workspace_all_targets_clippy": "PASS_MACOS_AND_LINUX_CFG",
+    "linux_execution": false,
+    "report_sha256": "74ded0d5674ba0ec8f41ce337cbbd2a760065b844818820dce38d7a45c4dee12"
+  },
+  "readback_gates": {
+    "positive_and_corrupted_copy_checks": 39,
+    "report_sha256": "2b04d90a1818e22ca9777f0ee4958b16eb67fa14e8bc4f9a0716d19a5a3b33b5",
+    "includes": "Exact commands, outcomes, tools, driver sources, raw streams, linked-root refusal and single-read JSONL integrity/object/duplicate-member controls."
+  },
+  "measurement_counter": {
+    "mutation": "Only initial observed GC stderr count is forced to1; final real blocking stream and all3successes retained unchanged",
+    "expected_refusal": "Cargo storage probe check failed: concurrent-gc-control-selector-present-gc-blocking-message-in-unmodified-stderr",
+    "observed_exit": 2,
+    "all_three_window_commands_exit_zero": true,
+    "final_gc_stderr_contains_exact_lock_phrase": true,
+    "initial_observed_prefix_lacks_phrase": true,
+    "remaining_owned_cargo_or_fixture_pids": [],
+    "report_sha256": "b78d18c184dc75a3786bffe2498c678fa6f06a480cc76ac311e52ce3a18f6b54",
+    "native_failed_result_sha256": "465aecbfc90edbfdf0b4baa9c3060d4c68fe528b6fbad2f6ecd1ad92421a9e5a",
+    "scope": "An isolated first-case witness uses an intentionally one-byte GC sample count while retaining the real final raw stream. The exact initial-prefix check refuses; no full lifecycle failure/retry acceptance is claimed."
+  },
+  "gc_scope": {
+    "cases": [
+      "control-selector-present",
+      "control-selector-absent",
+      "derived-selector-present",
+      "derived-selector-absent"
+    ],
+    "commands": 36,
+    "checks": 54,
+    "contention": "Two distinct live Cargo readers hold the barrier. Exact package-cache mutation blocking phrase must already occur within the unmodified stderr prefix observed before the >=250ms hold; then release and require all three final exits0.",
+    "routing": "Only derived+selector-present uses the selected mutable store. Other cases use original CARGO_HOME and leave the selected store untouched.",
+    "preservation": "HOME/config/credentials unchanged in every case; whole original CARGO_HOME unchanged for derived-selected only.",
+    "semantic_parity": "Actual expired-index deletion, fresh-index preservation, SQLite header, expected-root locks/cache artifacts and post-GC offline check. No timestamp/port/raw-path equality claim.",
+    "real_age_seconds": 15,
+    "gc_index_max_age": "10 seconds",
+    "clock_or_database_rewritten": false
+  },
+  "previous_source": "PR121 normally merged at29b663f1b900d12d2b9ebfe689bfc7e44ee8212e, exacttree equals independently reviewed cec71860; all8ordinarychecksPASS. Previous local140/181 record remains historical.",
+  "retained_failures": [
+    "Initial A2 integration strict-Clippy collapsible-if failure was corrected; source/logs retained.",
+    "The first parent negative-counter driver incorrectly expected exit1; actual maintainer refusal uses exit2. The corrected driver reran and verifies exact2, reason, failed receipt and cleanup.",
+    "Initial A3 source checked the phrase only in final stderr; review P2 accepted, source strengthened to the first-observed prefix and full suite plus deliberate incomplete-prefix counter rerun. Earlier A2/A3 source/results remain retained."
+  ],
+  "remaining": [
+    "Fresh protected original/derived Cargo production and expanded runtime on both hosts, including corrected Linux invalid-UTF8 characterization.",
+    "Concurrent fetch, complete lifecycle failure/retry and bounded selector-absent coverage beyond these registry-index GC cases.",
+    "Cargo-owned effective-input guard and shared typed activation/project/invocation/compiler/build-script/linker implementation.",
+    "Full both-host/two-root/five-variant/relocation/metadata/Serde and inherited AROS runtime/memory qualification before RC2 acceptance.",
+    "RC3 authenticated direct/APT/Homebrew distribution; RC4 full internal Python retirement; RC5 production/channel/recovery/rollback."
+  ],
+  "baseline_changed": false,
+  "protected_repositories_changed": false,
+  "independent_review": {
+    "first_review_sha256": "ce493ae96acca0d38e2e5b64aded9ce56277442990a412c8f340dd8bd8b273ff",
+    "finding": "P2: bind the timer witness to the initial observed stderr prefix; fixed and actual prefix-only corrupted-witness control passed.",
+    "delta_review_sha256": "e05351fcd9d4eaa5e5c3f402dce71ed74d61a9b47f0b75334d98548966d75af0",
+    "delta_result": "No remaining actionable issues; source/counter review only, actual execution is recorded separately above."
+  }
+}
