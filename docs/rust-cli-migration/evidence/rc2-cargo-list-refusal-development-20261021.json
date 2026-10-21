@@ -1,0 +1,87 @@
+{
+  "schema": "ami-rust-rc2-cargo-list-refusal-development-v1",
+  "status": "PASS_LOCAL_MACOS_BEHAVIOR_AND_FRESH_EXACT_SOURCE_REPLAY",
+  "qualified_component": false,
+  "sdk_published": false,
+  "rc2_accepted": false,
+  "upstream_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+  "effective_source_sha256": "c74b94bc2b061c81dff2643c2dd810132576bad86e6a1ce551fd1df23f3f5ff9",
+  "guard_patch_sha256": "e8e2cd451a3d5b5c444b2254ac744360af1fcf185fbadd87e4e834cb382c5280",
+  "source_files": 2929,
+  "source_symlinks": 121,
+  "macos_development_binary": {
+    "bytes": 38329136,
+    "sha256": "9d580f91e64c6502c1222b975ed15d5cc6a5c1773cfefa99e0097b7f3de4e832"
+  },
+  "behavior": {
+    "retained_receipt": "rc2-cargo-list-refusal-build-a1/result.json",
+    "sha256": "4262df40e59c72495749e1cea241ac891507f1302978e00de153681498d56cf8",
+    "commands": [
+      {
+        "label": "build-list-guard-cargo",
+        "exit_code": 0,
+        "stop_reason": null
+      },
+      {
+        "label": "new-cargo-version",
+        "exit_code": 0,
+        "stop_reason": null
+      },
+      {
+        "label": "compile-native-callback-fixture",
+        "exit_code": 0,
+        "stop_reason": null
+      },
+      {
+        "label": "fixture-lock",
+        "exit_code": 0,
+        "stop_reason": null
+      },
+      {
+        "label": "normal-list-still-works",
+        "exit_code": 0,
+        "stop_reason": null
+      },
+      {
+        "label": "old-selected-list-counter",
+        "exit_code": 0,
+        "stop_reason": null
+      },
+      {
+        "label": "selected-list-refused",
+        "exit_code": 101,
+        "stop_reason": null
+      },
+      {
+        "label": "partial-list-refused",
+        "exit_code": 101,
+        "stop_reason": null
+      },
+      {
+        "label": "selected-metadata-still-works",
+        "exit_code": 0,
+        "stop_reason": null
+      }
+    ],
+    "summary": "Unselected list succeeds; the old selected engine lists with a configuration callback only. The new selected and partial-selector list routes refuse before callbacks or list output. Selected metadata still emits configuration then command callbacks and succeeds."
+  },
+  "primary_behavior_readback": {
+    "retained_receipt": "rc2-cargo-list-refusal-readback-a1/result.json",
+    "sha256": "900a4d3ba31be90a40fe68e16565b6cff0da429a8296a0ddb78ad129160846b3",
+    "raw_streams": 18
+  },
+  "fresh_source_replay": {
+    "retained_receipt": "rc2-cargo-list-public-candidate-a2/result.json",
+    "sha256": "534578f04fa27f18e2fb712a1e0dd00707b96c965db7fcbfca74e056ad742083"
+  },
+  "independent_source_review": {
+    "retained_receipt": "rc2-cargo-list-refusal-independent-review-a1/review.md",
+    "sha256": "30553931417228769700a95059bec3e403b9ba24e2f5a1729b1ac27595016105"
+  },
+  "limitations": [
+    "Experimental component is not selected by existing producers, SDK pins or receipts.",
+    "macOS cache-assisted development build only; no fresh production, relocation, Linux binary/runtime or both-host qualification.",
+    "The native callback is a controlled fixture, not production activation/command/compiler/graph authorization.",
+    "No target baseline or existing release asset changed."
+  ]
+}

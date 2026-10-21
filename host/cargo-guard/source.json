@@ -13,13 +13,13 @@
   ],
   "additional_patch": {
     "repository_path": "host/cargo-guard/cargo-guard.patch",
-    "sha256": "eb93de6493914e526b36c2cd21c1c78b03647cb14f2472b9954630b3e57b386d"
+    "sha256": "e8e2cd451a3d5b5c444b2254ac744360af1fcf185fbadd87e4e834cb382c5280"
   },
   "changed_files": [
     {
       "path": "src/bin/cargo/cli.rs",
       "before_sha256": "83f924ab914bdeebc182f77a8f3311b2be408a2a0aeac44d0e77020d66e2391e",
-      "after_sha256": "8b19a9b0953e0e1659dee9d8f26ac20d26a886566a1bd15e321fac65fae83e11"
+      "after_sha256": "0ae37c3d3d91498ccb1fba46eb8910d9323509dd20af1dd072a0c7cb1edbf7e5"
     },
     {
       "path": "src/bin/cargo/main.rs",
@@ -45,7 +45,7 @@
   "effective_source": {
     "algorithm": "SHA-256 of sorted compact JSON relative-file-path to SHA-256 map, UTF-8",
     "file_count": 2929,
-    "sha256": "e501d9c45ffbe62dad90cecd2c3fe63cead8ef48b833f1ba29ed022a2443e78d"
+    "sha256": "c74b94bc2b061c81dff2643c2dd810132576bad86e6a1ce551fd1df23f3f5ff9"
   },
   "symlink_count": 121,
   "qualified_component": false,
