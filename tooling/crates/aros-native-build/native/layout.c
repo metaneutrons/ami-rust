@@ -1,0 +1,34 @@
+/* Independent native-header layout oracle, not a Rust-derived expected table. */
+#include "sdk.h"
+#include <exec/ports.h>
+#include <exec/libraries.h>
+#include <dos/dosextens.h>
+#if (__DOS64)
+#error "M1 preserves the qualified legacy FileInfoBlock32 profile"
+#endif
+_Static_assert(sizeof(LONG)==4,"AROS LONG32");
+_Static_assert(sizeof(IPTR)==8,"AROS pointer64");
+_Static_assert(sizeof(((struct FileInfoBlock*)0)->fib_Size)==4,"qualified FIB32");
+#define LAYOUT(T,...) sizeof(T),_Alignof(T),__VA_ARGS__
+#define OFF(T,F) offsetof(T,F)
+static const size_t c_layout[]={
+ LAYOUT(struct Node,OFF(struct Node,ln_Succ),OFF(struct Node,ln_Pred),OFF(struct Node,ln_Type),OFF(struct Node,ln_Pri),OFF(struct Node,ln_Name)),
+ LAYOUT(struct Library,OFF(struct Library,lib_Node),OFF(struct Library,lib_Flags),OFF(struct Library,lib_pad),OFF(struct Library,lib_NegSize),OFF(struct Library,lib_PosSize),OFF(struct Library,lib_Version),OFF(struct Library,lib_Revision),OFF(struct Library,lib_IdString),OFF(struct Library,lib_Sum),OFF(struct Library,lib_OpenCnt),OFF(struct Library,lib_Pad)),
+ LAYOUT(struct Message,OFF(struct Message,mn_Node),OFF(struct Message,mn_ReplyPort),OFF(struct Message,mn_Length)),
+ LAYOUT(struct List,OFF(struct List,lh_Head),OFF(struct List,lh_Tail),OFF(struct List,lh_TailPred),OFF(struct List,lh_Type),OFF(struct List,l_pad)),
+ LAYOUT(struct MsgPort,OFF(struct MsgPort,mp_Node),OFF(struct MsgPort,mp_Flags),OFF(struct MsgPort,mp_SigBit),OFF(struct MsgPort,mp_SigTask),OFF(struct MsgPort,mp_MsgList),OFF(struct MsgPort,mp_Pad)),
+ LAYOUT(struct FileInfoBlock,OFF(struct FileInfoBlock,fib_DiskKey),OFF(struct FileInfoBlock,fib_DirEntryType),OFF(struct FileInfoBlock,fib_FileName),OFF(struct FileInfoBlock,fib_Protection),OFF(struct FileInfoBlock,fib_EntryType),OFF(struct FileInfoBlock,fib_Size),OFF(struct FileInfoBlock,fib_NumBlocks),OFF(struct FileInfoBlock,fib_Date),OFF(struct FileInfoBlock,fib_Comment),OFF(struct FileInfoBlock,fib_OwnerUID),OFF(struct FileInfoBlock,fib_OwnerGID),OFF(struct FileInfoBlock,fib_Reserved)),
+ sizeof(IPTR),_Alignof(IPTR),sizeof(BPTR),_Alignof(BPTR),sizeof(LONG),_Alignof(LONG),sizeof(ULONG),_Alignof(ULONG),
+ LAYOUT(spinlock_t,OFF(spinlock_t,s_Owner),OFF(spinlock_t,s_Isolation)),
+ LAYOUT(SdkError,OFF(SdkError,kind),OFF(SdkError,native)),
+ LAYOUT(SdkStats,OFF(SdkStats,blocks),OFF(SdkStats,backing_charge),OFF(SdkStats,peak_charge),OFF(SdkStats,files),OFF(SdkStats,libraries),OFF(SdkStats,ports),OFF(SdkStats,signals),OFF(SdkStats,messages),OFF(SdkStats,refusals))
+};
+size_t sdk_layout(uint64_t *out,size_t cap) {
+ const size_t count=sizeof(c_layout)/sizeof(*c_layout);
+ if(cap<count || !out)return count;
+ for(size_t i=0;i<count;i++)out[i]=c_layout[i];return count;
+}
+
+uint64_t sdk_scalar(int32_t s,uint32_t u,uintptr_t p,uint64_t w,size_t n) {
+ return ((uint64_t)(uint32_t)s<<32)^(uint64_t)u^(uint64_t)p^w^(uint64_t)n;
+}
