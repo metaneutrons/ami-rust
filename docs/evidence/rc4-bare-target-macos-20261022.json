@@ -1,0 +1,64 @@
+{
+  "schema": "ami-rust-local-bare-target-prerequisite-summary-v1",
+  "status": "MACOS_ONLY_PRIVATE_PRODUCTION_REVIEWED_NOT_SDK_OR_RC_ACCEPTANCE",
+  "source_derivation": {
+    "base": "c806db1079644e959877099fa435ffcbc7271799",
+    "bare_target_module_sha256": "a2fd57fec83f1d32372b4aeac0a74445ad049a57875b26da371ed139ce48e0de",
+    "xtask_main_sha256": "e88b12957bc6f16e4ba8743bdbaff873874ed24529fcd464e4a07ab47ffda842",
+    "workspace_accounting_sha256": "ad55997275b92d10fb6c83c46d3781a7188ead30ec1d61d983f365aecb4c36a8",
+    "local_producer_binary_sha256": "fd2c215a7f04e7367e5378cddde16b0cdb1d57722a898edc17c07d872421590b"
+  },
+  "host": "macos-aarch64",
+  "target": "x86_64-aros",
+  "native_Cargo_sha256": "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d",
+  "observed": {
+    "elapsed_seconds": 32.71670208289288,
+    "aggregate_with_parent_peak_rss_bytes": 1648181248,
+    "phases": [
+      "rustc-version",
+      "rustc-sysroot",
+      "cargo-version",
+      "rust-objcopy-version",
+      "source-production"
+    ],
+    "rust_objcopy_version": "LLVM version 23.1.1",
+    "old_loader_warning_absent": true
+  },
+  "libraries": [
+    {
+      "bytes": 68233854,
+      "crate": "core",
+      "path": "libcore-7f112bce470cf4f4.rlib",
+      "sha256": "d5a7cb027f0eaa13e0348975cc3bdd6e0a589ab689a4214b9e1af5b9b2a1e7ed",
+      "source_filename": "libcore-7f112bce470cf4f4.rlib"
+    },
+    {
+      "bytes": 8500718,
+      "crate": "alloc",
+      "path": "liballoc-67cdea426a6788d2.rlib",
+      "sha256": "1a72320b657515188fc51d0b958197c10e9712b956a5e67727ae607ea42a1e4f",
+      "source_filename": "liballoc-67cdea426a6788d2.rlib"
+    },
+    {
+      "bytes": 2446116,
+      "crate": "compiler_builtins",
+      "path": "libcompiler_builtins-6ba5292693f8f158.rlib",
+      "sha256": "4434274348872c049d5d2624b3d9d5b37e2844cbba51f89e768d44aa8584c8ec",
+      "source_filename": "libcompiler_builtins-6ba5292693f8f158.rlib"
+    }
+  ],
+  "retained_evidence": {
+    "actual_result_sha256": "4e0db6fe8e28043b10956af9c542fe2d2aab50bbcd52ae77a9366c721b406567",
+    "producer_receipt_sha256": "473a3976a2f359763f7d86474fe31846fa046eeca6ab0ae635a861364fadf567",
+    "independent_actual_review_sha256": "455960cd6aa2615fc0911e621cc8343d96de81c63693940c934ac1a4db1778e2",
+    "original_unaliased_counter_record_sha256": "e558b2933c362910c650758f37c03c8952fc89354cab9c318296384582c670ba",
+    "negative_independent_review_sha256": "8e7c997ca30a7b8d725bbc9fb154178c0233e04a9221cc345681c21f4283945d",
+    "counter_child_signal": 6,
+    "counter_cli_exit": 134
+  },
+  "limitations": [
+    "Derived public summary; original captures and full inventories retained separately in verified private checkpoint13a67199580c1021333a514f03c126db0c934281.",
+    "Mac A2 was a different recipe: its swallowed objcopy failure remains preserved; removing its unmatched profile override changes alloc/builtins Cargo identities. No metadata rewriting.",
+    "No Linux reproduction, shared-pin adoption, completeSDK, application/runtime, L1, RC acceptance or publication."
+  ]
+}

@@ -35,6 +35,7 @@ jobs:
             examples/
             tests/
             tools/supervise-native-cargo.py
+            tools/supervise-bare-target-libraries.py
             host/
             native/sdk.h
             release/*.py
@@ -75,6 +76,7 @@ jobs:
           python3 -I -B release/test_finalize_cargo_probe.py
           python3 -I -B release/test_ci_python.py
           python3 -I -B release/test_ci_artifact_admission.py
+          python3 -I -B release/test_bare_target_libraries.py
           python3 -I -B release/test_ci_sdk.py
           python3 -I -B release/test_sdk_storage_accounting.py
           python3 -I -B release/test_ci_csdk.py
