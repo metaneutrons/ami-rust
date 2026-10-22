@@ -28,7 +28,8 @@ copies, caches, targets, logs and managed HOME/temp paths in workspace accountin
 The managed work tree must be removed before metadata upload. Local checkout
 plus metadata is bounded to 32 MiB per job; 64 MiB per job is conservatively
 reserved for checkout, metadata and provider logs. Uploaded metadata also counts
-against a separate 768 MiB retained artifact pool checked before production.
+against the shared retained artifact pool defined in
+[`release/ci-artifact-policy.json`](../release/ci-artifact-policy.json) checked before production.
 Any future SDK producer must use the same concurrency and artifact-pool gates.
 
 Run failures and cleanup failures remain failures. A successful helper receipt

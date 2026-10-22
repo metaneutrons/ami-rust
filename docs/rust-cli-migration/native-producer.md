@@ -94,8 +94,9 @@ quotas. Native-v2 authentication uses its existing 64 MiB bundle profile;
 historical-v1 retains 32 MiB. No release or package channel is mutated.
 The current retention authority is `release/ci-artifact-policy.json`, separate
 from the byte-pinned build resource policy and its historical retention field.
-The shared Actions retention pool is 768 MiB: one complete 448 MiB native
-campaign plus the existing 320 MiB legacy campaign reservation. Each native
+The shared Actions retention pool is defined in that policy. It admits the
+448 MiB native and 320 MiB legacy campaign profiles alongside the separate
+384 MiB three-host Cargo-prerequisite reservation, with prospective headroom. Each native
 consumer keeps at most 63 MiB of evidence, reserving 1 MiB for cleanup and ZIP
 framing. This owner-approved retention adjustment follows
 [run 39523584471](https://github.com/metaneutrons/ami-rust/actions/runs/39523584471):

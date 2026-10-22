@@ -30,7 +30,8 @@ snapshot; recorded cleanup retires only the owned remaining work roots.
 The final export adds the existing hash-pinned Cargo corresponding-source
 capsule, source inventory and accompanying licence texts. It retires the fixed
 Python runtime, inventories the uploaded bytes, and limits the complete export
-to 32 MiB per host within the 768 MiB artifact pool. A matching result
+to 32 MiB per host within the shared artifact pool in
+[`release/ci-artifact-policy.json`](../release/ci-artifact-policy.json). A matching result
 is explicitly diagnostic only. Any source/build-recipe fix still needs review,
 fresh two-host producer receipts, complete SDK qualification and the native
 runtime/memory matrix before R1 acceptance.

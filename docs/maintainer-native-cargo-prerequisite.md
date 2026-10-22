@@ -1,7 +1,7 @@
-# Native Linux Cargo prerequisite
+# Native Cargo prerequisite
 
 The manually dispatched native-Cargo workflow produces a development host
-prerequisite for Linux x86-64 and Linux ARM64. It does not publish an SDK or
+prerequisite for macOS Apple Silicon, Linux x86-64 and Linux ARM64. It does not publish an SDK or
 package, admit a new SDK host, or accept RC2, RC4, RC5 or L1. The public interface
 remains standard rustup and Cargo; these are internal maintainer tools.
 
@@ -12,8 +12,9 @@ x86-64 and AArch64 remains the later N0–N4 initiative in that roadmap.
 ## Source and execution boundary
 
 Run this workflow only from the protected `main` branch of this repository.
-Both jobs use standard GitHub-hosted Ubuntu 24.04 runners, with native
-`x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu` host programs. No
+The three jobs use standard GitHub-hosted Ubuntu 24.04 x86-64/ARM64 and
+macOS 26 ARM64 runners, with native `x86_64-unknown-linux-gnu`,
+`aarch64-unknown-linux-gnu` and `aarch64-apple-darwin` host programs. No
 emulation, private input repository or self-hosted runner is required.
 
 Each job starts a fresh attempt directory, records source/run/host identities
@@ -32,7 +33,7 @@ The producer executes the native qualification-helper tests and its intentional
 nonzero-exit control before using the helper for production phases. Source
 preparation, provisioning, overlay verification and Cargo production use typed
 command records. The resulting Cargo must report the expected version, have the
-correct native ELF architecture and usable loader/dependencies, and build and
+correct native ELF or Mach-O architecture and usable loader/dependencies, and build and
 run an offline host application. Wrong-host and changed-receipt copies must be
 rejected for the expected reason.
 
@@ -62,6 +63,9 @@ observation boundaries. These records must not be described as complete RC4
 workflow qualification or proof that no Python descendant executed.
 
 Each host artifact reserves 128 MiB, including upload framing, within the
-existing shared 768 MiB retained-artifact pool. Capacity checks and actual
+shared retained-artifact pool from
+[`release/ci-artifact-policy.json`](../release/ci-artifact-policy.json). The
+pre-checkout gate reads that policy from the exact protected commit; it has no
+separate hard-coded pool. Capacity checks and actual
 uploaded-size checks both remain mandatory. A failed or interrupted attempt
 keeps its own identity and evidence; reruns use a new attempt root.

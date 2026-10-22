@@ -1,7 +1,7 @@
 {
   "schema": "ami-rust-ci-artifact-policy-v1",
-  "CI_artifact_pool_bytes": 805306368,
+  "CI_artifact_pool_bytes": 1342177280,
   "native_consumer_artifact_bytes": 67108864,
   "native_consumer_framing_reserve_bytes": 1048576,
-  "basis": "Owner approved 64 MiB per native consumer on 2026-10-21 after run 39523584471 completed the Linux command matrix but exceeded the old 32 MiB report bound. The 768 MiB pool admits a full 448 MiB native campaign alongside the existing 320 MiB legacy campaign reservation. Reserve 1 MiB per native consumer for cleanup and provider ZIP framing; command and guest budgets are unchanged."
+  "basis": "The prospective pool is 1,280 MiB after native three-host run 39731376255 measured up to 517,108,026 existing bytes plus 384 MiB reserved for three Cargo producer artifacts. This leaves 422,416,070 bytes of headroom for that measured set and also covers the 448 MiB native, 320 MiB historical and 384 MiB prerequisite workflow profiles with 128 MiB of headroom. Keep the existing 64 MiB native consumer ceiling and 1 MiB framing reserve, individual producer bounds, all command/guest budgets and historical receipts unchanged. The policy file is authoritative; pre-checkout native production reads it from the exact protected source commit."
 }

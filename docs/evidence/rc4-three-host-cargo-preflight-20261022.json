@@ -1,0 +1,90 @@
+{
+  "schema": "ami-rust-three-host-cargo-capacity-evidence-v1",
+  "run": 39731376255,
+  "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39731376255",
+  "head": "20c9cf7add69544b4da52deaf577e6d0629645df",
+  "attempt": 1,
+  "status": "FAILED_BEFORE_CHECKOUT_ARTIFACT_CAPACITY",
+  "producer_executed": false,
+  "measured": [
+    {
+      "host": "linux-x86_64",
+      "schema": "ami-rust-native-cargo-host-preflight-v1",
+      "status": "FAILED",
+      "stage": "artifact-capacity",
+      "triple": "x86_64-unknown-linux-gnu",
+      "repository": "metaneutrons/ami-rust",
+      "ref": "refs/heads/main",
+      "protected": true,
+      "runner_arch": "x86_64",
+      "os": {
+        "id": "ubuntu",
+        "version": "24.04",
+        "image_os": "ubuntu24",
+        "image_version": "20261012.334.1"
+      },
+      "ram_bytes": 16766414848,
+      "workspace_free_bytes": 92114481152,
+      "runner_temp_free_bytes": 92114481152,
+      "artifact_pool_bytes": 805306368,
+      "artifact_existing_bytes": 517104377,
+      "artifact_reserved_bytes": 402653184,
+      "campaign_start_epoch": 1792648885
+    },
+    {
+      "host": "linux-aarch64",
+      "schema": "ami-rust-native-cargo-host-preflight-v1",
+      "status": "FAILED",
+      "stage": "artifact-capacity",
+      "triple": "aarch64-unknown-linux-gnu",
+      "repository": "metaneutrons/ami-rust",
+      "ref": "refs/heads/main",
+      "protected": true,
+      "runner_arch": "aarch64",
+      "os": {
+        "id": "ubuntu",
+        "version": "24.04",
+        "image_os": "ubuntu24-arm64",
+        "image_version": "20261018.154.1"
+      },
+      "ram_bytes": 16715923456,
+      "workspace_free_bytes": 115022434304,
+      "runner_temp_free_bytes": 115022434304,
+      "artifact_pool_bytes": 805306368,
+      "artifact_existing_bytes": 517106196,
+      "artifact_reserved_bytes": 402653184,
+      "campaign_start_epoch": 1792648888
+    },
+    {
+      "host": "macos-aarch64",
+      "schema": "ami-rust-native-cargo-host-preflight-v1",
+      "status": "FAILED",
+      "stage": "artifact-capacity",
+      "triple": "aarch64-apple-darwin",
+      "repository": "metaneutrons/ami-rust",
+      "ref": "refs/heads/main",
+      "protected": true,
+      "runner_arch": "arm64",
+      "os": {
+        "id": "macos",
+        "version": "26.6.2",
+        "image_os": "macos26",
+        "image_version": "20261013.0424.1"
+      },
+      "ram_bytes": 7516192768,
+      "workspace_free_bytes": 103436333056,
+      "runner_temp_free_bytes": 103436333056,
+      "artifact_pool_bytes": 805306368,
+      "artifact_existing_bytes": 517108026,
+      "artifact_reserved_bytes": 402653184,
+      "campaign_start_epoch": 1792648896
+    }
+  ],
+  "prospective_policy": {
+    "CI_artifact_pool_bytes": 1342177280,
+    "reserved_three_host_producer_bytes": 402653184,
+    "measured_existing_max_bytes": 517108026,
+    "headroom_after_measured_set_and_reservation_bytes": 422416070
+  },
+  "scope": "All three actual standard runner RAM/disk floors passed; shared retained-artifact pool failed. Prospective policy requires fresh source qualification and protected producer; no old receipt, build policy, ABI baseline or per-artifact limit changed."
+}
