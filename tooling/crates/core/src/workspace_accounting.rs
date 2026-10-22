@@ -121,7 +121,6 @@ enum EntryKind {
 struct EntrySnapshot {
     device: u64,
     inode: u64,
-    mode: u32,
     size: i64,
     kind: EntryKind,
 }
@@ -139,7 +138,6 @@ impl EntrySnapshot {
         Self {
             device: metadata.st_dev as u64,
             inode: metadata.st_ino as u64,
-            mode,
             size: metadata.st_size as i64,
             kind,
         }
@@ -274,10 +272,12 @@ fn validate_root_spelling(root: &Path) -> Result<(), ScanError> {
 
 impl EntrySnapshot {
     fn matches_directory_metadata(self, metadata: &std::fs::Metadata) -> bool {
+        // Staging may adjust permissions between stat and open. Device, inode,
+        // and directory type identify the opened object.
         self.device == metadata.dev()
             && self.inode == metadata.ino()
-            && self.mode == metadata.mode()
             && self.kind == EntryKind::Directory
+            && metadata.is_dir()
     }
 }
 
@@ -557,6 +557,57 @@ mod tests {
         // EBADF is not ENOENT and must remain visible through both helpers.
         assert!(stat_at_if_present(-1, c"gone").is_err());
         assert!(open_directory_at_if_present(-1, c"gone").is_err());
+    }
+
+    #[test]
+    fn permission_change_between_classification_and_open_keeps_directory_bytes() {
+        let tree = Tree::new();
+        let child_path = tree.0.join("mutable child");
+        fs::create_dir(&child_path).unwrap();
+        fs::set_permissions(&child_path, Permissions::from_mode(0o700)).unwrap();
+        let payload = b"permission change leaves identity";
+        fs::write(child_path.join("contents.log"), payload).unwrap();
+
+        let root = open_root(&tree.0).unwrap().unwrap();
+        let classified = stat_at(root.as_raw_fd(), c"mutable child").unwrap();
+        let before = EntrySnapshot::from_stat(&classified);
+        assert_eq!(before.kind, EntryKind::Directory);
+        let old_permissions = fs::metadata(&child_path).unwrap().mode() & 0o777;
+
+        fs::set_permissions(&child_path, Permissions::from_mode(0o711)).unwrap();
+        let opened = open_directory_at(root.as_raw_fd(), c"mutable child").unwrap();
+        let metadata = opened.metadata().unwrap();
+        assert_eq!(before.device, metadata.dev());
+        assert_eq!(before.inode, metadata.ino());
+        assert_ne!(old_permissions, metadata.mode() & 0o777);
+        assert!(before.matches_directory_metadata(&metadata));
+        drop(opened);
+        drop(root);
+
+        let accounting = scan(&tree.0, limits(8, 16)).unwrap();
+        assert_eq!(accounting.regular_file_bytes, payload.len() as u64);
+        assert_eq!(accounting.log_file_bytes, payload.len() as u64);
+    }
+
+    #[test]
+    fn replacing_classified_directory_with_new_inode_is_refused() {
+        let tree = Tree::new();
+        let child_path = tree.0.join("replace me");
+        let retained_old_path = tree.0.join("retained old child");
+        fs::create_dir(&child_path).unwrap();
+
+        let root = open_root(&tree.0).unwrap().unwrap();
+        let classified = stat_at(root.as_raw_fd(), c"replace me").unwrap();
+        let before = EntrySnapshot::from_stat(&classified);
+        fs::rename(&child_path, &retained_old_path).unwrap();
+        fs::create_dir(&child_path).unwrap();
+
+        let replacement = open_directory_at(root.as_raw_fd(), c"replace me").unwrap();
+        let metadata = replacement.metadata().unwrap();
+        assert!(metadata.is_dir());
+        assert_eq!(before.device, metadata.dev());
+        assert_ne!(before.inode, metadata.ino());
+        assert!(!before.matches_directory_metadata(&metadata));
     }
 
     #[test]
