@@ -1,0 +1,118 @@
+{
+  "schema": "ami-rust-cargo-native-host-recipe-evidence-v1",
+  "status": "MAC_COMPONENT_QUALIFIED_THREE_HOST_SOURCE_PREPARED",
+  "base_source": "66a4635a0bff44ac5e45b4fd2e2edae210982e36",
+  "source_scope": "A self-contained versioned native Cargo/OpenSSL recipe adds Linux ARM64. Exact legacy recipes and their receipt interpretation remain supported. The producer refuses mismatched, missing or duplicate bootstrap host reports before creating outputs.",
+  "source_files": {
+    ".github/workflows/ci.yml": "fe1826027f94ef393996603eb2c89ace3f97dd08d9145cb1c761ec0d3772b2a7",
+    "host/cargo-repro/three-host-v2/cargo-metadata.patch": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f",
+    "host/cargo-repro/three-host-v2/openssl-overlay.json": "676f1c208fe63f57014120f7461383a9f1da351565a5ea8b9dfe8a2dd109e944",
+    "host/cargo-repro/three-host-v2/openssl-paths.patch": "0bc0e316c16658c7be01baa8d14070efebbe0b115a26224b2ae75ac12667069e",
+    "host/cargo-repro/three-host-v2/source.json": "73c9fc79976541cb43cefb39ce878218a3245493e86bb37fac449ec3bee00a52",
+    "tooling/crates/core/src/cargo_producer.rs": "eab6560aea82003ee7fa7a201d625694e846d3665cc69c0b660b93c4e228b356",
+    "tooling/crates/core/src/cargo_vendor_overlay.rs": "2b0e4c6b5307446615a198fb485987db2342ebde1be86996f996a53bb1b48649"
+  },
+  "proposal_sha256": "2c6b29f1c7dea788e734d6c677eb1f608dcc953366ee62c113f1c1adc19ffcd5",
+  "new_recipe_sha256": "676f1c208fe63f57014120f7461383a9f1da351565a5ea8b9dfe8a2dd109e944",
+  "upstream_cargo_source": "3efb1f477e99b42974b982d939fd100303cdf7db",
+  "upstream_openssl_src": {
+    "version": "300.6.1+3.6.3",
+    "package_checksum": "46eb8fb9fb3b61ce1c0f8a026c4c1a0714d3a9e138e7fbde78753ce2babc3846",
+    "source_sha256": "c0f7ee0384ee12835abc6197122dc60ac75e33a3906dfe90bc378e62df56839d",
+    "legacy_postimage_sha256": "992641416caf72adc67e9196ee4e452f5ba284e8586050c9d2ed8bb1d287c1a5",
+    "three_host_postimage_sha256": "b954e7ccf0bd923c16fffad5384b994df897f65ca721def75fc8856ef19746c2"
+  },
+  "component_result_sha256": "71656d9c91910b2b8398163c21c162ca943562293d46648cc40a7b84b17c7e26",
+  "macos_component": {
+    "commands": 26,
+    "original_campaign_wall_seconds": 686.502119,
+    "aggregate_rss_bytes": 1391362048,
+    "workspace_bytes": 3823419612,
+    "combined_log_bytes": 15338,
+    "native_provision": {
+      "result_sha256": "f836a15ccc12d25278440922af0d0da7dda211a9a4a87cc4fd803c1cf8aa39a2",
+      "inputs_sha256": "5e5f51d1fff482e8d2af2f20dda8bba536095c3aed67e16c5780ec2c471d4c22",
+      "host": "aarch64-apple-darwin",
+      "status": "PRODUCED_PREREQUISITE_ONLY",
+      "scope": "Fresh actual Mac native prerequisite vendor production; no release Cargo build or ARM execution."
+    },
+    "host_refusals": [
+      {
+        "label": "wrong-host",
+        "fixture_sha256": "9ffbd35701d3f666ed9380659348510fc09718b81d11064e68ea121973e6dd00",
+        "exit_code": 2,
+        "outputs_absent": true
+      },
+      {
+        "label": "missing-host",
+        "fixture_sha256": "7d5e8c16fac89897fbe399a14ae63362ded49171e87c3749d7e5a3085bb15204",
+        "exit_code": 2,
+        "outputs_absent": true
+      },
+      {
+        "label": "duplicate-host",
+        "fixture_sha256": "b1254483733d081ba2e87b90df9f1d7b3e3a1a65fca804adb5abeff4ea409e56",
+        "exit_code": 2,
+        "outputs_absent": true
+      }
+    ],
+    "overlay_package_files_verified": 2436,
+    "profile_reports": {
+      "legacy": {
+        "receipt_sha256": "1293b3c813ecca4864f0a8d4ec1f382d3bd2d09060e6865d8d43dc31c3719299",
+        "source_sha256": "992641416caf72adc67e9196ee4e452f5ba284e8586050c9d2ed8bb1d287c1a5"
+      },
+      "three-host": {
+        "receipt_sha256": "493252d51029e30e2f7dac4f1e796e4c4d98cb638a9a929bba2d2e7b2c0a5a16",
+        "source_sha256": "b954e7ccf0bd923c16fffad5384b994df897f65ca721def75fc8856ef19746c2"
+      }
+    },
+    "selection_controls": [
+      "aarch64-apple-darwin aarch64-apple-darwin true true",
+      "x86_64-unknown-linux-gnu x86_64-unknown-linux-gnu true true",
+      "aarch64-unknown-linux-gnu aarch64-unknown-linux-gnu false true",
+      "aarch64-apple-darwin x86_64-unknown-linux-gnu false false",
+      "aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu false false",
+      "x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu false false",
+      "riscv64-unknown-linux-gnu riscv64-unknown-linux-gnu false false"
+    ],
+    "producer_binary_sha256": "d87dbebea77deb5875b44b77ab44c760e5b2ff81ae9b22fecc8215f20cf682f7"
+  },
+  "failure_preservation": {
+    "original_attempt_status": "FAILED",
+    "original_result_sha256": "77de8c45ea480f9f909e0110df1f2750e3246a7c7e66aafce5dcda5765050999",
+    "reason": "A unit fixture supplied a lexical parent-traversal recipe path; its fresh continuation canonicalizes the fixture as production already does. The strict production path check is unchanged.",
+    "passing_overlay_tests_inherited": 13,
+    "existing_ignored_native_full_patch_test": 1,
+    "original_clock_retained": true,
+    "capacity_refused_before_test_start": true
+  },
+  "source_review_sha256": "ae8bb2108de18971f1dbbb53bf2ed8a47b58cc247516b353fa920b0017896f85",
+  "limits": [
+    "No actual Linux ARM64 Cargo/OpenSSL build is claimed by the Mac component checks.",
+    "No new full release Cargo build is claimed.",
+    "No generic SDK host admission, publisher profile activation, SDK publication or RC2-RC5 acceptance.",
+    "The current x86-64 AROS ABI-v1 baseline, compiler and C-SDK are unchanged."
+  ],
+  "related_issues": [
+    "https://github.com/metaneutrons/ami-rust/issues/72",
+    "https://github.com/metaneutrons/ami-rust/issues/74",
+    "https://github.com/metaneutrons/ami-rust/issues/129"
+  ],
+  "actual_review_sha256": "46a24e07379639c7046a4ef456bfc41c9d96fc37e601f0f0431559eaa968a200",
+  "workflow_lint": {
+    "status": "PASS",
+    "workflow_sha256": "fe1826027f94ef393996603eb2c89ace3f97dd08d9145cb1c761ec0d3772b2a7",
+    "result_sha256": "a6c06014f2fdcfcc2178b032a8a3f3a1a645324ddc126975ef58f30d1f69a633"
+  },
+  "integration_base": "74c250fcc83204fd00917ad8c6538f39805316e7",
+  "integration_base_tree": "b31d8146071521b682995f50d44b31756d9c5583",
+  "prerequisite_source_ci": {
+    "run": 39702307913,
+    "source": "66a4635a0bff44ac5e45b4fd2e2edae210982e36",
+    "status": "SUCCESS",
+    "observer_result_sha256": "ae9a595b5f063a5400b6ee68c9478ad4bee4662ff060cee89e56404ec477e962",
+    "independent_review_sha256": "54f65243272ab7786f97ab0160283b49e0e2fea3a2b9199a588d14cfc454af8f",
+    "scope": "Previous exact source CI; the recipe change requires its own current source CI."
+  }
+}

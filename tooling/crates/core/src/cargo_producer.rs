@@ -7,7 +7,7 @@
 
 use crate::{
     Refusal, Result,
-    cargo_vendor_overlay::verify_overlay,
+    cargo_vendor_overlay::{validate_producer_host, verify_overlay},
     digest::{is_sha256_digest, sha256_bytes, sha256_file},
     directory::Directory,
     files::{open_regular_nofollow, read_regular_bounded, validate_relative_inventory_path},
@@ -251,6 +251,7 @@ pub fn produce(options: ProducerOptions) -> Result<Value> {
             "host rustc release or commit differs from the pinned bootstrap compiler",
         ));
     }
+    let native_host = validate_producer_host(&recipe, &compiler)?;
     let cargo_lock_sha256 = sha256_file(&source.join("Cargo.lock"))?;
 
     let mut protected_inputs = vec![&source, &recipe, &rust_root];
@@ -331,6 +332,7 @@ pub fn produce(options: ProducerOptions) -> Result<Value> {
         "producer_executable_sha256": executable_sha256,
         "cargo_lock_sha256": cargo_lock_sha256,
         "compiler": compiler,
+        "native_host_triple": native_host,
         "host": format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
         "source": path_text(&source, "Cargo source path")?,
         "host_rust": path_text(&rust_root, "host Rust path")?,
@@ -1501,6 +1503,17 @@ mod tests {
         fn drop(&mut self) {
             fs::remove_dir_all(&self.0).expect("remove producer fixture");
         }
+    }
+
+    #[test]
+    fn three_host_recipe_reuses_the_exact_pinned_cargo_source_and_patch() {
+        let recipe = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../host/cargo-repro/three-host-v2")
+            .canonicalize()
+            .unwrap();
+        let plan = load_pinned_plan(&recipe).unwrap();
+        assert_eq!(plan.pin_sha256, SOURCE_PIN_SHA256);
+        assert_eq!(sha256_file(&plan.patch_path).unwrap(), PATCH_SHA256);
     }
 
     fn fixture_pin() -> SourcePin {

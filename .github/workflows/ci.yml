@@ -192,6 +192,7 @@ jobs:
             host/contracts.py
             host/cargo-repro/openssl-overlay.json
             host/cargo-repro/openssl-paths.patch
+            host/cargo-repro/three-host-v2/
             docs/rust-cli-migration/contracts-v1.json
             release/ci-bootstrap-inputs.json
             release/ci-sdk-inputs.json
