@@ -35,5 +35,30 @@
     "clean_fourth_attempt": "fresh frozen driver; correct corrupted-copy refusal plus previously unrun ARM typecheck; all bindings rehashed"
   },
   "publisher_boundary": "Historical CLI v1 publisher profile intentionally stays closed. Internal prerequisite receipts bind full candidate sources/patch and producer binary. A new toolchain publisher profile requires explicit RC3 design/qualification.",
-  "baseline": "Pinned x86-64 AROS ABI-v1 unchanged; nxpk excluded."
+  "baseline": "Pinned x86-64 AROS ABI-v1 unchanged; nxpk excluded.",
+  "source_ci_integration": {
+    "failed_head": "c74ecf66321f988a5082690120d84ee97e2af638",
+    "failed_run": "https://github.com/metaneutrons/ami-rust/actions/runs/39697055817",
+    "diagnosis": "Both native fixture jobs omitted the actual pinned overlay recipe from their sparse checkout; the recipe-alias test refused it. The ARM observer job passed, but the overall CI run failed.",
+    "correction": "Select the two required recipe files in the existing native fixture checkout. No Rust producer, input pin or verification guard changes.",
+    "recipe_inputs_sha256": {
+      "host/cargo-repro/openssl-overlay.json": "15fbc9da969b32968884c24bf47f2d8b61b8f7d46ac73947faade43569569077",
+      "host/cargo-repro/openssl-paths.patch": "67f92b277d2cb9508ca3d6d041ebf9feb0ddbf05e97a9419960f313344cd6de8"
+    },
+    "workflow_sha256": "aff2f849a340cb103851a106399bf4bafe0712e3cea3d1a1cf139439abdcd273",
+    "local_probe": {
+      "exact_test": "cargo_vendor_overlay::tests::source_output_receipt_and_recipe_accept_ordinary_path_aliases",
+      "original_sparse_exit_code": 101,
+      "corrected_sparse_exit_code": 0,
+      "actionlint": "passed",
+      "supervised_commands": 8,
+      "elapsed_seconds": 18.638188583077863,
+      "max_child_rss_bytes": 785956864,
+      "driver_peak_rss_bytes": 61161472,
+      "max_managed_workspace_bytes": 432863417,
+      "result_sha256": "2315c59036e73224e004f5d87dd3c90f26ce6a01729e058f291b2ac20ee0f9e7",
+      "driver_sha256": "f3d1a5a0d1435f6225b5d0a12f560b1e5cff55184492cd67a874081830a793b1"
+    },
+    "scope": "Local macOS sparse-checkout integration proof. The corrected candidate still requires fresh source CI; no Cargo production, native ARM SDK admission or RC2/RC4 acceptance."
+  }
 }
