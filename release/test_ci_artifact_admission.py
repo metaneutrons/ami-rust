@@ -14,7 +14,7 @@ from ci_artifact_admission import admit
 
 
 MIB = 1024 ** 2
-POOL = 768 * MIB
+POOL = 1280 * MIB
 TEST_ENV = {
     'GITHUB_REPOSITORY': ci_artifact_admission.REPOSITORY,
     'GH_TOKEN': 'fixture-only-token',

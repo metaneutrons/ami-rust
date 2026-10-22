@@ -70,7 +70,7 @@ jobs:
           workspace_free=0
           temp_free=0
           artifact_used=0
-          artifact_pool=$((768 * 1024 * 1024))
+          artifact_pool=0 # Read the shared policy from the exact protected source below.
           artifact_reserve=$((3 * 128 * 1024 * 1024))
           preflight_status=FAILED
           write_preflight() {
@@ -82,6 +82,7 @@ jobs:
               --arg stage "$stage" \
               --arg triple "$TRIPLE" \
               --arg repository "$REPOSITORY" \
+              --arg head "$GITHUB_SHA" \
               --arg ref "$REF_NAME" \
               --argjson protected "$REF_PROTECTED" \
               --arg os_id "$os_id" \
@@ -96,7 +97,7 @@ jobs:
               --argjson artifact_existing_bytes "$artifact_used" \
               --argjson artifact_reserved_bytes "$artifact_reserve" \
               --argjson campaign_start_epoch "$campaign_start" \
-              '{schema:$schema,status:$status,stage:$stage,triple:$triple,repository:$repository,ref:$ref,protected:$protected,runner_arch:$runner_arch,os:{id:$os_id,version:$os_version,image_os:$image_os,image_version:$image_version},ram_bytes:$ram_bytes,workspace_free_bytes:$workspace_free_bytes,runner_temp_free_bytes:$runner_temp_free_bytes,artifact_pool_bytes:$artifact_pool_bytes,artifact_existing_bytes:$artifact_existing_bytes,artifact_reserved_bytes:$artifact_reserved_bytes,campaign_start_epoch:$campaign_start_epoch}' \
+              '{schema:$schema,status:$status,stage:$stage,triple:$triple,repository:$repository,head:$head,ref:$ref,protected:$protected,runner_arch:$runner_arch,os:{id:$os_id,version:$os_version,image_os:$image_os,image_version:$image_version},ram_bytes:$ram_bytes,workspace_free_bytes:$workspace_free_bytes,runner_temp_free_bytes:$runner_temp_free_bytes,artifact_pool_bytes:$artifact_pool_bytes,artifact_existing_bytes:$artifact_existing_bytes,artifact_reserved_bytes:$artifact_reserved_bytes,campaign_start_epoch:$campaign_start_epoch}' \
               > "$managed/preflight.json"
             exit "$rc"
           }
@@ -150,6 +151,15 @@ jobs:
           test "$ram_bytes" -ge 6442450944
           test "$workspace_free" -ge 25769803776
           test "$temp_free" -ge 25769803776
+
+          stage=artifact-policy
+          policy_endpoint="repos/$REPOSITORY/contents/release/ci-artifact-policy.json?ref=$GITHUB_SHA"
+          if [ "$runner_os" = Linux ]; then
+            artifact_policy=$(timeout --foreground 60 gh api -H 'Accept: application/vnd.github.raw+json' "$policy_endpoint")
+          else
+            artifact_policy=$(python3 -I -B -c 'import subprocess,sys; r=subprocess.run(sys.argv[2:],capture_output=True,text=True,timeout=int(sys.argv[1])); sys.stderr.write(r.stderr); sys.stdout.write(r.stdout); raise SystemExit(r.returncode)' 60 gh api -H 'Accept: application/vnd.github.raw+json' "$policy_endpoint")
+          fi
+          artifact_pool=$(jq -er 'select(.schema == "ami-rust-ci-artifact-policy-v1") | .CI_artifact_pool_bytes | select(type == "number" and . == floor and . > 0 and . <= 9007199254740991)' <<<"$artifact_policy")
 
           stage=artifact-capacity
           if [ "$runner_os" = Linux ]; then
