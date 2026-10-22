@@ -102,8 +102,10 @@ criteria remain required. See `docs/release-version-exception-20261018.md`.
 Owner decision, 2026-10-21: retain up to 64 MiB per native consumer host
 artifact, with 1 MiB reserved for cleanup and ZIP framing. The full native
 workflow reserves 448 MiB; the prospective shared Actions artifact pool is
-1,280 MiB under `release/ci-artifact-policy.json`. The measured three-host
-prerequisite reserves 384 MiB alongside about 493 MiB of retained artifacts.
+2,048 MiB under `release/ci-artifact-policy.json`. The 2026-10-22 inventory
+measured 670,354,805 retained bytes. Another 384 MiB for three bare-target
+library producer artifacts plus the 448 MiB native consumer DAG leaves
+604,713,611 bytes of headroom; the successful Cargo prerequisites stay retained.
 `release/ci-artifact-policy.json` owns current retention independently of the
 sealed build-resource policy and its historical retention field. These
 are evidence storage limits, independent of command RAM/log/workspace/time

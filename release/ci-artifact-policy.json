@@ -1,7 +1,7 @@
 {
   "schema": "ami-rust-ci-artifact-policy-v1",
-  "CI_artifact_pool_bytes": 1342177280,
+  "CI_artifact_pool_bytes": 2147483648,
   "native_consumer_artifact_bytes": 67108864,
   "native_consumer_framing_reserve_bytes": 1048576,
-  "basis": "The prospective pool is 1,280 MiB after native three-host run 39731376255 measured up to 517,108,026 existing bytes plus 384 MiB reserved for three Cargo producer artifacts. This leaves 422,416,070 bytes of headroom for that measured set and also covers the 448 MiB native, 320 MiB historical and 384 MiB prerequisite workflow profiles with 128 MiB of headroom. Keep the existing 64 MiB native consumer ceiling and 1 MiB framing reserve, individual producer bounds, all command/guest budgets and historical receipts unchanged. The policy file is authoritative; pre-checkout native production reads it from the exact protected source commit."
+  "basis": "Prospective 2,048 MiB pool: the 2026-10-22 preflight measured 670,354,805 retained Actions artifact bytes. Add 384 MiB for the three-host bare-target library prerequisite and 448 MiB for the full native consumer DAG: 1,542,770,037 bytes total, leaving 604,713,611 bytes headroom. Existing native Cargo prerequisites remain retained. Keep 64 MiB per native consumer with 1 MiB framing reserve, 128 MiB per prerequisite producer, sealed inputs, command RAM/log/workspace/time budgets and AROS baseline unchanged. This policy owns future evidence storage only; the protected workflow must read its exact source revision before checkout."
 }

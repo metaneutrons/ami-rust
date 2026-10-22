@@ -14,7 +14,7 @@ from ci_artifact_admission import admit
 
 
 MIB = 1024 ** 2
-POOL = 1280 * MIB
+POOL = 2048 * MIB
 TEST_ENV = {
     'GITHUB_REPOSITORY': ci_artifact_admission.REPOSITORY,
     'GH_TOKEN': 'fixture-only-token',
@@ -195,6 +195,18 @@ class MainAdmission(unittest.TestCase):
                              policy["native_consumer_artifact_bytes"])
             self.assertEqual(ci_artifact_admission.SDK_ARTIFACT_CEILINGS["consumer-" + host], 32 * MIB)
         self.assertEqual(ci_sdk.MAX_OUTPUT_BYTES, 32 * MIB - 64 * 1024)
+
+    def test_retained_cargo_target_libraries_and_full_consumer_coexist(self):
+        # Retained API inventory measured once on 2026-10-22; not a live claim.
+        existing = 670354805
+        target_libraries = 3 * 128 * MIB
+        consumers = sum(ci_artifact_admission.NATIVE_ARTIFACT_CEILINGS.values())
+        page = {'total_count': 1, 'artifacts': [{'id': 1, 'size_in_bytes': existing}]}
+        reservation = target_libraries + consumers
+        self.assertEqual(admit([page], POOL, reservation)['existing_artifact_bytes'], existing)
+        self.assertEqual(POOL - existing - reservation, 604713611)
+        with self.assertRaisesRegex(ValueError, 'quota'):
+            admit([page], 1280 * MIB, reservation)
 
     def test_native_workflow_reserves_the_entire_selected_dag(self):
         pending = sum(ci_artifact_admission.NATIVE_ARTIFACT_CEILINGS.values())
