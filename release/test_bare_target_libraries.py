@@ -15,7 +15,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 DRIVER_PATH = ROOT / "tools/supervise-bare-target-libraries.py"
-DRIVER_SHA256 = "a1cdbf8b46eb5a70dec0604d2437e31c5715024e678b6e194ac4035d67b9ebca"
+DRIVER_SHA256 = "d5d9697f824be4e2ff75a98d650215a5365495c6241a638763bb4442b1bf6883"
 LABELS = ("rustc-version", "rustc-sysroot", "cargo-version", "rust-objcopy-version", "source-production")
 LIMITS = {"seconds": 1200, "rss_bytes": 4 * 1024**3, "workspace_bytes": 12 * 1024**3, "log_bytes": 16 * 1024**2}
 REGISTRY = "registry+https://github.com/rust-lang/crates.io-index"
@@ -207,6 +207,34 @@ class BareTargetWrapperFixtures(unittest.TestCase):
         paths = DRIVER.validate_bootstrap_receipt(receipt, alias_parent / "prefix", context)
         self.assertEqual(paths["source_sysroot"], (prefix / "source-sysroot").resolve())
         self.assertEqual(paths["native_cargo"], (prefix / "native-cargo/bin/cargo").resolve())
+
+    def test_bootstrap_projection_accepts_all_three_actual_archive_ledger_names(self):
+        for host in ("aarch64-apple-darwin", "x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"):
+            with self.subTest(host=host):
+                prefix = self.base / host / "prefix"
+                records = prefix / "records"
+                records.mkdir(parents=True)
+                artifact = self.base / host / "artifact"
+                (artifact / "input-provenance").mkdir(parents=True)
+                names = {f"rustc-nightly-{host}.members.txt", f"rust-std-nightly-{host}.members.txt",
+                         "rust-src-nightly.members.txt", *DRIVER.BOOTSTRAP_RECORD_NAMES}
+                self.assertEqual(len(names), 6)
+                for name in names:
+                    (records / name).write_bytes(b"UNIT_FIXTURE archive ledger\n")
+                (prefix / "downloaded-archive.tar.xz").write_bytes(b"UNIT_FIXTURE must not be retained")
+                projected = DRIVER.retain_bootstrap_evidence(prefix, artifact)
+                self.assertEqual({Path(row["path"]).name for row in projected["records"]}, names)
+                self.assertIsNone(projected["receipt"])
+                self.assertEqual(DRIVER.retain_bootstrap_evidence(prefix, artifact), projected)
+                self.assertFalse(list(artifact.rglob("*.xz")))
+                (records / "unexpected-archive.members.txt").write_bytes(b"UNIT_FIXTURE invalid ledger")
+                with self.assertRaisesRegex(ValueError, "too many files"):
+                    DRIVER.retain_bootstrap_evidence(prefix, artifact)
+                (records / "unexpected-archive.members.txt").unlink()
+                (records / "rust-src-nightly.members.txt").unlink()
+                (records / "unexpected-archive.members.txt").write_bytes(b"UNIT_FIXTURE invalid ledger")
+                with self.assertRaisesRegex(ValueError, "unexpected path"):
+                    DRIVER.retain_bootstrap_evidence(prefix, artifact)
 
     def test_bootstrap_receipt_rejects_corrupted_identity_and_binding_fields(self):
         for field in ("schema", "status", "host", "manifest", "host_triple", "profile_sha",
