@@ -393,6 +393,12 @@ jobs:
             --target-dir "$RUNNER_TEMP/ami-rust-aarch64-report-tests" \
             --package ami-rust-core --lib qualification_command \
             -- --test-threads=1
+          # Exercise the internal maintainer CLI against the real command helper and symlink guard.
+          "$cli_rust/cargo" test --locked --offline \
+            --manifest-path tooling/Cargo.toml \
+            --target-dir "$RUNNER_TEMP/ami-rust-aarch64-report-tests" \
+            --package ami-rust-xtask --test qualification_command_cli \
+            -- --test-threads=1
           "$cli_rust/cargo" build --locked --offline \
             --manifest-path tools/consumer-enforcement-adapter/Cargo.toml \
             --target-dir "$RUNNER_TEMP/ami-rust-aarch64-adapter"
