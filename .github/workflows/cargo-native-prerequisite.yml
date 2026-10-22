@@ -1,0 +1,290 @@
+name: Native Linux Cargo component prerequisite (internal)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: read
+
+# Share the established artifact-reservation lock with protected builds.
+concurrency:
+  group: ami-rust-protected-builds
+  cancel-in-progress: false
+
+jobs:
+  native:
+    name: Native ${{ matrix.host.triple }}
+    runs-on: ${{ matrix.host.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        host:
+          - triple: x86_64-unknown-linux-gnu
+            runner: ubuntu-24.04
+          - triple: aarch64-unknown-linux-gnu
+            runner: ubuntu-24.04-arm
+    steps:
+      - id: preflight
+        name: Check protected source and capacity before work
+        timeout-minutes: 1
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          REF_NAME: ${{ github.ref }}
+          REF_PROTECTED: ${{ github.ref_protected }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          TRIPLE: ${{ matrix.host.triple }}
+        run: |
+          set -euo pipefail
+          umask 077
+          campaign_start=$(date +%s)
+          attempt="$RUNNER_TEMP/ami-rust-native-cargo/$RUN_ID-$RUN_ATTEMPT/$TRIPLE"
+          managed="$attempt/managed"
+          outer_output="$attempt/outer-output"
+          artifact_name="native-cargo-component-$TRIPLE-$RUN_ID-$RUN_ATTEMPT"
+          mkdir -p "$(dirname "$attempt")"
+          if [ -e "$attempt" ] || [ -L "$attempt" ]; then
+            echo "managed attempt root already exists" >&2
+            exit 1
+          fi
+          mkdir -m 700 "$attempt" "$managed" "$outer_output" "$outer_output/artifact"
+          {
+            printf 'NATIVE_CAMPAIGN_START_EPOCH=%s\n' "$campaign_start"
+            printf 'NATIVE_MANAGED_ROOT=%s\n' "$managed"
+            printf 'NATIVE_OUTER_OUTPUT=%s\n' "$outer_output"
+            printf 'NATIVE_ARTIFACT_NAME=%s\n' "$artifact_name"
+          } >> "$GITHUB_ENV"
+
+          stage=identity
+          ram_bytes=0
+          os_id=unavailable
+          os_version=unavailable
+          workspace_free=0
+          temp_free=0
+          artifact_used=0
+          artifact_pool=$((768 * 1024 * 1024))
+          artifact_reserve=$((2 * 128 * 1024 * 1024))
+          preflight_status=FAILED
+          write_preflight() {
+            local rc=$?
+            trap - EXIT
+            jq -n \
+              --arg schema ami-rust-native-cargo-host-preflight-v1 \
+              --arg status "$preflight_status" \
+              --arg stage "$stage" \
+              --arg triple "$TRIPLE" \
+              --arg repository "$REPOSITORY" \
+              --arg ref "$REF_NAME" \
+              --argjson protected "$REF_PROTECTED" \
+              --arg os_id "$os_id" \
+              --arg os_version "$os_version" \
+              --arg image_os "${ImageOS:-unavailable}" \
+              --arg image_version "${ImageVersion:-unavailable}" \
+              --arg runner_arch "$(uname -m 2>/dev/null || echo unavailable)" \
+              --argjson ram_bytes "$ram_bytes" \
+              --argjson workspace_free_bytes "$workspace_free" \
+              --argjson runner_temp_free_bytes "$temp_free" \
+              --argjson artifact_pool_bytes "$artifact_pool" \
+              --argjson artifact_existing_bytes "$artifact_used" \
+              --argjson artifact_reserved_bytes "$artifact_reserve" \
+              --argjson campaign_start_epoch "$campaign_start" \
+              '{schema:$schema,status:$status,stage:$stage,triple:$triple,repository:$repository,ref:$ref,protected:$protected,runner_arch:$runner_arch,os:{id:$os_id,version:$os_version,image_os:$image_os,image_version:$image_version},ram_bytes:$ram_bytes,workspace_free_bytes:$workspace_free,runner_temp_free_bytes:$runner_temp_free_bytes,artifact_pool_bytes:$artifact_pool_bytes,artifact_existing_bytes:$artifact_existing_bytes,artifact_reserved_bytes:$artifact_reserved_bytes,campaign_start_epoch:$campaign_start_epoch}' \
+              > "$managed/preflight.json"
+            exit "$rc"
+          }
+          trap write_preflight EXIT
+
+          test "$EVENT_NAME" = workflow_dispatch
+          test "$REPOSITORY" = metaneutrons/ami-rust
+          test "$REF_NAME" = refs/heads/main
+          test "$REF_PROTECTED" = true
+          test "$(uname -s)" = Linux
+          case "$TRIPLE:$(uname -m)" in
+            x86_64-unknown-linux-gnu:x86_64|aarch64-unknown-linux-gnu:aarch64) ;;
+            *) echo "native runner does not match requested host" >&2; exit 1 ;;
+          esac
+
+          stage=host-image
+          # Read the trusted runner OS identity without executing its contents.
+          os_id=$(sed -n 's/^ID=//p' /etc/os-release | tr -d '"')
+          os_version=$(sed -n 's/^VERSION_ID=//p' /etc/os-release | tr -d '"')
+          test "$os_id" = ubuntu
+          test "$os_version" = 24.04
+          test -n "${ImageOS:-}"
+          test -n "${ImageVersion:-}"
+
+          stage=capacity
+          ram_bytes=$(awk '/^MemTotal:/ {printf "%.0f\n", $2 * 1024}' /proc/meminfo)
+          workspace_free=$(df -B1 --output=avail "$GITHUB_WORKSPACE" | tail -n 1 | tr -d ' ')
+          temp_free=$(df -B1 --output=avail "$RUNNER_TEMP" | tail -n 1 | tr -d ' ')
+          test "$ram_bytes" -ge 6442450944
+          test "$workspace_free" -ge 25769803776
+          test "$temp_free" -ge 25769803776
+
+          stage=artifact-capacity
+          artifact_pages=$(timeout --foreground 60 gh api --paginate --slurp "repos/$REPOSITORY/actions/artifacts?per_page=100")
+          artifact_used=$(jq -er '[.[].artifacts[] | select(.expired == false) | .size_in_bytes] | add // 0' <<<"$artifact_pages")
+          test "$artifact_used" -le "$((artifact_pool - artifact_reserve))"
+          preflight_status=PASS
+          stage=complete
+          trap - EXIT
+          write_preflight 0
+
+      - id: checkout
+        name: Check out the complete protected source tree
+        timeout-minutes: 5
+        if: steps.preflight.outcome == 'success'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - id: qualify
+        name: Produce and smoke-test native Cargo component prerequisite
+        timeout-minutes: 75
+        if: steps.preflight.outcome == 'success' && steps.checkout.outcome == 'success'
+        shell: bash
+        env:
+          NATIVE_HOST_TRIPLE: ${{ matrix.host.triple }}
+          NATIVE_EVENT_NAME: ${{ github.event_name }}
+          NATIVE_REPOSITORY: ${{ github.repository }}
+          NATIVE_REF_NAME: ${{ github.ref }}
+          NATIVE_REF_PROTECTED: ${{ github.ref_protected }}
+          NATIVE_RUN_ID: ${{ github.run_id }}
+          NATIVE_RUN_ATTEMPT: ${{ github.run_attempt }}
+          NATIVE_CAMPAIGN_START_EPOCH: ${{ env.NATIVE_CAMPAIGN_START_EPOCH }}
+          NATIVE_MANAGED_ROOT: ${{ env.NATIVE_MANAGED_ROOT }}
+          NATIVE_OUTER_OUTPUT: ${{ env.NATIVE_OUTER_OUTPUT }}
+        run: >-
+          python3 -I -B "$GITHUB_WORKSPACE/source/tools/supervise-native-cargo.py"
+          --repo "$GITHUB_WORKSPACE/source"
+          --managed-root "$NATIVE_MANAGED_ROOT"
+          --outer-output "$NATIVE_OUTER_OUTPUT"
+
+      - id: finalize
+        name: Finalize typed job status (always)
+        timeout-minutes: 1
+        if: always()
+        shell: bash
+        env:
+          GH_JOB_STATUS: ${{ job.status }}
+          PREFLIGHT_OUTCOME: ${{ steps.preflight.outcome }}
+          CHECKOUT_OUTCOME: ${{ steps.checkout.outcome }}
+          QUALIFY_OUTCOME: ${{ steps.qualify.outcome }}
+          TRIPLE: ${{ matrix.host.triple }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          CAMPAIGN_START_EPOCH: ${{ env.NATIVE_CAMPAIGN_START_EPOCH }}
+        run: |
+          set -euo pipefail
+          attempt="$RUNNER_TEMP/ami-rust-native-cargo/$RUN_ID-$RUN_ATTEMPT/$TRIPLE"
+          managed="$attempt/managed"
+          outer_output="$attempt/outer-output"
+          artifact="$outer_output/artifact"
+          test -d "$artifact"
+          if [ -f "$managed/preflight.json" ]; then
+            command cp -- "$managed/preflight.json" "$artifact/preflight.json"
+          fi
+          wrapper="$artifact/native-cargo-supervision-result.json"
+          inner="$artifact/native-cargo-result.json"
+          if [ "$GH_JOB_STATUS" = success ] && [ "$PREFLIGHT_OUTCOME" = success ] && [ "$CHECKOUT_OUTCOME" = success ] && [ "$QUALIFY_OUTCOME" = success ] \
+            && jq -e --arg triple "$TRIPLE" --arg sha "$GITHUB_SHA" \
+              '.schema == "ami-rust-native-cargo-supervision-result-v1" and .status == "PREREQUISITE_ONLY" and .native_host == $triple and .head == $sha and .inner_status == "PREREQUISITE_ONLY"' "$wrapper" >/dev/null \
+            && jq -e --arg triple "$TRIPLE" --arg sha "$GITHUB_SHA" \
+              '.schema == "ami-rust-native-cargo-workflow-result-v1" and .status == "PREREQUISITE_ONLY" and .native_host == $triple and .head == $sha and .source_head == $sha and .exit_code == 0' "$inner" >/dev/null; then
+            result=PREREQUISITE_ONLY
+          else
+            result=FAILED
+          fi
+          ended_epoch=$(date +%s)
+          if [ -n "$CAMPAIGN_START_EPOCH" ]; then
+            campaign_start=$CAMPAIGN_START_EPOCH
+            elapsed_seconds=$((ended_epoch - campaign_start))
+          else
+            campaign_start=$ended_epoch
+            elapsed_seconds=0
+            result=FAILED
+          fi
+          jq -n \
+            --arg schema ami-rust-native-cargo-workflow-job-result-v1 \
+            --arg status "$result" \
+            --arg job_status "$GH_JOB_STATUS" \
+            --arg preflight_outcome "$PREFLIGHT_OUTCOME" \
+            --arg checkout_outcome "$CHECKOUT_OUTCOME" \
+            --arg qualify_outcome "$QUALIFY_OUTCOME" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg ref "$GITHUB_REF" \
+            --arg sha "$GITHUB_SHA" \
+            --arg triple "$TRIPLE" \
+            --arg run_id "$RUN_ID" \
+            --arg run_attempt "$RUN_ATTEMPT" \
+            --argjson campaign_start_epoch "$campaign_start" \
+            --argjson ended_epoch "$ended_epoch" \
+            --argjson elapsed_seconds "$elapsed_seconds" \
+            '{schema:$schema,status:$status,job_status:$job_status,steps:{preflight:$preflight_outcome,checkout:$checkout_outcome,qualification:$qualify_outcome},repository:$repository,ref:$ref,head:$sha,native_host:$triple,run_id:$run_id,run_attempt:$run_attempt,campaign:{started_epoch:$campaign_start_epoch,ended_epoch:$ended_epoch,elapsed_seconds:$elapsed_seconds,budget_seconds:5400,review_reserve_seconds:300}}' \
+            > "$artifact/workflow-result.json"
+
+          write_artifact_size() {
+            local measured payload=0 iteration stable=false
+            for ((iteration = 0; iteration < 8; iteration++)); do
+              jq -n \
+                --arg schema ami-rust-native-cargo-artifact-size-v1 \
+                --argjson payload_bytes "$payload" \
+                --argjson payload_limit_bytes 133165056 \
+                --arg framing_reserve "1 MiB" \
+                '{schema:$schema,payload_bytes:$payload_bytes,payload_limit_bytes:$payload_limit_bytes,upload_framing_reserve:$framing_reserve}' \
+                > "$artifact/artifact-size.json" || return 1
+              measured=$(find "$artifact" -type f -printf '%s\n' | awk '{sum += $1} END {printf "%.0f\n", sum}') || return 1
+              if [ "$measured" -eq "$payload" ]; then stable=true; break; fi
+              payload=$measured
+            done
+            test "$stable" = true
+            test "$payload" -le 133165056
+          }
+          if ! write_artifact_size; then
+            result=FAILED
+            jq --arg status "$result" '.status=$status' "$artifact/workflow-result.json" > "$artifact/workflow-result.tmp"
+            command mv -f -- "$artifact/workflow-result.tmp" "$artifact/workflow-result.json"
+            write_artifact_size
+            exit 1
+          fi
+          if [ "$result" != PREREQUISITE_ONLY ]; then
+            exit 1
+          fi
+
+      - name: Upload bounded component evidence (always)
+        timeout-minutes: 2
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-cargo-component-${{ matrix.host.triple }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-native-cargo/${{ github.run_id }}-${{ github.run_attempt }}/${{ matrix.host.triple }}/outer-output/artifact/
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Check actual retained artifact size (always)
+        timeout-minutes: 1
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_NAME: native-cargo-component-${{ matrix.host.triple }}-${{ github.run_id }}-${{ github.run_attempt }}
+          CAMPAIGN_START_EPOCH: ${{ env.NATIVE_CAMPAIGN_START_EPOCH }}
+        run: |
+          set -euo pipefail
+          pages=$(timeout --foreground 60 gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100")
+          sizes=$(jq -c --arg name "$ARTIFACT_NAME" '[.[].artifacts[] | select(.name == $name and .expired == false) | .size_in_bytes]' <<<"$pages")
+          test "$(jq 'length' <<<"$sizes")" -eq 1
+          actual=$(jq -er '.[0]' <<<"$sizes")
+          test "$actual" -le 134217728
+          ended_epoch=$(date +%s)
+          elapsed_seconds=$((ended_epoch - CAMPAIGN_START_EPOCH))
+          test "$elapsed_seconds" -le 5400

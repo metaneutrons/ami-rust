@@ -1,0 +1,66 @@
+{
+  "schema": "ami-rust-native-linux-cargo-development-checks-v1",
+  "date": "2026-10-22",
+  "status": "SOURCE_COMPONENT_CHECKS_PASS_ONLY",
+  "source_base": {
+    "commit": "2bc4625d52576f232763f56d7e12f4b82b8ecbc8",
+    "tree": "0420172743be74f332addf14146af97dfef15570"
+  },
+  "scope": "Manual protected Ubuntu 24.04 x86-64 and ARM64 Cargo prerequisite workflow preparation; no actual Linux producer run or SDK/RC acceptance.",
+  "source_sha256": {
+    ".github/workflows/ci.yml": "326065b3503d817dcfd353bef7b4085efe3bf0a239f9855997b4f6cfcc8a92dd",
+    ".github/workflows/cargo-native-prerequisite.yml": "7baa1924f1f69b62fe663e1a8cf3bdb24d539be904595aed09d429e873c31a1d",
+    "tools/qualify-native-cargo.sh": "8094269375e8d279d77260e15321b311dea33201af0cb10ec4e999d6bd6d69eb",
+    "tools/supervise-native-cargo.py": "75101d1e861aa2647636426a324095e39aa4900e995de6ba30fc8b680cb76c25",
+    "tests/test_supervise_native_cargo.py": "df8357b9faacb6d0b9087aab9bc23debaa8a0c796022b4e77732e235b91ebad1",
+    "docs/maintainer-native-cargo-prerequisite.md": "ae5fd9db20a026ac046483cef9978a50fa8868ef63b718cce9555e14dff63c35"
+  },
+  "checks": {
+    "bash_syntax": "PASS",
+    "shellcheck": "PASS",
+    "actionlint_workflow_and_ci": "PASS",
+    "supervisor_pure_tests": 9,
+    "native_shell_interop": {
+      "host": "macOS Apple Silicon",
+      "assertions": 20,
+      "cases": [
+        "positive child exit zero",
+        "child exit seven preserved",
+        "option and space arguments preserved",
+        "phase-index write failure before child",
+        "phase-marker write failure before child",
+        "malformed request rejected before child"
+      ],
+      "helper_sha256": "ef2f5e7c08caa8f5320f1b470b637c40f420400d32525b6cc8d886fb46e8a620",
+      "functions_sha256": "3d99e297af0d69ad179a7495f81f390415673da77d93ef467026f3090c547c63",
+      "result_sha256": "f08ed3f0ea9ed30a52e67b026bdf28ac29f99d94933fb18dee628e10ef8e8e8c"
+    },
+    "finalizer_io": {
+      "host": "macOS Apple Silicon",
+      "cases": [
+        "positive exact-digest copy",
+        "missing Cargo fails",
+        "empty Cargo fails",
+        "copy denied fails",
+        "typed result write denied fails without a success record"
+      ],
+      "result_sha256": "3f6d721fb5b5405acb567dd9afff8569e065bacb881a697aeb85f214720748c0",
+      "boundary": "Exact extracted finalizer with a GNU-find sizing compatibility adapter; not Linux production."
+    }
+  },
+  "independent_review": {
+    "decision": "ACCEPTED_FOR_MANUAL_TWO_HOST_INTERNAL_PREREQUISITE_DISPATCH_ONLY",
+    "result_sha256": "bea7e4c6f39c624d06042b16eed1532dbafe9dcc9899441490f83ee4966ca54c"
+  },
+  "resource_policy_sha256": "b9a5fbfff842847c30b5f56ea4e1d3a368f4bda30689f0407ed9d33610571646",
+  "remaining": [
+    "Actual protected two-host native producer and uploaded-artifact inspection",
+    "Linux ARM64 SDK input admission and complete three-host Cargo/AROS qualification",
+    "Complete RC4 Python retirement and full production/release qualification"
+  ],
+  "observation_boundaries": [
+    "Temporary internal Python supervisor remains in this development path",
+    "Checkout, provider upload and final result serialization have separate observation boundaries",
+    "No SDK publication or native AROS compiler/rustup support is established"
+  ]
+}
