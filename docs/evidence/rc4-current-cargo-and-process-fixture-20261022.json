@@ -1,0 +1,75 @@
+{
+  "schema": "ami-rust-current-cargo-and-process-fixture-evidence-v1",
+  "source_before_test_repair": "9f2b498bdaa5e86f365dbd215f8d373068c7528b",
+  "scope": "Two bounded local macOS component proofs. No SDK pin replacement, native ARM Cargo execution, publication, full no-Python or RC2-RC5 acceptance. Historical failed outcomes remain failed.",
+  "actual_cargo": {
+    "producer_source_tree": "fddda1f78280a141acede7cbc713b87848a2643b",
+    "initial_result_sha256": "1efd4686e179e2f352e94f8e5b2ffbd73b83b754f4382baeae9252daa4bea6fd",
+    "initial_overall_status": "FAILED: nested smoke fixture lacked its own workspace boundary after successful production",
+    "continuation_result_sha256": "46703d24ac932420e3d6fe293476184c3eb9852fd8c9b2c09524e4bdf27ed6fd",
+    "continuation_status": "PASS_COMPLETED_CURRENT_RUST_CARGO_PRODUCTION_AND_ISOLATED_OFFLINE_SMOKE",
+    "artifact_sha256": "7262dc3e44dda431242e693fd79a301515fe24a2496ac4981ac79db01214ea34",
+    "artifact_bytes": 38232784,
+    "host": "aarch64-apple-darwin",
+    "probes": [
+      "current Rust prerequisite provision, OpenSSL source overlay and release build",
+      "corrupted source refused without creating output",
+      "fresh standalone locked/offline metadata, build and native host execution"
+    ],
+    "campaign_elapsed_seconds": 656.785014,
+    "conservative_aggregate_rss_bytes": 2115878912,
+    "workspace_peak_bytes": 4416136837,
+    "matches_previous_derived_Cargo": true,
+    "matches_current_SDK_Cargo": false,
+    "difference_cause": "Host OS and bootstrap inventories differ; the causal difference has not been isolated. Preserve both identities.",
+    "independent_review_sha256": "fef6377f9935af798ab20de5c1401270a99cc553cdd30248fb1f8ac7749631c3"
+  },
+  "test_fixture_repair": {
+    "failed_ci": "https://github.com/metaneutrons/ami-rust/actions/runs/39699173065",
+    "failed_job": 119563955039,
+    "diagnosis": "The macOS test sampled an independently scheduled closed-pipe descendant marker after 700ms; marker absence does not prove a signal. Linux x86-64 fixtures and ARM observer passed in that failed overall run.",
+    "source_path": "tooling/crates/core/src/process_capture.rs",
+    "preimage_sha256": "0b28f78ec2f4bf782d2847b233e21e113ba51ab3b8bfc066272f6882827b06f7",
+    "postimage_sha256": "33396665cd1195062e618e7246bc3af9427f966b790a21f69ce2588d66f38362",
+    "patch_sha256": "2b18c9bdf076519d013a51d0e85a5bc64c57108e80dc3708b9b63720c4398eeb",
+    "production_prefix_unchanged": true,
+    "change": "Observe only positive fixture completion within the existing three-second fixture bound, rejecting completion observed at or after its deadline. Negative cleanup cases and production signal/reap/resource behavior remain unchanged.",
+    "controls": [
+      {
+        "label": "old-early-window-fails-despite-late-live-completion",
+        "source_sha256": "09a14ed62ce58c434b1234cd3bcca9eb950f081f68f2e0211f64fa4a0428be30",
+        "expected_exit_code": 101,
+        "observed_exit_code": 101,
+        "intended_observation": "legacy_window=false eventual_marker=true"
+      },
+      {
+        "label": "bounded-wait-accepts-delayed-live-descendant",
+        "source_sha256": "156973a38535cd069e21d0f273625a6fd13f37c709301d3639156cd086b71fad",
+        "expected_exit_code": 0,
+        "observed_exit_code": 0,
+        "intended_observation": "1 passed; 0 failed"
+      },
+      {
+        "label": "bounded-wait-still-refuses-dead-descendant",
+        "source_sha256": "b7abd25f1c3011c066355ae83775d3fae99aa938a2280204a592426d34a02e4e",
+        "expected_exit_code": 101,
+        "observed_exit_code": 101,
+        "intended_observation": "closed-pipe descendant did not complete before the fixture deadline"
+      }
+    ],
+    "process_capture_tests_passed": 20,
+    "strict_core_all_targets_clippy": "passed -D warnings with pinned Cargo/Clippy",
+    "format_and_diff_checks": "passed",
+    "initial_result_sha256": "3478f7f0bd02196c336a7d19a3010fd9f859242d3b21cf873e5958c27123c1dc",
+    "initial_status_remains": "FAILED: pinned cargo-clippy omitted from command lookup PATH; no lint ran in that step",
+    "continuation_result_sha256": "dc827a03139d947dfa3b683c5772d502a1259d00961f211b0f83699da01639df",
+    "continuation_status": "PASS_CONTROLLED_PROBES_PROCESS_SUITE_AND_PINNED_CLIPPY_CONTINUATION",
+    "campaign_elapsed_seconds": 182.560515,
+    "combined_aggregate_rss_bytes": 992755712,
+    "workspace_peak_bytes": 1647928128,
+    "combined_log_bytes": 8355,
+    "independent_review_sha256": "08d6be5d16c485a7c260ebb92d52e351e041378e0193c95f774a5152b0236607",
+    "review_serialization_note": "The initially referenced review digest 47013badf8a728121e04bd38fa8694940457f61c0b54b63666bcf9b1d73f5018 was observed before the reviewer shortened that report. The retained concise independent review has the digest above. No qualification driver, result, log, case source or test finding was changed by that editorial rewrite; the earlier review serialization is not used as retained acceptance evidence."
+  },
+  "integration": "The seven producer/overlay modules and pinned inputs remain unchanged. Fresh exact-head source CI and actual three-host observer artifacts are still required before protected merge; broader SDK/platform qualification remains open."
+}
