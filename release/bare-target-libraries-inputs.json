@@ -1,0 +1,398 @@
+{
+  "component_selection": {
+    "excluded_composed_aros_linker_alias": "profile symlink only; no aros-link binary, C SDK, linker/toolchain, collector, or SDK bundle is selected",
+    "installer_metadata": {
+      "excluded_paths_or_pattern": [
+        "lib/rustlib/components",
+        "lib/rustlib/install.log",
+        "lib/rustlib/manifest-cargo",
+        "lib/rustlib/manifest-rustc",
+        "lib/rustlib/manifest-rust-src",
+        "lib/rustlib/manifest-rust-std-<host-triple>",
+        "lib/rustlib/rust-installer-version",
+        "lib/rustlib/uninstall.sh"
+      ],
+      "excluded_rows_recorded_by_future_producer": true,
+      "policy": "Project only raw selected Rust component payload; exclude and record historical installer administrative state. Do not synthesize historical installation state or claim fresh install logs/manifests/components match the prior profiles."
+    },
+    "license_boundary": "This input selection does not substitute for a complete license review or release admission.",
+    "license_files": "Retain license files that belong to the selected raw Rust component payload; no complete license review is asserted.",
+    "official_cargo": "excluded from staged component projection and replaced by the matching native Cargo CI artifact; historical full-profile row retained unchanged",
+    "selected_rust_components": [
+      "rustc",
+      "rust-std",
+      "rust-src"
+    ],
+    "separately_selected_native_cargo": true
+  },
+  "hosts": [
+    {
+      "host": "macos-aarch64",
+      "host_triple": "aarch64-apple-darwin",
+      "native_cargo": {
+        "artifact_id": 12414197369,
+        "artifact_name": "native-cargo-component-aarch64-apple-darwin-39748078466-1",
+        "artifact_zip": {
+          "bytes": 46025674,
+          "evidence_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/12414197369.zip",
+          "sha256": "c41f56dfe3e6a3d7e3c1bf0e7934e939585ed157b507dd87dc54079a79fd41ce"
+        },
+        "binary_architecture": "arm64",
+        "binary_format": "Mach-O",
+        "cargo_source_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+        "cargo_version": "cargo 1.99.0 (3efb1f477 2026-07-17)",
+        "host": "macos-aarch64",
+        "host_triple": "aarch64-apple-darwin",
+        "member": {
+          "bytes": 39348200,
+          "path": "cargo",
+          "sha256": "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d",
+          "unique_count": 1
+        },
+        "retrieval_metadata_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/retrieval.json",
+        "review_metadata_path": "rc4-native-three-host-cargo-producer-actual-review-a2/review.json",
+        "runner_label": "macos-26"
+      },
+      "official_cargo_profile_row_excluded": {
+        "bytes": 32170408,
+        "path": "bin/cargo",
+        "reason": "matching native Cargo CI artifact replaces this row; full profile bytes remain unchanged",
+        "sha256": "37e07284393e4c979d0cf8d0efc62e4c29b64424a0d10123a616aec790056333"
+      },
+      "rust_components": [
+        {
+          "bytes": 51581740,
+          "component": "rustc",
+          "metadata_source": "release/ci-sdk-inputs.json",
+          "raw_archive_retained_here": false,
+          "sha256": "80803ea169647e026499a205269c46a2632a14f312478b1ec8a089c322f55a88",
+          "url": "https://static.rust-lang.org/dist/2026-09-18/rustc-nightly-aarch64-apple-darwin.tar.xz"
+        },
+        {
+          "bytes": 30504920,
+          "component": "rust-std",
+          "metadata_source": "release/ci-sdk-inputs.json",
+          "raw_archive_retained_here": false,
+          "sha256": "06268b6cd0fdaccd7e36a5731dcba1d0fb8b44cf01b874ac772001a1b5aba9eb",
+          "url": "https://static.rust-lang.org/dist/2026-09-18/rust-std-nightly-aarch64-apple-darwin.tar.xz"
+        },
+        {
+          "bytes": 5934836,
+          "component": "rust-src",
+          "metadata_source": "release/ci-sdk-inputs.json; retained shared raw archive verified against the official signed channel manifest row",
+          "raw_archive_retained_here": true,
+          "retained_archive_path": "rc2-linux-aarch64-rust-src-authenticated-archive-a1/raw/rust-src-nightly.tar.xz",
+          "sha256": "8de4a7bc2ba7fd977a3ec74ae2794fee99c6f987e5f022ba2ff4b0ca8a5d1004",
+          "url": "https://static.rust-lang.org/dist/2026-09-18/rust-src-nightly.tar.xz"
+        }
+      ],
+      "rust_profile": {
+        "bytes": 782454,
+        "linux_aarch64_profile_copy_source": null,
+        "raw_inventory_rows": {
+          "files": 3882,
+          "official_cargo_rows_excluded": 44,
+          "rust_src_rows": 3731,
+          "rust_std_rows": 59,
+          "rustc_rows": 48
+        },
+        "repo_relative_path_or_proposed_path": "tooling/crates/aros-native-build/pins/macos-aarch64/rust.json",
+        "sha256": "9acf02ab3d4a22137b6c5f82294e35c518ff1ffdbad5a701d5f3cdb0910668ea",
+        "status": "existing tracked profile reference"
+      }
+    },
+    {
+      "host": "linux-x86_64",
+      "host_triple": "x86_64-unknown-linux-gnu",
+      "native_cargo": {
+        "artifact_id": 12412803262,
+        "artifact_name": "native-cargo-component-x86_64-unknown-linux-gnu-39748078466-1",
+        "artifact_zip": {
+          "bytes": 54643384,
+          "evidence_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/12412803262.zip",
+          "sha256": "cd8b174bb32b73797522c9b07077bcda5e310a52eed65fae3506f0c223a299e9"
+        },
+        "binary_architecture": "x86_64",
+        "binary_format": "ELF",
+        "cargo_source_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+        "cargo_version": "cargo 1.99.0 (3efb1f477 2026-07-17)",
+        "host": "linux-x86_64",
+        "host_triple": "x86_64-unknown-linux-gnu",
+        "member": {
+          "bytes": 48110632,
+          "path": "cargo",
+          "sha256": "938bc3ee1f60b5f239d369a9f3b6bf1a6e004aecdb6ef65fb7fe901745b011db",
+          "unique_count": 1
+        },
+        "retrieval_metadata_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/retrieval.json",
+        "review_metadata_path": "rc4-native-three-host-cargo-producer-actual-review-a2/review.json",
+        "runner_label": "ubuntu-24.04"
+      },
+      "official_cargo_profile_row_excluded": {
+        "bytes": 36137048,
+        "path": "bin/cargo",
+        "reason": "matching native Cargo CI artifact replaces this row; full profile bytes remain unchanged",
+        "sha256": "21c38ae0b341e88245fc0cd7afc0a28ff51183d3459f05a4c41aec254b06cb45"
+      },
+      "rust_components": [
+        {
+          "bytes": 85397620,
+          "component": "rustc",
+          "metadata_source": "release/ci-sdk-inputs.json",
+          "raw_archive_retained_here": false,
+          "sha256": "a0f5685f293fb6fc2c3b0ba1e67f24a38c688259ad1b4f04596ec4c86ec5a435",
+          "url": "https://static.rust-lang.org/dist/2026-09-18/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz"
+        },
+        {
+          "bytes": 31384072,
+          "component": "rust-std",
+          "metadata_source": "release/ci-sdk-inputs.json",
+          "raw_archive_retained_here": false,
+          "sha256": "d04688ad62025ca2afe16e86243994c43fa63802934ca3f64290756dc792a200",
+          "url": "https://static.rust-lang.org/dist/2026-09-18/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz"
+        },
+        {
+          "bytes": 5934836,
+          "component": "rust-src",
+          "metadata_source": "release/ci-sdk-inputs.json; retained shared raw archive verified against the official signed channel manifest row",
+          "raw_archive_retained_here": true,
+          "retained_archive_path": "rc2-linux-aarch64-rust-src-authenticated-archive-a1/raw/rust-src-nightly.tar.xz",
+          "sha256": "8de4a7bc2ba7fd977a3ec74ae2794fee99c6f987e5f022ba2ff4b0ca8a5d1004",
+          "url": "https://static.rust-lang.org/dist/2026-09-18/rust-src-nightly.tar.xz"
+        }
+      ],
+      "rust_profile": {
+        "bytes": 783036,
+        "linux_aarch64_profile_copy_source": null,
+        "raw_inventory_rows": {
+          "files": 3883,
+          "official_cargo_rows_excluded": 44,
+          "rust_src_rows": 3731,
+          "rust_std_rows": 63,
+          "rustc_rows": 45
+        },
+        "repo_relative_path_or_proposed_path": "tooling/crates/aros-native-build/pins/linux-x86_64/rust.json",
+        "sha256": "7a88373f28d19d6d61494587240681999adfb2bec964b4c3d74fae9718f097e8",
+        "status": "existing tracked profile reference"
+      }
+    },
+    {
+      "host": "linux-aarch64",
+      "host_triple": "aarch64-unknown-linux-gnu",
+      "native_cargo": {
+        "artifact_id": 12412418782,
+        "artifact_name": "native-cargo-component-aarch64-unknown-linux-gnu-39748078466-1",
+        "artifact_zip": {
+          "bytes": 52392807,
+          "evidence_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/12412418782.zip",
+          "sha256": "d86f474fdf12d62a2a7cda0b1027bcf966d977c661950287045c86fdbfd7a8cf"
+        },
+        "binary_architecture": "aarch64",
+        "binary_format": "ELF",
+        "cargo_source_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+        "cargo_version": "cargo 1.99.0 (3efb1f477 2026-07-17)",
+        "host": "linux-aarch64",
+        "host_triple": "aarch64-unknown-linux-gnu",
+        "member": {
+          "bytes": 45863336,
+          "path": "cargo",
+          "sha256": "2f8a507ec5bef7fe41a04c18aee06e359ff7f3b70d17d98007c9014114e17d9b",
+          "unique_count": 1
+        },
+        "retrieval_metadata_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/retrieval.json",
+        "review_metadata_path": "rc4-native-three-host-cargo-producer-actual-review-a2/review.json",
+        "runner_label": "ubuntu-24.04-arm"
+      },
+      "official_cargo_profile_row_excluded": {
+        "bytes": 35521536,
+        "path": "bin/cargo",
+        "reason": "matching native Cargo CI artifact replaces this row; full profile bytes remain unchanged",
+        "sha256": "44a4f14309e8d807e9e514f2c3b95be5ec0717887b5e6edadf112b8f7235c371"
+      },
+      "rust_components": [
+        {
+          "archive_inventory_sha256": "1f7fc136a5b47a7ee86e346f2106ce66604b8b6ae84b14d3c8f286f062c0ed78",
+          "bytes": 69887392,
+          "component": "rustc",
+          "metadata_source": "signed official channel manifest bound by rc2-linux-aarch64-rust-authentication-a1/result.json",
+          "raw_archive_retained_here": true,
+          "retained_archive_path": "rc2-linux-aarch64-rust-archives-a1/archives/rustc-nightly-aarch64-unknown-linux-gnu.tar.xz",
+          "sha256": "c47f347181aaca8640fa98ada7ba7b88baff2f7b77aeb2b44c86efa3c888190b",
+          "url": "https://static.rust-lang.org/dist/2026-09-18/rustc-nightly-aarch64-unknown-linux-gnu.tar.xz"
+        },
+        {
+          "archive_inventory_sha256": "963d25f43d8e168c16173f84417d7d7e9f9387a6beff37fccd21389b5b5d9159",
+          "bytes": 31586332,
+          "component": "rust-std",
+          "metadata_source": "signed official channel manifest bound by rc2-linux-aarch64-rust-authentication-a1/result.json",
+          "raw_archive_retained_here": true,
+          "retained_archive_path": "rc2-linux-aarch64-rust-archives-a1/archives/rust-std-nightly-aarch64-unknown-linux-gnu.tar.xz",
+          "sha256": "498101e6afae426eb8689a1a79c2958c5bf42c20edc1d7346a98179a2e67c7c8",
+          "url": "https://static.rust-lang.org/dist/2026-09-18/rust-std-nightly-aarch64-unknown-linux-gnu.tar.xz"
+        },
+        {
+          "archive_inventory_sha256": "b23f2d52243731dd78750b840dc9a1b68894e1f215a84388fe4e6688f2664325",
+          "bytes": 5934836,
+          "component": "rust-src",
+          "metadata_source": "authenticated_manifest.package_row in rc2-linux-aarch64-rust-src-authenticated-archive-a1/result.json",
+          "raw_archive_retained_here": true,
+          "retained_archive_path": "rc2-linux-aarch64-rust-src-authenticated-archive-a1/raw/rust-src-nightly.tar.xz",
+          "sha256": "8de4a7bc2ba7fd977a3ec74ae2794fee99c6f987e5f022ba2ff4b0ca8a5d1004",
+          "url": "https://static.rust-lang.org/dist/2026-09-18/rust-src-nightly.tar.xz"
+        }
+      ],
+      "rust_profile": {
+        "bytes": 782901,
+        "linux_aarch64_profile_copy_source": "rc2-linux-aarch64-rust-profile-proposal-a1/repo-relative/tooling/crates/aros-native-build/pins/linux-aarch64/rust.json",
+        "raw_inventory_rows": {
+          "files": 3882,
+          "official_cargo_rows_excluded": 44,
+          "rust_src_rows": 3731,
+          "rust_std_rows": 62,
+          "rustc_rows": 45
+        },
+        "repo_relative_path_or_proposed_path": "release/bare-target-libraries/linux-aarch64-rust.json",
+        "sha256": "862be6c4c1d29c59fc774e2d38f046672fcd0aa0978a869be9af2752fb4f76ee",
+        "status": "candidate copy; not admitted"
+      }
+    }
+  ],
+  "native_cargo_run": {
+    "actual_review": {
+      "claim_boundary": "PREREQUISITE_ONLY; not SDK qualification, complete package delivery, runtime matrix, RC acceptance, or Python-retirement proof.",
+      "path": "rc4-native-three-host-cargo-producer-actual-review-a2/review.json",
+      "sha256": "d6ab32fdeecacbe88d19bd2bb18282586312cda53a3236c04bc1287b803da9e8",
+      "verdict": "PASS_NARROW_THREE_HOST_PREREQUISITE_WITH_EXPLICIT_EVIDENCE_GAPS"
+    },
+    "artifacts": [
+      {
+        "artifact_id": 12414197369,
+        "artifact_name": "native-cargo-component-aarch64-apple-darwin-39748078466-1",
+        "artifact_zip": {
+          "bytes": 46025674,
+          "evidence_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/12414197369.zip",
+          "sha256": "c41f56dfe3e6a3d7e3c1bf0e7934e939585ed157b507dd87dc54079a79fd41ce"
+        },
+        "binary_architecture": "arm64",
+        "binary_format": "Mach-O",
+        "cargo_source_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+        "cargo_version": "cargo 1.99.0 (3efb1f477 2026-07-17)",
+        "host": "macos-aarch64",
+        "host_triple": "aarch64-apple-darwin",
+        "member": {
+          "bytes": 39348200,
+          "path": "cargo",
+          "sha256": "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d",
+          "unique_count": 1
+        },
+        "retrieval_metadata_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/retrieval.json",
+        "review_metadata_path": "rc4-native-three-host-cargo-producer-actual-review-a2/review.json",
+        "runner_label": "macos-26"
+      },
+      {
+        "artifact_id": 12412803262,
+        "artifact_name": "native-cargo-component-x86_64-unknown-linux-gnu-39748078466-1",
+        "artifact_zip": {
+          "bytes": 54643384,
+          "evidence_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/12412803262.zip",
+          "sha256": "cd8b174bb32b73797522c9b07077bcda5e310a52eed65fae3506f0c223a299e9"
+        },
+        "binary_architecture": "x86_64",
+        "binary_format": "ELF",
+        "cargo_source_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+        "cargo_version": "cargo 1.99.0 (3efb1f477 2026-07-17)",
+        "host": "linux-x86_64",
+        "host_triple": "x86_64-unknown-linux-gnu",
+        "member": {
+          "bytes": 48110632,
+          "path": "cargo",
+          "sha256": "938bc3ee1f60b5f239d369a9f3b6bf1a6e004aecdb6ef65fb7fe901745b011db",
+          "unique_count": 1
+        },
+        "retrieval_metadata_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/retrieval.json",
+        "review_metadata_path": "rc4-native-three-host-cargo-producer-actual-review-a2/review.json",
+        "runner_label": "ubuntu-24.04"
+      },
+      {
+        "artifact_id": 12412418782,
+        "artifact_name": "native-cargo-component-aarch64-unknown-linux-gnu-39748078466-1",
+        "artifact_zip": {
+          "bytes": 52392807,
+          "evidence_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/12412418782.zip",
+          "sha256": "d86f474fdf12d62a2a7cda0b1027bcf966d977c661950287045c86fdbfd7a8cf"
+        },
+        "binary_architecture": "aarch64",
+        "binary_format": "ELF",
+        "cargo_source_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+        "cargo_version": "cargo 1.99.0 (3efb1f477 2026-07-17)",
+        "host": "linux-aarch64",
+        "host_triple": "aarch64-unknown-linux-gnu",
+        "member": {
+          "bytes": 45863336,
+          "path": "cargo",
+          "sha256": "2f8a507ec5bef7fe41a04c18aee06e359ff7f3b70d17d98007c9014114e17d9b",
+          "unique_count": 1
+        },
+        "retrieval_metadata_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/retrieval.json",
+        "review_metadata_path": "rc4-native-three-host-cargo-producer-actual-review-a2/review.json",
+        "runner_label": "ubuntu-24.04-arm"
+      }
+    ],
+    "attempt": 1,
+    "head": "f23c369b9eb25de8fb40d6ea409186ac287b4a2e",
+    "repository": "metaneutrons/ami-rust",
+    "tree": "f5a60254769de6eb8a58a374e66b62ffd0531411",
+    "workflow_path": ".github/workflows/cargo-native-prerequisite.yml",
+    "workflow_run_id": 39748078466,
+    "workflow_sha256": "aaf9311d21e8c97ba983b3769e34ca6863e8039a6816aaa356ccd4b72a0638f3"
+  },
+  "provenance_limits": [
+    "Mac ARM and Linux x86_64 Rust archive URLs, byte sizes, and SHA-256 values are read from tracked release/ci-sdk-inputs.json. Their compressed rustc/rust-std bodies are not retained in the inspected local evidence; those four archive bodies were not rehashed in this proposal.",
+    "Linux ARM rustc and rust-std bodies are retained and byte-rehashed, with metadata bound to the authenticated official channel manifest receipt. The shared rust-src body is retained and byte-rehashed against its signed channel-manifest package row.",
+    "The Rust signing receipt records cryptographic signature validity but unknown GPG owner certification. The CI Cargo review is prerequisite-only and retains explicit evidence gaps.",
+    "The Linux AArch64 profile remains a byte-preserved prospective candidate; it is not a tracked sealed host profile or host admission."
+  ],
+  "schema": "ami-rust-bare-target-libraries-inputs-proposal-v1",
+  "scope": "Prospective internal bare-target Rust library producer inputs; no public package, SDK acceptance, L1/RC acceptance, or publication claim.",
+  "status": "PROPOSAL_ONLY_INTERNAL_PRODUCER_INPUTS_NOT_ADMITTED",
+  "target": {
+    "channel_manifest": {
+      "sha256": "2b7ae1e4e2d50e09e80312706032ee8409ff7ace5c7d4faa78c40dce2c58c86d",
+      "url": "https://static.rust-lang.org/dist/2026-09-18/channel-rust-nightly.toml"
+    },
+    "key": "x86_64-aros",
+    "rust_channel": "nightly-2026-09-18",
+    "rust_library_lock": {
+      "bytes": 10042,
+      "path_inside_rust_profile": "lib/rustlib/src/rust/library/Cargo.lock",
+      "sha256": "75848db58a70444bfb62c649b103d19c5d92fede325eb0c8c0e5442848448669"
+    },
+    "rust_llvm": "23.1.1",
+    "rustc_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
+    "target_alias": {
+      "alias_path": "lib/rustlib/x86_64-aros/target.json",
+      "alias_target": "x86_64-aros.json",
+      "materialize_only_in_fresh_component_stage": true,
+      "spec_stage_path": "lib/rustlib/x86_64-aros/x86_64-aros.json"
+    },
+    "target_libraries_inventory_reference": {
+      "bytes": 851,
+      "path": "tooling/crates/aros-native-build/pins/target-libraries.json",
+      "role": "existing candidate inventory only; not expected output identity",
+      "sha256": "3bc55e3dcfb3c4f88fb528a8a9c2855622c74c8a38e4840445ad96f4de05ca56"
+    },
+    "target_pin": {
+      "bytes": 256,
+      "path": "tooling/crates/aros-native-build/pins/target.json",
+      "sha256": "33fdd3d97053370eb3db9e05ea75721dafcfc7f4b5f8c218acaab1911984c341",
+      "source_date_epoch": 1791936000,
+      "spec_sha256": "de7a0024aa94269641e3e6d480ce8cd334962bf7e02592b0652e19e56b5fba71",
+      "status": "DEVELOPMENT_CANDIDATE_NOT_RELEASE_QUALIFICATION"
+    },
+    "target_spec": {
+      "bytes": 955,
+      "path": "targets/x86_64-aros.json",
+      "sha256": "de7a0024aa94269641e3e6d480ce8cd334962bf7e02592b0652e19e56b5fba71"
+    }
+  }
+}

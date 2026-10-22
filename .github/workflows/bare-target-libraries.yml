@@ -1,0 +1,370 @@
+name: Bare-target Rust library prerequisite (internal)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: read
+
+# Share the established reservation lock with protected build campaigns.
+concurrency:
+  group: ami-rust-protected-builds
+  cancel-in-progress: false
+
+jobs:
+  produce:
+    name: Bare target ${{ matrix.host.key }}
+    runs-on: ${{ matrix.host.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        host:
+          - key: macos-aarch64
+            triple: aarch64-apple-darwin
+            runner: macos-26
+          - key: linux-x86_64
+            triple: x86_64-unknown-linux-gnu
+            runner: ubuntu-24.04
+          - key: linux-aarch64
+            triple: aarch64-unknown-linux-gnu
+            runner: ubuntu-24.04-arm
+    steps:
+      - id: preflight
+        name: Check protected source and host capacity before checkout
+        timeout-minutes: 1
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          REF_NAME: ${{ github.ref }}
+          REF_PROTECTED: ${{ github.ref_protected }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          HOST_KEY: ${{ matrix.host.key }}
+          HOST_TRIPLE: ${{ matrix.host.triple }}
+        run: |
+          set -euo pipefail
+          umask 077
+          campaign_start=$(date +%s)
+          attempt="$RUNNER_TEMP/ami-rust-bare-target-libraries/$RUN_ID-$RUN_ATTEMPT/$HOST_KEY"
+          managed="$attempt/managed"
+          outer_output="$attempt/outer-output"
+          artifact_name="bare-target-libraries-$HOST_KEY-$RUN_ID-$RUN_ATTEMPT"
+          mkdir -p "$(dirname "$attempt")"
+          if [ -e "$attempt" ] || [ -L "$attempt" ]; then
+            echo "managed attempt root already exists" >&2
+            exit 1
+          fi
+          mkdir -m 700 "$attempt"
+          mkdir -m 700 "$managed" "$outer_output"
+          mkdir -m 700 "$outer_output/artifact"
+          {
+            printf 'BARE_CAMPAIGN_START_EPOCH=%s\n' "$campaign_start"
+            printf 'BARE_MANAGED_ROOT=%s\n' "$managed"
+            printf 'BARE_OUTER_OUTPUT=%s\n' "$outer_output"
+            printf 'BARE_ARTIFACT_NAME=%s\n' "$artifact_name"
+          } >> "$GITHUB_ENV"
+
+          stage=identity
+          ram_bytes=0
+          os_id=unavailable
+          os_version=unavailable
+          workspace_free=0
+          temp_free=0
+          artifact_used=0
+          artifact_pool=0
+          artifact_reserve=$((3 * 128 * 1024 * 1024))
+          preflight_status=FAILED
+          write_preflight() {
+            local rc=$?
+            trap - EXIT
+            jq -n \
+              --arg schema ami-rust-bare-target-host-preflight-v1 \
+              --arg status "$preflight_status" \
+              --arg stage "$stage" \
+              --arg host "$HOST_KEY" \
+              --arg triple "$HOST_TRIPLE" \
+              --arg repository "$REPOSITORY" \
+              --arg head "$GITHUB_SHA" \
+              --arg ref "$REF_NAME" \
+              --argjson protected "$REF_PROTECTED" \
+              --arg os_id "$os_id" \
+              --arg os_version "$os_version" \
+              --arg image_os "${ImageOS:-unavailable}" \
+              --arg image_version "${ImageVersion:-unavailable}" \
+              --arg runner_arch "$(uname -m 2>/dev/null || echo unavailable)" \
+              --argjson ram_bytes "$ram_bytes" \
+              --argjson workspace_free_bytes "$workspace_free" \
+              --argjson runner_temp_free_bytes "$temp_free" \
+              --argjson artifact_pool_bytes "$artifact_pool" \
+              --argjson artifact_existing_bytes "$artifact_used" \
+              --argjson artifact_reserved_bytes "$artifact_reserve" \
+              --argjson campaign_start_epoch "$campaign_start" \
+              '{schema:$schema,status:$status,stage:$stage,host:$host,host_triple:$triple,repository:$repository,head:$head,ref:$ref,protected:$protected,runner_arch:$runner_arch,os:{id:$os_id,version:$os_version,image_os:$image_os,image_version:$image_version},ram_bytes:$ram_bytes,workspace_free_bytes:$workspace_free_bytes,runner_temp_free_bytes:$runner_temp_free_bytes,artifact_pool_bytes:$artifact_pool_bytes,artifact_existing_bytes:$artifact_existing_bytes,artifact_reserved_bytes:$artifact_reserved_bytes,campaign_start_epoch:$campaign_start_epoch}' \
+              > "$managed/preflight.json"
+            exit "$rc"
+          }
+          trap write_preflight EXIT
+
+          test "$EVENT_NAME" = workflow_dispatch
+          test "$REPOSITORY" = metaneutrons/ami-rust
+          test "$REF_NAME" = refs/heads/main
+          test "$REF_PROTECTED" = true
+          case "$HOST_KEY:$HOST_TRIPLE:$(uname -s):$(uname -m)" in
+            macos-aarch64:aarch64-apple-darwin:Darwin:arm64|macos-aarch64:aarch64-apple-darwin:Darwin:aarch64) ;;
+            linux-x86_64:x86_64-unknown-linux-gnu:Linux:x86_64) ;;
+            linux-aarch64:aarch64-unknown-linux-gnu:Linux:aarch64) ;;
+            *) echo "runner does not match its selected native host" >&2; exit 1 ;;
+          esac
+
+          stage=host-image
+          runner_os=$(uname -s)
+          if [ "$runner_os" = Linux ]; then
+            os_id=$(sed -n 's/^ID=//p' /etc/os-release | tr -d '"')
+            os_version=$(sed -n 's/^VERSION_ID=//p' /etc/os-release | tr -d '"')
+            test "$os_id" = ubuntu
+            test "$os_version" = 24.04
+          else
+            os_id=macos
+            os_version=$(sw_vers -productVersion)
+            case "$os_version" in 26.*) ;; *) echo "macOS 26 runner required" >&2; exit 1 ;; esac
+            test -d "$(xcode-select -p)"
+            test -d "$(xcrun --sdk macosx --show-sdk-path)"
+            for tool in /usr/bin/file /usr/bin/otool /usr/bin/shasum /usr/bin/git /usr/bin/tar /usr/bin/gzip; do
+              test -x "$tool"
+            done
+          fi
+          command -v python3 >/dev/null
+          command -v jq >/dev/null
+          test -n "${ImageOS:-}"
+          test -n "${ImageVersion:-}"
+
+          stage=capacity
+          if [ "$runner_os" = Linux ]; then
+            ram_bytes=$(awk '/^MemTotal:/ {printf "%.0f\n", $2 * 1024}' /proc/meminfo)
+            workspace_free=$(df -B1 --output=avail "$GITHUB_WORKSPACE" | tail -n 1 | tr -d ' ')
+            temp_free=$(df -B1 --output=avail "$RUNNER_TEMP" | tail -n 1 | tr -d ' ')
+          else
+            ram_bytes=$(/usr/sbin/sysctl -n hw.memsize)
+            workspace_free=$(python3 -I -B -c 'import shutil,sys; print(shutil.disk_usage(sys.argv[1]).free)' "$GITHUB_WORKSPACE")
+            temp_free=$(python3 -I -B -c 'import shutil,sys; print(shutil.disk_usage(sys.argv[1]).free)' "$RUNNER_TEMP")
+          fi
+          test "$ram_bytes" -ge 6442450944
+          test "$workspace_free" -ge 25769803776
+          test "$temp_free" -ge 25769803776
+
+          stage=artifact-policy
+          policy_endpoint="repos/$REPOSITORY/contents/release/ci-artifact-policy.json?ref=$GITHUB_SHA"
+          if [ "$runner_os" = Linux ]; then
+            artifact_policy=$(timeout --foreground 60 gh api -H 'Accept: application/vnd.github.raw+json' "$policy_endpoint")
+          else
+            artifact_policy=$(python3 -I -B -c 'import subprocess,sys; r=subprocess.run(sys.argv[2:],capture_output=True,text=True,timeout=int(sys.argv[1])); sys.stderr.write(r.stderr); sys.stdout.write(r.stdout); raise SystemExit(r.returncode)' 60 gh api -H 'Accept: application/vnd.github.raw+json' "$policy_endpoint")
+          fi
+          artifact_pool=$(jq -er 'select(.schema == "ami-rust-ci-artifact-policy-v1") | .CI_artifact_pool_bytes | select(type == "number" and . == floor and . > 0 and . <= 9007199254740991)' <<<"$artifact_policy")
+
+          stage=artifact-capacity
+          if [ "$runner_os" = Linux ]; then
+            artifact_pages=$(timeout --foreground 60 gh api --paginate --slurp "repos/$REPOSITORY/actions/artifacts?per_page=100")
+          else
+            artifact_pages=$(python3 -I -B -c 'import subprocess,sys; r=subprocess.run(sys.argv[2:],capture_output=True,text=True,timeout=int(sys.argv[1])); sys.stderr.write(r.stderr); sys.stdout.write(r.stdout); raise SystemExit(r.returncode)' 60 gh api --paginate --slurp "repos/$REPOSITORY/actions/artifacts?per_page=100")
+          fi
+          artifact_used=$(jq -er '[.[].artifacts[] | select(.expired == false) | .size_in_bytes] | add // 0' <<<"$artifact_pages")
+          test "$artifact_used" -le "$((artifact_pool - artifact_reserve))"
+          preflight_status=PASS
+          stage=complete
+          trap - EXIT
+          write_preflight 0
+
+      - id: checkout
+        name: Check out the exact protected source SHA
+        timeout-minutes: 5
+        if: steps.preflight.outcome == 'success'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - id: produce
+        name: Build and retain the internal bare-target prerequisite
+        timeout-minutes: 75
+        if: steps.preflight.outcome == 'success' && steps.checkout.outcome == 'success'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BARE_HOST_KEY: ${{ matrix.host.key }}
+          BARE_HOST_TRIPLE: ${{ matrix.host.triple }}
+          BARE_EVENT_NAME: ${{ github.event_name }}
+          BARE_REPOSITORY: ${{ github.repository }}
+          BARE_REF_NAME: ${{ github.ref }}
+          BARE_REF_PROTECTED: ${{ github.ref_protected }}
+          BARE_RUN_ID: ${{ github.run_id }}
+          BARE_RUN_ATTEMPT: ${{ github.run_attempt }}
+          BARE_CAMPAIGN_START_EPOCH: ${{ env.BARE_CAMPAIGN_START_EPOCH }}
+          BARE_MANAGED_ROOT: ${{ env.BARE_MANAGED_ROOT }}
+          BARE_OUTER_OUTPUT: ${{ env.BARE_OUTER_OUTPUT }}
+          NATIVE_HOST_TRIPLE: ${{ matrix.host.triple }}
+          NATIVE_EVENT_NAME: ${{ github.event_name }}
+          NATIVE_REPOSITORY: ${{ github.repository }}
+          NATIVE_REF_NAME: ${{ github.ref }}
+          NATIVE_REF_PROTECTED: ${{ github.ref_protected }}
+          NATIVE_RUN_ID: ${{ github.run_id }}
+          NATIVE_RUN_ATTEMPT: ${{ github.run_attempt }}
+          NATIVE_CAMPAIGN_START_EPOCH: ${{ env.BARE_CAMPAIGN_START_EPOCH }}
+          NATIVE_MANAGED_ROOT: ${{ env.BARE_MANAGED_ROOT }}
+          NATIVE_OUTER_OUTPUT: ${{ env.BARE_OUTER_OUTPUT }}
+        run: >-
+          python3 -I -B "$GITHUB_WORKSPACE/source/tools/supervise-bare-target-libraries.py"
+          --repo "$GITHUB_WORKSPACE/source"
+          --managed-root "$BARE_MANAGED_ROOT"
+          --outer-output "$BARE_OUTER_OUTPUT"
+
+      - id: finalize
+        name: Finalize typed job status and artifact bound (always)
+        timeout-minutes: 1
+        if: always()
+        shell: bash
+        env:
+          GH_JOB_STATUS: ${{ job.status }}
+          PREFLIGHT_OUTCOME: ${{ steps.preflight.outcome }}
+          CHECKOUT_OUTCOME: ${{ steps.checkout.outcome }}
+          PRODUCE_OUTCOME: ${{ steps.produce.outcome }}
+          HOST_KEY: ${{ matrix.host.key }}
+          HOST_TRIPLE: ${{ matrix.host.triple }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          CAMPAIGN_START_EPOCH: ${{ env.BARE_CAMPAIGN_START_EPOCH }}
+        run: |
+          printf 'artifact_within_bound=false\n' >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          attempt="$RUNNER_TEMP/ami-rust-bare-target-libraries/$RUN_ID-$RUN_ATTEMPT/$HOST_KEY"
+          managed="$attempt/managed"
+          outer_output="$attempt/outer-output"
+          artifact="$outer_output/artifact"
+          test -d "$artifact"
+          if [ -f "$managed/preflight.json" ]; then
+            command cp "$managed/preflight.json" "$artifact/preflight.json"
+          fi
+          supervision="$artifact/bare-target-supervision-result.json"
+          if [ "$GH_JOB_STATUS" = success ] && [ "$PREFLIGHT_OUTCOME" = success ] && [ "$CHECKOUT_OUTCOME" = success ] && [ "$PRODUCE_OUTCOME" = success ] \
+            && jq -e --arg host "$HOST_KEY" --arg triple "$HOST_TRIPLE" --arg sha "$GITHUB_SHA" \
+              '.schema == "ami-rust-bare-target-libraries-supervision-result-v1" and .status == "PREREQUISITE_ONLY" and .host.key == $host and .host.triple == $triple and .source.head == $sha and .producer.status == "PRODUCED_BARE_TARGET_LIBRARIES_NOT_L1_OR_RC_QUALIFICATION"' "$supervision" >/dev/null \
+            && jq -e --arg sha "$GITHUB_SHA" '.schema == "ami-rust-bare-target-host-preflight-v1" and .status == "PASS" and .head == $sha' "$artifact/preflight.json" >/dev/null; then
+            result=PREREQUISITE_ONLY
+          else
+            result=FAILED
+          fi
+          ended_epoch=$(date +%s)
+          if [ -n "${CAMPAIGN_START_EPOCH:-}" ]; then
+            campaign_start=$CAMPAIGN_START_EPOCH
+            elapsed_seconds=$((ended_epoch - campaign_start))
+            if [ "$elapsed_seconds" -gt 5400 ]; then result=FAILED; fi
+          else
+            campaign_start=$ended_epoch
+            elapsed_seconds=0
+            result=FAILED
+          fi
+          jq -n \
+            --arg schema ami-rust-bare-target-libraries-workflow-job-result-v1 \
+            --arg status "$result" \
+            --arg claim "Internal bare-target Rust library prerequisite only; no SDK, L1, RC4, or publication acceptance" \
+            --arg job_status "$GH_JOB_STATUS" \
+            --arg preflight_outcome "$PREFLIGHT_OUTCOME" \
+            --arg checkout_outcome "$CHECKOUT_OUTCOME" \
+            --arg produce_outcome "$PRODUCE_OUTCOME" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg ref "$GITHUB_REF" \
+            --arg sha "$GITHUB_SHA" \
+            --arg host "$HOST_KEY" \
+            --arg triple "$HOST_TRIPLE" \
+            --arg run_id "$RUN_ID" \
+            --arg run_attempt "$RUN_ATTEMPT" \
+            --argjson campaign_start_epoch "$campaign_start" \
+            --argjson ended_epoch "$ended_epoch" \
+            --argjson elapsed_seconds "$elapsed_seconds" \
+            '{schema:$schema,status:$status,claim:$claim,job_status:$job_status,steps:{preflight:$preflight_outcome,checkout:$checkout_outcome,produce:$produce_outcome},repository:$repository,ref:$ref,head:$sha,host:{key:$host,triple:$triple},run_id:$run_id,run_attempt:$run_attempt,campaign:{started_epoch:$campaign_start_epoch,ended_epoch:$ended_epoch,elapsed_seconds:$elapsed_seconds,budget_seconds:5400,review_reserve_seconds:300}}' \
+            > "$artifact/workflow-result.json"
+
+          write_artifact_size() {
+            local measured payload=0 iteration stable=false
+            for ((iteration = 0; iteration < 8; iteration++)); do
+              jq -n \
+                --arg schema ami-rust-bare-target-artifact-size-v1 \
+                --arg status "$result" \
+                --argjson payload_bytes "$payload" \
+                --argjson payload_limit_bytes 133165056 \
+                --arg framing_limit_bytes 134217728 \
+                '{schema:$schema,status:$status,payload_bytes:$payload_bytes,payload_limit_bytes:$payload_limit_bytes,uploaded_artifact_limit_bytes:$framing_limit_bytes}' \
+                > "$artifact/artifact-size.json" || return 1
+              measured=$(python3 -I -B - "$artifact" <<'PY'
+          import os
+          import stat
+          import sys
+          total = 0
+          for directory, _, names in os.walk(sys.argv[1], followlinks=False):
+              for name in names:
+                  try:
+                      info = os.stat(os.path.join(directory, name), follow_symlinks=False)
+                  except FileNotFoundError:
+                      continue
+                  if stat.S_ISREG(info.st_mode):
+                      total += info.st_size
+          print(total)
+          PY
+          ) || return 1
+              if [ "$measured" -eq "$payload" ]; then stable=true; break; fi
+              payload=$measured
+            done
+            test "$stable" = true
+            test "$payload" -le 133165056
+          }
+          if ! write_artifact_size; then
+            result=FAILED
+            jq --arg status "$result" '.status=$status' "$artifact/workflow-result.json" > "$artifact/workflow-result.tmp"
+            command mv -f "$artifact/workflow-result.tmp" "$artifact/workflow-result.json"
+            write_artifact_size || true
+            exit 1
+          fi
+          printf 'artifact_within_bound=true\n' >> "$GITHUB_OUTPUT"
+          if [ "$result" != PREREQUISITE_ONLY ]; then
+            exit 1
+          fi
+
+      - name: Upload bounded target-library evidence (always)
+        timeout-minutes: 2
+        if: always() && steps.finalize.outputs.artifact_within_bound == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bare-target-libraries-${{ matrix.host.key }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-bare-target-libraries/${{ github.run_id }}-${{ github.run_attempt }}/${{ matrix.host.key }}/outer-output/artifact/
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Check actual retained artifact size and campaign clock (always)
+        timeout-minutes: 1
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_NAME: bare-target-libraries-${{ matrix.host.key }}-${{ github.run_id }}-${{ github.run_attempt }}
+          CAMPAIGN_START_EPOCH: ${{ env.BARE_CAMPAIGN_START_EPOCH }}
+        run: |
+          set -euo pipefail
+          if [ "$(uname -s)" = Linux ]; then
+            pages=$(timeout --foreground 60 gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100")
+          else
+            pages=$(python3 -I -B -c 'import subprocess,sys; r=subprocess.run(sys.argv[2:],capture_output=True,text=True,timeout=int(sys.argv[1])); sys.stderr.write(r.stderr); sys.stdout.write(r.stdout); raise SystemExit(r.returncode)' 60 gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100")
+          fi
+          sizes=$(jq -c --arg name "$ARTIFACT_NAME" '[.[].artifacts[] | select(.name == $name and .expired == false) | .size_in_bytes]' <<<"$pages")
+          test "$(jq 'length' <<<"$sizes")" -eq 1
+          actual=$(jq -er '.[0]' <<<"$sizes")
+          test "$actual" -le 134217728
+          test -n "$CAMPAIGN_START_EPOCH"
+          ended_epoch=$(date +%s)
+          elapsed_seconds=$((ended_epoch - CAMPAIGN_START_EPOCH))
+          test "$elapsed_seconds" -le 5400
