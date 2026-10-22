@@ -24,6 +24,19 @@ Do not put the whole toolchain bin directory ahead of rustup's proxies; that can
 bypass project toolchain selection. The final configuration and package layouts
 must pass the RC2/RC3 consumer qualification before release instructions are
 advertised.
+A prospective composed prefix must include the relative `target.json` and
+host-specific `bin/aros-link` aliases for standard Cargo and rustc discovery after
+relocation. The selected toolchain's paired Cargo must be used, and a non-empty
+`RUST_TARGET_PATH` is rejected.
+
+A bare-target compiler probe confirmed that this alias discovers the target
+specification but does not make the existing `core` and `compiler_builtins`
+usable: their target metadata is `x86_64-aros-10008448819653387821`, so rustc
+rejects them with E0461. A prospective bare-target prefix requires newly
+source-produced target libraries whose metadata matches the selected target; the
+alias alone is insufficient. This source proposal changes no target libraries or
+ABI baseline, does not implement prefix composition, and does not qualify an SDK
+release.
 
 `BuildOptions::testing` enables the retained qualification-only C hooks. It is
 not an application feature or a separate package manager. Source obligations and
