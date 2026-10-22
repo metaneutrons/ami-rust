@@ -68,7 +68,8 @@
     "combined_aggregate_rss_bytes": 992755712,
     "workspace_peak_bytes": 1647928128,
     "combined_log_bytes": 8355,
-    "independent_review_sha256": "47013badf8a728121e04bd38fa8694940457f61c0b54b63666bcf9b1d73f5018"
+    "independent_review_sha256": "08d6be5d16c485a7c260ebb92d52e351e041378e0193c95f774a5152b0236607",
+    "review_serialization_note": "The initially referenced review digest 47013badf8a728121e04bd38fa8694940457f61c0b54b63666bcf9b1d73f5018 was observed before the reviewer shortened that report. The retained concise independent review has the digest above. No qualification driver, result, log, case source or test finding was changed by that editorial rewrite; the earlier review serialization is not used as retained acceptance evidence."
   },
   "integration": "The seven producer/overlay modules and pinned inputs remain unchanged. Fresh exact-head source CI and actual three-host observer artifacts are still required before protected merge; broader SDK/platform qualification remains open."
 }
