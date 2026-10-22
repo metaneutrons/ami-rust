@@ -6,6 +6,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -23,6 +24,133 @@ def gzip_file(path: Path, payload: bytes) -> None:
 
 
 class SupervisorPureControls(unittest.TestCase):
+    def test_native_identity_keeps_linux_hosts_and_admits_only_arm64_macos(self):
+        self.assertTrue(MONITOR.native_identity_matches(
+            "Linux", "x86_64", "x86_64-unknown-linux-gnu"))
+        self.assertTrue(MONITOR.native_identity_matches(
+            "Linux", "aarch64", "aarch64-unknown-linux-gnu"))
+        self.assertTrue(MONITOR.native_identity_matches(
+            "Darwin", "arm64", "aarch64-apple-darwin"))
+        self.assertTrue(MONITOR.native_identity_matches(
+            "Darwin", "aarch64", "aarch64-apple-darwin"))
+        self.assertFalse(MONITOR.native_identity_matches(
+            "Darwin", "x86_64", "aarch64-apple-darwin"))
+        self.assertFalse(MONITOR.native_identity_matches(
+            "Linux", "arm64", "aarch64-apple-darwin"))
+
+    def test_ru_maxrss_is_normalized_for_linux_and_darwin(self):
+        with patch.object(MONITOR.resource, "getrusage",
+                          return_value=SimpleNamespace(ru_maxrss=1234)), \
+                patch.object(MONITOR.platform, "system", return_value="Linux"):
+            self.assertEqual(MONITOR._own_hwm_bytes(), 1234 * 1024)
+        with patch.object(MONITOR.resource, "getrusage",
+                          return_value=SimpleNamespace(ru_maxrss=1234)), \
+                patch.object(MONITOR.platform, "system", return_value="Darwin"):
+            self.assertEqual(MONITOR._own_hwm_bytes(), 1234)
+
+    def test_binary_inspection_accepts_matching_elf_and_macho_records(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            records = root / "command-records"
+            records.mkdir()
+            paths = []
+            for name in ("header", "program", "dynamic"):
+                record_dir = records / name
+                record_dir.mkdir()
+                record = record_dir / "result.json"
+                record.write_text("{}", encoding="utf-8")
+                paths.append(str(record))
+            inspection_path = root / "native-cargo-binary-inspection.json"
+            inspection_path.write_text(json.dumps({
+                "schema": MONITOR.INSPECTION_SCHEMA,
+                "status": "PASS",
+                "host": "x86_64-unknown-linux-gnu",
+                "format": "ELF",
+                "architecture": "x86_64",
+                "format_description": "Advanced Micro Devices X86-64",
+                "interpreter": None,
+                "header_record": paths[0],
+                "program_headers_record": paths[1],
+                "dynamic_dependencies_record": paths[2],
+                "runtime_dependencies_record": None,
+            }), encoding="utf-8")
+            self.assertEqual(MONITOR.validate_binary_inspection(
+                inspection_path, "x86_64-unknown-linux-gnu", root)["format"], "ELF")
+
+            format_dir = records / "format"
+            dependencies_dir = records / "dependencies"
+            format_dir.mkdir()
+            dependencies_dir.mkdir()
+            format_record = format_dir / "result.json"
+            dependencies_record = dependencies_dir / "result.json"
+            format_record.write_text("{}", encoding="utf-8")
+            dependencies_record.write_text("{}", encoding="utf-8")
+            description = b"cargo: Mach-O 64-bit executable arm64\n"
+            dependency_output = (
+                b"cargo:\n"
+                b"\t/System/Library/Frameworks/Security.framework/Versions/A/Security (compatibility version 1.0.0, current version 1.0.0)\n"
+                b"\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1.0.0)\n"
+            )
+            gzip_file(format_dir / "stdout.raw.gz", description)
+            gzip_file(dependencies_dir / "stdout.raw.gz", dependency_output)
+            dependencies = [
+                "/System/Library/Frameworks/Security.framework/Versions/A/Security",
+                "/usr/lib/libSystem.B.dylib",
+            ]
+            inspection_path.write_text(json.dumps({
+                "schema": MONITOR.INSPECTION_SCHEMA,
+                "status": "PASS",
+                "host": "aarch64-apple-darwin",
+                "format": "Mach-O",
+                "architecture": "arm64",
+                "format_description": description.decode().strip(),
+                "interpreter": None,
+                "format_record": str(format_record),
+                "dependencies_record": str(dependencies_record),
+                "system_dependencies": dependencies,
+            }), encoding="utf-8")
+            self.assertEqual(MONITOR.validate_binary_inspection(
+                inspection_path, "aarch64-apple-darwin", root)["architecture"], "arm64")
+
+    def test_binary_inspection_rejects_false_macho_or_non_system_dependency(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            records = root / "command-records"
+            records.mkdir()
+            format_dir = records / "format"
+            dependencies_dir = records / "dependencies"
+            format_dir.mkdir()
+            dependencies_dir.mkdir()
+            format_record = format_dir / "result.json"
+            dependencies_record = dependencies_dir / "result.json"
+            format_record.write_text("{}", encoding="utf-8")
+            dependencies_record.write_text("{}", encoding="utf-8")
+            gzip_file(format_dir / "stdout.raw.gz", b"cargo: Mach-O 64-bit executable arm64\n")
+            gzip_file(dependencies_dir / "stdout.raw.gz", b"cargo:\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1.0.0)\n")
+            inspection_path = root / "native-cargo-binary-inspection.json"
+            value = {
+                "schema": MONITOR.INSPECTION_SCHEMA,
+                "status": "PASS",
+                "host": "aarch64-apple-darwin",
+                "format": "Mach-O",
+                "architecture": "arm64",
+                "format_description": "cargo: Mach-O 64-bit executable x86_64",
+                "interpreter": None,
+                "format_record": str(format_record),
+                "dependencies_record": str(dependencies_record),
+                "system_dependencies": ["/usr/lib/libSystem.B.dylib"],
+            }
+            inspection_path.write_text(json.dumps(value), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                MONITOR.validate_binary_inspection(
+                    inspection_path, "aarch64-apple-darwin", root)
+            value["format_description"] = "cargo: Mach-O 64-bit executable arm64"
+            value["system_dependencies"] = ["@rpath/libunexpected.dylib"]
+            inspection_path.write_text(json.dumps(value), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                MONITOR.validate_binary_inspection(
+                    inspection_path, "aarch64-apple-darwin", root)
+
     def test_campaign_clock_preserves_review_reserve_and_step_cap(self):
         self.assertEqual(MONITOR.campaign_timeout(1000, 1000), 4500)
         self.assertEqual(MONITOR.campaign_timeout(1000, 2000), 4100)
@@ -119,10 +247,10 @@ class SupervisorPureControls(unittest.TestCase):
             "child_exit_code": 7,
             "child_signal": None,
         }
-        self.assertTrue(MONITOR.negative_control_valid("actual-linux-cli-child-exit-seven", record))
+        self.assertTrue(MONITOR.negative_control_valid("actual-cli-child-exit-seven", record))
         self.assertFalse(MONITOR.negative_control_valid("unexpected-phase", record))
         record["capture_complete"] = False
-        self.assertFalse(MONITOR.negative_control_valid("actual-linux-cli-child-exit-seven", record))
+        self.assertFalse(MONITOR.negative_control_valid("actual-cli-child-exit-seven", record))
 
     def test_negative_control_budget_failure_is_not_accepted(self):
         request_sha = hashlib.sha256(b"request").hexdigest()
@@ -143,10 +271,10 @@ class SupervisorPureControls(unittest.TestCase):
             "stderr": {"bytes": 20, "sha256": "b" * 64},
         }
         self.assertEqual(MONITOR.validate_helper_record(
-            "actual-linux-cli-child-exit-seven", request_sha, record), 100)
+            "actual-cli-child-exit-seven", request_sha, record), 100)
         record["aggregate_peak_rss_bytes"] = MONITOR.HELPER_RSS_REQUEST + 1
         with self.assertRaises(ValueError):
-            MONITOR.validate_helper_record("actual-linux-cli-child-exit-seven", request_sha, record)
+            MONITOR.validate_helper_record("actual-cli-child-exit-seven", request_sha, record)
 
     def test_missing_and_malformed_inner_results_fail_closed(self):
         with tempfile.TemporaryDirectory() as temporary:

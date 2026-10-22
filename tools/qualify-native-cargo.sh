@@ -18,7 +18,14 @@ readonly MAX_LOG=16777216
 readonly CAMPAIGN_SECONDS=5400
 readonly REVIEW_RESERVE=300
 readonly ARTIFACT_PAYLOAD_MAX=133165056 # 127 MiB less 4 KiB for final metadata.
-readonly TRIPLE="${NATIVE_HOST_TRIPLE:?workflow must select a native Linux host}"
+readonly TRIPLE="${NATIVE_HOST_TRIPLE:?workflow must select a native host}"
+readonly HOST_OS="$(uname -s)"
+readonly MACHINE="$(uname -m)"
+case "$HOST_OS" in
+  Linux) readonly SHA256_PROGRAM=/usr/bin/sha256sum; sha256_args=() ;;
+  Darwin) readonly SHA256_PROGRAM=/usr/bin/shasum; sha256_args=(-a 256) ;;
+  *) echo "unsupported native runner OS: $HOST_OS" >&2; exit 1 ;;
+esac
 readonly REPO="$GITHUB_WORKSPACE/source"
 readonly ROOT="${NATIVE_MANAGED_ROOT:?preflight must create the managed root}"
 readonly CAMPAIGN_START="${NATIVE_CAMPAIGN_START_EPOCH:?preflight must start the campaign clock}"
@@ -69,7 +76,162 @@ test "$NATIVE_RUN_ATTEMPT" = "$GITHUB_RUN_ATTEMPT"
 test "$NATIVE_HOST_TRIPLE" = "$TRIPLE"
 
 sha256_file() {
-  sha256sum -- "$1" | awk '{print $1}'
+  if [ "$HOST_OS" = Darwin ]; then
+    /usr/bin/shasum -a 256 "$1" | awk '{print $1}'
+  else
+    /usr/bin/sha256sum -- "$1" | awk '{print $1}'
+  fi
+}
+
+canonical_program() {
+  if [ "$HOST_OS" = Linux ]; then
+    /usr/bin/readlink -e -- "$1"
+  else
+    python3 -I -B -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve(strict=True))' "$1"
+  fi
+}
+
+run_with_timeout() {
+  local seconds=$1 stdout_path=$2 stderr_path=$3
+  shift 3
+  if [ "$HOST_OS" = Linux ]; then
+    if [ "$stdout_path" = "$stderr_path" ]; then
+      /usr/bin/timeout --foreground --kill-after=10 "$seconds" "$@" > "$stdout_path" 2>&1
+    else
+      /usr/bin/timeout --foreground --kill-after=10 "$seconds" "$@" > "$stdout_path" 2> "$stderr_path"
+    fi
+    return $?
+  fi
+  python3 -I -B - "$seconds" "$stdout_path" "$stderr_path" "$@" <<'PY'
+import os
+import signal
+import subprocess
+import sys
+
+seconds = int(sys.argv[1])
+stdout_path, stderr_path = sys.argv[2:4]
+command = sys.argv[4:]
+child = None
+
+def stop(signum, _frame):
+    if child is not None:
+        try:
+            os.killpg(child.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            os.killpg(child.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        child.wait()
+    raise SystemExit(128 + signum)
+
+signal.signal(signal.SIGTERM, stop)
+signal.signal(signal.SIGINT, stop)
+stdout = open(stdout_path, "wb")
+stderr = stdout if stdout_path == stderr_path else open(stderr_path, "wb")
+try:
+    child = subprocess.Popen(command, stdout=stdout, stderr=stderr, start_new_session=True)
+    try:
+        code = child.wait(timeout=seconds)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(child.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            child.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            pass
+        try:
+            os.killpg(child.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        child.wait()
+        code = 124
+finally:
+    if stderr is not stdout:
+        stderr.close()
+    stdout.close()
+raise SystemExit(code if code >= 0 else 128 - code)
+PY
+}
+
+measure_tree_bytes() {
+  python3 -I -B - "$@" <<'PY'
+import os
+import stat
+import sys
+
+total = 0
+seen = set()
+for root in sys.argv[1:]:
+    try:
+        info = os.lstat(root)
+    except FileNotFoundError:
+        continue
+    total += info.st_size
+    for directory, names, files in os.walk(root, followlinks=False):
+        for name in names + files:
+            path = os.path.join(directory, name)
+            try:
+                child = os.lstat(path)
+            except FileNotFoundError:
+                continue
+            if stat.S_ISREG(child.st_mode):
+                identity = (child.st_dev, child.st_ino)
+                if identity in seen:
+                    continue
+                seen.add(identity)
+            total += child.st_size
+print(total)
+PY
+}
+
+regular_file_bytes() {
+  python3 -I -B - "$1" <<'PY'
+import os
+import stat
+import sys
+
+total = 0
+for directory, _, names in os.walk(sys.argv[1], followlinks=False):
+    for name in names:
+        try:
+            info = os.stat(os.path.join(directory, name), follow_symlinks=False)
+        except FileNotFoundError:
+            continue
+        if stat.S_ISREG(info.st_mode):
+            total += info.st_size
+print(total)
+PY
+}
+
+write_vendor_index() {
+  if [ "$HOST_OS" = Darwin ]; then
+    python3 -I -B - "$TOOLING_VENDOR" "$SETUP/tooling-vendor-index.sha256" <<'PY'
+import hashlib
+import os
+import sys
+
+root, destination = sys.argv[1:]
+paths = []
+for directory, _, names in os.walk(root, followlinks=False):
+    if ".cargo-checksum.json" in names:
+        paths.append(os.path.join(directory, ".cargo-checksum.json"))
+with open(destination, "w", encoding="utf-8") as output:
+    for path in sorted(paths):
+        digest = hashlib.sha256()
+        with open(path, "rb") as source:
+            for block in iter(lambda: source.read(1024 * 1024), b""):
+                digest.update(block)
+        output.write(f"{digest.hexdigest()}  {path}\n")
+PY
+  else
+    find "$TOOLING_VENDOR" -type f -name .cargo-checksum.json -print0 \
+      | sort -z \
+      | xargs -0 -r /usr/bin/sha256sum > "$SETUP/tooling-vendor-index.sha256"
+  fi
 }
 
 require_sha() {
@@ -98,7 +260,7 @@ compress_streams() {
   for stream in stdout stderr; do
     if [ -f "$directory/$stream.log" ]; then
       gzip -n -c "$directory/$stream.log" > "$directory/$stream.raw.gz" || return 1
-      rm -- "$directory/$stream.log" || return 1
+      rm "$directory/$stream.log" || return 1
     fi
   done
 }
@@ -108,7 +270,7 @@ setup_run() {
   shift 2
   local start end rc
   start=$(date +%s)
-  if timeout --foreground --kill-after=10 "$limit" \
+  if run_with_timeout "$limit" "$log" "$log" \
     env -i \
       PATH="$BOOTSTRAP/toolchain/bin:/usr/bin:/bin" \
       HOME="$TOOLING/home" \
@@ -120,7 +282,7 @@ setup_run() {
       CARGO_PROFILE_DEV_INCREMENTAL=false \
       CARGO_INCREMENTAL=0 \
       LC_ALL=C TZ=UTC SOURCE_DATE_EPOCH=1791936000 \
-      "$@" > "$log" 2>&1; then
+      "$@"; then
     rc=0
   else
     rc=$?
@@ -139,7 +301,7 @@ setup_run() {
     > "$SETUP/$label.json"
   gzip -n -c "$log" > "$SETUP/$label.output.gz"
   wc -c < "$log" | tr -d ' ' > "$SETUP/$label.output.bytes"
-  rm -- "$log"
+  rm "$log"
   if [ "$rc" -ne 0 ]; then
     failure_stage=$label
     echo "$label failed with status $rc; see retained compressed setup log" >&2
@@ -176,7 +338,7 @@ run_q() {
     /*) ;;
     *) echo "qualification command program must be absolute: $program" >&2; return 125 ;;
   esac
-  actual_program=$(/usr/bin/readlink -e -- "$program") || {
+  actual_program=$(canonical_program "$program") || {
     echo "qualification command program cannot be resolved: $program" >&2
     return 125
   }
@@ -232,18 +394,17 @@ run_q() {
     return 125
   fi
   printf '%s\n' "$label" > "$PHASE_ACTIVE.tmp" || return 125
-  command mv -f -- "$PHASE_ACTIVE.tmp" "$PHASE_ACTIVE" || return 125
-  if timeout --foreground --kill-after=10 "$campaign_limit" \
+  command mv -f "$PHASE_ACTIVE.tmp" "$PHASE_ACTIVE" || return 125
+  if run_with_timeout "$campaign_limit" "$cli_path/stdout.log" "$cli_path/stderr.log" \
     env -i PATH="/usr/bin:/bin" HOME="$TOOLING/home" TMPDIR="$TOOLING_TMP" LC_ALL=C TZ=UTC \
-    "$XTASK" qualification-command --request "$request_path" --record "$record" \
-    > "$cli_path/stdout.log" 2> "$cli_path/stderr.log"; then
+    "$XTASK" qualification-command --request "$request_path" --record "$record"; then
     rc=0
   else
     rc=$?
   fi
   cleanup_status=0
-  rm -- "$PHASE_ACTIVE" || cleanup_status=1
-  rm -- "$request_path" || cleanup_status=1
+  rm "$PHASE_ACTIVE" || cleanup_status=1
+  rm "$request_path" || cleanup_status=1
   if [ "$cleanup_status" -ne 0 ]; then
     echo "helper phase marker or request cleanup failed for $label" >&2
     return 125
@@ -308,7 +469,7 @@ run_q() {
 
 expect_stdout_line() {
   local label=$1 expected=$2 directory=$3
-  if ! grep -Fqx -- "$expected" <(gzip -cd "$directory/stdout.raw.gz"); then
+  if ! grep -Fqx "$expected" <(gzip -cd "$directory/stdout.raw.gz"); then
     echo "expected output line missing for $label" >&2
     return 1
   fi
@@ -324,7 +485,7 @@ finalize() {
     original_rc=1
     final_status=FAILED
   }
-  if ! rm -f -- "$PHASE_ACTIVE" "$PHASE_ACTIVE.tmp"; then
+  if ! rm -f "$PHASE_ACTIVE" "$PHASE_ACTIVE.tmp"; then
     mark_finalize_failure active-phase-marker-cleanup
   fi
   if ! end_epoch=$(date +%s); then
@@ -339,7 +500,7 @@ finalize() {
   if [ "$final_status" = FAILED ] && [ "$original_rc" -eq 0 ]; then original_rc=1; fi
 
   if [ -n "$cargo_binary" ] && [ -f "$cargo_binary" ] && [ -s "$cargo_binary" ]; then
-    if ! command cp -- "$cargo_binary" "$ARTIFACT/cargo" \
+    if ! command cp "$cargo_binary" "$ARTIFACT/cargo" \
       || [ ! -f "$ARTIFACT/cargo" ] || [ ! -s "$ARTIFACT/cargo" ] \
       || ! copied_cargo_sha=$(sha256_file "$ARTIFACT/cargo") \
       || [ "$copied_cargo_sha" != "$cargo_sha" ]; then
@@ -349,7 +510,7 @@ finalize() {
     mark_finalize_failure cargo-artifact-missing
   fi
   local -a evidence_paths=()
-  for path in preflight.json setup phase-index helper-cli command-records native-cargo-elf-inspection.json; do
+  for path in preflight.json setup phase-index helper-cli command-records native-cargo-binary-inspection.json; do
     if [ -e "$ROOT/$path" ]; then evidence_paths+=("$path"); fi
   done
   for path in producer/provision/record producer/build/record producer/overlay/receipt.json smoke control; do
@@ -387,9 +548,9 @@ finalize() {
       --arg xtask_sha256 "$xtask_sha" \
       --arg resource_policy_sha256 "$policy_sha" \
       --arg tooling_lock_sha256 "$tooling_lock_sha" \
-      '{schema:$schema,status:$status,phase:$phase,failure_stage:$failure_stage,repository:$repository,ref:$ref,head:$head,source_head:$source_head,native_host:$triple,run_id:$run_id,run_attempt:$run_attempt,campaign:{started_epoch:$campaign_start_epoch,ended_epoch:$ended_epoch,elapsed_seconds:$elapsed_seconds,review_reserve_seconds:300},exit_code:$exit_code,cargo_source_commit:$cargo_source_commit,cargo_binary_sha256:$cargo_binary_sha256,xtask_sha256:$xtask_sha256,resource_policy_sha256:$resource_policy_sha256,tooling_lock_sha256:$tooling_lock_sha256,claim:"native Linux host Cargo prerequisite only"}' \
+      '{schema:$schema,status:$status,phase:$phase,failure_stage:$failure_stage,repository:$repository,ref:$ref,head:$head,source_head:$source_head,native_host:$triple,run_id:$run_id,run_attempt:$run_attempt,campaign:{started_epoch:$campaign_start_epoch,ended_epoch:$ended_epoch,elapsed_seconds:$elapsed_seconds,review_reserve_seconds:300},exit_code:$exit_code,cargo_source_commit:$cargo_source_commit,cargo_binary_sha256:$cargo_binary_sha256,xtask_sha256:$xtask_sha256,resource_policy_sha256:$resource_policy_sha256,tooling_lock_sha256:$tooling_lock_sha256,claim:"native host Cargo prerequisite only"}' \
       > "$ARTIFACT/native-cargo-result.tmp" || return 1
-    command mv -f -- "$ARTIFACT/native-cargo-result.tmp" "$ARTIFACT/native-cargo-result.json" || return 1
+    command mv -f "$ARTIFACT/native-cargo-result.tmp" "$ARTIFACT/native-cargo-result.json" || return 1
   }
   if ! write_result; then
     mark_finalize_failure result-serialization
@@ -407,7 +568,7 @@ finalize() {
         --arg framing_reserve "1 MiB" \
         '{schema:$schema,payload_bytes:$payload_bytes,payload_limit_bytes:$payload_limit_bytes,upload_framing_reserve:$framing_reserve}' \
         > "$ARTIFACT/artifact-size.json" || return 1
-      measured_bytes=$(find "$ARTIFACT" -type f -printf '%s\n' | awk '{sum += $1} END {printf "%.0f\n", sum}') || return 1
+      measured_bytes=$(regular_file_bytes "$ARTIFACT") || return 1
       case "$measured_bytes" in ''|*[!0-9]*) return 1 ;; esac
       if [ "$measured_bytes" -eq "$payload_bytes" ]; then stable=true; break; fi
       payload_bytes=$measured_bytes
@@ -444,14 +605,13 @@ test "$NATIVE_REF_PROTECTED" = true
 source_head=$(git -C "$REPO" rev-parse HEAD)
 test "$source_head" = "$GITHUB_SHA"
 test -z "$(git -C "$REPO" status --porcelain --untracked-files=all)"
-test "$(uname -s)" = Linux
-case "$TRIPLE:$(uname -m)" in
-  x86_64-unknown-linux-gnu:x86_64|aarch64-unknown-linux-gnu:aarch64) ;;
+case "$HOST_OS:$TRIPLE:$MACHINE" in
+  Linux:x86_64-unknown-linux-gnu:x86_64|Linux:aarch64-unknown-linux-gnu:aarch64|Darwin:aarch64-apple-darwin:arm64|Darwin:aarch64-apple-darwin:aarch64) ;;
   *) echo "runner architecture does not match the native producer host" >&2; exit 1 ;;
 esac
 
 case "$TRIPLE" in
-  x86_64-unknown-linux-gnu)
+  aarch64-apple-darwin|x86_64-unknown-linux-gnu)
     bootstrap_pins="$REPO/release/ci-bootstrap-inputs.json"
     expected_bootstrap_sha=5c3557a2696457d76562f8883efa2c7d2c4cfc583f4f5814a722907a1f639f81
     ;;
@@ -475,8 +635,8 @@ require_sha "$REPO/host/cargo-repro/three-host-v2/openssl-overlay.json" 676f1c20
 require_sha "$REPO/host/cargo-repro/three-host-v2/openssl-paths.patch" 0bc0e316c16658c7be01baa8d14070efebbe0b115a26224b2ae75ac12667069e
 policy_sha=$(sha256_file "$REPO/release/ci-resources.json")
 tooling_lock_sha=$(sha256_file "$REPO/tooling/Cargo.lock")
-command cp -- "$bootstrap_pins" "$SETUP/bootstrap-pins.json"
-command cp -- "$REPO/release/ci-resources.json" "$SETUP/ci-resources.json"
+command cp "$bootstrap_pins" "$SETUP/bootstrap-pins.json"
+command cp "$REPO/release/ci-resources.json" "$SETUP/ci-resources.json"
 jq -n \
   --arg schema ami-rust-native-cargo-setup-bindings-v1 \
   --arg repository "$NATIVE_REPOSITORY" \
@@ -531,7 +691,11 @@ grep -Fqx "host: $TRIPLE" "$SETUP/cargo-vv.txt"
 
 phase=tooling-vendor
 failure_stage=tooling-vendor
-setup_before=$(du -sb "$REPO" "$ROOT" | awk '{sum += $1} END {printf "%.0f\n",sum}')
+if [ "$HOST_OS" = Linux ]; then
+  setup_before=$(du -sb "$REPO" "$ROOT" | awk '{sum += $1} END {printf "%.0f\n",sum}')
+else
+  setup_before=$(measure_tree_bytes "$REPO" "$ROOT")
+fi
 vendor_budget=$(campaign_budget)
 if (( vendor_budget > MAX_SECONDS )); then vendor_budget=$MAX_SECONDS; fi
 setup_run tooling-cargo-vendor "$vendor_budget" "$BOOTSTRAP/toolchain/bin/cargo" \
@@ -540,12 +704,14 @@ test -d "$TOOLING_VENDOR"
 jq -nr --arg directory "$TOOLING_VENDOR" \
   '"[source.crates-io]\nreplace-with = \"vendored-sources\"\n[source.vendored-sources]\ndirectory = \($directory | @json)\n"' \
   > "$TOOLING_HOME/config.toml"
-find "$TOOLING_VENDOR" -type f -name .cargo-checksum.json -print0 \
-  | sort -z \
-  | xargs -0 -r sha256sum > "$SETUP/tooling-vendor-index.sha256"
+write_vendor_index
 vendor_count=$(wc -l < "$SETUP/tooling-vendor-index.sha256" | tr -d ' ')
 test "$vendor_count" -eq 29
-setup_after=$(du -sb "$REPO" "$ROOT" | awk '{sum += $1} END {printf "%.0f\n",sum}')
+if [ "$HOST_OS" = Linux ]; then
+  setup_after=$(du -sb "$REPO" "$ROOT" | awk '{sum += $1} END {printf "%.0f\n",sum}')
+else
+  setup_after=$(measure_tree_bytes "$REPO" "$ROOT")
+fi
 jq -n \
   --arg schema ami-rust-native-cargo-measurement-gap-v1 \
   --arg classification UNQUALIFIED_EXTERNAL_SETUP \
@@ -593,7 +759,7 @@ printf '%s\n' 'ami-rust-command-child-exit7-stderr-v1' >&2
 exit 7
 CHILD
 chmod 700 "$child_exit_script"
-if run_q actual-linux-cli-child-exit-seven /bin/sh "$ROOT/control" "$environment_json" "$child_exit_script"; then
+if run_q actual-cli-child-exit-seven /bin/sh "$ROOT/control" "$environment_json" "$child_exit_script"; then
   echo "helper CLI unexpectedly accepted child exit status 7" >&2
   exit 1
 else
@@ -607,14 +773,14 @@ jq -e --arg request_sha256 "$LAST_REQUEST_SHA" \
    .capture_complete == true and .capture_error == null and
    .child_exit_code == 7 and .child_signal == null' \
   "$child_exit_record/result.json" >/dev/null
-expect_stdout_line actual-linux-cli-child-exit-seven \
+expect_stdout_line actual-cli-child-exit-seven \
   ami-rust-command-child-exit7-stdout-v1 "$child_exit_record"
-grep -Fqx -- ami-rust-command-child-exit7-stderr-v1 \
+grep -Fqx ami-rust-command-child-exit7-stderr-v1 \
   <(gzip -cd "$child_exit_record/stderr.raw.gz")
-child_exit_index="$PHASE_INDEX/$(printf '%03d' "$sequence")-actual-linux-cli-child-exit-seven.json"
+child_exit_index="$PHASE_INDEX/$(printf '%03d' "$sequence")-actual-cli-child-exit-seven.json"
 jq -e --arg request_sha256 "$LAST_REQUEST_SHA" \
   --arg record "$child_exit_record/result.json" \
-  '.phase == "actual-linux-cli-child-exit-seven" and
+  '.phase == "actual-cli-child-exit-seven" and
    .request_sha256 == $request_sha256 and .record == $record' \
   "$child_exit_index" >/dev/null
 
@@ -634,9 +800,11 @@ test "$source_commit" = "$CARGO_SOURCE_COMMIT"
 
 phase=source-patch-apply
 failure_stage=$phase
-run_q cargo-source-original-hashes /usr/bin/sha256sum "$UPSTREAM" "$git_environment" \
-  src/compiler/build_runner/compilation_files.rs src/workspace/features.rs
-mapfile -t original_hashes < <(gzip -cd "$LAST_RECORD/stdout.raw.gz" | awk '{print $1}')
+run_q cargo-source-original-hashes "$SHA256_PROGRAM" "$UPSTREAM" "$git_environment" \
+  "${sha256_args[@]}" src/compiler/build_runner/compilation_files.rs src/workspace/features.rs
+original_hashes=()
+while IFS= read -r value; do original_hashes+=("$value"); done \
+  < <(gzip -cd "$LAST_RECORD/stdout.raw.gz" | awk '{print $1}')
 test "${#original_hashes[@]}" -eq 2
 test "${original_hashes[0]}" = 275e1ff7e6512bbbb3b30a7f0ceb9c7d455745e6aafce0484cb73d8fe31e0e67
 test "${original_hashes[1]}" = 2747b5598654963df7d9270b07fc7dbd80a700cf219b26db71b0d2291ea74638
@@ -646,13 +814,17 @@ run_q cargo-source-apply /usr/bin/git "$UPSTREAM" "$git_environment" \
   apply "$REPO/host/cargo-repro/three-host-v2/cargo-metadata.patch"
 run_q cargo-source-changed-paths /usr/bin/git "$UPSTREAM" "$git_environment" \
   diff --name-only --no-renames
-mapfile -t changed_paths < <(gzip -cd "$LAST_RECORD/stdout.raw.gz")
+changed_paths=()
+while IFS= read -r value; do changed_paths+=("$value"); done \
+  < <(gzip -cd "$LAST_RECORD/stdout.raw.gz")
 test "${#changed_paths[@]}" -eq 2
 test "${changed_paths[0]}" = src/compiler/build_runner/compilation_files.rs
 test "${changed_paths[1]}" = src/workspace/features.rs
-run_q cargo-source-patched-hashes /usr/bin/sha256sum "$UPSTREAM" "$git_environment" \
-  src/compiler/build_runner/compilation_files.rs src/workspace/features.rs
-mapfile -t patched_hashes < <(gzip -cd "$LAST_RECORD/stdout.raw.gz" | awk '{print $1}')
+run_q cargo-source-patched-hashes "$SHA256_PROGRAM" "$UPSTREAM" "$git_environment" \
+  "${sha256_args[@]}" src/compiler/build_runner/compilation_files.rs src/workspace/features.rs
+patched_hashes=()
+while IFS= read -r value; do patched_hashes+=("$value"); done \
+  < <(gzip -cd "$LAST_RECORD/stdout.raw.gz" | awk '{print $1}')
 test "${#patched_hashes[@]}" -eq 2
 test "${patched_hashes[0]}" = b572e74e742cca08765540aa9f611b1877defc08d146cff52fcd9b0c039106db
 test "${patched_hashes[1]}" = 0db8ba62877729fdee23ee8ae26f11a7b79fdd8bf086845a53c5f097eb1eacc3
@@ -763,64 +935,115 @@ run_q native-cargo-version "$cargo_binary" "$UPSTREAM" "$environment_json" -Vv
 case "$TRIPLE" in
   x86_64-unknown-linux-gnu) cargo_host_line="host: x86_64-unknown-linux-gnu" ;;
   aarch64-unknown-linux-gnu) cargo_host_line="host: aarch64-unknown-linux-gnu" ;;
+  aarch64-apple-darwin) cargo_host_line="host: aarch64-apple-darwin" ;;
 esac
 expect_stdout_line native-cargo-version "$cargo_host_line" "$LAST_RECORD"
 expect_stdout_line native-cargo-version "commit-hash: $CARGO_SOURCE_COMMIT" "$LAST_RECORD"
 
-phase=native-cargo-elf-header
+phase=native-cargo-binary-inspection
 failure_stage=$phase
-run_q native-cargo-elf-header /usr/bin/readelf "$UPSTREAM" "$environment_json" -h "$cargo_binary"
-header_record=$LAST_RECORD
 case "$TRIPLE" in
-  x86_64-unknown-linux-gnu) expected_machine='Advanced Micro Devices X86-64' ;;
-  aarch64-unknown-linux-gnu) expected_machine='AArch64' ;;
-esac
-if ! grep -E "Machine:[[:space:]]*$expected_machine" <(gzip -cd "$header_record/stdout.raw.gz") >/dev/null; then
-  echo "native Cargo ELF machine does not match the runner" >&2
-  exit 1
-fi
+  x86_64-unknown-linux-gnu|aarch64-unknown-linux-gnu)
+    run_q native-cargo-elf-header /usr/bin/readelf "$UPSTREAM" "$environment_json" -h "$cargo_binary"
+    header_record=$LAST_RECORD
+    case "$TRIPLE" in
+      x86_64-unknown-linux-gnu)
+        expected_machine='Advanced Micro Devices X86-64'
+        architecture=x86_64
+        ;;
+      aarch64-unknown-linux-gnu)
+        expected_machine='AArch64'
+        architecture=aarch64
+        ;;
+    esac
+    if ! grep -E "Machine:[[:space:]]*$expected_machine" <(gzip -cd "$header_record/stdout.raw.gz") >/dev/null; then
+      echo "native Cargo ELF machine does not match the runner" >&2
+      exit 1
+    fi
 
-phase=native-cargo-elf-program-headers
-failure_stage=$phase
-run_q native-cargo-elf-program-headers /usr/bin/readelf "$UPSTREAM" "$environment_json" -l "$cargo_binary"
-program_headers_record=$LAST_RECORD
-run_q native-cargo-elf-dynamic-dependencies /usr/bin/readelf "$UPSTREAM" "$environment_json" -d "$cargo_binary"
-dynamic_dependencies_record=$LAST_RECORD
-interpreter=$(gzip -cd "$program_headers_record/stdout.raw.gz" \
-  | sed -n 's/.*Requesting program interpreter: \(.*\)]/\1/p')
-if [ -n "$interpreter" ]; then
-  test "$(printf '%s\n' "$interpreter" | wc -l | tr -d ' ')" -eq 1
-  case "$TRIPLE:$interpreter" in
-    x86_64-unknown-linux-gnu:/lib64/ld-linux-x86-64.so.2|x86_64-unknown-linux-gnu:/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2|aarch64-unknown-linux-gnu:/lib/ld-linux-aarch64.so.1|aarch64-unknown-linux-gnu:/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1) ;;
-    *) echo "unexpected native Cargo ELF interpreter: $interpreter" >&2; exit 1 ;;
-  esac
-  test -x "$interpreter"
-  phase=native-cargo-runtime-dependencies
-  failure_stage=$phase
-  run_q native-cargo-runtime-dependencies /usr/bin/ldd "$UPSTREAM" "$environment_json" "$cargo_binary"
-  runtime_dependencies_record=$LAST_RECORD
-  if grep -Fq 'not found' <(gzip -cd "$LAST_RECORD/stdout.raw.gz"); then
-    echo "native Cargo has an unresolved ELF dependency" >&2
-    exit 1
-  fi
-else
-  if grep -Eq '\(NEEDED\)' <(gzip -cd "$LAST_RECORD/stdout.raw.gz"); then
-    echo "ELF has dynamic dependencies but no recorded interpreter" >&2
-    exit 1
-  fi
-  runtime_dependencies_record=
-fi
-jq -n \
-  --arg schema ami-rust-native-cargo-elf-inspection-v1 \
-  --arg status PASS \
-  --arg host "$TRIPLE" \
-  --arg interpreter "$interpreter" \
-  --arg header_record "$header_record/result.json" \
-  --arg program_headers_record "$program_headers_record/result.json" \
-  --arg dynamic_dependencies_record "$dynamic_dependencies_record/result.json" \
-  --arg runtime_dependencies_record "$runtime_dependencies_record" \
-  '{schema:$schema,status:$status,host:$host,interpreter:(if $interpreter == "" then null else $interpreter end),header_record:$header_record,program_headers_record:$program_headers_record,dynamic_dependencies_record:$dynamic_dependencies_record,runtime_dependencies_record:(if $runtime_dependencies_record == "" then null else ($runtime_dependencies_record + "/result.json") end)}' \
-  > "$ROOT/native-cargo-elf-inspection.json"
+    run_q native-cargo-elf-program-headers /usr/bin/readelf "$UPSTREAM" "$environment_json" -l "$cargo_binary"
+    program_headers_record=$LAST_RECORD
+    run_q native-cargo-elf-dynamic-dependencies /usr/bin/readelf "$UPSTREAM" "$environment_json" -d "$cargo_binary"
+    dynamic_dependencies_record=$LAST_RECORD
+    interpreter=$(gzip -cd "$program_headers_record/stdout.raw.gz" \
+      | sed -n 's/.*Requesting program interpreter: \(.*\)]/\1/p')
+    if [ -n "$interpreter" ]; then
+      test "$(printf '%s\n' "$interpreter" | wc -l | tr -d ' ')" -eq 1
+      case "$TRIPLE:$interpreter" in
+        x86_64-unknown-linux-gnu:/lib64/ld-linux-x86-64.so.2|x86_64-unknown-linux-gnu:/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2|aarch64-unknown-linux-gnu:/lib/ld-linux-aarch64.so.1|aarch64-unknown-linux-gnu:/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1) ;;
+        *) echo "unexpected native Cargo ELF interpreter: $interpreter" >&2; exit 1 ;;
+      esac
+      test -x "$interpreter"
+      phase=native-cargo-runtime-dependencies
+      failure_stage=$phase
+      run_q native-cargo-runtime-dependencies /usr/bin/ldd "$UPSTREAM" "$environment_json" "$cargo_binary"
+      runtime_dependencies_record=$LAST_RECORD
+      if grep -Fq 'not found' <(gzip -cd "$LAST_RECORD/stdout.raw.gz"); then
+        echo "native Cargo has an unresolved ELF dependency" >&2
+        exit 1
+      fi
+    else
+      if grep -Eq '\(NEEDED\)' <(gzip -cd "$LAST_RECORD/stdout.raw.gz"); then
+        echo "ELF has dynamic dependencies but no recorded interpreter" >&2
+        exit 1
+      fi
+      runtime_dependencies_record=
+    fi
+    jq -n \
+      --arg schema ami-rust-native-cargo-binary-inspection-v1 \
+      --arg status PASS \
+      --arg host "$TRIPLE" \
+      --arg format ELF \
+      --arg architecture "$architecture" \
+      --arg format_description "$expected_machine" \
+      --arg interpreter "$interpreter" \
+      --arg header_record "$header_record/result.json" \
+      --arg program_headers_record "$program_headers_record/result.json" \
+      --arg dynamic_dependencies_record "$dynamic_dependencies_record/result.json" \
+      --arg runtime_dependencies_record "$runtime_dependencies_record" \
+      '{schema:$schema,status:$status,host:$host,format:$format,architecture:$architecture,format_description:$format_description,interpreter:(if $interpreter == "" then null else $interpreter end),header_record:$header_record,program_headers_record:$program_headers_record,dynamic_dependencies_record:$dynamic_dependencies_record,runtime_dependencies_record:(if $runtime_dependencies_record == "" then null else ($runtime_dependencies_record + "/result.json") end)}' \
+      > "$ROOT/native-cargo-binary-inspection.json"
+    ;;
+  aarch64-apple-darwin)
+    run_q native-cargo-mach-o-format /usr/bin/file "$UPSTREAM" "$environment_json" "$cargo_binary"
+    format_record=$LAST_RECORD
+    format_description=$(gzip -cd "$format_record/stdout.raw.gz" | tr -d '\r\n')
+    case "$format_description" in *"Mach-O 64-bit executable arm64"*) ;; *)
+      echo "native Cargo is not an arm64 Mach-O executable" >&2
+      exit 1
+      ;;
+    esac
+    run_q native-cargo-mach-o-system-dependencies /usr/bin/otool "$UPSTREAM" "$environment_json" -L "$cargo_binary"
+    dependencies_record=$LAST_RECORD
+    macho_dependencies=()
+    while IFS= read -r dependency; do
+      [ -n "$dependency" ] || continue
+      case "$dependency" in
+        /System/Library/Frameworks/*|/System/Library/PrivateFrameworks/*|/usr/lib/*) ;;
+        *) echo "unexpected native Cargo Mach-O dependency: $dependency" >&2; exit 1 ;;
+      esac
+      macho_dependencies+=("$dependency")
+    done < <(gzip -cd "$dependencies_record/stdout.raw.gz" | sed '1d' \
+      | sed -E 's/^[[:space:]]*([^[:space:]]+).*/\1/')
+    test "${#macho_dependencies[@]}" -gt 0
+    dependency_json=$(printf '%s\n' "${macho_dependencies[@]}" \
+      | LC_ALL=C sort -u | jq -R . | jq -s .)
+    unique_count=$(printf '%s\n' "${macho_dependencies[@]}" | LC_ALL=C sort -u | wc -l | tr -d ' ')
+    test "$unique_count" -eq "${#macho_dependencies[@]}"
+    jq -n \
+      --arg schema ami-rust-native-cargo-binary-inspection-v1 \
+      --arg status PASS \
+      --arg host "$TRIPLE" \
+      --arg format Mach-O \
+      --arg architecture arm64 \
+      --arg format_description "$format_description" \
+      --arg format_record "$format_record/result.json" \
+      --arg dependencies_record "$dependencies_record/result.json" \
+      --argjson system_dependencies "$dependency_json" \
+      '{schema:$schema,status:$status,host:$host,format:$format,architecture:$architecture,format_description:$format_description,interpreter:null,format_record:$format_record,dependencies_record:$dependencies_record,system_dependencies:$system_dependencies}' \
+      > "$ROOT/native-cargo-binary-inspection.json"
+    ;;
+esac
 
 phase=standalone-offline-smoke
 failure_stage=$phase
