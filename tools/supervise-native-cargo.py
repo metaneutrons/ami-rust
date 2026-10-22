@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Temporary outer monitor for internal native Linux Cargo development."""
+"""Temporary outer monitor for internal native Cargo development."""
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import importlib.util
 import json
@@ -32,6 +33,7 @@ PARENT_RSS_RESERVE = 512 * 1024**2
 HELPER_RSS_REQUEST = 3758096384
 EXPECTED_SCHEMA = "ami-rust-native-cargo-workflow-result-v1"
 WRAPPER_SCHEMA = "ami-rust-native-cargo-supervision-result-v1"
+INSPECTION_SCHEMA = "ami-rust-native-cargo-binary-inspection-v1"
 EXPECTED_HELPER_LIMITS = {
     "seconds": MAX_PHASE_SECONDS,
     "rss_bytes": HELPER_RSS_REQUEST,
@@ -39,7 +41,7 @@ EXPECTED_HELPER_LIMITS = {
     "log_bytes": MAX_LOGS,
 }
 EXPECTED_NEGATIVE_CONTROLS = {
-    "actual-linux-cli-child-exit-seven": 7,
+    "actual-cli-child-exit-seven": 7,
     "expected-corrupted-overlay-receipt-rejection": 2,
     "expected-wrong-host-rejection": 2,
 }
@@ -62,6 +64,15 @@ def campaign_timeout(start_epoch: int, now_epoch: int, *, campaign: int = CAMPAI
     if remaining <= 0:
         raise ValueError("campaign has no time left outside the review reserve")
     return min(step_cap, remaining)
+
+
+def native_identity_matches(system: str, machine: str, triple: str) -> bool:
+    return (system, machine.lower(), triple) in {
+        ("Linux", "x86_64", "x86_64-unknown-linux-gnu"),
+        ("Linux", "aarch64", "aarch64-unknown-linux-gnu"),
+        ("Darwin", "arm64", "aarch64-apple-darwin"),
+        ("Darwin", "aarch64", "aarch64-apple-darwin"),
+    }
 
 
 def roots_are_disjoint(*roots: Path) -> bool:
@@ -202,11 +213,103 @@ def validate_inner_result(path: Path, triple: str, head: str) -> dict:
     return value
 
 
+def validate_binary_inspection(path: Path, triple: str, managed: Path) -> dict:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise ValueError("native Cargo binary inspection is missing or malformed") from error
+    expected = {
+        "x86_64-unknown-linux-gnu": ("ELF", "x86_64"),
+        "aarch64-unknown-linux-gnu": ("ELF", "aarch64"),
+        "aarch64-apple-darwin": ("Mach-O", "arm64"),
+    }.get(triple)
+    if (expected is None or not isinstance(value, dict)
+            or value.get("schema") != INSPECTION_SCHEMA
+            or value.get("status") != "PASS"
+            or value.get("host") != triple
+            or (value.get("format"), value.get("architecture")) != expected):
+        raise ValueError("native Cargo binary inspection format, architecture, or host is invalid")
+
+    root = managed.resolve(strict=True)
+
+    def check_record(field: str) -> Path:
+        raw = value.get(field)
+        if not isinstance(raw, str) or not Path(raw).is_absolute():
+            raise ValueError("native Cargo inspection record path is missing: " + field)
+        record = Path(raw).resolve(strict=True)
+        if not record.is_file() or not record.is_relative_to(root):
+            raise ValueError("native Cargo inspection record path escapes managed root: " + field)
+        return record
+
+    if expected[0] == "ELF":
+        descriptions = {
+            "x86_64": "Advanced Micro Devices X86-64",
+            "aarch64": "AArch64",
+        }
+        if value.get("format_description") != descriptions[expected[1]]:
+            raise ValueError("ELF inspection description does not match the native architecture")
+        for field in ("header_record", "program_headers_record", "dynamic_dependencies_record"):
+            check_record(field)
+        interpreter = value.get("interpreter")
+        runtime_record = value.get("runtime_dependencies_record")
+        if interpreter is None:
+            if runtime_record is not None:
+                raise ValueError("static ELF inspection unexpectedly records an ldd result")
+        else:
+            allowed = {
+                "/lib64/ld-linux-x86-64.so.2",
+                "/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
+                "/lib/ld-linux-aarch64.so.1",
+                "/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1",
+            }
+            if interpreter not in allowed or not isinstance(runtime_record, str):
+                raise ValueError("ELF runtime interpreter or ldd record is not admitted")
+            check_record("runtime_dependencies_record")
+    else:
+        description = value.get("format_description")
+        if (not isinstance(description, str)
+                or "Mach-O 64-bit executable arm64" not in description
+                or value.get("interpreter") is not None):
+            raise ValueError("Mach-O inspection does not prove an arm64 executable")
+        format_record = check_record("format_record")
+        dependencies_record = check_record("dependencies_record")
+        dependencies = value.get("system_dependencies")
+        if (not isinstance(dependencies, list) or not dependencies
+                or any(not isinstance(item, str) or not item.startswith((
+                    "/System/Library/Frameworks/",
+                    "/System/Library/PrivateFrameworks/",
+                    "/usr/lib/",
+                )) for item in dependencies)
+                or dependencies != sorted(set(dependencies))):
+            raise ValueError("Mach-O dependencies are empty, non-system, duplicated, or unsorted")
+
+        def helper_stdout(record: Path) -> str:
+            raw_log = record.parent / "stdout.raw.gz"
+            try:
+                with gzip.open(raw_log, "rb") as stream:
+                    payload = stream.read(1024 * 1024 + 1)
+            except (OSError, EOFError) as error:
+                raise ValueError("Mach-O inspection helper stdout is missing or malformed") from error
+            if len(payload) > 1024 * 1024:
+                raise ValueError("Mach-O inspection helper stdout exceeds its bounded size")
+            return payload.decode("utf-8", "replace")
+
+        observed_description = helper_stdout(format_record).replace("\r", "").replace("\n", "")
+        if observed_description != description:
+            raise ValueError("Mach-O format description differs from the retained file output")
+        dependency_lines = helper_stdout(dependencies_record).splitlines()
+        observed_dependencies = [line.strip().split()[0] for line in dependency_lines[1:] if line.strip()]
+        if (len(observed_dependencies) != len(set(observed_dependencies))
+                or sorted(observed_dependencies) != dependencies):
+            raise ValueError("Mach-O dependency list differs from the retained otool output")
+    return value
+
+
 def _load_supervisor(repo: Path):
     module_path = repo / "release/ci_cargo.py"
     if sha256(module_path) != CI_CARGO_SHA256:
         raise ValueError("temporary monitor source differs from its frozen digest")
-    spec = importlib.util.spec_from_file_location("native_linux_ci_cargo", module_path)
+    spec = importlib.util.spec_from_file_location("native_host_ci_cargo", module_path)
     if spec is None or spec.loader is None:
         raise ValueError("cannot load the existing temporary Cargo supervisor")
     module = importlib.util.module_from_spec(spec)
@@ -215,8 +318,14 @@ def _load_supervisor(repo: Path):
 
 
 def _own_hwm_bytes() -> int:
-    # Linux ru_maxrss is KiB; this wrapper rejects non-Linux hosts before use.
-    return int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024
+    # Linux reports KiB; Darwin reports bytes.
+    raw = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    system = platform.system()
+    if system == "Linux":
+        return raw * 1024
+    if system == "Darwin":
+        return raw
+    raise ValueError("unsupported native supervisor OS: " + system)
 
 
 def _verify_inputs(repo: Path, managed: Path, outer_output: Path) -> tuple[str, str, str, Path]:
@@ -228,14 +337,9 @@ def _verify_inputs(repo: Path, managed: Path, outer_output: Path) -> tuple[str, 
                 "NATIVE_CAMPAIGN_START_EPOCH", "NATIVE_MANAGED_ROOT", "NATIVE_OUTER_OUTPUT")
     if any(not env.get(key) for key in required):
         raise ValueError("required protected workflow inputs are missing")
-    if platform.system() != "Linux":
-        raise ValueError("native Cargo proposal requires a Linux runner")
     triple = env["NATIVE_HOST_TRIPLE"]
     machine = platform.machine().lower()
-    if (triple, machine) not in {
-        ("x86_64-unknown-linux-gnu", "x86_64"),
-        ("aarch64-unknown-linux-gnu", "aarch64"),
-    }:
+    if not native_identity_matches(platform.system(), machine, triple):
         raise ValueError("runner architecture does not match the requested native host")
     if (env["NATIVE_EVENT_NAME"] != "workflow_dispatch"
             or env["NATIVE_REPOSITORY"] != "metaneutrons/ami-rust"
@@ -350,7 +454,7 @@ def run(repo: Path, managed: Path, outer_output: Path) -> int:
     payload: dict = {
         "schema": WRAPPER_SCHEMA,
         "status": "FAILED",
-        "claim": "temporary internal native Linux Cargo prerequisite only",
+        "claim": "temporary internal native Cargo prerequisite only",
         "limits": {
             "aggregate_rss_bytes": MAX_RSS,
             "managed_source_root_output_bytes": MAX_WORKSPACE,
@@ -421,6 +525,8 @@ def run(repo: Path, managed: Path, outer_output: Path) -> int:
             raise ValueError("final managed-root or aggregate log accounting exceeds its ceiling")
         inner_path = artifact / "native-cargo-result.json"
         inner = validate_inner_result(inner_path, triple, head)
+        inspection_path = managed / "native-cargo-binary-inspection.json"
+        validate_binary_inspection(inspection_path, triple, managed)
         payload.update({
             "status": "PREREQUISITE_ONLY",
             "repository": os.environ["GITHUB_REPOSITORY"],
@@ -434,6 +540,7 @@ def run(repo: Path, managed: Path, outer_output: Path) -> int:
             "wrapper_sha256": sha256(Path(__file__).resolve()),
             "shell_producer_sha256": sha256(repo / "tools/qualify-native-cargo.sh"),
             "inner_result_sha256": sha256(inner_path),
+            "binary_inspection_sha256": sha256(inspection_path),
             "observed": {
                 "aggregate_rss_upper_bound_bytes": conservative_peak,
                 "full_process_tree_plus_python_peak_bytes": full_peak,
