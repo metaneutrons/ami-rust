@@ -346,7 +346,7 @@ class SupervisorTests(unittest.TestCase):
             )
             command = [sys.executable, "-c", wrapper_code, str(producer_path), str(pidfile)]
 
-            def rss_probe(_pid):
+            def rss_probe(_pid, _rows=None):
                 return (ci_cargo.MAX_RSS_BYTES + 1) if pidfile.exists() else 0
 
             pids = []
