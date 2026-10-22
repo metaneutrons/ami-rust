@@ -1,0 +1,39 @@
+{
+  "schema": "ami-rust-cargo-prerequisite-source-reattachment-evidence-v1",
+  "scope": "Internal maintainer Cargo prerequisite producer and OpenSSL vendor overlay only. No public SDK manager/CLI, production workflow switch, SDK host admission, current Cargo build or RC4 acceptance.",
+  "base_commit": "14e9af69f6f3c2218390cfe53d2cd2d2b7d45c10",
+  "code_sha256": {
+    "tooling/crates/core/src/cargo_producer.rs": "520b2f047887249e3984fae9cd60630f19ad9d0d6e729ac63d13d1840fa06af2",
+    "tooling/crates/core/src/cargo_vendor_overlay.rs": "5b7ce8829aa41e5fc3a2a9fc39b31395433917d16352805f82d032d6f9165959",
+    "tooling/crates/core/src/json.rs": "1115959e611af2951925c3980ad62de96490768d3d50e7350cc0fa4ae446ecc4",
+    "tooling/crates/core/src/lib.rs": "a6181331386faa340a2319a05d9e20861fb2b1c8263704e82c9e713a58c550c4",
+    "tooling/crates/xtask/src/cargo_producer.rs": "016941c3f156c0114fb90c5339dfc781c463b57ed8ef5d3afa64d8d8547056ea",
+    "tooling/crates/xtask/src/cargo_vendor_overlay.rs": "e8821a6299ab8fc958f56c28648f9b339b13992849547946d0a2fe9240068e8a",
+    "tooling/crates/xtask/src/main.rs": "984c3afaf8cba3bc169c8ce6eaccd3a2f3cd1f964a99908ff22fe54c1fde1704"
+  },
+  "validation": {
+    "isolated_source_base": "0a30162c5bc6342333e723288107e57c39116c79",
+    "current_preimages_and_proposal_outputs": "exact seven-path byte match; current base differs in previously qualified consumer-enforcement parser only",
+    "focused_core_tests_passed": 30,
+    "focused_core_ignored_tests": 2,
+    "xtask_tests_passed": 53,
+    "strict_core_xtask_clippy": "passed on exact unchanged producer source",
+    "old_overlay_receipt_bytes": 10360641,
+    "json_profile": {
+      "name": "CargoVendorOverlayReceipt",
+      "maximum_bytes": 67108864,
+      "consumer_limits_changed": false
+    },
+    "clean_counter_and_arm_typecheck_result_sha256": "a414fd8f146533ab33a1a3533c0cb048747f55f15686275964dbf2d0c3a08c3e",
+    "fresh_arm_typecheck": "offline all-targets check only; not ARM execution",
+    "current_seven_file_format": "passed"
+  },
+  "retained_failures": {
+    "first_component": "missing removed JSON profile at compile time; fixed with separate maintainer profile",
+    "second_component": "all component commands passed individually but outer driver asserted wrong refusal wording; original result remains failed",
+    "third_attempt": "driver/result were modified after controller failure; not used as a sealed proof",
+    "clean_fourth_attempt": "fresh frozen driver; correct corrupted-copy refusal plus previously unrun ARM typecheck; all bindings rehashed"
+  },
+  "publisher_boundary": "Historical CLI v1 publisher profile intentionally stays closed. Internal prerequisite receipts bind full candidate sources/patch and producer binary. A new toolchain publisher profile requires explicit RC3 design/qualification.",
+  "baseline": "Pinned x86-64 AROS ABI-v1 unchanged; nxpk excluded."
+}

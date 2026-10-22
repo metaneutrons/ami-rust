@@ -24,8 +24,14 @@ pub const COSIGN_BUNDLE_MAX_BYTES: usize = 1_048_576;
 pub const TRUSTED_ROOT_MAX_BYTES: usize = 16_777_216;
 /// Existing external verifier stdout capture profile (not bundle input size).
 pub const VERIFIER_OUTPUT_MAX_BYTES: usize = 4_194_304;
+/// Maintainer-only Cargo vendor overlay receipt bound; not an SDK consumer limit.
+pub const CARGO_VENDOR_OVERLAY_RECEIPT_MAX_BYTES: usize = 64 * 1024 * 1024;
 
-/// A JSON format whose input byte limit is frozen in `contracts-v1.json`.
+/// A JSON format with an explicit input byte bound.
+///
+/// Consumer profile limits are frozen in `contracts-v1.json`. The
+/// `CargoVendorOverlayReceipt` profile has a separate maintainer-only bound and
+/// is not a consumer compatibility limit.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum JsonProfile {
     PackageMetadataStateSelection,
@@ -37,6 +43,7 @@ pub enum JsonProfile {
     CosignBundle,
     TrustedRoot,
     VerifierOutput,
+    CargoVendorOverlayReceipt,
 }
 
 impl JsonProfile {
@@ -55,6 +62,7 @@ impl JsonProfile {
             Self::CosignBundle => COSIGN_BUNDLE_MAX_BYTES,
             Self::TrustedRoot => TRUSTED_ROOT_MAX_BYTES,
             Self::VerifierOutput => VERIFIER_OUTPUT_MAX_BYTES,
+            Self::CargoVendorOverlayReceipt => CARGO_VENDOR_OVERLAY_RECEIPT_MAX_BYTES,
         }
     }
 }
@@ -299,8 +307,9 @@ impl<'de> Visitor<'de> for JsonVisitor {
 #[cfg(test)]
 mod tests {
     use super::{
-        COSIGN_BUNDLE_MAX_BYTES, GITHUB_ATTESTATION_BUNDLE_MAX_BYTES, JSON_MAX_CONTAINER_DEPTH,
-        JsonProfile, PACKAGE_METADATA_STATE_SELECTION_MAX_BYTES, PROJECT_LOCK_MAX_BYTES,
+        CARGO_VENDOR_OVERLAY_RECEIPT_MAX_BYTES, COSIGN_BUNDLE_MAX_BYTES,
+        GITHUB_ATTESTATION_BUNDLE_MAX_BYTES, JSON_MAX_CONTAINER_DEPTH, JsonProfile,
+        PACKAGE_METADATA_STATE_SELECTION_MAX_BYTES, PROJECT_LOCK_MAX_BYTES,
         PUBLISHER_POLICY_AND_AUTHENTICATION_METADATA_MAX_BYTES,
         RELEASE_MANIFEST_AND_INSTALL_RECEIPT_MAX_BYTES, SDK_COMPONENT_MANIFEST_MAX_BYTES,
         TRUSTED_ROOT_MAX_BYTES, parse_json, parse_json_value,
@@ -456,6 +465,47 @@ mod tests {
         let mut bytes = vec![b' '; size];
         bytes[..4].copy_from_slice(b"null");
         bytes
+    }
+
+    #[test]
+    fn maintainer_vendor_receipt_accepts_json_above_consumer_limit() {
+        const SDK_CONSUMER_LIMIT: usize = 16 * 1024 * 1024;
+        let input = padded_null(SDK_CONSUMER_LIMIT + 1);
+        assert_eq!(
+            parse_json_value(&input, JsonProfile::CargoVendorOverlayReceipt).unwrap(),
+            Value::Null
+        );
+        let error = parse_json_value(&input, JsonProfile::SdkComponentManifest).unwrap_err();
+        assert!(error.to_string().contains("byte limit"));
+    }
+
+    #[test]
+    fn maintainer_vendor_receipt_obeys_exact_64_mib_bound() {
+        const MAINTAINER_LIMIT: usize = 64 * 1024 * 1024;
+        assert_eq!(CARGO_VENDOR_OVERLAY_RECEIPT_MAX_BYTES, MAINTAINER_LIMIT);
+        assert_eq!(
+            JsonProfile::CargoVendorOverlayReceipt.max_bytes(),
+            MAINTAINER_LIMIT
+        );
+        let exact = padded_null(MAINTAINER_LIMIT);
+        assert_eq!(
+            parse_json_value(&exact, JsonProfile::CargoVendorOverlayReceipt).unwrap(),
+            Value::Null
+        );
+        drop(exact);
+        let above = padded_null(MAINTAINER_LIMIT + 1);
+        let error = parse_json_value(&above, JsonProfile::CargoVendorOverlayReceipt).unwrap_err();
+        assert!(error.to_string().contains("byte limit"));
+    }
+
+    #[test]
+    fn maintainer_vendor_receipt_profile_still_rejects_duplicate_keys() {
+        let error = parse_json_value(
+            br#"{"receipt":{"version":1,"version":2}}"#,
+            JsonProfile::CargoVendorOverlayReceipt,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("duplicate JSON object key"));
     }
 
     #[test]

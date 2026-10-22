@@ -7,6 +7,8 @@ pub use error::{Refusal, Result};
 pub mod acquisition;
 pub mod baseline;
 pub mod cargo_archive;
+pub mod cargo_producer;
+pub mod cargo_vendor_overlay;
 pub mod compact;
 pub mod component_archive;
 pub mod component_install;
