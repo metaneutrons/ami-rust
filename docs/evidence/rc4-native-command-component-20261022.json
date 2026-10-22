@@ -1,0 +1,106 @@
+{
+  "schema": "ami-rust-internal-command-component-evidence-v1",
+  "scope": "Mac Apple Silicon internal one-command component only; no public CLI, Linux execution, complete campaign/Python retirement, SDK admission or RC acceptance.",
+  "source_base": "cc6668a9f39f6f4effcf21749a6ed9fddc1d7853",
+  "source_base_tree": "32041c81fbae73899eaac3a5a0f4cd7995f29e26",
+  "tested_source_sha256": {
+    "tooling/crates/core/src/qualification_command.rs": "ca0d91fa50fa33dc40f1ca15c30733098e14bf2109bc40af1ec9f8418afc7d70",
+    "tooling/crates/xtask/src/qualification_command.rs": "34893dc88dc847bf2f684bf42bc8d4e87df8528e735ec5c16f31918addf9b87e",
+    "tooling/crates/core/src/lib.rs": "a20db586f33444d10f3a485d616a6880ff21736d879b2aca814fb2dc8f411e8a",
+    "tooling/crates/xtask/src/main.rs": "93379e3dd06532f2f67decf0b0d84f1a3a93178b73da141d3a38e524e1b4158a"
+  },
+  "proposal_manifest_sha256": "84e436adf065797ac49973982fba184fcbf9a13a9a615afbf998982c2338eb3b",
+  "source_review_sha256": "2c6dff0f6dc8b8f649b98bac194595d39f3fbf9640ac2a5d584cef10e9c0d734",
+  "actual_result_sha256": "26172d5841451da3d797fb6f6b939f94cf2e963d04893cab2dddba44b93ff23a",
+  "independent_actual_review_sha256": "52c8312cbf8f3721ee4a23bae2b8418469d3e6ccc11564e65397429a4575f0a9",
+  "result": {
+    "status": "PASS_MAC_COMMAND_COMPONENT_WITH_EXPLICIT_LIMITS",
+    "elapsed_seconds": 154.71802220796235,
+    "aggregate_peak_rss_bytes": 977780736,
+    "workspace_peak_bytes": 2038462695,
+    "combined_log_bytes": 300558,
+    "focused_tests_passed": 10,
+    "helper_executable_sha256": "ef2f5e7c08caa8f5320f1b470b637c40f420400d32525b6cc8d886fb46e8a620"
+  },
+  "recorded_commands": 26,
+  "actual_cli_record_cases": [
+    {
+      "case": "native-positive",
+      "result_sha256": "ec7b8c40974ca577f84b167d5208dd1402279e7185d4713b1360390107fb6962",
+      "passed": true,
+      "child_exit_code": 0,
+      "child_signal": null
+    },
+    {
+      "case": "child-exit-seven",
+      "result_sha256": "c97db101148bc9d66d29a737a8077e9cdeb8634ac183d414107894dbde7fb74b",
+      "passed": false,
+      "child_exit_code": 7,
+      "child_signal": null
+    },
+    {
+      "case": "deadline",
+      "result_sha256": "3bae50125f2cb8e42c7ef6e504a001b7ec5d649ec4e66343eff5e7e9e1beafab",
+      "passed": false,
+      "child_exit_code": null,
+      "child_signal": 15
+    },
+    {
+      "case": "captured-log-bound",
+      "result_sha256": "900f4f56083576d78056724c2e1a45d12fc6f49aa060c1ba0730d6dc185b8dfd",
+      "passed": false,
+      "child_exit_code": 0,
+      "child_signal": null
+    },
+    {
+      "case": "workspace-bound",
+      "result_sha256": "4841f31ff4bf75359ff61e32d791777424e83e99471a40484a6c5b19582ff215",
+      "passed": false,
+      "child_exit_code": 0,
+      "child_signal": null
+    },
+    {
+      "case": "rss-positive",
+      "result_sha256": "9fb6555f2003ede6075b1ea021d46a152313a3f922694f756dcca0f7482a2320",
+      "passed": true,
+      "child_exit_code": 0,
+      "child_signal": null
+    },
+    {
+      "case": "rss-bound",
+      "result_sha256": "ca1692b3c369aa1672fdb4e795af92856110462e339ff715b3cea41d25200162",
+      "passed": false,
+      "child_exit_code": null,
+      "child_signal": 15
+    }
+  ],
+  "additional_controls": [
+    "occupied result retained bytewise",
+    "missing, symlink and overlapping roots refused before outputs",
+    "child exit7 preserved as7",
+    "existing maintainer task refusal remains2",
+    "SIGTERM during finalization leaves no authoritative result",
+    "pending-file sync failure leaves no authoritative result"
+  ],
+  "failed_first_attempt": {
+    "status": "FAILED",
+    "result_sha256": "17949a4f22811aecced6a6532c481a87ebe1497698553820e10a4142ae136ba7",
+    "reason": "Four compile/lint findings in first helper proposal; repaired narrowly and independently reviewed.",
+    "original_campaign_clock_retained": true,
+    "cache_reused": "Only regenerable dependency/build cache; original failure receipt, source fixture and logs retained."
+  },
+  "limits": {
+    "aggregate_rss_bytes": 4294967296,
+    "workspace_bytes": 12884901888,
+    "logs_bytes": 16777216,
+    "command_seconds": 1200,
+    "original_campaign_seconds": 5400
+  },
+  "limitations": [
+    "Temporary pinned Python outer test supervisor remains; no full active Python retirement.",
+    "Helper own RSS boundary follows stream/log processing and precedes final workspace walk/result serialization.",
+    "Outer setup precedes its campaign receipt; final receipt serialization/publication follows recorded final metrics.",
+    "Captured-log counter refused the actual stdout limit but also recorded an EPERM cleanup error and zero resource samples; it proves refusal, not successful cleanup/containment.",
+    "Only the narrowly tested component is accepted; Linux and full SDK/runtime/release gates remain open."
+  ]
+}

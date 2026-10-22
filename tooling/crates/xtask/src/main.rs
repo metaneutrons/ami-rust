@@ -8,6 +8,7 @@ mod consumer_runtime;
 mod historical_prepare_sigterm;
 mod legacy_migration_fixture;
 mod prepare_sigterm;
+mod qualification_command;
 
 use ami_rust_core::{
     Refusal, Result,
@@ -27,9 +28,16 @@ use std::{
 };
 
 fn main() {
+    let qualification_command = std::env::args_os().nth(1).as_deref()
+        == Some(std::ffi::OsStr::new("qualification-command"));
     if let Err(error) = run() {
         eprintln!("ami-rust maintainer task refused: {error}");
-        std::process::exit(2);
+        let exit_code = if qualification_command {
+            error.exit_code()
+        } else {
+            2
+        };
+        std::process::exit(i32::from(exit_code));
     }
 }
 
@@ -50,11 +58,12 @@ fn run() -> Result<()> {
         Some("cargo-vendor-overlay") => cargo_vendor_overlay::run(arguments),
         Some("native-package-verify") => run_native_package_verify(arguments),
         Some("native-consumer-observe") => consumer_observe::run(arguments),
+        Some("qualification-command") => qualification_command::run(arguments),
         Some("native-prepare-interruption") => prepare_sigterm::run(arguments),
         Some("historical-prepare-interruption") => historical_prepare_sigterm::run(arguments),
         Some("native-legacy-migration-fixture") => legacy_migration_fixture::run(arguments),
         _ => Err(Refusal::new(
-            "usage: ami-rust-xtask {--cargo-plugin|--rc2-git-credential|cargo-storage-probe|cargo-storage-lifecycle-probe|cargo-storage-registry-probe|cargo-storage-nested-probe|cargo-storage-concurrent-gc-probe|cargo-storage-git-helper-probe|native-package-verify|native-consumer-observe|native-prepare-interruption|historical-prepare-interruption|native-legacy-migration-fixture|cargo-repro-producer|cargo-vendor-overlay} OPTIONS; composition does not accept a release",
+            "usage: ami-rust-xtask {--cargo-plugin|--rc2-git-credential|cargo-storage-probe|cargo-storage-lifecycle-probe|cargo-storage-registry-probe|cargo-storage-nested-probe|cargo-storage-concurrent-gc-probe|cargo-storage-git-helper-probe|native-package-verify|native-consumer-observe|qualification-command|native-prepare-interruption|historical-prepare-interruption|native-legacy-migration-fixture|cargo-repro-producer|cargo-vendor-overlay} OPTIONS; composition does not accept a release",
         )),
     }
 }
