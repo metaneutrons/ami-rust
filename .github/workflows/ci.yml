@@ -36,6 +36,16 @@ jobs:
             tests/
             tools/supervise-native-cargo.py
             tools/supervise-bare-target-libraries.py
+            tools/bootstrap-host-rust.sh
+            tools/bootstrap-bare-target-inputs.sh
+            release/bare-target-libraries-inputs.json
+            release/bare-target-libraries/linux-aarch64-rust.json
+            tooling/crates/aros-native-build/pins/target.json
+            tooling/crates/aros-native-build/pins/macos-aarch64/rust.json
+            tooling/crates/aros-native-build/pins/linux-x86_64/rust.json
+            tooling/crates/xtask/src/bare_target_producer.rs
+            tooling/crates/xtask/src/main.rs
+            targets/x86_64-aros.json
             host/
             native/sdk.h
             release/*.py

@@ -32,7 +32,7 @@ TARGET_ALIAS_TARGET = "x86_64-aros.json"
 BOOTSTRAP_RECORD_NAMES = {"excluded-installer-metadata.txt", "excluded-installer-state.txt",
                           "duplicate-identical-component-paths.txt"}
 BOOTSTRAP_RECEIPT_MAX_BYTES = 1024 * 1024
-XTASK_MODULE_SHA = "a2fd57fec83f1d32372b4aeac0a74445ad049a57875b26da371ed139ce48e0de"
+XTASK_MODULE_SHA = "ee488a8b034515c86044bb664498f040d66d3243745152db37269854df10bc4a"
 XTASK_MAIN_SHA = "e88b12957bc6f16e4ba8743bdbaff873874ed24529fcd464e4a07ab47ffda842"
 NATIVE_CARGO_COMMIT = "3efb1f477e99b42974b982d939fd100303cdf7db"
 RUST_COMMIT = "330d317121e16b5db8e5adc63595910528ff2ee7"
@@ -114,6 +114,32 @@ def import_monitor(repo: Path):
     return module
 
 
+def verify_source_inputs(repo: Path, host_key: str) -> dict:
+    """Check every source identity used by the protected producer before any build."""
+    if host_key not in HOSTS:
+        raise ValueError("unsupported host key")
+    _, _, _, profile, profile_sha, h1_inputs, h1_sha = HOSTS[host_key]
+    bound = {
+        "release/ci_cargo.py": CI_CARGO_SHA,
+        "release/ci-resources.json": RESOURCE_SHA,
+        "tools/bootstrap-host-rust.sh": H1_HELPER_SHA,
+        "tools/supervise-native-cargo.py": MONITOR_SHA,
+        "tools/bootstrap-bare-target-inputs.sh": INPUT_BOOTSTRAP_SHA,
+        "release/bare-target-libraries-inputs.json": INPUTS_SHA,
+        "tooling/Cargo.toml": TOOLING_MANIFEST_SHA,
+        "tooling/Cargo.lock": TOOLING_LOCK_SHA,
+        "tooling/crates/aros-native-build/pins/target.json": TARGET_PIN_SHA,
+        "targets/x86_64-aros.json": TARGET_SPEC_SHA,
+        "tooling/crates/xtask/src/bare_target_producer.rs": XTASK_MODULE_SHA,
+        "tooling/crates/xtask/src/main.rs": XTASK_MAIN_SHA,
+        profile: profile_sha,
+        h1_inputs: h1_sha,
+    }
+    source_files = {name: {"bytes": require_file(repo, name, digest).stat().st_size, "sha256": digest}
+                    for name, digest in bound.items()}
+    return source_files
+
+
 def verify_checkout(args, artifact: Path) -> dict:
     env = os.environ
     host_key = env.get("BARE_HOST_KEY", "")
@@ -158,24 +184,7 @@ def verify_checkout(args, artifact: Path) -> dict:
     if head != env["GITHUB_SHA"] or dirty or not (repo / ".git").is_dir():
         raise ValueError("source is not a clean exact GITHUB_SHA checkout")
 
-    bound = {
-        "release/ci_cargo.py": CI_CARGO_SHA,
-        "release/ci-resources.json": RESOURCE_SHA,
-        "tools/bootstrap-host-rust.sh": H1_HELPER_SHA,
-        "tools/supervise-native-cargo.py": MONITOR_SHA,
-        "tools/bootstrap-bare-target-inputs.sh": INPUT_BOOTSTRAP_SHA,
-        "release/bare-target-libraries-inputs.json": INPUTS_SHA,
-        "tooling/Cargo.toml": TOOLING_MANIFEST_SHA,
-        "tooling/Cargo.lock": TOOLING_LOCK_SHA,
-        "tooling/crates/aros-native-build/pins/target.json": TARGET_PIN_SHA,
-        "targets/x86_64-aros.json": TARGET_SPEC_SHA,
-        "tooling/crates/xtask/src/bare_target_producer.rs": XTASK_MODULE_SHA,
-        "tooling/crates/xtask/src/main.rs": XTASK_MAIN_SHA,
-        profile: profile_sha,
-        h1_inputs: h1_sha,
-    }
-    source_files = {name: {"bytes": require_file(repo, name, digest).stat().st_size, "sha256": digest}
-                    for name, digest in bound.items()}
+    source_files = verify_source_inputs(repo, host_key)
     for name in (".cargo/config", ".cargo/config.toml", "tooling/.cargo/config", "tooling/.cargo/config.toml"):
         if (repo / name).exists() or (repo / name).is_symlink():
             raise ValueError("unexpected local Cargo config in checkout: " + name)

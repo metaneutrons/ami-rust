@@ -15,7 +15,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 DRIVER_PATH = ROOT / "tools/supervise-bare-target-libraries.py"
-DRIVER_SHA256 = "d5d9697f824be4e2ff75a98d650215a5365495c6241a638763bb4442b1bf6883"
+DRIVER_SHA256 = "cca95d8b3756f2e7933fe1a6064b7cded71c234262a52dee4393b8c205945e6f"
 LABELS = ("rustc-version", "rustc-sysroot", "cargo-version", "rust-objcopy-version", "source-production")
 LIMITS = {"seconds": 1200, "rss_bytes": 4 * 1024**3, "workspace_bytes": 12 * 1024**3, "log_bytes": 16 * 1024**2}
 REGISTRY = "registry+https://github.com/rust-lang/crates.io-index"
@@ -96,6 +96,21 @@ class BareTargetWrapperFixtures(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="bare-target-unit-fixture-")
         self.addCleanup(self.temp.cleanup)
         self.base = Path(self.temp.name)
+
+    def test_actual_checkout_source_pins_match_all_three_hosts(self):
+        for host in DRIVER.HOSTS:
+            with self.subTest(host=host):
+                rows = DRIVER.verify_source_inputs(self.repo, host)
+                module = "tooling/crates/xtask/src/bare_target_producer.rs"
+                self.assertEqual(rows[module]["sha256"], file_digest(self.repo / module))
+
+    def test_stale_producer_source_pin_is_refused_for_all_three_hosts(self):
+        old_pin = "a2fd57fec83f1d32372b4aeac0a74445ad049a57875b26da371ed139ce48e0de"
+        with mock.patch.object(DRIVER, "XTASK_MODULE_SHA", old_pin):
+            for host in DRIVER.HOSTS:
+                with self.subTest(host=host):
+                    with self.assertRaisesRegex(ValueError, "pinned source input differs: tooling/crates/xtask/src/bare_target_producer.rs"):
+                        DRIVER.verify_source_inputs(self.repo, host)
 
     def producer_fixture(self, name):
         """Build a producer-shaped receipt with tiny UNIT_FIXTURE-only files."""
