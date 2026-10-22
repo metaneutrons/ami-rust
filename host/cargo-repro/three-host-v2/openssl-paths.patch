@@ -1,0 +1,58 @@
+--- a/openssl-src-300.6.1+3.6.3/src/lib.rs
++++ b/openssl-src-300.6.1+3.6.3/src/lib.rs
+@@ -142,6 +142,11 @@
+         let out_dir = self.out_dir.as_ref().ok_or("OUT_DIR not set")?;
+         let build_dir = out_dir.join("build");
+         let install_dir = out_dir.join("install");
++        let use_canonical_install_prefix = host == target
++            && matches!(
++                host,
++                "aarch64-apple-darwin" | "x86_64-unknown-linux-gnu" | "aarch64-unknown-linux-gnu"
++            );
+ 
+         if build_dir.exists() {
+             fs::remove_dir_all(&build_dir).map_err(|e| format!("build_dir: {e}"))?;
+@@ -159,8 +164,11 @@
+         let mut configure = Command::new(perl_program);
+         configure.arg("./Configure");
+ 
+-        // Change the install directory to happen inside of the build directory.
+-        if host.contains("pc-windows-gnu") {
++        // Supported Unix hosts use a stable runtime prefix and stage installed
++        // artifacts under install_dir. Other hosts keep the existing prefix.
++        if use_canonical_install_prefix {
++            configure.arg("--prefix=/usr/local");
++        } else if host.contains("pc-windows-gnu") {
+             configure.arg(&format!("--prefix={}", sanitize_sh(&install_dir)));
+         } else if host.contains("pc-windows-msvc") || host.contains("win7-windows-msvc") {
+             // On Windows, the prefix argument does not support \ path seperators
+@@ -672,6 +680,9 @@
+             self.run_command(build, "building OpenSSL")?;
+ 
+             let mut install = self.cmd_make()?;
++            if use_canonical_install_prefix {
++                install.arg(format!("DESTDIR={}", install_dir.display()));
++            }
+             install.arg("install_dev").current_dir(&inner_dir);
+             self.run_command(install, "installing OpenSSL")?;
+         }
+@@ -684,10 +695,16 @@
+ 
+         fs::remove_dir_all(&inner_dir).map_err(|e| format!("{}: {e}", inner_dir.display()))?;
+ 
++        let artifact_root = if use_canonical_install_prefix {
++            install_dir.join("usr/local")
++        } else {
++            install_dir.clone()
++        };
++
+         Ok(Artifacts {
+-            lib_dir: install_dir.join("lib"),
+-            bin_dir: install_dir.join("bin"),
+-            include_dir: install_dir.join("include"),
++            lib_dir: artifact_root.join("lib"),
++            bin_dir: artifact_root.join("bin"),
++            include_dir: artifact_root.join("include"),
+             libs: libs,
+             target: target.to_string(),
+         })

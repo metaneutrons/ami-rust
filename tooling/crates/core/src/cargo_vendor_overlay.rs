@@ -34,6 +34,39 @@ const SOURCE_PATH: &str = "openssl-src-300.6.1+3.6.3/src/lib.rs";
 const SOURCE_SHA256: &str = "c0f7ee0384ee12835abc6197122dc60ac75e33a3906dfe90bc378e62df56839d";
 const PATCHED_SHA256: &str = "992641416caf72adc67e9196ee4e452f5ba284e8586050c9d2ed8bb1d287c1a5";
 const PATCH_REPO_PATH: &str = "host/cargo-repro/openssl-paths.patch";
+// Exact profile identities preserve historical receipts while a new derived
+// recipe adds the third native host. Arbitrary caller-provided recipes remain
+// refused before copying or patching any vendor source.
+struct PinnedOverlayProfile {
+    pin_sha256: &'static str,
+    supported_hosts: &'static [&'static str],
+    schema: &'static str,
+    patch_sha256: &'static str,
+    patch_repo_path: &'static str,
+    patched_sha256: &'static str,
+}
+
+const LEGACY_PROFILE: PinnedOverlayProfile = PinnedOverlayProfile {
+    pin_sha256: PIN_SHA256,
+    supported_hosts: &["aarch64-apple-darwin", "x86_64-unknown-linux-gnu"],
+    schema: PIN_SCHEMA,
+    patch_sha256: PATCH_SHA256,
+    patch_repo_path: PATCH_REPO_PATH,
+    patched_sha256: PATCHED_SHA256,
+};
+const THREE_HOST_PROFILE: PinnedOverlayProfile = PinnedOverlayProfile {
+    pin_sha256: "676f1c208fe63f57014120f7461383a9f1da351565a5ea8b9dfe8a2dd109e944",
+    supported_hosts: &[
+        "aarch64-apple-darwin",
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu",
+    ],
+    schema: "ami-rust-cargo-vendor-overlay-v2",
+    patch_sha256: "0bc0e316c16658c7be01baa8d14070efebbe0b115a26224b2ae75ac12667069e",
+    patch_repo_path: "host/cargo-repro/three-host-v2/openssl-paths.patch",
+    patched_sha256: "b954e7ccf0bd923c16fffad5384b994df897f65ca721def75fc8856ef19746c2",
+};
+
 const MAX_TREE_ENTRIES: usize = 100_000;
 const MAX_PATCH_BYTES: usize = 16 * 1024 * 1024;
 const MAX_CAPTURE_STREAM_BYTES: usize = 8 * 1024 * 1024;
@@ -92,6 +125,7 @@ struct OverlayReceipt {
 
 #[derive(Clone, Debug)]
 struct OverlayPlan {
+    supported_hosts: &'static [&'static str],
     pin_sha256: String,
     patch_sha256: String,
     patch_path: PathBuf,
@@ -131,40 +165,60 @@ fn load_pinned_plan(recipe: &Path) -> Result<OverlayPlan> {
     let pin_path = recipe.join("openssl-overlay.json");
     let pin_raw = read_regular_bounded(&pin_path, JsonProfile::SdkComponentManifest.max_bytes())?;
     let pin_sha256 = sha256_bytes(&pin_raw);
-    if pin_sha256 != PIN_SHA256 {
-        return Err(Refusal::new("vendor overlay recipe identity mismatch"));
-    }
+    let profile = match pin_sha256.as_str() {
+        PIN_SHA256 => &LEGACY_PROFILE,
+        digest if digest == THREE_HOST_PROFILE.pin_sha256 => &THREE_HOST_PROFILE,
+        _ => return Err(Refusal::new("vendor overlay recipe identity mismatch")),
+    };
     let pin = parse_json_value(&pin_raw, JsonProfile::SdkComponentManifest)?;
-    validate_pinned_json(&pin)?;
+    validate_pinned_json(&pin, profile)?;
 
     let patch_path = recipe.join("openssl-paths.patch");
     let patch = read_regular_bounded(&patch_path, MAX_PATCH_BYTES)?;
     let patch_sha256 = sha256_bytes(&patch);
-    if patch_sha256 != PATCH_SHA256 {
+    if patch_sha256 != profile.patch_sha256 {
         return Err(Refusal::new("vendor overlay patch identity mismatch"));
     }
 
     Ok(OverlayPlan {
+        supported_hosts: profile.supported_hosts,
         pin_sha256,
         patch_sha256,
         patch_path,
         package_checksum: PACKAGE_CHECKSUM.to_owned(),
         source_path: SOURCE_PATH.to_owned(),
         source_sha256: SOURCE_SHA256.to_owned(),
-        patched_sha256: PATCHED_SHA256.to_owned(),
+        patched_sha256: profile.patched_sha256.to_owned(),
     })
 }
 
-fn validate_pinned_json(pin: &Value) -> Result<()> {
-    if pin.get("schema").and_then(Value::as_str) != Some(PIN_SCHEMA)
-        || pin.get("patch_file").and_then(Value::as_str) != Some(PATCH_REPO_PATH)
-        || pin.get("patch_sha256").and_then(Value::as_str) != Some(PATCH_SHA256)
+fn validate_pinned_json(pin: &Value, profile: &PinnedOverlayProfile) -> Result<()> {
+    if pin.get("schema").and_then(Value::as_str) != Some(profile.schema)
+        || pin.get("patch_file").and_then(Value::as_str) != Some(profile.patch_repo_path)
+        || pin.get("patch_sha256").and_then(Value::as_str) != Some(profile.patch_sha256)
         || pin.get("source_path_in_vendor").and_then(Value::as_str) != Some(SOURCE_PATH)
         || pin.get("source_sha256").and_then(Value::as_str) != Some(SOURCE_SHA256)
-        || pin.get("patched_sha256").and_then(Value::as_str) != Some(PATCHED_SHA256)
+        || pin.get("patched_sha256").and_then(Value::as_str) != Some(profile.patched_sha256)
     {
         return Err(Refusal::new(
             "vendor overlay recipe has unexpected pinned inputs",
+        ));
+    }
+    let pairs = pin
+        .get("supported_host_target_pairs")
+        .and_then(Value::as_array)
+        .ok_or_else(|| Refusal::new("vendor overlay native host pairs are missing"))?;
+    if pairs.len() != profile.supported_hosts.len()
+        || pairs
+            .iter()
+            .zip(profile.supported_hosts)
+            .any(|(pair, host)| {
+                pair.get("host").and_then(Value::as_str) != Some(*host)
+                    || pair.get("target").and_then(Value::as_str) != Some(*host)
+            })
+    {
+        return Err(Refusal::new(
+            "vendor overlay native host pairs differ from its profile",
         ));
     }
     let package = pin
@@ -176,6 +230,41 @@ fn validate_pinned_json(pin: &Value) -> Result<()> {
         || package.get("cargo_lock_checksum").and_then(Value::as_str) != Some(PACKAGE_CHECKSUM)
     {
         return Err(Refusal::new("vendor overlay package pin mismatch"));
+    }
+    Ok(())
+}
+
+/// The maintainer producer is native: reported Rust host, running platform,
+/// and the exact overlay profile must agree before any work output is created.
+pub(crate) fn validate_producer_host(recipe: &Path, report: &str) -> Result<&'static str> {
+    let plan = load_pinned_plan(recipe)?;
+    let native = native_host_triple(std::env::consts::OS, std::env::consts::ARCH)?;
+    validate_host_report(report, native, plan.supported_hosts)?;
+    Ok(native)
+}
+
+fn native_host_triple(os: &str, arch: &str) -> Result<&'static str> {
+    match (os, arch) {
+        ("macos", "aarch64") => Ok("aarch64-apple-darwin"),
+        ("linux", "x86_64") => Ok("x86_64-unknown-linux-gnu"),
+        ("linux", "aarch64") => Ok("aarch64-unknown-linux-gnu"),
+        _ => Err(Refusal::new("native producer platform is not supported")),
+    }
+}
+
+fn validate_host_report(report: &str, native: &str, supported: &[&str]) -> Result<()> {
+    let mut reported = report
+        .lines()
+        .filter_map(|line| line.strip_prefix("host: "));
+    if reported.next() != Some(native) || reported.next().is_some() {
+        return Err(Refusal::new(
+            "host rustc target does not match the native producer host",
+        ));
+    }
+    if !supported.contains(&native) {
+        return Err(Refusal::new(
+            "native producer host is unsupported by the selected overlay recipe",
+        ));
     }
     Ok(())
 }
@@ -881,6 +970,7 @@ mod tests {
         let patch_path = root.join("test.patch");
         fs::write(&patch_path, b"injected patch identity").expect("write injected patch");
         OverlayPlan {
+            supported_hosts: LEGACY_PROFILE.supported_hosts,
             pin_sha256: TEST_PIN.to_owned(),
             patch_sha256: sha256_file(&patch_path).unwrap(),
             patch_path,
@@ -1082,6 +1172,121 @@ mod tests {
             PIN_SHA256
         );
         fs::remove_file(alias).unwrap();
+    }
+
+    #[test]
+    fn host_reports_require_exactly_one_native_target_supported_by_the_recipe() {
+        for host in THREE_HOST_PROFILE.supported_hosts {
+            let report = format!("release: 1.98.1\nhost: {host}\n");
+            validate_host_report(&report, host, THREE_HOST_PROFILE.supported_hosts).unwrap();
+            assert!(
+                validate_host_report(
+                    "release: 1.98.1\n",
+                    host,
+                    THREE_HOST_PROFILE.supported_hosts
+                )
+                .is_err()
+            );
+            assert!(
+                validate_host_report(
+                    &format!("{report}host: {host}\n"),
+                    host,
+                    THREE_HOST_PROFILE.supported_hosts
+                )
+                .is_err()
+            );
+            assert!(
+                validate_host_report(
+                    "host: riscv64-unknown-linux-gnu\n",
+                    host,
+                    THREE_HOST_PROFILE.supported_hosts
+                )
+                .is_err()
+            );
+            assert_eq!(
+                validate_host_report(&report, host, LEGACY_PROFILE.supported_hosts).is_ok(),
+                LEGACY_PROFILE.supported_hosts.contains(host)
+            );
+        }
+        assert_eq!(
+            native_host_triple("macos", "aarch64").unwrap(),
+            "aarch64-apple-darwin"
+        );
+        assert_eq!(
+            native_host_triple("linux", "x86_64").unwrap(),
+            "x86_64-unknown-linux-gnu"
+        );
+        assert_eq!(
+            native_host_triple("linux", "aarch64").unwrap(),
+            "aarch64-unknown-linux-gnu"
+        );
+        assert!(native_host_triple("linux", "riscv64").is_err());
+        assert!(native_host_triple("macos", "x86_64").is_err());
+    }
+
+    #[test]
+    fn known_recipe_profiles_preserve_legacy_and_bind_new_three_host_output() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../host/cargo-repro");
+        let legacy = load_pinned_plan(&root).unwrap();
+        let three_host = load_pinned_plan(&root.join("three-host-v2")).unwrap();
+        assert_eq!(legacy.pin_sha256, PIN_SHA256);
+        assert_eq!(legacy.patched_sha256, PATCHED_SHA256);
+        assert_eq!(three_host.pin_sha256, THREE_HOST_PROFILE.pin_sha256);
+        assert_eq!(three_host.patched_sha256, THREE_HOST_PROFILE.patched_sha256);
+        assert_ne!(legacy.patch_sha256, three_host.patch_sha256);
+        assert_ne!(legacy.patched_sha256, three_host.patched_sha256);
+    }
+
+    #[test]
+    fn swapped_profile_patch_and_modified_recipe_are_refused_before_output() {
+        let fixture = Fixture::new();
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../host/cargo-repro");
+        let current = root.join("three-host-v2");
+        for (index, (recipe, other)) in [(&root, &current), (&current, &root)].iter().enumerate() {
+            let copy = fixture.path().join(format!("recipe-{index}"));
+            fs::create_dir(&copy).unwrap();
+            fs::copy(
+                recipe.join("openssl-overlay.json"),
+                copy.join("openssl-overlay.json"),
+            )
+            .unwrap();
+            fs::copy(
+                other.join("openssl-paths.patch"),
+                copy.join("openssl-paths.patch"),
+            )
+            .unwrap();
+            let output = fixture.path().join(format!("output-{index}"));
+            let receipt = fixture.path().join(format!("receipt-{index}.json"));
+            let error = prepare_overlay(
+                &fixture.path().join("absent-source"),
+                &output,
+                &receipt,
+                &copy,
+            )
+            .unwrap_err();
+            assert_eq!(error.to_string(), "vendor overlay patch identity mismatch");
+            assert!(!output.exists());
+            assert!(!receipt.exists());
+            fs::copy(
+                recipe.join("openssl-paths.patch"),
+                copy.join("openssl-paths.patch"),
+            )
+            .unwrap();
+            let pin = copy.join("openssl-overlay.json");
+            let mut bytes = fs::read(&pin).unwrap();
+            bytes.push(b' ');
+            fs::write(pin, bytes).unwrap();
+            let error = prepare_overlay(
+                &fixture.path().join("absent-source"),
+                &output,
+                &receipt,
+                &copy,
+            )
+            .unwrap_err();
+            assert_eq!(error.to_string(), "vendor overlay recipe identity mismatch");
+            assert!(!output.exists());
+            assert!(!receipt.exists());
+        }
     }
 
     #[test]
