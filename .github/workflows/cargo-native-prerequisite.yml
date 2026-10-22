@@ -94,7 +94,7 @@ jobs:
               --argjson artifact_existing_bytes "$artifact_used" \
               --argjson artifact_reserved_bytes "$artifact_reserve" \
               --argjson campaign_start_epoch "$campaign_start" \
-              '{schema:$schema,status:$status,stage:$stage,triple:$triple,repository:$repository,ref:$ref,protected:$protected,runner_arch:$runner_arch,os:{id:$os_id,version:$os_version,image_os:$image_os,image_version:$image_version},ram_bytes:$ram_bytes,workspace_free_bytes:$workspace_free,runner_temp_free_bytes:$runner_temp_free_bytes,artifact_pool_bytes:$artifact_pool_bytes,artifact_existing_bytes:$artifact_existing_bytes,artifact_reserved_bytes:$artifact_reserved_bytes,campaign_start_epoch:$campaign_start_epoch}' \
+              '{schema:$schema,status:$status,stage:$stage,triple:$triple,repository:$repository,ref:$ref,protected:$protected,runner_arch:$runner_arch,os:{id:$os_id,version:$os_version,image_os:$image_os,image_version:$image_version},ram_bytes:$ram_bytes,workspace_free_bytes:$workspace_free_bytes,runner_temp_free_bytes:$runner_temp_free_bytes,artifact_pool_bytes:$artifact_pool_bytes,artifact_existing_bytes:$artifact_existing_bytes,artifact_reserved_bytes:$artifact_reserved_bytes,campaign_start_epoch:$campaign_start_epoch}' \
               > "$managed/preflight.json"
             exit "$rc"
           }
