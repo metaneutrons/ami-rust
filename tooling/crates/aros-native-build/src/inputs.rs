@@ -919,6 +919,7 @@ fn hex_digest(bytes: &[u8]) -> String {
 mod tests {
     use super::{
         FilePin, Inventory, SymlinkPin, expected_entries, parse_relative_path, verify_exact_tree,
+        verify_inventory_members,
     };
     use sha2::{Digest, Sha256};
     use std::{
@@ -976,6 +977,73 @@ mod tests {
             parse_relative_path("lib/rustlib/file").unwrap(),
             PathBuf::from("lib/rustlib/file")
         );
+    }
+
+    #[test]
+    fn rust_alias_inventory_survives_relocation_and_rejects_bad_links() {
+        use std::os::unix::fs::symlink;
+
+        let temp = TempDirectory::new();
+        let original_root = temp.0.join("prefix");
+        let target = b"pinned AROS target spec";
+        let linker = b"pinned aros-link";
+        let hosts = ["aarch64-apple-darwin", "x86_64-unknown-linux-gnu"];
+        fs::create_dir_all(original_root.join("lib/rustlib/x86_64-aros")).unwrap();
+        fs::create_dir_all(original_root.join("bin")).unwrap();
+        fs::write(
+            original_root.join("lib/rustlib/x86_64-aros/x86_64-aros.json"),
+            target,
+        )
+        .unwrap();
+        fs::write(original_root.join("bin/aros-link"), linker).unwrap();
+
+        let mut aliases = vec![SymlinkPin {
+            path: "lib/rustlib/x86_64-aros/target.json".to_owned(),
+            target: "x86_64-aros.json".to_owned(),
+        }];
+        for host in hosts {
+            let path = format!("lib/rustlib/{host}/bin/aros-link");
+            fs::create_dir_all(original_root.join(format!("lib/rustlib/{host}/bin"))).unwrap();
+            symlink("../../../../bin/aros-link", original_root.join(&path)).unwrap();
+            aliases.push(SymlinkPin {
+                path,
+                target: "../../../../bin/aros-link".to_owned(),
+            });
+        }
+        symlink(
+            "x86_64-aros.json",
+            original_root.join("lib/rustlib/x86_64-aros/target.json"),
+        )
+        .unwrap();
+        let expected = inventory(
+            vec![
+                file_pin("lib/rustlib/x86_64-aros/x86_64-aros.json", target),
+                file_pin("bin/aros-link", linker),
+            ],
+            aliases,
+        );
+        verify_inventory_members(&original_root, &expected, "Rust sysroot", None).unwrap();
+
+        let root = temp.0.join("relocated prefix with spaces");
+        fs::rename(&original_root, &root).unwrap();
+        verify_inventory_members(&root, &expected, "Rust sysroot", None).unwrap();
+
+        let target_alias = root.join("lib/rustlib/x86_64-aros/target.json");
+        fs::remove_file(&target_alias).unwrap();
+        assert!(verify_inventory_members(&root, &expected, "Rust sysroot", None).is_err());
+        symlink("wrong.json", &target_alias).unwrap();
+        assert!(verify_inventory_members(&root, &expected, "Rust sysroot", None).is_err());
+        fs::remove_file(&target_alias).unwrap();
+        let outside_target = temp.0.join("outside-target.json");
+        fs::write(&outside_target, target).unwrap();
+        symlink("../../../../outside-target.json", &target_alias).unwrap();
+        let canonical_root = fs::canonicalize(&root).unwrap();
+        assert!(
+            !fs::canonicalize(&target_alias)
+                .unwrap()
+                .starts_with(&canonical_root)
+        );
+        assert!(verify_inventory_members(&root, &expected, "Rust sysroot", None).is_err());
     }
 
     #[test]

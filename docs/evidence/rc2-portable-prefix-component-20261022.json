@@ -1,0 +1,91 @@
+{
+  "schema": "ami-rust-portable-prefix-component-evidence-v1",
+  "scope": "Actual macOS aros-native-build library tests and strict Clippy only; no complete prefix, Cargo application, target-library production, Linux/SDK/RC acceptance.",
+  "source_base": "a393d50de2ad81d15c1b5d6bddaec4c7e2e1e172",
+  "tested_source_sha256": {
+    "tooling/crates/aros-native-build/src/build.rs": "1184e4bb5c17afbded81eee25f3b01c971bb28dc86ee330861b3e0f221102e6c",
+    "tooling/crates/aros-native-build/src/inputs.rs": "d629e8fe611c16666c16e832ce5291c979e0f0b8bbb94a2de24f700470ee6b7e",
+    "tooling/crates/aros-native-build/pins/macos-aarch64/rust.json": "9acf02ab3d4a22137b6c5f82294e35c518ff1ffdbad5a701d5f3cdb0910668ea",
+    "tooling/crates/aros-native-build/pins/linux-x86_64/rust.json": "7a88373f28d19d6d61494587240681999adfb2bec964b4c3d74fae9718f097e8",
+    "tooling/crates/aros-native-build/README.md": "616fe85e5a139cf982cf430cff2840982aa47e4d4206ac703c8c54d2e2c47abf"
+  },
+  "proposal_manifest_sha256": "f0b62ac5af127b5aeda2ef84c2fe33250baa194b35202ef228b3f3293f7d9994",
+  "actual_component_result_sha256": "be09a0f957ee482202fbd9aefd991acc673396c0615897addda6bd689eb90345",
+  "actual_component_status": "PASS_MACOS_22_LIBRARY_TESTS_AND_STRICT_CLIPPY",
+  "tests_passed": 22,
+  "strict_clippy": "passed with -D warnings",
+  "elapsed_seconds": 8.030676124850288,
+  "commands": [
+    {
+      "phase": "test",
+      "record_sha256": "aab7d71e6b2ad77a7b1d4256d1b65a47c0f711defbce9692e8fd39938f2febad",
+      "passed": true,
+      "capture_complete": true,
+      "child_exit_code": 0,
+      "stdout": {
+        "bytes": 1877,
+        "sha256": "482876e4fb98bce696b59766b54e9832cebdba58086263a33ba59c2a0c4d652b"
+      },
+      "stderr": {
+        "bytes": 1300,
+        "sha256": "1ed33ce36378829718863cbed9ad71306dea94cd4a472e7cc7388b26a7ff465e"
+      },
+      "aggregate_with_driver_peak_rss_bytes": 578945024,
+      "workspace_peak_bytes": 1159478993,
+      "sample_count": 54,
+      "incomplete_cleanup": false
+    },
+    {
+      "phase": "clippy",
+      "record_sha256": "801d87645f8346c06d7702417b0dd99ac457260aecaed8453bf4abf131f87d46",
+      "passed": true,
+      "capture_complete": true,
+      "child_exit_code": 0,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "bytes": 930,
+        "sha256": "5a6842ba158e081ba7dcab9fbd9d7a326aad7ccd05f1ea00b057d0008fec3e8d"
+      },
+      "aggregate_with_driver_peak_rss_bytes": 434569216,
+      "workspace_peak_bytes": 1173189990,
+      "sample_count": 15,
+      "incomplete_cleanup": false
+    }
+  ],
+  "cases": [
+    "Effective encoded target flags cannot override linker, sysroot or target; normal optimization/cfg flags accepted.",
+    "Bare aros-link resolves only the exact relative link in the selected host slot; missing, wrong-host and absolute alias controls refuse.",
+    "RUST_TARGET_PATH unset/empty accepted; nonempty UTF-8 or non-UTF-8 refused.",
+    "Inventory verifies before and after actual prefix rename into a path with spaces; missing/wrong/physically escaping target aliases refuse."
+  ],
+  "bare_target_discovery": {
+    "result_sha256": "5e0d2c2e33ffb266a5bc8c0a64d5f3ee2399faa4cf51b830606ef323f190d1ed",
+    "status": "PASS_BARE_TARGET_SELECTED_SYSROOT_RELATIVE_ALIAS_RELOCATION_AND_REFUSAL_CONTROLS",
+    "actual_compiler_commands": 7,
+    "scope": "Pinned compiler target-spec lookup only; short-lived children lack complete RSS samples."
+  },
+  "real_codegen_dependency": {
+    "result_sha256": "3d5138aab20ab5b20825a8fb0362a40d76be2f5ea40706df69dbcef223aedb07",
+    "absolute_json_target_exit_code": 0,
+    "bare_target_exit_code": 1,
+    "diagnostic": "E0461: old core/compiler_builtins metadata identifies x86_64-aros-10008448819653387821; bare target expects x86_64-aros.",
+    "resolution": "Produce new core, alloc and compiler_builtins from pinned sources with the bare target. Preserve old libraries and the ABI baseline; do not edit rlib metadata."
+  },
+  "limits": {
+    "aggregate_rss_bytes": 4294967296,
+    "workspace_bytes": 12884901888,
+    "logs_bytes": 16777216,
+    "command_seconds": 1200
+  },
+  "limitations": [
+    "Actual new crate checks are macOS Apple Silicon only; Linux qualification remains required.",
+    "This changes prospective inventory expectations and guards; it does not compose a complete toolchain or qualify a Cargo application build.",
+    "Original prefixes/target libraries remain unchanged. New target-library production and paired Cargo host input admission are open.",
+    "Temporary internal Python supervision remains; no complete Python retirement claim.",
+    "L1 and RC2-RC5 remain unaccepted. No SDK publication or native AROS compiler/rustup claim."
+  ],
+  "independent_actual_review_sha256": "18c4435b9233c6a7e090c085430af8fda807dc408401bb2daca81bf2146cd911"
+}

@@ -9,7 +9,7 @@ use std::{
     env,
     fs::{self, OpenOptions},
     io::{Read, Write},
-    os::unix::fs::OpenOptionsExt,
+    os::unix::{ffi::OsStrExt, fs::OpenOptionsExt},
     path::{Path, PathBuf},
     process::Command,
 };
@@ -82,6 +82,7 @@ pub(crate) struct NativeObjects {
 /// This function runs from the application's additive build script. It never
 /// calls Cargo, resolves dependencies, downloads inputs or changes rustup state.
 pub fn prepare(options: BuildOptions) -> Result<()> {
+    verify_rust_target_path(env::var_os("RUST_TARGET_PATH").as_deref())?;
     if env::var("TARGET").ok().as_deref() != Some("x86_64-aros") {
         return Err(Refusal::new("native bridge requires TARGET=x86_64-aros"));
     }
@@ -99,6 +100,7 @@ pub fn prepare(options: BuildOptions) -> Result<()> {
             "Cargo host does not match the admitted native tools",
         ));
     }
+    verify_target_rustflags(env::var_os("CARGO_ENCODED_RUSTFLAGS").as_deref())?;
     for name in ["RUSTC_WRAPPER", "RUSTC_WORKSPACE_WRAPPER"] {
         if env::var_os(name).is_some_and(|value| !value.is_empty()) {
             return Err(Refusal::new(format!(
@@ -126,9 +128,7 @@ pub fn prepare(options: BuildOptions) -> Result<()> {
     verify_selected_compiler(&compiler, &tc, default_proxy)?;
     let linker = env::var_os("RUSTC_LINKER")
         .ok_or_else(|| Refusal::new("Cargo must explicitly select this toolchain's aros-link"))?;
-    if fs::canonicalize(linker)? != fs::canonicalize(tc.root().join("bin/aros-link"))? {
-        return Err(Refusal::new("Cargo selected a different target linker"));
-    }
+    verify_selected_linker(Path::new(&linker), tc.root(), host)?;
     let cargo = env::var_os("CARGO")
         .ok_or_else(|| Refusal::new("Cargo did not identify its executable"))?;
     if fs::canonicalize(cargo)? != fs::canonicalize(tc.cargo())? {
@@ -209,6 +209,7 @@ pub fn prepare(options: BuildOptions) -> Result<()> {
         "CARGO_HOME",
         "RUST_TARGET_PATH",
         "RUSTFLAGS",
+        "CARGO_ENCODED_RUSTFLAGS",
         "RUSTC_WRAPPER",
         "RUSTC_WORKSPACE_WRAPPER",
         "PATH",
@@ -225,6 +226,84 @@ pub fn prepare(options: BuildOptions) -> Result<()> {
         "cargo::rustc-link-arg=--ami-native-objects={}",
         cargo_path(&objects)?
     );
+    Ok(())
+}
+
+/// Cargo supplies the effective target flags as unit-separated arguments.
+/// Tool selection belongs to the selected prefix and Cargo's linker setting.
+fn verify_target_rustflags(flags: Option<&std::ffi::OsStr>) -> Result<()> {
+    let Some(flags) = flags else {
+        return Ok(());
+    };
+    let mut codegen_argument = false;
+    for flag in flags.as_bytes().split(|byte| *byte == 0x1f) {
+        if flag == b"--sysroot"
+            || flag.starts_with(b"--sysroot=")
+            || flag == b"--target"
+            || flag.starts_with(b"--target=")
+        {
+            return Err(Refusal::new(
+                "AROS target flags must not override the selected sysroot or target",
+            ));
+        }
+        if flag == b"-C" || flag == b"--codegen" {
+            codegen_argument = true;
+            continue;
+        }
+        let value = if codegen_argument {
+            Some(flag)
+        } else {
+            flag.strip_prefix(b"-C=")
+                .or_else(|| flag.strip_prefix(b"-C"))
+                .or_else(|| flag.strip_prefix(b"--codegen="))
+        };
+        codegen_argument = false;
+        if value.is_some_and(|value| {
+            matches!(
+                value.split(|byte| *byte == b'=').next(),
+                Some(b"linker" | b"linker-flavor")
+            )
+        }) {
+            return Err(Refusal::new(
+                "AROS target flags must not override Cargo's selected target linker",
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Match rustc's bundled-tool lookup without accepting ambient PATH fallback.
+fn verify_selected_linker(linker: &Path, root: &Path, host: &str) -> Result<()> {
+    let expected = fs::canonicalize(root.join("bin/aros-link"))?;
+    let selected = if linker == Path::new("aros-link") {
+        let bundled = root.join("lib/rustlib").join(host).join("bin/aros-link");
+        if fs::read_link(&bundled)? != Path::new("../../../../bin/aros-link") {
+            return Err(Refusal::new(
+                "selected toolchain's bundled aros-link has an unexpected destination",
+            ));
+        }
+        fs::canonicalize(bundled)?
+    } else {
+        if linker.components().count() <= 1 {
+            return Err(Refusal::new(
+                "Cargo selected an unsupported bare target linker",
+            ));
+        }
+        fs::canonicalize(linker)?
+    };
+    if selected != expected {
+        return Err(Refusal::new("Cargo selected a different target linker"));
+    }
+    Ok(())
+}
+
+/// Refuse ambient target search paths before opening or preparing native inputs.
+fn verify_rust_target_path(path: Option<&std::ffi::OsStr>) -> Result<()> {
+    if path.is_some_and(|path| !path.is_empty()) {
+        return Err(Refusal::new(
+            "RUST_TARGET_PATH must be unset or empty for the selected toolchain",
+        ));
+    }
     Ok(())
 }
 
@@ -633,6 +712,70 @@ mod tests {
         fn drop(&mut self) {
             fs::remove_dir_all(&self.0).unwrap();
         }
+    }
+
+    #[test]
+    fn effective_target_flags_cannot_replace_tool_selection() {
+        use std::ffi::OsStr;
+        verify_target_rustflags(None).unwrap();
+        verify_target_rustflags(Some(OsStr::new(
+            "-Zunstable-options\x1f-Copt-level=2\x1f-C\x1fpanic=abort",
+        )))
+        .unwrap();
+        for flags in [
+            "-Clinker=other",
+            "-C=linker=other",
+            "-C\x1flinker=other",
+            "--codegen=linker=other",
+            "--codegen\x1flinker=other",
+            "-Clinker-flavor=gcc",
+            "--sysroot=/other",
+            "--sysroot\x1f/other",
+            "--target=other",
+            "--target\x1fother",
+        ] {
+            assert!(
+                verify_target_rustflags(Some(OsStr::new(flags))).is_err(),
+                "{flags:?}"
+            );
+        }
+        verify_target_rustflags(Some(OsStr::new("--cfg\x1ffeature=\"--sysroot\""))).unwrap();
+    }
+
+    #[test]
+    fn rust_target_path_must_be_unset_or_empty() {
+        use std::{ffi::OsStr, os::unix::ffi::OsStrExt};
+
+        verify_rust_target_path(None).unwrap();
+        verify_rust_target_path(Some(OsStr::new(""))).unwrap();
+        assert!(verify_rust_target_path(Some(OsStr::new("/other/targets"))).is_err());
+        assert!(verify_rust_target_path(Some(OsStr::from_bytes(b"\xff"))).is_err());
+    }
+
+    #[test]
+    fn bare_linker_uses_only_the_selected_host_slot() {
+        let temp = Temp::new();
+        let root = temp.0.join("prefix with spaces");
+        fs::create_dir_all(root.join("bin")).unwrap();
+        fs::write(root.join("bin/aros-link"), b"selected linker").unwrap();
+        let slot = root.join("lib/rustlib/aarch64-apple-darwin/bin/aros-link");
+        fs::create_dir_all(slot.parent().unwrap()).unwrap();
+        assert!(
+            verify_selected_linker(Path::new("aros-link"), &root, "aarch64-apple-darwin").is_err()
+        );
+        std::os::unix::fs::symlink("../../../../bin/aros-link", &slot).unwrap();
+        verify_selected_linker(Path::new("aros-link"), &root, "aarch64-apple-darwin").unwrap();
+        verify_selected_linker(&root.join("bin/aros-link"), &root, "aarch64-apple-darwin").unwrap();
+        assert!(
+            verify_selected_linker(Path::new("aros-link"), &root, "x86_64-unknown-linux-gnu")
+                .is_err()
+        );
+        assert!(verify_selected_linker(Path::new("gcc"), &root, "aarch64-apple-darwin").is_err());
+        fs::remove_file(&slot).unwrap();
+        std::os::unix::fs::symlink(root.join("bin/aros-link"), &slot).unwrap();
+        assert!(
+            verify_selected_linker(Path::new("aros-link"), &root, "aarch64-apple-darwin").is_err()
+        );
     }
 
     #[test]

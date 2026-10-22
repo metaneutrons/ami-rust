@@ -19416,5 +19416,14 @@
       "sha256": "4ef3d025b716cff7960ae3e01b9e4417db273e5ceaad531c3d223c0fe7f9570f"
     }
   ],
-  "symlinks": []
+  "symlinks": [
+    {
+      "path": "lib/rustlib/x86_64-aros/target.json",
+      "target": "x86_64-aros.json"
+    },
+    {
+      "path": "lib/rustlib/x86_64-unknown-linux-gnu/bin/aros-link",
+      "target": "../../../../bin/aros-link"
+    }
+  ]
 }
