@@ -5,6 +5,8 @@ edition.workspace = true
 publish = false
 license.workspace = true
 description = "Task-affine, allocation-free safe wrappers for the bounded AROS M1 SDK"
+repository = "https://github.com/metaneutrons/ami-rust"
+homepage = "https://github.com/metaneutrons/ami-rust"
 
 readme = "README.md"
 [dependencies]

@@ -8,6 +8,7 @@ repository = "https://github.com/metaneutrons/ami-rust"
 description = "AROS x86-64 ABI-v1 native ELF validation and section compaction"
 readme = "README.md"
 publish = false
+homepage = "https://github.com/metaneutrons/ami-rust"
 
 [dependencies]
 serde = { version = "=1.0.228", features = ["derive"] }

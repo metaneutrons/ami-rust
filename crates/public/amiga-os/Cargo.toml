@@ -3,6 +3,9 @@ name = "amiga-os"
 version.workspace = true
 edition.workspace = true
 publish = false
+description = "Public task-affine Rust API for the selected x86-64 AROS ABI-v1 runtime."
+repository = "https://github.com/metaneutrons/ami-rust"
+homepage = "https://github.com/metaneutrons/ami-rust"
 license.workspace = true
 readme = "README.md"
 [features]

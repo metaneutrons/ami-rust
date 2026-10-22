@@ -96,10 +96,11 @@ fn application(ctx: &Context) -> AppStatus {
 amiga_os::entry!(application);
 ```
 
-`amiga-os` is the public facade. `amiga-sys` exposes the unsafe ABI boundary;
-`amiga-alloc` provides the native allocator. See the [API guide](docs/api.md)
-for file I/O, borrowed output streams, library lifetimes, signals, messages,
-and synchronous callbacks.
+`amiga-os` is the public facade, and `amiga-alloc` provides the native allocator.
+The intended public raw ABI crate is `aros-sys`; `amiga-sys` remains an unpublished
+local compatibility facade. See the [API guide](docs/api.md) for file I/O,
+borrowed output streams, library lifetimes, signals, messages and synchronous
+callbacks, including the unsafe boundary and supported interfaces.
 
 ## Get started
 

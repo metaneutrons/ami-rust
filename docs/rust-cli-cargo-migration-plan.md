@@ -130,10 +130,14 @@ keep no dispatcher or separate application build engine merely for compatibility
 
 ### Crate boundaries
 
-- **Target libraries:** use the existing `amiga-sys`, `amiga-os`, `amiga-alloc`
-  facade and `aros-*` implementation crates as the starting inventory. Preserve
-  ABI, ownership, task-affinity and optional-allocation contracts. Registry names
-  and publication eligibility are not assumed from workspace directory names.
+- **Target libraries:** `aros-sys` is the intended public raw, unsafe ABI crate.
+  `amiga-os` and `amiga-alloc` are public facades; `aros-alloc`, `aros-runtime` and
+  `aros-sdk` provide their implementation. Keep `amiga-sys` as an unpublished
+  local compatibility facade only: the 2026-10-21 namespace survey records that
+  crates.io name as an unrelated registered crate. Preserve ABI, ownership,
+  task-affinity and optional-allocation contracts. A recorded 404 for `aros-sys`
+  is not a reservation, name-availability guarantee, ownership proof or publish
+  authorization.
 - **Runtime/build integration:** provide ordinary dependencies and `build.rs`
   integration for startup, C bridge objects and native link directives. Compose
   with developer build scripts; do not overwrite their source or implement a
@@ -176,9 +180,20 @@ migration CLI, silently rewrite locks, or execute an old Python launcher.
 
 Crate delivery requires real package manifests, versioned dependencies (no escaping
 workspace-only paths), preserved licences/source obligations, a verified registry
-publisher/name and a tested release order. Qualify `cargo package` archives and
-fresh consumers of the exact delivered crates; a local workspace build is not
-registry-distribution evidence. Do not publish while these gates are unmet.
+publisher/name and a tested release order. The current target-library order must
+place `aros-sys` before `aros-alloc`, then `aros-runtime`, then `aros-sdk`; `amiga-alloc`
+follows `aros-alloc`, and `amiga-os` follows both `aros-runtime` and `aros-sdk`.
+The separate tooling chain is `aros-elf` before `aros-native-build`. The target and
+tooling chains have no dependency edge between them in the current manifests, so
+their relative interleaving is arbitrary. Exclude the local `amiga-sys`
+compatibility facade. Recompute these orders from the exact release manifests and
+archives before publication. The dated namespace survey is unauthenticated: it
+records `amiga-sys` as occupied and `aros-sys` as returning 404, which proves
+neither name entitlement nor publishing access. All current manifests remain
+`publish = false` until the separate RC3 package/name/authentication gates are
+satisfied. Qualify `cargo package` archives and fresh consumers of the exact
+delivered crates; a local workspace build is not registry-distribution evidence.
+Do not publish while these gates are unmet.
 
 Rustup registration selects tools; it does not authenticate SDK contents, provide
 a C SDK or install arbitrary third-party toolchains from a name. Reuse existing
