@@ -405,8 +405,9 @@ def retain_bootstrap_evidence(prefix: Path, artifact: Path) -> dict:
             raise ValueError("A2 bootstrap records contain too many files")
         valid_entries = []
         for path in entries:
-            allowed_members = (path.name.endswith(".members.txt") and
-                               path.name.startswith(("rustc-nightly-", "rust-std-nightly-", "rust-src-nightly-")))
+            allowed_members = (path.name == "rust-src-nightly.members.txt" or
+                               (path.name.endswith(".members.txt") and
+                                path.name.startswith(("rustc-nightly-", "rust-std-nightly-"))))
             if path.is_symlink() or not path.is_file() or not (allowed_members or path.name in BOOTSTRAP_RECORD_NAMES):
                 raise ValueError("A2 bootstrap records contain an unexpected path or non-regular file")
             valid_entries.append(path)
