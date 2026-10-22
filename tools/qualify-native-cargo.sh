@@ -171,7 +171,19 @@ driver_env() {
 run_q() {
   local label=$1 program=$2 cwd=$3 environment_json=$4
   shift 4
-  local campaign_limit limit record request_path cli_path request request_sha limits_json record_request_sha record_child_exit rc cleanup_status
+  local campaign_limit limit record request_path cli_path request request_sha limits_json record_request_sha record_child_exit rc cleanup_status actual_program
+  case "$program" in
+    /*) ;;
+    *) echo "qualification command program must be absolute: $program" >&2; return 125 ;;
+  esac
+  actual_program=$(/usr/bin/readlink -e -- "$program") || {
+    echo "qualification command program cannot be resolved: $program" >&2
+    return 125
+  }
+  if [ ! -f "$actual_program" ] || [ ! -x "$actual_program" ]; then
+    echo "qualification command program is not an executable regular file: $program" >&2
+    return 125
+  fi
   campaign_limit=$(campaign_budget) || return 124
   limit=$MAX_SECONDS
   sequence=$((sequence + 1))
@@ -185,7 +197,7 @@ run_q() {
   mkdir -m 700 "$cli_path" || return 125
   request=$(jq -cn \
     --arg schema "$REQUEST_SCHEMA" \
-    --arg program "$program" \
+    --arg program "$actual_program" \
     --arg cwd "$cwd" \
     --argjson environment "$environment_json" \
     --arg root_source "$REPO" \
@@ -208,10 +220,11 @@ run_q() {
     --arg phase "$label" \
     --arg request_sha256 "$request_sha" \
     --arg record "$record/result.json" \
-    --arg program "$program" \
+    --arg program "$actual_program" \
+    --arg requested_program "$program" \
     --arg cwd "$cwd" \
     --argjson limits "$limits_json" \
-    '{schema:$schema,phase:$phase,request_sha256:$request_sha256,record:$record,program:$program,cwd:$cwd,limits:$limits}' \
+    '{schema:$schema,phase:$phase,request_sha256:$request_sha256,record:$record,requested_program:$requested_program,program:$program,cwd:$cwd,limits:$limits}' \
     > "$PHASE_INDEX/$(printf '%03d' "$sequence")-$label.json" || return 125
 
   if [ -e "$PHASE_ACTIVE" ] || [ -e "$PHASE_ACTIVE.tmp" ]; then
