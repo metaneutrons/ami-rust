@@ -44,6 +44,9 @@ pub mod publisher_materials;
 pub mod publisher_metadata;
 pub mod publisher_policy;
 pub mod publisher_tar;
+/// Maintainer-only one-command qualification API.
+#[doc(hidden)]
+pub mod qualification_command;
 pub mod ready_state;
 pub mod receipts;
 pub mod records;

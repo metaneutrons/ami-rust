@@ -385,6 +385,12 @@ jobs:
             --manifest-path tooling/Cargo.toml \
             --target-dir "$RUNNER_TEMP/ami-rust-aarch64-report-tests" \
             --package ami-rust-xtask --bin ami-rust-xtask consumer_report::tests
+          # Exercise the new process-wide signal/resource helper natively on ARM64.
+          "$cli_rust/cargo" test --locked --offline \
+            --manifest-path tooling/Cargo.toml \
+            --target-dir "$RUNNER_TEMP/ami-rust-aarch64-report-tests" \
+            --package ami-rust-core --lib qualification_command \
+            -- --test-threads=1
           "$cli_rust/cargo" build --locked --offline \
             --manifest-path tools/consumer-enforcement-adapter/Cargo.toml \
             --target-dir "$RUNNER_TEMP/ami-rust-aarch64-adapter"
