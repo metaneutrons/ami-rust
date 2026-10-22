@@ -2,6 +2,8 @@
 > packages. Their CLI implementation is retired in the development tree. Use the
 > [released source](https://github.com/metaneutrons/ami-rust/tree/v0.1.0) for replay.
 > The next release uses rustup, normal Cargo and crates; see the migration plan.
+> For the upcoming crate-based release, use `aros-sys` for raw ABI access.
+> The local `amiga-sys` compatibility facade remains unpublished.
 
 # ami-rust production installation recipe
 
@@ -135,8 +137,8 @@ C SDK, vendor tree or native payload is copied. The project retains its source
 snapshot and original licence/modification files after uninstall. Regenerate
 or explicitly review that snapshot when selecting a new SDK version.
 
-Use `aros-sys` only at the unsafe ABI boundary; prefer the task-affine
-`amiga-os` API. The local `amiga-sys` compatibility facade remains unpublished. Tasks, library lifetime, buffer ownership and callbacks remain
+Use SDK `amiga-sys` only at the unsafe ABI boundary; prefer the task-affine
+`amiga-os` API. Tasks, library lifetime, buffer ownership and callbacks remain
 bounded by the delivered `SDK-API.md`. A fallible allocation operation such as
 `Vec::try_reserve` can report refusal in its own error type; `amiga_os::ErrorKind`
 has no out-of-memory variant. The global allocator returns null on native

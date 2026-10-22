@@ -37,9 +37,9 @@
       "source": "release/bundle-assets/QUICKSTART.md"
     },
     {
-      "bytes": 13858,
+      "bytes": 14063,
       "path": "SDK-API.md",
-      "sha256": "f924a9bf729ee87dad4da50e0021b0bbb086d648872d2902c9e0440a233339d9",
+      "sha256": "06d597be428b355d8d3f6cddaf09a85aacd884c71d4945456265a528b3aa7984",
       "source": "docs/api.md"
     },
     {
