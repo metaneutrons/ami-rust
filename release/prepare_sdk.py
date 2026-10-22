@@ -24,6 +24,8 @@ HOSTS = {
     "macos-aarch64": "aarch64-apple-darwin",
     "linux-x86_64": "x86_64-unknown-linux-gnu",
 }
+PORTABLE_CSDK_HOSTS = ("linux-aarch64", "linux-x86_64", "macos-aarch64")
+PORTABLE_CSDK_ARM_TOOLCHAIN_ARCHIVE_URL = "https://github.com/metaneutrons/aros-toolchains/releases/download/v0.1.4/aros-toolchain-v1-llvm11.0.0-linux-aarch64-pc-x86_64.tar.xz"
 REQUIRED_EXTRAS = {
     "README.md",
     "contract/linux-x86_64-profile.json",
@@ -69,7 +71,7 @@ def _validate_portable_csdk_spec(spec: dict) -> None:
     }
     if set(spec) != expected_keys or spec.get("schema") != "ami-rust-portable-csdk-v1":
         raise ValueError("portable C-SDK specification has an unsupported schema or fields")
-    if spec.get("status") != "PINNED_CANDIDATE_TWO_HOST_QUALIFICATION_REQUIRED":
+    if spec.get("status") != "PINNED_CANDIDATE_THREE_HOST_QUALIFICATION_REQUIRED":
         raise ValueError("portable C-SDK specification does not identify an unqualified candidate")
 
     def validate_path_pin(value: object, label: str, *, path_key: str = "path") -> None:
@@ -135,11 +137,23 @@ def _validate_portable_csdk_spec(spec: dict) -> None:
         raise ValueError("portable C-SDK required file and change counts differ from the reviewed values")
 
     toolchains = spec.get("toolchains")
-    if not isinstance(toolchains, dict) or set(toolchains) != set(HOSTS):
+    if not isinstance(toolchains, dict) or set(toolchains) != set(PORTABLE_CSDK_HOSTS):
         raise ValueError("portable C-SDK toolchain pins are incomplete")
     for host, components in toolchains.items():
-        if not isinstance(components, dict) or set(components) != {"compiler", "profile"}:
+        expected = {"compiler", "profile"} | ({"archive"} if host == "linux-aarch64" else set())
+        if not isinstance(components, dict) or set(components) != expected:
             raise ValueError(f"portable C-SDK {host} toolchain identity is malformed")
+        if host == "linux-aarch64":
+            archive = components["archive"]
+            if (not isinstance(archive, dict)
+                    or set(archive) != {"kind", "url", "bytes", "sha256", "archive_root"}
+                    or archive.get("kind") != "tar"
+                    or archive.get("url") != PORTABLE_CSDK_ARM_TOOLCHAIN_ARCHIVE_URL
+                    or archive.get("archive_root") != "toolchain"
+                    or type(archive.get("bytes")) is not int or archive["bytes"] <= 0
+                    or not isinstance(archive.get("sha256"), str)
+                    or not SHA256.fullmatch(archive["sha256"])):
+                raise ValueError("malformed portable C-SDK Linux/AArch64 archive pin")
         validate_path_pin(components["compiler"], f"{host} compiler")
         validate_path_pin(components["profile"], f"{host} toolchain profile")
 

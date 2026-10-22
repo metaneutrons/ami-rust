@@ -149,7 +149,7 @@
   },
   "portable_csdk": {
     "path": "release/portable-csdk/spec.json",
-    "bytes": 2900,
-    "sha256": "7cb73dd7057feac1bf1a7f1bbf2172934cc06555e2b83938a93cb1b2bfe3178f"
+    "bytes": 3662,
+    "sha256": "1b6f413082dc2ee087d91bc9838850a9f42f7f4a28829bfcb88d60ed1dacfdb3"
   }
 }

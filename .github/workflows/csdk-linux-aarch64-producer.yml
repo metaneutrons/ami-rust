@@ -1,0 +1,286 @@
+name: Portable C-SDK Linux AArch64 candidate (internal)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ami-rust-protected-builds
+  cancel-in-progress: false
+
+jobs:
+  produce:
+    name: Linux AArch64 portable C-SDK candidate
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    steps:
+      - id: preflight
+        name: Check protected source, capacity, and artifact pool before checkout
+        timeout-minutes: 2
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          REF_NAME: ${{ github.ref }}
+          REF_PROTECTED: ${{ github.ref_protected }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          umask 077
+          campaign_start=$(date +%s)
+          attempt="$RUNNER_TEMP/ami-rust-portable-csdk/$RUN_ID-$RUN_ATTEMPT"
+          managed="$attempt/managed"
+          outer_output="$attempt/outer-output"
+          artifact_name="portable-csdk-linux-aarch64-$RUN_ID-$RUN_ATTEMPT"
+          mkdir -p "$(dirname "$attempt")"
+          if [ -e "$attempt" ] || [ -L "$attempt" ]; then
+            echo "managed attempt root already exists" >&2
+            exit 1
+          fi
+          mkdir -m 700 "$attempt"
+          mkdir -m 700 "$managed" "$outer_output"
+          mkdir -m 700 "$outer_output/artifact"
+          {
+            printf 'CSDK_CAMPAIGN_START_EPOCH=%s\n' "$campaign_start"
+            printf 'CSDK_MANAGED_ROOT=%s\n' "$managed"
+            printf 'CSDK_OUTER_OUTPUT=%s\n' "$outer_output"
+            printf 'CSDK_ARTIFACT_NAME=%s\n' "$artifact_name"
+          } >> "$GITHUB_ENV"
+
+          stage=identity
+          ram_bytes=0
+          workspace_free=0
+          runner_temp_free=0
+          artifact_pool=0
+          artifact_existing=0
+          artifact_reserve=$((3 * 128 * 1024 * 1024))
+          artifact_policy_sha256=unavailable
+          preflight_status=FAILED
+          write_preflight() {
+            local rc=$?
+            trap - EXIT
+            jq -n \
+              --arg schema ami-rust-portable-csdk-host-preflight-v1 \
+              --arg status "$preflight_status" \
+              --arg stage "$stage" \
+              --arg repository "$REPOSITORY" \
+              --arg head "$GITHUB_SHA" \
+              --arg ref "$REF_NAME" \
+              --argjson protected "$REF_PROTECTED" \
+              --arg runner_arch "$(uname -m 2>/dev/null || echo unavailable)" \
+              --arg image_os "${ImageOS:-unavailable}" \
+              --arg image_version "${ImageVersion:-unavailable}" \
+              --argjson ram_bytes "$ram_bytes" \
+              --argjson workspace_free_bytes "$workspace_free" \
+              --argjson runner_temp_free_bytes "$runner_temp_free" \
+              --argjson artifact_pool_bytes "$artifact_pool" \
+              --argjson artifact_existing_bytes "$artifact_existing" \
+              --argjson artifact_reserved_bytes "$artifact_reserve" \
+              --arg artifact_policy_sha256 "$artifact_policy_sha256" \
+              --arg artifact_name "$artifact_name" \
+              --argjson campaign_start_epoch "$campaign_start" \
+              '{schema:$schema,status:$status,stage:$stage,repository:$repository,head:$head,ref:$ref,protected:$protected,runner_arch:$runner_arch,image:{os:$image_os,version:$image_version},ram_bytes:$ram_bytes,workspace_free_bytes:$workspace_free_bytes,runner_temp_free_bytes:$runner_temp_free_bytes,artifact_pool_bytes:$artifact_pool,artifact_existing_bytes:$artifact_existing,artifact_reserved_bytes:$artifact_reserved,artifact_policy_sha256:$artifact_policy_sha256,artifact_name:$artifact_name,campaign_start_epoch:$campaign_start_epoch}' \
+              > "$managed/preflight.json"
+            exit "$rc"
+          }
+          trap write_preflight EXIT
+
+          test "$EVENT_NAME" = workflow_dispatch
+          test "$REPOSITORY" = metaneutrons/ami-rust
+          test "$REF_NAME" = refs/heads/main
+          test "$REF_PROTECTED" = true
+          test "$(uname -s)" = Linux
+          test "$(uname -m)" = aarch64
+          test -n "${ImageOS:-}"
+          test -n "${ImageVersion:-}"
+          os_id=$(sed -n 's/^ID=//p' /etc/os-release | tr -d '"')
+          os_version=$(sed -n 's/^VERSION_ID=//p' /etc/os-release | tr -d '"')
+          test "$os_id" = ubuntu
+          test "$os_version" = 24.04
+
+          stage=capacity
+          ram_bytes=$(awk '/^MemTotal:/ {printf "%.0f\n", $2 * 1024}' /proc/meminfo)
+          workspace_free=$(df -B1 --output=avail "$GITHUB_WORKSPACE" | tail -n 1 | tr -d ' ')
+          runner_temp_free=$(df -B1 --output=avail "$RUNNER_TEMP" | tail -n 1 | tr -d ' ')
+          test "$ram_bytes" -ge 6442450944
+          test "$workspace_free" -ge 25769803776
+          test "$runner_temp_free" -ge 25769803776
+
+          stage=artifact-policy
+          policy_path="$managed/ci-artifact-policy.json"
+          timeout --foreground 60 gh api \
+            -H 'Accept: application/vnd.github.raw+json' \
+            "repos/$REPOSITORY/contents/release/ci-artifact-policy.json?ref=$GITHUB_SHA" \
+            > "$policy_path"
+          artifact_policy_sha256=$(sha256sum "$policy_path" | cut -d ' ' -f 1)
+          artifact_pool=$(jq -er 'select(.schema == "ami-rust-ci-artifact-policy-v1") | .CI_artifact_pool_bytes | select(type == "number" and . == floor and . > 0)' "$policy_path")
+          test "$artifact_pool" -ge "$artifact_reserve"
+
+          stage=artifact-capacity
+          artifact_pages=$(timeout --foreground 60 gh api --paginate --slurp \
+            "repos/$REPOSITORY/actions/artifacts?per_page=100")
+          artifact_existing=$(jq -er '[.[].artifacts[] | select(.expired == false) | .size_in_bytes] | add // 0' <<<"$artifact_pages")
+          test "$artifact_existing" -le "$((artifact_pool - artifact_reserve))"
+          printf 'CSDK_POLICY_SHA256=%s\n' "$artifact_policy_sha256" >> "$GITHUB_ENV"
+          preflight_status=PASS
+          stage=complete
+
+      - id: checkout
+        name: Check out the exact admitted source
+        timeout-minutes: 5
+        if: steps.preflight.outcome == 'success'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - id: produce
+        name: Verify pinned ARM LLVM and reproduce the C-SDK candidate
+        timeout-minutes: 74
+        if: steps.preflight.outcome == 'success' && steps.checkout.outcome == 'success'
+        shell: bash
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          exec python3 -I -B \
+            "$GITHUB_WORKSPACE/source/tools/supervise-portable-csdk-linux-aarch64.py" \
+            --repo "$GITHUB_WORKSPACE/source" \
+            --managed-root "$CSDK_MANAGED_ROOT" \
+            --outer-output "$CSDK_OUTER_OUTPUT"
+
+      - id: finalize
+        name: Finalize status and bounded evidence (always)
+        timeout-minutes: 1
+        if: always()
+        shell: bash
+        env:
+          GH_JOB_STATUS: ${{ job.status }}
+          PREFLIGHT_OUTCOME: ${{ steps.preflight.outcome }}
+          CHECKOUT_OUTCOME: ${{ steps.checkout.outcome }}
+          PRODUCE_OUTCOME: ${{ steps.produce.outcome }}
+        run: |
+          printf 'artifact_within_bound=false\n' >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          artifact="$CSDK_OUTER_OUTPUT/artifact"
+          test -d "$artifact"
+          if [ -f "$CSDK_MANAGED_ROOT/preflight.json" ]; then
+            command cp "$CSDK_MANAGED_ROOT/preflight.json" "$artifact/preflight.json"
+          fi
+          result=FAILED
+          if [ "$GH_JOB_STATUS" = success ] \
+            && [ "$PREFLIGHT_OUTCOME" = success ] \
+            && [ "$CHECKOUT_OUTCOME" = success ] \
+            && [ "$PRODUCE_OUTCOME" = success ] \
+            && jq -e '.schema == "ami-rust-portable-csdk-linux-aarch64-supervision-v1" and .status == "PREREQUISITE_ONLY" and .inner_status == "CANDIDATE_ONLY" and .source_capsule_exported == false and .producer_staging_exported == false and .sdk_l1_rc4_or_release_acceptance == false' "$artifact/driver-result.json" >/dev/null; then
+            result=PREREQUISITE_ONLY
+          fi
+          ended_epoch=$(date +%s)
+          campaign_start=${CSDK_CAMPAIGN_START_EPOCH:-$ended_epoch}
+          elapsed_seconds=$((ended_epoch - campaign_start))
+          if [ "$elapsed_seconds" -gt 5100 ]; then result=FAILED; fi
+          jq -n \
+            --arg schema ami-rust-portable-csdk-workflow-result-v1 \
+            --arg status "$result" \
+            --arg claim "C-SDK candidate prerequisite only; not Rust, SDK, L1, RC4, or release qualification" \
+            --arg job_status "$GH_JOB_STATUS" \
+            --arg preflight_outcome "$PREFLIGHT_OUTCOME" \
+            --arg checkout_outcome "$CHECKOUT_OUTCOME" \
+            --arg produce_outcome "$PRODUCE_OUTCOME" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg sha "$GITHUB_SHA" \
+            --arg artifact_name "$CSDK_ARTIFACT_NAME" \
+            --argjson campaign_start_epoch "$campaign_start" \
+            --argjson ended_epoch "$ended_epoch" \
+            --argjson elapsed_seconds "$elapsed_seconds" \
+            '{schema:$schema,status:$status,claim:$claim,job_status:$job_status,steps:{preflight:$preflight_outcome,checkout:$checkout_outcome,produce:$produce_outcome},repository:$repository,head:$sha,artifact_name:$artifact_name,campaign:{started_epoch:$campaign_start_epoch,ended_epoch:$ended_epoch,elapsed_seconds:$elapsed_seconds,budget_seconds:5400,producer_deadline_seconds:4400,finalization_deadline_seconds:5100,review_reserve_seconds:300},SDK_or_RC4_acceptance:false}' \
+            > "$artifact/workflow-result.json"
+
+          write_artifact_size() {
+            local measured payload=0 iteration stable=false
+            for ((iteration = 0; iteration < 8; iteration++)); do
+              jq -n \
+                --arg schema ami-rust-portable-csdk-artifact-size-v1 \
+                --arg status "$result" \
+                --argjson payload_bytes "$payload" \
+                --argjson payload_limit_bytes 133169152 \
+                --argjson uploaded_artifact_limit_bytes 134217728 \
+                '{schema:$schema,status:$status,payload_bytes:$payload_bytes,payload_limit_bytes:$payload_limit_bytes,uploaded_artifact_limit_bytes:$uploaded_artifact_limit_bytes}' \
+                > "$artifact/artifact-size.json" || return 1
+              measured=$(python3 -I -B - "$artifact" <<'PY'
+          import os
+          import stat
+          import sys
+          total = 0
+          for directory, dirs, names in os.walk(sys.argv[1], followlinks=False):
+              if any(os.path.islink(os.path.join(directory, name)) for name in dirs):
+                  raise SystemExit("artifact contains a symlink directory")
+              for name in names:
+                  path = os.path.join(directory, name)
+                  info = os.stat(path, follow_symlinks=False)
+                  if stat.S_ISLNK(info.st_mode):
+                      raise SystemExit("artifact contains a symlink")
+                  if stat.S_ISREG(info.st_mode):
+                      total += info.st_size
+          print(total)
+          PY
+          ) || return 1
+              if [ "$measured" -eq "$payload" ]; then stable=true; break; fi
+              payload=$measured
+            done
+            test "$stable" = true
+            test "$payload" -le 133169152
+          }
+          if ! write_artifact_size; then
+            result=FAILED
+            jq --arg status "$result" '.status=$status' "$artifact/workflow-result.json" > "$artifact/workflow-result.tmp"
+            command mv -f "$artifact/workflow-result.tmp" "$artifact/workflow-result.json"
+            write_artifact_size || true
+            exit 1
+          fi
+          printf 'artifact_within_bound=true\n' >> "$GITHUB_OUTPUT"
+          if [ "$result" != PREREQUISITE_ONLY ]; then
+            exit 1
+          fi
+
+      - id: upload
+        name: Upload bounded C-SDK candidate evidence (always)
+        timeout-minutes: 2
+        if: always() && steps.finalize.outputs.artifact_within_bound == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: portable-csdk-linux-aarch64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-portable-csdk/${{ github.run_id }}-${{ github.run_attempt }}/outer-output/artifact/
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Check retained artifact and full campaign clock (always)
+        timeout-minutes: 1
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_WITHIN_BOUND: ${{ steps.finalize.outputs.artifact_within_bound }}
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+        run: |
+          set -euo pipefail
+          test "$ARTIFACT_WITHIN_BOUND" = true
+          test "$UPLOAD_OUTCOME" = success
+          : "${CSDK_ARTIFACT_NAME:?missing artifact name}"
+          : "${CSDK_CAMPAIGN_START_EPOCH:?missing campaign start time}"
+          pages=$(timeout --foreground 60 gh api --paginate --slurp \
+            "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100")
+          sizes=$(jq -c --arg name "$CSDK_ARTIFACT_NAME" '[.[].artifacts[] | select(.name == $name and .expired == false) | .size_in_bytes]' <<<"$pages")
+          test "$(jq 'length' <<<"$sizes")" -eq 1
+          actual=$(jq -er '.[0]' <<<"$sizes")
+          test "$actual" -le 134217728
+          ended_epoch=$(date +%s)
+          elapsed_seconds=$((ended_epoch - CSDK_CAMPAIGN_START_EPOCH))
+          test "$elapsed_seconds" -le 5400

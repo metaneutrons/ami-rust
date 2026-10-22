@@ -15,7 +15,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 DRIVER_PATH = ROOT / "tools/supervise-bare-target-libraries.py"
-DRIVER_SHA256 = "cca95d8b3756f2e7933fe1a6064b7cded71c234262a52dee4393b8c205945e6f"
+DRIVER_SHA256 = "a39118baeb43260f0a906d72200a49ff28ac69b31f1ce3ec40143fa520ddbf23"
 LABELS = ("rustc-version", "rustc-sysroot", "cargo-version", "rust-objcopy-version", "source-production")
 LIMITS = {"seconds": 1200, "rss_bytes": 4 * 1024**3, "workspace_bytes": 12 * 1024**3, "log_bytes": 16 * 1024**2}
 REGISTRY = "registry+https://github.com/rust-lang/crates.io-index"
@@ -111,6 +111,21 @@ class BareTargetWrapperFixtures(unittest.TestCase):
                 with self.subTest(host=host):
                     with self.assertRaisesRegex(ValueError, "pinned source input differs: tooling/crates/xtask/src/bare_target_producer.rs"):
                         DRIVER.verify_source_inputs(self.repo, host)
+
+    def test_stale_shared_monitor_pin_is_refused_for_all_three_hosts(self):
+        old_pins = (
+            ("CI_CARGO_SHA", "589a8abc9fc4b0537b4b9646d441413f4eb005288bbc3ea0220f5218ffc18da2",
+             "pinned source input differs: release/ci_cargo.py"),
+            ("MONITOR_SHA", "8c809ff9ab2f22b17696931f0a5731a2154616f02c9a66232947f73f3b84e0d4",
+             "pinned source input differs: tools/supervise-native-cargo.py"),
+        )
+        for constant, old_pin, expected in old_pins:
+            with self.subTest(constant=constant):
+                with mock.patch.object(DRIVER, constant, old_pin):
+                    for host in DRIVER.HOSTS:
+                        with self.subTest(host=host):
+                            with self.assertRaisesRegex(ValueError, expected):
+                                DRIVER.verify_source_inputs(self.repo, host)
 
     def producer_fixture(self, name):
         """Build a producer-shaped receipt with tiny UNIT_FIXTURE-only files."""

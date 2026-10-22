@@ -24,6 +24,10 @@ def gzip_file(path: Path, payload: bytes) -> None:
 
 
 class SupervisorPureControls(unittest.TestCase):
+    def test_ci_cargo_pin_matches_current_shared_monitor_source(self):
+        shared_monitor = ROOT / "release/ci_cargo.py"
+        self.assertEqual(MONITOR.sha256(shared_monitor), MONITOR.CI_CARGO_SHA256)
+
     def test_native_identity_keeps_linux_hosts_and_admits_only_arm64_macos(self):
         self.assertTrue(MONITOR.native_identity_matches(
             "Linux", "x86_64", "x86_64-unknown-linux-gnu"))

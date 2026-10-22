@@ -227,6 +227,36 @@ class SupervisorTests(unittest.TestCase):
             self.assertEqual(supervisor.commands[0]["stop_reason"], "aggregate RSS ceiling")
             self.assertIsNotNone(supervisor.commands[0]["exit_code"])
 
+    def test_external_rss_guard_stops_child_and_preserves_command_row(self):
+        with tempfile.TemporaryDirectory() as temp:
+            supervisor = self._supervisor(Path(temp))
+            command = [sys.executable, "-c", "import time; time.sleep(20)"]
+            calls = {"count": 0}
+            child_peaks = []
+
+            def guard(child_peak):
+                calls["count"] += 1
+                child_peaks.append(child_peak)
+                return calls["count"] < 4
+
+            def stop_fixture_child(child, **_kwargs):
+                if child.poll() is None:
+                    child.terminate()
+                child.wait(timeout=3)
+
+            started = time.monotonic()
+            with mock.patch.object(ci_cargo, "rss_group", return_value=1234), \
+                    mock.patch.object(ci_cargo, "stop_group", side_effect=stop_fixture_child):
+                with self.assertRaisesRegex(RuntimeError, "external RSS guard"):
+                    supervisor.run(command, cwd=Path(temp), label="external-rss-guard",
+                                   timeout=5, rss_guard=guard)
+            self.assertLess(time.monotonic() - started, 5)
+            self.assertGreaterEqual(calls["count"], 4)
+            self.assertEqual(len(supervisor.commands), 1)
+            self.assertEqual(supervisor.commands[0]["stop_reason"], "external RSS guard")
+            self.assertIsNotNone(supervisor.commands[0]["exit_code"])
+            self.assertIn(1234, child_peaks)
+
     def test_build_child_keeps_standalone_session_isolation_by_default(self):
         producer_path = Path(__file__).resolve().parent.parent / "host/cargo-repro/produce.py"
         producer = runpy.run_path(str(producer_path))

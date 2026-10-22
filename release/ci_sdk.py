@@ -34,6 +34,7 @@ HOST_TARGETS = {
     "macos-aarch64": "aarch64-apple-darwin",
     "linux-x86_64": "x86_64-unknown-linux-gnu",
 }
+PORTABLE_CSDK_HOSTS = ("linux-aarch64", "linux-x86_64", "macos-aarch64")
 LINKAGE_AUDIT_UTILITIES = {
     "macos-aarch64": ("otool", "-L"),
     "linux-x86_64": ("readelf", "-d"),
@@ -182,6 +183,17 @@ def host_identity() -> tuple[str, str]:
     return host, HOST_TARGETS[host]
 
 
+def portable_csdk_host_identity() -> str:
+    system, machine = platform.system(), platform.machine().lower()
+    host = {("Darwin", "arm64"): "macos-aarch64",
+            ("Linux", "x86_64"): "linux-x86_64",
+            ("Linux", "aarch64"): "linux-aarch64",
+            ("Linux", "arm64"): "linux-aarch64"}.get((system, machine))
+    if host is None:
+        raise ValueError("portable C-SDK producer supports only macOS ARM64, Linux x86-64 and Linux ARM64")
+    return host
+
+
 def _safe_relative(value: object) -> PurePosixPath:
     if not isinstance(value, str) or not value or "\\" in value or "\0" in value or ":" in value:
         raise ValueError("manifest path is not a portable relative path")
@@ -283,15 +295,23 @@ def validate_resource_schema(resources: dict) -> tuple[int, int]:
     return ram_min, disk_min
 
 
-def validate_resource_policy(resources: dict, disk_path: Path) -> dict:
+def _validate_resource_policy_for_host(resources: dict, disk_path: Path, host: str) -> dict:
     ram_min, disk_min = validate_resource_schema(resources)
-    host, _ = host_identity()
     ram = physical_memory_bytes(host)
     free = shutil.disk_usage(disk_path).free
     if ram < ram_min or free < disk_min:
         raise ValueError(f"host capacity refused: {ram} RAM bytes/{free} free bytes")
     return {"physical_ram_bytes": ram, "free_disk_bytes": free,
             "ram_minimum_bytes": ram_min, "disk_free_minimum_bytes": disk_min}
+
+
+def validate_resource_policy(resources: dict, disk_path: Path) -> dict:
+    host, _ = host_identity()
+    return _validate_resource_policy_for_host(resources, disk_path, host)
+
+
+def validate_portable_csdk_resource_policy(resources: dict, disk_path: Path) -> dict:
+    return _validate_resource_policy_for_host(resources, disk_path, portable_csdk_host_identity())
 
 
 def validate_inputs(inputs: dict, normative: dict, host: str) -> dict:

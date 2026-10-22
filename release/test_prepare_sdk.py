@@ -33,6 +33,29 @@ def write_json(path: Path, value: object) -> bytes:
 
 
 class PrepareSdkTests(unittest.TestCase):
+    def test_portable_csdk_host_allowlist_is_separate_from_sdk_host_profiles(self):
+        self.assertEqual(set(prepare_sdk.HOSTS),
+                         {"macos-aarch64", "linux-x86_64"})
+        self.assertEqual(set(prepare_sdk.PORTABLE_CSDK_HOSTS),
+                         {"macos-aarch64", "linux-x86_64", "linux-aarch64"})
+        prepare_sdk._validate_portable_csdk_spec(self.csdk_spec)
+        missing_arm = copy.deepcopy(self.csdk_spec)
+        missing_arm["toolchains"].pop("linux-aarch64")
+        with self.assertRaisesRegex(ValueError, "toolchain pins are incomplete"):
+            prepare_sdk._validate_portable_csdk_spec(missing_arm)
+        extra_sdk = copy.deepcopy(self.csdk_spec)
+        extra_sdk["toolchains"]["windows-x86_64"] = extra_sdk["toolchains"]["linux-x86_64"]
+        with self.assertRaisesRegex(ValueError, "toolchain pins are incomplete"):
+            prepare_sdk._validate_portable_csdk_spec(extra_sdk)
+        missing_archive = copy.deepcopy(self.csdk_spec)
+        del missing_archive["toolchains"]["linux-aarch64"]["archive"]
+        with self.assertRaisesRegex(ValueError, "linux-aarch64 toolchain identity is malformed"):
+            prepare_sdk._validate_portable_csdk_spec(missing_archive)
+        altered_archive = copy.deepcopy(self.csdk_spec)
+        altered_archive["toolchains"]["linux-aarch64"]["archive"]["url"] = "https://example.test/changed.tar.xz"
+        with self.assertRaisesRegex(ValueError, "Linux/AArch64 archive pin"):
+            prepare_sdk._validate_portable_csdk_spec(altered_archive)
+
     def test_portable_path_contract(self):
         for name in ("bad\nname", "é.txt", "a" * 241, "a" * 121, "CON.txt", "LPT1", "a.", "a b"):
             with self.subTest(name=name), self.assertRaises(ValueError):
@@ -198,7 +221,7 @@ class PrepareSdkTests(unittest.TestCase):
         candidate_sha = sha(self.csdk_candidate_profile_bytes)
         return {
             "schema": "ami-rust-portable-csdk-v1",
-            "status": "PINNED_CANDIDATE_TWO_HOST_QUALIFICATION_REQUIRED",
+            "status": "PINNED_CANDIDATE_THREE_HOST_QUALIFICATION_REQUIRED",
             "original": {
                 "profile": {"path": "release/portable-csdk/original-profile.json",
                             "bytes": len(self.csdk_original_profile_bytes), "sha256": original_sha},
@@ -229,13 +252,17 @@ class PrepareSdkTests(unittest.TestCase):
                                 "sha256": sha(b"fixture source manifest")},
             "toolchains": {
                 host: {
+                    **({"archive": {"kind": "tar",
+                                    "url": prepare_sdk.PORTABLE_CSDK_ARM_TOOLCHAIN_ARCHIVE_URL,
+                                    "bytes": 35097912, "sha256": sha(b"fixture ARM LLVM archive"),
+                                    "archive_root": "toolchain"}} if host == "linux-aarch64" else {}),
                     "compiler": {"bytes": 10, "path": "bin/clang-11",
                                  "sha256": sha(f"{host} compiler".encode())},
                     "profile": {"bytes": 20,
                                 "path": f"host/profiles/{host}/toolchain.json",
                                 "sha256": sha(f"{host} profile".encode())},
                 }
-                for host in prepare_sdk.HOSTS
+                for host in prepare_sdk.PORTABLE_CSDK_HOSTS
             },
         }
 
@@ -424,7 +451,7 @@ class PrepareSdkTests(unittest.TestCase):
             self.assertNotIn("/fixture/historical/source", json.dumps(manifest, sort_keys=True))
             self.assertEqual(portable_csdk["candidate_archive"], self.csdk_spec["candidate"]["archive"])
             self.assertEqual(portable_csdk["distribution_spec"]["status"],
-                             "PINNED_CANDIDATE_TWO_HOST_QUALIFICATION_REQUIRED")
+                             "PINNED_CANDIDATE_THREE_HOST_QUALIFICATION_REQUIRED")
             self.assertEqual(portable_csdk["changed_profile_rows"], 532)
             self.assertEqual(len(manifest["files"]), 93)
             self.assertEqual(len(tar.getmembers()), 94)

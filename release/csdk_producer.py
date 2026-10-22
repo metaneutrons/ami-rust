@@ -18,6 +18,7 @@ import tarfile
 
 
 ROOT = Path(__file__).resolve().parent.parent
+ARM_TOOLCHAIN_ARCHIVE_URL = "https://github.com/metaneutrons/aros-toolchains/releases/download/v0.1.4/aros-toolchain-v1-llvm11.0.0-linux-aarch64-pc-x86_64.tar.xz"
 
 
 def load(name):
@@ -57,6 +58,34 @@ def profile_rows(profile):
     return rows
 
 
+def compile_nouveau(plan: dict, work_dir: Path, plan_path: Path, jobs: int) -> dict:
+    """Persist an interrupted direct compile before propagating failure."""
+    try:
+        outcome = nouveau._compile_commands(plan, work_dir, jobs)
+    except KeyboardInterrupt as error:
+        plan["status"] = "FAIL_COMPILE"
+        plan["error"] = str(error)
+        signal_state = getattr(error, "signal_state", {})
+        plan["compile"] = {
+            "failure": str(error),
+            "interrupted": True,
+            "sigterm_delivery_count": signal_state.get("received", 0),
+            "signal_cleanup_attempts": signal_state.get("cleanup_attempts", 1),
+            "process_group_cleanup": signal_state.get("process_group_cleanup", []),
+            "incomplete_cleanup": signal_state.get("incomplete_cleanup", False),
+            "cleanup_status": ("incomplete_cleanup" if signal_state.get("incomplete_cleanup")
+                               else "complete"),
+            "logs_directory": str(work_dir / "nouveau-logs"),
+        }
+        nouveau._replace_plan(plan_path, plan)
+        raise RuntimeError("full Nouveau compilation interrupted: " + str(error)) from error
+    plan["compile"] = outcome
+    plan["status"] = ("NOUVEAU_825_COMPILE_COMMANDS_COMPLETE"
+                       if outcome["failure"] is None else "FAIL_COMPILE")
+    nouveau._replace_plan(plan_path, plan)
+    return outcome
+
+
 def validate_profiles(original, candidate):
     before, after = profile_rows(original), profile_rows(candidate)
     if len(before) != 2835 or before.keys() != after.keys():
@@ -69,14 +98,31 @@ def validate_profiles(original, candidate):
     return sorted(changed)
 
 
+def validate_toolchain_hosts(toolchains):
+    if not isinstance(toolchains, dict) or set(toolchains) != set(sdk.PORTABLE_CSDK_HOSTS):
+        raise ValueError("portable C-SDK toolchain pins must cover exactly the admitted C-SDK hosts")
+    arm = toolchains["linux-aarch64"]
+    if not isinstance(arm, dict) or "archive" not in arm:
+        raise ValueError("portable C-SDK Linux/AArch64 archive pin is missing")
+    archive = arm["archive"]
+    if (not isinstance(archive, dict)
+            or set(archive) != {"kind", "url", "bytes", "sha256", "archive_root"}
+            or archive.get("kind") != "tar" or archive.get("url") != ARM_TOOLCHAIN_ARCHIVE_URL
+            or archive.get("archive_root") != "toolchain"
+            or type(archive.get("bytes")) is not int or archive["bytes"] <= 0
+            or not sdk._is_digest(archive.get("sha256"))):
+        raise ValueError("portable C-SDK Linux/AArch64 archive pin is malformed")
+    return toolchains
+
+
 def load_inputs(spec_path):
     spec = sdk.read_json(spec_path)
     if (spec.get("schema") != "ami-rust-portable-csdk-v1"
-            or spec.get("status") != "PINNED_CANDIDATE_TWO_HOST_QUALIFICATION_REQUIRED"
+            or spec.get("status") != "PINNED_CANDIDATE_THREE_HOST_QUALIFICATION_REQUIRED"
             or spec.get("required_counts") != {"regular_files": 2835, "changed_files": 532,
-                                               "public_headers": 530}
-            or set(spec.get("toolchains", {})) != set(sdk.HOST_TARGETS)):
+                                               "public_headers": 530}):
         raise ValueError("unrecognized portable C-SDK candidate contract")
+    validate_toolchain_hosts(spec.get("toolchains"))
     validate_native_counts(spec.get("nouveau", {}))
     original = sdk.read_json(pinned_file(spec["original"]["profile"]))
     candidate = sdk.read_json(pinned_file(spec["candidate"]["profile"]))
@@ -224,7 +270,7 @@ def canonical_archive(root, modes, destination):
 def produce(spec_path, original_archive, toolchain, native_compiler, work, output, supervisor,
             *, host_tools=None):
     spec, original_profile, candidate_profile = load_inputs(spec_path)
-    host = sdk.host_identity()[0]
+    host = sdk.portable_csdk_host_identity()
     tool_profile = sdk.read_json(pinned_file(spec["toolchains"][host]["profile"]))
     sdk.verify_component(toolchain, tool_profile, "portable C-SDK cross toolchain")
     compiler_pin = spec["toolchains"][host]["compiler"]
@@ -275,10 +321,7 @@ def produce(spec_path, original_archive, toolchain, native_compiler, work, outpu
     nouveau._prepare_outputs(plan)
     native_work = work / "nouveau-compile"
     native_work.mkdir()
-    outcome = nouveau._compile_commands(plan, native_work, 2)
-    plan["compile"] = outcome
-    plan["status"] = "NOUVEAU_825_COMPILE_COMMANDS_COMPLETE" if outcome["failure"] is None else "FAIL_COMPILE"
-    nouveau._replace_plan(plan_path, plan)
+    outcome = compile_nouveau(plan, native_work, plan_path, 2)
     if outcome["failure"] is not None or outcome["completed"] != 825:
         raise ValueError("full Nouveau compilation failed: " + str(outcome["failure"]))
     nouveau._validate_compiler(plan, compiler_pin["sha256"])
@@ -353,7 +396,8 @@ def main():
     python = args.work / "python"
     python.mkdir()
     supervisor = sdk.Supervisor(args.work, args.output, python, {**os.environ, "LC_ALL": "C", "LANG": "C"})
-    sdk.validate_resource_policy(sdk.read_json(ROOT / "release/ci-resources.json"), args.work)
+    sdk.validate_portable_csdk_resource_policy(
+        sdk.read_json(ROOT / "release/ci-resources.json"), args.work)
     result = produce(args.spec.resolve(strict=True), args.original_archive.resolve(strict=True),
                      args.toolchain.resolve(strict=True), args.native_compiler.resolve(strict=True),
                      args.work, args.output, supervisor, host_tools=host_tools)

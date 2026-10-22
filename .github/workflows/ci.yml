@@ -36,6 +36,7 @@ jobs:
             tests/
             tools/supervise-native-cargo.py
             tools/supervise-bare-target-libraries.py
+            tools/supervise-portable-csdk-linux-aarch64.py
             tools/bootstrap-host-rust.sh
             tools/bootstrap-bare-target-inputs.sh
             release/bare-target-libraries-inputs.json
@@ -92,6 +93,7 @@ jobs:
           python3 -I -B release/test_ci_csdk.py
           python3 -I -B release/test_csdk_recipes.py
           python3 -I -B release/test_csdk_nouveau.py
+          python3 -I -B release/test_csdk_supervision.py
           python3 -I -B release/test_csdk_archive.py
           python3 -I -B release/test_csdk_metadata.py
           python3 -I -B release/test_csdk_producer.py
