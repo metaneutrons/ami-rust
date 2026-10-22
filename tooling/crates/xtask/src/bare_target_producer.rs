@@ -47,6 +47,15 @@ const MACOS_LLVM_SOURCE_SHA256: &str =
     "f875883949c8ff96b94faca6a295f66302ae305ce897165fc8765d5ba2d73573";
 const MACOS_LLVM_ALIAS_PATH: &str = "lib/rustlib/aarch64-apple-darwin/lib/libLLVM.dylib";
 const MACOS_LLVM_ALIAS_TARGET: &str = "../../../libLLVM.dylib";
+const LINUX_LLVM_SOURCE_PATH: &str = "lib/libLLVM.so.23.1-rust-1.100.0-nightly";
+const LINUX_LLVM_SOURCE_PATH_NAME: &str = "libLLVM.so.23.1-rust-1.100.0-nightly";
+const LINUX_LLVM_ALIAS_TARGET: &str = "../../../libLLVM.so.23.1-rust-1.100.0-nightly";
+const LINUX_X86_64_LLVM_SOURCE_BYTES: u64 = 208_323_328;
+const LINUX_X86_64_LLVM_SOURCE_SHA256: &str =
+    "eba1c74fa09e3e4704b331e92cd166fc398cbf73becf3f6e49e83087e15be257";
+const LINUX_AARCH64_LLVM_SOURCE_BYTES: u64 = 164_461_896;
+const LINUX_AARCH64_LLVM_SOURCE_SHA256: &str =
+    "6be3e489d3ffa25dfbaeb2ea815ecf1a7d9b3737c189e4d352382a6c88d29de7";
 const LLVM_OBJCOPY_VERSION: &str = "LLVM version 23.1.1";
 const CARGO_LOCK_BYTES: &[u8] =
     b"version = 4\n\n[[package]]\nname = \"bare-target-library-probe\"\nversion = \"0.1.0\"\n";
@@ -138,6 +147,7 @@ struct ScopedInventory {
     cargo_files: Vec<FileIdentity>,
     host_linker_alias: LinkIdentity,
     macos_llvm_runtime_alias: Option<MacosLlvmRuntimeAlias>,
+    linux_llvm_runtime_alias: Option<LinuxLlvmRuntimeAlias>,
     rustc_payload_rows: usize,
     std_rows: usize,
     src_rows: usize,
@@ -146,6 +156,11 @@ struct ScopedInventory {
 }
 
 struct MacosLlvmRuntimeAlias {
+    link: LinkIdentity,
+    source_file: FileIdentity,
+}
+
+struct LinuxLlvmRuntimeAlias {
     link: LinkIdentity,
     source_file: FileIdentity,
 }
@@ -315,6 +330,9 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
     if let Some(alias) = &inputs.scoped.macos_llvm_runtime_alias {
         create_macos_llvm_runtime_alias(&stage, alias)?;
     }
+    if let Some(alias) = &inputs.scoped.linux_llvm_runtime_alias {
+        create_linux_llvm_runtime_alias(inputs.host, &stage, alias)?;
+    }
 
     let mut final_files = inputs.scoped.files.clone();
     final_files.push(FileIdentity {
@@ -331,8 +349,11 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
     if let Some(alias) = &inputs.scoped.macos_llvm_runtime_alias {
         final_links.push(alias.link.clone());
     }
+    if let Some(alias) = &inputs.scoped.linux_llvm_runtime_alias {
+        final_links.push(alias.link.clone());
+    }
     let component_inventory = json!({
-        "schema": "ami-rust-bare-target-scoped-component-inventory-v1",
+        "schema": "ami-rust-bare-target-scoped-component-inventory-v2",
         "input_profile_sha256": inputs.profile_sha256,
         "selected_rust_component_files": &inputs.scoped.files,
         "excluded_installer_admin_rows": &inputs.scoped.installer_admin_files,
@@ -342,6 +363,11 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
             "link": &alias.link,
             "authenticated_source_file": &alias.source_file,
             "purpose": "resolve the pinned macOS rust-objcopy @rpath/libLLVM.dylib from the authenticated root Rust component file"
+        })),
+        "linux_rust_objcopy_llvm_runtime_alias": inputs.scoped.linux_llvm_runtime_alias.as_ref().map(|alias| json!({
+            "link": &alias.link,
+            "authenticated_source_file": &alias.source_file,
+            "purpose": "resolve the pinned Linux rust-objcopy libLLVM.so.23.1-rust-1.100.0-nightly dependency from the authenticated root Rust component file"
         })),
         "target_spec_profile_rows_readded_as_explicit_input": inputs.scoped.target_spec_rows,
         "materialized_files": &final_files,
@@ -594,6 +620,7 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
             "official_cargo_excluded": inputs.scoped.cargo_files.len(),
             "cross_component_aros_link_alias_excluded": 1,
             "macos_llvm_runtime_alias_added": inputs.scoped.macos_llvm_runtime_alias.is_some(),
+            "linux_llvm_runtime_alias_added": inputs.scoped.linux_llvm_runtime_alias.is_some(),
             "target_spec_row_explicitly_readded": inputs.scoped.target_spec_rows,
             "installer_admin_paths_allowlist": [
                 "lib/rustlib/components",
@@ -625,6 +652,11 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
             "link": &alias.link,
             "authenticated_source_file": &alias.source_file,
             "purpose": "resolve the pinned macOS rust-objcopy @rpath/libLLVM.dylib from the authenticated root Rust component file"
+        })),
+        "linux_rust_objcopy_llvm_runtime_alias": inputs.scoped.linux_llvm_runtime_alias.as_ref().map(|alias| json!({
+            "link": &alias.link,
+            "authenticated_source_file": &alias.source_file,
+            "purpose": "resolve the pinned Linux rust-objcopy libLLVM.so.23.1-rust-1.100.0-nightly dependency from the authenticated root Rust component file"
         })),
         "recipe": {
             "target": TARGET,
@@ -789,6 +821,8 @@ fn select_component_inventory(profile: &ProfileRows, host: HostPins) -> Result<S
     }
     let macos_llvm_runtime_alias =
         select_macos_llvm_runtime_alias(host, &profile.files, &profile.symlinks)?;
+    let linux_llvm_runtime_alias =
+        select_linux_llvm_runtime_alias(host, &profile.files, &profile.symlinks)?;
     let target_link = LinkIdentity {
         path: TARGET_ALIAS_PATH.to_owned(),
         target: TARGET_ALIAS.to_owned(),
@@ -913,6 +947,7 @@ fn select_component_inventory(profile: &ProfileRows, host: HostPins) -> Result<S
         cargo_files,
         host_linker_alias: linker_link,
         macos_llvm_runtime_alias,
+        linux_llvm_runtime_alias,
         rustc_payload_rows,
         std_rows,
         src_rows,
@@ -982,6 +1017,127 @@ fn create_macos_llvm_runtime_alias(stage: &Path, alias: &MacosLlvmRuntimeAlias) 
         Ok(_) => {
             return Err(Refusal::new(
                 "macOS LLVM runtime alias destination already exists in the staged profile",
+            ));
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
+    }
+    symlink(&alias.link.target, path)?;
+    Ok(())
+}
+
+fn select_linux_llvm_runtime_alias(
+    host: HostPins,
+    files: &[FileIdentity],
+    symlinks: &[LinkIdentity],
+) -> Result<Option<LinuxLlvmRuntimeAlias>> {
+    if host.name == "macos-aarch64" {
+        return Ok(None);
+    }
+    let (expected_triple, source_bytes, source_sha256) = match host.name {
+        "linux-x86_64" => (
+            "x86_64-unknown-linux-gnu",
+            LINUX_X86_64_LLVM_SOURCE_BYTES,
+            LINUX_X86_64_LLVM_SOURCE_SHA256,
+        ),
+        "linux-aarch64" => (
+            "aarch64-unknown-linux-gnu",
+            LINUX_AARCH64_LLVM_SOURCE_BYTES,
+            LINUX_AARCH64_LLVM_SOURCE_SHA256,
+        ),
+        _ => {
+            return Err(Refusal::new(
+                "Linux LLVM runtime alias host is not a pinned Linux profile",
+            ));
+        }
+    };
+    if host.triple != expected_triple {
+        return Err(Refusal::new(
+            "Linux LLVM runtime alias host triple differs from its pinned host",
+        ));
+    }
+    let alias_path = format!("lib/rustlib/{expected_triple}/lib/{LINUX_LLVM_SOURCE_PATH_NAME}");
+    if files.iter().any(|row| row.path == alias_path)
+        || symlinks.iter().any(|row| row.path == alias_path)
+    {
+        return Err(Refusal::new(
+            "Linux LLVM runtime alias destination collides with a profile row",
+        ));
+    }
+    let source_file = files
+        .iter()
+        .find(|row| row.path == LINUX_LLVM_SOURCE_PATH)
+        .cloned()
+        .ok_or_else(|| Refusal::new("authenticated Linux root libLLVM.so row is missing"))?;
+    let link = LinkIdentity {
+        path: alias_path,
+        target: LINUX_LLVM_ALIAS_TARGET.to_owned(),
+    };
+    validate_linux_llvm_runtime_alias(host, &link, &source_file)?;
+    if source_file.bytes != source_bytes || source_file.sha256 != source_sha256 {
+        return Err(Refusal::new(
+            "Linux root libLLVM.so identity differs from its pinned host profile",
+        ));
+    }
+    Ok(Some(LinuxLlvmRuntimeAlias { link, source_file }))
+}
+
+fn validate_linux_llvm_runtime_alias(
+    host: HostPins,
+    link: &LinkIdentity,
+    source_file: &FileIdentity,
+) -> Result<()> {
+    let (expected_triple, source_bytes, source_sha256) = match host.name {
+        "linux-x86_64" => (
+            "x86_64-unknown-linux-gnu",
+            LINUX_X86_64_LLVM_SOURCE_BYTES,
+            LINUX_X86_64_LLVM_SOURCE_SHA256,
+        ),
+        "linux-aarch64" => (
+            "aarch64-unknown-linux-gnu",
+            LINUX_AARCH64_LLVM_SOURCE_BYTES,
+            LINUX_AARCH64_LLVM_SOURCE_SHA256,
+        ),
+        _ => {
+            return Err(Refusal::new(
+                "Linux LLVM runtime alias host is not a pinned Linux profile",
+            ));
+        }
+    };
+    if host.triple != expected_triple {
+        return Err(Refusal::new(
+            "Linux LLVM runtime alias host triple differs from its pinned host",
+        ));
+    }
+    let expected_path = format!("lib/rustlib/{expected_triple}/lib/{LINUX_LLVM_SOURCE_PATH_NAME}");
+    validate_relative_inventory_path(&link.path)?;
+    if link.path != expected_path || link.target != LINUX_LLVM_ALIAS_TARGET {
+        return Err(Refusal::new(
+            "Linux LLVM runtime alias path or relative target differs from its fixed host scope",
+        ));
+    }
+    if source_file.path != LINUX_LLVM_SOURCE_PATH
+        || source_file.bytes != source_bytes
+        || source_file.sha256 != source_sha256
+    {
+        return Err(Refusal::new(
+            "Linux LLVM runtime alias source differs from its authenticated host profile row",
+        ));
+    }
+    Ok(())
+}
+
+fn create_linux_llvm_runtime_alias(
+    host: HostPins,
+    stage: &Path,
+    alias: &LinuxLlvmRuntimeAlias,
+) -> Result<()> {
+    validate_linux_llvm_runtime_alias(host, &alias.link, &alias.source_file)?;
+    let path = stage.join(&alias.link.path);
+    match fs::symlink_metadata(&path) {
+        Ok(_) => {
+            return Err(Refusal::new(
+                "Linux LLVM runtime alias destination already exists in the staged profile",
             ));
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
@@ -1479,11 +1635,15 @@ fn usage() -> Refusal {
 mod tests {
     use super::{
         HostPins, LIBRARY_LOCK_BYTES, LIBRARY_LOCK_PATH, LIBRARY_LOCK_SHA256,
-        MACOS_LLVM_ALIAS_PATH, MACOS_LLVM_ALIAS_TARGET, MACOS_LLVM_SOURCE_BYTES,
-        MACOS_LLVM_SOURCE_PATH, MACOS_LLVM_SOURCE_SHA256, ProfileRows, TARGET_ALIAS,
-        TARGET_ALIAS_PATH, TARGET_SPEC_BYTES, TARGET_SPEC_PROFILE_PATH, TARGET_SPEC_SHA256,
-        collect_libraries, is_installer_admin_path, is_official_cargo_path, require_digest,
-        select_component_inventory, select_macos_llvm_runtime_alias,
+        LINUX_AARCH64_LLVM_SOURCE_BYTES, LINUX_AARCH64_LLVM_SOURCE_SHA256, LINUX_LLVM_ALIAS_TARGET,
+        LINUX_LLVM_SOURCE_PATH, LINUX_LLVM_SOURCE_PATH_NAME, LINUX_X86_64_LLVM_SOURCE_BYTES,
+        LINUX_X86_64_LLVM_SOURCE_SHA256, MACOS_LLVM_ALIAS_PATH, MACOS_LLVM_ALIAS_TARGET,
+        MACOS_LLVM_SOURCE_BYTES, MACOS_LLVM_SOURCE_PATH, MACOS_LLVM_SOURCE_SHA256, ProfileRows,
+        TARGET_ALIAS, TARGET_ALIAS_PATH, TARGET_SPEC_BYTES, TARGET_SPEC_PROFILE_PATH,
+        TARGET_SPEC_SHA256, collect_libraries, create_linux_llvm_runtime_alias,
+        is_installer_admin_path, is_official_cargo_path, require_digest,
+        select_component_inventory, select_linux_llvm_runtime_alias,
+        select_macos_llvm_runtime_alias, validate_linux_llvm_runtime_alias,
         validate_macos_llvm_runtime_alias,
     };
     use ami_rust_core::inventory::{FileIdentity, LinkIdentity};
@@ -1610,8 +1770,9 @@ mod tests {
     #[test]
     fn selected_inventory_is_unique_and_keeps_only_the_rust_components() {
         let host = pins();
+        let profile = profile(host);
         let selected =
-            select_component_inventory(&profile(host), host).expect("partition fixture profile");
+            select_component_inventory(&profile, host).expect("partition fixture profile");
         assert_eq!(selected.files.len(), 6);
         assert_eq!(selected.cargo_files.len(), 3);
         assert_eq!(selected.rustc_payload_rows, 3);
@@ -1632,6 +1793,11 @@ mod tests {
         assert_eq!(llvm_alias.source_file.path, MACOS_LLVM_SOURCE_PATH);
         assert_eq!(llvm_alias.source_file.bytes, MACOS_LLVM_SOURCE_BYTES);
         assert_eq!(llvm_alias.source_file.sha256, MACOS_LLVM_SOURCE_SHA256);
+        assert!(
+            select_linux_llvm_runtime_alias(host, &profile.files, &profile.symlinks)
+                .expect("Mac profile has no Linux alias")
+                .is_none()
+        );
         assert!(
             !selected
                 .files
@@ -1682,15 +1848,157 @@ mod tests {
     }
 
     #[test]
-    fn linux_profiles_do_not_receive_a_macos_llvm_runtime_alias() {
+    fn linux_profiles_receive_authenticated_host_scoped_llvm_aliases() {
+        for (name, triple, bytes, sha256) in [
+            (
+                "linux-x86_64",
+                "x86_64-unknown-linux-gnu",
+                LINUX_X86_64_LLVM_SOURCE_BYTES,
+                LINUX_X86_64_LLVM_SOURCE_SHA256,
+            ),
+            (
+                "linux-aarch64",
+                "aarch64-unknown-linux-gnu",
+                LINUX_AARCH64_LLVM_SOURCE_BYTES,
+                LINUX_AARCH64_LLVM_SOURCE_SHA256,
+            ),
+        ] {
+            let mut host = pins();
+            host.name = name;
+            host.triple = triple;
+            let mut source = file(LINUX_LLVM_SOURCE_PATH);
+            source.bytes = bytes;
+            source.sha256 = sha256.to_owned();
+            let mut profile = profile(host);
+            let root = profile
+                .files
+                .iter_mut()
+                .find(|row| row.path == MACOS_LLVM_SOURCE_PATH)
+                .expect("fixture root LLVM row");
+            *root = source.clone();
+            let std = profile
+                .files
+                .iter_mut()
+                .find(|row| row.path.ends_with("/libstd.rlib"))
+                .expect("fixture native std row");
+            std.path = format!("lib/rustlib/{triple}/lib/libstd.rlib");
+            let host_link = profile
+                .symlinks
+                .iter_mut()
+                .find(|row| row.path.ends_with("/bin/aros-link"))
+                .expect("fixture host linker alias");
+            host_link.path = format!("lib/rustlib/{triple}/bin/aros-link");
+
+            let selected =
+                select_component_inventory(&profile, host).expect("complete pinned Linux profile");
+            let alias = selected
+                .linux_llvm_runtime_alias
+                .expect("Linux runtime alias");
+            assert_eq!(
+                alias.link.path,
+                format!("lib/rustlib/{triple}/lib/{LINUX_LLVM_SOURCE_PATH_NAME}")
+            );
+            assert_eq!(alias.link.target, LINUX_LLVM_ALIAS_TARGET);
+            assert_eq!(alias.source_file.path, LINUX_LLVM_SOURCE_PATH);
+            validate_linux_llvm_runtime_alias(host, &alias.link, &alias.source_file)
+                .expect("exact host runtime alias");
+
+            let fixture = Fixture::new();
+            let stage = fixture.0.join("stage");
+            let root_file = stage.join(LINUX_LLVM_SOURCE_PATH);
+            fs::create_dir_all(root_file.parent().expect("root lib directory"))
+                .expect("create root lib directory");
+            fs::write(&root_file, b"small loader path fixture")
+                .expect("write root library fixture");
+            let alias_path = stage.join(&alias.link.path);
+            fs::create_dir_all(alias_path.parent().expect("nested host lib directory"))
+                .expect("create nested host lib directory");
+            create_linux_llvm_runtime_alias(host, &stage, &alias)
+                .expect("create nested Linux loader alias");
+            assert_eq!(
+                fs::read_link(&alias_path)
+                    .expect("read alias")
+                    .to_str()
+                    .expect("UTF-8 symlink target"),
+                LINUX_LLVM_ALIAS_TARGET
+            );
+            assert_eq!(
+                alias_path.canonicalize().expect("resolve alias"),
+                root_file.canonicalize().expect("resolve root file")
+            );
+            assert!(create_linux_llvm_runtime_alias(host, &stage, &alias).is_err());
+        }
+    }
+
+    #[test]
+    fn linux_llvm_alias_refuses_missing_wrong_host_collision_escape_and_wrong_source() {
         let mut host = pins();
         host.name = "linux-x86_64";
         host.triple = "x86_64-unknown-linux-gnu";
-        let files = [file("lib/libLLVM.so.23.1-rust-1.100.0-nightly")];
+        let mut source = file(LINUX_LLVM_SOURCE_PATH);
+        source.bytes = LINUX_X86_64_LLVM_SOURCE_BYTES;
+        source.sha256 = LINUX_X86_64_LLVM_SOURCE_SHA256.to_owned();
+        assert!(select_linux_llvm_runtime_alias(host, &[], &[]).is_err());
+
+        let mut wrong_host = host;
+        wrong_host.triple = "aarch64-unknown-linux-gnu";
+        assert!(select_linux_llvm_runtime_alias(wrong_host, &[source.clone()], &[]).is_err());
+        let mut arm_host_with_x86_profile = host;
+        arm_host_with_x86_profile.name = "linux-aarch64";
+        arm_host_with_x86_profile.triple = "aarch64-unknown-linux-gnu";
         assert!(
-            select_macos_llvm_runtime_alias(host, &files, &[])
-                .expect("Linux profile")
+            select_linux_llvm_runtime_alias(arm_host_with_x86_profile, &[source.clone()], &[])
+                .is_err()
+        );
+
+        let alias_path = format!(
+            "lib/rustlib/{}/lib/{LINUX_LLVM_SOURCE_PATH_NAME}",
+            host.triple
+        );
+        let mut colliding_file = source.clone();
+        colliding_file.path = alias_path.clone();
+        assert!(
+            select_linux_llvm_runtime_alias(host, &[source.clone(), colliding_file], &[]).is_err()
+        );
+        assert!(
+            select_linux_llvm_runtime_alias(
+                host,
+                &[source.clone()],
+                &[LinkIdentity {
+                    path: alias_path.clone(),
+                    target: LINUX_LLVM_ALIAS_TARGET.to_owned(),
+                }]
+            )
+            .is_err()
+        );
+
+        let link = LinkIdentity {
+            path: alias_path.clone(),
+            target: LINUX_LLVM_ALIAS_TARGET.to_owned(),
+        };
+        let escaping = LinkIdentity {
+            path: alias_path,
+            target: "../../../../libLLVM.so.23.1-rust-1.100.0-nightly".to_owned(),
+        };
+        assert!(validate_linux_llvm_runtime_alias(host, &escaping, &source).is_err());
+        let mut wrong_source = source;
+        wrong_source.sha256 = "0".repeat(64);
+        assert!(validate_linux_llvm_runtime_alias(host, &link, &wrong_source).is_err());
+    }
+
+    #[test]
+    fn macos_linux_runtime_alias_selection_remains_disabled() {
+        let host = pins();
+        let profile = profile(host);
+        assert!(
+            select_linux_llvm_runtime_alias(host, &profile.files, &profile.symlinks)
+                .expect("Mac profile")
                 .is_none()
+        );
+        assert!(
+            select_macos_llvm_runtime_alias(host, &profile.files, &profile.symlinks)
+                .expect("Mac profile")
+                .is_some()
         );
     }
 
