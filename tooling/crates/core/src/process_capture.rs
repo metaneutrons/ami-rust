@@ -1827,10 +1827,22 @@ mod tests {
         );
         let completed = capture(&closed_spec, limits(), || false).unwrap();
         assert!(completed.status.success());
-        thread::sleep(Duration::from_millis(700));
+        // Capture reaps the direct child; its closed-pipe descendant runs
+        // independently. Observe completion within the existing fixture bound
+        // instead of assuming its 600 ms delay fits a 700 ms scheduler window.
+        let completion_deadline = Instant::now() + limits().timeout;
+        let observed_completion = loop {
+            if Instant::now() >= completion_deadline {
+                break false;
+            }
+            if closed_marker.exists() {
+                break Instant::now() < completion_deadline;
+            }
+            thread::sleep(POLL_QUANTUM);
+        };
         assert!(
-            closed_marker.exists(),
-            "completed child group was signalled after reap"
+            observed_completion,
+            "closed-pipe descendant did not complete before the fixture deadline"
         );
     }
 
