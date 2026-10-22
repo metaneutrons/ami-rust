@@ -3,6 +3,9 @@ name = "aros-alloc"
 version.workspace = true
 edition.workspace = true
 publish = false
+description = "Exec-backed Rust allocator for the selected x86-64 AROS ABI-v1."
+repository = "https://github.com/metaneutrons/ami-rust"
+homepage = "https://github.com/metaneutrons/ami-rust"
 license.workspace = true
 readme = "README.md"
 [dependencies]

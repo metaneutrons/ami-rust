@@ -8,6 +8,7 @@ repository = "https://github.com/metaneutrons/ami-rust"
 description = "Cargo build-script integration and focused target linker for AROS ABI-v1"
 readme = "README.md"
 publish = false
+homepage = "https://github.com/metaneutrons/ami-rust"
 
 [dependencies]
 aros-elf = { version = "=0.2.0-dev", path = "../aros-elf" }

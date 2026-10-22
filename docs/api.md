@@ -23,15 +23,18 @@ and acceptance state.
 `amiga-os` is the `no_std` task-affine facade. This index records the current
 source reexports and signatures; it does not promise API stability. The dated
 [release status](https://github.com/metaneutrons/ami-rust/blob/main/docs/release-status.md) records qualification and acceptance state
-for a particular source snapshot. The `aros-*` names in the inventory below
-identify internal implementation and qualification crates, not additional
-consumer packages. Use `amiga-sys` only at the unsafe raw ABI boundary; raw calls
-sit outside the safe guarantees summarized here.
+for a particular source snapshot. The `aros-sys` crate is the intended public package for the raw ABI; other
+`aros-*` names below identify implementation and qualification crates rather
+than additional consumer APIs. `amiga-sys` remains an unpublished local
+compatibility facade because the 2026-10-21 namespace survey recorded that
+crates.io name as registered to an unrelated project. Use `aros-sys` only at
+the unsafe raw ABI boundary; raw calls sit outside the safe guarantees
+summarized here.
 
 | Surface | Current signature and semantics |
 | --- | --- |
 | Entry and status | `amiga_os::entry!(application)` installs the entry for `application: fn(&Context) -> AppStatus`; `amiga_os::entry!(application, alloc)` also installs the global allocator when the default `alloc` feature is enabled. `AppStatus` is `Success = 0`, `Error = 10`, or `Fatal = 20`. |
-| `Context` | `Context::args(&self) -> Args<'_>` yields borrowed argument byte slices for the active application frame (`Args` is the returned iterator type, not separately re-exported by the facade); `Context::diagnostic(&self, label: &[u8], code: u64)` emits a bounded diagnostic; `Context::statistics(&self) -> aros_sys::SdkStats` returns native resource counters from the raw ABI, also re-exported by `amiga-sys`. The context is supplied by the entry and is task-affine. |
+| `Context` | `Context::args(&self) -> Args<'_>` yields borrowed argument byte slices for the active application frame (`Args` is the returned iterator type, not separately re-exported by the facade); `Context::diagnostic(&self, label: &[u8], code: u64)` emits a bounded diagnostic; `Context::statistics(&self) -> aros_sys::SdkStats` returns native resource counters from the raw ABI exposed by `aros-sys`. The context is supplied by the entry and is task-affine. |
 | Errors | `ErrorKind` is `Native`, `Input`, `Limit`, `Owner`, `State`, `Eof`, or `ZeroProgress`; `Operation` identifies the operation. `Error { kind: ErrorKind, native: i64, operation: Operation }` is allocation-free and has `kind_code(self) -> u8`. There is no `OutOfMemory` error kind. |
 | Paths and files | `BytePath::new(path: &[u8]) -> Result<Self, Error>` rejects embedded NUL and payloads over 127 bytes; `len(&self) -> usize` and `is_empty(&self) -> bool` inspect it. `FileMode` is `ReadExisting`, `CreateTruncate`, or `ReadWrite`. `File::open(context: &'ctx Context, path: &BytePath, mode: FileMode) -> Result<File<'ctx>, Error>` creates an owned context-bound handle. `File::read(&mut self, &mut [u8]) -> Result<usize, Error>`, `File::write(&mut self, &[u8]) -> Result<usize, Error>`, `File::read_exact(&mut self, &mut [u8]) -> Result<(), Error>`, `File::write_all(&mut self, &[u8]) -> Result<(), Error>`, and consuming `File::close(self) -> Result<(), Error>` operate on borrowed buffers; one transfer is at most 64 KiB. |
 | Standard streams | `Stdout::new(context: &'ctx Context) -> Result<Stdout<'ctx>, Error>` and `Stderr::new(context: &'ctx Context) -> Result<Stderr<'ctx>, Error>` borrow process handles. `Stdout::write(&mut self, &[u8]) -> Result<usize, Error>` and `Stdout::write_all(&mut self, &[u8]) -> Result<(), Error>` write borrowed buffers; `Stderr::write(&mut self, &[u8]) -> Result<usize, Error>` and `Stderr::write_all(&mut self, &[u8]) -> Result<(), Error>` do the same for standard error. Each single transfer is at most 64 KiB. `Stderr` requires a DOS process and selects `pr_CES`, falling back to `pr_COS`; neither wrapper closes its borrowed handle. A DOS handler may allocate while writing. |
@@ -40,7 +43,7 @@ sit outside the safe guarantees summarized here.
 | Synchronous callback | `call<F>(context: &Context, callback: &mut F, input: u64) -> Result<u64, Error> where F: FnMut(u64) -> u64` invokes a callback synchronously; callback state is not retained. |
 
 Owned handles borrow their creating context and remain confined to that task;
-the context and handles are neither `Send` nor `Sync`. `amiga-sys` is the
+the context and handles are neither `Send` nor `Sync`. `aros-sys` is the
 separate unsafe raw ABI boundary.
 
 Global allocator refusal is distinct from a fallible API error. A Rust

@@ -2,6 +2,8 @@
 > packages. Their CLI implementation is retired in the development tree. Use the
 > [released source](https://github.com/metaneutrons/ami-rust/tree/v0.1.0) for replay.
 > The next release uses rustup, normal Cargo and crates; see the migration plan.
+> For the upcoming crate-based release, use `aros-sys` for raw ABI access.
+> The local `amiga-sys` compatibility facade remains unpublished.
 
 # ami-rust production installation recipe
 
