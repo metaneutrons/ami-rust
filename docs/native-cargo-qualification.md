@@ -20,7 +20,12 @@ For each host, the measured application phase links an isolated
 dependency and SHA-256 examples in two fresh source roots. Complete ELF bytes
 and native objects must agree between those roots. The pinned nightly compiler
 receives `-Zunstable-options` together with the reproducibility path mappings
-for its custom target. Fixed system programs are canonicalized before the
+for its custom target. The isolated Cargo configuration enables the pinned
+`ami-rust-reproducible-cross` mode already used by the target-library producer;
+this keeps host build-script identities out of target crate disambiguators.
+It preserves fresh private caches and ordinary Cargo commands. Finished ELF
+files, archives and compiler metadata are never rewritten to force a match.
+Fixed system programs are canonicalized before the
 unchanged protected-executable checks, including merged `/usr` Linux systems. Missing-compiler and wrong
 linker controls must produce the intended Cargo diagnostic with complete
 capture, healthy resource measurement and no accepted ELF output. Offline

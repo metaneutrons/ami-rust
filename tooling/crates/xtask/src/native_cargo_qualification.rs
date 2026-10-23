@@ -907,7 +907,12 @@ fn write_cargo_vendor_config(
     );
     if let Some(prefix) = prefix {
         let linker = toml_string(&path_text(&prefix.join("bin/aros-link"))?);
-        config.push_str(&format!("\n[target.x86_64-aros]\nlinker = {linker}\n"));
+        // The pinned Cargo producer exposes this opt-in mode for fresh private
+        // cross-build caches. Keep ordinary Cargo commands while excluding
+        // host build-script identities from target crate disambiguators.
+        config.push_str(&format!(
+            "\n[unstable]\nami-rust-reproducible-cross = true\n\n[target.x86_64-aros]\nlinker = {linker}\n"
+        ));
     }
     write_new(&cargo_home.join("config.toml"), config.as_bytes())
 }

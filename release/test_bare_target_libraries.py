@@ -15,7 +15,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 DRIVER_PATH = ROOT / "tools/supervise-bare-target-libraries.py"
-DRIVER_SHA256 = "67fc3b7109db9f6351149600d6d2e3fdf855a72d13421a3a61b6c904e5804f3a"
+DRIVER_SHA256 = "beca90eb5a52f1266734df146a8cf371703b224bdb8d88189d3ec154b4b2c994"
 LABELS = ("rustc-version", "rustc-sysroot", "cargo-version", "rust-objcopy-version", "source-production")
 LIMITS = {"seconds": 1200, "rss_bytes": 4 * 1024**3, "workspace_bytes": 12 * 1024**3, "log_bytes": 16 * 1024**2}
 REGISTRY = "registry+https://github.com/rust-lang/crates.io-index"
