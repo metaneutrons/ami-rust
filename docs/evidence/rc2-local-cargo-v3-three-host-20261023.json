@@ -73,7 +73,7 @@
     "One fresh application build root per host, not the production two-root/control matrix.",
     "macOS development Cargo is not the production all-static dependency build.",
     "Host-specific Cargo binaries and Rust metadata are not asserted byte-identical.",
-    "Affected AROS guest runtime/memory, remaining cache/fallback controls and complete producer chain are open.",
+    "Remaining cache/fallback controls and complete production producer chain are open.",
     "No RC2-RC5 acceptance, SDK qualification or publication."
   ],
   "baseline": "Qualified x86-64 AROS ABI-v1, target and QEMU inputs unchanged.",
@@ -94,5 +94,26 @@
     "real_patch_application": "v2 two-file and v3 four-file exact original/changed-path/postimage checks PASS",
     "static_checks": "bash syntax, actionlint, git diff --check PASS",
     "source_review": "Independent read-only review found no material issues; primary separately reviewed the Rust producer change."
+  },
+  "affected_local_runtime": {
+    "status": "ACCEPT_LOCAL_AFFECTED_RUNTIME_MEASUREMENT_ONLY",
+    "full_cases": 48,
+    "large_cases": 14,
+    "independent_audit_checks": 124,
+    "failed_audit_checks": 0,
+    "case_resource_validation_failures": 0,
+    "core_alloc_smoke_runs": 2,
+    "stdout_stderr_and_sha256sum": "PASS actual AROS guest checks in both smoke runs",
+    "elapsed_seconds_from_original_campaign_start": 3721.6540429592133,
+    "clock_reset": false,
+    "baseline": "Same pinned x86-64 ABI-v1 ISO, target, QEMU, BIOS/VGA, one CPU, 512 MiB, no network",
+    "whole_guest_peak_bytes": {
+      "full48": 30679168,
+      "large-macos": 79273520
+    },
+    "runtime_independent_review_sha256": "0ecbdb56f06de47b4dedac9b140b8de5ee609dbea112201bca3683e71fea741e",
+    "smoke_independent_review_sha256": "5e8a18284cdf23db37d4f729592d03e38da65d54cef6548a89409153a47611ea",
+    "primary_runtime_decision_sha256": "840f22c55b46b801deda979b14e2dea0edc1c8508fe1a68aee88e65509d43ae3",
+    "boundary": "Exact local new-output runtime/memory measurement accepted after independent raw-capture audit. One local QEMU host; raw five-program bytes already matched across three native build hosts. No SDK, production producer-chain, two-root, protected CI, RC milestone or publication acceptance."
   }
 }
