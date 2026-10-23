@@ -298,7 +298,7 @@ fn validate_inventory_path(path: &str, limits: ComponentInstallLimits) -> Result
     Ok(())
 }
 
-fn validate_link_target(target: &str, maximum: usize) -> Result<()> {
+pub(crate) fn validate_link_target(target: &str, maximum: usize) -> Result<()> {
     if target.is_empty()
         || target.len() > maximum
         || target.starts_with('/')
@@ -526,7 +526,7 @@ fn materialize_one_link(
     create_symlink(parent, leaf, &expected.target)
 }
 
-fn create_symlink(parent: &Directory, leaf: &str, target: &str) -> Result<()> {
+pub(crate) fn create_symlink(parent: &Directory, leaf: &str, target: &str) -> Result<()> {
     let leaf = CString::new(leaf.as_bytes())
         .map_err(|_| Refusal::new("component symlink path contains NUL"))?;
     let target = CString::new(target.as_bytes())
@@ -547,7 +547,7 @@ fn create_symlink(parent: &Directory, leaf: &str, target: &str) -> Result<()> {
     Ok(())
 }
 
-fn random_stage_name() -> Result<OsString> {
+pub(crate) fn random_stage_name() -> Result<OsString> {
     let mut nonce = [0_u8; 12];
     #[allow(
         unsafe_code,

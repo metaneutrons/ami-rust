@@ -77,6 +77,17 @@ pub(crate) struct NativeObjects {
     pub objects: Vec<FileIdentity>,
 }
 
+fn native_host_triple(host: &str) -> Result<&'static str> {
+    match host {
+        "macos-aarch64" => Ok("aarch64-apple-darwin"),
+        "linux-x86_64" => Ok("x86_64-unknown-linux-gnu"),
+        "linux-aarch64" => Ok("aarch64-unknown-linux-gnu"),
+        _ => Err(Refusal::new(
+            "native-build host input admission is incomplete",
+        )),
+    }
+}
+
 /// Prepare the unchanged native bridge within Cargo's own OUT_DIR.
 ///
 /// This function runs from the application's additive build script. It never
@@ -86,15 +97,7 @@ pub fn prepare(options: BuildOptions) -> Result<()> {
     if env::var("TARGET").ok().as_deref() != Some("x86_64-aros") {
         return Err(Refusal::new("native bridge requires TARGET=x86_64-aros"));
     }
-    let host = match crate::inputs::current_host()? {
-        "macos-aarch64" => "aarch64-apple-darwin",
-        "linux-x86_64" => "x86_64-unknown-linux-gnu",
-        _ => {
-            return Err(Refusal::new(
-                "native-build host input admission is incomplete",
-            ));
-        }
-    };
+    let host = native_host_triple(crate::inputs::current_host()?)?;
     if env::var("HOST").ok().as_deref() != Some(host) {
         return Err(Refusal::new(
             "Cargo host does not match the admitted native tools",
@@ -712,6 +715,23 @@ mod tests {
         fn drop(&mut self) {
             fs::remove_dir_all(&self.0).unwrap();
         }
+    }
+
+    #[test]
+    fn native_host_target_triple_selection_is_explicit_and_closed() {
+        assert_eq!(
+            native_host_triple("macos-aarch64").unwrap(),
+            "aarch64-apple-darwin"
+        );
+        assert_eq!(
+            native_host_triple("linux-x86_64").unwrap(),
+            "x86_64-unknown-linux-gnu"
+        );
+        assert_eq!(
+            native_host_triple("linux-aarch64").unwrap(),
+            "aarch64-unknown-linux-gnu"
+        );
+        assert!(native_host_triple("linux-riscv64").is_err());
     }
 
     #[test]

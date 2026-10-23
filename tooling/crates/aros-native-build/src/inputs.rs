@@ -131,34 +131,19 @@ impl Toolchain {
     }
 }
 
-/// Return the admitted native-build host key.
+/// Return the pinned native-build host key for the running host.
 pub fn current_host() -> Result<&'static str> {
-    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    {
-        Ok("macos-aarch64")
-    }
+    host_for_target(std::env::consts::OS, std::env::consts::ARCH)
+}
 
-    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-    {
-        Ok("linux-x86_64")
-    }
-
-    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
-    {
-        Err(Refusal::new(
-            "L1: Linux AArch64 host pins are not admitted yet",
-        ))
-    }
-
-    #[cfg(not(any(
-        all(target_os = "macos", target_arch = "aarch64"),
-        all(target_os = "linux", target_arch = "x86_64"),
-        all(target_os = "linux", target_arch = "aarch64")
-    )))]
-    {
-        Err(Refusal::new(
-            "native build supports only macOS aarch64 and Linux x86_64 hosts",
-        ))
+fn host_for_target(os: &str, arch: &str) -> Result<&'static str> {
+    match (os, arch) {
+        ("macos", "aarch64") => Ok("macos-aarch64"),
+        ("linux", "x86_64") => Ok("linux-x86_64"),
+        ("linux", "aarch64") => Ok("linux-aarch64"),
+        _ => Err(Refusal::new(
+            "native build supports only macOS aarch64 and Linux x86_64/aarch64 hosts",
+        )),
     }
 }
 
@@ -201,6 +186,7 @@ struct TargetLibrariesPin {
     symlinks: Vec<SymlinkPin>,
 }
 
+#[derive(Clone, Copy)]
 struct EmbeddedPins {
     rust: &'static str,
     cargo: &'static str,
@@ -225,32 +211,7 @@ struct Pins {
 
 impl Pins {
     fn for_host(host: &'static str) -> Result<Self> {
-        let embedded = match host {
-            "macos-aarch64" => EmbeddedPins {
-                rust: include_str!("../pins/macos-aarch64/rust.json"),
-                cargo: include_str!("../pins/macos-aarch64/cargo.json"),
-                collector: include_str!("../pins/macos-aarch64/collector.json"),
-                llvm: include_str!("../pins/macos-aarch64/toolchain.json"),
-                csdk: include_str!("../pins/macos-aarch64/csdk.json"),
-                target: include_str!("../pins/target.json"),
-                target_libraries: include_str!("../pins/target-libraries.json"),
-            },
-            "linux-x86_64" => EmbeddedPins {
-                rust: include_str!("../pins/linux-x86_64/rust.json"),
-                cargo: include_str!("../pins/linux-x86_64/cargo.json"),
-                collector: include_str!("../pins/linux-x86_64/collector.json"),
-                llvm: include_str!("../pins/linux-x86_64/toolchain.json"),
-                csdk: include_str!("../pins/linux-x86_64/csdk.json"),
-                target: include_str!("../pins/target.json"),
-                target_libraries: include_str!("../pins/target-libraries.json"),
-            },
-            _ => {
-                return Err(Refusal::new(
-                    "no native-build input pins are embedded for this host",
-                ));
-            }
-        };
-
+        let embedded = embedded_pins_for_host(host)?;
         let rust = parse_inventory("Rust sysroot", embedded.rust)?;
         let cargo = parse_inventory("Cargo", embedded.cargo)?;
         let collector = parse_inventory("collector", embedded.collector)?;
@@ -294,6 +255,41 @@ impl Pins {
             source_date_epoch: target.source_date_epoch,
             identity,
         })
+    }
+}
+
+fn embedded_pins_for_host(host: &str) -> Result<EmbeddedPins> {
+    match host {
+        "macos-aarch64" => Ok(EmbeddedPins {
+            rust: include_str!("../pins/macos-aarch64/rust.json"),
+            cargo: include_str!("../pins/macos-aarch64/cargo.json"),
+            collector: include_str!("../pins/macos-aarch64/collector.json"),
+            llvm: include_str!("../pins/macos-aarch64/toolchain.json"),
+            csdk: include_str!("../pins/macos-aarch64/csdk.json"),
+            target: include_str!("../pins/target.json"),
+            target_libraries: include_str!("../pins/target-libraries.json"),
+        }),
+        "linux-x86_64" => Ok(EmbeddedPins {
+            rust: include_str!("../pins/linux-x86_64/rust.json"),
+            cargo: include_str!("../pins/linux-x86_64/cargo.json"),
+            collector: include_str!("../pins/linux-x86_64/collector.json"),
+            llvm: include_str!("../pins/linux-x86_64/toolchain.json"),
+            csdk: include_str!("../pins/linux-x86_64/csdk.json"),
+            target: include_str!("../pins/target.json"),
+            target_libraries: include_str!("../pins/target-libraries.json"),
+        }),
+        "linux-aarch64" => Ok(EmbeddedPins {
+            rust: include_str!("../pins/linux-aarch64/rust.json"),
+            cargo: include_str!("../pins/linux-aarch64/cargo.json"),
+            collector: include_str!("../pins/linux-aarch64/collector.json"),
+            llvm: include_str!("../pins/linux-aarch64/toolchain.json"),
+            csdk: include_str!("../pins/linux-aarch64/csdk.json"),
+            target: include_str!("../pins/target.json"),
+            target_libraries: include_str!("../pins/target-libraries.json"),
+        }),
+        _ => Err(Refusal::new(
+            "no native-build input pins are embedded for this host",
+        )),
     }
 }
 
@@ -918,8 +914,9 @@ fn hex_digest(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        FilePin, Inventory, SymlinkPin, expected_entries, parse_relative_path, verify_exact_tree,
-        verify_inventory_members,
+        FilePin, Inventory, Pins, SymlinkPin, TARGET_SPEC_PATH, embedded_pins_for_host,
+        expected_entries, host_for_target, input_identity, parse_relative_path, verify_exact_tree,
+        verify_file, verify_inventory_members,
     };
     use sha2::{Digest, Sha256};
     use std::{
@@ -929,6 +926,227 @@ mod tests {
     };
 
     static NEXT_TEMP: AtomicUsize = AtomicUsize::new(0);
+
+    fn digest_text(text: &str) -> String {
+        let digest = Sha256::digest(text.as_bytes());
+        digest.iter().map(|byte| format!("{byte:02x}")).collect()
+    }
+
+    #[test]
+    fn native_host_and_embedded_pin_selection_cover_three_hosts_only() {
+        assert_eq!(
+            host_for_target("macos", "aarch64").unwrap(),
+            "macos-aarch64"
+        );
+        assert_eq!(host_for_target("linux", "x86_64").unwrap(), "linux-x86_64");
+        assert_eq!(
+            host_for_target("linux", "aarch64").unwrap(),
+            "linux-aarch64"
+        );
+        for (os, arch) in [
+            ("linux", "arm64"),
+            ("macos", "x86_64"),
+            ("windows", "aarch64"),
+        ] {
+            assert!(host_for_target(os, arch).is_err(), "accepted {os}/{arch}");
+        }
+        assert!(Pins::for_host("linux-arm64").is_err());
+        assert!(embedded_pins_for_host("linux-riscv64").is_err());
+        assert_eq!(
+            super::current_host().unwrap(),
+            host_for_target(std::env::consts::OS, std::env::consts::ARCH).unwrap()
+        );
+    }
+
+    #[test]
+    fn linux_aarch64_profiles_are_exact_candidates_and_existing_hosts_stay_fixed() {
+        let arm = embedded_pins_for_host("linux-aarch64").unwrap();
+        let expected = [
+            (
+                "rust",
+                "862be6c4c1d29c59fc774e2d38f046672fcd0aa0978a869be9af2752fb4f76ee",
+                arm.rust,
+            ),
+            (
+                "cargo",
+                "857d1fa31e24d23c6792f79471a454dcdd644e01f18e3dec9b2cb78314e1da87",
+                arm.cargo,
+            ),
+            (
+                "collector",
+                "52ea287e4fdf80eaa58a6d459828f1cb0d778b7201affe0dfde65f5ffec29e55",
+                arm.collector,
+            ),
+            (
+                "LLVM/C SDK toolchain",
+                "be3dc1a696882367f4ff39ad393bf3ae66d6ee25fd73f8042eccfcb738defd68",
+                arm.llvm,
+            ),
+            (
+                "C SDK",
+                "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337",
+                arm.csdk,
+            ),
+            (
+                "target",
+                "33fdd3d97053370eb3db9e05ea75721dafcfc7f4b5f8c218acaab1911984c341",
+                arm.target,
+            ),
+            (
+                "target libraries",
+                "4759fc1a0f2f74e1a624a6c7b62b5d9949d873f1ce05a61ba9825891bf327183",
+                arm.target_libraries,
+            ),
+        ];
+        for (name, expected_sha256, bytes) in expected {
+            assert_eq!(
+                digest_text(bytes),
+                expected_sha256,
+                "{name} pin bytes changed"
+            );
+        }
+
+        let pins = Pins::for_host("linux-aarch64").unwrap();
+        assert_eq!(pins.rust.files.len(), 3882);
+        assert_eq!(pins.rust.symlinks.len(), 2);
+        assert_eq!(pins.cargo.files.len(), 1);
+        assert_eq!(pins.cargo.files[0].path, "bin/cargo");
+        assert_eq!(pins.cargo.files[0].bytes, 45863336);
+        assert_eq!(
+            pins.cargo.files[0].sha256,
+            "2f8a507ec5bef7fe41a04c18aee06e359ff7f3b70d17d98007c9014114e17d9b"
+        );
+        assert_eq!(pins.collector.files.len(), 10);
+        assert_eq!(pins.llvm.files.len(), 2754);
+        assert_eq!(pins.llvm.symlinks.len(), 134);
+        assert_eq!(pins.csdk.files.len(), 2835);
+        assert!(
+            pins.identity
+                .starts_with("linux-aarch64:x86_64-aros:sha256:")
+        );
+
+        let old_hosts = [
+            (
+                "macos-aarch64",
+                [
+                    "9acf02ab3d4a22137b6c5f82294e35c518ff1ffdbad5a701d5f3cdb0910668ea",
+                    "2f081118d19e93b95304c95440d82d1f3d022fb063e4ae7ad1b89285ceddbe39",
+                    "34e7e069a72ac84d980f15c797b4250f324eee19088f55d135c9e4eafa0d88de",
+                    "28237af9576e852451fcdf0470a904edb34a70232feb41d0c56be246313baadf",
+                    "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337",
+                ],
+            ),
+            (
+                "linux-x86_64",
+                [
+                    "7a88373f28d19d6d61494587240681999adfb2bec964b4c3d74fae9718f097e8",
+                    "85f5bb754c7f11429dc1a58a2adc1256b9ad4da1f7a47926629e1f94dd92ead8",
+                    "0e97967a63d6ec868edcf26e2b2c08a9c36a292416aa0f7ae016564369551caa",
+                    "a68f0d3d6b6d9e9678dca0af25b083d6b00f67fd4f806adcb6a2e16af1a19a6d",
+                    "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337",
+                ],
+            ),
+        ];
+        for (host, hashes) in old_hosts {
+            let pins = embedded_pins_for_host(host).unwrap();
+            let actual =
+                [pins.rust, pins.cargo, pins.collector, pins.llvm, pins.csdk].map(digest_text);
+            assert_eq!(actual, hashes, "existing {host} pins changed");
+            Pins::for_host(host).unwrap();
+        }
+    }
+
+    #[test]
+    fn every_linux_aarch64_pin_participates_in_input_identity() {
+        let pins = embedded_pins_for_host("linux-aarch64").unwrap();
+        let identity = input_identity("linux-aarch64", &pins);
+        let mut rust = pins;
+        rust.rust = changed_text(pins.rust);
+        assert_ne!(
+            input_identity("linux-aarch64", &rust),
+            identity,
+            "rust missing from identity"
+        );
+        let mut cargo = pins;
+        cargo.cargo = changed_text(pins.cargo);
+        assert_ne!(
+            input_identity("linux-aarch64", &cargo),
+            identity,
+            "cargo missing from identity"
+        );
+        let mut collector = pins;
+        collector.collector = changed_text(pins.collector);
+        assert_ne!(
+            input_identity("linux-aarch64", &collector),
+            identity,
+            "collector missing from identity"
+        );
+        let mut llvm = pins;
+        llvm.llvm = changed_text(pins.llvm);
+        assert_ne!(
+            input_identity("linux-aarch64", &llvm),
+            identity,
+            "llvm missing from identity"
+        );
+        let mut csdk = pins;
+        csdk.csdk = changed_text(pins.csdk);
+        assert_ne!(
+            input_identity("linux-aarch64", &csdk),
+            identity,
+            "csdk missing from identity"
+        );
+        let mut target = pins;
+        target.target = changed_text(pins.target);
+        assert_ne!(
+            input_identity("linux-aarch64", &target),
+            identity,
+            "target missing from identity"
+        );
+        let mut libraries = pins;
+        libraries.target_libraries = changed_text(pins.target_libraries);
+        assert_ne!(
+            input_identity("linux-aarch64", &libraries),
+            identity,
+            "target libraries missing from identity"
+        );
+        assert_ne!(input_identity("linux-x86_64", &pins), identity);
+    }
+
+    fn changed_text(text: &'static str) -> &'static str {
+        Box::leak(format!("{text} ").into_boxed_str())
+    }
+
+    #[test]
+    fn pinned_target_spec_member_accepts_exact_bytes_and_rejects_corruption() {
+        let pins = Pins::for_host("linux-aarch64").unwrap();
+        let temp = TempDirectory::new();
+        let target_spec = include_bytes!("../tests/fixtures/x86_64-aros.json");
+        let path = temp.0.join(TARGET_SPEC_PATH);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, target_spec).unwrap();
+        verify_file(
+            &temp.0,
+            TARGET_SPEC_PATH,
+            None,
+            &pins.target_spec_sha256,
+            "AROS target specification",
+        )
+        .unwrap();
+
+        let mut corrupted = target_spec.to_vec();
+        corrupted[0] ^= 1;
+        fs::write(&path, corrupted).unwrap();
+        assert!(
+            verify_file(
+                &temp.0,
+                TARGET_SPEC_PATH,
+                None,
+                &pins.target_spec_sha256,
+                "AROS target specification"
+            )
+            .is_err()
+        );
+    }
 
     struct TempDirectory(PathBuf);
 
