@@ -33,7 +33,7 @@ BOOTSTRAP_RECORD_NAMES = {"excluded-installer-metadata.txt", "excluded-installer
                           "duplicate-identical-component-paths.txt"}
 BOOTSTRAP_RECEIPT_MAX_BYTES = 1024 * 1024
 XTASK_MODULE_SHA = "83385578ad207037a7f339be95aff76abab05424b0eba6d94f13db1952c83627"
-XTASK_MAIN_SHA = "e88b12957bc6f16e4ba8743bdbaff873874ed24529fcd464e4a07ab47ffda842"
+XTASK_MAIN_SHA = "786bcfadb16294ef54d6788f22ac8b28efbe590affb66d4995a0f5007f54c6d8"
 NATIVE_CARGO_COMMIT = "3efb1f477e99b42974b982d939fd100303cdf7db"
 RUST_COMMIT = "330d317121e16b5db8e5adc63595910528ff2ee7"
 LIMITS = {"rss_bytes": 4 * 1024**3, "workspace_bytes": 12 * 1024**3,

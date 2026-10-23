@@ -321,6 +321,7 @@ jobs:
           persist-credentials: false
           sparse-checkout-cone-mode: false
           sparse-checkout: |
+            targets/x86_64-aros.json
             tools/
             tooling/
             host/profiles/
