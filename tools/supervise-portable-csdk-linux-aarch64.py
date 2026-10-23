@@ -38,20 +38,30 @@ INNER_PRODUCER_CLEANUP_RESERVE_SECONDS = 150
 OUTER_PRODUCER_DEADLINE_SECONDS = 4340
 OUTER_CLEANUP_RESERVE_SECONDS = 60
 PRODUCER_SHUTDOWN_GRACE_SECONDS = 15
+# The parent Supervisor's 15s stop grace starts before this wrapper's handler
+# runs. Keep one absolute 10s receipt deadline from handler entry, with an 8s
+# operation cutoff and a 2s log-hash/atomic-write reserve. Each child wait and
+# process-table call is clipped to the remaining operation budget.
+OUTER_SIGNAL_RECEIPT_DEADLINE_SECONDS = 10.0
+OUTER_SIGNAL_OPERATION_DEADLINE_SECONDS = 8.0
+OUTER_SIGNAL_FINALIZATION_RESERVE_SECONDS = 2.0
+OUTER_SIGNAL_PRODUCER_SETTLE_SECONDS = 1.5
+OUTER_SIGNAL_OBSERVER_TIMEOUT_SECONDS = 1.5
+OUTER_SIGNAL_CHILD_REAP_WAIT_SECONDS = 1.0
+OUTER_SIGNAL_CHILD_REAP_AFTER_KILL_SECONDS = 0.5
+OUTER_SIGNAL_FINAL_RECEIPT_WRITE_GUARD_SECONDS = 0.5
 PROCESS_ROWS_TIMEOUT_SECONDS = 2.0
-# The outer receipt bound counts six timed ps reads/loop overruns, six seconds
-# for two finite direct-child waits, and twelve seconds of scheduling slack.
-OUTER_CLEANUP_OBSERVER_READ_BUDGET = 6
-OUTER_CLEANUP_DIRECT_WAIT_SECONDS = 6
-OUTER_CLEANUP_SCHEDULING_SLACK_SECONDS = 12
 # Inner cleanup covers the producer TERM grace, both observed-group TERM/KILL
 # grace periods, ten bounded ps waits, and the producer's 1s+3s direct reap.
 INNER_CLEANUP_MINIMUM_SECONDS = (
     3 * PRODUCER_SHUTDOWN_GRACE_SECONDS + 10 * PROCESS_ROWS_TIMEOUT_SECONDS + 4)
+# The outer reservation covers the parent's unchanged stop grace, the nested
+# receipt deadline plus up to one process-table timeout of handler dispatch,
+# and 15s of workflow scheduling/finalization slack.
+OUTER_WORKFLOW_FINALIZATION_SLACK_SECONDS = 15
 OUTER_CLEANUP_MINIMUM_SECONDS = (
-    2 * PRODUCER_SHUTDOWN_GRACE_SECONDS + OUTER_CLEANUP_DIRECT_WAIT_SECONDS
-    + OUTER_CLEANUP_OBSERVER_READ_BUDGET * PROCESS_ROWS_TIMEOUT_SECONDS
-    + OUTER_CLEANUP_SCHEDULING_SLACK_SECONDS)
+    PRODUCER_SHUTDOWN_GRACE_SECONDS + OUTER_SIGNAL_RECEIPT_DEADLINE_SECONDS
+    + PROCESS_ROWS_TIMEOUT_SECONDS + OUTER_WORKFLOW_FINALIZATION_SLACK_SECONDS)
 ARTIFACT_PAYLOAD_BYTES = 127 * 1024**2
 ARTIFACT_BYTES = 128 * 1024**2
 WORKFLOW_SCHEMA = "ami-rust-portable-csdk-linux-aarch64-supervision-v1"
@@ -66,7 +76,7 @@ EXPECTED = {
     "release/prepare_sdk.py": "57e447ca6dad3b013c0aa3f692e09246c8e9330de7d1d168be8ffa3247924a43",
     "release/ci_csdk.py": "44245c9645a53c73124787d6ead4e95014d029a4744b9162dbab2fce2f57819b",
     "release/csdk_producer.py": "b21ac90ba5e9e76cf6b49a69201378209adc25c641bdf9584132de43cd0acce6",
-    "release/test_csdk_supervision.py": "9ff9560a820eda821565d7c9a39689099d827cd8636c3bef37ef45ed5e832d8f",
+    "release/test_csdk_supervision.py": "ded55566c44587f401284e6077a9a01fd033703edab18b00c6b724e0815cb91e",
     "release/csdk_archive.py": "9c20f9e1f6f45f3baf4c044c5511860c46b7ee73c8f8fd1cbbebd1dce2991d15",
     "release/csdk_metadata.py": "efbdaff73fae189a1aa59d3b9dfa5a217e9d7696db6d7e3389514adad1e6d53b",
     "release/csdk_nouveau.py": "96de187a1090a9211d35a615b5245c48253ec490eed55adbe0a128c9cabefd58",
@@ -142,6 +152,302 @@ def write_json(path: Path, record: dict) -> None:
         stream.write((json.dumps(record, sort_keys=True, indent=2) + "\n").encode())
 
 
+def write_json_fresh_atomic(path: Path, record: dict) -> None:
+    temporary = path.with_name(path.name + ".provisional")
+    if path.exists() or path.is_symlink() or temporary.exists() or temporary.is_symlink():
+        raise ValueError("fresh provisional receipt path required")
+    try:
+        with temporary.open("xb") as stream:
+            stream.write((json.dumps(record, sort_keys=True, indent=2) + "\n").encode())
+        os.link(temporary, path, follow_symlinks=False)
+    finally:
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def replace_json(path: Path, record: dict) -> None:
+    temporary = path.with_name(path.name + ".finalizing")
+    if temporary.exists() or temporary.is_symlink():
+        raise ValueError("fresh atomic receipt temporary required")
+    with temporary.open("xb") as stream:
+        stream.write((json.dumps(record, sort_keys=True, indent=2) + "\n").encode())
+    os.replace(temporary, path)
+
+
+def replace_json_before_deadline(path: Path, record: dict, *, deadline: float) -> tuple[bool, bool]:
+    """Promote a final receipt only if its bounded write leaves a rename margin."""
+    temporary = path.with_name(path.name + ".finalizing")
+    if temporary.exists() or temporary.is_symlink():
+        raise ValueError("fresh atomic receipt temporary required")
+    with temporary.open("xb") as stream:
+        stream.write((json.dumps(record, sort_keys=True, indent=2) + "\n").encode())
+    if time.monotonic() + OUTER_SIGNAL_FINAL_RECEIPT_WRITE_GUARD_SECONDS >= deadline:
+        temporary.unlink()
+        return False, False
+    os.replace(temporary, path)
+    return time.monotonic() < deadline, True
+
+
+def _bounded_timeout(deadline: float, maximum: float, *, reserve: float = 0.0) -> float:
+    return max(0.0, min(maximum, deadline - time.monotonic() - reserve))
+
+
+def _outer_signal_cleanup(process, seen_groups, ci_cargo_module, *, received_at: float,
+                          signal_group=None, get_session_id=None) -> dict:
+    """Finish nested cleanup inside one deadline shorter than the outer 15s grace."""
+    deadline = received_at + OUTER_SIGNAL_OPERATION_DEADLINE_SECONDS
+    if signal_group is None:
+        signal_group = os.killpg
+    if get_session_id is None:
+        get_session_id = os.getsid
+    result = {
+        "group_ids": sorted(seen_groups), "sigterm_group_ids": [], "sigkill_group_ids": [],
+        "remaining_group_ids": sorted(seen_groups), "unsignaled_group_ids": [],
+        "foreign_session_group_ids": [], "unverified_session_group_ids": [],
+        "ambiguous_session_group_ids": [],
+        "signal_census_complete": False, "signal_deadline_exhausted": False,
+        "observer_errors": [],
+        "signal_errors": [], "complete": False, "incomplete_cleanup": True,
+        "status": "incomplete_cleanup", "receipt_deadline_seconds":
+            OUTER_SIGNAL_RECEIPT_DEADLINE_SECONDS,
+        "operation_deadline_seconds": OUTER_SIGNAL_OPERATION_DEADLINE_SECONDS,
+        "operation_cutoff_monotonic": deadline,
+        "process_table_calls": 0,
+    }
+    if process is None:
+        result["observer_errors"].append("RuntimeError: producer process was not started")
+        result["direct_child_reap"] = {
+            "schema": "ami-rust-direct-child-reap-v1", "status": "incomplete_cleanup",
+            "incomplete_cleanup": True, "wait_attempt_count": 0,
+            "sigkill_attempted": False, "return_code": None,
+        }
+        return result
+
+    wrapper_session_id = None
+    wrapper_session_error = None
+    try:
+        wrapper_session_id = get_session_id(0)
+    except Exception as error:
+        wrapper_session_error = type(error).__name__ + ": " + str(error)[:200]
+
+    def classify_owned_groups(rows, fresh_descendants):
+        """Classify current descendant groups and retained same-session orphans."""
+        observed = set(seen_groups) & {row[2] for row in rows}
+        owned = observed & set(fresh_descendants)
+        foreign, unverified, ambiguous = [], [], []
+        for group in sorted(observed - owned):
+            sessions = set()
+            errors = []
+            for pid, _parent, row_group, _rss in rows:
+                if row_group != group or pid <= 1:
+                    continue
+                try:
+                    sessions.add(get_session_id(pid))
+                except ProcessLookupError:
+                    # The process exited after the bounded process-table read.
+                    continue
+                except Exception as error:
+                    errors.append(type(error).__name__ + ": " + str(error)[:160])
+            if wrapper_session_id is None or errors:
+                unverified.append(group)
+                detail = ("; ".join(errors) if errors else
+                          "wrapper session is unavailable: " + str(wrapper_session_error))
+                result["observer_errors"].append(
+                    "session-census:" + str(group) + ": " + detail)
+            elif wrapper_session_id in sessions:
+                owned.add(group)
+            elif sessions:
+                foreign.append(group)
+                ambiguous.append(group)
+                result["observer_errors"].append(
+                    "session-census:" + str(group)
+                    + ": historical live PGID is in another session and ownership is ambiguous")
+            # No sessions means all process rows raced away during getsid;
+            # the final census will decide whether anything remains.
+        result["foreign_session_group_ids"] = sorted(
+            set(result["foreign_session_group_ids"]) | set(foreign))
+        result["unverified_session_group_ids"] = sorted(
+            set(result["unverified_session_group_ids"]) | set(unverified))
+        result["ambiguous_session_group_ids"] = sorted(
+            set(result["ambiguous_session_group_ids"]) | set(ambiguous))
+        return sorted(owned), sorted(set(unverified) | set(ambiguous))
+
+    # Give the producer's existing signal handler a short chance to write its
+    # own failure receipt. The reserve below guarantees time for census, kill,
+    # direct-child reap, a final census, and the wrapper receipt.
+    wait_seconds = _bounded_timeout(
+        deadline, OUTER_SIGNAL_PRODUCER_SETTLE_SECONDS,
+        reserve=(OUTER_SIGNAL_OBSERVER_TIMEOUT_SECONDS
+                 + OUTER_SIGNAL_CHILD_REAP_WAIT_SECONDS
+                 + OUTER_SIGNAL_CHILD_REAP_AFTER_KILL_SECONDS
+                 + OUTER_SIGNAL_OBSERVER_TIMEOUT_SECONDS))
+    if process.poll() is None and wait_seconds > 0:
+        try:
+            process.wait(timeout=wait_seconds)
+        except subprocess.TimeoutExpired:
+            pass
+        except BaseException as error:
+            result["observer_errors"].append(
+                "producer-settle:" + type(error).__name__ + ": " + str(error)[:200])
+
+    rows = None
+    initial_census_complete = False
+    fresh_descendant_groups = None
+    observer_timeout = _bounded_timeout(
+        deadline, OUTER_SIGNAL_OBSERVER_TIMEOUT_SECONDS,
+        reserve=(OUTER_SIGNAL_CHILD_REAP_WAIT_SECONDS
+                 + OUTER_SIGNAL_CHILD_REAP_AFTER_KILL_SECONDS
+                 + OUTER_SIGNAL_OBSERVER_TIMEOUT_SECONDS))
+    if observer_timeout > 0:
+        result["process_table_calls"] += 1
+        try:
+            rows = ci_cargo_module.process_rows(timeout=observer_timeout)
+            fresh_descendant_groups = set(
+                ci_cargo_module.descendant_process_groups(process.pid, rows))
+            seen_groups.update(fresh_descendant_groups)
+            result["group_ids"] = sorted(seen_groups)
+            initial_census_complete = True
+        except Exception as error:
+            result["observer_errors"].append(
+                "initial-census:" + type(error).__name__ + ": " + str(error)[:200])
+    else:
+        result["observer_errors"].append("initial-census:TimeoutError: operation budget exhausted")
+
+    # Keep historical PGIDs because producer helpers can be reparented or
+    # started in another session. Fresh descendants are attributable from the
+    # current tree; a historical orphan is attributable only if its members
+    # still resolve to this wrapper's session. A live foreign-session PGID is
+    # ambiguous (it may be an owned helper or a reused unrelated PGID), so fail
+    # closed without signaling it. Walk confirmed groups until the absolute
+    # cutoff rather than imposing a fixed batch cap.
+    if rows is not None and initial_census_complete and fresh_descendant_groups is not None:
+        live_groups, unverified_groups = classify_owned_groups(rows, fresh_descendant_groups)
+        result["signal_census_complete"] = True
+        result["unsignaled_group_ids"].extend(unverified_groups)
+        for index, group in enumerate(live_groups):
+            if time.monotonic() >= deadline:
+                result["signal_deadline_exhausted"] = True
+                result["unsignaled_group_ids"].extend(live_groups[index:])
+                result["signal_errors"].append(
+                    "deadline:TimeoutError: operation cutoff reached before all live groups were signaled")
+                break
+            try:
+                signal_group(group, signal.SIGKILL)
+                result["sigkill_group_ids"].append(group)
+            except ProcessLookupError:
+                # The observed group exited between census and kill.
+                pass
+            except BaseException as error:
+                result["unsignaled_group_ids"].append(group)
+                result["signal_errors"].append(
+                    "killpg:" + str(group) + ":" + type(error).__name__ + ": "
+                    + str(error)[:200])
+            if time.monotonic() >= deadline:
+                result["signal_deadline_exhausted"] = True
+                if index + 1 < len(live_groups):
+                    result["unsignaled_group_ids"].extend(live_groups[index + 1:])
+                result["signal_errors"].append(
+                    "deadline:TimeoutError: operation cutoff reached during group signaling")
+                break
+    elif seen_groups:
+        result["observer_errors"].append(
+            "signal-census:RuntimeError: fresh descendant census did not complete; no groups signaled")
+
+    reap_deadline = deadline - OUTER_SIGNAL_OBSERVER_TIMEOUT_SECONDS
+    first_wait = _bounded_timeout(
+        reap_deadline, OUTER_SIGNAL_CHILD_REAP_WAIT_SECONDS,
+        reserve=OUTER_SIGNAL_CHILD_REAP_AFTER_KILL_SECONDS)
+    second_wait = _bounded_timeout(
+        reap_deadline, OUTER_SIGNAL_CHILD_REAP_AFTER_KILL_SECONDS)
+    try:
+        result["direct_child_reap"] = ci_cargo_module.reap_child_bounded(
+            process, wait_seconds=first_wait, sigkill_wait_seconds=second_wait)
+    except BaseException as error:
+        result["direct_child_reap"] = {
+            "schema": "ami-rust-direct-child-reap-v1", "status": "incomplete_cleanup",
+            "incomplete_cleanup": True, "wait_attempt_count": 0,
+            "sigkill_attempted": False, "return_code": process.returncode,
+            "signal_errors": ["reap:" + type(error).__name__ + ": " + str(error)[:200]],
+        }
+        result["signal_errors"].extend(result["direct_child_reap"]["signal_errors"])
+
+    final_rows = None
+    final_descendant_groups = None
+    final_owned_groups = None
+    final_unverified_groups = None
+    final_timeout = _bounded_timeout(
+        deadline, OUTER_SIGNAL_OBSERVER_TIMEOUT_SECONDS)
+    if final_timeout > 0:
+        result["process_table_calls"] += 1
+        try:
+            final_rows = ci_cargo_module.process_rows(timeout=final_timeout)
+            final_descendant_groups = set(
+                ci_cargo_module.descendant_process_groups(process.pid, final_rows))
+            seen_groups.update(final_descendant_groups)
+            result["group_ids"] = sorted(seen_groups)
+            final_owned_groups, final_unverified_groups = classify_owned_groups(
+                final_rows, final_descendant_groups)
+        except Exception as error:
+            result["observer_errors"].append(
+                "final-census:" + type(error).__name__ + ": " + str(error)[:200])
+    else:
+        result["observer_errors"].append("final-census:TimeoutError: operation budget exhausted")
+
+    if final_rows is not None and final_descendant_groups is not None:
+        # Include same-session groups that were reparented before the final
+        # descendant walk. Unverified members remain a fail-closed remainder;
+        # positively foreign PGID reuse is never reported as our live child.
+        result["remaining_group_ids"] = sorted(
+            set(final_owned_groups or ()) | set(final_unverified_groups or ()))
+        not_attempted = (set(result["remaining_group_ids"])
+                         - set(result["sigkill_group_ids"]))
+        result["unsignaled_group_ids"] = sorted(
+            set(result["unsignaled_group_ids"]) | not_attempted)
+    else:
+        result["remaining_group_ids"] = sorted(seen_groups)
+    within_operation_deadline = time.monotonic() < deadline
+    if not within_operation_deadline:
+        result["observer_errors"].append(
+            "operation-deadline:TimeoutError: outer signal operation cutoff was reached")
+    child_complete = (result["direct_child_reap"].get("status") == "complete"
+                      and process.returncode is not None)
+    result["complete"] = bool(
+        within_operation_deadline and rows is not None and initial_census_complete
+        and final_rows is not None and child_complete
+        and not result["remaining_group_ids"]
+        and not result["unsignaled_group_ids"] and not result["signal_deadline_exhausted"]
+        and not result["observer_errors"] and not result["signal_errors"])
+    result["incomplete_cleanup"] = not result["complete"]
+    result["status"] = "complete" if result["complete"] else "incomplete_cleanup"
+    result["elapsed_seconds"] = round(time.monotonic() - received_at, 6)
+    result["configured_outer_stop_grace_seconds"] = PRODUCER_SHUTDOWN_GRACE_SECONDS
+    result["handler_dispatch_allowance_seconds"] = PROCESS_ROWS_TIMEOUT_SECONDS
+    result["minimum_outer_escalation_margin_seconds"] = round(
+        PRODUCER_SHUTDOWN_GRACE_SECONDS - PROCESS_ROWS_TIMEOUT_SECONDS
+        - OUTER_SIGNAL_RECEIPT_DEADLINE_SECONDS, 6)
+    return result
+
+
+def receipt_file_identity(path: Path, *, deadline: float) -> dict:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("expected a regular receipt log: " + str(path))
+    size = path.stat().st_size
+    if size > MAX_LOG_BYTES:
+        raise ValueError("receipt log exceeds the pinned aggregate log ceiling")
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while True:
+            if time.monotonic() >= deadline:
+                raise TimeoutError("receipt log hashing exceeded its finalization reserve")
+            block = stream.read(256 * 1024)
+            if not block:
+                break
+            digest.update(block)
+    return {"path": str(path), "bytes": size, "sha256": digest.hexdigest()}
+
+
 class _SupervisorStopRequested(KeyboardInterrupt):
     pass
 
@@ -161,14 +467,16 @@ def run_child_with_deadline(command, *, cwd: Path, env: dict[str, str], stdout, 
 
     previous_sigterm = signal.getsignal(signal.SIGTERM)
     received_sigterm_count = 0
+    outer_signal_received_at = None
     cleanup_attempts = 0
     cleanup_started = False
 
     def outer_stop(signum, _frame):
-        nonlocal received_sigterm_count, cleanup_started
+        nonlocal received_sigterm_count, cleanup_started, outer_signal_received_at
         received_sigterm_count += 1
         if not cleanup_started:
             cleanup_started = True
+            outer_signal_received_at = time.monotonic()
             raise _SupervisorStopRequested(
                 "outer supervisor sent SIGTERM " + str(signum))
 
@@ -188,10 +496,10 @@ def run_child_with_deadline(command, *, cwd: Path, env: dict[str, str], stdout, 
                                    start_new_session=False)
         deadline = time.monotonic() + timeout
 
-        def observe_descendants():
-            rows = ci_cargo_module.process_rows()
-            seen_descendant_groups.update(
-                ci_cargo_module.descendant_process_groups(process.pid, rows))
+        def observe_descendants(*, timeout=PROCESS_ROWS_TIMEOUT_SECONDS):
+            rows = ci_cargo_module.process_rows(timeout=timeout)
+            observed = set(ci_cargo_module.descendant_process_groups(process.pid, rows))
+            seen_descendant_groups.update(observed)
             return rows
 
         try:
@@ -221,13 +529,146 @@ def run_child_with_deadline(command, *, cwd: Path, env: dict[str, str], stdout, 
             return process.returncode
 
         cleanup_attempts += 1
+        outer_signal = primary_reason == "outer_supervisor_sigterm"
+        cleanup_grace = (OUTER_SIGNAL_PRODUCER_SETTLE_SECONDS if outer_signal else grace)
+        if outer_signal:
+            signal_at = outer_signal_received_at or time.monotonic()
+            provisional = {
+                "schema": "ami-rust-portable-csdk-producer-timeout-v1",
+                "status": "FAILED", "label": label, "timeout_seconds": timeout,
+                "termination_reason": primary_reason, "termination_signal": "SIGTERM",
+                "driver_sigterm_delivery_count": received_sigterm_count,
+                "cleanup_attempts": cleanup_attempts,
+                "sigterm_grace_seconds": cleanup_grace,
+                "configured_sigterm_grace_seconds": grace,
+                "candidate_accepted": False, "cleanup_status": "incomplete_cleanup",
+                "cleanup_complete": False, "receipt_phase": "cleanup_in_progress",
+                "outer_signal_cleanup_deadline_seconds": OUTER_SIGNAL_RECEIPT_DEADLINE_SECONDS,
+                "outer_signal_operation_deadline_seconds": OUTER_SIGNAL_OPERATION_DEADLINE_SECONDS,
+                "outer_signal_finalization_reserve_seconds": OUTER_SIGNAL_FINALIZATION_RESERVE_SECONDS,
+                "primary_error": (type(primary_error).__name__ + ": " + str(primary_error)[:300]
+                                  if primary_error else None),
+            }
+            provisional_error = None
+            try:
+                write_json_fresh_atomic(timeout_record, provisional)
+            except BaseException as error:
+                provisional_error = type(error).__name__ + ": " + str(error)[:300]
+
+            try:
+                if process.poll() is None:
+                    process.send_signal(signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            except BaseException as error:
+                cleanup_error = type(error).__name__ + ": " + str(error)[:300]
+                primary_error = primary_error or error
+
+            bounded = _outer_signal_cleanup(
+                process, seen_descendant_groups, ci_cargo_module, received_at=signal_at)
+            direct_child_reap = bounded.pop("direct_child_reap")
+            group_cleanup = bounded
+            if provisional_error:
+                cleanup_error = cleanup_error or ("provisional timeout receipt: " + provisional_error)
+            group_cleanup["complete"] = bool(
+                group_cleanup.get("complete") and direct_child_reap.get("status") == "complete"
+                and cleanup_error is None and provisional_error is None)
+            group_cleanup["incomplete_cleanup"] = not group_cleanup["complete"]
+            group_cleanup["status"] = (
+                "complete" if group_cleanup["complete"] else "incomplete_cleanup")
+            direct_child_sigkill_fallback = direct_child_reap.get("sigkill_attempted", False)
+            record = {
+                **provisional,
+                "receipt_phase": "final",
+                "driver_sigterm_delivery_count": received_sigterm_count,
+                "direct_child_sigkill_fallback": direct_child_sigkill_fallback,
+                "direct_child_reap": direct_child_reap,
+                "cleanup_error": cleanup_error,
+                "descendant_process_group_cleanup": group_cleanup,
+                "child_exit_code": process.returncode,
+                "candidate_accepted": False,
+                "cleanup_status": group_cleanup["status"],
+                "cleanup_complete": bool(group_cleanup["complete"]),
+            }
+            final_deadline = signal_at + OUTER_SIGNAL_RECEIPT_DEADLINE_SECONDS
+            log_hash_deadline = (final_deadline
+                                 - OUTER_SIGNAL_FINAL_RECEIPT_WRITE_GUARD_SECONDS)
+            receipt_errors = []
+            receipt_paths = (("stdout", Path(stdout.name)), ("stderr", Path(stderr.name)))
+            try:
+                aggregate_log_bytes = sum(path.stat().st_size for _, path in receipt_paths)
+                if aggregate_log_bytes > MAX_LOG_BYTES:
+                    raise ValueError("receipt logs exceed the aggregate 16MiB ceiling")
+            except BaseException as error:
+                aggregate_log_bytes = None
+                receipt_errors.append(
+                    "aggregate-logs: " + type(error).__name__ + ": " + str(error)[:200])
+            for key, path in receipt_paths:
+                try:
+                    if aggregate_log_bytes is None:
+                        raise ValueError("aggregate log sizes were not verified")
+                    record[key] = receipt_file_identity(path, deadline=log_hash_deadline)
+                except BaseException as error:
+                    receipt_errors.append(key + ": " + type(error).__name__ + ": " + str(error)[:200])
+                    try:
+                        stat = path.stat()
+                        record[key] = {"path": str(path), "bytes": stat.st_size,
+                                       "sha256": None, "identity_error": type(error).__name__}
+                    except OSError:
+                        record[key] = {"path": str(path), "bytes": None,
+                                       "sha256": None, "identity_error": type(error).__name__}
+            if receipt_errors:
+                record["receipt_errors"] = receipt_errors
+                record["cleanup_complete"] = False
+                record["cleanup_status"] = "incomplete_cleanup"
+                record["descendant_process_group_cleanup"]["complete"] = False
+                record["descendant_process_group_cleanup"]["incomplete_cleanup"] = True
+                record["descendant_process_group_cleanup"]["status"] = "incomplete_cleanup"
+            record["outer_signal_elapsed_seconds"] = round(time.monotonic() - signal_at, 6)
+            record["outer_signal_deadline_seconds"] = OUTER_SIGNAL_RECEIPT_DEADLINE_SECONDS
+            record["outer_signal_handler_dispatch_allowance_seconds"] = PROCESS_ROWS_TIMEOUT_SECONDS
+            record["minimum_outer_escalation_margin_seconds"] = round(
+                PRODUCER_SHUTDOWN_GRACE_SECONDS - PROCESS_ROWS_TIMEOUT_SECONDS
+                - OUTER_SIGNAL_RECEIPT_DEADLINE_SECONDS, 6)
+            if time.monotonic() + OUTER_SIGNAL_FINAL_RECEIPT_WRITE_GUARD_SECONDS >= final_deadline:
+                record["receipt_errors"] = sorted(set(record.get("receipt_errors", []) + [
+                    "final receipt was not promoted because the deadline write margin was exhausted"
+                ]))
+                record["cleanup_complete"] = False
+                record["cleanup_status"] = "incomplete_cleanup"
+                record["descendant_process_group_cleanup"]["complete"] = False
+                record["descendant_process_group_cleanup"]["incomplete_cleanup"] = True
+                record["descendant_process_group_cleanup"]["status"] = "incomplete_cleanup"
+                reason = primary_reason.replace("_", " ")
+                raise TimeoutError(label + " failed: " + reason) from primary_error
+            try:
+                timely, promoted = replace_json_before_deadline(
+                    timeout_record, record, deadline=final_deadline)
+                if not timely:
+                    record["receipt_errors"] = sorted(set(record.get("receipt_errors", []) + [
+                        "final receipt promotion crossed its deadline; cleanup is incomplete"
+                    ]))
+                    record["cleanup_complete"] = False
+                    record["cleanup_status"] = "incomplete_cleanup"
+                    record["descendant_process_group_cleanup"]["complete"] = False
+                    record["descendant_process_group_cleanup"]["incomplete_cleanup"] = True
+                    record["descendant_process_group_cleanup"]["status"] = "incomplete_cleanup"
+                    if promoted:
+                        replace_json(timeout_record, record)
+            except BaseException as error:
+                cleanup_error = cleanup_error or (
+                    "final timeout receipt: " + type(error).__name__ + ": " + str(error)[:200])
+                primary_error = primary_error or error
+            reason = primary_reason.replace("_", " ")
+            raise TimeoutError(label + " failed: " + reason) from primary_error
+
         try:
             if process.poll() is None:
                 process.send_signal(signal.SIGTERM)
         except ProcessLookupError:
             pass
-        grace_deadline = time.monotonic() + grace
         observer_errors = []
+        grace_deadline = time.monotonic() + cleanup_grace
         while time.monotonic() < grace_deadline:
             try:
                 observe_descendants()
@@ -262,7 +703,7 @@ def run_child_with_deadline(command, *, cwd: Path, env: dict[str, str], stdout, 
             group_cleanup = ci_cargo_module.stop_process_groups(
                 sorted(seen_descendant_groups),
                 rows_reader=ci_cargo_module.process_rows,
-                grace_seconds=grace)
+                grace_seconds=cleanup_grace)
         except BaseException as error:
             # Keep the first deadline/observer failure, but retain a bounded
             # cleanup failure and still stop the direct producer below.
@@ -289,7 +730,7 @@ def run_child_with_deadline(command, *, cwd: Path, env: dict[str, str], stdout, 
         # The producer shares this wrapper's process group, so only signal the
         # direct child here; process-group cleanup above targets compiler groups.
         direct_child_reap = ci_cargo_module.reap_child_bounded(
-            process, wait_seconds=min(1.0, max(0.1, grace)), sigkill_wait_seconds=3.0)
+            process, wait_seconds=min(1.0, max(0.1, cleanup_grace)), sigkill_wait_seconds=3.0)
         direct_child_sigkill_fallback = direct_child_reap["sigkill_attempted"]
         if direct_child_reap["status"] != "complete":
             cleanup_error = cleanup_error or "direct producer reaping remained incomplete"
@@ -317,7 +758,8 @@ def run_child_with_deadline(command, *, cwd: Path, env: dict[str, str], stdout, 
             "termination_signal": "SIGTERM",
             "driver_sigterm_delivery_count": received_sigterm_count,
             "cleanup_attempts": cleanup_attempts,
-            "sigterm_grace_seconds": grace,
+            "sigterm_grace_seconds": cleanup_grace,
+            "configured_sigterm_grace_seconds": grace,
             "direct_child_sigkill_fallback": direct_child_sigkill_fallback,
             "direct_child_reap": direct_child_reap,
             "cleanup_error": cleanup_error,
@@ -448,6 +890,22 @@ def validate_nested_deadline_policy(
         raise ValueError("process observer timeout differs from the pinned cleanup calculation")
     if supervisor_stop_grace_seconds != PRODUCER_SHUTDOWN_GRACE_SECONDS:
         raise ValueError("shared supervisor grace differs from the pinned cleanup calculation")
+    if (OUTER_SIGNAL_OPERATION_DEADLINE_SECONDS
+            + OUTER_SIGNAL_FINALIZATION_RESERVE_SECONDS
+            != OUTER_SIGNAL_RECEIPT_DEADLINE_SECONDS):
+        raise ValueError("outer signal operation and receipt reserves do not meet the hard deadline")
+    if OUTER_SIGNAL_OBSERVER_TIMEOUT_SECONDS > PROCESS_ROWS_TIMEOUT_SECONDS:
+        raise ValueError("outer signal observer exceeds its bounded policy")
+    if (OUTER_SIGNAL_PRODUCER_SETTLE_SECONDS
+            + 2 * OUTER_SIGNAL_OBSERVER_TIMEOUT_SECONDS
+            + OUTER_SIGNAL_CHILD_REAP_WAIT_SECONDS
+            + OUTER_SIGNAL_CHILD_REAP_AFTER_KILL_SECONDS
+            > OUTER_SIGNAL_OPERATION_DEADLINE_SECONDS):
+        raise ValueError("outer signal waits and censuses exceed the operation cutoff")
+    handler_dispatch_allowance = PROCESS_ROWS_TIMEOUT_SECONDS
+    if (OUTER_SIGNAL_RECEIPT_DEADLINE_SECONDS + handler_dispatch_allowance
+            > supervisor_stop_grace_seconds - 3):
+        raise ValueError("outer signal receipt leaves less than three seconds before parent escalation")
     if (INNER_PRODUCER_WORK_SECONDS >= OUTER_PRODUCER_DEADLINE_SECONDS
             or OUTER_PRODUCER_DEADLINE_SECONDS - INNER_PRODUCER_WORK_SECONDS
             < INNER_CLEANUP_MINIMUM_SECONDS
