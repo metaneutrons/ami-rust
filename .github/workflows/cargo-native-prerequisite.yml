@@ -1,7 +1,16 @@
 name: Native Cargo component prerequisite (internal)
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      recipe:
+        description: Immutable native Cargo recipe to qualify
+        type: choice
+        options:
+          - three-host-v2
+          - three-host-v3
+        default: three-host-v2
+        required: true
 
 permissions:
   contents: read
@@ -192,6 +201,7 @@ jobs:
         shell: bash
         env:
           NATIVE_HOST_TRIPLE: ${{ matrix.host.triple }}
+          NATIVE_CARGO_RECIPE: ${{ inputs.recipe }}
           NATIVE_EVENT_NAME: ${{ github.event_name }}
           NATIVE_REPOSITORY: ${{ github.repository }}
           NATIVE_REF_NAME: ${{ github.ref }}

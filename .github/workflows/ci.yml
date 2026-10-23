@@ -35,6 +35,7 @@ jobs:
             examples/
             tests/
             tools/supervise-native-cargo.py
+            tools/native-cargo-recipe.sh
             tools/supervise-bare-target-libraries.py
             tools/supervise-portable-csdk-linux-aarch64.py
             tools/bootstrap-host-rust.sh
@@ -90,6 +91,7 @@ jobs:
           python3 -I -B host/tests/test_elf_audit.py
           python3 -I -B release/test_ci_cargo.py
           python3 -I -B tests/test_supervise_native_cargo.py
+          python3 -I -B tests/test_native_cargo_recipe.py
           python3 -I -B release/test_cargo_context_probe.py
           python3 -I -B release/test_finalize_cargo_probe.py
           python3 -I -B release/test_ci_python.py

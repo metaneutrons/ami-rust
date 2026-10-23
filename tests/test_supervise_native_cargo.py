@@ -4,6 +4,7 @@ import gzip
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import tempfile
 from types import SimpleNamespace
@@ -24,6 +25,18 @@ def gzip_file(path: Path, payload: bytes) -> None:
 
 
 class SupervisorPureControls(unittest.TestCase):
+    def test_recipe_defaults_to_v2_and_preserves_explicit_selection(self):
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(MONITOR._supervised_env()["NATIVE_CARGO_RECIPE"], "three-host-v2")
+        for name in ("three-host-v2", "three-host-v3"):
+            with patch.dict(os.environ, {"NATIVE_CARGO_RECIPE": name}, clear=True):
+                self.assertEqual(MONITOR.native_recipe(), name)
+                self.assertEqual(MONITOR._supervised_env()["NATIVE_CARGO_RECIPE"], name)
+        for name in ("", "../../../unreviewed", "three-host-v4"):
+            with patch.dict(os.environ, {"NATIVE_CARGO_RECIPE": name}, clear=True):
+                with self.assertRaises(ValueError):
+                    MONITOR._supervised_env()
+
     def test_ci_cargo_pin_matches_current_shared_monitor_source(self):
         shared_monitor = ROOT / "release/ci_cargo.py"
         self.assertEqual(MONITOR.sha256(shared_monitor), MONITOR.CI_CARGO_SHA256)
