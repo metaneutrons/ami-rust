@@ -5,6 +5,9 @@ mod error;
 pub use error::{Refusal, Result};
 
 pub mod acquisition;
+/// Maintainer-only retained bare-target command readback.
+#[doc(hidden)]
+pub mod bare_target_record_validation;
 pub mod baseline;
 pub mod cargo_archive;
 pub mod cargo_producer;

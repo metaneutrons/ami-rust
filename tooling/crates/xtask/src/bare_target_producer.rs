@@ -8,11 +8,12 @@
 
 use ami_rust_core::{
     Refusal, Result,
+    bare_target_record_validation::{self, InnerCommandSummary},
     component_install::{self, ComponentInstallLimits, ComponentInstallSpec},
-    digest::{sha256_bytes, sha256_file},
-    files::validate_relative_inventory_path,
+    digest::{is_sha256_digest, sha256_bytes, sha256_file},
+    files::{read_regular_bounded, validate_relative_inventory_path},
     inventory::{FileIdentity, InventoryLimits, LinkIdentity, verify_complete},
-    json::{JsonProfile, parse_json},
+    json::{JsonProfile, parse_json, parse_json_value},
     ownership,
     qualification_command::{self, CommandBudgets, CommandRequest},
     workspace_accounting::{self, ScanLimits},
@@ -429,6 +430,9 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
     )?;
 
     let mut records = Vec::new();
+    let mut expected_requests =
+        Vec::with_capacity(bare_target_record_validation::INNER_COMMAND_LABELS.len());
+    let mut parent_peak_rss_bytes = 0_u64;
     let mut environment = BTreeMap::new();
     environment.insert(
         "PATH".to_owned(),
@@ -470,7 +474,12 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
         &format!("commit-hash: {RUST_COMMIT}"),
         "pinned rustc commit",
     )?;
-    records.push(version.summary);
+    retain_command_outcome(
+        version,
+        &mut expected_requests,
+        &mut records,
+        &mut parent_peak_rss_bytes,
+    );
 
     let selected_sysroot = run_command(
         &command_context,
@@ -485,7 +494,12 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
         &utf8(&stage)?,
         "selected private Rust sysroot",
     )?;
-    records.push(selected_sysroot.summary);
+    retain_command_outcome(
+        selected_sysroot,
+        &mut expected_requests,
+        &mut records,
+        &mut parent_peak_rss_bytes,
+    );
 
     let cargo_version = run_command(
         &command_context,
@@ -505,7 +519,12 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
         host.triple,
         "native Cargo host triple",
     )?;
-    records.push(cargo_version.summary);
+    retain_command_outcome(
+        cargo_version,
+        &mut expected_requests,
+        &mut records,
+        &mut parent_peak_rss_bytes,
+    );
 
     let objcopy_version = run_command(
         &command_context,
@@ -520,7 +539,12 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
         LLVM_OBJCOPY_VERSION,
         "pinned LLVM objcopy runtime version",
     )?;
-    records.push(objcopy_version.summary);
+    retain_command_outcome(
+        objcopy_version,
+        &mut expected_requests,
+        &mut records,
+        &mut parent_peak_rss_bytes,
+    );
 
     let flags = [
         "-Zunstable-options".to_owned(),
@@ -560,7 +584,12 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
         &work.join("fixture"),
         &environment,
     )?;
-    records.push(build.summary);
+    retain_command_outcome(
+        build,
+        &mut expected_requests,
+        &mut records,
+        &mut parent_peak_rss_bytes,
+    );
 
     if sha256_file(&lock_path)? != LIBRARY_LOCK_SHA256
         || sha256_file(&fixture_lock)? != CARGO_LOCK_SHA256
@@ -584,6 +613,26 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
             "source-library build modified the private Rust component stage",
         ));
     }
+
+    // The same process sampled its RUSAGE_SELF high-water in every final
+    // command record. The outer trusted supervisor remains responsible for
+    // observing the complete producer invocation, including finalization.
+    let helper_sha256 = sha256_file(&std::env::current_exe()?)?;
+    let program_sha256_by_label = pinned_program_digests(&work, host)?;
+    let binding_context = InnerCommandBindingContext {
+        host,
+        work_root: &work,
+        output_root: &output,
+        helper_sha256: &helper_sha256,
+        program_sha256_by_label: &program_sha256_by_label,
+    };
+    let inner_validation = validate_caller_bound_inner_commands(
+        &output,
+        &expected_requests,
+        &records,
+        &binding_context,
+        parent_peak_rss_bytes,
+    )?;
 
     let libraries = collect_libraries(
         &work,
@@ -667,6 +716,17 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
             "stale_target_libraries_loaded": false
         },
         "qualification_commands": records,
+        "inner_record_validation": {
+            "status": "ALL_FIVE_CALLER_BOUND_RECORDS_AND_RAW_STREAMS_VALIDATED",
+            "command_count": inner_validation.commands.len(),
+            "parent_peak_rss_bytes": parent_peak_rss_bytes,
+            "inner_conservative_rss_envelope_bytes": inner_validation.inner_rss_envelope_bytes,
+            "combined_conservative_rss_envelope_bytes": inner_validation.combined_rss_envelope_bytes,
+            "raw_log_bytes": inner_validation.total_log_bytes,
+            "command_elapsed_nanos": inner_validation.total_elapsed_nanos,
+            "parent_peak_source": "maximum RUSAGE_SELF high-water sampled by the five completed qualification-command records",
+            "interpretation": "conservative resource envelope; trusted outer supervisor observes the complete producer invocation"
+        },
         "libraries": libraries,
         "budgets": {
             "per_command_seconds": COMMAND_SECONDS,
@@ -1294,12 +1354,22 @@ fn install_rust_components(
 struct CommandOutcome {
     summary: Value,
     stdout: String,
+    request: CommandRequest,
+    own_peak_rss_bytes: u64,
 }
 
 struct CommandContext<'a> {
     work: &'a Path,
     output: &'a Path,
     started: &'a Instant,
+}
+
+struct InnerCommandBindingContext<'a> {
+    host: HostPins,
+    work_root: &'a Path,
+    output_root: &'a Path,
+    helper_sha256: &'a str,
+    program_sha256_by_label: &'a BTreeMap<&'static str, String>,
 }
 
 fn run_command(
@@ -1361,6 +1431,11 @@ fn run_command(
         )));
     }
     let result_path = record_path.join("result.json");
+    let own_peak_rss_bytes = record.own_peak_rss_bytes.ok_or_else(|| {
+        Refusal::new(format!(
+            "qualified command {label} omitted producer RUSAGE_SELF peak"
+        ))
+    })?;
     let stdout = fs::read_to_string(record_path.join("stdout.log")).map_err(|error| {
         Refusal::new(format!(
             "could not read qualified command output {label}: {error}"
@@ -1378,7 +1453,173 @@ fn run_command(
         "record_path": utf8(&result_path)?,
         "request_path": utf8(&request_path)?
     });
-    Ok(CommandOutcome { summary, stdout })
+    Ok(CommandOutcome {
+        summary,
+        stdout,
+        request,
+        own_peak_rss_bytes,
+    })
+}
+
+fn retain_command_outcome(
+    outcome: CommandOutcome,
+    expected_requests: &mut Vec<CommandRequest>,
+    summaries: &mut Vec<Value>,
+    parent_peak_rss_bytes: &mut u64,
+) {
+    *parent_peak_rss_bytes = (*parent_peak_rss_bytes).max(outcome.own_peak_rss_bytes);
+    expected_requests.push(outcome.request);
+    summaries.push(outcome.summary);
+}
+
+fn expected_program_path(label: &str, work_root: &Path, host: HostPins) -> Result<PathBuf> {
+    let stage = work_root.join("toolchain");
+    match label {
+        "rustc-version" | "rustc-sysroot" => Ok(stage.join("bin/rustc")),
+        "cargo-version" | "source-production" => Ok(stage.join("bin/cargo")),
+        "rust-objcopy-version" => {
+            Ok(stage.join(format!("lib/rustlib/{}/bin/rust-objcopy", host.triple)))
+        }
+        _ => Err(Refusal::new("unknown bare-target command binding label")),
+    }
+}
+
+fn pinned_program_digests(
+    work_root: &Path,
+    host: HostPins,
+) -> Result<BTreeMap<&'static str, String>> {
+    bare_target_record_validation::INNER_COMMAND_LABELS
+        .iter()
+        .map(|label| {
+            let path = expected_program_path(label, work_root, host)?;
+            Ok((*label, sha256_file(&path)?))
+        })
+        .collect()
+}
+
+fn expected_command_binding(
+    request: &CommandRequest,
+    program_sha256: &str,
+    helper_sha256: &str,
+) -> Result<Value> {
+    if !is_sha256_digest(program_sha256) || !is_sha256_digest(helper_sha256) {
+        return Err(Refusal::new(
+            "qualified command executable identity is not SHA-256",
+        ));
+    }
+    let args_raw = serde_json::to_vec(&request.args)
+        .map_err(|error| Refusal::new(format!("could not encode command arguments: {error}")))?;
+    let environment_raw = serde_json::to_vec(&request.environment)
+        .map_err(|error| Refusal::new(format!("could not encode command environment: {error}")))?;
+    Ok(json!({
+        "program": request.program,
+        "program_sha256": program_sha256,
+        "cwd": request.cwd,
+        "args_sha256": sha256_bytes(&args_raw),
+        "environment_keys": request.environment.keys().cloned().collect::<Vec<_>>(),
+        "environment_sha256": sha256_bytes(&environment_raw),
+        "helper_sha256": helper_sha256
+    }))
+}
+
+fn validate_bound_command_record(
+    label: &str,
+    expected: &CommandRequest,
+    request_bytes: &[u8],
+    summary: &InnerCommandSummary,
+    record: &Value,
+    context: &InnerCommandBindingContext<'_>,
+) -> Result<()> {
+    let parsed = qualification_command::parse_request(request_bytes)?;
+    let canonical = serde_json::to_vec(expected).map_err(|error| {
+        Refusal::new(format!("could not encode planned command request: {error}"))
+    })?;
+    let expected_roots = vec![utf8(context.work_root)?, utf8(context.output_root)?];
+    let expected_program = utf8(&expected_program_path(
+        label,
+        context.work_root,
+        context.host,
+    )?)?;
+    if parsed != *expected
+        || request_bytes != canonical
+        || sha256_bytes(request_bytes) != summary.request_sha256
+        || record.get("request_sha256").and_then(Value::as_str)
+            != Some(summary.request_sha256.as_str())
+        || expected.schema != qualification_command::REQUEST_SCHEMA
+        || expected.limits != bare_target_record_validation::INNER_LIMITS
+        || expected.program != expected_program
+        || expected.cwd != utf8(&context.work_root.join("fixture"))?
+        || expected.required_roots != expected_roots
+    {
+        return Err(Refusal::new(format!(
+            "qualified command request differs from the producer's host-pinned plan: {label}"
+        )));
+    }
+    let program_sha256 = context
+        .program_sha256_by_label
+        .get(label)
+        .ok_or_else(|| Refusal::new("pinned command program digest is missing"))?;
+    let command = expected_command_binding(expected, program_sha256, context.helper_sha256)?;
+    if record.get("command") != Some(&command) {
+        return Err(Refusal::new(format!(
+            "qualified command record binding differs from the producer's host-pinned plan: {label}"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_caller_bound_inner_commands(
+    storage_output_root: &Path,
+    expected_requests: &[CommandRequest],
+    summary_values: &[Value],
+    context: &InnerCommandBindingContext<'_>,
+    parent_peak_rss_bytes: u64,
+) -> Result<bare_target_record_validation::InnerValidationSummary> {
+    let labels = bare_target_record_validation::INNER_COMMAND_LABELS;
+    if expected_requests.len() != labels.len() || summary_values.len() != labels.len() {
+        return Err(Refusal::new(
+            "producer did not retain exactly five command requests",
+        ));
+    }
+    let summaries: Vec<InnerCommandSummary> =
+        serde_json::from_value(Value::Array(summary_values.to_vec())).map_err(|error| {
+            Refusal::new(format!("producer command summary is malformed: {error}"))
+        })?;
+    for ((label, expected), summary) in labels.iter().zip(expected_requests).zip(&summaries) {
+        if summary.label != *label {
+            return Err(Refusal::new(
+                "producer command request labels are out of order",
+            ));
+        }
+        let request_path = storage_output_root
+            .join("requests")
+            .join(format!("{label}.json"));
+        let request_bytes = read_regular_bounded(
+            &request_path,
+            JsonProfile::PackageMetadataStateSelection.max_bytes(),
+        )?;
+        let result_path = storage_output_root
+            .join("records")
+            .join(label)
+            .join("result.json");
+        let result_bytes = read_regular_bounded(
+            &result_path,
+            JsonProfile::PackageMetadataStateSelection.max_bytes(),
+        )?;
+        if sha256_bytes(&result_bytes) != summary.result_sha256 {
+            return Err(Refusal::new(format!(
+                "qualified command result digest differs from its retained summary: {label}"
+            )));
+        }
+        let record = parse_json_value(&result_bytes, JsonProfile::PackageMetadataStateSelection)?;
+        validate_bound_command_record(label, expected, &request_bytes, summary, &record, context)?;
+    }
+    bare_target_record_validation::validate_inner_commands(
+        storage_output_root,
+        &utf8(context.output_root)?,
+        &summaries,
+        parent_peak_rss_bytes,
+    )
 }
 
 fn require_output_contains(output: &str, expected: &str, label: &str) -> Result<()> {
@@ -1634,22 +1875,29 @@ fn usage() -> Refusal {
 #[cfg(test)]
 mod tests {
     use super::{
-        HostPins, LIBRARY_LOCK_BYTES, LIBRARY_LOCK_PATH, LIBRARY_LOCK_SHA256,
-        LINUX_AARCH64_LLVM_SOURCE_BYTES, LINUX_AARCH64_LLVM_SOURCE_SHA256, LINUX_LLVM_ALIAS_TARGET,
-        LINUX_LLVM_SOURCE_PATH, LINUX_LLVM_SOURCE_PATH_NAME, LINUX_X86_64_LLVM_SOURCE_BYTES,
-        LINUX_X86_64_LLVM_SOURCE_SHA256, MACOS_LLVM_ALIAS_PATH, MACOS_LLVM_ALIAS_TARGET,
-        MACOS_LLVM_SOURCE_BYTES, MACOS_LLVM_SOURCE_PATH, MACOS_LLVM_SOURCE_SHA256, ProfileRows,
-        TARGET_ALIAS, TARGET_ALIAS_PATH, TARGET_SPEC_BYTES, TARGET_SPEC_PROFILE_PATH,
-        TARGET_SPEC_SHA256, collect_libraries, create_linux_llvm_runtime_alias,
-        is_installer_admin_path, is_official_cargo_path, require_digest,
-        select_component_inventory, select_linux_llvm_runtime_alias,
-        select_macos_llvm_runtime_alias, validate_linux_llvm_runtime_alias,
-        validate_macos_llvm_runtime_alias,
+        HostPins, InnerCommandBindingContext, LIBRARY_LOCK_BYTES, LIBRARY_LOCK_PATH,
+        LIBRARY_LOCK_SHA256, LINUX_AARCH64_LLVM_SOURCE_BYTES, LINUX_AARCH64_LLVM_SOURCE_SHA256,
+        LINUX_LLVM_ALIAS_TARGET, LINUX_LLVM_SOURCE_PATH, LINUX_LLVM_SOURCE_PATH_NAME,
+        LINUX_X86_64_LLVM_SOURCE_BYTES, LINUX_X86_64_LLVM_SOURCE_SHA256, MACOS_LLVM_ALIAS_PATH,
+        MACOS_LLVM_ALIAS_TARGET, MACOS_LLVM_SOURCE_BYTES, MACOS_LLVM_SOURCE_PATH,
+        MACOS_LLVM_SOURCE_SHA256, ProfileRows, TARGET_ALIAS, TARGET_ALIAS_PATH, TARGET_SPEC_BYTES,
+        TARGET_SPEC_PROFILE_PATH, TARGET_SPEC_SHA256, collect_libraries,
+        create_linux_llvm_runtime_alias, is_installer_admin_path, is_official_cargo_path,
+        pinned_program_digests, require_digest, select_component_inventory,
+        select_linux_llvm_runtime_alias, select_macos_llvm_runtime_alias,
+        validate_bound_command_record, validate_caller_bound_inner_commands,
+        validate_linux_llvm_runtime_alias, validate_macos_llvm_runtime_alias,
     };
-    use ami_rust_core::inventory::{FileIdentity, LinkIdentity};
+    use ami_rust_core::{
+        bare_target_record_validation::{self, InnerCommandSummary},
+        inventory::{FileIdentity, LinkIdentity},
+        qualification_command::{self, CommandRequest},
+    };
+    use serde_json::Value;
     use std::{
-        collections::BTreeSet,
+        collections::{BTreeMap, BTreeSet},
         fs,
+        os::unix::fs::PermissionsExt,
         path::PathBuf,
         sync::atomic::{AtomicU64, Ordering},
     };
@@ -2137,6 +2385,316 @@ mod tests {
         );
         assert!(!nested_work.exists());
         assert!(!nested_output.exists());
+    }
+
+    const ACTUAL_MACOS_COMMAND_FIXTURE: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../core/tests/fixtures/bare-target-records/actual-macos/producer"
+    );
+    const ACTUAL_MACOS_HELPER_SHA256: &str =
+        "23e9ff9cc248ab43a54de757700ac5b62f1528f83c2f43f3bdb4c9b137303a73";
+
+    fn fixture_command_digests() -> BTreeMap<&'static str, String> {
+        BTreeMap::from([
+            (
+                "rustc-version",
+                "5bb7cf7ca89e240c2f97c00c94b5aa3576a84798def7d329b72cb12a20e6e6d0".to_owned(),
+            ),
+            (
+                "rustc-sysroot",
+                "5bb7cf7ca89e240c2f97c00c94b5aa3576a84798def7d329b72cb12a20e6e6d0".to_owned(),
+            ),
+            (
+                "cargo-version",
+                "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d".to_owned(),
+            ),
+            (
+                "rust-objcopy-version",
+                "41f770659a8429c0d1239b103da688041df424998529775bfa9b6d97a0011e95".to_owned(),
+            ),
+            (
+                "source-production",
+                "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d".to_owned(),
+            ),
+        ])
+    }
+
+    fn actual_macos_fixture() -> (
+        PathBuf,
+        PathBuf,
+        Vec<CommandRequest>,
+        Vec<Value>,
+        Vec<InnerCommandSummary>,
+        u64,
+    ) {
+        let fixture = PathBuf::from(ACTUAL_MACOS_COMMAND_FIXTURE)
+            .canonicalize()
+            .expect("resolve retained fixture without parent traversal");
+        let producer: Value = serde_json::from_slice(
+            &fs::read(fixture.join("producer.json")).expect("read retained producer record"),
+        )
+        .expect("parse retained producer record");
+        let summary_values = producer["qualification_commands"]
+            .as_array()
+            .expect("producer retains command summaries")
+            .clone();
+        let summaries: Vec<InnerCommandSummary> =
+            serde_json::from_value(Value::Array(summary_values.clone()))
+                .expect("parse retained command summaries");
+        let expected_requests = bare_target_record_validation::INNER_COMMAND_LABELS
+            .iter()
+            .map(|label| {
+                let bytes = fs::read(fixture.join("requests").join(format!("{label}.json")))
+                    .expect("read retained command request");
+                qualification_command::parse_request(&bytes).expect("parse retained request")
+            })
+            .collect::<Vec<_>>();
+        let work_root = PathBuf::from(&expected_requests[0].required_roots[0]);
+        let parent_peak = bare_target_record_validation::INNER_COMMAND_LABELS
+            .iter()
+            .map(|label| {
+                let record: Value = serde_json::from_slice(
+                    &fs::read(fixture.join("records").join(label).join("result.json"))
+                        .expect("read retained command record"),
+                )
+                .expect("parse retained command record");
+                record["own_peak_rss_bytes"]
+                    .as_u64()
+                    .expect("retained producer RSS high-water")
+            })
+            .max()
+            .expect("five retained records");
+        (
+            fixture,
+            work_root,
+            expected_requests,
+            summary_values,
+            summaries,
+            parent_peak,
+        )
+    }
+
+    #[test]
+    fn caller_binding_maps_staged_programs_from_work_root_and_rejects_doubled_toolchain() {
+        let fixture = Fixture::new();
+        let work = fixture.0.join("work");
+        let stage = work.join("toolchain");
+        let host = super::host_pins("macos-aarch64").expect("pinned Mac host");
+        let rustc = b"fixture staged rustc";
+        let cargo = b"fixture staged cargo";
+        let objcopy = b"fixture staged rust-objcopy";
+
+        let rustc_path = stage.join("bin/rustc");
+        let cargo_path = stage.join("bin/cargo");
+        let objcopy_path = stage.join(format!("lib/rustlib/{}/bin/rust-objcopy", host.triple));
+        for path in [&rustc_path, &cargo_path, &objcopy_path] {
+            fs::create_dir_all(path.parent().expect("staged program parent"))
+                .expect("create staged program parent");
+        }
+        fs::write(&rustc_path, rustc).expect("write staged rustc fixture");
+        fs::write(&cargo_path, cargo).expect("write staged Cargo fixture");
+        fs::write(&objcopy_path, objcopy).expect("write staged rust-objcopy fixture");
+        for path in [&rustc_path, &cargo_path, &objcopy_path] {
+            fs::set_permissions(path, fs::Permissions::from_mode(0o755))
+                .expect("make staged program fixture executable");
+        }
+
+        let digests = pinned_program_digests(&work, host)
+            .expect("production work root resolves the staged toolchain");
+        assert_eq!(digests.len(), 5);
+        assert_eq!(
+            digests["rustc-version"],
+            ami_rust_core::digest::sha256_bytes(rustc)
+        );
+        assert_eq!(
+            digests["rustc-sysroot"],
+            ami_rust_core::digest::sha256_bytes(rustc)
+        );
+        assert_eq!(
+            digests["cargo-version"],
+            ami_rust_core::digest::sha256_bytes(cargo)
+        );
+        assert_eq!(
+            digests["source-production"],
+            ami_rust_core::digest::sha256_bytes(cargo)
+        );
+        assert_eq!(
+            digests["rust-objcopy-version"],
+            ami_rust_core::digest::sha256_bytes(objcopy)
+        );
+
+        assert!(pinned_program_digests(&stage, host).is_err());
+    }
+
+    #[test]
+    fn retained_actual_macos_five_command_records_pass_caller_binding() {
+        let (fixture, work_root, requests, rows, summaries, parent_peak) = actual_macos_fixture();
+        let output_root = PathBuf::from(&requests[0].required_roots[1]);
+        let host = super::host_pins("macos-aarch64").expect("pinned Mac host");
+        let program_sha256_by_label = fixture_command_digests();
+        let context = InnerCommandBindingContext {
+            host,
+            work_root: &work_root,
+            output_root: &output_root,
+            helper_sha256: ACTUAL_MACOS_HELPER_SHA256,
+            program_sha256_by_label: &program_sha256_by_label,
+        };
+        let validation =
+            validate_caller_bound_inner_commands(&fixture, &requests, &rows, &context, parent_peak)
+                .expect("actual five-command Mac fixture matches the producer plan");
+        assert_eq!(validation.commands.len(), 5);
+        assert_eq!(validation.total_log_bytes, 52_706);
+        assert!(validation.combined_rss_envelope_bytes <= 4 * 1024 * 1024 * 1024);
+        assert_eq!(summaries.len(), 5);
+    }
+
+    #[test]
+    fn caller_binding_refuses_program_argv_cwd_environment_roots_and_digest_changes() {
+        let (fixture, work_root, requests, _rows, summaries, _parent_peak) = actual_macos_fixture();
+        let output_root = PathBuf::from(&requests[0].required_roots[1]);
+        let host = super::host_pins("macos-aarch64").expect("pinned Mac host");
+        let program_sha256_by_label = fixture_command_digests();
+        let context = InnerCommandBindingContext {
+            host,
+            work_root: &work_root,
+            output_root: &output_root,
+            helper_sha256: ACTUAL_MACOS_HELPER_SHA256,
+            program_sha256_by_label: &program_sha256_by_label,
+        };
+        let label = "rustc-version";
+        let request_bytes = fs::read(fixture.join("requests/rustc-version.json"))
+            .expect("read retained request bytes");
+        let record: Value = serde_json::from_slice(
+            &fs::read(fixture.join("records/rustc-version/result.json"))
+                .expect("read retained command result"),
+        )
+        .expect("parse retained command result");
+        let summary = &summaries[0];
+        let original = &requests[0];
+
+        let mut changed = original.clone();
+        changed.program.push_str(".unexpected");
+        assert!(
+            validate_bound_command_record(
+                label,
+                &changed,
+                &request_bytes,
+                summary,
+                &record,
+                &context
+            )
+            .is_err()
+        );
+
+        let mut changed = original.clone();
+        changed.args.push("--unexpected".to_owned());
+        assert!(
+            validate_bound_command_record(
+                label,
+                &changed,
+                &request_bytes,
+                summary,
+                &record,
+                &context
+            )
+            .is_err()
+        );
+
+        let mut changed = original.clone();
+        changed.cwd.push_str("/unexpected");
+        assert!(
+            validate_bound_command_record(
+                label,
+                &changed,
+                &request_bytes,
+                summary,
+                &record,
+                &context
+            )
+            .is_err()
+        );
+
+        let mut changed = original.clone();
+        changed
+            .environment
+            .insert("PATH".to_owned(), "/unexpected".to_owned());
+        assert!(
+            validate_bound_command_record(
+                label,
+                &changed,
+                &request_bytes,
+                summary,
+                &record,
+                &context
+            )
+            .is_err()
+        );
+
+        let mut changed = original.clone();
+        changed.required_roots[0].push_str("/unexpected");
+        assert!(
+            validate_bound_command_record(
+                label,
+                &changed,
+                &request_bytes,
+                summary,
+                &record,
+                &context
+            )
+            .is_err()
+        );
+
+        let mut changed_summary = summary.clone();
+        changed_summary.request_sha256.replace_range(..1, "0");
+        assert!(
+            validate_bound_command_record(
+                label,
+                original,
+                &request_bytes,
+                &changed_summary,
+                &record,
+                &context
+            )
+            .is_err()
+        );
+
+        let mut changed_record = record.clone();
+        changed_record["request_sha256"] = Value::String("0".repeat(64));
+        assert!(
+            validate_bound_command_record(
+                label,
+                original,
+                &request_bytes,
+                summary,
+                &changed_record,
+                &context,
+            )
+            .is_err()
+        );
+
+        for (field, replacement) in [
+            ("program", Value::String("/tmp/unpinned".to_owned())),
+            ("program_sha256", Value::String("0".repeat(64))),
+            ("args_sha256", Value::String("0".repeat(64))),
+            ("cwd", Value::String("/tmp/unpinned".to_owned())),
+            ("environment_keys", Value::Array(Vec::new())),
+            ("environment_sha256", Value::String("0".repeat(64))),
+            ("helper_sha256", Value::String("0".repeat(64))),
+        ] {
+            let mut changed_record = record.clone();
+            changed_record["command"][field] = replacement;
+            assert!(
+                validate_bound_command_record(
+                    label,
+                    original,
+                    &request_bytes,
+                    summary,
+                    &changed_record,
+                    &context
+                )
+                .is_err()
+            );
+        }
     }
 
     #[test]
