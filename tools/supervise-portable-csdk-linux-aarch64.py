@@ -18,6 +18,7 @@ import platform
 import resource
 import signal
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -914,12 +915,41 @@ def validate_nested_deadline_policy(
         raise ValueError("nested deadlines leave insufficient ordered cleanup time")
 
 
+def require_outer_runtime_directories(managed: Path) -> dict[str, Path]:
+    """Validate the private HOME/TMP directories created once by outer_run."""
+    if managed.is_symlink() or not managed.is_dir():
+        raise ValueError("managed root must be a real directory")
+    paths = {name: managed / name for name in ("home", "tmp")}
+    for name, path in paths.items():
+        try:
+            info = path.lstat()
+        except FileNotFoundError as error:
+            raise ValueError("outer runtime directory is missing: " + name) from error
+        if (not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid()
+                or stat.S_IMODE(info.st_mode) != 0o700):
+            raise ValueError("outer runtime directory is not a private owned directory: " + name)
+    return paths
+
+
+def create_outer_runtime_directories(managed: Path) -> dict[str, Path]:
+    """Create HOME/TMP once in the outer process and return validated paths."""
+    managed = managed.resolve(strict=True)
+    if managed.is_symlink() or not managed.is_dir():
+        raise ValueError("managed root must be a real directory")
+    for name in ("home", "tmp"):
+        path = managed / name
+        path.mkdir(mode=0o700)
+        path.chmod(0o700)
+    return require_outer_runtime_directories(managed)
+
+
 def inner_produce(repo: Path, managed: Path, artifact: Path, expected_head: str,
                   campaign_start: int) -> dict:
     validate_nested_deadline_policy()
     repo = repo.resolve(strict=True)
     managed = managed.resolve(strict=True)
     artifact = artifact.resolve(strict=True)
+    runtime_dirs = require_outer_runtime_directories(managed)
     code_pins = verify_pinned_sources(repo)
     git_record = source_commit(repo, expected_head)
     policy_path = managed / "ci-artifact-policy.json"
@@ -1019,15 +1049,13 @@ def inner_produce(repo: Path, managed: Path, artifact: Path, expected_head: str,
     if time.monotonic() - stage_start > MAX_PHASE_SECONDS:
         raise TimeoutError("ARM LLVM extraction/profile phase exceeded 1200 seconds")
 
-    env = {"HOME": str(managed / "home"), "TMPDIR": str(managed / "tmp"),
-           "TMP": str(managed / "tmp"), "TEMP": str(managed / "tmp"),
+    env = {"HOME": str(runtime_dirs["home"]), "TMPDIR": str(runtime_dirs["tmp"]),
+           "TMP": str(runtime_dirs["tmp"]), "TEMP": str(runtime_dirs["tmp"]),
            "PATH": str(toolchain / "bin") + ":/usr/bin:/bin:/usr/sbin:/sbin",
            "LC_ALL": "C", "LANG": "C", "TZ": "UTC", "PYTHONNOUSERSITE": "1",
            "PYTHONDONTWRITEBYTECODE": "1", "GIT_TERMINAL_PROMPT": "0",
            "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
            "GIT_OPTIONAL_LOCKS": "0"}
-    Path(env["HOME"]).mkdir()
-    Path(env["TMPDIR"]).mkdir()
     clang_version = run_version(compiler, ["--version"], managed, env)
     if LLVM_ARCHIVE["clang"]["version_prefix"] not in clang_version["stdout"]:
         raise ValueError("ARM LLVM runtime version does not identify the pinned clang 11 release")
@@ -1256,12 +1284,11 @@ def outer_run(repo: Path, managed: Path, outer_output: Path) -> dict:
     # Python process. Leave a fixed reserve for this outer observer and add
     # its own peak RSS to the reported child-tree peak after the run.
     ci_cargo.MAX_RSS_BYTES = CHILD_RSS_LIMIT_BYTES
-    (managed / "home").mkdir(exist_ok=True)
-    (managed / "tmp").mkdir(exist_ok=True)
+    runtime_dirs = create_outer_runtime_directories(managed)
     log_dir = managed / "observer-logs"
     log_dir.mkdir()
-    env = {"HOME": str(managed / "home"), "TMPDIR": str(managed / "tmp"),
-           "TMP": str(managed / "tmp"), "TEMP": str(managed / "tmp"),
+    env = {"HOME": str(runtime_dirs["home"]), "TMPDIR": str(runtime_dirs["tmp"]),
+           "TMP": str(runtime_dirs["tmp"]), "TEMP": str(runtime_dirs["tmp"]),
            "PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "LC_ALL": "C", "LANG": "C",
            "TZ": "UTC", "PYTHONNOUSERSITE": "1", "PYTHONDONTWRITEBYTECODE": "1",
            "GIT_TERMINAL_PROMPT": "0", "GIT_CONFIG_NOSYSTEM": "1",
