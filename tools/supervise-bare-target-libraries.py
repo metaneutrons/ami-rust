@@ -32,7 +32,7 @@ TARGET_ALIAS_TARGET = "x86_64-aros.json"
 BOOTSTRAP_RECORD_NAMES = {"excluded-installer-metadata.txt", "excluded-installer-state.txt",
                           "duplicate-identical-component-paths.txt"}
 BOOTSTRAP_RECEIPT_MAX_BYTES = 1024 * 1024
-XTASK_MODULE_SHA = "ee488a8b034515c86044bb664498f040d66d3243745152db37269854df10bc4a"
+XTASK_MODULE_SHA = "83385578ad207037a7f339be95aff76abab05424b0eba6d94f13db1952c83627"
 XTASK_MAIN_SHA = "e88b12957bc6f16e4ba8743bdbaff873874ed24529fcd464e4a07ab47ffda842"
 NATIVE_CARGO_COMMIT = "3efb1f477e99b42974b982d939fd100303cdf7db"
 RUST_COMMIT = "330d317121e16b5db8e5adc63595910528ff2ee7"
