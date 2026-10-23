@@ -159,6 +159,13 @@ stage() {
   unzip -p "$managed/downloads/native_cargo.zip" cargo > "$managed/components/cargo/bin/cargo"
   verify "$managed/components/cargo/bin/cargo" "$(jq -er '.payload_bytes' <<<"$row")" "$(jq -er '.payload_sha256' <<<"$row")"
   chmod 0755 "$managed/components/cargo/bin/cargo"
+  local cargo_profile="$source_root/tooling/crates/aros-native-build/pins/$host/cargo.json" producer
+  if jq -e '.files | any(.path == "producer.json")' "$cargo_profile" >/dev/null; then
+    producer=$(jq -ce '[.files[] | select(.path == "producer.json")] | if length == 1 then .[0] else error("ambiguous producer record") end' "$cargo_profile")
+    # Reproduce the embedded original bytes, then require their exact pinned identity.
+    jq -S '.producer_identity_spec.record | select(type == "object")' "$cargo_profile" > "$managed/components/cargo/producer.json"
+    verify "$managed/components/cargo/producer.json" "$(jq -er '.bytes' <<<"$producer")" "$(jq -er '.sha256' <<<"$producer")"
+  fi
   while IFS= read -r member; do
     case "$member" in producer/libraries/lib*.rlib) ;; *) fail 'unexpected target library member' ;; esac
     destination="$managed/components/target_libraries/${member##*/}"
