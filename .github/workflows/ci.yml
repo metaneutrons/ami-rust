@@ -70,6 +70,7 @@ jobs:
             release/bundle-assets/
             release/bundle-files.json
             release/cargo-notices/payload-v3/
+            release/test_cargo_notice_inventory.sh
             docs/
             licences/
             LICENSE*
@@ -82,7 +83,7 @@ jobs:
           python3 --version
           test -x /usr/bin/ssh-keygen
           python3 -I -B release/test_install.py
-          python3 -I -B release/test_cargo_notice_inventory.py
+          bash release/test_cargo_notice_inventory.sh
           python3 -I -B host/test_contracts.py
           python3 -I -B host/tests/test_host_capacity.py
           python3 -I -B host/tests/test_allocation_layout.py
