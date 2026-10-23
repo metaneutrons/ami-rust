@@ -4,6 +4,19 @@ This is an unqualified development recipe. Current producers continue to use
 `three-host-v2`. Adding this directory does not select a new SDK input, qualify
 any release criterion, or change the AROS ABI/boot baseline.
 
+The internal producer and its protected prerequisite workflow accept an explicit
+`three-host-v3` recipe choice; the default remains `three-host-v2`. The selector
+accepts only those two immutable source/patch pairs. Selection is forwarded
+through the existing supervisor and recorded in setup bindings. The source
+checkout must match every original and patched file in the selected inventory,
+with no extra or missing changed paths. Existing SDK manifests and historical
+producer receipts continue to bind their original v2 inputs.
+
+The [local three-host development summary](../../../docs/evidence/rc2-local-cargo-v3-three-host-20261023.json)
+records five complete AROS programs and 22 native objects per host with equal
+raw bytes. It does not qualify production Cargo binaries, two-root controls or
+the new programs' AROS runtime/memory behavior.
+
 The v2 consumer run found one remaining complete-ELF mismatch: Cargo recursively
 included a host-only `cpufeatures -> libc` edge on AArch64 in the target crate
 identity. The edge is absent on x86-64. The same `libc` unit is already reachable

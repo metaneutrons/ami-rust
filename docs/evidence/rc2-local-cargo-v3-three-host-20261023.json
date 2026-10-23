@@ -1,0 +1,98 @@
+{
+  "schema": "ami-rust-local-cross-host-development-summary-v1",
+  "status": "PASS_EXACT_SOURCE_FIVE_ELFS_AND_TWENTY_TWO_OBJECTS_ALL_THREE_HOSTS",
+  "completed_utc": "2026-10-23T16:19:37.220584+00:00",
+  "source_head": "68d519f1109e3767e9eb2ac90a33fe923942931d",
+  "recipe": "host/cargo-repro/three-host-v3",
+  "source_pin_sha256": "9c8ac1d58262c73116c74172c93c345196bd8ffa3995bebba3d1f8ea00bc59ce",
+  "patch_sha256": "2c3ab831d216cc4395decc4bcc307a1d9bac6b6936cd01d7c496c44e55d9826b",
+  "hosts": [
+    "macos-aarch64",
+    "linux-aarch64",
+    "linux-x86_64"
+  ],
+  "source_files": 1169,
+  "source_overlays": "Three explicit development Cargo inventories, identical on every host; not production producer receipts.",
+  "development_cargo": {
+    "macos-aarch64": {
+      "bytes": 116569200,
+      "sha256": "f709fbafa16aef6496f5033d0a78b90734aa17c5a78a652f36e36ff3b7eb590a"
+    },
+    "linux-aarch64": {
+      "bytes": 112439784,
+      "sha256": "18be3c03688da29d660ed992309e74fb5999c089c7611a515b32fa295e81a77c"
+    },
+    "linux-x86_64": {
+      "bytes": 115508144,
+      "sha256": "1f51b7e8248c799db82bf99fab7bb8c2c56c65e0c71319c2d2cbdeaaf1b5fe04"
+    }
+  },
+  "rows": [
+    {
+      "variant": "core",
+      "bytes": 359616,
+      "sha256": "b2ebfb0ceed4133fde0996d079bc5351a707551c014c2b60d931265c5eaa752d",
+      "native_objects": 4,
+      "all_three_hosts_raw_bytes_equal": true
+    },
+    {
+      "variant": "alloc",
+      "bytes": 885856,
+      "sha256": "3b09b1e5a1c0f4e3266f3d741947a934b5ab03af162fdfa76232f36ca5847685",
+      "native_objects": 4,
+      "all_three_hosts_raw_bytes_equal": true
+    },
+    {
+      "variant": "qualification",
+      "bytes": 1029880,
+      "sha256": "53f4533538e47e822f003097c57093c16dcf74f4021d1044e2cabed32c038999",
+      "native_objects": 5,
+      "all_three_hosts_raw_bytes_equal": true
+    },
+    {
+      "variant": "dependencies",
+      "bytes": 1501800,
+      "sha256": "6f224cd7bbcb71c1609d935cc0e9cf2a01f4c121bc2305f0350f234e054794c0",
+      "native_objects": 5,
+      "all_three_hosts_raw_bytes_equal": true
+    },
+    {
+      "variant": "sha256sum",
+      "bytes": 928208,
+      "sha256": "156afa6cc9846697ccc0c41a41c9af9075bd84bf3def4687deaa52f43cc36a62",
+      "native_objects": 4,
+      "all_three_hosts_raw_bytes_equal": true
+    }
+  ],
+  "observed_commands": 18,
+  "elf_files_checked": 15,
+  "native_object_files_checked": 66,
+  "resource_results": "All 18 typed commands passed capture, exit status and pinned time/RSS/workspace/log checks.",
+  "primary_comparison_sha256": "fc92fe85c9656e20067d6824fc3903713ca02b75d1863ff6d19e8c32d97e0227",
+  "limitations": [
+    "One fresh application build root per host, not the production two-root/control matrix.",
+    "macOS development Cargo is not the production all-static dependency build.",
+    "Host-specific Cargo binaries and Rust metadata are not asserted byte-identical.",
+    "Affected AROS guest runtime/memory, remaining cache/fallback controls and complete producer chain are open.",
+    "No RC2-RC5 acceptance, SDK qualification or publication."
+  ],
+  "baseline": "Qualified x86-64 AROS ABI-v1, target and QEMU inputs unchanged.",
+  "elapsed_seconds": 2531.077093,
+  "source_postimages": "All3post-build trees match the same complete1169regular-file,zero-symlink manifest; only identical3derived tooling Cargo inventory overlays differ from source commit.",
+  "source_manifest_sha256": "463edec2d79aa17b8ca0b05a076ba3c7ab7a04407b451de732720cf5f8848909",
+  "retained_correction": "The initial ARM attempt put two noncurrent-host inventories in different source locations. Its raw ELF/object equality passed but source parity was not accepted. A separate fresh linker/application ARM root corrected the paths within the original campaign clock; original artifacts and records remain retained.",
+  "producer_integration_checks": {
+    "rustc_cargo": "1.98.1 official pinned native bootstrap",
+    "rust_producer_tests": {
+      "passed": 13,
+      "failed": 0,
+      "ignored_child_fixture": 1
+    },
+    "clippy": "PASS all-targets with warnings denied",
+    "python_recipe_supervisor_tests": 17,
+    "python_bare_library_source_guard_fixtures": 18,
+    "real_patch_application": "v2 two-file and v3 four-file exact original/changed-path/postimage checks PASS",
+    "static_checks": "bash syntax, actionlint, git diff --check PASS",
+    "source_review": "Independent read-only review found no material issues; primary separately reviewed the Rust producer change."
+  }
+}
