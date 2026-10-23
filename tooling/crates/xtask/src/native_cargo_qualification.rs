@@ -39,8 +39,18 @@ const PREREQUISITES: &[u8] =
     include_bytes!("../../../../release/native-cargo-qualification-prerequisites.json");
 const PREREQUISITES_SHA256: &str =
     "5297b2dc7418325a7b2df734f28d1358c400a7b2f9b04aceb3283334d67930a9";
-const VENDOR_BYTES: u64 = 3_264_952;
-const VENDOR_SHA256: &str = "84fb6e3e1710f13e85450cce1db541c3967520f996a3f17efbd5a7a8345b1c7e";
+const VENDOR_BYTES: u64 = 2_331_800;
+const VENDOR_SHA256: &str = "dea3c4d945f31406cdfe824581592a9253f1afcffe8423e8a1bc9f528b2267b0";
+const VENDOR_SOURCE_LOCKS: [(&str, &str); 2] = [
+    (
+        "Cargo.lock",
+        "1f77911ff0c9fcb5328babbb7cf5b01d2598c961061b75bb50307a56026ec00d",
+    ),
+    (
+        "tooling/Cargo.lock",
+        "eebb986b7c8eb7c9f6476a866b6def2491cb89445b1c69a6c9164ccb9a4ff7b2",
+    ),
+];
 const HOST_BOOTSTRAP_COMMIT: &str = "48a229ceaefd4985c50990b14116b6d856af0985";
 const HOST_BOOTSTRAP_CARGO_COMMIT: &str = "797e8a9bca276c1c9f9f738d2a20f484fa4eea9d";
 const NATIVE_CARGO_COMMIT: &str = "3efb1f477e99b42974b982d939fd100303cdf7db";
@@ -464,9 +474,12 @@ fn run_campaign(state: &mut RunState, raw_request: &[u8]) -> Result<Value> {
         h_env,
     )?;
     require_pass(&linker_outcome)?;
-    let linker_path = linker_target
-        .join(&rust_host_triple)
-        .join("release/aros-link");
+    let linker_release = linker_target.join(&rust_host_triple).join("release");
+    let linker_path = linker_release.join("aros-link");
+    // Cargo inherits the private harness umask; the component contract is 0755.
+    Directory::open(&linker_release)?
+        .regular(OsStr::new("aros-link"))?
+        .set_permissions(fs::Permissions::from_mode(0o755))?;
     let (linker_bytes, linker_sha256) = executable_identity(&linker_path, "built aros-link")?;
     let linker_record_sha = linker_outcome.result_sha256.clone();
 
@@ -492,6 +505,7 @@ fn run_campaign(state: &mut RunState, raw_request: &[u8]) -> Result<Value> {
     }
 
     let source_copies = source_copy_destinations(&work);
+    let copy_program = fs::canonicalize("/bin/cp")?;
     for (index, destination) in source_copies.iter().enumerate() {
         let args = prepare_source_copy(&source, destination)?;
         let copy = execute(
@@ -501,7 +515,7 @@ fn run_campaign(state: &mut RunState, raw_request: &[u8]) -> Result<Value> {
             } else {
                 "source-copy-b"
             },
-            Path::new("/bin/cp"),
+            &copy_program,
             &args,
             &managed,
             minimal_environment(&work),
@@ -638,6 +652,12 @@ fn run_campaign(state: &mut RunState, raw_request: &[u8]) -> Result<Value> {
         "rust_host_triple":rust_host_triple,
         "source_root":source,
         "prerequisites_manifest_sha256":PREREQUISITES_SHA256,
+        "offline_vendor":{
+            "path":"release/inputs/native-cargo-vendor.tar.xz",
+            "bytes":VENDOR_BYTES,
+            "sha256":VENDOR_SHA256,
+            "scope":"Exact 51-package registry union of the pinned application and tooling locks"
+        },
         "trust_boundary":"The protected workflow authenticates run metadata, artifact identities and ZIP bytes before staging prerequisite roots. This local record verifies staged profile bytes; the embedded manifest is not GitHub authentication.",
         "source_candidate":{
             "inputs_rs_sha256":"7935f15114c453f87db55d27013935a4b9413a16008c7392f296107a590df631",
@@ -766,10 +786,17 @@ fn verify_host_bootstrap(state: &mut RunState) -> Result<()> {
 }
 
 fn extract_vendor(state: &mut RunState) -> Result<PathBuf> {
+    for (path, expected) in VENDOR_SOURCE_LOCKS {
+        if sha256_file(&state.request.source_root.join(path))? != expected {
+            return Err(Refusal::new(format!(
+                "native Cargo vendor archive does not match source lock {path}"
+            )));
+        }
+    }
     let archive_path = state
         .request
         .source_root
-        .join("release/inputs/vendor.tar.xz");
+        .join("release/inputs/native-cargo-vendor.tar.xz");
     let archive = ownership::protected_regular_file(&archive_path, false)?;
     let metadata = archive.metadata()?;
     if metadata.len() != VENDOR_BYTES || sha256_file(&archive_path)? != VENDOR_SHA256 {
@@ -880,7 +907,12 @@ fn write_cargo_vendor_config(
     );
     if let Some(prefix) = prefix {
         let linker = toml_string(&path_text(&prefix.join("bin/aros-link"))?);
-        config.push_str(&format!("\n[target.x86_64-aros]\nlinker = {linker}\n"));
+        // The pinned Cargo producer exposes this opt-in mode for fresh private
+        // cross-build caches. Keep ordinary Cargo commands while excluding
+        // host build-script identities from target crate disambiguators.
+        config.push_str(&format!(
+            "\n[unstable]\nami-rust-reproducible-cross = true\n\n[target.x86_64-aros]\nlinker = {linker}\n"
+        ));
     }
     write_new(&cargo_home.join("config.toml"), config.as_bytes())
 }
@@ -1042,7 +1074,15 @@ fn cargo_environment(inputs: CargoEnvironmentInputs<'_>) -> Result<BTreeMap<Stri
     environment.insert("TZ".to_owned(), "UTC".to_owned());
     environment.insert("RUSTC_WRAPPER".to_owned(), String::new());
     environment.insert("RUSTC_WORKSPACE_WRAPPER".to_owned(), String::new());
+    // Rust uses the last matching prefix. Keep the broad managed-work map
+    // before the more specific source/vendor maps so relocated inputs retain
+    // their intended canonical paths even when nested below work_root.
     let remaps = [
+        "-Zunstable-options".to_owned(),
+        format!(
+            "--remap-path-prefix={}=/build",
+            path_text(&inputs.state.request.work_root)?
+        ),
         format!(
             "--remap-path-prefix={}=/ami-rust-source",
             path_text(inputs.source_root)?
@@ -1050,10 +1090,6 @@ fn cargo_environment(inputs: CargoEnvironmentInputs<'_>) -> Result<BTreeMap<Stri
         format!(
             "--remap-path-prefix={}=/cargo-registry",
             path_text(inputs.vendor_root)?
-        ),
-        format!(
-            "--remap-path-prefix={}=/build",
-            path_text(&inputs.state.request.work_root)?
         ),
     ];
     environment.insert("CARGO_ENCODED_RUSTFLAGS".to_owned(), remaps.join("\u{1f}"));
@@ -1958,9 +1994,25 @@ mod tests {
         let source = root.join("source");
         let inputs = source.join("release/inputs");
         fs::create_dir_all(&inputs).expect("isolated archive directory");
-        let original =
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../release/inputs/vendor.tar.xz");
-        let archive = inputs.join("vendor.tar.xz");
+        let original_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+        let profile: Value = serde_json::from_slice(
+            &fs::read(original_root.join("release/native-cargo-vendor-inputs.json"))
+                .expect("native vendor material profile"),
+        )
+        .expect("valid vendor material profile");
+        assert_eq!(profile["bytes"], VENDOR_BYTES);
+        assert_eq!(profile["sha256"], VENDOR_SHA256);
+        assert_eq!(
+            profile["packages"].as_array().expect("package rows").len(),
+            51
+        );
+        fs::create_dir(source.join("tooling")).expect("isolated tooling lock parent");
+        for (path, digest) in VENDOR_SOURCE_LOCKS {
+            assert_eq!(profile["source_locks"][path], digest);
+            fs::copy(original_root.join(path), source.join(path)).expect("copy pinned source lock");
+        }
+        let original = original_root.join("release/inputs/native-cargo-vendor.tar.xz");
+        let archive = inputs.join("native-cargo-vendor.tar.xz");
         fs::copy(&original, &archive).expect("copy pinned real vendor archive");
         fs::set_permissions(&archive, fs::Permissions::from_mode(0o644))
             .expect("archive is non-executable data");
@@ -1995,6 +2047,10 @@ mod tests {
                 .to_string()
                 .contains("differs from its pinned identity")
         );
+        fs::write(source.join("tooling/Cargo.lock"), b"different lock")
+            .expect("change only isolated lock");
+        let refusal = extract_vendor(&mut state).expect_err("changed source lock must be refused");
+        assert!(refusal.to_string().contains("does not match source lock"));
         fs::remove_dir_all(&root).expect("retire isolated fixture");
     }
 

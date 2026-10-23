@@ -1,0 +1,378 @@
+{
+  "schema": "ami-rust-native-cargo-vendor-inputs-v1",
+  "scope": "Exact registry-package union of current application and tooling locks; independent of the sealed legacy SDK vendor input.",
+  "path": "release/inputs/native-cargo-vendor.tar.xz",
+  "bytes": 2331800,
+  "sha256": "dea3c4d945f31406cdfe824581592a9253f1afcffe8423e8a1bc9f528b2267b0",
+  "component_root": "vendor",
+  "source_locks": {
+    "Cargo.lock": "1f77911ff0c9fcb5328babbb7cf5b01d2598c961061b75bb50307a56026ec00d",
+    "tooling/Cargo.lock": "eebb986b7c8eb7c9f6476a866b6def2491cb89445b1c69a6c9164ccb9a4ff7b2"
+  },
+  "packages": [
+    {
+      "name": "adler2",
+      "version": "2.0.1",
+      "checksum": "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa",
+      "files": 13,
+      "checksum_manifest_sha256": "1fea7b818407db360ba16278b91e5488d7b78c4e411dd29a2b35a85a6f08026e"
+    },
+    {
+      "name": "base64ct",
+      "version": "1.8.3",
+      "checksum": "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06",
+      "files": 32,
+      "checksum_manifest_sha256": "892e814f248b7ce3d69bdd98a040406d2f24170d985e573e7430d337cd06ba6a"
+    },
+    {
+      "name": "block-buffer",
+      "version": "0.10.4",
+      "checksum": "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71",
+      "files": 10,
+      "checksum_manifest_sha256": "0691600c336bc2ef683e3737febaa545439b044b88f9937f6d17d89bd38c462e"
+    },
+    {
+      "name": "block-buffer",
+      "version": "0.12.1",
+      "checksum": "d2f6c7dbe95a6ed67ad9f18e57daf93a2f034c524b99fd2b76d18fdfeb6660aa",
+      "files": 12,
+      "checksum_manifest_sha256": "391bb6a933f42c9cdb8422d5d0da4c3778ee749869663ef452b4870f0359fff0"
+    },
+    {
+      "name": "cfg-if",
+      "version": "1.0.5",
+      "checksum": "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600",
+      "files": 13,
+      "checksum_manifest_sha256": "82eff63d9ee5824ef77e3ac2b7771c8f3dbcbe15da135bc366498a72aa825a14"
+    },
+    {
+      "name": "const-oid",
+      "version": "0.10.2",
+      "checksum": "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c",
+      "files": 22,
+      "checksum_manifest_sha256": "8292fc9a283257ea03f194002e91230c22c7a98bf8f8bcfbc2ca2f772d2fad49"
+    },
+    {
+      "name": "const-oid",
+      "version": "0.9.6",
+      "checksum": "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8",
+      "files": 16,
+      "checksum_manifest_sha256": "617f80dfc75dbe6d8873a36cfe64493c0401c705ee74e8b311c7a9579e73e6d2"
+    },
+    {
+      "name": "cpufeatures",
+      "version": "0.2.17",
+      "checksum": "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280",
+      "files": 16,
+      "checksum_manifest_sha256": "6c77e99670f40bcd27bc3589789348f4940ae69e8284086a15b5fc11fb9540a0"
+    },
+    {
+      "name": "cpufeatures",
+      "version": "0.3.1",
+      "checksum": "5ca28b0ae3115b884660db4118d803791fd6756b6e88f39c0f3f7859060d7566",
+      "files": 16,
+      "checksum_manifest_sha256": "e5cb85eb081ff9e52dc16064a38e00abdff9c0eb8b9b22dd18c639f3f2357e69"
+    },
+    {
+      "name": "crc32fast",
+      "version": "1.5.2",
+      "checksum": "01a7799fd6b852db0e61728dde9a204c423b44d689dbd432522543614b490e78",
+      "files": 18,
+      "checksum_manifest_sha256": "1d8d9eb59d0ef24f8e68e2701568cba52910297dfdf3b70dd5eca8f2fd20a739"
+    },
+    {
+      "name": "crypto-common",
+      "version": "0.1.7",
+      "checksum": "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a",
+      "files": 9,
+      "checksum_manifest_sha256": "67cfc799d970aa7bc27bf693e7c82a8e7b10fcc37db6925b9b76664d249cfe2c"
+    },
+    {
+      "name": "crypto-common",
+      "version": "0.2.2",
+      "checksum": "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453",
+      "files": 11,
+      "checksum_manifest_sha256": "397863a7b57f7353bf39de2bfbb7c0eed30f8cd25a3fc61278a8d131840244fe"
+    },
+    {
+      "name": "curve25519-dalek",
+      "version": "4.1.3",
+      "checksum": "97fb8b7c4503de7d6ae7b42ab72a5a59857b4c937ec27a3d4539dba95b5ab2be",
+      "files": 63,
+      "checksum_manifest_sha256": "406e5e3863d15c41f61dc7be6fc5c0d91f60638eb4b4619365e5ea6753e3f12b"
+    },
+    {
+      "name": "curve25519-dalek-derive",
+      "version": "0.1.1",
+      "checksum": "f46882e17999c6cc590af592290432be3bce0428cb0d5f8b6715e4dc7b383eb3",
+      "files": 9,
+      "checksum_manifest_sha256": "89eec4879d74ebd6d0ca4219ca342134253f4ff0423e0696bc10c42e67e4114c"
+    },
+    {
+      "name": "der",
+      "version": "0.7.10",
+      "checksum": "e7c1832837b905bbfb5101e07cc24c8deddf52f93225eee6ead5f4d63d53ddcb",
+      "files": 68,
+      "checksum_manifest_sha256": "b975bded9de16f357e505ebd06b44cc14920435e4ada9f70120f87673ffff428"
+    },
+    {
+      "name": "digest",
+      "version": "0.10.7",
+      "checksum": "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292",
+      "files": 21,
+      "checksum_manifest_sha256": "3a766b67bdca5d6cf0f506b83db1d3092f6dc09070b5cedc147743f0ca902be1"
+    },
+    {
+      "name": "digest",
+      "version": "0.11.3",
+      "checksum": "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2",
+      "files": 26,
+      "checksum_manifest_sha256": "f23ee42ce76ddfca0f2ae5206bab4c4cb2f36106238fe84835ccaf47dbbe0107"
+    },
+    {
+      "name": "ed25519",
+      "version": "2.2.3",
+      "checksum": "115531babc129696a58c64a4fef0a8bf9e9698629fb97e9e40767d235cfbcd53",
+      "files": 20,
+      "checksum_manifest_sha256": "a45eb5b2d196e6f3b4605d88d0bf922019cd812348c1e95e8375b44a54c8840a"
+    },
+    {
+      "name": "ed25519-dalek",
+      "version": "2.2.0",
+      "checksum": "70e796c081cee67dc755e1a36a0a172b897fab85fc3f6bc48307991f64e4eca9",
+      "files": 28,
+      "checksum_manifest_sha256": "78d4efe3c4a6a54e40b8e33d4aeebbe68ce04959d42703c3155dca62c71858fa"
+    },
+    {
+      "name": "fiat-crypto",
+      "version": "0.2.9",
+      "checksum": "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d",
+      "files": 39,
+      "checksum_manifest_sha256": "761c6e887dbf126ee37df9bf3257841230381d4716fd197d42c790ed8d1bcc51"
+    },
+    {
+      "name": "filetime",
+      "version": "0.2.29",
+      "checksum": "5c287a33c7f0a620c38e641e7f60827713987b3c0f26e8ddc9462cc69cf75759",
+      "files": 18,
+      "checksum_manifest_sha256": "affd4ac46283e0f423373c3e961d29dc46bdce44ec8e0ed834f55e6748205fbf"
+    },
+    {
+      "name": "flate2",
+      "version": "1.1.10",
+      "checksum": "6e634e2e0ebac1ee034020da1ca582e17ffe4e0f5e985823721e168928136dcb",
+      "files": 63,
+      "checksum_manifest_sha256": "e409e9af82ef235954853110cb72127fea166131103afd4ca0400f30f0f4b421"
+    },
+    {
+      "name": "generic-array",
+      "version": "0.14.7",
+      "checksum": "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a",
+      "files": 16,
+      "checksum_manifest_sha256": "050c8a3b25158fd5916ede18a5a87d1bf3f8b3a432ba1e0e0052c37fc08bb5c9"
+    },
+    {
+      "name": "hybrid-array",
+      "version": "0.4.15",
+      "checksum": "27f864f10dfb56725ce5ce5472bc52252c8f93a4ab86327122cebf62c5f59a17",
+      "files": 23,
+      "checksum_manifest_sha256": "08d538bd5371b55c276d316f4391e1488b8f755acc8eda5f31b55e41f06dc661"
+    },
+    {
+      "name": "itoa",
+      "version": "1.0.18",
+      "checksum": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682",
+      "files": 13,
+      "checksum_manifest_sha256": "91026b615517f376b506b969da616ce1ac97ff760501690a528ca369e16c5ccc"
+    },
+    {
+      "name": "libc",
+      "version": "0.2.191",
+      "checksum": "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a",
+      "files": 452,
+      "checksum_manifest_sha256": "47b7f7c681e96cfd241925cddfdc04fc0fa519161d56c969b03f646adb3d31b0"
+    },
+    {
+      "name": "lzma-rust2",
+      "version": "0.22.0",
+      "checksum": "7277c9742229dc25243236d578b6471a798c554512c6f6a04365ec2e87c2a3bb",
+      "files": 96,
+      "checksum_manifest_sha256": "5b84a5fb411e4b44ef494b4416ee4c18320cb9ddeea13fc4ebc6034f5dbdf0b2"
+    },
+    {
+      "name": "memchr",
+      "version": "2.8.3",
+      "checksum": "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98",
+      "files": 58,
+      "checksum_manifest_sha256": "7a772ae111fd9370fe127ad0d65c00ccbc5030fe37c84abc879a7b442e5ac6a0"
+    },
+    {
+      "name": "miniz_oxide",
+      "version": "0.9.1",
+      "checksum": "b63fbc4a50860e98e7b2aa7804ded1db5cbc3aff9193adaff57a6931bf7c4b4c",
+      "files": 23,
+      "checksum_manifest_sha256": "606dad1f8a6b478302b0398888ce4035ae6064eddfdcce6491d7ce61a015bcdb"
+    },
+    {
+      "name": "pkcs8",
+      "version": "0.10.2",
+      "checksum": "f950b2377845cebe5cf8b5165cb3cc1a5e0fa5cfa3e1f7f55707d8fd82e0a7b7",
+      "files": 39,
+      "checksum_manifest_sha256": "c28c49394ccb73919528f99781ac9663da59b524f2d8fe78a42a3964a064b9cc"
+    },
+    {
+      "name": "proc-macro2",
+      "version": "1.0.107",
+      "checksum": "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9",
+      "files": 32,
+      "checksum_manifest_sha256": "f446cfd05e78b027598827cd6a564b7856a55fc5612e992c3dab2c28ba589ba1"
+    },
+    {
+      "name": "quote",
+      "version": "1.0.47",
+      "checksum": "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001",
+      "files": 34,
+      "checksum_manifest_sha256": "77c75949648f39a753e67b9fa616fa255429b9475e52eb8b87ebf70307133d70"
+    },
+    {
+      "name": "rustc_version",
+      "version": "0.4.1",
+      "checksum": "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92",
+      "files": 12,
+      "checksum_manifest_sha256": "657082fc7c3693dbe86a4cd3c73f952db28266a2f2161667ca56497d4bc6c961"
+    },
+    {
+      "name": "ryu",
+      "version": "1.0.23",
+      "checksum": "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f",
+      "files": 37,
+      "checksum_manifest_sha256": "ade4786a60d094402173784065297af180f20175f85291aa6e1877f7bcd982dd"
+    },
+    {
+      "name": "semver",
+      "version": "1.0.28",
+      "checksum": "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd",
+      "files": 24,
+      "checksum_manifest_sha256": "c9ecd8c9a77889ee73837b9ccfa4c0622971cd708349b91082e34a32f5b96c00"
+    },
+    {
+      "name": "serde",
+      "version": "1.0.228",
+      "checksum": "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e",
+      "files": 33,
+      "checksum_manifest_sha256": "00d93125d9f4f381b79c91f6ec512080b9d3d4879bf76fe055d3e685ec5c5c3d"
+    },
+    {
+      "name": "serde_core",
+      "version": "1.0.228",
+      "checksum": "41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad",
+      "files": 27,
+      "checksum_manifest_sha256": "bb1a3cf921cb53c7213a0f5ea1dc6882cb366e91cff3e9cb173633441027d707"
+    },
+    {
+      "name": "serde_derive",
+      "version": "1.0.228",
+      "checksum": "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79",
+      "files": 36,
+      "checksum_manifest_sha256": "fe219a2550171ff98db8d05b826dc86b5023d1c9b895e89a6b71a9890ec06ca2"
+    },
+    {
+      "name": "serde_json",
+      "version": "1.0.145",
+      "checksum": "402a6f66d8c709116cf22f558eab210f5a50187f702eb4d7e5ef38d9a7f1c79c",
+      "files": 87,
+      "checksum_manifest_sha256": "0bde9162ae3d46829feaed63a438eb151d48b240eca731da696d654edef60cce"
+    },
+    {
+      "name": "sha2",
+      "version": "0.10.9",
+      "checksum": "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283",
+      "files": 31,
+      "checksum_manifest_sha256": "f0acc49f02600e95af1077f76fc9616464cf1cf3cbbac4a50b07b1515ee00217"
+    },
+    {
+      "name": "sha2",
+      "version": "0.11.1",
+      "checksum": "47d7069beb7d6ac7b9acd1039986e73443f24234f41074da099d6f994ac9ad19",
+      "files": 47,
+      "checksum_manifest_sha256": "3ea8ce6d17d49aaed3e524dd15fb40301c6799858400b73564af3f8ffde099eb"
+    },
+    {
+      "name": "signature",
+      "version": "2.2.0",
+      "checksum": "77549399552de45a898a580c1b41d445bf730df867cc44e6c0233bbc4b8329de",
+      "files": 16,
+      "checksum_manifest_sha256": "dff8a3bd28120e65861c4c63b3ae452cce17162ec79187d6072ece4703e29541"
+    },
+    {
+      "name": "simd-adler32",
+      "version": "0.3.10",
+      "checksum": "3a219298ac11a56ea9a6d2120044824d6f01aeb034955e7af7bc16858527deea",
+      "files": 21,
+      "checksum_manifest_sha256": "6d213e1128248a032e7c1ada237f85d915b43f1bd0e1c4ae49ae0c641006c213"
+    },
+    {
+      "name": "spki",
+      "version": "0.7.3",
+      "checksum": "d91ed6c858b01f942cd56b37a94b3e0a1798290327d1236e4d9cf4eaca44d29d",
+      "files": 21,
+      "checksum_manifest_sha256": "780655245939e09ed627d7e5bd90bf0a5e4ffdc9db904536cc80c0d46207f66f"
+    },
+    {
+      "name": "subtle",
+      "version": "2.6.1",
+      "checksum": "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292",
+      "files": 10,
+      "checksum_manifest_sha256": "eedcd8071f06fb5c367e1c231a7c1760639eb3ae2a6fbc3a7d3b56659e099178"
+    },
+    {
+      "name": "syn",
+      "version": "2.0.119",
+      "checksum": "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297",
+      "files": 105,
+      "checksum_manifest_sha256": "55204f43d4c71c1f4d7492245176a09c1b5ac58d497ba6df9d6557b71244d5b4"
+    },
+    {
+      "name": "tar",
+      "version": "0.4.46",
+      "checksum": "3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840",
+      "files": 26,
+      "checksum_manifest_sha256": "46f578f89b3ac804e96ece2b4a2ed9f2272b64e9058602577550b0fc70a0c6a6"
+    },
+    {
+      "name": "typenum",
+      "version": "1.20.1",
+      "checksum": "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20",
+      "files": 24,
+      "checksum_manifest_sha256": "4c6d3d1d2739b0e21fcbedf53053cbcc391b57bb8818e93c36b0f45833b54085"
+    },
+    {
+      "name": "unicode-ident",
+      "version": "1.0.27",
+      "checksum": "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563",
+      "files": 23,
+      "checksum_manifest_sha256": "4ea0dc8d9b7c199e12e98ba61a852b18c16e143831b47fc69856451fa2730403"
+    },
+    {
+      "name": "version_check",
+      "version": "0.9.5",
+      "checksum": "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a",
+      "files": 12,
+      "checksum_manifest_sha256": "17763d67791915858b47cd01f2a6e27e40e4b85e90650b30e677e71b71d670a3"
+    },
+    {
+      "name": "zeroize",
+      "version": "1.9.1",
+      "checksum": "e13084392c5e4bc371903e2935a5eaeed24905a7511356b883835e18a78f6879",
+      "files": 16,
+      "checksum_manifest_sha256": "7c29c52b5a14a63333c648c21f24a311618f2e4376554523391d0ebe83c65ad4"
+    }
+  ],
+  "reproduction": {
+    "source_date_epoch": 1791936000,
+    "registry_closure": "cargo vendor --locked --versioned-dirs --manifest-path Cargo.toml --sync tooling/Cargo.toml STAGING/vendor",
+    "archive_command": "GNU tar 1.35 --sort=name --format=ustar --mtime=@1791936000 --owner=0 --group=0 --numeric-owner --mode=u=rwX,go=rX -cJf native-cargo-vendor.tar.xz -C STAGING vendor",
+    "xz_options": "-T1 -6 --check=crc64",
+    "xz_version": "5.8.4"
+  }
+}

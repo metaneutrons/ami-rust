@@ -28,6 +28,12 @@ sha() { shasum -a 256 "$1" | awk '{print $1}'; }
 size() { wc -c < "$1" | tr -d '[:space:]'; }
 verify() { [[ -f "$1" && ! -L "$1" && $(size "$1") == "$2" && $(sha "$1") == "$3" ]] || fail "input identity differs: $1"; }
 active() { [[ $(( $(date +%s) - ${NATIVE_CAMPAIGN_START_EPOCH:?} )) -lt 5100 ]] || fail 'active campaign cutoff reached'; }
+# Prefix assembly anchors about 1,300 directories for this pinned inventory.
+# Raise only this process's inherited soft limit; never change host configuration.
+soft_nofile=$(ulimit -Sn)
+if [[ "$soft_nofile" != unlimited && "$soft_nofile" -lt 4096 ]]; then
+  ulimit -Sn 4096 || fail 'native qualification requires a hard open-file limit of at least 4096'
+fi
 canonical_program() {
   local path=$1 link count=0
   while [[ -L "$path" ]]; do
@@ -102,12 +108,30 @@ authenticate() {
 build_helper() {
   active
   bash "$source_root/tools/bootstrap-host-rust.sh" "$managed/bootstrap" "$triple" > "$managed/auth/bootstrap.log" 2>&1
+  compile_helper
+}
+
+compile_helper() {
+  active
   mkdir -m 700 "$managed/tooling-home" "$managed/tooling-target"
+  jq -n --arg soft "$(ulimit -Sn)" --arg hard "$(ulimit -Hn)" \
+    '{minimum_open_files:4096,soft_open_files:$soft,hard_open_files:$hard,scope:"Inherited per-process descriptor capacity; no host configuration change."}' > "$managed/auth/descriptor-capacity.json"
+  local vendor_profile="$source_root/release/native-cargo-vendor-inputs.json"
+  local archive="$source_root/release/inputs/native-cargo-vendor.tar.xz" lock
+  jq -e '.schema == "ami-rust-native-cargo-vendor-inputs-v1" and .path == "release/inputs/native-cargo-vendor.tar.xz" and .component_root == "vendor"' "$vendor_profile" >/dev/null
+  for lock in Cargo.lock tooling/Cargo.lock; do
+    [[ $(sha "$source_root/$lock") == "$(jq -er --arg lock "$lock" '.source_locks[$lock]' "$vendor_profile")" ]] || fail 'native vendor source lock differs'
+  done
+  verify "$archive" "$(jq -er '.bytes' "$vendor_profile")" "$(jq -er '.sha256' "$vendor_profile")"
+  safe_tar "$archive" vendor "$managed/tooling-vendor"
+  jq -nr --arg directory "$managed/tooling-vendor/vendor" \
+    '"[net]\noffline = true\n[source.crates-io]\nreplace-with = \"qualification-vendor\"\n[source.qualification-vendor]\ndirectory = " + ($directory | tojson)' \
+    > "$managed/tooling-home/config.toml"
   env -i HOME="$managed/bootstrap-home" PATH='/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin' \
     LC_ALL=C TZ=UTC SOURCE_DATE_EPOCH=1791936000 CARGO_BUILD_JOBS=2 \
     CARGO_HOME="$managed/tooling-home" CARGO_TARGET_DIR="$managed/tooling-target" \
     RUSTC="$managed/bootstrap/toolchain/bin/rustc" RUSTDOC="$managed/bootstrap/toolchain/bin/rustdoc" \
-    "$managed/bootstrap/toolchain/bin/cargo" build --locked --release --manifest-path "$source_root/tooling/Cargo.toml" -p ami-rust-xtask \
+    "$managed/bootstrap/toolchain/bin/cargo" build --locked --offline --release --manifest-path "$source_root/tooling/Cargo.toml" -p ami-rust-xtask \
     > "$managed/auth/helper-build.log" 2>&1
   active
 }
@@ -143,6 +167,13 @@ stage() {
   unzip -p "$managed/downloads/native_cargo.zip" cargo > "$managed/components/cargo/bin/cargo"
   verify "$managed/components/cargo/bin/cargo" "$(jq -er '.payload_bytes' <<<"$row")" "$(jq -er '.payload_sha256' <<<"$row")"
   chmod 0755 "$managed/components/cargo/bin/cargo"
+  local cargo_profile="$source_root/tooling/crates/aros-native-build/pins/$host/cargo.json" producer
+  if jq -e '.files | any(.path == "producer.json")' "$cargo_profile" >/dev/null; then
+    producer=$(jq -ce '[.files[] | select(.path == "producer.json")] | if length == 1 then .[0] else error("ambiguous producer record") end' "$cargo_profile")
+    # Reproduce the embedded original bytes, then require their exact pinned identity.
+    jq -S '.producer_identity_spec.record | select(type == "object")' "$cargo_profile" > "$managed/components/cargo/producer.json"
+    verify "$managed/components/cargo/producer.json" "$(jq -er '.bytes' <<<"$producer")" "$(jq -er '.sha256' <<<"$producer")"
+  fi
   while IFS= read -r member; do
     case "$member" in producer/libraries/lib*.rlib) ;; *) fail 'unexpected target library member' ;; esac
     destination="$managed/components/target_libraries/${member##*/}"
@@ -194,8 +225,9 @@ prove() {
 case "$mode" in
   authenticate) authenticate ;;
   build-helper) build_helper ;;
+  compile-helper) compile_helper ;;
   stage) stage ;;
-  measure-stage) request_and_run stage "$(canonical_program "$(command -v bash)")" "$(jq -nc --arg script "$source_root/tools/qualify-native-cargo-consumer.sh" --arg host "$host" --arg root "$managed" '[ $script,"stage",$host,$root ]')" ;;
+  measure-stage) request_and_run stage "$(canonical_program /bin/bash)" "$(jq -nc --arg script "$source_root/tools/qualify-native-cargo-consumer.sh" --arg host "$host" --arg root "$managed" '[ $script,"stage",$host,$root ]')" ;;
   prove) prove ;;
   *) fail 'unknown internal staging mode' ;;
 esac

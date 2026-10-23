@@ -149,7 +149,7 @@ jobs:
           for entry in stage.outer-request.json consumer.outer-request.json consumer.request.json; do
             if [ -f "$root/$entry" ] && [ ! -L "$root/$entry" ]; then command cp "$root/$entry" "$artifact/$entry"; fi
           done
-          command rm -rf -- "$root/work" "$root/components" "$root/downloads" "$root/unpacked" "$root/bootstrap" "$root/tooling-home" "$root/tooling-target" "$root/bootstrap-home" "$root/selector" "$root/tmp"
+          command rm -rf -- "$root/work" "$root/components" "$root/downloads" "$root/unpacked" "$root/bootstrap" "$root/tooling-home" "$root/tooling-target" "$root/tooling-vendor" "$root/bootstrap-home" "$root/selector" "$root/tmp"
           elapsed=$(($(date +%s) - NATIVE_CAMPAIGN_START_EPOCH))
           if [ "$elapsed" -gt 5100 ]; then result=FAILED; fi
           jq -n --arg status "$result" --arg head "$GITHUB_SHA" --arg host "$NATIVE_HOST_KEY" --argjson elapsed "$elapsed" \
