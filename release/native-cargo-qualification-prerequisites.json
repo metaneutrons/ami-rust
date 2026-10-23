@@ -1,0 +1,119 @@
+{
+  "schema": "ami-rust-native-cargo-qualification-prerequisites-v1",
+  "claim_boundary": "Previously reviewed component prerequisites only. The protected caller verifies GitHub run and artifact metadata and ZIP digests before extracting these roots; this manifest does not authenticate GitHub by itself.",
+  "limits": {
+    "command_seconds": 1200,
+    "aggregate_rss_bytes": 4294967296,
+    "workspace_bytes": 12884901888,
+    "log_bytes": 16777216,
+    "active_seconds": 5100,
+    "campaign_seconds": 5400,
+    "finalization_reserve_seconds": 300,
+    "consumer_artifact_bytes": 67108864
+  },
+  "native_cargo": {
+    "repository": "metaneutrons/ami-rust",
+    "workflow": ".github/workflows/cargo-native-prerequisite.yml",
+    "run_id": 39748078466,
+    "attempt": 1,
+    "head": "f23c369b9eb25de8fb40d6ea409186ac287b4a2e",
+    "tree": "f5a60254769de6eb8a58a374e66b62ffd0531411",
+    "review": "rc4-native-three-host-cargo-producer-actual-review-a2",
+    "hosts": {
+      "macos-aarch64": {
+        "artifact_id": 12414197369,
+        "artifact_name": "native-cargo-component-aarch64-apple-darwin-39748078466-1",
+        "zip_bytes": 46025674,
+        "zip_sha256": "c41f56dfe3e6a3d7e3c1bf0e7934e939585ed157b507dd87dc54079a79fd41ce",
+        "payload_path": "cargo",
+        "payload_bytes": 39348200,
+        "payload_sha256": "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d",
+        "native_host": "aarch64-apple-darwin"
+      },
+      "linux-x86_64": {
+        "artifact_id": 12412803262,
+        "artifact_name": "native-cargo-component-x86_64-unknown-linux-gnu-39748078466-1",
+        "zip_bytes": 54643384,
+        "zip_sha256": "cd8b174bb32b73797522c9b07077bcda5e310a52eed65fae3506f0c223a299e9",
+        "payload_path": "cargo",
+        "payload_bytes": 48110632,
+        "payload_sha256": "938bc3ee1f60b5f239d369a9f3b6bf1a6e004aecdb6ef65fb7fe901745b011db",
+        "native_host": "x86_64-unknown-linux-gnu"
+      },
+      "linux-aarch64": {
+        "artifact_id": 12412418782,
+        "artifact_name": "native-cargo-component-aarch64-unknown-linux-gnu-39748078466-1",
+        "zip_bytes": 52392807,
+        "zip_sha256": "d86f474fdf12d62a2a7cda0b1027bcf966d977c661950287045c86fdbfd7a8cf",
+        "payload_path": "cargo",
+        "payload_bytes": 45863336,
+        "payload_sha256": "2f8a507ec5bef7fe41a04c18aee06e359ff7f3b70d17d98007c9014114e17d9b",
+        "native_host": "aarch64-unknown-linux-gnu"
+      }
+    }
+  },
+  "bare_target_libraries": {
+    "repository": "metaneutrons/ami-rust",
+    "workflow": ".github/workflows/bare-target-libraries.yml",
+    "run_id": 39893777151,
+    "attempt": 1,
+    "head": "4f75d28a7201c329cdcb1f89ebb821c54f60b81b",
+    "tree": "ecc202259513065f2b53c70cc0380e8afa5256ec",
+    "review": "rc4-bare-target-three-host-actual-independent-review-a1",
+    "profile_path": "tooling/crates/aros-native-build/pins/target-libraries.json",
+    "profile_sha256": "4759fc1a0f2f74e1a624a6c7b62b5d9949d873f1ce05a61ba9825891bf327183",
+    "hosts": {
+      "macos-aarch64": {
+        "artifact_id": 12476087651,
+        "artifact_name": "bare-target-libraries-macos-aarch64-39893777151-1",
+        "zip_bytes": 87669192,
+        "zip_sha256": "71b403a3fb44d6f5c49748f920515904a0e716eac50be217b6acdf66a5b84feb",
+        "library_paths": [
+          "producer/libraries/liballoc-67cdea426a6788d2.rlib",
+          "producer/libraries/libcompiler_builtins-6ba5292693f8f158.rlib",
+          "producer/libraries/libcore-7f112bce470cf4f4.rlib"
+        ]
+      },
+      "linux-x86_64": {
+        "artifact_id": 12476555575,
+        "artifact_name": "bare-target-libraries-linux-x86_64-39893777151-1",
+        "zip_bytes": 88477696,
+        "zip_sha256": "b35b5dfc3a825c6c8c483f96e6ebd24d4520a821bd98baa1d8747953439d6807",
+        "library_paths": [
+          "producer/libraries/liballoc-67cdea426a6788d2.rlib",
+          "producer/libraries/libcompiler_builtins-6ba5292693f8f158.rlib",
+          "producer/libraries/libcore-7f112bce470cf4f4.rlib"
+        ]
+      },
+      "linux-aarch64": {
+        "artifact_id": 12476725239,
+        "artifact_name": "bare-target-libraries-linux-aarch64-39893777151-1",
+        "zip_bytes": 87281222,
+        "zip_sha256": "8e02df60ed46d54943afc843f813b4017d9ad8d9eaef536b502de3c1555572fb",
+        "library_paths": [
+          "producer/libraries/liballoc-67cdea426a6788d2.rlib",
+          "producer/libraries/libcompiler_builtins-6ba5292693f8f158.rlib",
+          "producer/libraries/libcore-7f112bce470cf4f4.rlib"
+        ]
+      }
+    }
+  },
+  "linux_aarch64_csdk": {
+    "repository": "metaneutrons/ami-rust",
+    "workflow": ".github/workflows/csdk-linux-aarch64-producer.yml",
+    "run_id": 39893693245,
+    "attempt": 1,
+    "head": "4f75d28a7201c329cdcb1f89ebb821c54f60b81b",
+    "artifact_id": 12476215647,
+    "artifact_name": "portable-csdk-linux-aarch64-39893693245-1",
+    "zip_bytes": 15142320,
+    "zip_sha256": "462d1d2945d0fde9edbd2e3791175074509bddb7c83619c3c78b8fb81c83852c",
+    "component_path": "csdk-component.tar.xz",
+    "component_bytes": 5619304,
+    "component_sha256": "942417c7b82218f5704eba168922fc348dc0ce5c17a236139c3353775209b99b",
+    "profile_path": "csdk-profile.json",
+    "profile_bytes": 467692,
+    "profile_sha256": "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337",
+    "review": "rc2-linux-aarch64-csdk-independent-review-a1"
+  }
+}

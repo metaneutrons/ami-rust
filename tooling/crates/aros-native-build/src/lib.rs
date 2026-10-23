@@ -11,6 +11,9 @@ pub mod recipe;
 
 pub use aros_elf::{Refusal, Result};
 pub use build::{BuildOptions, prepare};
+/// Verified locally composed native-build prefix.
+#[doc(hidden)]
+pub use inputs::Toolchain;
 
 /// The rustc target-linker entry point. This is not a Cargo command dispatcher.
 pub fn link(arguments: &[std::ffi::OsString]) -> Result<()> {
