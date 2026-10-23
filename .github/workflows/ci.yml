@@ -44,8 +44,14 @@ jobs:
             tooling/crates/aros-native-build/pins/target.json
             tooling/crates/aros-native-build/pins/macos-aarch64/rust.json
             tooling/crates/aros-native-build/pins/linux-x86_64/rust.json
+            tooling/crates/aros-native-build/Cargo.toml
+            tooling/crates/aros-native-build/src/lib.rs
             tooling/crates/xtask/src/bare_target_producer.rs
             tooling/crates/xtask/src/main.rs
+            tooling/crates/xtask/Cargo.toml
+            tooling/crates/xtask/src/native_cargo_qualification.rs
+            tooling/crates/xtask/src/native_prefix_compose.rs
+            release/native-cargo-qualification-prerequisites.json
             targets/x86_64-aros.json
             host/
             native/sdk.h
@@ -169,7 +175,7 @@ jobs:
           if ! git cat-file -e "$CLI_BASE^{commit}"; then
             git fetch --no-tags --filter=blob:none --depth=1 origin "$CLI_BASE"
           fi
-          if git diff --quiet "$CLI_BASE" "$GITHUB_SHA" -- Cargo.toml Cargo.lock crates/ examples/ tests/ targets/ tools/ tooling/ host/profiles/ host/contracts.py docs/rust-cli-migration/contracts-v1.json .github/workflows/ci.yml release/ci-bootstrap-inputs.json release/ci-bootstrap-linux-aarch64-inputs.json release/ci-python-counter-linux-aarch64-inputs.json release/ci-sdk-inputs.json release/portable-csdk/spec.json release/native-tooling-inputs.json release/ci-python-inputs.json release/ci_historical.py release/install.py release/test_install.py release/verify_publisher.py release/ci_native.py release/ci_sdk.py release/ci_auth.py release/ci_cargo.py release/prepare_sdk.py release/ci_python.py; then
+          if git diff --quiet "$CLI_BASE" "$GITHUB_SHA" -- Cargo.toml Cargo.lock crates/ examples/ tests/ targets/ tools/ tooling/ host/profiles/ host/contracts.py docs/rust-cli-migration/contracts-v1.json .github/workflows/ci.yml .github/workflows/native-cargo-qualification.yml release/ci-bootstrap-inputs.json release/ci-bootstrap-linux-aarch64-inputs.json release/ci-python-counter-linux-aarch64-inputs.json release/ci-sdk-inputs.json release/portable-csdk/spec.json release/native-tooling-inputs.json release/ci-python-inputs.json release/native-cargo-qualification-prerequisites.json release/native-cargo-consumer-inputs.json release/ci_historical.py release/install.py release/test_install.py release/verify_publisher.py release/ci_native.py release/ci_sdk.py release/ci_auth.py release/ci_cargo.py release/prepare_sdk.py release/ci_python.py; then
             printf 'affected=false\n' >> "$GITHUB_OUTPUT"
           else
             cli_diff_status=$?
@@ -218,6 +224,7 @@ jobs:
             release/native-tooling-inputs.json
             release/ci-python-inputs.json
             release/ci-resources.json
+            release/native-cargo-qualification-prerequisites.json
             release/ci_python.py
             release/ci_historical.py
             release/ci_native.py
@@ -228,6 +235,10 @@ jobs:
             release/install.py
             release/test_install.py
             release/verify_publisher.py
+      - name: Check native consumer input refusal controls offline
+        run: |
+          bash tools/test-native-cargo-artifact-inventory.sh
+          bash tools/test-native-cargo-consumer-auth.sh
       - name: Install the existing hash-pinned host Rust inputs
         env:
           CLI_HOST_TRIPLE: ${{ matrix.triple }}
@@ -332,6 +343,7 @@ jobs:
             release/ci-sdk-inputs.json
             release/portable-csdk/spec.json
             release/ci-resources.json
+            release/native-cargo-qualification-prerequisites.json
       - name: Measure host capacity and write observer scope
         run: |
           set -euo pipefail
@@ -380,6 +392,10 @@ jobs:
             echo "Linux AArch64 observer runner is below the existing source-CI capacity floor" >&2
             exit 1
           fi
+      - name: Check native consumer input refusal controls offline
+        run: |
+          bash tools/test-native-cargo-artifact-inventory.sh
+          bash tools/test-native-cargo-consumer-auth.sh
       - name: Install the hash-pinned Linux AArch64 Rust inputs
         run: bash tools/bootstrap-host-rust.sh "$RUNNER_TEMP/ami-rust-aarch64-host" aarch64-unknown-linux-gnu
       - name: Test only the ARM observer integration surfaces
@@ -406,6 +422,10 @@ jobs:
             --manifest-path tooling/Cargo.toml \
             --target-dir "$RUNNER_TEMP/ami-rust-aarch64-report-tests" \
             --package ami-rust-xtask --bin ami-rust-xtask consumer_report::tests
+          "$cli_rust/cargo" test --locked --offline \
+            --manifest-path tooling/Cargo.toml \
+            --target-dir "$RUNNER_TEMP/ami-rust-aarch64-report-tests" \
+            --package ami-rust-xtask --bin ami-rust-xtask native_cargo_qualification::tests
           # Exercise the new process-wide signal/resource helper natively on ARM64.
           "$cli_rust/cargo" test --locked --offline \
             --manifest-path tooling/Cargo.toml \

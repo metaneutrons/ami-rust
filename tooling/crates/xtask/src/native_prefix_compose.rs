@@ -11,7 +11,8 @@ use ami_rust_core::{
     inventory::{FileIdentity, LinkIdentity},
     json::{JsonProfile, parse_json_value},
     native_prefix::{
-        NativePrefixFile, NativePrefixProfile, NativePrefixSpec, assemble_native_prefix,
+        NativePrefixFile, NativePrefixProfile, NativePrefixReceipt, NativePrefixSpec,
+        assemble_native_prefix,
     },
     ownership::require_disjoint,
     signals::SigtermGuard,
@@ -69,21 +70,37 @@ const TARGET_LIBRARIES: &str = include_str!("../../aros-native-build/pins/target
 const TARGET_SPEC: &[u8] = include_bytes!("../../../../targets/x86_64-aros.json");
 const INPUTS_RS: &[u8] = include_bytes!("../../aros-native-build/src/inputs.rs");
 
-struct ProfileRows {
-    files: Vec<FileIdentity>,
-    symlinks: Vec<LinkIdentity>,
+pub(super) struct ProfileRows {
+    pub(super) files: Vec<FileIdentity>,
+    pub(super) symlinks: Vec<LinkIdentity>,
 }
 
-struct HostProfiles {
-    key: &'static str,
-    triple: &'static str,
-    os: &'static str,
-    arch: &'static str,
-    rust: &'static str,
-    cargo: &'static str,
-    llvm: &'static str,
-    csdk: &'static str,
-    collector: &'static str,
+pub(super) struct HostProfiles {
+    pub(super) key: &'static str,
+    pub(super) triple: &'static str,
+    pub(super) os: &'static str,
+    pub(super) arch: &'static str,
+    pub(super) rust: &'static str,
+    pub(super) cargo: &'static str,
+    pub(super) llvm: &'static str,
+    pub(super) csdk: &'static str,
+    pub(super) collector: &'static str,
+}
+
+pub(super) struct LinkerIdentity {
+    pub(super) root: PathBuf,
+    pub(super) bytes: u64,
+    pub(super) sha256: String,
+    pub(super) build_request_sha256: String,
+    pub(super) build_record_sha256: String,
+}
+
+pub(super) struct CandidateComposition {
+    pub(super) host: HostProfiles,
+    pub(super) linker: FileIdentity,
+    pub(super) linker_build_request_sha256: String,
+    pub(super) linker_build_record_sha256: String,
+    pub(super) receipt: NativePrefixReceipt,
 }
 
 pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
@@ -118,18 +135,9 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
     }
     require_candidate_profile_sources()?;
 
-    let host = host_profiles(
-        text(&request, "host_key")?,
-        text(&request, "rust_host_triple")?,
-    )?;
-    if std::env::consts::OS != host.os || std::env::consts::ARCH != host.arch {
-        return Err(Refusal::new(
-            "native-prefix host profile must match the running native host",
-        ));
-    }
+    let host_key = text(&request, "host_key")?;
+    let rust_host_triple = text(&request, "rust_host_triple")?;
     let source_root = existing_directory(text(&request, "source_root")?)?;
-    verify_source_profile_files(&source_root)?;
-    let target_spec_root = existing_directory(&source_root.join("targets").to_string_lossy())?;
     let destination = PathBuf::from(text(&request, "destination")?);
 
     let roots_value = request
@@ -196,16 +204,110 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
             "source-built linker does not match the caller-authenticated executable identity",
         ));
     }
-    let linker_identity = FileIdentity {
-        path: linker_path.to_owned(),
+    let linker = LinkerIdentity {
+        root: linker_root,
         bytes: linker_bytes,
         sha256: linker_sha256.to_owned(),
+        build_request_sha256: linker_build_request_sha256.to_owned(),
+        build_record_sha256: linker_build_record_sha256.to_owned(),
+    };
+    let composition = compose_candidate(
+        host_key,
+        rust_host_triple,
+        &source_root,
+        &destination,
+        roots,
+        linker,
+    )?;
+    let host = composition.host;
+    let linker_identity = composition.linker;
+    let linker_build_request_sha256 = composition.linker_build_request_sha256;
+    let linker_build_record_sha256 = composition.linker_build_record_sha256;
+    let receipt = composition.receipt;
+    println!(
+        "{}",
+        serde_json::json!({
+            "schema":"ami-rust-native-prefix-compose-result-v1",
+            "status":"LOCAL_COMPOSED_CANDIDATE_ONLY",
+            "request_sha256":request_sha256,
+            "source_root":source_root,
+            "host_key":receipt.host_key,
+            "rust_host_triple":host.triple,
+            "source_inputs_rs_sha256":EXPECTED_INPUTS_RS_SHA256,
+            "target_library_profile_sha256":EXPECTED_TARGET_LIBRARIES_SHA256,
+            "target_spec_sha256":EXPECTED_TARGET_SPEC_SHA256,
+            "linker_artifact":{"path":linker_identity.path,"bytes":linker_identity.bytes,"sha256":linker_identity.sha256},
+            "linker_build_request_sha256":linker_build_request_sha256,
+            "linker_build_record_sha256":linker_build_record_sha256,
+            "replaced_official_cargo":receipt.replaced_official_cargo,
+            "unmapped_cargo_rows":receipt.unmapped_cargo_rows,
+            "unmapped_collector_rows":receipt.unmapped_collector_rows,
+            "measurement":{
+                "files":receipt.measurement.files,
+                "symlinks":receipt.measurement.symlinks,
+                "directories":receipt.measurement.directories,
+                "file_bytes":receipt.measurement.file_bytes
+            },
+            "files":receipt.files,
+            "symlinks":receipt.symlinks,
+            "claim":"Local fixed-layout composition and checked linker artifact identity only. Build provenance is supplied by the outer workflow. Toolchain::open, ordinary Cargo application proof, SDK publication, host admission and RC4 acceptance remain separate."
+        })
+    );
+    Ok(())
+}
+
+/// Compose the fixed prefix from profiles embedded in this compiled source.
+/// The caller supplies component roots produced by its already authenticated
+/// acquisition flow. This API does not admit a new host or authenticate an
+/// artifact source; it applies the same source/profile/host checks as the
+/// retained maintainer command.
+pub(super) fn compose_candidate(
+    host_key: &str,
+    rust_host_triple: &str,
+    source_root: &Path,
+    destination: &Path,
+    roots: [PathBuf; 6],
+    linker: LinkerIdentity,
+) -> Result<CandidateComposition> {
+    let host = verify_candidate_source(host_key, rust_host_triple, source_root)?;
+    let source_root = existing_directory(&source_root.to_string_lossy())?;
+    let target_spec_root = existing_directory(&source_root.join("targets").to_string_lossy())?;
+    let roots = roots
+        .into_iter()
+        .map(|root| existing_directory(&root.to_string_lossy()))
+        .collect::<Result<Vec<_>>>()?;
+    let linker_root = existing_directory(&linker.root.to_string_lossy())?;
+    if linker.bytes == 0
+        || linker.bytes > MAX_LINKER_BYTES
+        || !is_sha256_digest(&linker.sha256)
+        || !is_sha256_digest(&linker.build_request_sha256)
+        || !is_sha256_digest(&linker.build_record_sha256)
+    {
+        return Err(Refusal::new(
+            "source-built linker identity or provenance references are invalid",
+        ));
+    }
+    let linker_file = linker_root.join("aros-link");
+    let linker_metadata = std::fs::symlink_metadata(&linker_file)?;
+    if !linker_metadata.file_type().is_file()
+        || linker_metadata.len() != linker.bytes
+        || linker_metadata.permissions().mode() & 0o111 == 0
+        || sha256_file(&linker_file)? != linker.sha256
+    {
+        return Err(Refusal::new(
+            "source-built linker does not match the caller-authenticated executable identity",
+        ));
+    }
+    let linker_identity = FileIdentity {
+        path: "aros-link".to_owned(),
+        bytes: linker.bytes,
+        sha256: linker.sha256,
         mode: Some(0o755),
     };
 
     require_disjoint(
         &source_root,
-        &destination,
+        destination,
         "native prefix output overlaps candidate source",
     )?;
     for left in 0..roots.len() {
@@ -216,7 +318,7 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
         )?;
         require_disjoint(
             &roots[left],
-            &destination,
+            destination,
             "native prefix output overlaps a component root",
         )?;
         require_disjoint(
@@ -239,7 +341,7 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
     )?;
     require_disjoint(
         &linker_root,
-        &destination,
+        destination,
         "native prefix output overlaps source-built linker",
     )?;
 
@@ -278,11 +380,10 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
         sha256: EXPECTED_TARGET_SPEC_SHA256.to_owned(),
         mode: None,
     };
-
     let guard = SigtermGuard::acquire()?;
     let receipt = assemble_native_prefix(
         NativePrefixSpec {
-            destination: &destination,
+            destination,
             host_key: host.key,
             rust_host_triple: host.triple,
             rust: NativePrefixProfile {
@@ -343,36 +444,30 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
             failure.recovery_entry
         ))
     })?;
-    println!(
-        "{}",
-        serde_json::json!({
-            "schema":"ami-rust-native-prefix-compose-result-v1",
-            "status":"LOCAL_COMPOSED_CANDIDATE_ONLY",
-            "request_sha256":request_sha256,
-            "source_root":source_root,
-            "host_key":receipt.host_key,
-            "rust_host_triple":host.triple,
-            "source_inputs_rs_sha256":EXPECTED_INPUTS_RS_SHA256,
-            "target_library_profile_sha256":EXPECTED_TARGET_LIBRARIES_SHA256,
-            "target_spec_sha256":EXPECTED_TARGET_SPEC_SHA256,
-            "linker_artifact":{"path":linker_identity.path,"bytes":linker_identity.bytes,"sha256":linker_identity.sha256},
-            "linker_build_request_sha256":linker_build_request_sha256,
-            "linker_build_record_sha256":linker_build_record_sha256,
-            "replaced_official_cargo":receipt.replaced_official_cargo,
-            "unmapped_cargo_rows":receipt.unmapped_cargo_rows,
-            "unmapped_collector_rows":receipt.unmapped_collector_rows,
-            "measurement":{
-                "files":receipt.measurement.files,
-                "symlinks":receipt.measurement.symlinks,
-                "directories":receipt.measurement.directories,
-                "file_bytes":receipt.measurement.file_bytes
-            },
-            "files":receipt.files,
-            "symlinks":receipt.symlinks,
-            "claim":"Local fixed-layout composition and checked linker artifact identity only. Build provenance is supplied by the outer workflow. Toolchain::open, ordinary Cargo application proof, SDK publication, host admission and RC4 acceptance remain separate."
-        })
-    );
-    Ok(())
+    Ok(CandidateComposition {
+        host,
+        linker: linker_identity,
+        linker_build_request_sha256: linker.build_request_sha256,
+        linker_build_record_sha256: linker.build_record_sha256,
+        receipt,
+    })
+}
+
+pub(super) fn verify_candidate_source(
+    key: &str,
+    triple: &str,
+    source_root: &Path,
+) -> Result<HostProfiles> {
+    require_candidate_profile_sources()?;
+    let host = host_profiles(key, triple)?;
+    if std::env::consts::OS != host.os || std::env::consts::ARCH != host.arch {
+        return Err(Refusal::new(
+            "native-prefix host profile must match the running native host",
+        ));
+    }
+    let source_root = existing_directory(&source_root.to_string_lossy())?;
+    verify_source_profile_files(&source_root)?;
+    Ok(host)
 }
 
 fn host_profiles(key: &str, triple: &str) -> Result<HostProfiles> {

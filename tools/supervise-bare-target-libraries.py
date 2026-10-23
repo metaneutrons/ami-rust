@@ -23,7 +23,7 @@ H1_HELPER_SHA = "dfa41aa97181d7b2516e8f4b42b18793a2f35cdba969dd430be269adcf1754a
 INPUTS_SHA = "d932be30b3f88ca6c77010d6f96e0449273970864250569b49cd6d391e37d1c2"
 INPUT_BOOTSTRAP_SHA = "5733fb6599124b9d282a427b9c770d9d0b6fd57c369169be1f852f72c80896c6"
 TOOLING_MANIFEST_SHA = "13ac0ca9ac4437c7ac77b066b5a044ea30f935ffef0446dad7146132eda12a3f"
-TOOLING_LOCK_SHA = "9268b294c6d697a3914b735f775a0c2b0543e775de3f6bf10b2f964baf5de6cd"
+TOOLING_LOCK_SHA = "eebb986b7c8eb7c9f6476a866b6def2491cb89445b1c69a6c9164ccb9a4ff7b2"
 TARGET_PIN_SHA = "33fdd3d97053370eb3db9e05ea75721dafcfc7f4b5f8c218acaab1911984c341"
 TARGET_SPEC_SHA = "de7a0024aa94269641e3e6d480ce8cd334962bf7e02592b0652e19e56b5fba71"
 TARGET_SPEC_PATH = "targets/x86_64-aros.json"
@@ -33,7 +33,13 @@ BOOTSTRAP_RECORD_NAMES = {"excluded-installer-metadata.txt", "excluded-installer
                           "duplicate-identical-component-paths.txt"}
 BOOTSTRAP_RECEIPT_MAX_BYTES = 1024 * 1024
 XTASK_MODULE_SHA = "83385578ad207037a7f339be95aff76abab05424b0eba6d94f13db1952c83627"
-XTASK_MAIN_SHA = "786bcfadb16294ef54d6788f22ac8b28efbe590affb66d4995a0f5007f54c6d8"
+XTASK_MAIN_SHA = "361978d3f6780da299cb963a4f1a91fe3d2a3e2efe2918fedf1c8d4194efee91"
+XTASK_MANIFEST_SHA = "256ac50c83b022a9831cb4e1e00b2470583ebb85a8552eff20f798be43cf0d62"
+NATIVE_CARGO_MODULE_SHA = "77394cbf50577cce7f9bec049020d41e490455affb0ad9525b28ef50126f1254"
+NATIVE_CARGO_PREREQUISITES_SHA = "5297b2dc7418325a7b2df734f28d1358c400a7b2f9b04aceb3283334d67930a9"
+NATIVE_PREFIX_COMPOSER_SHA = "912ac1978f369366a26dd74d37e16d8e8b94415a3944153d0668d3a702139add"
+AROS_NATIVE_BUILD_MANIFEST_SHA = "d346847b53e14529cdb232b5e145198596e133934e1f4b2053f94796705662f6"
+AROS_NATIVE_BUILD_LIB_SHA = "a9c277ad7ebe5b2d57e425632a5606c7b4abceed5c8cdccba2815bb7e8d85c48"
 NATIVE_CARGO_COMMIT = "3efb1f477e99b42974b982d939fd100303cdf7db"
 RUST_COMMIT = "330d317121e16b5db8e5adc63595910528ff2ee7"
 LIMITS = {"rss_bytes": 4 * 1024**3, "workspace_bytes": 12 * 1024**3,
@@ -132,6 +138,12 @@ def verify_source_inputs(repo: Path, host_key: str) -> dict:
         "targets/x86_64-aros.json": TARGET_SPEC_SHA,
         "tooling/crates/xtask/src/bare_target_producer.rs": XTASK_MODULE_SHA,
         "tooling/crates/xtask/src/main.rs": XTASK_MAIN_SHA,
+        "tooling/crates/xtask/Cargo.toml": XTASK_MANIFEST_SHA,
+        "tooling/crates/xtask/src/native_cargo_qualification.rs": NATIVE_CARGO_MODULE_SHA,
+        "release/native-cargo-qualification-prerequisites.json": NATIVE_CARGO_PREREQUISITES_SHA,
+        "tooling/crates/xtask/src/native_prefix_compose.rs": NATIVE_PREFIX_COMPOSER_SHA,
+        "tooling/crates/aros-native-build/Cargo.toml": AROS_NATIVE_BUILD_MANIFEST_SHA,
+        "tooling/crates/aros-native-build/src/lib.rs": AROS_NATIVE_BUILD_LIB_SHA,
         profile: profile_sha,
         h1_inputs: h1_sha,
     }
@@ -274,6 +286,12 @@ def copy_inputs(repo: Path, artifact: Path, host: dict) -> list[dict]:
         ("tooling/Cargo.lock", TOOLING_LOCK_SHA),
         ("tooling/crates/aros-native-build/pins/target.json", TARGET_PIN_SHA),
         ("targets/x86_64-aros.json", TARGET_SPEC_SHA),
+        ("tooling/crates/xtask/Cargo.toml", XTASK_MANIFEST_SHA),
+        ("tooling/crates/xtask/src/native_cargo_qualification.rs", NATIVE_CARGO_MODULE_SHA),
+        ("release/native-cargo-qualification-prerequisites.json", NATIVE_CARGO_PREREQUISITES_SHA),
+        ("tooling/crates/xtask/src/native_prefix_compose.rs", NATIVE_PREFIX_COMPOSER_SHA),
+        ("tooling/crates/aros-native-build/Cargo.toml", AROS_NATIVE_BUILD_MANIFEST_SHA),
+        ("tooling/crates/aros-native-build/src/lib.rs", AROS_NATIVE_BUILD_LIB_SHA),
     ]:
         destination = artifact / "input-provenance" / relative.replace("/", "__")
         row = retain(repo / relative, destination, digest)

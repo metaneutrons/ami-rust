@@ -8,6 +8,8 @@ publish.workspace = true
 
 [dependencies]
 ami-rust-core = { version = "=0.2.0-dev", path = "../core" }
+aros-elf = { version = "=0.2.0-dev", path = "../aros-elf" }
+aros-native-build = { version = "=0.2.0-dev", path = "../aros-native-build" }
 serde_json.workspace = true
 
 [lints]

@@ -27,6 +27,8 @@ name = "ami-rust-xtask"
 version = "0.2.0-dev"
 dependencies = [
  "ami-rust-core",
+ "aros-elf",
+ "aros-native-build",
  "serde_json",
 ]
 
