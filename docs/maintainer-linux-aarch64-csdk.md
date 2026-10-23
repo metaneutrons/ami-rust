@@ -25,6 +25,15 @@ workspace, 16 MiB logs and 1,200-second command budgets. The producer has an
 earlier work cutoff and ordered cleanup reserves inside that campaign. Failure
 and incomplete-cleanup receipts remain part of the evidence.
 
+Before LLVM acquisition, the driver checks all native host prerequisites:
+`cc` (including an AArch64 `-dumpmachine` result), `cmake`, `pkg-config`,
+`perl`, `git`, and the fixed `/usr/bin/patch`. Relative names use only the
+controlled `/usr/local/bin:/usr/bin:/bin` search path. Each selected executable
+has a recorded resolved path, byte identity, and version; successful production
+also requires unchanged executable identities. Ambient `PATH` entries are not
+fallbacks. Retain the runner image identity with those observations; a missing
+tool is a prerequisite failure and does not qualify a C-SDK candidate.
+
 After success, independently verify the original artifact and complete producer
 receipts, source and license inventories, C-SDK profile and file identities,
 resource records and cleanup. Compare the target content under the existing
