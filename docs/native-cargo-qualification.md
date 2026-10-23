@@ -18,7 +18,10 @@ application qualification run.
 For each host, the measured application phase links an isolated
 `aros-0.2.0-dev` rustup selection and builds core, allocation, qualification,
 dependency and SHA-256 examples in two fresh source roots. Complete ELF bytes
-and native objects must agree between those roots. Missing-compiler and wrong
+and native objects must agree between those roots. The pinned nightly compiler
+receives `-Zunstable-options` together with the reproducibility path mappings
+for its custom target. Fixed system programs are canonicalized before the
+unchanged protected-executable checks, including merged `/usr` Linux systems. Missing-compiler and wrong
 linker controls must produce the intended Cargo diagnostic with complete
 capture, healthy resource measurement and no accepted ELF output. Offline
 fixtures also reject malformed artifact inventories, incorrect publisher/run

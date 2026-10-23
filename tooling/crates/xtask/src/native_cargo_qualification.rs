@@ -505,6 +505,7 @@ fn run_campaign(state: &mut RunState, raw_request: &[u8]) -> Result<Value> {
     }
 
     let source_copies = source_copy_destinations(&work);
+    let copy_program = fs::canonicalize("/bin/cp")?;
     for (index, destination) in source_copies.iter().enumerate() {
         let args = prepare_source_copy(&source, destination)?;
         let copy = execute(
@@ -514,7 +515,7 @@ fn run_campaign(state: &mut RunState, raw_request: &[u8]) -> Result<Value> {
             } else {
                 "source-copy-b"
             },
-            Path::new("/bin/cp"),
+            &copy_program,
             &args,
             &managed,
             minimal_environment(&work),
@@ -1069,6 +1070,7 @@ fn cargo_environment(inputs: CargoEnvironmentInputs<'_>) -> Result<BTreeMap<Stri
     environment.insert("RUSTC_WRAPPER".to_owned(), String::new());
     environment.insert("RUSTC_WORKSPACE_WRAPPER".to_owned(), String::new());
     let remaps = [
+        "-Zunstable-options".to_owned(),
         format!(
             "--remap-path-prefix={}=/ami-rust-source",
             path_text(inputs.source_root)?
