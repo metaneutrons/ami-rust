@@ -474,9 +474,12 @@ fn run_campaign(state: &mut RunState, raw_request: &[u8]) -> Result<Value> {
         h_env,
     )?;
     require_pass(&linker_outcome)?;
-    let linker_path = linker_target
-        .join(&rust_host_triple)
-        .join("release/aros-link");
+    let linker_release = linker_target.join(&rust_host_triple).join("release");
+    let linker_path = linker_release.join("aros-link");
+    // Cargo inherits the private harness umask; the component contract is 0755.
+    Directory::open(&linker_release)?
+        .regular(OsStr::new("aros-link"))?
+        .set_permissions(fs::Permissions::from_mode(0o755))?;
     let (linker_bytes, linker_sha256) = executable_identity(&linker_path, "built aros-link")?;
     let linker_record_sha = linker_outcome.result_sha256.clone();
 
