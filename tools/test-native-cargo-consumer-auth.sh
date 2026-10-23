@@ -229,6 +229,15 @@ assert_no_zip_fetch() {
   if grep -q '/zip$' "$calls"; then fail "$case_name requested ZIP bytes before metadata authentication completed"; fi
 }
 
+# A child-only hard limit just below the admitted capacity must fail before work/API use.
+if (
+  ulimit -Sn 1024 || exit 2
+  ulimit -Hn 4095 || exit 2
+  run_auth low_descriptor_capacity
+); then fail 'insufficient descriptor capacity was accepted'; fi
+grep -Fq 'hard open-file limit of at least 4096' "$test_root/low_descriptor_capacity.stderr" || fail 'descriptor capacity failed for an unrelated reason'
+[[ ! -e "$RUNNER_TEMP/ami-rust-native-cargo-consumer/low_descriptor_capacity" && ! -s "$test_root/low_descriptor_capacity.gh-calls.log" ]] || fail 'insufficient descriptor capacity reached workspace/API use'
+
 if ! run_auth positive; then fail 'positive authentication fixture was refused'; fi
 success_root="$RUNNER_TEMP/ami-rust-native-cargo-consumer/positive"
 [[ -f "$success_root/auth/handoff.json" ]] || fail 'success handoff receipt was not retained'
