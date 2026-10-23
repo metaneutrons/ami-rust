@@ -1,0 +1,188 @@
+name: Cross-host Cargo application qualification (internal)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ami-rust-protected-builds
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    name: Cargo host ${{ matrix.host.key }}
+    runs-on: ${{ matrix.host.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        host:
+          - key: macos-aarch64
+            runner: macos-26
+          - key: linux-x86_64
+            runner: ubuntu-24.04
+          - key: linux-aarch64
+            runner: ubuntu-24.04-arm
+    env:
+      NATIVE_HOST_KEY: ${{ matrix.host.key }}
+      NATIVE_REF_PROTECTED: ${{ github.ref_protected }}
+    steps:
+      - id: preflight
+        name: Require protected main and native runner capacity
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_REPOSITORY" = metaneutrons/ami-rust
+          test "$GITHUB_REF" = refs/heads/main
+          test "$NATIVE_REF_PROTECTED" = true
+          printf 'NATIVE_CAMPAIGN_START_EPOCH=%s\n' "$(date +%s)" >> "$GITHUB_ENV"
+          printf 'NATIVE_MANAGED_ROOT=%s\n' "$RUNNER_TEMP/ami-rust-native-cargo-consumer/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/$NATIVE_HOST_KEY" >> "$GITHUB_ENV"
+          case "$NATIVE_HOST_KEY:$(uname -s):$(uname -m)" in
+            macos-aarch64:Darwin:arm64|macos-aarch64:Darwin:aarch64)
+              case "$(sw_vers -productVersion)" in 26.*) ;; *) exit 1 ;; esac
+              ram=$(/usr/sbin/sysctl -n hw.memsize)
+              test -d "$(xcrun --sdk macosx --show-sdk-path)"
+              ;;
+            linux-x86_64:Linux:x86_64|linux-aarch64:Linux:aarch64|linux-aarch64:Linux:arm64)
+              . /etc/os-release
+              test "$ID:$VERSION_ID" = ubuntu:24.04
+              ram=$(awk '/^MemTotal:/ {printf "%.0f\n", $2*1024}' /proc/meminfo)
+              ;;
+            *) exit 1 ;;
+          esac
+          test "$ram" -ge 6442450944
+          for root in "$RUNNER_TEMP" "$GITHUB_WORKSPACE"; do
+            free=$(df -Pk "$root" | awk 'END {printf "%.0f\n", $4*1024}')
+            test "$free" -ge 25769803776
+          done
+
+      - id: checkout
+        name: Check out the exact protected source
+        if: steps.preflight.outcome == 'success'
+        timeout-minutes: 5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - id: admission
+        name: Reserve the complete campaign artifact capacity
+        if: steps.checkout.outcome == 'success'
+        timeout-minutes: 2
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          policy="$GITHUB_WORKSPACE/source/release/ci-artifact-policy.json"
+          pool=$(jq -er 'select(.schema == "ami-rust-ci-artifact-policy-v1") | .CI_artifact_pool_bytes | select(type == "number" and . == floor and . > 0 and . <= 9007199254740991)' "$policy")
+          inventory=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" |
+            jq -ec -f "$GITHUB_WORKSPACE/source/tools/native-cargo-artifact-inventory.jq")
+          used=$(jq -er 'map(.size_in_bytes) | add // 0' <<<"$inventory")
+          test "$pool" -ge "$((448*1024*1024))"
+          test "$used" -le "$((pool - 448*1024*1024))"
+
+      - id: authenticate
+        name: Authenticate the reviewed prior-run prerequisites
+        if: steps.admission.outcome == 'success'
+        timeout-minutes: 10
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: bash "$GITHUB_WORKSPACE/source/tools/qualify-native-cargo-consumer.sh" authenticate "$NATIVE_HOST_KEY" "$NATIVE_MANAGED_ROOT"
+
+      # Trusted harness bootstrap is recorded separately. It is not a claim of
+      # complete producer/Python-retirement qualification. Staging and all
+      # application commands below have the existing typed resource monitor.
+      - id: helper
+        name: Build the pinned-host Rust qualification harness
+        if: steps.authenticate.outcome == 'success'
+        timeout-minutes: 20
+        shell: bash
+        run: bash "$GITHUB_WORKSPACE/source/tools/qualify-native-cargo-consumer.sh" build-helper "$NATIVE_HOST_KEY" "$NATIVE_MANAGED_ROOT"
+
+      - id: stage
+        name: Measure exact component staging
+        if: steps.helper.outcome == 'success'
+        timeout-minutes: 20
+        shell: bash
+        run: bash "$GITHUB_WORKSPACE/source/tools/qualify-native-cargo-consumer.sh" measure-stage "$NATIVE_HOST_KEY" "$NATIVE_MANAGED_ROOT"
+
+      - id: consumer
+        name: Measure ordinary Cargo application builds and controls
+        if: steps.stage.outcome == 'success'
+        timeout-minutes: 20
+        shell: bash
+        run: bash "$GITHUB_WORKSPACE/source/tools/qualify-native-cargo-consumer.sh" prove "$NATIVE_HOST_KEY" "$NATIVE_MANAGED_ROOT"
+
+      - id: finalize
+        name: Retain bounded original evidence and retire owned work
+        if: always() && steps.preflight.outcome == 'success'
+        timeout-minutes: 2
+        env:
+          CONSUMER_OUTCOME: ${{ steps.consumer.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          root="$NATIVE_MANAGED_ROOT"
+          case "$root" in "$RUNNER_TEMP/ami-rust-native-cargo-consumer/"*) ;; *) exit 1 ;; esac
+          test ! -L "$root"
+          artifact="$root/artifact"
+          mkdir -p "$artifact"
+          result=FAILED
+          if [ "$CONSUMER_OUTCOME" = success ] &&
+            jq -e --arg host "$NATIVE_HOST_KEY" '.status == "PASS_LOCAL_NATIVE_CARGO_QUALIFICATION" and .host_key == $host' "$root/proof/result.json" >/dev/null; then
+            result=HOST_WORKSPACE_CARGO_PROOF_ONLY
+          fi
+          for entry in auth proof stage.record consumer.record; do
+            if [ -d "$root/$entry" ] && [ ! -L "$root/$entry" ]; then command cp -R "$root/$entry" "$artifact/$entry"; fi
+          done
+          for entry in stage.outer-request.json consumer.outer-request.json consumer.request.json; do
+            if [ -f "$root/$entry" ] && [ ! -L "$root/$entry" ]; then command cp "$root/$entry" "$artifact/$entry"; fi
+          done
+          command rm -rf -- "$root/work" "$root/components" "$root/downloads" "$root/unpacked" "$root/bootstrap" "$root/tooling-home" "$root/tooling-target" "$root/bootstrap-home" "$root/selector" "$root/tmp"
+          elapsed=$(($(date +%s) - NATIVE_CAMPAIGN_START_EPOCH))
+          if [ "$elapsed" -gt 5100 ]; then result=FAILED; fi
+          jq -n --arg status "$result" --arg head "$GITHUB_SHA" --arg host "$NATIVE_HOST_KEY" --argjson elapsed "$elapsed" \
+            '{schema:"ami-rust-native-cargo-consumer-job-v1",status:$status,source_head:$head,host_key:$host,campaign_elapsed_seconds:$elapsed,claim:"Workspace/path Cargo proof only. No versioned-crate, L1, SDK, Python-retirement, or release acceptance."}' > "$artifact/job-result.json"
+          test -z "$(find "$artifact" -type l -print -quit)"
+          retained=$(find "$artifact" -type f -exec wc -c {} \; | awk '{sum += $1} END {printf "%.0f\n", sum}')
+          test "$retained" -le 66060288
+          printf 'safe=true\n' >> "$GITHUB_OUTPUT"
+          test "$result" = HOST_WORKSPACE_CARGO_PROOF_ONLY
+
+      - id: upload
+        name: Retain the original host proof
+        if: always() && steps.finalize.outputs.safe == 'true'
+        timeout-minutes: 5
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-cargo-consumer-${{ matrix.host.key }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-native-cargo-consumer/${{ github.run_id }}-${{ github.run_attempt }}/${{ matrix.host.key }}/artifact/
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Check retained ZIP size and total campaign clock
+        if: always() && steps.upload.outcome == 'success'
+        timeout-minutes: 2
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_NAME: native-cargo-consumer-${{ matrix.host.key }}-${{ github.run_id }}-${{ github.run_attempt }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          inventory=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" |
+            jq -ec -f "$GITHUB_WORKSPACE/source/tools/native-cargo-artifact-inventory.jq")
+          sizes=$(jq -c --arg name "$ARTIFACT_NAME" '[.[] | select(.name == $name) | .size_in_bytes]' <<<"$inventory")
+          test "$(jq 'length' <<<"$sizes")" -eq 1
+          test "$(jq -er '.[0]' <<<"$sizes")" -le 67108864
+          test "$(($(date +%s) - NATIVE_CAMPAIGN_START_EPOCH))" -le 5400
