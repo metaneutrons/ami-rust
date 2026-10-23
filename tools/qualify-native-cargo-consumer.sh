@@ -212,7 +212,7 @@ case "$mode" in
   build-helper) build_helper ;;
   compile-helper) compile_helper ;;
   stage) stage ;;
-  measure-stage) request_and_run stage "$(canonical_program "$(command -v bash)")" "$(jq -nc --arg script "$source_root/tools/qualify-native-cargo-consumer.sh" --arg host "$host" --arg root "$managed" '[ $script,"stage",$host,$root ]')" ;;
+  measure-stage) request_and_run stage "$(canonical_program /bin/bash)" "$(jq -nc --arg script "$source_root/tools/qualify-native-cargo-consumer.sh" --arg host "$host" --arg root "$managed" '[ $script,"stage",$host,$root ]')" ;;
   prove) prove ;;
   *) fail 'unknown internal staging mode' ;;
 esac

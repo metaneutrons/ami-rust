@@ -15,6 +15,7 @@ case "$host:$(uname -s):$(uname -m)" in
 esac
 case "$base" in /*) ;; *) echo 'absolute fresh base required' >&2; exit 2 ;; esac
 [[ "$base" != *'/../'* && "$base" != *'/./'* && ! -e "$base" && ! -L "$base" ]] || exit 2
+base="$(cd -P -- "$(dirname -- "$base")" && pwd -P)/$(basename -- "$base")"
 source_root=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 pins="$source_root/release/native-cargo-qualification-prerequisites.json"
 jq -e --arg host "$host" '.native_cargo.hosts[$host] != null and .bare_target_libraries.hosts[$host] != null' "$pins" >/dev/null
@@ -22,7 +23,10 @@ jq -e --arg host "$host" '.native_cargo.hosts[$host] != null and .bare_target_li
 mkdir -m 700 "$base"
 export RUNNER_TEMP="$base"
 export NATIVE_CAMPAIGN_START_EPOCH
-NATIVE_CAMPAIGN_START_EPOCH=$(date +%s)
+NATIVE_CAMPAIGN_START_EPOCH=${NATIVE_CAMPAIGN_START_EPOCH:-$(date +%s)}
+[[ "$NATIVE_CAMPAIGN_START_EPOCH" =~ ^[1-9][0-9]{0,9}$ ]] || exit 2
+elapsed=$(( $(date +%s) - NATIVE_CAMPAIGN_START_EPOCH ))
+[[ $elapsed -ge 0 && $elapsed -le 3900 ]] || { echo 'campaign clock lacks a complete command window' >&2; exit 2; }
 managed="$base/ami-rust-native-cargo-consumer/$host"
 mkdir -p "$managed"
 mkdir -m 700 "$managed/auth" "$managed/downloads" "$managed/bootstrap-home" "$managed/tmp" "$managed/bootstrap" "$managed/local-tools"

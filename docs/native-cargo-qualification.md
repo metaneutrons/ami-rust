@@ -75,6 +75,9 @@ and native Ubuntu 24.04 x86-64 on an available x86-64 machine. Keep machine name
 VM definitions, local cache paths and credentials outside the public repository.
 Check effective RAM and disk capacity before starting large local work. Reuse
 verified immutable inputs; keep failed attempts instead of resetting their clocks.
+For a continuation in a new work root, retain the original
+`NATIVE_CAMPAIGN_START_EPOCH`; the local runner accepts an inherited, bounded
+clock and refuses one without a complete command window.
 
 Local green results provide development feedback. They do not replace the
 independent protected-runner qualification, cross-host output comparison, AROS
