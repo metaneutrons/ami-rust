@@ -39,3 +39,44 @@ application, relocation and the remaining specified controls, plus runtime and
 memory evidence bound to the actual resulting AROS programs. RC3–RC5 and native
 AROS tooling remain separate acceptance gates. The authoritative criteria are
 in [the migration plan](rust-cli-cargo-migration-plan.md).
+
+## Local checks before spending CI time
+
+First run the inexpensive offline development gate on the actual host:
+
+```bash
+bash tools/check-native-cargo-offline.sh "$host_triple" "$pinned_bootstrap_prefix" "$fresh_work_root"
+```
+
+It verifies the current application and tooling locks against the separate
+`native-cargo-vendor-inputs.json` material record, checks the archive identity,
+resolves both complete graphs offline in a fresh Cargo home, and builds the
+actual native `aros-link`. The 51-package union is independent of the sealed
+legacy SDK vendor archive. A changed lock requires a new reviewed vendor input;
+the old input and historical evidence remain intact.
+
+Then exercise the same component staging and ordinary-Cargo proof as CI:
+
+```bash
+bash tools/qualify-native-cargo-local.sh "$host_key" "$pinned_zip_cache" "$pinned_bootstrap_prefix" "$rustup_binary" "$fresh_base"
+```
+
+The cache contains the exact retained producer ZIPs named
+`native_cargo-HOST.zip`, `bare_target_libraries-HOST.zip`, and, for ARM64 Linux,
+`linux_aarch64_csdk.zip`. The script verifies their pinned lengths and hashes,
+copies the pinned bootstrap and a private rustup selector, builds the shared
+qualification helper offline, and calls the existing measured staging and
+application functions. It retains original records under the fresh base.
+Bootstrap/helper preparation retains the same separate trust boundary as CI.
+No user's rustup defaults, projects, registry cache or installed SDK are changed.
+
+Use native macOS ARM64, Ubuntu 24.04 ARM64 in an isolated local VM/container,
+and native Ubuntu 24.04 x86-64 on an available x86-64 machine. Keep machine names,
+VM definitions, local cache paths and credentials outside the public repository.
+Check effective RAM and disk capacity before starting large local work. Reuse
+verified immutable inputs; keep failed attempts instead of resetting their clocks.
+
+Local green results provide development feedback. They do not replace the
+independent protected-runner qualification, cross-host output comparison, AROS
+runtime/memory checks or RC2–RC5 acceptance. Launch the expensive protected
+matrix after the affected local paths pass.

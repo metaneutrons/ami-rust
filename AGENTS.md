@@ -1,5 +1,15 @@
 # Repository working memory
 
+## Local development before protected qualification
+
+Owner decision, 2026-10-23: reproduce and fix affected build paths locally before
+relaunching an expensive CI matrix. Use native macOS, Linux ARM64 in an isolated
+VM/container and an available native Linux x86-64 host. Run complete locked,
+offline dependency resolution and the actual affected build, then the shared
+application qualification path. Preserve the independent protected CI gates.
+Machine names, VM/container configuration and local cache locations belong in
+operator configuration/evidence, not this generic repository workflow.
+
 ## Rust host tooling and Python retirement
 
 Owner decision, 2026-10-18: plan the public ami-rust CLI migration to Rust and

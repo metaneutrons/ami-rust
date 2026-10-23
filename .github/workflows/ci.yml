@@ -227,6 +227,8 @@ jobs:
             release/ci-resources.json
             release/native-cargo-qualification-prerequisites.json
             release/inputs/vendor.tar.xz
+            release/inputs/native-cargo-vendor.tar.xz
+            release/native-cargo-vendor-inputs.json
             release/ci_python.py
             release/ci_historical.py
             release/ci_native.py
@@ -334,6 +336,7 @@ jobs:
           persist-credentials: false
           sparse-checkout-cone-mode: false
           sparse-checkout: |
+            Cargo.lock
             targets/x86_64-aros.json
             tools/
             tooling/
@@ -347,6 +350,8 @@ jobs:
             release/ci-resources.json
             release/native-cargo-qualification-prerequisites.json
             release/inputs/vendor.tar.xz
+            release/inputs/native-cargo-vendor.tar.xz
+            release/native-cargo-vendor-inputs.json
       - name: Measure host capacity and write observer scope
         run: |
           set -euo pipefail

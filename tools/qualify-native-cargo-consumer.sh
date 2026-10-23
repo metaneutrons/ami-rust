@@ -102,12 +102,28 @@ authenticate() {
 build_helper() {
   active
   bash "$source_root/tools/bootstrap-host-rust.sh" "$managed/bootstrap" "$triple" > "$managed/auth/bootstrap.log" 2>&1
+  compile_helper
+}
+
+compile_helper() {
+  active
   mkdir -m 700 "$managed/tooling-home" "$managed/tooling-target"
+  local vendor_profile="$source_root/release/native-cargo-vendor-inputs.json"
+  local archive="$source_root/release/inputs/native-cargo-vendor.tar.xz" lock
+  jq -e '.schema == "ami-rust-native-cargo-vendor-inputs-v1" and .path == "release/inputs/native-cargo-vendor.tar.xz" and .component_root == "vendor"' "$vendor_profile" >/dev/null
+  for lock in Cargo.lock tooling/Cargo.lock; do
+    [[ $(sha "$source_root/$lock") == "$(jq -er --arg lock "$lock" '.source_locks[$lock]' "$vendor_profile")" ]] || fail 'native vendor source lock differs'
+  done
+  verify "$archive" "$(jq -er '.bytes' "$vendor_profile")" "$(jq -er '.sha256' "$vendor_profile")"
+  safe_tar "$archive" vendor "$managed/tooling-vendor"
+  jq -nr --arg directory "$managed/tooling-vendor/vendor" \
+    '"[net]\noffline = true\n[source.crates-io]\nreplace-with = \"qualification-vendor\"\n[source.qualification-vendor]\ndirectory = " + ($directory | tojson)' \
+    > "$managed/tooling-home/config.toml"
   env -i HOME="$managed/bootstrap-home" PATH='/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin' \
     LC_ALL=C TZ=UTC SOURCE_DATE_EPOCH=1791936000 CARGO_BUILD_JOBS=2 \
     CARGO_HOME="$managed/tooling-home" CARGO_TARGET_DIR="$managed/tooling-target" \
     RUSTC="$managed/bootstrap/toolchain/bin/rustc" RUSTDOC="$managed/bootstrap/toolchain/bin/rustdoc" \
-    "$managed/bootstrap/toolchain/bin/cargo" build --locked --release --manifest-path "$source_root/tooling/Cargo.toml" -p ami-rust-xtask \
+    "$managed/bootstrap/toolchain/bin/cargo" build --locked --offline --release --manifest-path "$source_root/tooling/Cargo.toml" -p ami-rust-xtask \
     > "$managed/auth/helper-build.log" 2>&1
   active
 }
@@ -194,6 +210,7 @@ prove() {
 case "$mode" in
   authenticate) authenticate ;;
   build-helper) build_helper ;;
+  compile-helper) compile_helper ;;
   stage) stage ;;
   measure-stage) request_and_run stage "$(canonical_program "$(command -v bash)")" "$(jq -nc --arg script "$source_root/tools/qualify-native-cargo-consumer.sh" --arg host "$host" --arg root "$managed" '[ $script,"stage",$host,$root ]')" ;;
   prove) prove ;;
