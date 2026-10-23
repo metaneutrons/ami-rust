@@ -28,6 +28,12 @@ sha() { shasum -a 256 "$1" | awk '{print $1}'; }
 size() { wc -c < "$1" | tr -d '[:space:]'; }
 verify() { [[ -f "$1" && ! -L "$1" && $(size "$1") == "$2" && $(sha "$1") == "$3" ]] || fail "input identity differs: $1"; }
 active() { [[ $(( $(date +%s) - ${NATIVE_CAMPAIGN_START_EPOCH:?} )) -lt 5100 ]] || fail 'active campaign cutoff reached'; }
+# Prefix assembly anchors about 1,300 directories for this pinned inventory.
+# Raise only this process's inherited soft limit; never change host configuration.
+soft_nofile=$(ulimit -Sn)
+if [[ "$soft_nofile" != unlimited && "$soft_nofile" -lt 4096 ]]; then
+  ulimit -Sn 4096 || fail 'native qualification requires a hard open-file limit of at least 4096'
+fi
 canonical_program() {
   local path=$1 link count=0
   while [[ -L "$path" ]]; do
@@ -108,6 +114,8 @@ build_helper() {
 compile_helper() {
   active
   mkdir -m 700 "$managed/tooling-home" "$managed/tooling-target"
+  jq -n --arg soft "$(ulimit -Sn)" --arg hard "$(ulimit -Hn)" \
+    '{minimum_open_files:4096,soft_open_files:$soft,hard_open_files:$hard,scope:"Inherited per-process descriptor capacity; no host configuration change."}' > "$managed/auth/descriptor-capacity.json"
   local vendor_profile="$source_root/release/native-cargo-vendor-inputs.json"
   local archive="$source_root/release/inputs/native-cargo-vendor.tar.xz" lock
   jq -e '.schema == "ami-rust-native-cargo-vendor-inputs-v1" and .path == "release/inputs/native-cargo-vendor.tar.xz" and .component_root == "vendor"' "$vendor_profile" >/dev/null

@@ -76,7 +76,11 @@ No user's rustup defaults, projects, registry cache or installed SDK are changed
 Use native macOS ARM64, Ubuntu 24.04 ARM64 in an isolated local VM/container,
 and native Ubuntu 24.04 x86-64 on an available x86-64 machine. Keep machine names,
 VM definitions, local cache paths and credentials outside the public repository.
-Check effective RAM and disk capacity before starting large local work. Reuse
+Check effective RAM and disk capacity before starting large local work. The
+shared runner also requires a hard open-file limit of at least 4,096 and raises
+only its own inherited soft limit when needed. The pinned prefix assembler
+anchors approximately 1,300 output directories; a 1,024-descriptor login default
+is insufficient. This preparation does not change system-wide limits. Reuse
 verified immutable inputs; keep failed attempts instead of resetting their clocks.
 For a continuation in a new work root, retain the original
 `NATIVE_CAMPAIGN_START_EPOCH`; the local runner accepts an inherited, bounded
