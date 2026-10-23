@@ -84,7 +84,7 @@ jobs:
               --arg artifact_policy_sha256 "$artifact_policy_sha256" \
               --arg artifact_name "$artifact_name" \
               --argjson campaign_start_epoch "$campaign_start" \
-              '{schema:$schema,status:$status,stage:$stage,repository:$repository,head:$head,ref:$ref,protected:$protected,runner_arch:$runner_arch,image:{os:$image_os,version:$image_version},ram_bytes:$ram_bytes,workspace_free_bytes:$workspace_free_bytes,runner_temp_free_bytes:$runner_temp_free_bytes,artifact_pool_bytes:$artifact_pool,artifact_existing_bytes:$artifact_existing,artifact_reserved_bytes:$artifact_reserved,artifact_policy_sha256:$artifact_policy_sha256,artifact_name:$artifact_name,campaign_start_epoch:$campaign_start_epoch}' \
+              '{schema:$schema,status:$status,stage:$stage,repository:$repository,head:$head,ref:$ref,protected:$protected,runner_arch:$runner_arch,image:{os:$image_os,version:$image_version},ram_bytes:$ram_bytes,workspace_free_bytes:$workspace_free_bytes,runner_temp_free_bytes:$runner_temp_free_bytes,artifact_pool_bytes:$artifact_pool_bytes,artifact_existing_bytes:$artifact_existing_bytes,artifact_reserved_bytes:$artifact_reserved_bytes,artifact_policy_sha256:$artifact_policy_sha256,artifact_name:$artifact_name,campaign_start_epoch:$campaign_start_epoch}' \
               > "$managed/preflight.json"
             exit "$rc"
           }
@@ -104,9 +104,15 @@ jobs:
           test "$os_version" = 24.04
 
           stage=capacity
-          ram_bytes=$(awk '/^MemTotal:/ {printf "%.0f\n", $2 * 1024}' /proc/meminfo)
-          workspace_free=$(df -B1 --output=avail "$GITHUB_WORKSPACE" | tail -n 1 | tr -d ' ')
-          runner_temp_free=$(df -B1 --output=avail "$RUNNER_TEMP" | tail -n 1 | tr -d ' ')
+          if ! ram_candidate=$(awk '/^MemTotal:/ {printf "%.0f\n", $2 * 1024}' /proc/meminfo); then exit 1; fi
+          case "$ram_candidate" in ''|*[!0-9]*) exit 1 ;; esac
+          ram_bytes=$ram_candidate
+          if ! workspace_candidate=$(df -B1 --output=avail "$GITHUB_WORKSPACE" | tail -n 1 | tr -d ' '); then exit 1; fi
+          case "$workspace_candidate" in ''|*[!0-9]*) exit 1 ;; esac
+          workspace_free=$workspace_candidate
+          if ! runner_temp_candidate=$(df -B1 --output=avail "$RUNNER_TEMP" | tail -n 1 | tr -d ' '); then exit 1; fi
+          case "$runner_temp_candidate" in ''|*[!0-9]*) exit 1 ;; esac
+          runner_temp_free=$runner_temp_candidate
           test "$ram_bytes" -ge 6442450944
           test "$workspace_free" -ge 25769803776
           test "$runner_temp_free" -ge 25769803776
@@ -118,13 +124,17 @@ jobs:
             "repos/$REPOSITORY/contents/release/ci-artifact-policy.json?ref=$GITHUB_SHA" \
             > "$policy_path"
           artifact_policy_sha256=$(sha256sum "$policy_path" | cut -d ' ' -f 1)
-          artifact_pool=$(jq -er 'select(.schema == "ami-rust-ci-artifact-policy-v1") | .CI_artifact_pool_bytes | select(type == "number" and . == floor and . > 0)' "$policy_path")
+          if ! artifact_pool_candidate=$(jq -er 'select(.schema == "ami-rust-ci-artifact-policy-v1") | .CI_artifact_pool_bytes | select(type == "number" and . == floor and . > 0)' "$policy_path"); then exit 1; fi
+          case "$artifact_pool_candidate" in ''|*[!0-9]*) exit 1 ;; esac
+          artifact_pool=$artifact_pool_candidate
           test "$artifact_pool" -ge "$artifact_reserve"
 
           stage=artifact-capacity
           artifact_pages=$(timeout --foreground 60 gh api --paginate --slurp \
             "repos/$REPOSITORY/actions/artifacts?per_page=100")
-          artifact_existing=$(jq -er '[.[].artifacts[] | select(.expired == false) | .size_in_bytes] | add // 0' <<<"$artifact_pages")
+          if ! artifact_existing_candidate=$(jq -er 'if type == "array" and all(.[]; type == "object" and (.artifacts | type == "array") and all(.artifacts[]; type == "object" and (.expired | type == "boolean") and (.size_in_bytes | type == "number" and . == floor and . >= 0))) then [.[].artifacts[] | select(.expired == false) | .size_in_bytes] | add // 0 else error("artifact page or record schema invalid") end' <<<"$artifact_pages"); then exit 1; fi
+          case "$artifact_existing_candidate" in ''|*[!0-9]*) exit 1 ;; esac
+          artifact_existing=$artifact_existing_candidate
           test "$artifact_existing" -le "$((artifact_pool - artifact_reserve))"
           printf 'CSDK_POLICY_SHA256=%s\n' "$artifact_policy_sha256" >> "$GITHUB_ENV"
           preflight_status=PASS

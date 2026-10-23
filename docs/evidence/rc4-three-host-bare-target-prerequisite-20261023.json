@@ -1,0 +1,82 @@
+{
+  "schema": "ami-rust-three-host-bare-target-prerequisite-evidence-v1",
+  "status": "PASS_COMPONENT_PREREQUISITE_ONLY",
+  "recorded_date": "2026-10-23",
+  "authority": "docs/rust-cli-cargo-migration-plan.md revision 4",
+  "tracking": [
+    "https://github.com/metaneutrons/ami-rust/issues/72",
+    "https://github.com/metaneutrons/ami-rust/issues/74",
+    "https://github.com/metaneutrons/ami-rust/issues/129"
+  ],
+  "run": {
+    "url": "https://github.com/metaneutrons/ami-rust/actions/runs/39861952599",
+    "id": 39861952599,
+    "attempt": 1,
+    "source_head": "70c2ea995f93ec04af025ea705bb7565e1f3863b",
+    "source_tree": "4659a4019b5406841145b00929fcf6db7a288dfa",
+    "result": "success"
+  },
+  "hosts": [
+    {
+      "host": "macos-aarch64",
+      "artifact_bytes": 87577503,
+      "artifact_sha256": "04b2866a9bf9ee60aae639b64625cd319a83e1a6e92153739dd3ee7ae63efac7",
+      "artifact_members": 80,
+      "scoped_inventory_sha256": "ca17970532a7e1efd096075a541648da300f7097114dcbb4238e4274579bc3f1",
+      "scoped_inventory_result": "PASS"
+    },
+    {
+      "host": "linux-x86_64",
+      "artifact_bytes": 88378395,
+      "artifact_sha256": "84159b6dc43da58270e9ca5321f28089f5453f68533a45f20a96ffa01afc9792",
+      "artifact_members": 80,
+      "scoped_inventory_sha256": "6831324fa590a202794b916b38aad03afca5686ba42baf7878568dd61eee28c0",
+      "scoped_inventory_result": "PASS"
+    },
+    {
+      "host": "linux-aarch64",
+      "artifact_bytes": 87186514,
+      "artifact_sha256": "795db37d4308a50df635cf8392c48ccbe700195556cf7d6b9ffddef4a36564c8",
+      "artifact_members": 80,
+      "scoped_inventory_sha256": "07dcfa6f548018012c1a69fb39ac7a9fe7963e832d0611e50e28c96ec3cceba3",
+      "scoped_inventory_result": "PASS"
+    }
+  ],
+  "target_libraries": [
+    {
+      "path": "producer/libraries/liballoc-67cdea426a6788d2.rlib",
+      "bytes": 8500718,
+      "sha256": "1a72320b657515188fc51d0b958197c10e9712b956a5e67727ae607ea42a1e4f",
+      "full_original_byte_comparison": "PASS_ALL_THREE_HOSTS"
+    },
+    {
+      "path": "producer/libraries/libcompiler_builtins-6ba5292693f8f158.rlib",
+      "bytes": 2446116,
+      "sha256": "4434274348872c049d5d2624b3d9d5b37e2844cbba51f89e768d44aa8584c8ec",
+      "full_original_byte_comparison": "PASS_ALL_THREE_HOSTS"
+    },
+    {
+      "path": "producer/libraries/libcore-7f112bce470cf4f4.rlib",
+      "bytes": 68233854,
+      "sha256": "d5a7cb027f0eaa13e0348975cc3bdd6e0a589ab689a4214b9e1af5b9b2a1e7ed",
+      "full_original_byte_comparison": "PASS_ALL_THREE_HOSTS"
+    }
+  ],
+  "verification": {
+    "complete_inventory_source_path_resource_reader_sha256": "a0e55dbc610b315dcf66d4ee247ab154123319ed67804500a5f89f4e7f1cbbca",
+    "independent_original_byte_readback_sha256": "469d0cdecf95db7035f4f2e05b784942c6a8f7494a5d511062dcbb539c225f69",
+    "independent_actual_proof_review_sha256": "74bef08235f9eea38baacc7999bdbe88e440b4dfd8898c8542710419321edd31",
+    "all_nine_original_rlibs_read_and_compared": true,
+    "byte_difference_counter": "REFUSED",
+    "metadata_or_archive_rewriting": false,
+    "source_production_flags": "EXACT_SOURCE_DERIVED_VALUE",
+    "source_inventory_zero_byte_files": "Accepted only at nonnegative integer size and the canonical empty-file SHA-256; negative/bool size, incorrect empty digest and inventory tampering refused."
+  },
+  "acceptance_boundary": {
+    "shared_target_library_pin_adopted": false,
+    "sdk_released": false,
+    "l1_or_rc2_rc3_rc4_rc5_accepted": false,
+    "description": "This report qualifies source-produced target libraries and their original three-host artifacts only. Full ordinary-Cargo application, lifecycle, native AROS runtime/memory, release and complete Python-retirement criteria remain open. The tested source identity is exact and does not qualify a future producer modification."
+  },
+  "baseline": "Qualified x86-64 AROS ABI-v1/QEMU inputs unchanged; no native AROS execution performed by this component run."
+}
