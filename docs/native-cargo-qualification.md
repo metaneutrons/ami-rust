@@ -20,7 +20,10 @@ For each host, the measured application phase links an isolated
 dependency and SHA-256 examples in two fresh source roots. Complete ELF bytes
 and native objects must agree between those roots. The pinned nightly compiler
 receives `-Zunstable-options` together with the reproducibility path mappings
-for its custom target. The isolated Cargo configuration enables the pinned
+for its custom target. General work-root prefix mappings precede the specific
+source/vendor mappings because Rust applies the last matching mapping. This
+keeps the intended source paths stable when those trees are nested or relocated.
+The isolated Cargo configuration enables the pinned
 `ami-rust-reproducible-cross` mode already used by the target-library producer;
 this keeps host build-script identities out of target crate disambiguators.
 It preserves fresh private caches and ordinary Cargo commands. Finished ELF

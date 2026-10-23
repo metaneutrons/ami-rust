@@ -1074,8 +1074,15 @@ fn cargo_environment(inputs: CargoEnvironmentInputs<'_>) -> Result<BTreeMap<Stri
     environment.insert("TZ".to_owned(), "UTC".to_owned());
     environment.insert("RUSTC_WRAPPER".to_owned(), String::new());
     environment.insert("RUSTC_WORKSPACE_WRAPPER".to_owned(), String::new());
+    // Rust uses the last matching prefix. Keep the broad managed-work map
+    // before the more specific source/vendor maps so relocated inputs retain
+    // their intended canonical paths even when nested below work_root.
     let remaps = [
         "-Zunstable-options".to_owned(),
+        format!(
+            "--remap-path-prefix={}=/build",
+            path_text(&inputs.state.request.work_root)?
+        ),
         format!(
             "--remap-path-prefix={}=/ami-rust-source",
             path_text(inputs.source_root)?
@@ -1083,10 +1090,6 @@ fn cargo_environment(inputs: CargoEnvironmentInputs<'_>) -> Result<BTreeMap<Stri
         format!(
             "--remap-path-prefix={}=/cargo-registry",
             path_text(inputs.vendor_root)?
-        ),
-        format!(
-            "--remap-path-prefix={}=/build",
-            path_text(&inputs.state.request.work_root)?
         ),
     ];
     environment.insert("CARGO_ENCODED_RUSTFLAGS".to_owned(), remaps.join("\u{1f}"));
