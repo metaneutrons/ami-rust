@@ -226,6 +226,7 @@ jobs:
             release/ci-python-inputs.json
             release/ci-resources.json
             release/native-cargo-qualification-prerequisites.json
+            release/inputs/vendor.tar.xz
             release/ci_python.py
             release/ci_historical.py
             release/ci_native.py
@@ -345,6 +346,7 @@ jobs:
             release/portable-csdk/spec.json
             release/ci-resources.json
             release/native-cargo-qualification-prerequisites.json
+            release/inputs/vendor.tar.xz
       - name: Measure host capacity and write observer scope
         run: |
           set -euo pipefail
