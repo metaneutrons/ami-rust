@@ -73,6 +73,22 @@ const DOWNLOAD_TOTAL_TIMEOUT: Duration = Duration::from_secs(300);
 const DOWNLOAD_HOP_TIMEOUT: Duration = Duration::from_secs(30);
 const INSTALL_TIMEOUT: Duration = Duration::from_secs(300);
 
+// PR157 adds a Linux ARM64 selector to the candidate C-SDK specification.
+// Pin the current checked source bytes here while the ordinary consumer remains
+// deliberately limited to its two accepted SDK hosts. The R1 receipt fixture
+// stays immutable and continues to describe its original acquisition record.
+const CURRENT_CI_SDK_INPUTS_PATH: &str = "release/ci-sdk-inputs.json";
+const CURRENT_CI_SDK_INPUTS_BYTES: u64 = 6451;
+const CURRENT_CI_SDK_INPUTS_SHA256: &str =
+    "70ea2900ba0e61213c6636fe1ee1c9bb0666e975847aee5ee5dc52797b437162";
+const CURRENT_PORTABLE_CSDK_SPEC_PATH: &str = "release/portable-csdk/spec.json";
+const CURRENT_PORTABLE_CSDK_SPEC_BYTES: u64 = 3662;
+const CURRENT_PORTABLE_CSDK_SPEC_SHA256: &str =
+    "1b6f413082dc2ee087d91bc9838850a9f42f7f4a28829bfcb88d60ed1dacfdb3";
+const CURRENT_PORTABLE_CSDK_SPEC_STATUS: &str =
+    "PINNED_CANDIDATE_THREE_HOST_QUALIFICATION_REQUIRED";
+const ORDINARY_SDK_HOSTS: [&str; 2] = ["linux-x86_64", "macos-aarch64"];
+
 /// Six verified roots ready for a selection record. Measurements describe the
 /// inventories actually checked at the end of provisioning; they do not make
 /// new publisher-authentication claims.
@@ -310,13 +326,18 @@ pub fn provision_native_consumer_components(
 
 fn read_and_validate_ci_inputs(source: &Directory, runtime: &Value) -> Result<Value> {
     let accepted = field(runtime, "accepted_source")?;
-    let path = string(accepted, "path")?;
-    if path != "release/ci-sdk-inputs.json" {
+    if string(accepted, "path")? != CURRENT_CI_SDK_INPUTS_PATH {
         return Err(Refusal::new("compiled CI input source path changed"));
     }
-    let bytes = counter(accepted, "bytes")?;
-    let digest = string(accepted, "sha256")?;
-    let raw = read_source_file(source, path, bytes, digest, 1024 * 1024)?;
+    // The immutable R1 receipt contains the original source manifest identity.
+    // The active source bytes are rebound to PR157's reviewed postimage above.
+    let raw = read_source_file(
+        source,
+        CURRENT_CI_SDK_INPUTS_PATH,
+        CURRENT_CI_SDK_INPUTS_BYTES,
+        CURRENT_CI_SDK_INPUTS_SHA256,
+        1024 * 1024,
+    )?;
     let inputs = parse_json_value(&raw, JsonProfile::SdkComponentManifest)?;
     if string(&inputs, "schema")? != "ami-rust-ci-sdk-inputs-v1" {
         return Err(Refusal::new("unsupported checked CI input schema"));
@@ -341,7 +362,34 @@ fn read_and_validate_ci_inputs(source: &Directory, runtime: &Value) -> Result<Va
     Ok(inputs)
 }
 
+fn validate_ordinary_sdk_host_selection(inputs: &Value, runtime: &Value) -> Result<()> {
+    exact_keys(
+        field(inputs, "hosts")?,
+        &ORDINARY_SDK_HOSTS,
+        "ordinary SDK source host set",
+    )?;
+    exact_keys(
+        field(field(runtime, "rust")?, "hosts")?,
+        &ORDINARY_SDK_HOSTS,
+        "compiled ordinary SDK host set",
+    )?;
+    Ok(())
+}
+
+fn validate_current_portable_csdk_spec_pin(source_spec: &Value) -> Result<()> {
+    if string(source_spec, "path")? != CURRENT_PORTABLE_CSDK_SPEC_PATH
+        || counter(source_spec, "bytes")? != CURRENT_PORTABLE_CSDK_SPEC_BYTES
+        || string(source_spec, "sha256")? != CURRENT_PORTABLE_CSDK_SPEC_SHA256
+    {
+        return Err(Refusal::new(
+            "source portable CSDK specification pin differs from compiled baseline",
+        ));
+    }
+    Ok(())
+}
+
 fn runtime_host_plan(inputs: &Value, runtime: &Value, host: Host) -> Result<RuntimeHostPlan> {
+    validate_ordinary_sdk_host_selection(inputs, runtime)?;
     let key = host_key(host);
     let runtime_rust = field(runtime, "rust")?;
     let source_host = field(field(inputs, "hosts")?, key)?;
@@ -426,15 +474,8 @@ fn runtime_host_plan(inputs: &Value, runtime: &Value, host: Host) -> Result<Runt
     }
 
     let portable = field(baseline_shared, "portable_csdk")?;
-    let spec_pin = field(portable, "spec")?;
     let source_spec = field(inputs, "portable_csdk")?;
-    for key in ["path", "bytes", "sha256"] {
-        if field(source_spec, key)? != field(spec_pin, key)? {
-            return Err(Refusal::new(
-                "source portable CSDK specification pin differs from compiled baseline",
-            ));
-        }
-    }
+    validate_current_portable_csdk_spec_pin(source_spec)?;
     let csdk_archive = field(portable, "archive")?;
     if string(csdk_archive, "name")? != "csdk-component.tar.xz" {
         return Err(Refusal::new("portable CSDK candidate archive name changed"));
@@ -468,18 +509,18 @@ fn validate_portable_csdk_spec(
     plan: &RuntimeHostPlan,
 ) -> Result<()> {
     let runtime_portable = field(field(runtime, "shared_archives")?, "portable_csdk")?;
-    let spec_pin = field(runtime_portable, "spec")?;
-    let spec_path = string(spec_pin, "path")?;
+    let source_spec = field(inputs, "portable_csdk")?;
+    validate_current_portable_csdk_spec_pin(source_spec)?;
     let spec_raw = read_source_file(
         source,
-        spec_path,
-        counter(spec_pin, "bytes")?,
-        string(spec_pin, "sha256")?,
+        CURRENT_PORTABLE_CSDK_SPEC_PATH,
+        CURRENT_PORTABLE_CSDK_SPEC_BYTES,
+        CURRENT_PORTABLE_CSDK_SPEC_SHA256,
         4 * 1024 * 1024,
     )?;
     let spec = parse_json_value(&spec_raw, JsonProfile::SdkComponentManifest)?;
     if string(&spec, "schema")? != "ami-rust-portable-csdk-v1"
-        || string(&spec, "status")? != "PINNED_CANDIDATE_TWO_HOST_QUALIFICATION_REQUIRED"
+        || string(&spec, "status")? != CURRENT_PORTABLE_CSDK_SPEC_STATUS
     {
         return Err(Refusal::new(
             "portable CSDK spec is not the accepted candidate",
@@ -532,14 +573,7 @@ fn validate_portable_csdk_spec(
         string(profile, "sha256")?,
         4 * 1024 * 1024,
     )?;
-    let source_spec = field(inputs, "portable_csdk")?;
-    for key in ["path", "bytes", "sha256"] {
-        if field(source_spec, key)? != field(spec_pin, key)? {
-            return Err(Refusal::new(
-                "source portable CSDK spec pointer differs from compiled baseline",
-            ));
-        }
-    }
+    validate_current_portable_csdk_spec_pin(source_spec)?;
     // The inventory is supplied by the admitted SDK recipe. Reading and
     // hashing this selected source profile keeps the candidate's own pin live
     // without treating it as an authentication authority.
@@ -1785,19 +1819,64 @@ mod tests {
     }
 
     #[test]
-    fn accepted_host_plan_refuses_source_rows_that_differ_from_compiled_pins() {
+    fn accepted_host_plan_tracks_current_candidate_without_widening_sdk_hosts() {
         let baseline = InitialBaseline::load().unwrap();
         let runtime = baseline.runtime_acquisition();
-        let source = parse_json_value(
-            include_bytes!("../../../../release/ci-sdk-inputs.json"),
-            JsonProfile::SdkComponentManifest,
+        let input_bytes = include_bytes!("../../../../release/ci-sdk-inputs.json");
+        assert_eq!(input_bytes.len() as u64, CURRENT_CI_SDK_INPUTS_BYTES);
+        assert_eq!(sha256_bytes(input_bytes), CURRENT_CI_SDK_INPUTS_SHA256);
+        let source = parse_json_value(input_bytes, JsonProfile::SdkComponentManifest).unwrap();
+
+        let spec_bytes = include_bytes!("../../../../release/portable-csdk/spec.json");
+        assert_eq!(spec_bytes.len() as u64, CURRENT_PORTABLE_CSDK_SPEC_BYTES);
+        assert_eq!(sha256_bytes(spec_bytes), CURRENT_PORTABLE_CSDK_SPEC_SHA256);
+        let spec = parse_json_value(spec_bytes, JsonProfile::SdkComponentManifest).unwrap();
+        assert_eq!(
+            string(&spec, "status").unwrap(),
+            CURRENT_PORTABLE_CSDK_SPEC_STATUS
+        );
+        exact_keys(
+            field(&spec, "toolchains").unwrap(),
+            &["linux-aarch64", "linux-x86_64", "macos-aarch64"],
+            "candidate CSDK toolchain set",
         )
         .unwrap();
-        let plan = runtime_host_plan(&source, runtime, Host::LinuxX86_64).unwrap();
-        assert_eq!(plan.rust.archives.len(), 4);
-        assert_eq!(plan.csdk_root, "Developer");
-        let mut changed = source;
-        changed["hosts"]["linux-x86_64"]["collector"]["sha256"] = Value::String("0".repeat(64));
-        assert!(runtime_host_plan(&changed, runtime, Host::LinuxX86_64).is_err());
+
+        validate_ordinary_sdk_host_selection(&source, runtime).unwrap();
+        validate_current_portable_csdk_spec_pin(field(&source, "portable_csdk").unwrap()).unwrap();
+        let linux = runtime_host_plan(&source, runtime, Host::LinuxX86_64).unwrap();
+        let macos = runtime_host_plan(&source, runtime, Host::MacosAarch64).unwrap();
+        for plan in [&linux, &macos] {
+            assert_eq!(plan.rust.archives.len(), 4);
+            assert_eq!(plan.csdk_root, "Developer");
+            assert_eq!(plan.csdk_path, "release/inputs/portable-csdk.tar.xz");
+            assert_eq!(
+                plan.csdk_sha256,
+                "942417c7b82218f5704eba168922fc348dc0ce5c17a236139c3353775209b99b"
+            );
+        }
+        let runtime_portable =
+            field(field(runtime, "shared_archives").unwrap(), "portable_csdk").unwrap();
+        assert_eq!(
+            field(field(&spec, "candidate").unwrap(), "archive").unwrap(),
+            field(runtime_portable, "archive").unwrap()
+        );
+        assert_eq!(
+            field(field(&spec, "candidate").unwrap(), "profile").unwrap(),
+            field(runtime_portable, "profile").unwrap()
+        );
+
+        let mut changed_row = source.clone();
+        changed_row["hosts"]["linux-x86_64"]["collector"]["sha256"] = Value::String("0".repeat(64));
+        assert!(runtime_host_plan(&changed_row, runtime, Host::LinuxX86_64).is_err());
+
+        let mut added_ordinary_host = source.clone();
+        let arm_candidate_row = added_ordinary_host["hosts"]["linux-x86_64"].clone();
+        added_ordinary_host["hosts"]["linux-aarch64"] = arm_candidate_row;
+        assert!(runtime_host_plan(&added_ordinary_host, runtime, Host::LinuxX86_64).is_err());
+
+        let mut corrupted_spec_pin = source;
+        corrupted_spec_pin["portable_csdk"]["sha256"] = Value::String("0".repeat(64));
+        assert!(runtime_host_plan(&corrupted_spec_pin, runtime, Host::LinuxX86_64).is_err());
     }
 }

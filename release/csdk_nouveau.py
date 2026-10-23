@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import signal
 import subprocess
 import sys
 import threading
@@ -27,12 +28,20 @@ if _RECIPES_SPEC is None or _RECIPES_SPEC.loader is None:  # pragma: no cover - 
 csdk_recipes = importlib.util.module_from_spec(_RECIPES_SPEC)
 _RECIPES_SPEC.loader.exec_module(csdk_recipes)
 
+_CI_CARGO_PATH = Path(__file__).resolve().with_name("ci_cargo.py")
+_CI_CARGO_SPEC = importlib.util.spec_from_file_location("_csdk_nouveau_ci_cargo", _CI_CARGO_PATH)
+if _CI_CARGO_SPEC is None or _CI_CARGO_SPEC.loader is None:  # pragma: no cover - filesystem failure
+    raise ImportError("cannot load sibling ci_cargo.py")
+ci_cargo = importlib.util.module_from_spec(_CI_CARGO_SPEC)
+_CI_CARGO_SPEC.loader.exec_module(ci_cargo)
+
 
 EXPECTED_OBJECTS = 825
 ARCHIVE_OUTPUT = "SYS/Developer/lib/libdrm_nouveau.a"
 ARCHIVE_RULE = "C_STATIC_LIBRARY_LINKER__hidd-nouveau-drm_Release"
 COMPILER_RELATIVE = "bin/clang-11"
 MAX_JOBS = 2
+MAX_COMMAND_SECONDS = 1200
 MAX_LOG_BYTES_PER_STREAM = 512 * 1024
 PARENT_SUMMARY_RESERVE = 64 * 1024
 MAX_AGGREGATE_SAVED_LOG_BYTES = 16 * 1024 * 1024 - PARENT_SUMMARY_RESERVE
@@ -460,8 +469,16 @@ class _PipeCapture:
         except BaseException as exc:  # surfaced after join, never lost in a daemon thread
             self.error = exc
 
-    def join(self) -> None:
-        self.thread.join()
+    def join(self, *, timeout_seconds: float = 3.0) -> None:
+        self.thread.join(timeout=timeout_seconds)
+        if self.thread.is_alive():
+            try:
+                self.stream.close()
+            except OSError:
+                pass
+            self.thread.join(timeout=1.0)
+        if self.thread.is_alive():
+            raise NouveauError("compiler pipe reader did not stop within the bounded reap window")
         self.stream.close()
 
     @property
@@ -523,37 +540,61 @@ class _LogBudget:
 
 
 def _finish_state(state: dict) -> None:
-    state["stdout"].join()
-    state["stderr"].join()
+    failures = []
+    for key in ("stdout", "stderr"):
+        try:
+            state[key].join()
+        except BaseException as error:
+            failures.append(type(error).__name__ + ": " + str(error)[:200])
+    if failures:
+        raise NouveauError("compiler pipe cleanup incomplete: " + "; ".join(failures))
 
 
-def _stop_processes(active: dict[int, dict]) -> None:
-    for state in active.values():
-        process: subprocess.Popen = state["process"]
-        if process.poll() is None:
+def _stop_process_group(process: subprocess.Popen) -> dict:
+    try:
+        return ci_cargo.stop_group(process)
+    except BaseException as error:
+        # Keep bounded direct-child reaping even if the shared group observer
+        # fails; the receipt remains incomplete because descendants were not
+        # conclusively observed and stopped.
+        signal_errors = []
+        for signum in (signal.SIGTERM, signal.SIGKILL):
             try:
-                process.terminate()
+                os.killpg(process.pid, signum)
             except ProcessLookupError:
                 pass
-    deadline = time.monotonic() + 5.0
-    for state in active.values():
-        process = state["process"]
-        if process.poll() is None:
-            remaining = max(0.0, deadline - time.monotonic())
-            try:
-                process.wait(timeout=remaining)
-            except subprocess.TimeoutExpired:
-                process.kill()
-    for state in active.values():
-        process = state["process"]
+            except (OSError, PermissionError) as signal_error:
+                signal_errors.append(
+                    f"{signum}:{type(signal_error).__name__}:{str(signal_error)[:160]}")
         try:
-            process.wait(timeout=5.0)
-        except subprocess.TimeoutExpired:  # defensive after kill
-            process.kill()
-            process.wait()
+            direct_reap = ci_cargo.reap_child_bounded(
+                process, process_group_id=process.pid, wait_seconds=0.1,
+                sigkill_wait_seconds=3.0)
+        except BaseException as reap_error:
+            direct_reap = {"schema": "ami-rust-direct-child-reap-v1",
+                           "status": "incomplete_cleanup", "incomplete_cleanup": True,
+                           "wait_attempt_count": 0, "return_code": process.returncode,
+                           "error": type(reap_error).__name__ + ": " + str(reap_error)[:160]}
+        return {"group_ids": [process.pid], "sigterm_group_ids": [],
+                "sigkill_group_ids": [process.pid], "remaining_group_ids": [process.pid],
+                "observer_errors": [type(error).__name__ + ": " + str(error)[:200],
+                                    "fallback did not observe descendant groups"],
+                "signal_errors": signal_errors, "direct_child_reap": direct_reap,
+                "complete": False, "incomplete_cleanup": True,
+                "status": "incomplete_cleanup"}
 
 
-def _compile_commands(plan: dict, work_dir: Path, jobs: int) -> dict:
+def _stop_processes(active: dict[int, dict]) -> list[dict]:
+    receipts = []
+    for index, state in active.items():
+        process: subprocess.Popen = state["process"]
+        receipt = _stop_process_group(process)
+        state["cleanup"] = receipt
+        receipts.append({"command_index": index, "receipt": receipt})
+    return receipts
+
+
+def _compile_commands_impl(plan: dict, work_dir: Path, jobs: int) -> dict:
     if jobs not in (1, MAX_JOBS):
         raise NouveauError("compile concurrency must be one or two jobs")
     if len(plan["commands"]) != EXPECTED_OBJECTS or len(plan["ordered_object_paths"]) != EXPECTED_OBJECTS:
@@ -578,6 +619,7 @@ def _compile_commands(plan: dict, work_dir: Path, jobs: int) -> dict:
     started = 0
     completed = 0
     observed_warning_bytes = 0
+    cleanup_receipts = []
     failure: str | None = None
     failure_index: int | None = None
 
@@ -589,28 +631,37 @@ def _compile_commands(plan: dict, work_dir: Path, jobs: int) -> dict:
         stderr_path = logs_dir / (stem + ".stderr.log")
         _new_log_file(stdout_path)
         _new_log_file(stderr_path)
+        process: subprocess.Popen | None = None
         try:
             process = subprocess.Popen(
                 command["argv"], cwd=plan["working_directory"], stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False,
+                process_group=0,
             )
+            stdout_capture = _PipeCapture(process.stdout, MAX_LOG_BYTES_PER_STREAM)
+            stderr_capture = _PipeCapture(process.stderr, MAX_LOG_BYTES_PER_STREAM)
+            stdout_capture.start()
+            stderr_capture.start()
+            active[index] = {
+                "process": process,
+                "started_at": time.monotonic(),
+                "stdout": stdout_capture,
+                "stderr": stderr_capture,
+                "stdout_path": stdout_path,
+                "stderr_path": stderr_path,
+                "logs_saved": False,
+            }
+            started += 1
         except OSError as exc:
             log_budget.save_launch_failure(stdout_path, stderr_path,
                                            "compiler launch failed: " + str(exc) + "\n")
             raise NouveauError("could not launch Nouveau compiler for " + command["source"] + ": " + str(exc)) from exc
-        stdout_capture = _PipeCapture(process.stdout, MAX_LOG_BYTES_PER_STREAM)
-        stderr_capture = _PipeCapture(process.stderr, MAX_LOG_BYTES_PER_STREAM)
-        stdout_capture.start()
-        stderr_capture.start()
-        active[index] = {
-            "process": process,
-            "stdout": stdout_capture,
-            "stderr": stderr_capture,
-            "stdout_path": stdout_path,
-            "stderr_path": stderr_path,
-            "logs_saved": False,
-        }
-        started += 1
+        except BaseException:
+            if process is not None:
+                cleanup_receipt = _stop_process_group(process)
+                if cleanup_receipt.get("incomplete_cleanup"):
+                    raise NouveauError("compiler launch cleanup returned incomplete_cleanup")
+            raise
 
     try:
         while next_index < EXPECTED_OBJECTS or active:
@@ -627,19 +678,27 @@ def _compile_commands(plan: dict, work_dir: Path, jobs: int) -> dict:
             if not active:
                 break
             time.sleep(0.02)
+            now = time.monotonic()
+            expired_command = next((index for index, state in active.items()
+                                    if now - state["started_at"] >= MAX_COMMAND_SECONDS), None)
+            if expired_command is not None:
+                failure = "compiler command exceeded per-command timeout of " + str(
+                    MAX_COMMAND_SECONDS) + " seconds"
+                failure_index = expired_command
             active_warning_bytes = sum(
                 state["stdout"].total + state["stderr"].total for state in active.values()
             )
             overflow_stream = next((index for index, state in active.items()
                                     if state["stdout"].truncated or state["stderr"].truncated), None)
-            if overflow_stream is not None:
-                failure = "compiler output exceeded the per-stream capture limit"
-                failure_index = overflow_stream
-            elif observed_warning_bytes + active_warning_bytes > MAX_TOTAL_WARNING_BYTES:
-                failure = "total compiler warning-byte capture limit exceeded"
-                failure_index = next(iter(active))
+            if failure is None:
+                if overflow_stream is not None:
+                    failure = "compiler output exceeded the per-stream capture limit"
+                    failure_index = overflow_stream
+                elif observed_warning_bytes + active_warning_bytes > MAX_TOTAL_WARNING_BYTES:
+                    failure = "total compiler warning-byte capture limit exceeded"
+                    failure_index = next(iter(active))
             if failure is not None:
-                _stop_processes(active)
+                cleanup_receipts.extend(_stop_processes(active))
                 for state in active.values():
                     _finish_state(state)
                     observed_warning_bytes += state["stdout"].total + state["stderr"].total
@@ -708,7 +767,7 @@ def _compile_commands(plan: dict, work_dir: Path, jobs: int) -> dict:
                         pass
                     break
             if failure is not None:
-                _stop_processes(active)
+                cleanup_receipts.extend(_stop_processes(active))
                 for state in active.values():
                     _finish_state(state)
                     observed_warning_bytes += state["stdout"].total + state["stderr"].total
@@ -719,10 +778,19 @@ def _compile_commands(plan: dict, work_dir: Path, jobs: int) -> dict:
                             pass
                 active.clear()
                 break
-    except BaseException:
-        _stop_processes(active)
-        for state in active.values():
-            _finish_state(state)
+    except BaseException as error:
+        cleanup_receipts.extend(_stop_processes(active))
+        if isinstance(error, CompileInterrupted):
+            error.signal_state["process_group_cleanup"] = cleanup_receipts
+            error.signal_state["incomplete_cleanup"] = any(
+                row["receipt"].get("incomplete_cleanup") for row in cleanup_receipts)
+        for index, state in active.items():
+            try:
+                _finish_state(state)
+            except NouveauError as finish_error:
+                cleanup_receipts.append({"command_index": index,
+                    "receipt": {"status": "incomplete_cleanup", "incomplete_cleanup": True,
+                                "error": str(finish_error)[:200]}})
             observed_warning_bytes += state["stdout"].total + state["stderr"].total
             if not state["logs_saved"]:
                 try:
@@ -730,6 +798,11 @@ def _compile_commands(plan: dict, work_dir: Path, jobs: int) -> dict:
                 except NouveauError:
                     pass
         raise
+
+    incomplete_cleanup = any(
+        row["receipt"].get("incomplete_cleanup") for row in cleanup_receipts)
+    if incomplete_cleanup:
+        failure = failure or "compiler process-group cleanup returned incomplete_cleanup"
 
     return {
         "started": started,
@@ -740,9 +813,36 @@ def _compile_commands(plan: dict, work_dir: Path, jobs: int) -> dict:
         "warning_bytes_captured": observed_warning_bytes,
         "aggregate_saved_log_bytes": log_budget.saved,
         "aggregate_saved_log_limit": MAX_AGGREGATE_SAVED_LOG_BYTES,
+        "per_command_timeout_seconds": MAX_COMMAND_SECONDS,
         "per_stream_capture_limit": MAX_LOG_BYTES_PER_STREAM,
         "total_warning_byte_limit": MAX_TOTAL_WARNING_BYTES,
+        "process_group_cleanup": cleanup_receipts,
+        "incomplete_cleanup": incomplete_cleanup,
     }
+
+
+class CompileInterrupted(KeyboardInterrupt):
+    def __init__(self, signal_state: dict[str, Any]):
+        super().__init__("compiler run interrupted by SIGTERM")
+        self.signal_state = signal_state
+
+
+def _compile_commands(plan: dict, work_dir: Path, jobs: int) -> dict:
+    """Run compiler groups with one idempotent SIGTERM cleanup request."""
+    previous_sigterm = signal.getsignal(signal.SIGTERM)
+    signal_state = {"received": 0, "cleanup_attempts": 0}
+
+    def interrupt_compile(_signum, _frame):
+        signal_state["received"] += 1
+        if signal_state["cleanup_attempts"] == 0:
+            signal_state["cleanup_attempts"] = 1
+            raise CompileInterrupted(signal_state)
+
+    signal.signal(signal.SIGTERM, interrupt_compile)
+    try:
+        return _compile_commands_impl(plan, work_dir, jobs)
+    finally:
+        signal.signal(signal.SIGTERM, previous_sigterm)
 
 
 def _read_bounded_text(path: Path, label: str) -> str:
@@ -796,7 +896,26 @@ def _cli_compile_plan(args: argparse.Namespace) -> int:
     try:
         _validate_compiler(plan, args.compiler_sha256)
         _prepare_outputs(plan)
-        outcome = _compile_commands(plan, work_dir, args.jobs)
+        try:
+            outcome = _compile_commands(plan, work_dir, args.jobs)
+        except KeyboardInterrupt as exc:
+            plan["status"] = "FAIL_COMPILE"
+            plan["error"] = str(exc)
+            state = getattr(exc, "signal_state", {})
+            plan["compile"] = {
+                "failure": str(exc),
+                "interrupted": True,
+                "sigterm_delivery_count": state.get("received", 0),
+                "signal_cleanup_attempts": state.get("cleanup_attempts", 1),
+                "process_group_cleanup": state.get("process_group_cleanup", []),
+                "incomplete_cleanup": state.get("incomplete_cleanup", False),
+                "cleanup_status": ("incomplete_cleanup" if state.get("incomplete_cleanup")
+                                   else "complete"),
+                "logs_directory": str(work_dir / "nouveau-logs"),
+            }
+            _replace_plan(plan_path, plan)
+            print("csdk_nouveau: " + str(exc), file=sys.stderr)
+            return 1
         plan["compile"] = outcome
         compiler = _require_regular_file(plan["compiler"], "pinned clang-11 compiler")
         compiler_sha_after = _sha256_file(compiler)

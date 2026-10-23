@@ -44,7 +44,8 @@ class PublisherAssemblyTests(unittest.TestCase):
         self.csdk_candidate_profile = b'{"files":[{"fixture":true}],"symlinks":[]}\n'
         self.csdk_candidate_archive = b"fixture candidate C-SDK archive"
         self.csdk_original_archive = b"fixture original C-SDK archive"
-        self.csdk_toolchain_profiles = {h: f"fixture {h} toolchain profile\n".encode() for h in auth.HOSTS}
+        self.csdk_toolchain_profiles = {h: f"fixture {h} toolchain profile\n".encode()
+                                        for h in auth.PORTABLE_CSDK_HOSTS}
         self.csdk_spec = self._make_csdk_spec(
             self.csdk_original_profile, self.csdk_candidate_profile, self.csdk_candidate_archive,
             self.csdk_original_archive, b"fixture patch series", b"fixture source capsule",
@@ -123,7 +124,7 @@ class PublisherAssemblyTests(unittest.TestCase):
         pin = lambda path, raw: {"path": path, "bytes": len(raw), "sha256": auth.sha(raw)}
         return {
             "schema": "ami-rust-portable-csdk-v1",
-            "status": "PINNED_CANDIDATE_TWO_HOST_QUALIFICATION_REQUIRED",
+            "status": "PINNED_CANDIDATE_THREE_HOST_QUALIFICATION_REQUIRED",
             "original": {
                 "profile": pin("release/portable-csdk/original-profile.json", original_profile),
                 "archive": pin("release/inputs/csdk.tar.xz", original_archive),
@@ -145,6 +146,9 @@ class PublisherAssemblyTests(unittest.TestCase):
             "source_manifest": pin("release/csdk-source/manifest.json", source_manifest),
             "toolchains": {
                 host: {
+                    **({"archive": {"kind": "tar", "url": auth.PORTABLE_CSDK_ARM_TOOLCHAIN_ARCHIVE_URL,
+                                    "bytes": 35097912, "sha256": auth.sha(b"fixture ARM LLVM archive"),
+                                    "archive_root": "toolchain"}} if host == "linux-aarch64" else {}),
                     "compiler": {"path": "bin/clang-11", "bytes": 17, "sha256": "3" * 64},
                     "profile": pin(f"release/portable-csdk/toolchains/{host}.json", profile_raw),
                 }
@@ -275,11 +279,15 @@ class PublisherAssemblyTests(unittest.TestCase):
              self.csdk_toolchain_profiles["linux-x86_64"]),
             ("release/portable-csdk/toolchains/macos-aarch64.json",
              self.csdk_toolchain_profiles["macos-aarch64"]),
+            ("release/portable-csdk/toolchains/linux-aarch64.json",
+             self.csdk_toolchain_profiles["linux-aarch64"]),
             (vendor_name, vendor),
         )
         for name, value in expected_materials:
             self.assertEqual(actual[f"git+https://github.com/{auth.REPO}#{name}"], auth.sha(value))
         self.assertEqual(actual[tool_pin["url"]], tool_pin["sha256"])
+        arm_archive = self.csdk_spec["toolchains"]["linux-aarch64"]["archive"]
+        self.assertEqual(actual[arm_archive["url"]], arm_archive["sha256"])
         inputs_tampered = dict(sdk_inputs)
         inputs_tampered["portable_csdk"] = {**sdk_inputs["portable_csdk"], "sha256": "0" * 64}
         self.write(self.source, ci_inputs_path, auth.encoded(inputs_tampered))
@@ -292,6 +300,28 @@ class PublisherAssemblyTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 auth.input_manifest(self.source)
             self.write(self.source, name, value)
+
+    def test_arm_toolchain_is_publisher_input_without_extending_sdk_hosts(self):
+        self.assertEqual(set(auth.HOSTS), {"linux-x86_64", "macos-aarch64"})
+        self.assertIn("linux-aarch64", auth.PORTABLE_CSDK_HOSTS)
+        materials = {}
+        def add_material(uri, algorithm, digest):
+            self.assertEqual(algorithm, "sha256")
+            materials[uri] = digest
+        sdk_inputs = auth.parsed(auth.read(self.source / "release/ci-sdk-inputs.json"))
+        auth.load_portable_csdk(self.source, sdk_inputs, add_material=add_material)
+        uri = f"git+https://github.com/{auth.REPO}#release/portable-csdk/toolchains/linux-aarch64.json"
+        self.assertEqual(materials[uri], auth.sha(self.csdk_toolchain_profiles["linux-aarch64"]))
+        archive = self.csdk_spec["toolchains"]["linux-aarch64"]["archive"]
+        self.assertEqual(materials[archive["url"]], archive["sha256"])
+        missing = copy.deepcopy(self.csdk_spec)
+        del missing["toolchains"]["linux-aarch64"]["archive"]
+        with self.assertRaisesRegex(ValueError, "malformed portable C-SDK linux-aarch64 toolchain identity"):
+            auth._validate_portable_csdk_spec(missing)
+        altered = copy.deepcopy(self.csdk_spec)
+        altered["toolchains"]["linux-aarch64"]["archive"]["sha256"] = "not-a-digest"
+        with self.assertRaisesRegex(ValueError, "malformed portable C-SDK Linux/AArch64 archive pin"):
+            auth._validate_portable_csdk_spec(altered)
 
     def test_host_disagreement_refused_before_output(self):
         (self.payloads[auth.HOSTS[0]] / "sdk.tar.xz").write_bytes(b"different")

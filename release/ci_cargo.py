@@ -33,6 +33,8 @@ MAX_EXPANDED_ARCHIVE = 6 * 1024**3
 MAX_LOG_BYTES = 16 * 1024**2
 MAX_RSS_BYTES = 4 * 1024**3
 MAX_WORK_BYTES = 12 * 1024**3
+SUPERVISOR_STOP_GRACE_SECONDS = 15
+PROCESS_ROWS_TIMEOUT_SECONDS = 2.0
 PRODUCER_SCHEMA = "ami-rust-hosted-custom-cargo-producer-v1"
 
 
@@ -408,8 +410,11 @@ def tree_inventory(root: Path, *, exclude_git: bool = False) -> dict:
                                   "inventory_sha256": license_digest.hexdigest()}}
 
 
-def process_rows():
-    output = subprocess.check_output(["/bin/ps", "-axo", "pid=,ppid=,pgid=,rss="], text=True)
+def process_rows(*, timeout: float = PROCESS_ROWS_TIMEOUT_SECONDS):
+    if timeout <= 0 or timeout > 5:
+        raise ValueError("process table observer timeout exceeds the bounded policy")
+    output = subprocess.check_output(["/bin/ps", "-axo", "pid=,ppid=,pgid=,rss="],
+                                     text=True, timeout=timeout)
     return [tuple(map(int, line.split())) for line in output.splitlines()
             if len(line.split()) == 4]
 
@@ -430,34 +435,198 @@ def group_alive(pid: int, rows=None) -> bool:
     return any(group == pid for _, _, group, _ in rows)
 
 
-def stop_group(child: subprocess.Popen, rows_reader=process_rows) -> None:
-    """Kill the process group even if its leader has already exited."""
-    def alive_or_unknown():
-        try:
-            return group_alive(child.pid, rows_reader())
-        except (OSError, subprocess.SubprocessError, ValueError):
-            # If process observation fails, signaling the original group is
-            # safer than assuming it has exited.
-            return True
+def descendant_process_groups(root_pid: int, rows=None) -> list[int]:
+    """Return process groups below root_pid, excluding the root's own group."""
+    rows = process_rows() if rows is None else rows
+    root_row = next((row for row in rows if row[0] == root_pid), None)
+    if root_row is None:
+        return []
+    root_group = root_row[2]
+    children = {}
+    for pid, parent, group, rss in rows:
+        children.setdefault(parent, set()).add(pid)
+    descendants = {root_pid}
+    pending = [root_pid]
+    while pending:
+        parent = pending.pop()
+        for child in children.get(parent, ()):
+            if child not in descendants:
+                descendants.add(child)
+                pending.append(child)
+    return sorted({group for pid, parent, group, rss in rows
+                   if pid in descendants and group != root_group})
 
-    if alive_or_unknown():
+
+def _groups_alive(group_ids, rows_reader):
+    groups = set(group_ids)
+    if not groups:
+        return [], None
+    try:
+        rows = rows_reader()
+    except (OSError, subprocess.SubprocessError, ValueError, TypeError) as error:
+        return sorted(groups), type(error).__name__ + ": " + str(error)[:300]
+    return sorted({group for _, _, group, _ in rows if group in groups}), None
+
+
+def _signal_groups(group_ids, signum):
+    sent = []
+    errors = []
+    for group in sorted(set(group_ids)):
         try:
-            os.killpg(child.pid, signal.SIGTERM)
+            os.killpg(group, signum)
+            sent.append(group)
         except ProcessLookupError:
             pass
-        deadline = time.monotonic() + 3
+        except (OSError, PermissionError) as error:
+            errors.append(f"{group}:{type(error).__name__}:{str(error)[:160]}")
+    return sent, errors
+
+
+def stop_process_groups(group_ids, rows_reader=None, *, grace_seconds: float = 3.0) -> dict:
+    """Terminate only already-observed process groups, then verify they are gone."""
+    if rows_reader is None:
+        rows_reader = process_rows
+    return _terminate_process_groups(group_ids, rows_reader, grace_seconds)
+
+
+def _terminate_process_groups(group_ids, rows_reader, grace_seconds, *, reap=None):
+    groups = sorted({int(group) for group in group_ids if type(group) is int and group > 1})
+    result = {"group_ids": groups, "sigterm_group_ids": [], "sigkill_group_ids": [],
+              "remaining_group_ids": [], "observer_errors": [], "signal_errors": [],
+              "complete": True, "incomplete_cleanup": False, "status": "complete"}
+    if not groups:
+        return result
+    alive, error = _groups_alive(groups, rows_reader)
+    if error:
+        result["observer_errors"].append(error)
+        alive = groups
+    result["sigterm_group_ids"], errors = _signal_groups(alive, signal.SIGTERM)
+    result["signal_errors"].extend(errors)
+    deadline = time.monotonic() + max(0.0, grace_seconds)
+    while time.monotonic() < deadline:
+        if reap is not None:
+            reap()
+        alive, error = _groups_alive(groups, rows_reader)
+        if error:
+            if error not in result["observer_errors"]:
+                result["observer_errors"].append(error)
+            alive = groups
+            break
+        if not alive:
+            break
+        time.sleep(min(0.05, max(0.0, deadline - time.monotonic())))
+    if reap is not None:
+        reap()
+    alive, error = _groups_alive(groups, rows_reader)
+    if error:
+        if error not in result["observer_errors"]:
+            result["observer_errors"].append(error)
+        alive = groups
+    if alive:
+        result["sigkill_group_ids"], errors = _signal_groups(alive, signal.SIGKILL)
+        result["signal_errors"].extend(errors)
+        deadline = time.monotonic() + max(0.25, grace_seconds)
         while time.monotonic() < deadline:
-            child.poll()
-            alive = alive_or_unknown()
+            if reap is not None:
+                reap()
+            alive, error = _groups_alive(groups, rows_reader)
+            if error:
+                if error not in result["observer_errors"]:
+                    result["observer_errors"].append(error)
+                alive = groups
+                break
             if not alive:
                 break
-            time.sleep(0.05)
-        if alive_or_unknown():
+            time.sleep(min(0.05, max(0.0, deadline - time.monotonic())))
+    if reap is not None:
+        reap()
+    alive, error = _groups_alive(groups, rows_reader)
+    if error:
+        if error not in result["observer_errors"]:
+            result["observer_errors"].append(error)
+        alive = groups
+    result["remaining_group_ids"] = alive
+    result["complete"] = not alive and not result["observer_errors"] and not result["signal_errors"]
+    result["incomplete_cleanup"] = not result["complete"]
+    result["status"] = "complete" if result["complete"] else "incomplete_cleanup"
+    return result
+
+
+def reap_child_bounded(child: subprocess.Popen, *, process_group_id: int | None = None,
+                       wait_seconds: float = 3.0,
+                       sigkill_wait_seconds: float = 3.0) -> dict:
+    """Reap a direct child with two finite waits and an explicit failure receipt."""
+    if (wait_seconds < 0 or sigkill_wait_seconds < 0
+            or wait_seconds > 10 or sigkill_wait_seconds > 10
+            or (process_group_id is not None
+                and (type(process_group_id) is not int or process_group_id <= 1))):
+        raise ValueError("direct-child reap input is outside the bounded policy")
+    result = {"schema": "ami-rust-direct-child-reap-v1", "status": "complete",
+              "incomplete_cleanup": False, "wait_attempt_count": 0,
+              "initial_wait_timeout_seconds": wait_seconds,
+              "post_sigkill_wait_timeout_seconds": sigkill_wait_seconds,
+              "sigkill_attempted": False, "signal_errors": [],
+              "process_group_id": process_group_id,
+              "initial_wait_timed_out": False, "post_sigkill_wait_timed_out": False,
+              "return_code": None}
+    try:
+        result["wait_attempt_count"] += 1
+        child.wait(timeout=wait_seconds)
+    except subprocess.TimeoutExpired:
+        result["initial_wait_timed_out"] = True
+        result["sigkill_attempted"] = True
+        if process_group_id is not None:
             try:
-                os.killpg(child.pid, signal.SIGKILL)
+                os.killpg(process_group_id, signal.SIGKILL)
             except ProcessLookupError:
                 pass
-    child.wait(timeout=3)
+            except (OSError, PermissionError) as error:
+                result["signal_errors"].append(
+                    f"killpg:{type(error).__name__}:{str(error)[:160]}")
+        try:
+            child.kill()
+        except ProcessLookupError:
+            pass
+        except (OSError, PermissionError) as error:
+            result["signal_errors"].append(
+                f"kill:{type(error).__name__}:{str(error)[:160]}")
+        try:
+            result["wait_attempt_count"] += 1
+            child.wait(timeout=sigkill_wait_seconds)
+        except subprocess.TimeoutExpired:
+            result["post_sigkill_wait_timed_out"] = True
+        except BaseException as error:
+            result["signal_errors"].append(
+                f"wait:{type(error).__name__}:{str(error)[:160]}")
+    except BaseException as error:
+        result["signal_errors"].append(
+            f"wait:{type(error).__name__}:{str(error)[:160]}")
+    result["return_code"] = child.returncode
+    result["incomplete_cleanup"] = bool(
+        result["post_sigkill_wait_timed_out"] or result["signal_errors"]
+        or child.returncode is None)
+    result["status"] = "incomplete_cleanup" if result["incomplete_cleanup"] else "complete"
+    return result
+
+
+def stop_group(child: subprocess.Popen, rows_reader=None, *, grace_seconds: float = 3,
+               descendant_groups=()) -> dict:
+    """Stop observed groups, then perform bounded direct-child reaping."""
+    if rows_reader is None:
+        rows_reader = process_rows
+    groups = sorted(({child.pid} | set(descendant_groups)) - {0, 1})
+    result = _terminate_process_groups(groups, rows_reader, grace_seconds, reap=child.poll)
+    direct_reap = reap_child_bounded(child, process_group_id=child.pid)
+    result["direct_child_reap"] = direct_reap
+    if direct_reap["sigkill_attempted"]:
+        result["sigkill_group_ids"] = sorted(
+            set(result["sigkill_group_ids"]) | {child.pid})
+    result["complete"] = bool(result["complete"] and direct_reap["status"] == "complete")
+    result["incomplete_cleanup"] = not result["complete"]
+    result["status"] = "complete" if result["complete"] else "incomplete_cleanup"
+    return result
+
+
 
 
 class Supervisor:
@@ -495,14 +664,22 @@ class Supervisor:
         return total
 
     def run(self, command, *, cwd: Path, label: str, timeout: int = 1200,
-            stdin_bytes: bytes | None = None) -> dict:
+            stdin_bytes: bytes | None = None, rss_guard=None,
+            cleanup_descendant_groups: bool = False) -> dict:
         stdout_path = self.log_dir / (label + ".stdout.log")
         stderr_path = self.log_dir / (label + ".stderr.log")
         if self.managed_bytes() > MAX_WORK_BYTES:
             raise RuntimeError("managed workspace ceiling exceeded before " + label)
+        if rss_guard is not None and not rss_guard(0):
+            raise RuntimeError("external RSS guard exceeded before " + label)
         start = time.monotonic()
         peak_rss = peak_size = 0
         reason = None
+        descendant_groups = set()
+        cleanup_result = None
+        cleanup_error = None
+        cleanup_census_errors = []
+        direct_child_reap = None
         with stdout_path.open("xb") as stdout, stderr_path.open("xb") as stderr:
             child = subprocess.Popen(command, cwd=cwd, env=self.env, stdout=stdout, stderr=stderr,
                                      stdin=subprocess.PIPE if stdin_bytes is not None else subprocess.DEVNULL,
@@ -513,56 +690,143 @@ class Supervisor:
                     child.stdin.close()
                 next_size = 0.0
                 while child.poll() is None:
-                    peak_rss = max(peak_rss, rss_group(child.pid))
+                    rows = process_rows()
+                    peak_rss = max(peak_rss, rss_group(child.pid, rows))
+                    if cleanup_descendant_groups:
+                        descendant_groups.update(descendant_process_groups(child.pid, rows))
                     now = time.monotonic()
                     if now >= next_size:
                         peak_size = max(peak_size, self.managed_bytes())
                         next_size = now + 0.5
                     if now - start > timeout:
-                        reason = "timeout"
+                        reason = reason or "timeout"
+                    if rss_guard is not None and not rss_guard(peak_rss):
+                        reason = reason or "external RSS guard"
                     if peak_rss > MAX_RSS_BYTES:
-                        reason = "aggregate RSS ceiling"
+                        reason = reason or "aggregate RSS ceiling"
                     if peak_size > MAX_WORK_BYTES:
-                        reason = "managed workspace ceiling"
+                        reason = reason or "managed workspace ceiling"
                     if self.logs_bytes() > MAX_LOG_BYTES:
-                        reason = "aggregate log ceiling"
+                        reason = reason or "aggregate log ceiling"
                     if reason:
                         break
                     time.sleep(0.1)
             except BaseException as error:
                 reason = "monitor failure: " + type(error).__name__ + ": " + str(error)[:300]
             finally:
-                try:
-                    if reason or group_alive(child.pid):
-                        reason = reason or "leader exited while subprocess group remained alive"
-                        stop_group(child)
-                    else:
-                        child.wait(timeout=3)
-                except BaseException:
+                descendants_alive = False
+                if cleanup_descendant_groups:
                     try:
-                        os.killpg(child.pid, signal.SIGKILL)
-                    except (ProcessLookupError, PermissionError):
-                        pass
-                    child.wait()
-                    raise
+                        rows = process_rows()
+                        descendant_groups.update(descendant_process_groups(child.pid, rows))
+                        descendants_alive = any(group in descendant_groups
+                                                for _, _, group, _ in rows)
+                    except (OSError, subprocess.SubprocessError, ValueError, TypeError) as error:
+                        message = (type(error).__name__ + ": " + str(error)[:200])
+                        cleanup_census_errors.append(message)
+                        reason = reason or ("monitor failure during descendant cleanup census: "
+                                            + message)
+                        descendants_alive = bool(descendant_groups)
+                try:
+                    root_group_alive = group_alive(child.pid)
+                except (OSError, subprocess.SubprocessError, ValueError, TypeError) as error:
+                    reason = reason or ("monitor failure checking process group: "
+                                        + type(error).__name__ + ": " + str(error)[:200])
+                    root_group_alive = True
+                if reason or root_group_alive or descendants_alive:
+                    reason = reason or "leader exited while a supervised process group remained alive"
+                    try:
+                        cleanup_result = stop_group(
+                            child, grace_seconds=SUPERVISOR_STOP_GRACE_SECONDS,
+                            descendant_groups=descendant_groups if cleanup_descendant_groups else ())
+                        direct_child_reap = cleanup_result.get("direct_child_reap")
+                    except BaseException as error:
+                        cleanup_error = type(error).__name__ + ": " + str(error)[:300]
+                        signal_errors = []
+                        try:
+                            os.killpg(child.pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                        except (OSError, PermissionError) as signal_error:
+                            signal_errors.append(
+                                f"killpg:{type(signal_error).__name__}:{str(signal_error)[:160]}")
+                        try:
+                            child.kill()
+                        except ProcessLookupError:
+                            pass
+                        except (OSError, PermissionError) as signal_error:
+                            signal_errors.append(
+                                f"kill:{type(signal_error).__name__}:{str(signal_error)[:160]}")
+                        direct_child_reap = reap_child_bounded(child)
+                        cleanup_result = {
+                            "group_ids": sorted({child.pid} | descendant_groups),
+                            "sigterm_group_ids": [], "sigkill_group_ids": [child.pid],
+                            "remaining_group_ids": sorted(descendant_groups),
+                            "observer_errors": list(cleanup_census_errors),
+                            "signal_errors": signal_errors,
+                            "direct_child_reap": direct_child_reap,
+                            "complete": False, "incomplete_cleanup": True,
+                            "status": "incomplete_cleanup", "cleanup_error": cleanup_error}
+                else:
+                    direct_child_reap = reap_child_bounded(child)
+                    if direct_child_reap["status"] != "complete":
+                        reason = reason or "incomplete_cleanup: direct child reap failed"
+                        cleanup_result = stop_group(
+                            child, grace_seconds=SUPERVISOR_STOP_GRACE_SECONDS,
+                            descendant_groups=descendant_groups if cleanup_descendant_groups else ())
+                        direct_child_reap = cleanup_result.get("direct_child_reap", direct_child_reap)
         if self.logs_bytes() > MAX_LOG_BYTES:
             reason = reason or "aggregate log ceiling"
+        if rss_guard is not None and not rss_guard(peak_rss):
+            reason = reason or "external RSS guard"
         peak_size = max(peak_size, self.managed_bytes())
         if peak_size > MAX_WORK_BYTES:
             reason = reason or "managed workspace ceiling"
+        if cleanup_census_errors:
+            cleanup_result = cleanup_result or {
+                "group_ids": sorted({child.pid} | descendant_groups),
+                "sigterm_group_ids": [], "sigkill_group_ids": [],
+                "remaining_group_ids": sorted(descendant_groups),
+                "observer_errors": [], "signal_errors": [],
+                "complete": False, "incomplete_cleanup": True,
+                "status": "incomplete_cleanup"}
+            cleanup_result["observer_errors"] = sorted(
+                set(cleanup_result.get("observer_errors", [])) | set(cleanup_census_errors))
+            cleanup_result["complete"] = False
+            cleanup_result["incomplete_cleanup"] = True
+            cleanup_result["status"] = "incomplete_cleanup"
+        if cleanup_result and cleanup_result.get("incomplete_cleanup"):
+            reason = reason or "incomplete_cleanup"
         elapsed = time.monotonic() - start
         row = {"label": label, "exit_code": child.returncode, "stop_reason": reason,
                "elapsed_seconds": round(elapsed, 3), "rss_peak_observed_bytes": peak_rss,
                "managed_peak_observed_bytes": max(peak_size, self.managed_bytes()),
                "stdout_log": stdout_path.relative_to(self.work).as_posix(),
-               "stderr_log": stderr_path.relative_to(self.work).as_posix()}
+               "stderr_log": stderr_path.relative_to(self.work).as_posix(),
+               "direct_child_reap": direct_child_reap,
+               "cleanup_status": (cleanup_result or {}).get("status", "complete"),
+               "incomplete_cleanup": bool((cleanup_result or {}).get("incomplete_cleanup", False))}
+        if cleanup_descendant_groups:
+            row["tracked_descendant_process_group_ids"] = sorted(descendant_groups)
+            row["descendant_process_group_cleanup"] = cleanup_result or {
+                "group_ids": [], "sigterm_group_ids": [], "sigkill_group_ids": [],
+                "remaining_group_ids": [], "observer_errors": list(cleanup_census_errors),
+                "signal_errors": [], "direct_child_reap": direct_child_reap,
+                "complete": not bool(cleanup_error or cleanup_census_errors),
+                "incomplete_cleanup": bool(cleanup_error or cleanup_census_errors),
+                "status": "incomplete_cleanup" if cleanup_error or cleanup_census_errors else "complete"}
+            if cleanup_error:
+                row["descendant_process_group_cleanup"]["cleanup_error"] = cleanup_error
         self.peak_rss = max(self.peak_rss, peak_rss)
         self.peak_workspace = max(self.peak_workspace, row["managed_peak_observed_bytes"])
         self.commands.append(row)
         if reason or child.returncode:
             stderr_tail = stderr_path.read_bytes()[-4096:].decode("utf-8", "replace")
+            suffix = ("; cleanup " + cleanup_error) if cleanup_error else ""
             raise RuntimeError(f"{label} failed: {reason or 'exit ' + str(child.returncode)}; "
-                               + stderr_tail[-1000:])
+                               + stderr_tail[-1000:] + suffix)
+        if cleanup_error:
+            raise RuntimeError(f"{label} cleanup failed: " + cleanup_error)
         return row
 
     def run_text(self, command, *, cwd: Path, label: str, timeout: int = 60) -> str:

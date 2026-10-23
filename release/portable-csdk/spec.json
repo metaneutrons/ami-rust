@@ -57,8 +57,27 @@
     "path": "release/csdk-source/manifest.json",
     "sha256": "4e616c8373ac1dc36e5a109953b13e971783abcff0358f24eb49d78f606ad689"
   },
-  "status": "PINNED_CANDIDATE_TWO_HOST_QUALIFICATION_REQUIRED",
+  "status": "PINNED_CANDIDATE_THREE_HOST_QUALIFICATION_REQUIRED",
   "toolchains": {
+    "linux-aarch64": {
+      "archive": {
+        "archive_root": "toolchain",
+        "bytes": 35097912,
+        "kind": "tar",
+        "sha256": "8d9be3b71eb02f60177c77ed62931caf4ebedd9c34b6ca9312b57157685c572e",
+        "url": "https://github.com/metaneutrons/aros-toolchains/releases/download/v0.1.4/aros-toolchain-v1-llvm11.0.0-linux-aarch64-pc-x86_64.tar.xz"
+      },
+      "compiler": {
+        "bytes": 133112,
+        "path": "bin/clang-11",
+        "sha256": "9fe7d123cee50d1c04017a934ca547ef488c399decf5b656d931b8dd2133daea"
+      },
+      "profile": {
+        "bytes": 488632,
+        "path": "release/portable-csdk/toolchains/linux-aarch64.json",
+        "sha256": "be3dc1a696882367f4ff39ad393bf3ae66d6ee25fd73f8042eccfcb738defd68"
+      }
+    },
     "linux-x86_64": {
       "compiler": {
         "bytes": 133336,

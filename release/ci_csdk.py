@@ -2,7 +2,7 @@
 """Produce the explicitly derived portable C-SDK from pinned original inputs.
 
 Original SDK/source bytes remain immutable. A source patch is not qualified
-until generation, compilation, relocation and the two-host checks pass.
+until generation, compilation, relocation and the three-host checks pass.
 """
 from __future__ import annotations
 
@@ -303,7 +303,8 @@ def generate_public_headers(source, frozen_include, header_recipes, generator_re
                    label="headers-absolute-counter", timeout=60)
     if not all(str(source).encode() in (control / n).read_bytes() for n in row["outputs"]):
         raise ValueError("absolute config counter-case did not expose its source prefix")
-    return {"status": "PASS_MACOS_HEADERS_ONLY" if sdk.host_identity()[0] == "macos-aarch64"
+    return {"status": "PASS_MACOS_HEADERS_ONLY"
+            if sdk.portable_csdk_host_identity() == "macos-aarch64"
             else "PASS_LINUX_HEADERS_ONLY", "headers": all_roots[0],
             "two_roots_byte_identical": True, "only_provenance_paths_changed": True,
             "absolute_config_counter_case": "EXPECTED_LOCAL_PREFIX_DETECTED",

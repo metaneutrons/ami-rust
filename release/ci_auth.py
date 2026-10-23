@@ -25,6 +25,8 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parent.parent
 HOSTS = ("linux-x86_64", "macos-aarch64")
+PORTABLE_CSDK_HOSTS = ("linux-aarch64", "linux-x86_64", "macos-aarch64")
+PORTABLE_CSDK_ARM_TOOLCHAIN_ARCHIVE_URL = "https://github.com/metaneutrons/aros-toolchains/releases/download/v0.1.4/aros-toolchain-v1-llvm11.0.0-linux-aarch64-pc-x86_64.tar.xz"
 REPO = "metaneutrons/ami-rust"
 WORKFLOW = ".github/workflows/sdk-qualify.yml"
 SUBJECTS = ("release.json", "sdk.tar.xz", "SHAUTIL")
@@ -157,7 +159,7 @@ def _validate_portable_csdk_spec(spec):
             "required_counts", "source_capsule", "source_manifest", "toolchains"}
     if (not isinstance(spec, dict) or set(spec) != keys
             or spec.get("schema") != "ami-rust-portable-csdk-v1"
-            or spec.get("status") != "PINNED_CANDIDATE_TWO_HOST_QUALIFICATION_REQUIRED"):
+            or spec.get("status") != "PINNED_CANDIDATE_THREE_HOST_QUALIFICATION_REQUIRED"):
         raise ValueError("unsupported portable C-SDK specification")
     if (not isinstance(spec["original"], dict) or set(spec["original"]) != {"profile", "archive"}
             or not isinstance(spec["candidate"], dict)
@@ -207,11 +209,23 @@ def _validate_portable_csdk_spec(spec):
                                "symbols", "unchanged_members"))):
         raise ValueError("malformed portable C-SDK nouveau measurements")
     toolchains = spec["toolchains"]
-    if not isinstance(toolchains, dict) or set(toolchains) != set(HOSTS):
+    if not isinstance(toolchains, dict) or set(toolchains) != set(PORTABLE_CSDK_HOSTS):
         raise ValueError("portable C-SDK toolchain profiles are incomplete")
     for host, components in toolchains.items():
-        if not isinstance(components, dict) or set(components) != {"compiler", "profile"}:
+        expected = {"compiler", "profile"} | ({"archive"} if host == "linux-aarch64" else set())
+        if not isinstance(components, dict) or set(components) != expected:
             raise ValueError("malformed portable C-SDK " + host + " toolchain identity")
+        if host == "linux-aarch64":
+            archive = components["archive"]
+            if (not isinstance(archive, dict)
+                    or set(archive) != {"kind", "url", "bytes", "sha256", "archive_root"}
+                    or archive.get("kind") != "tar"
+                    or archive.get("url") != PORTABLE_CSDK_ARM_TOOLCHAIN_ARCHIVE_URL
+                    or archive.get("archive_root") != "toolchain"
+                    or type(archive.get("bytes")) is not int or archive["bytes"] <= 0
+                    or not isinstance(archive.get("sha256"), str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", archive["sha256"])):
+                raise ValueError("malformed portable C-SDK Linux/AArch64 archive pin")
         compiler = components["compiler"]
         if (not isinstance(compiler, dict) or set(compiler) != {"path", "bytes", "sha256"}
                 or compiler.get("path") != "bin/clang-11"):
@@ -263,7 +277,7 @@ def load_portable_csdk(source, inputs, *, full=False, add_material=None):
     candidate_profile = _verify_pinned_file(
         source, spec["candidate"]["profile"], "candidate profile", keep=True)
     _verify_pinned_file(source, spec["candidate"]["archive"], "candidate archive")
-    for host in HOSTS:
+    for host in PORTABLE_CSDK_HOSTS:
         _verify_pinned_file(source, spec["toolchains"][host]["profile"], host + " toolchain profile")
 
     if full:
@@ -304,11 +318,13 @@ def load_portable_csdk(source, inputs, *, full=False, add_material=None):
         pins = [pin, spec["original"]["profile"], spec["candidate"]["profile"],
                 spec["original"]["archive"], spec["candidate"]["archive"], spec["patch_series"],
                 spec["source_capsule"], spec["source_manifest"],
-                *(spec["toolchains"][host]["profile"] for host in HOSTS)]
+                *(spec["toolchains"][host]["profile"] for host in PORTABLE_CSDK_HOSTS)]
         if not full:
-            pins = pins[:5] + [*(spec["toolchains"][host]["profile"] for host in HOSTS)]
+            pins = pins[:5] + [*(spec["toolchains"][host]["profile"] for host in PORTABLE_CSDK_HOSTS)]
         for item in pins:
             add_material(f"git+https://github.com/{REPO}#{item['path']}", "sha256", item["sha256"])
+        arm_archive = spec["toolchains"]["linux-aarch64"]["archive"]
+        add_material(arm_archive["url"], "sha256", arm_archive["sha256"])
 
     return {"spec": spec, "spec_raw": spec_raw, "original_profile": original_profile,
             "candidate_profile": candidate_profile}

@@ -4,7 +4,14 @@ const COLD_RUNTIME_ARCHIVE_SHA256: &str =
 const COLD_RUNTIME_ARCHIVE_URL: &str =
     "https://static.rust-lang.org/dist/2026-09-18/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz";
 const COLD_RUNTIME_INPUTS_SHA256: &str =
-    "df4494bfc3590b97c5a8d5fe126842c56d801787ffb49dead0b9e58c9a3c3ded";
+    "70ea2900ba0e61213c6636fe1ee1c9bb0666e975847aee5ee5dc52797b437162";
+
+#[test]
+fn cold_runtime_input_digest_matches_current_sdk_manifest() {
+    let inputs = include_bytes!("../../../../release/ci-sdk-inputs.json");
+    assert_eq!(inputs.len(), 6451);
+    assert_eq!(sha256_bytes(inputs), COLD_RUNTIME_INPUTS_SHA256);
+}
 const COLD_RUNTIME_RUST_COMMIT: &str = "330d317121e16b5db8e5adc63595910528ff2ee7";
 const COLD_RUNTIME_LLVM_VERSION: &str = "23.1.1";
 const COLD_RUNTIME_TARGET: &str = "x86_64-unknown-linux-gnu";
