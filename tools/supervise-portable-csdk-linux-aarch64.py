@@ -121,6 +121,9 @@ CANDIDATE = {
     "profile_sha256": "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337",
 }
 
+NATIVE_TOOL_SEARCH_PATH = "/usr/local/bin:/usr/bin:/bin"
+NATIVE_TOOL_RUNTIME_PATH = NATIVE_TOOL_SEARCH_PATH + ":/usr/sbin:/sbin"
+
 NATIVE_TOOLS = {
     "cc": ("cc", ["--version"]),
     "cmake": ("cmake", ["--version"]),
@@ -851,7 +854,7 @@ def run_version(executable: Path, args: list[str], cwd: Path, env: dict[str, str
 
 def tool_identity(name: str, command: str, args: list[str], cwd: Path,
                   env: dict[str, str]) -> tuple[Path, dict]:
-    selected = command if command.startswith("/") else shutil.which(command, path="/usr/bin:/bin")
+    selected = command if command.startswith("/") else shutil.which(command, path=NATIVE_TOOL_SEARCH_PATH)
     if not selected:
         raise ValueError("required native host tool is unavailable: " + name)
     lexical = Path(selected)
@@ -862,6 +865,31 @@ def tool_identity(name: str, command: str, args: list[str], cwd: Path,
               "resolved": file_identity(resolved),
               "version": run_version(resolved, args, cwd, env)}
     return resolved, record
+
+
+def collect_native_host_tools(cwd: Path, env: dict[str, str]) -> tuple[dict, dict[str, Path]]:
+    """Resolve and identify every host prerequisite before touching LLVM inputs."""
+    tool_records, tool_paths = {}, {}
+    for name, (command_name, args) in NATIVE_TOOLS.items():
+        path, record = tool_identity(name, command_name, args, cwd, env)
+        tool_paths[name] = path
+        tool_records[name] = record
+    cc_target = run_version(tool_paths["cc"], ["-dumpmachine"], cwd, env)
+    if "aarch64" not in cc_target["stdout"].lower():
+        raise ValueError("native C compiler does not target the runner's AArch64 host")
+    tool_records["cc_target"] = cc_target
+    if Path(NATIVE_TOOLS["patch"][0]).resolve(strict=True) != tool_paths["patch"]:
+        raise ValueError("patch tool path differs from the producer's fixed /usr/bin/patch path")
+    return tool_records, tool_paths
+
+
+def verify_native_host_tools_unchanged(tool_records: dict) -> None:
+    for name, record in tool_records.items():
+        if name == "cc_target":
+            continue
+        resolved = Path(record["resolved"]["path"])
+        if file_identity(resolved) != record["resolved"]:
+            raise ValueError("native host tool changed during C-SDK production: " + name)
 
 
 def redacted_error(error: BaseException, repo: Path, managed: Path) -> str:
@@ -1009,6 +1037,21 @@ def inner_produce(repo: Path, managed: Path, artifact: Path, expected_head: str,
             or len(candidate_profile.get("files", [])) != 2835):
         raise ValueError("C-SDK source or baseline candidate profile differs from its frozen pin")
 
+    # Check all six native host tools, including the compiler target, before
+    # downloading or extracting the 35 MB LLVM archive. Use a small fixed
+    # lookup path that includes the host-local installation prefix.
+    native_env = {"HOME": str(runtime_dirs["home"]),
+                  "TMPDIR": str(runtime_dirs["tmp"]), "TMP": str(runtime_dirs["tmp"]),
+                  "TEMP": str(runtime_dirs["tmp"]), "PATH": NATIVE_TOOL_RUNTIME_PATH,
+                  "LC_ALL": "C", "LANG": "C", "TZ": "UTC",
+                  "PYTHONNOUSERSITE": "1", "PYTHONDONTWRITEBYTECODE": "1",
+                  "GIT_TERMINAL_PROMPT": "0", "GIT_CONFIG_NOSYSTEM": "1",
+                  "GIT_CONFIG_GLOBAL": os.devnull, "GIT_OPTIONAL_LOCKS": "0"}
+    host_tool_start = time.monotonic()
+    tool_records, tool_paths = collect_native_host_tools(managed, native_env)
+    if time.monotonic() - host_tool_start > MAX_PHASE_SECONDS:
+        raise TimeoutError("native host tool preflight exceeded 1200 seconds")
+
     input_root = managed / "inputs"
     archive_path = input_root / LLVM_ARCHIVE["name"]
     extract_path = managed / "arm-llvm-extracted"
@@ -1049,27 +1092,11 @@ def inner_produce(repo: Path, managed: Path, artifact: Path, expected_head: str,
     if time.monotonic() - stage_start > MAX_PHASE_SECONDS:
         raise TimeoutError("ARM LLVM extraction/profile phase exceeded 1200 seconds")
 
-    env = {"HOME": str(runtime_dirs["home"]), "TMPDIR": str(runtime_dirs["tmp"]),
-           "TMP": str(runtime_dirs["tmp"]), "TEMP": str(runtime_dirs["tmp"]),
-           "PATH": str(toolchain / "bin") + ":/usr/bin:/bin:/usr/sbin:/sbin",
-           "LC_ALL": "C", "LANG": "C", "TZ": "UTC", "PYTHONNOUSERSITE": "1",
-           "PYTHONDONTWRITEBYTECODE": "1", "GIT_TERMINAL_PROMPT": "0",
-           "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
-           "GIT_OPTIONAL_LOCKS": "0"}
+    env = dict(native_env)
+    env["PATH"] = str(toolchain / "bin") + ":" + NATIVE_TOOL_RUNTIME_PATH
     clang_version = run_version(compiler, ["--version"], managed, env)
     if LLVM_ARCHIVE["clang"]["version_prefix"] not in clang_version["stdout"]:
         raise ValueError("ARM LLVM runtime version does not identify the pinned clang 11 release")
-    tool_records, tool_paths = {}, {}
-    for name, (command_name, args) in NATIVE_TOOLS.items():
-        path, record = tool_identity(name, command_name, args, managed, env)
-        tool_paths[name] = path
-        tool_records[name] = record
-    cc_target = run_version(tool_paths["cc"], ["-dumpmachine"], managed, env)
-    if "aarch64" not in cc_target["stdout"].lower():
-        raise ValueError("native C compiler does not target the runner's AArch64 host")
-    tool_records["cc_target"] = cc_target
-    if Path(NATIVE_TOOLS["patch"][0]).resolve(strict=True) != tool_paths["patch"]:
-        raise ValueError("patch tool path differs from the producer's fixed /usr/bin/patch path")
 
     if int(time.time()) - campaign_start >= PRODUCER_WINDOW_SECONDS:
         raise TimeoutError("campaign has entered the reserved finalization window")
@@ -1078,7 +1105,7 @@ def inner_produce(repo: Path, managed: Path, artifact: Path, expected_head: str,
     producer_env = dict(env)
     producer_env["PATH"] = str(toolchain / "bin") + ":" + ":".join(
         str(tool_paths[name].parent)
-        for name in ("cc", "cmake", "pkg-config", "perl", "git", "patch")) + ":/usr/bin:/bin:/usr/sbin:/sbin"
+        for name in ("cc", "cmake", "pkg-config", "perl", "git", "patch")) + ":" + NATIVE_TOOL_RUNTIME_PATH
     command = [sys.executable, "-I", "-B", str(repo / "release/csdk_producer.py"),
                "--work", str(producer_work), "--output", str(producer_output),
                "--toolchain", str(toolchain), "--native-compiler", str(tool_paths["cc"]),
@@ -1144,12 +1171,7 @@ def inner_produce(repo: Path, managed: Path, artifact: Path, expected_head: str,
             or producer_record.get("source_capsule_sha256")
             != EXPECTED["release/csdk-source/csdk-corresponding-source.tar.xz"]):
         raise ValueError("producer compilation or source-capsule receipt is incomplete")
-    for name, record in tool_records.items():
-        if name == "cc_target":
-            continue
-        resolved = Path(record["resolved"]["path"])
-        if file_identity(resolved) != record["resolved"]:
-            raise ValueError("native host tool changed during C-SDK production: " + name)
+    verify_native_host_tools_unchanged(tool_records)
     if file_identity(compiler) != clang_identity:
         raise ValueError("pinned ARM clang changed during production")
 

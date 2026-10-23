@@ -194,6 +194,29 @@ pub fn validate_inner_record(
             )));
         }
     }
+    if report
+        .get("current_workspace_bytes")
+        .and_then(Value::as_u64)
+        != Some(workspace)
+        || report.get("current_log_bytes").and_then(Value::as_u64) != Some(logs)
+    {
+        return Err(Refusal::new(format!(
+            "inner command finish totals differ from its final resource sample: {label}"
+        )));
+    }
+    let peak_workspace = report
+        .get("peak_workspace_bytes")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| Refusal::new("resource report field is invalid: peak_workspace_bytes"))?;
+    let peak_logs = report
+        .get("peak_log_bytes")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| Refusal::new("resource report field is invalid: peak_log_bytes"))?;
+    if peak_workspace < workspace || peak_logs < logs {
+        return Err(Refusal::new(format!(
+            "inner resource peak understates its final sample: {label}"
+        )));
+    }
 
     for stream_name in ["stdout", "stderr"] {
         let stream = record
@@ -298,9 +321,21 @@ pub fn validate_inner_commands(
             validate_inner_record(expected_label, &summary.request_sha256, &request, &record)?;
         let record_workspace = number(&record, "workspace_bytes_at_finish")?;
         let record_logs = number(&record, "log_bytes_at_finish")?;
+        let report = record
+            .get("resource_report")
+            .and_then(Value::as_object)
+            .ok_or_else(|| Refusal::new("inner command resource report is missing"))?;
+        let report_peak_workspace = report
+            .get("peak_workspace_bytes")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| Refusal::new("inner peak workspace total is invalid"))?;
+        let report_peak_logs = report
+            .get("peak_log_bytes")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| Refusal::new("inner peak log total is invalid"))?;
         if peak != summary.aggregate_peak_rss_bytes
-            || record_workspace != summary.peak_workspace_bytes
-            || record_logs != summary.peak_log_bytes
+            || report_peak_workspace != summary.peak_workspace_bytes
+            || report_peak_logs != summary.peak_log_bytes
         {
             return Err(Refusal::new(format!(
                 "inner command summary totals differ from its record: {expected_label}"
@@ -355,8 +390,8 @@ pub fn validate_inner_commands(
             request_sha256: summary.request_sha256.clone(),
             result_sha256: summary.result_sha256.clone(),
             aggregate_peak_rss_bytes: peak,
-            workspace_bytes_at_finish: summary.peak_workspace_bytes,
-            log_bytes_at_finish: summary.peak_log_bytes,
+            workspace_bytes_at_finish: record_workspace,
+            log_bytes_at_finish: record_logs,
             elapsed_nanos: elapsed,
         });
         raw_streams.push((record_directory, stream_metadata));
@@ -818,6 +853,79 @@ mod tests {
         let mut rows = summaries(&root);
         rows[0].peak_workspace_bytes += 1;
         assert!(validate(&root, &rows, 0).is_err());
+    }
+
+    #[test]
+    fn accepts_workspace_and_log_peaks_above_their_finish_totals() {
+        let temp = TempDir::new();
+        let root = temp.fixture_copy();
+        let mut record: Value = serde_json::from_slice(
+            &fs::read(root.join("records/source-production/result.json")).unwrap(),
+        )
+        .unwrap();
+        let mut rows = summaries(&root);
+        let workspace_finish = record["workspace_bytes_at_finish"].as_u64().unwrap();
+        let log_finish = record["log_bytes_at_finish"].as_u64().unwrap();
+        let workspace_peak = workspace_finish + 1024 * 1024;
+        let log_peak = log_finish + 1024;
+        record["resource_report"]["peak_workspace_bytes"] = json!(workspace_peak);
+        record["resource_report"]["peak_log_bytes"] = json!(log_peak);
+        rows[4].peak_workspace_bytes = workspace_peak;
+        rows[4].peak_log_bytes = log_peak;
+        resign_record(&root, "source-production", &record, &mut rows);
+
+        let result = validate(&root, &rows, 0).unwrap();
+        let command = &result.commands[4];
+        assert!(command.workspace_bytes_at_finish < workspace_peak);
+        assert_eq!(command.workspace_bytes_at_finish, workspace_finish);
+        assert!(command.log_bytes_at_finish < log_peak);
+        assert_eq!(command.log_bytes_at_finish, log_finish);
+    }
+
+    #[test]
+    fn rejects_workspace_peak_overrun_and_inconsistent_finish_sample() {
+        let temp = TempDir::new();
+        let root = temp.fixture_copy();
+        let mut record: Value = serde_json::from_slice(
+            &fs::read(root.join("records/source-production/result.json")).unwrap(),
+        )
+        .unwrap();
+        let mut rows = summaries(&root);
+        record["resource_report"]["peak_workspace_bytes"] = json!(INNER_LIMITS.workspace_bytes + 1);
+        resign_record(&root, "source-production", &record, &mut rows);
+        let error = validate(&root, &rows, 0).unwrap_err().to_string();
+        assert!(error.contains("inner resource report exceeds its bound"));
+
+        let finish_temp = TempDir::new();
+        let root = finish_temp.fixture_copy();
+        let mut record: Value = serde_json::from_slice(
+            &fs::read(root.join("records/source-production/result.json")).unwrap(),
+        )
+        .unwrap();
+        let mut rows = summaries(&root);
+        let finish = record["workspace_bytes_at_finish"].as_u64().unwrap();
+        record["workspace_bytes_at_finish"] = json!(finish + 1);
+        resign_record(&root, "source-production", &record, &mut rows);
+        let error = validate(&root, &rows, 0).unwrap_err().to_string();
+        assert!(error.contains("finish totals differ from its final resource sample"));
+    }
+
+    #[test]
+    fn rejects_resource_peak_below_final_sample() {
+        let temp = TempDir::new();
+        let root = temp.fixture_copy();
+        let mut record: Value = serde_json::from_slice(
+            &fs::read(root.join("records/source-production/result.json")).unwrap(),
+        )
+        .unwrap();
+        let mut rows = summaries(&root);
+        let finish = record["workspace_bytes_at_finish"].as_u64().unwrap();
+        let understated_peak = finish - 1;
+        record["resource_report"]["peak_workspace_bytes"] = json!(understated_peak);
+        rows[4].peak_workspace_bytes = understated_peak;
+        resign_record(&root, "source-production", &record, &mut rows);
+        let error = validate(&root, &rows, 0).unwrap_err().to_string();
+        assert!(error.contains("resource peak understates its final sample"));
     }
 
     #[test]
