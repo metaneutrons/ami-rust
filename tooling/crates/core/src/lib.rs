@@ -31,6 +31,9 @@ pub mod json;
 mod macos_host_selection;
 mod mutations;
 pub mod native_install;
+/// Maintainer-only local composition of already-authenticated host components.
+#[doc(hidden)]
+pub mod native_prefix;
 pub mod ownership;
 pub mod package;
 pub mod package_records;

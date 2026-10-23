@@ -1,0 +1,55 @@
+{
+  "files": [
+    {
+      "bytes": 35149,
+      "path": "LICENSE",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    },
+    {
+      "bytes": 13895,
+      "path": "README.md",
+      "sha256": "edfc8cad7ec1d5d7a7f81bee9dbc32a536a7e856ef9b581000afdf083b3d19fc"
+    },
+    {
+      "bytes": 20180008,
+      "path": "bin/aros",
+      "sha256": "a15f851d6ba8a5d2510cc042882dc8bad190c06fd13fb3d8769b3fb4a610b3c2"
+    },
+    {
+      "bytes": 1961312,
+      "path": "bin/aros-ahi-runner",
+      "sha256": "770727152ec4591d6caed53b822ed9f1251ff541c0827fb35bac3ff80276acdc"
+    },
+    {
+      "bytes": 1537112,
+      "path": "bin/aros-collect",
+      "sha256": "59b767b506d366b03a12e35fa62c7fcd289eece4993c0d45b12fc1f0c2b583a5"
+    },
+    {
+      "bytes": 6947408,
+      "path": "bin/aros-fetch",
+      "sha256": "62c3dfe411f4404d91b8abea55f97970719a8bc51b5b12583b5f7f1363ee6d4d"
+    },
+    {
+      "bytes": 2053928,
+      "path": "bin/aros-genmodule",
+      "sha256": "b0cc15369e9020bf47b8c78816f52a90addb124aaf6c4b819b87183374bafd65"
+    },
+    {
+      "bytes": 1813168,
+      "path": "bin/aros-romtool",
+      "sha256": "03bcff9453614ba465813179c55b4506a31723ae4b0e8e0136142e1b3d62724a"
+    },
+    {
+      "bytes": 7040720,
+      "path": "bin/aros-transpiler",
+      "sha256": "910928da1a5544976b9b04bcedd38afd05bcdafa23b7d6d160cb26a014441299"
+    },
+    {
+      "bytes": 6165296,
+      "path": "bin/aros-verify",
+      "sha256": "9e1cef4498b75ceab64233fa56a1c803ba7119448f736eb55bf60372e3988878"
+    }
+  ],
+  "symlinks": []
+}

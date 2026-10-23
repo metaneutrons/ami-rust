@@ -2,22 +2,22 @@
   "schema": "aros-target-library-candidate-v1",
   "target": "x86_64-aros",
   "rustc_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
-  "origin": "Retained shared-native A2 exact pinned compiler/recipe; packaging as sysroot libraries is a new candidate requiring full per-host qualification.",
+  "origin": "Candidate sysroot libraries from three-host run 39861952599 attempt 1 at source 70c2ea995f93ec04af025ea705bb7565e1f3863b; all nine original files match across hosts. See docs/evidence/rc4-three-host-bare-target-prerequisite-20261023.json. Full SDK/application/runtime qualification remains required.",
   "files": [
     {
-      "path": "liballoc-fdc13dd8ec57eb82.rlib",
-      "bytes": 8501678,
-      "sha256": "9abb60e44dca9f621530478465b0ae8024291331effd8d8cfc32c7df326fd691"
+      "path": "liballoc-67cdea426a6788d2.rlib",
+      "bytes": 8500718,
+      "sha256": "1a72320b657515188fc51d0b958197c10e9712b956a5e67727ae607ea42a1e4f"
     },
     {
-      "path": "libcompiler_builtins-e338c14d9dc031f6.rlib",
-      "bytes": 2447068,
-      "sha256": "7f6fb1d30ad93b2e0fe70ca4096df86733fbddfe295a0fd8436a0a42d0e6fc60"
+      "path": "libcompiler_builtins-6ba5292693f8f158.rlib",
+      "bytes": 2446116,
+      "sha256": "4434274348872c049d5d2624b3d9d5b37e2844cbba51f89e768d44aa8584c8ec"
     },
     {
-      "path": "libcore-141bfcd02ef2299c.rlib",
-      "bytes": 68234814,
-      "sha256": "bc299428fda7c4e0b59d149487183cc1f982a9fea1aca91bf27624db543cb6de"
+      "path": "libcore-7f112bce470cf4f4.rlib",
+      "bytes": 68233854,
+      "sha256": "d5a7cb027f0eaa13e0348975cc3bdd6e0a589ab689a4214b9e1af5b9b2a1e7ed"
     }
   ],
   "symlinks": []

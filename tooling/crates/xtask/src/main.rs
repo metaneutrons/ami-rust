@@ -8,6 +8,7 @@ mod consumer_report;
 mod consumer_runtime;
 mod historical_prepare_sigterm;
 mod legacy_migration_fixture;
+mod native_prefix_compose;
 mod prepare_sigterm;
 mod qualification_command;
 
@@ -56,6 +57,7 @@ fn run() -> Result<()> {
             cargo_storage_probe::run_concurrent_gc(arguments)
         }
         Some("bare-target-libraries") => bare_target_producer::run(arguments),
+        Some("native-prefix-compose") => native_prefix_compose::run(arguments),
         Some("cargo-repro-producer") => cargo_producer::run(arguments),
         Some("cargo-vendor-overlay") => cargo_vendor_overlay::run(arguments),
         Some("native-package-verify") => run_native_package_verify(arguments),
@@ -65,7 +67,7 @@ fn run() -> Result<()> {
         Some("historical-prepare-interruption") => historical_prepare_sigterm::run(arguments),
         Some("native-legacy-migration-fixture") => legacy_migration_fixture::run(arguments),
         _ => Err(Refusal::new(
-            "usage: ami-rust-xtask {--cargo-plugin|--rc2-git-credential|cargo-storage-probe|cargo-storage-lifecycle-probe|cargo-storage-registry-probe|cargo-storage-nested-probe|cargo-storage-concurrent-gc-probe|cargo-storage-git-helper-probe|native-package-verify|native-consumer-observe|qualification-command|native-prepare-interruption|historical-prepare-interruption|native-legacy-migration-fixture|bare-target-libraries|cargo-repro-producer|cargo-vendor-overlay} OPTIONS; composition does not accept a release",
+            "usage: ami-rust-xtask {--cargo-plugin|--rc2-git-credential|cargo-storage-probe|cargo-storage-lifecycle-probe|cargo-storage-registry-probe|cargo-storage-nested-probe|cargo-storage-concurrent-gc-probe|cargo-storage-git-helper-probe|native-package-verify|native-consumer-observe|qualification-command|native-prepare-interruption|historical-prepare-interruption|native-legacy-migration-fixture|bare-target-libraries|native-prefix-compose|cargo-repro-producer|cargo-vendor-overlay} OPTIONS; composition does not accept a release",
         )),
     }
 }

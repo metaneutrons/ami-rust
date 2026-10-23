@@ -571,7 +571,7 @@ fn home_directory() -> Result<PathBuf> {
 }
 
 #[allow(unsafe_code)]
-fn entry_exists_at(parent: &Directory, name: &OsStr) -> Result<bool> {
+pub(crate) fn entry_exists_at(parent: &Directory, name: &OsStr) -> Result<bool> {
     let name = CString::new(name.as_bytes())
         .map_err(|_| Refusal::new("target name contains a NUL byte"))?;
     let mut status = MaybeUninit::<libc::stat>::zeroed();
