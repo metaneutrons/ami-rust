@@ -770,7 +770,7 @@ fn extract_vendor(state: &mut RunState) -> Result<PathBuf> {
         .request
         .source_root
         .join("release/inputs/vendor.tar.xz");
-    let archive = ownership::protected_regular_file(&archive_path, true)?;
+    let archive = ownership::protected_regular_file(&archive_path, false)?;
     let metadata = archive.metadata()?;
     if metadata.len() != VENDOR_BYTES || sha256_file(&archive_path)? != VENDOR_SHA256 {
         return Err(Refusal::new(
@@ -1946,6 +1946,56 @@ mod tests {
             "ami-rust-native-cargo-{label}-{}-{nonce}",
             std::process::id()
         ))
+    }
+
+    #[test]
+    fn vendor_archive_is_data_and_corrupt_bytes_are_refused() {
+        let root = temporary_root("vendor-data");
+        fs::create_dir(&root).expect("private test root");
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o700))
+            .expect("private root permissions");
+        let root = fs::canonicalize(&root).expect("canonical private root");
+        let source = root.join("source");
+        let inputs = source.join("release/inputs");
+        fs::create_dir_all(&inputs).expect("isolated archive directory");
+        let original =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../release/inputs/vendor.tar.xz");
+        let archive = inputs.join("vendor.tar.xz");
+        fs::copy(&original, &archive).expect("copy pinned real vendor archive");
+        fs::set_permissions(&archive, fs::Permissions::from_mode(0o644))
+            .expect("archive is non-executable data");
+        let work = root.join("work");
+        create_private_dir(&work).expect("private extraction work");
+        let mut value = request_value();
+        value["source_root"] = json!(source);
+        value["managed_root"] = json!(root);
+        value["work_root"] = json!(work);
+        let mut state = RunState {
+            request: parse_request(&value).expect("archive test request"),
+            started: Instant::now(),
+            commands: Vec::new(),
+            total_log_bytes: 0,
+            consumer_artifact_bytes: 0,
+        };
+        let extracted = extract_vendor(&mut state)
+            .expect("the real pinned archive must extract without executable permission");
+        assert!(extracted.is_dir());
+        assert!(
+            fs::read_dir(&extracted)
+                .expect("vendor entries")
+                .next()
+                .is_some()
+        );
+        let mut changed = fs::read(&archive).expect("isolated archive bytes");
+        changed[0] ^= 1;
+        fs::write(&archive, changed).expect("corrupt only isolated archive");
+        let refusal = extract_vendor(&mut state).expect_err("changed archive must be refused");
+        assert!(
+            refusal
+                .to_string()
+                .contains("differs from its pinned identity")
+        );
+        fs::remove_dir_all(&root).expect("retire isolated fixture");
     }
 
     fn expected_control(
