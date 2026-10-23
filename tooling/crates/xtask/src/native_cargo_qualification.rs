@@ -1199,7 +1199,11 @@ fn run_cargo_refusal_controls(
         cwd: source_copy.to_path_buf(),
         environment: wrong_env.clone(),
         required_roots: vec![path_text(&state.request.managed_root)?],
-        diagnostic_fragments: &["linking with", "/usr/bin/false", "failed"],
+        diagnostic_fragments: &[
+            "failed to run custom build command",
+            "AROS native bridge",
+            "Cargo selected a different target linker",
+        ],
     };
     let wrong = execute(
         state,
@@ -2239,9 +2243,13 @@ mod tests {
                 "CARGO_TARGET_X86_64_AROS_LINKER".to_owned(),
                 "/usr/bin/false".to_owned(),
             )]),
-            &["linking with", "/usr/bin/false", "failed"],
+            &[
+                "failed to run custom build command",
+                "AROS native bridge",
+                "Cargo selected a different target linker",
+            ],
         );
-        let wrong_diagnostic = b"error: linking with `/usr/bin/false` failed: exit status: 1\n";
+        let wrong_diagnostic = b"error: failed to run custom build command for `ami-rust-minimal v0.2.0-dev`\n\nCaused by:\n  process didn't exit successfully: `/UNIT_FIXTURE/cargo build-script-build` (exit status: 101)\n  --- stderr\n\n  thread 'main' panicked at examples/minimal/build.rs:3:10:\n  AROS native bridge: Cargo selected a different target linker\n";
         let wrong = synthetic_failure(
             &root.join("linker-positive"),
             &wrong_expected,
