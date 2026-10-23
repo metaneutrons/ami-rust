@@ -402,17 +402,25 @@ fn create_run_directories(request: &Request) -> Result<()> {
     for name in ["requests", "records", "artifacts", "native-objects"] {
         create_private_dir(&request.output_root.join(name))?;
     }
-    for name in [
-        "home",
-        "tmp",
-        "linker-cargo-home",
-        "linker-target",
-        "root-a",
-        "root-b",
-    ] {
+    for name in ["home", "tmp", "linker-cargo-home", "linker-target"] {
         create_private_dir(&request.work_root.join(name))?;
     }
     Ok(())
+}
+
+fn source_copy_destinations(work_root: &Path) -> [PathBuf; 2] {
+    [
+        work_root.join("root a/source"),
+        work_root.join("root b/source"),
+    ]
+}
+
+fn prepare_source_copy(source: &Path, destination: &Path) -> Result<Vec<String>> {
+    let parent = destination
+        .parent()
+        .ok_or_else(|| Refusal::new("fresh source-copy path has no parent"))?;
+    create_private_dir(parent)?;
+    copy_arguments(source, destination)
 }
 
 fn run_campaign(state: &mut RunState, raw_request: &[u8]) -> Result<Value> {
@@ -483,13 +491,9 @@ fn run_campaign(state: &mut RunState, raw_request: &[u8]) -> Result<Value> {
         return Err(Refusal::new("Toolchain::open selected another prefix"));
     }
 
-    let source_copies = [work.join("root-a/source"), work.join("root-b/source")];
+    let source_copies = source_copy_destinations(&work);
     for (index, destination) in source_copies.iter().enumerate() {
-        let parent = destination
-            .parent()
-            .ok_or_else(|| Refusal::new("fresh source-copy path has no parent"))?;
-        create_private_dir(parent)?;
-        let args = copy_arguments(&source, destination)?;
+        let args = prepare_source_copy(&source, destination)?;
         let copy = execute(
             state,
             if index == 0 {
@@ -518,7 +522,7 @@ fn run_campaign(state: &mut RunState, raw_request: &[u8]) -> Result<Value> {
         let mut root_rows = BTreeMap::new();
         for variant in VARIANTS {
             let label = format!("root-{root_key}-{}", variant.key);
-            let variant_root = work.join(format!("root-{root_key}/{}", variant.key));
+            let variant_root = work.join(format!("root {root_key}/{}", variant.key));
             create_private_dir(&variant_root)?;
             for child in ["home", "tmp", "cargo-home", "rustup-home", "target"] {
                 create_private_dir(&variant_root.join(child))?;
@@ -1901,6 +1905,7 @@ fn usage() -> Refusal {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::process::Command;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn request_value() -> Value {
@@ -2107,6 +2112,77 @@ mod tests {
                 "sha256sum"
             ]
         );
+    }
+
+    #[test]
+    fn source_copy_preparation_creates_two_spaced_roots_and_copies_source() {
+        let root = temporary_root("source-copy-spaces");
+        fs::create_dir_all(&root).expect("fixture root");
+        let managed = root.join("managed workspace");
+        fs::create_dir(&managed).expect("managed fixture directory");
+        let source = root.join("source checkout with spaces");
+        fs::create_dir_all(source.join("tooling")).expect("source fixture directories");
+        fs::write(source.join("Cargo.lock"), b"workspace-lock fixture\n")
+            .expect("workspace lock fixture");
+        fs::write(source.join("tooling/Cargo.lock"), b"tooling-lock fixture\n")
+            .expect("tooling lock fixture");
+        fs::write(source.join("README.md"), b"UNIT_FIXTURE source tree\n")
+            .expect("source marker fixture");
+
+        let work = managed.join("work area");
+        let output = managed.join("output area");
+        let request = Request {
+            host_key: "macos-aarch64".to_owned(),
+            rust_host_triple: "aarch64-apple-darwin".to_owned(),
+            source_root: source.clone(),
+            managed_root: managed,
+            work_root: work.clone(),
+            output_root: output,
+            component_roots: [
+                root.join("components/rust"),
+                root.join("components/cargo"),
+                root.join("components/llvm"),
+                root.join("components/csdk"),
+                root.join("components/collector"),
+                root.join("components/target-libraries"),
+            ],
+            bootstrap_cargo: root.join("bootstrap/cargo"),
+            bootstrap_rustc: root.join("bootstrap/rustc"),
+            rustup: root.join("bootstrap/rustup"),
+        };
+        create_run_directories(&request).expect("initial run directories");
+
+        let destinations = source_copy_destinations(&work);
+        assert!(
+            destinations
+                .iter()
+                .all(|destination| destination.to_string_lossy().contains(" "))
+        );
+        for (index, destination) in destinations.iter().enumerate() {
+            let parent = destination.parent().expect("source-copy parent");
+            assert!(!parent.exists(), "source-copy parent must be fresh");
+            let args = prepare_source_copy(&source, destination)
+                .expect("prepare source-copy parent and arguments");
+            assert!(parent.is_dir(), "spaced source-copy parent was created");
+            let status = Command::new("/bin/cp")
+                .args(&args)
+                .status()
+                .expect("run the production source-copy program");
+            assert!(status.success(), "source copy {index} must succeed");
+            assert_eq!(
+                fs::read(destination.join("README.md")).expect("copied source marker"),
+                b"UNIT_FIXTURE source tree\n"
+            );
+            assert_eq!(
+                sha256_file(&destination.join("Cargo.lock")).expect("copied workspace lock"),
+                sha256_file(&source.join("Cargo.lock")).expect("source workspace lock")
+            );
+            assert_eq!(
+                sha256_file(&destination.join("tooling/Cargo.lock")).expect("copied tooling lock"),
+                sha256_file(&source.join("tooling/Cargo.lock")).expect("source tooling lock")
+            );
+        }
+        fs::remove_dir_all(&root).expect("remove source-copy fixtures");
     }
 
     #[test]
