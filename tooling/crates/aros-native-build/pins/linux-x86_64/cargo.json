@@ -1,123 +1,116 @@
 {
   "files": [
     {
-      "bytes": 48110632,
+      "bytes": 48005520,
       "path": "bin/cargo",
-      "sha256": "938bc3ee1f60b5f239d369a9f3b6bf1a6e004aecdb6ef65fb7fe901745b011db"
+      "sha256": "de46b26c6ef3ba7bb76da12f8b757c08c6d9c1a59c5b1abfb9c513293499cd3e"
     },
     {
-      "bytes": 4234,
+      "bytes": 4705,
       "path": "producer.json",
-      "sha256": "78e6232c3e83e2fc637b1b7f218e937b8593331d7d9ccece093852f0fefc916d"
+      "sha256": "4b1b800af59885a2d8e2daeb40c6c4b5921ae6db236e490772a31d40404e556d"
     }
   ],
   "producer_identity_spec": {
-    "bytes": 4234,
+    "bytes": 4705,
     "record": {
       "artifact": {
-        "bytes": 48110632,
+        "bytes": 48005520,
         "path": "bin/cargo",
-        "sha256": "938bc3ee1f60b5f239d369a9f3b6bf1a6e004aecdb6ef65fb7fe901745b011db",
-        "version": "cargo 1.99.0 (3efb1f477 2026-07-17)\nrelease: 1.99.0\ncommit-hash: 3efb1f477e99b42974b982d939fd100303cdf7db\ncommit-date: 2026-07-17\nhost: x86_64-unknown-linux-gnu\nlibgit2: 1.9.4 (sys:0.21.0 vendored)\nlibcurl: 8.21.0-DEV (sys:0.4.90+curl-8.21.0 vendored ssl:OpenSSL/3.6.3)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Ubuntu 24.4.0 (noble) [64-bit]"
+        "sha256": "de46b26c6ef3ba7bb76da12f8b757c08c6d9c1a59c5b1abfb9c513293499cd3e",
+        "version": "cargo 1.99.0 (3efb1f477 2026-07-17)\nrelease: 1.99.0\ncommit-hash: 3efb1f477e99b42974b982d939fd100303cdf7db\ncommit-date: 2026-07-17\nhost: x86_64-unknown-linux-gnu\nlibgit2: 1.9.4 (sys:0.21.0 vendored)\nlibcurl: 8.21.0-DEV (sys:0.4.90+curl-8.21.0 vendored ssl:OpenSSL/3.6.3)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Ubuntu 24.4.0 (noble) [64-bit]\n"
       },
-      "bootstrap": {
-        "archives": [
-          {
-            "bytes": 11662108,
-            "component": "cargo",
-            "sha256": "ea1de9f9e23107d97ee2b41a72c552f34064a593da503789218387aee59f3ba4",
-            "url": "https://static.rust-lang.org/dist/2026-09-03/cargo-1.98.1-x86_64-unknown-linux-gnu.tar.xz"
-          },
-          {
-            "bytes": 30715684,
-            "component": "rust-std",
-            "sha256": "fa3ff450172a16c026944030230c5069947af93c728d9179971d44e5e0cfb561",
-            "url": "https://static.rust-lang.org/dist/2026-09-03/rust-std-1.98.1-x86_64-unknown-linux-gnu.tar.xz"
-          },
-          {
-            "bytes": 79727616,
-            "component": "rustc",
-            "sha256": "e974f036b28565f37c0f3bd92ddefa809bee16c04f9dcf07b9ed96e05aaaf7c4",
-            "url": "https://static.rust-lang.org/dist/2026-09-03/rustc-1.98.1-x86_64-unknown-linux-gnu.tar.xz"
-          }
-        ],
-        "bootstrap_cargo_commit": "797e8a9bca276c1c9f9f738d2a20f484fa4eea9d",
-        "channel_manifest_sha256": "a7c8774a5fd8441c997d94c029776cbc5eb111e9d72ab5d256fa69866644347e",
-        "rust_commit": "48a229ceaefd4985c50990b14116b6d856af0985",
-        "rust_release": "1.98.1"
-      },
-      "budgets": {
-        "jobs": 2,
-        "log_bytes": 16777216,
-        "rss_bytes": 4294967296,
-        "seconds": 1200,
-        "workspace_bytes": 12884901888
-      },
-      "build_profile": "release",
-      "cargo_source": {
-        "cargo_lock_sha256": "b4ccfa53ccf8d7360c0359c1533d801759629f9cdd486d9a0a88e512717058d9",
-        "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
-        "patch_sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f",
-        "patch_targets": [
-          {
-            "patched_sha256": "b572e74e742cca08765540aa9f611b1877defc08d146cff52fcd9b0c039106db",
-            "path": "src/compiler/build_runner/compilation_files.rs",
-            "upstream_sha256": "275e1ff7e6512bbbb3b30a7f0ceb9c7d455745e6aafce0484cb73d8fe31e0e67"
-          },
-          {
-            "patched_sha256": "0db8ba62877729fdee23ee8ae26f11a7b79fdd8bf086845a53c5f097eb1eacc3",
-            "path": "src/workspace/features.rs",
-            "upstream_sha256": "2747b5598654963df7d9270b07fc7dbd80a700cf219b26db71b0d2291ea74638"
-          }
-        ],
-        "upstream": "https://github.com/rust-lang/cargo.git"
+      "claim": "Canonical component companion derived from reviewed protected producer records; not an original upstream producer payload or complete SDK qualification.",
+      "evidence": {
+        "build_inputs_sha256": "1a4623bd44f8a33d7ae4876b292b2e21e436996151ae7e823c468a55452eaecc",
+        "build_result_sha256": "368adb941e38c1a57dee1b7948a821980b4026ea11c6a9dedb023109ec74ed5e",
+        "outer_result_sha256": "920152c418f9d2b3bc5466fc6cd9522eff5aab4ffc86ed4d212534271da293e5",
+        "review": {
+          "path": "evidence/rc1-native-qualification-flow-20261019/rc2-cargo-controls-local-20261024-a1/protected-prerequisite-readiness-a1/independent-linux-artifacts-review-a1.json",
+          "sha256": "0a4ad55f2ca9afc6e8b84045be3deeb78e988cd45ef37f757ce8e6285268b8fc",
+          "verdict": "PASS_LINUX_COMPONENT_PREREQUISITE_ARTIFACTS"
+        }
       },
       "host": "linux-x86_64",
-      "host_capacity": {
-        "disk_free_minimum_bytes": 25769803776,
-        "ram_minimum_bytes": 6442450944,
-        "schema": "ami-rust-host-capacity-v1"
+      "producer": {
+        "artifact_id": 12556876494,
+        "artifact_name": "native-cargo-component-x86_64-unknown-linux-gnu-40083672447-1",
+        "attempt": 1,
+        "component_job": {
+          "id": 120842151211,
+          "name": "Native x86_64-unknown-linux-gnu",
+          "run_conclusion": "failure",
+          "runner_label": "ubuntu-24.04"
+        },
+        "head": "d53aba8270cdb96f1c76ac75db7d34d31945dd07",
+        "native_host": "x86_64-unknown-linux-gnu",
+        "payload_bytes": 48005520,
+        "payload_path": "cargo",
+        "payload_sha256": "de46b26c6ef3ba7bb76da12f8b757c08c6d9c1a59c5b1abfb9c513293499cd3e",
+        "repository": "metaneutrons/ami-rust",
+        "run_id": 40083672447,
+        "tree": "82bb4d2738524c487986e9dd8c9300064f64c9da",
+        "workflow": ".github/workflows/cargo-native-prerequisite.yml",
+        "workflow_sha256": "522dd6111bd803167d422c3770ccf08c34d56da771afeb26ee4f93e5dc95ec14",
+        "zip_bytes": 54538145,
+        "zip_sha256": "38dcb9759b4fa69ff7f92c876141531e2f7807ce14662ad25711bb1ac15cd555"
       },
-      "input_identities": {
-        "inputs_sha256": "5c3557a2696457d76562f8883efa2c7d2c4cfc583f4f5814a722907a1f639f81",
-        "resource_policy_sha256": "b9a5fbfff842847c30b5f56ea4e1d3a368f4bda30689f0407ed9d33610571646"
-      },
-      "openssl_overlay": {
-        "changed_paths": [
-          "openssl-src-300.6.1+3.6.3/.cargo-checksum.json",
-          "openssl-src-300.6.1+3.6.3/src/lib.rs"
-        ],
-        "patch_sha256": "67f92b277d2cb9508ca3d6d041ebf9feb0ddbf05e97a9419960f313344cd6de8",
-        "patched_sha256": "992641416caf72adc67e9196ee4e452f5ba284e8586050c9d2ed8bb1d287c1a5",
-        "recipe_sha256": "15fbc9da969b32968884c24bf47f2d8b61b8f7d46ac73947faade43569569077",
-        "source_sha256": "c0f7ee0384ee12835abc6197122dc60ac75e33a3906dfe90bc378e62df56839d"
-      },
-      "producer_helpers": {
-        "build.py": "88839d90b25c8962929501b5c97886c7531b1775c467f510b772b532578684f6",
-        "ci_cargo.py": "589a8abc9fc4b0537b4b9646d441413f4eb005288bbc3ea0220f5218ffc18da2",
-        "prepare-overlay.py": "cb2834a2c22d5b70555759c685425a4e42f5df12e2ad8ff48b63afc5836795d3",
-        "produce.py": "e91757106409643855ac4053540f4d018839937eada7a24f8be504c27b1e423f"
-      },
-      "producer_schema": "ami-rust-hosted-custom-cargo-producer-v1",
-      "producer_status": "PRODUCED_PREREQUISITE_ONLY_NOT_R1_QUALIFICATION",
       "qualification_only": true,
       "rust_target": "x86_64-unknown-linux-gnu",
-      "schema": "ami-rust-hosted-cargo-component-producer-v1"
+      "schema": "ami-rust-authenticated-cargo-component-v1",
+      "source_and_build": {
+        "budgets": {
+          "jobs": 2,
+          "log_bytes": 16777216,
+          "rss_bytes": 4294967296,
+          "seconds": 1200,
+          "workspace_bytes": 12884901888
+        },
+        "build_environment": {
+          "CARGO_BUILD_JOBS": "2",
+          "CARGO_INCREMENTAL": "0",
+          "CARGO_NET_OFFLINE": "true",
+          "CARGO_PROFILE_DEV_DEBUG": "0",
+          "CARGO_PROFILE_DEV_INCREMENTAL": "false",
+          "CARGO_PROFILE_RELEASE_CODEGEN_UNITS": "16",
+          "CARGO_PROFILE_RELEASE_DEBUG": "0",
+          "CARGO_PROFILE_RELEASE_INCREMENTAL": "false",
+          "CARGO_PROFILE_RELEASE_LTO": "false",
+          "CARGO_PROFILE_RELEASE_OPT_LEVEL": "2",
+          "SOURCE_DATE_EPOCH": "1791936000"
+        },
+        "cargo_lock_sha256": "b4ccfa53ccf8d7360c0359c1533d801759629f9cdd486d9a0a88e512717058d9",
+        "compiler": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8\n",
+        "host": "linux-x86_64",
+        "macos_oso_prefix_strip_enabled": false,
+        "native_host_triple": "x86_64-unknown-linux-gnu",
+        "overlay_verifier_sha256": "2b0e4c6b5307446615a198fb485987db2342ebde1be86996f996a53bb1b48649",
+        "patch_sha256": "2c3ab831d216cc4395decc4bcc307a1d9bac6b6936cd01d7c496c44e55d9826b",
+        "producer_executable_sha256": "5363efde00c6f7988e84c27ba29c7759d12a1edbdce26b6f3a577cf4444fa841",
+        "producer_sha256": "c6432ce8039976c3d50f2e76365b17c0f9cdd9b50307dc56c55f18b1ac3f3d0d",
+        "profile": "release",
+        "remap_destinations": [
+          "/cargo-source",
+          "/cargo-build",
+          "/cargo-vendor"
+        ],
+        "schema": "ami-rust-cargo-prerequisite-producer-input-v1",
+        "source_pin_sha256": "9c8ac1d58262c73116c74172c93c345196bd8ffa3995bebba3d1f8ea00bc59ce",
+        "upstream_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+        "vendor_overlay": {
+          "inventory_directories": 4338,
+          "inventory_files": 30517,
+          "patch_sha256": "0bc0e316c16658c7be01baa8d14070efebbe0b115a26224b2ae75ac12667069e",
+          "pin_sha256": "676f1c208fe63f57014120f7461383a9f1da351565a5ea8b9dfe8a2dd109e944",
+          "receipt_sha256": "bb7dd0b81e47c72c5d7e7aeb04966df4bc0960e7c396018fb914ff7e1aea53f0"
+        }
+      }
     },
-    "record_is_exact_producer_json_payload": true,
-    "schema": "ami-rust-hosted-cargo-component-producer-v1",
+    "record_is_derived_canonical_companion": true,
+    "record_is_exact_producer_json_payload": false,
+    "schema": "ami-rust-authenticated-cargo-component-v1",
     "serialization": "UTF-8 JSON with sorted keys, two-space indentation, and one trailing LF",
-    "sha256": "78e6232c3e83e2fc637b1b7f218e937b8593331d7d9ccece093852f0fefc916d",
-    "volatile_report_fields_excluded": [
-      "capacity_preflight",
-      "peaks",
-      "relative_files",
-      "source_inventory",
-      "vendor.upstream_inventory",
-      "vendor.overlay_inventory",
-      "custom_cargo_artifact.relative_path",
-      "run_id"
-    ]
+    "sha256": "4b1b800af59885a2d8e2daeb40c6c4b5921ae6db236e490772a31d40404e556d"
   },
   "symlinks": []
 }

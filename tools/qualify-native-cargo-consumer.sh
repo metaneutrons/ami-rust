@@ -83,10 +83,38 @@ authenticate() {
     run=$(jq -er '.run_id' <<<"$row"); attempt=$(jq -er '.attempt' <<<"$row"); head=$(jq -er '.head' <<<"$row")
     workflow=$(jq -er '.workflow' <<<"$row"); artifact=$(jq -er '.artifact_id' <<<"$row"); name=$(jq -er '.artifact_name' <<<"$row")
     bytes=$(jq -er '.zip_bytes' <<<"$row"); digest=$(jq -er '.zip_sha256' <<<"$row")
+    # A retained native Cargo host may come from a matrix whose other host
+    # failed. Accept only an explicitly pinned successful component job; keep
+    # the parent run's actual terminal conclusion and authenticate both records.
+    local run_conclusion=success component_job= job_id job_name runner_label
+    if [[ "$key" == native_cargo ]] && jq -e 'has("component_job")' <<<"$row" >/dev/null; then
+      component_job=$(jq -ce '.component_job | select(type == "object") |
+        select((keys | sort) == ["id","name","run_conclusion","runner_label"]) |
+        select(.id | type == "number" and . == floor and . > 0 and . <= 9007199254740991) |
+        select(.name | type == "string" and length > 0) |
+        select(.runner_label | type == "string" and length > 0) |
+        select(.run_conclusion == "success" or .run_conclusion == "failure")' <<<"$row") || fail 'native Cargo component job pin is malformed'
+      job_id=$(jq -er '.id' <<<"$component_job")
+      job_name=$(jq -er '.name' <<<"$component_job")
+      runner_label=$(jq -er '.runner_label' <<<"$component_job")
+      run_conclusion=$(jq -er '.run_conclusion' <<<"$component_job")
+      [[ "$job_name" == "Native $triple" ]] || fail 'native Cargo component job pin selects another host'
+      case "$host:$runner_label" in
+        macos-aarch64:macos-26|linux-x86_64:ubuntu-24.04|linux-aarch64:ubuntu-24.04-arm) ;;
+        *) fail 'native Cargo component job pin selects another runner' ;;
+      esac
+    fi
     gh api "repos/metaneutrons/ami-rust/actions/runs/$run" > "$managed/auth/$key.run.json"
-    jq -e --argjson run "$run" --argjson attempt "$attempt" --arg head "$head" --arg workflow "$workflow" \
-      '.id == $run and .run_attempt == $attempt and .repository.full_name == "metaneutrons/ami-rust" and .event == "workflow_dispatch" and .head_branch == "main" and .head_sha == $head and .path == $workflow and .status == "completed" and .conclusion == "success"' \
+    jq -e --argjson run "$run" --argjson attempt "$attempt" --arg head "$head" --arg workflow "$workflow" --arg conclusion "$run_conclusion" \
+      '.id == $run and .run_attempt == $attempt and .repository.full_name == "metaneutrons/ami-rust" and .event == "workflow_dispatch" and .head_branch == "main" and .head_sha == $head and .path == $workflow and .status == "completed" and .conclusion == $conclusion' \
       "$managed/auth/$key.run.json" >/dev/null || fail 'prerequisite run identity/status differs'
+    if [[ -n "$component_job" ]]; then
+      gh api "repos/metaneutrons/ami-rust/actions/jobs/$job_id" > "$managed/auth/$key.job.json"
+      jq -e --argjson id "$job_id" --argjson run "$run" --argjson attempt "$attempt" \
+        --arg head "$head" --arg name "$job_name" --arg runner "$runner_label" \
+        '.id == $id and .run_id == $run and .run_attempt == $attempt and .head_sha == $head and .head_branch == "main" and .name == $name and .status == "completed" and .conclusion == "success" and (.labels | type == "array" and index($runner) != null)' \
+        "$managed/auth/$key.job.json" >/dev/null || fail 'native Cargo component job identity/status differs'
+    fi
     tree=$(jq -r '.tree // empty' <<<"$row")
     if [[ -n "$tree" ]]; then
       gh api "repos/metaneutrons/ami-rust/git/commits/$head" > "$managed/auth/$key.commit.json"
@@ -170,7 +198,7 @@ stage() {
   local cargo_profile="$source_root/tooling/crates/aros-native-build/pins/$host/cargo.json" producer
   if jq -e '.files | any(.path == "producer.json")' "$cargo_profile" >/dev/null; then
     producer=$(jq -ce '[.files[] | select(.path == "producer.json")] | if length == 1 then .[0] else error("ambiguous producer record") end' "$cargo_profile")
-    # Reproduce the embedded original bytes, then require their exact pinned identity.
+    # Materialize the embedded canonical companion, then verify its pinned bytes.
     jq -S '.producer_identity_spec.record | select(type == "object")' "$cargo_profile" > "$managed/components/cargo/producer.json"
     verify "$managed/components/cargo/producer.json" "$(jq -er '.bytes' <<<"$producer")" "$(jq -er '.sha256' <<<"$producer")"
   fi

@@ -82,8 +82,8 @@ const HOSTS: [HostPins; 3] = [
         cargo_rows: 44,
         historical_cargo_bytes: 32_170_408,
         historical_cargo_sha256: "37e07284393e4c979d0cf8d0efc62e4c29b64424a0d10123a616aec790056333",
-        native_cargo_bytes: 39_348_200,
-        native_cargo_sha256: "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d",
+        native_cargo_bytes: 38_204_560,
+        native_cargo_sha256: "671bc15372da8d9abfe15dadbcc4ac00c61fe2f16c1fad86361dc8bcc99396e3",
     },
     HostPins {
         name: "linux-x86_64",
@@ -98,8 +98,8 @@ const HOSTS: [HostPins; 3] = [
         cargo_rows: 44,
         historical_cargo_bytes: 36_137_048,
         historical_cargo_sha256: "21c38ae0b341e88245fc0cd7afc0a28ff51183d3459f05a4c41aec254b06cb45",
-        native_cargo_bytes: 48_110_632,
-        native_cargo_sha256: "938bc3ee1f60b5f239d369a9f3b6bf1a6e004aecdb6ef65fb7fe901745b011db",
+        native_cargo_bytes: 48_005_520,
+        native_cargo_sha256: "de46b26c6ef3ba7bb76da12f8b757c08c6d9c1a59c5b1abfb9c513293499cd3e",
     },
     HostPins {
         name: "linux-aarch64",
@@ -114,8 +114,8 @@ const HOSTS: [HostPins; 3] = [
         cargo_rows: 44,
         historical_cargo_bytes: 35_521_536,
         historical_cargo_sha256: "44a4f14309e8d807e9e514f2c3b95be5ec0717887b5e6edadf112b8f7235c371",
-        native_cargo_bytes: 45_863_336,
-        native_cargo_sha256: "2f8a507ec5bef7fe41a04c18aee06e359ff7f3b70d17d98007c9014114e17d9b",
+        native_cargo_bytes: 46_166_136,
+        native_cargo_sha256: "a11faf3989f239c89b972aba79bc713755607605e4535d919c3af042d6790f9c",
     },
 ];
 

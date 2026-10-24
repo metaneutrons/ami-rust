@@ -5,6 +5,14 @@ set -euo pipefail
 umask 077
 
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
+# Exercise both the historical whole-run contract and explicit per-host jobs.
+if [[ ${AMI_RUST_AUTH_FIXTURE_VARIANT:-all} == all ]]; then
+  AMI_RUST_AUTH_FIXTURE_VARIANT=legacy bash "$0"
+  AMI_RUST_AUTH_FIXTURE_VARIANT=component bash "$0"
+  AMI_RUST_AUTH_FIXTURE_VARIANT=component-success bash "$0"
+  exit 0
+fi
+case "$AMI_RUST_AUTH_FIXTURE_VARIANT" in legacy|component|component-success) ;; *) fail 'unknown fixture variant' ;; esac
 for tool in bash git jq zip shasum unzip awk wc date cmp grep mktemp rm mkdir uname dd; do
   command -v "$tool" >/dev/null || fail "missing test prerequisite: $tool"
 done
@@ -87,6 +95,25 @@ jq -n --arg host "$host" --arg triple "$triple" \
   '{schema:"ami-rust-native-cargo-consumer-inputs-v1",hosts:{($host):{rust_host_triple:$triple}}}' \
   > "$source_fixture/release/native-cargo-consumer-inputs.json"
 
+if [[ "$AMI_RUST_AUTH_FIXTURE_VARIANT" == component* ]]; then
+  case "$host" in
+    macos-aarch64) component_runner=macos-26 ;;
+    linux-x86_64) component_runner=ubuntu-24.04 ;;
+    linux-aarch64) component_runner=ubuntu-24.04-arm ;;
+  esac
+  component_conclusion=failure
+  [[ "$AMI_RUST_AUTH_FIXTURE_VARIANT" != component-success ]] || component_conclusion=success
+  jq --arg host "$host" --arg triple "$triple" --arg runner "$component_runner" --arg conclusion "$component_conclusion" \
+    '.native_cargo as $common |
+     .native_cargo.hosts[$host] += {run_id:$common.run_id,attempt:$common.attempt,head:$common.head,tree:$common.tree,
+       component_job:{id:90101,name:("Native " + $triple),runner_label:$runner,run_conclusion:$conclusion}} |
+     .native_cargo.run_id = 70000 | .native_cargo.attempt = 99 |
+     .native_cargo.head = "0000000000000000000000000000000000000000" |
+     .native_cargo.tree = "0000000000000000000000000000000000000000"' \
+    "$source_fixture/release/native-cargo-qualification-prerequisites.json" > "$test_root/component-pins.json"
+  command mv "$test_root/component-pins.json" "$source_fixture/release/native-cargo-qualification-prerequisites.json"
+fi
+
 fixture_key_fields() {
   case "$1" in
     native_cargo)
@@ -111,7 +138,10 @@ write_fixture_json() {
   printf '%s\n' "$value" > "$file"
 }
 
-cases='positive wrong_repository wrong_head wrong_attempt wrong_digest expired malformed_run wrong_source_tree wrong_zip'
+cases='positive wrong_repository wrong_head wrong_attempt wrong_digest expired malformed_run wrong_source_tree wrong_zip wrong_run_conclusion'
+if [[ "$AMI_RUST_AUTH_FIXTURE_VARIANT" == component* ]]; then
+  cases="$cases wrong_job_id wrong_job_run wrong_job_attempt wrong_job_head wrong_job_branch wrong_job_name wrong_job_runner pending_job failed_job skipped_job"
+fi
 keys='native_cargo bare_target_libraries'
 [[ "$host" != linux-aarch64 ]] || keys="$keys linux_aarch64_csdk"
 for fixture_case in $cases; do
@@ -120,6 +150,11 @@ for fixture_case in $cases; do
     run_repository=metaneutrons/ami-rust
     run_head=$FIXTURE_HEAD
     run_attempt=2
+    run_conclusion=success
+    if [[ "$key" == native_cargo && "$AMI_RUST_AUTH_FIXTURE_VARIANT" == component* ]]; then run_conclusion=$component_conclusion; fi
+    if [[ "$fixture_case" == wrong_run_conclusion && "$key" == native_cargo ]]; then
+      if [[ "$run_conclusion" == success ]]; then run_conclusion=failure; else run_conclusion=success; fi
+    fi
     artifact_digest="sha256:$FIXTURE_ZIP_SHA"
     expired=false
     if [[ "$fixture_case" == wrong_repository && "$key" == native_cargo ]]; then run_repository=another/repository; fi
@@ -128,8 +163,8 @@ for fixture_case in $cases; do
     if [[ "$fixture_case" == wrong_digest && "$key" == native_cargo ]]; then artifact_digest="sha256:$(printf '%064d' 0 | tr '0' '0')"; fi
     if [[ "$fixture_case" == expired && "$key" == native_cargo ]]; then expired=true; fi
     run_json=$(jq -n --argjson id "$FIXTURE_RUN" --argjson attempt "$run_attempt" --arg repository "$run_repository" \
-      --arg head "$run_head" --arg workflow "$FIXTURE_WORKFLOW" \
-      '{id:$id,run_attempt:$attempt,repository:{full_name:$repository},event:"workflow_dispatch",head_branch:"main",head_sha:$head,path:$workflow,status:"completed",conclusion:"success"}')
+      --arg head "$run_head" --arg workflow "$FIXTURE_WORKFLOW" --arg conclusion "$run_conclusion" \
+      '{id:$id,run_attempt:$attempt,repository:{full_name:$repository},event:"workflow_dispatch",head_branch:"main",head_sha:$head,path:$workflow,status:"completed",conclusion:$conclusion}')
     commit_tree=$FIXTURE_TREE
     if [[ "$fixture_case" == wrong_source_tree && "$key" == native_cargo ]]; then commit_tree=$(printf '%040d' 0 | tr '0' '8'); fi
     if [[ -n "$FIXTURE_TREE" ]]; then
@@ -140,6 +175,23 @@ for fixture_case in $cases; do
       --argjson bytes "$FIXTURE_ZIP_BYTES" --arg digest "$artifact_digest" --argjson expired "$expired" \
       --argjson run "$FIXTURE_RUN" --arg head "$FIXTURE_HEAD" \
       '{id:$id,name:$name,size_in_bytes:$bytes,digest:$digest,expired:$expired,workflow_run:{id:$run,head_sha:$head}}')
+    if [[ "$key" == native_cargo && "$AMI_RUST_AUTH_FIXTURE_VARIANT" == component* ]]; then
+      job_json=$(jq -n --arg head "$FIXTURE_HEAD" --arg triple "$triple" --arg runner "$component_runner" \
+        '{id:90101,run_id:70101,run_attempt:2,head_sha:$head,head_branch:"main",name:("Native " + $triple),labels:[$runner],status:"completed",conclusion:"success"}')
+      case "$fixture_case" in
+        wrong_job_id) job_json=$(jq '.id = 90102' <<<"$job_json") ;;
+        wrong_job_run) job_json=$(jq '.run_id = 70102' <<<"$job_json") ;;
+        wrong_job_attempt) job_json=$(jq '.run_attempt = 3' <<<"$job_json") ;;
+        wrong_job_head) job_json=$(jq '.head_sha = "ffffffffffffffffffffffffffffffffffffffff"' <<<"$job_json") ;;
+        wrong_job_branch) job_json=$(jq '.head_branch = "another-branch"' <<<"$job_json") ;;
+        wrong_job_name) job_json=$(jq '.name = "Native another-host"' <<<"$job_json") ;;
+        wrong_job_runner) job_json=$(jq '.labels = ["another-runner"]' <<<"$job_json") ;;
+        pending_job) job_json=$(jq '.status = "in_progress" | .conclusion = null' <<<"$job_json") ;;
+        failed_job) job_json=$(jq '.conclusion = "failure"' <<<"$job_json") ;;
+        skipped_job) job_json=$(jq '.conclusion = "skipped"' <<<"$job_json") ;;
+      esac
+      write_fixture_json "$fixture_data/$fixture_case/$key.job.json" "$job_json"
+    fi
     write_fixture_json "$fixture_data/$fixture_case/$key.run.json" "$run_json"
     write_fixture_json "$fixture_data/$fixture_case/$key.artifact.json" "$artifact_json"
     zip_source="$fixture_data/bare-target-libraries.zip"
@@ -171,6 +223,7 @@ endpoint=$2
 printf '%s\n' "$endpoint" >> "$GH_CALL_LOG"
 case "$endpoint" in
   repos/metaneutrons/ami-rust/actions/runs/70101) key=native_cargo; kind=run ;;
+  repos/metaneutrons/ami-rust/actions/jobs/90101) key=native_cargo; kind=job ;;
   repos/metaneutrons/ami-rust/actions/runs/70102) key=bare_target_libraries; kind=run ;;
   repos/metaneutrons/ami-rust/actions/runs/70103) key=linux_aarch64_csdk; kind=run ;;
   repos/metaneutrons/ami-rust/git/commits/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) key=native_cargo; kind=commit ;;
@@ -254,6 +307,10 @@ for key in native_cargo bare_target_libraries; do
   cmp -s "$success_root/auth/$key.artifact.json" "$fixture_data/positive/$key.artifact.json" || fail "$key artifact identity was not retained exactly"
   cmp -s "$success_root/downloads/$key.zip" "$fixture_data/positive/$key.zip" || fail "$key ZIP bytes differ from the authenticated fixture"
 done
+if [[ "$AMI_RUST_AUTH_FIXTURE_VARIANT" == component* ]]; then
+  cmp -s "$success_root/auth/native_cargo.job.json" "$fixture_data/positive/native_cargo.job.json" || fail 'component job metadata was not retained exactly'
+  jq -e --arg conclusion "$component_conclusion" '.conclusion == $conclusion' "$success_root/auth/native_cargo.run.json" >/dev/null || fail 'component parent conclusion was relabelled'
+fi
 if [[ "$host" == linux-aarch64 ]]; then
   key=linux_aarch64_csdk
   cmp -s "$success_root/auth/$key.run.json" "$fixture_data/positive/$key.run.json" || fail 'CSDK run identity was not retained exactly'
@@ -262,11 +319,16 @@ if [[ "$host" == linux-aarch64 ]]; then
 fi
 [[ ! -s "$CURL_CALL_LOG" ]] || fail 'authentication unexpectedly used curl/download transport'
 
-for rejected in wrong_repository wrong_head wrong_attempt wrong_digest expired malformed_run wrong_source_tree; do
+rejected_cases='wrong_repository wrong_head wrong_attempt wrong_digest expired malformed_run wrong_source_tree wrong_run_conclusion'
+if [[ "$AMI_RUST_AUTH_FIXTURE_VARIANT" == component* ]]; then
+  rejected_cases="$rejected_cases wrong_job_id wrong_job_run wrong_job_attempt wrong_job_head wrong_job_branch wrong_job_name wrong_job_runner pending_job failed_job skipped_job"
+fi
+for rejected in $rejected_cases; do
   if run_auth "$rejected"; then fail "$rejected metadata was unexpectedly accepted"; fi
   assert_no_zip_fetch "$rejected"
   case "$rejected" in
-    wrong_repository|wrong_head|wrong_attempt) diagnostic='prerequisite run identity/status differs' ;;
+    wrong_repository|wrong_head|wrong_attempt|wrong_run_conclusion) diagnostic='prerequisite run identity/status differs' ;;
+    wrong_job_*|pending_job|failed_job|skipped_job) diagnostic='native Cargo component job identity/status differs' ;;
     wrong_digest|expired) diagnostic='prerequisite artifact metadata differs' ;;
     wrong_source_tree) diagnostic='prerequisite source tree differs' ;;
     malformed_run) diagnostic='parse error' ;;

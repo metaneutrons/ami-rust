@@ -10,7 +10,7 @@
     },
     "bare_target_libraries_inputs": {
       "path": "release/bare-target-libraries-inputs.json",
-      "sha256": "d932be30b3f88ca6c77010d6f96e0449273970864250569b49cd6d391e37d1c2",
+      "sha256": "3887976912a7cc67d207bcb17c207ddf2521daef0d810c5daaaf7c9c2814eb79",
       "role": "ARM64 rustc, rust-std, and rust-src rows.",
       "note": "Existing checked-in input authority; all three rows cross-check against retained signed archive metadata.",
       "scope": "repository"

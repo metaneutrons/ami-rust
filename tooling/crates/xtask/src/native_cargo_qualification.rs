@@ -38,7 +38,7 @@ const RESULT_SCHEMA: &str = "ami-rust-native-cargo-qualification-result-v1";
 const PREREQUISITES: &[u8] =
     include_bytes!("../../../../release/native-cargo-qualification-prerequisites.json");
 const PREREQUISITES_SHA256: &str =
-    "5297b2dc7418325a7b2df734f28d1358c400a7b2f9b04aceb3283334d67930a9";
+    "31487c9232b9ec7383d33f5ff3b2798a21b28ce85af68c9ebb8b565df041ccf6";
 const VENDOR_BYTES: u64 = 2_331_800;
 const VENDOR_SHA256: &str = "dea3c4d945f31406cdfe824581592a9253f1afcffe8423e8a1bc9f528b2267b0";
 const VENDOR_SOURCE_LOCKS: [(&str, &str); 2] = [

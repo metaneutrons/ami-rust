@@ -23,7 +23,7 @@ case "$cli_host_key" in
     cli_host_triple='aarch64-apple-darwin'
     cli_expected_profile='tooling/crates/aros-native-build/pins/macos-aarch64/rust.json'
     cli_expected_profile_sha='9acf02ab3d4a22137b6c5f82294e35c518ff1ffdbad5a701d5f3cdb0910668ea'
-    cli_expected_cargo_id='12414197369'
+    cli_expected_cargo_id='12559051826'
     cli_expected_cargo_arch='arm64'
     cli_expected_cargo_format='Mach-O'
     ;;
@@ -31,7 +31,7 @@ case "$cli_host_key" in
     cli_host_triple='x86_64-unknown-linux-gnu'
     cli_expected_profile='tooling/crates/aros-native-build/pins/linux-x86_64/rust.json'
     cli_expected_profile_sha='7a88373f28d19d6d61494587240681999adfb2bec964b4c3d74fae9718f097e8'
-    cli_expected_cargo_id='12412803262'
+    cli_expected_cargo_id='12556876494'
     cli_expected_cargo_arch='x86_64'
     cli_expected_cargo_format='ELF'
     ;;
@@ -39,7 +39,7 @@ case "$cli_host_key" in
     cli_host_triple='aarch64-unknown-linux-gnu'
     cli_expected_profile='release/bare-target-libraries/linux-aarch64-rust.json'
     cli_expected_profile_sha='862be6c4c1d29c59fc774e2d38f046672fcd0aa0978a869be9af2752fb4f76ee'
-    cli_expected_cargo_id='12412418782'
+    cli_expected_cargo_id='12556322768'
     cli_expected_cargo_arch='aarch64'
     cli_expected_cargo_format='ELF'
     ;;
@@ -96,13 +96,15 @@ cli_sha256_file() {
 }
 cli_file_bytes() { wc -c < "$1" | tr -d '[:space:]'; }
 
-cli_expected_manifest_sha='d932be30b3f88ca6c77010d6f96e0449273970864250569b49cd6d391e37d1c2'
+cli_expected_manifest_sha='3887976912a7cc67d207bcb17c207ddf2521daef0d810c5daaaf7c9c2814eb79'
 cli_manifest_bytes=$(cli_file_bytes "$cli_manifest")
 cli_manifest_sha=$(cli_sha256_file "$cli_manifest")
-[[ "$cli_manifest_bytes" == '20020' && "$cli_manifest_sha" == "$cli_expected_manifest_sha" ]] || cli_fail 'frozen bare-target input manifest size or SHA-256 mismatch'
+[[ "$cli_manifest_bytes" == '20060' && "$cli_manifest_sha" == "$cli_expected_manifest_sha" ]] || cli_fail 'frozen bare-target input manifest size or SHA-256 mismatch'
 jq -e '
-  .schema == "ami-rust-bare-target-libraries-inputs-proposal-v1" and
+  .schema == "ami-rust-bare-target-libraries-inputs-proposal-v2" and
   .status == "PROPOSAL_ONLY_INTERNAL_PRODUCER_INPUTS_NOT_ADMITTED" and
+  (has("native_cargo_run") | not) and
+  (has("duplicate_artifacts") | not) and
   .target.key == "x86_64-aros" and
   .target.rustc_commit == "330d317121e16b5db8e5adc63595910528ff2ee7" and
   .target.rust_channel == "nightly-2026-09-18" and
@@ -111,12 +113,29 @@ jq -e '
   .component_selection.selected_rust_components == ["rustc","rust-std","rust-src"] and
   (.hosts | length) == 3 and
   ([.hosts[].host] | sort) == ["linux-aarch64","linux-x86_64","macos-aarch64"] and
-  .native_cargo_run.workflow_run_id == 39748078466 and
-  .native_cargo_run.attempt == 1 and
-  .native_cargo_run.head == "f23c369b9eb25de8fb40d6ea409186ac287b4a2e" and
-  .native_cargo_run.tree == "f5a60254769de6eb8a58a374e66b62ffd0531411" and
-  .native_cargo_run.workflow_path == ".github/workflows/cargo-native-prerequisite.yml" and
-  .native_cargo_run.workflow_sha256 == "aaf9311d21e8c97ba983b3769e34ca6863e8039a6816aaa356ccd4b72a0638f3"
+  ([.hosts[] | select(
+    .native_cargo.host != .host or
+    .native_cargo.host_triple != .host_triple or
+    (.native_cargo.producer | type) != "object" or
+    .native_cargo.producer.repository != "metaneutrons/ami-rust" or
+    (.native_cargo.producer.workflow_run_id | type) != "number" or
+    .native_cargo.producer.workflow_run_id < 1 or
+    (.native_cargo.producer.workflow_run_id | floor) != .native_cargo.producer.workflow_run_id or
+    (.native_cargo.producer.attempt | type) != "number" or
+    .native_cargo.producer.attempt < 1 or
+    (.native_cargo.producer.attempt | floor) != .native_cargo.producer.attempt or
+    (.native_cargo.producer.head | test("^[0-9a-f]{40}$") | not) or
+    (.native_cargo.producer.tree | test("^[0-9a-f]{40}$") | not) or
+    .native_cargo.producer.workflow_path != ".github/workflows/cargo-native-prerequisite.yml" or
+    (.native_cargo.producer.workflow_sha256 | test("^[0-9a-f]{64}$") | not) or
+    .native_cargo.artifact_name != ("native-cargo-component-" + .host_triple + "-" + (.native_cargo.producer.workflow_run_id | tostring) + "-" + (.native_cargo.producer.attempt | tostring)) or
+    (.native_cargo.producer.actual_review | type) != "object" or
+    (.native_cargo.producer.actual_review.path | type) != "string" or
+    (.native_cargo.producer.actual_review.path | length) == 0 or
+    (.native_cargo.producer.actual_review.sha256 | test("^[0-9a-f]{64}$") | not) or
+    (.native_cargo.producer.actual_review.verdict | type) != "string" or
+    (.native_cargo.producer.actual_review.verdict | length) == 0
+  )] | length) == 0
 ' "$cli_manifest" >/dev/null || cli_fail 'input manifest schema or fixed source pins are not accepted'
 
 cli_host_row=$(jq -ce --arg host "$cli_host_key" '
@@ -167,9 +186,12 @@ cli_cargo_row=$(jq -ce --arg host "$cli_host_key" '
   [.hosts[] | select(.host == $host)][0].native_cargo
 ' "$cli_manifest") || cli_fail 'native Cargo artifact row is missing'
 jq -e --arg host "$cli_host_key" '
-  ([.native_cargo_run.artifacts[] | select(.host == $host)] | length) == 1 and
-  ([.native_cargo_run.artifacts[] | select(.host == $host)][0] == [.hosts[] | select(.host == $host)][0].native_cargo)
-' "$cli_manifest" >/dev/null || cli_fail 'host Cargo row does not match the bound CI run artifact'
+  ([.hosts[] | select(.host == $host)] | length) == 1 and
+  ([.hosts[] | select(.host == $host)][0] as $row |
+    $row.native_cargo.host == $host and
+    $row.native_cargo.host_triple == $row.host_triple and
+    $row.native_cargo.producer.workflow_path == ".github/workflows/cargo-native-prerequisite.yml")
+' "$cli_manifest" >/dev/null || cli_fail 'host Cargo row does not match its per-host producer binding'
 cli_cargo_id=$(jq -er '.artifact_id' <<<"$cli_cargo_row")
 cli_cargo_triple=$(jq -er '.host_triple' <<<"$cli_cargo_row")
 cli_cargo_zip_bytes=$(jq -er '.artifact_zip.bytes' <<<"$cli_cargo_row")
