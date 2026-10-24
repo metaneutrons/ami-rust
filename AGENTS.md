@@ -144,3 +144,14 @@ AROS `std`/OS support, native compiler/Cargo and rustup/distribution work. It is
 not established by a rustup alias on macOS/Linux or by copying Linux ARM64
 binaries onto AROS. See `docs/platform-roadmap.md`. Do not add a public ami-rust
 CLI, alter the current ABI-v1/QEMU baseline, or edit protected AROS checkouts.
+
+Prospective evidence retention, 2026-10-24: `release/ci-artifact-policy.json`
+now reserves a 4,096 MiB shared pool for the complete remaining Cargo,
+bare-target-library and native-consumer chain. The first Cargo run showed that
+a later matrix host sees earlier uploads while conservatively reserving the
+whole producer matrix again. Keep the existing 64 MiB consumer and 128 MiB
+producer limits and all command budgets. The native Cargo workflow accepts a
+host selection so an accepted protected component from another host can be
+retained and reused; every reused artifact still needs its own provenance and
+input verification. Historical receipts and the qualified AROS baseline stay
+immutable.
