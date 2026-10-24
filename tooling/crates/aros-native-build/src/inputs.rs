@@ -969,7 +969,7 @@ mod tests {
             ),
             (
                 "cargo",
-                "857d1fa31e24d23c6792f79471a454dcdd644e01f18e3dec9b2cb78314e1da87",
+                "cda53b294ab30c94930b54f8ac9c5472c17d7fb480beeb14472a92fdf0535103",
                 arm.cargo,
             ),
             (
@@ -1009,12 +1009,13 @@ mod tests {
         let pins = Pins::for_host("linux-aarch64").unwrap();
         assert_eq!(pins.rust.files.len(), 3882);
         assert_eq!(pins.rust.symlinks.len(), 2);
-        assert_eq!(pins.cargo.files.len(), 1);
+        assert_eq!(pins.cargo.files.len(), 2);
+        assert_eq!(pins.cargo.files[1].path, "producer.json");
         assert_eq!(pins.cargo.files[0].path, "bin/cargo");
-        assert_eq!(pins.cargo.files[0].bytes, 45863336);
+        assert_eq!(pins.cargo.files[0].bytes, 46166136);
         assert_eq!(
             pins.cargo.files[0].sha256,
-            "2f8a507ec5bef7fe41a04c18aee06e359ff7f3b70d17d98007c9014114e17d9b"
+            "a11faf3989f239c89b972aba79bc713755607605e4535d919c3af042d6790f9c"
         );
         assert_eq!(pins.collector.files.len(), 10);
         assert_eq!(pins.llvm.files.len(), 2754);
@@ -1041,7 +1042,7 @@ mod tests {
                 "macos-aarch64",
                 [
                     "02eecb396c56bd134cb4dc732d30898b03ab9a84ad1143f5d09c0a6b25fc466e",
-                    "2f081118d19e93b95304c95440d82d1f3d022fb063e4ae7ad1b89285ceddbe39",
+                    "db628732266dd8927ef64c9ecdf4ca87e3fac3b0dea68765f2d8702ff837afb1",
                     "34e7e069a72ac84d980f15c797b4250f324eee19088f55d135c9e4eafa0d88de",
                     "28237af9576e852451fcdf0470a904edb34a70232feb41d0c56be246313baadf",
                     "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337",
@@ -1051,7 +1052,7 @@ mod tests {
                 "linux-x86_64",
                 [
                     "7a88373f28d19d6d61494587240681999adfb2bec964b4c3d74fae9718f097e8",
-                    "85f5bb754c7f11429dc1a58a2adc1256b9ad4da1f7a47926629e1f94dd92ead8",
+                    "5525b66ce482af4c68429654f0e7fc41fa63098c7aca5794af96b8aca7dbf062",
                     "0e97967a63d6ec868edcf26e2b2c08a9c36a292416aa0f7ae016564369551caa",
                     "a68f0d3d6b6d9e9678dca0af25b083d6b00f67fd4f806adcb6a2e16af1a19a6d",
                     "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337",

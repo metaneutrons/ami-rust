@@ -30,12 +30,12 @@
       "host": "macos-aarch64",
       "host_triple": "aarch64-apple-darwin",
       "native_cargo": {
-        "artifact_id": 12414197369,
-        "artifact_name": "native-cargo-component-aarch64-apple-darwin-39748078466-1",
+        "artifact_id": 12559051826,
+        "artifact_name": "native-cargo-component-aarch64-apple-darwin-40089115388-1",
         "artifact_zip": {
-          "bytes": 46025674,
-          "evidence_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/12414197369.zip",
-          "sha256": "c41f56dfe3e6a3d7e3c1bf0e7934e939585ed157b507dd87dc54079a79fd41ce"
+          "bytes": 44862463,
+          "evidence_path": "evidence/rc1-native-qualification-flow-20261019/rc2-remaining-controls-local-20261024-a1/protected-macos-cargo-prerequisite-a1/artifacts/native-cargo-component-aarch64-apple-darwin-40089115388-1.zip",
+          "sha256": "29dc70f7fa2ada59abcab817b6d894af5525d9d6da1d6732f838abcbc84d34a3"
         },
         "binary_architecture": "arm64",
         "binary_format": "Mach-O",
@@ -44,13 +44,34 @@
         "host": "macos-aarch64",
         "host_triple": "aarch64-apple-darwin",
         "member": {
-          "bytes": 39348200,
+          "bytes": 38204560,
           "path": "cargo",
-          "sha256": "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d",
+          "sha256": "671bc15372da8d9abfe15dadbcc4ac00c61fe2f16c1fad86361dc8bcc99396e3",
           "unique_count": 1
         },
-        "retrieval_metadata_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/retrieval.json",
-        "review_metadata_path": "rc4-native-three-host-cargo-producer-actual-review-a2/review.json",
+        "producer": {
+          "actual_review": {
+            "claim_boundary": "Prerequisite component only; not SDK/RC/L1/release acceptance.",
+            "path": "evidence/rc1-native-qualification-flow-20261019/rc2-remaining-controls-local-20261024-a1/protected-macos-cargo-prerequisite-a1/independent-macos-artifacts-review-a1.json",
+            "sha256": "215121ef7c21f1dfae59853efec0dd70b6d15cbc418d84ba309c855bdd0fb42e",
+            "verdict": "PASS_MACOS_CARGO_COMPONENT_PREREQUISITE"
+          },
+          "attempt": 1,
+          "component_job": {
+            "id": 120857976530,
+            "name": "Native aarch64-apple-darwin",
+            "run_conclusion": "success",
+            "runner_label": "macos-26"
+          },
+          "head": "e845cf88e89be929deb7799f0db4161d93bba890",
+          "repository": "metaneutrons/ami-rust",
+          "tree": "408e232e6889cd6c84c217eef297157547399cae",
+          "workflow_path": ".github/workflows/cargo-native-prerequisite.yml",
+          "workflow_run_id": 40089115388,
+          "workflow_sha256": "eb620b5c4622b824c1f765fd1ed09f46c2449b1449d22f99ba9bc7eb25a75e35"
+        },
+        "retrieval_metadata_path": "evidence/rc1-native-qualification-flow-20261019/rc2-remaining-controls-local-20261024-a1/protected-macos-cargo-prerequisite-a1/artifact-provider-readback.json",
+        "review_metadata_path": "evidence/rc1-native-qualification-flow-20261019/rc2-remaining-controls-local-20261024-a1/protected-macos-cargo-prerequisite-a1/independent-macos-artifacts-review-a1.json",
         "runner_label": "macos-26"
       },
       "official_cargo_profile_row_excluded": {
@@ -105,12 +126,12 @@
       "host": "linux-x86_64",
       "host_triple": "x86_64-unknown-linux-gnu",
       "native_cargo": {
-        "artifact_id": 12412803262,
-        "artifact_name": "native-cargo-component-x86_64-unknown-linux-gnu-39748078466-1",
+        "artifact_id": 12556876494,
+        "artifact_name": "native-cargo-component-x86_64-unknown-linux-gnu-40083672447-1",
         "artifact_zip": {
-          "bytes": 54643384,
-          "evidence_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/12412803262.zip",
-          "sha256": "cd8b174bb32b73797522c9b07077bcda5e310a52eed65fae3506f0c223a299e9"
+          "bytes": 54538145,
+          "evidence_path": "evidence/rc1-native-qualification-flow-20261019/rc2-cargo-controls-local-20261024-a1/protected-prerequisite-readiness-a1/artifacts/native-cargo-component-x86_64-unknown-linux-gnu-40083672447-1.zip",
+          "sha256": "38dcb9759b4fa69ff7f92c876141531e2f7807ce14662ad25711bb1ac15cd555"
         },
         "binary_architecture": "x86_64",
         "binary_format": "ELF",
@@ -119,13 +140,34 @@
         "host": "linux-x86_64",
         "host_triple": "x86_64-unknown-linux-gnu",
         "member": {
-          "bytes": 48110632,
+          "bytes": 48005520,
           "path": "cargo",
-          "sha256": "938bc3ee1f60b5f239d369a9f3b6bf1a6e004aecdb6ef65fb7fe901745b011db",
+          "sha256": "de46b26c6ef3ba7bb76da12f8b757c08c6d9c1a59c5b1abfb9c513293499cd3e",
           "unique_count": 1
         },
-        "retrieval_metadata_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/retrieval.json",
-        "review_metadata_path": "rc4-native-three-host-cargo-producer-actual-review-a2/review.json",
+        "producer": {
+          "actual_review": {
+            "claim_boundary": "Prerequisite component only; not SDK/RC/L1/release acceptance.",
+            "path": "evidence/rc1-native-qualification-flow-20261019/rc2-cargo-controls-local-20261024-a1/protected-prerequisite-readiness-a1/independent-linux-artifacts-review-a1.json",
+            "sha256": "0a4ad55f2ca9afc6e8b84045be3deeb78e988cd45ef37f757ce8e6285268b8fc",
+            "verdict": "PASS_LINUX_COMPONENT_PREREQUISITE_ARTIFACTS"
+          },
+          "attempt": 1,
+          "component_job": {
+            "id": 120842151211,
+            "name": "Native x86_64-unknown-linux-gnu",
+            "run_conclusion": "failure",
+            "runner_label": "ubuntu-24.04"
+          },
+          "head": "d53aba8270cdb96f1c76ac75db7d34d31945dd07",
+          "repository": "metaneutrons/ami-rust",
+          "tree": "82bb4d2738524c487986e9dd8c9300064f64c9da",
+          "workflow_path": ".github/workflows/cargo-native-prerequisite.yml",
+          "workflow_run_id": 40083672447,
+          "workflow_sha256": "522dd6111bd803167d422c3770ccf08c34d56da771afeb26ee4f93e5dc95ec14"
+        },
+        "retrieval_metadata_path": "evidence/rc1-native-qualification-flow-20261019/rc2-cargo-controls-local-20261024-a1/protected-prerequisite-readiness-a1/artifact-provider-readback.json",
+        "review_metadata_path": "evidence/rc1-native-qualification-flow-20261019/rc2-cargo-controls-local-20261024-a1/protected-prerequisite-readiness-a1/independent-linux-artifacts-review-a1.json",
         "runner_label": "ubuntu-24.04"
       },
       "official_cargo_profile_row_excluded": {
@@ -180,12 +222,12 @@
       "host": "linux-aarch64",
       "host_triple": "aarch64-unknown-linux-gnu",
       "native_cargo": {
-        "artifact_id": 12412418782,
-        "artifact_name": "native-cargo-component-aarch64-unknown-linux-gnu-39748078466-1",
+        "artifact_id": 12556322768,
+        "artifact_name": "native-cargo-component-aarch64-unknown-linux-gnu-40083672447-1",
         "artifact_zip": {
-          "bytes": 52392807,
-          "evidence_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/12412418782.zip",
-          "sha256": "d86f474fdf12d62a2a7cda0b1027bcf966d977c661950287045c86fdbfd7a8cf"
+          "bytes": 52697792,
+          "evidence_path": "evidence/rc1-native-qualification-flow-20261019/rc2-cargo-controls-local-20261024-a1/protected-prerequisite-readiness-a1/artifacts/native-cargo-component-aarch64-unknown-linux-gnu-40083672447-1.zip",
+          "sha256": "c10a93bcf7b3e2a4933b83ac92b3aadc5c8942c310c63ba0825b6b03e12ccbe7"
         },
         "binary_architecture": "aarch64",
         "binary_format": "ELF",
@@ -194,13 +236,34 @@
         "host": "linux-aarch64",
         "host_triple": "aarch64-unknown-linux-gnu",
         "member": {
-          "bytes": 45863336,
+          "bytes": 46166136,
           "path": "cargo",
-          "sha256": "2f8a507ec5bef7fe41a04c18aee06e359ff7f3b70d17d98007c9014114e17d9b",
+          "sha256": "a11faf3989f239c89b972aba79bc713755607605e4535d919c3af042d6790f9c",
           "unique_count": 1
         },
-        "retrieval_metadata_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/retrieval.json",
-        "review_metadata_path": "rc4-native-three-host-cargo-producer-actual-review-a2/review.json",
+        "producer": {
+          "actual_review": {
+            "claim_boundary": "Prerequisite component only; not SDK/RC/L1/release acceptance.",
+            "path": "evidence/rc1-native-qualification-flow-20261019/rc2-cargo-controls-local-20261024-a1/protected-prerequisite-readiness-a1/independent-linux-artifacts-review-a1.json",
+            "sha256": "0a4ad55f2ca9afc6e8b84045be3deeb78e988cd45ef37f757ce8e6285268b8fc",
+            "verdict": "PASS_LINUX_COMPONENT_PREREQUISITE_ARTIFACTS"
+          },
+          "attempt": 1,
+          "component_job": {
+            "id": 120842151046,
+            "name": "Native aarch64-unknown-linux-gnu",
+            "run_conclusion": "failure",
+            "runner_label": "ubuntu-24.04-arm"
+          },
+          "head": "d53aba8270cdb96f1c76ac75db7d34d31945dd07",
+          "repository": "metaneutrons/ami-rust",
+          "tree": "82bb4d2738524c487986e9dd8c9300064f64c9da",
+          "workflow_path": ".github/workflows/cargo-native-prerequisite.yml",
+          "workflow_run_id": 40083672447,
+          "workflow_sha256": "522dd6111bd803167d422c3770ccf08c34d56da771afeb26ee4f93e5dc95ec14"
+        },
+        "retrieval_metadata_path": "evidence/rc1-native-qualification-flow-20261019/rc2-cargo-controls-local-20261024-a1/protected-prerequisite-readiness-a1/artifact-provider-readback.json",
+        "review_metadata_path": "evidence/rc1-native-qualification-flow-20261019/rc2-cargo-controls-local-20261024-a1/protected-prerequisite-readiness-a1/independent-linux-artifacts-review-a1.json",
         "runner_label": "ubuntu-24.04-arm"
       },
       "official_cargo_profile_row_excluded": {
@@ -257,102 +320,13 @@
       }
     }
   ],
-  "native_cargo_run": {
-    "actual_review": {
-      "claim_boundary": "PREREQUISITE_ONLY; not SDK qualification, complete package delivery, runtime matrix, RC acceptance, or Python-retirement proof.",
-      "path": "rc4-native-three-host-cargo-producer-actual-review-a2/review.json",
-      "sha256": "d6ab32fdeecacbe88d19bd2bb18282586312cda53a3236c04bc1287b803da9e8",
-      "verdict": "PASS_NARROW_THREE_HOST_PREREQUISITE_WITH_EXPLICIT_EVIDENCE_GAPS"
-    },
-    "artifacts": [
-      {
-        "artifact_id": 12414197369,
-        "artifact_name": "native-cargo-component-aarch64-apple-darwin-39748078466-1",
-        "artifact_zip": {
-          "bytes": 46025674,
-          "evidence_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/12414197369.zip",
-          "sha256": "c41f56dfe3e6a3d7e3c1bf0e7934e939585ed157b507dd87dc54079a79fd41ce"
-        },
-        "binary_architecture": "arm64",
-        "binary_format": "Mach-O",
-        "cargo_source_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
-        "cargo_version": "cargo 1.99.0 (3efb1f477 2026-07-17)",
-        "host": "macos-aarch64",
-        "host_triple": "aarch64-apple-darwin",
-        "member": {
-          "bytes": 39348200,
-          "path": "cargo",
-          "sha256": "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d",
-          "unique_count": 1
-        },
-        "retrieval_metadata_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/retrieval.json",
-        "review_metadata_path": "rc4-native-three-host-cargo-producer-actual-review-a2/review.json",
-        "runner_label": "macos-26"
-      },
-      {
-        "artifact_id": 12412803262,
-        "artifact_name": "native-cargo-component-x86_64-unknown-linux-gnu-39748078466-1",
-        "artifact_zip": {
-          "bytes": 54643384,
-          "evidence_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/12412803262.zip",
-          "sha256": "cd8b174bb32b73797522c9b07077bcda5e310a52eed65fae3506f0c223a299e9"
-        },
-        "binary_architecture": "x86_64",
-        "binary_format": "ELF",
-        "cargo_source_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
-        "cargo_version": "cargo 1.99.0 (3efb1f477 2026-07-17)",
-        "host": "linux-x86_64",
-        "host_triple": "x86_64-unknown-linux-gnu",
-        "member": {
-          "bytes": 48110632,
-          "path": "cargo",
-          "sha256": "938bc3ee1f60b5f239d369a9f3b6bf1a6e004aecdb6ef65fb7fe901745b011db",
-          "unique_count": 1
-        },
-        "retrieval_metadata_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/retrieval.json",
-        "review_metadata_path": "rc4-native-three-host-cargo-producer-actual-review-a2/review.json",
-        "runner_label": "ubuntu-24.04"
-      },
-      {
-        "artifact_id": 12412418782,
-        "artifact_name": "native-cargo-component-aarch64-unknown-linux-gnu-39748078466-1",
-        "artifact_zip": {
-          "bytes": 52392807,
-          "evidence_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/12412418782.zip",
-          "sha256": "d86f474fdf12d62a2a7cda0b1027bcf966d977c661950287045c86fdbfd7a8cf"
-        },
-        "binary_architecture": "aarch64",
-        "binary_format": "ELF",
-        "cargo_source_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
-        "cargo_version": "cargo 1.99.0 (3efb1f477 2026-07-17)",
-        "host": "linux-aarch64",
-        "host_triple": "aarch64-unknown-linux-gnu",
-        "member": {
-          "bytes": 45863336,
-          "path": "cargo",
-          "sha256": "2f8a507ec5bef7fe41a04c18aee06e359ff7f3b70d17d98007c9014114e17d9b",
-          "unique_count": 1
-        },
-        "retrieval_metadata_path": "rc4-native-three-host-cargo-producer-success-artifacts-a2/retrieval.json",
-        "review_metadata_path": "rc4-native-three-host-cargo-producer-actual-review-a2/review.json",
-        "runner_label": "ubuntu-24.04-arm"
-      }
-    ],
-    "attempt": 1,
-    "head": "f23c369b9eb25de8fb40d6ea409186ac287b4a2e",
-    "repository": "metaneutrons/ami-rust",
-    "tree": "f5a60254769de6eb8a58a374e66b62ffd0531411",
-    "workflow_path": ".github/workflows/cargo-native-prerequisite.yml",
-    "workflow_run_id": 39748078466,
-    "workflow_sha256": "aaf9311d21e8c97ba983b3769e34ca6863e8039a6816aaa356ccd4b72a0638f3"
-  },
   "provenance_limits": [
     "Mac ARM and Linux x86_64 Rust archive URLs, byte sizes, and SHA-256 values are read from tracked release/ci-sdk-inputs.json. Their compressed rustc/rust-std bodies are not retained in the inspected local evidence; those four archive bodies were not rehashed in this proposal.",
     "Linux ARM rustc and rust-std bodies are retained and byte-rehashed, with metadata bound to the authenticated official channel manifest receipt. The shared rust-src body is retained and byte-rehashed against its signed channel-manifest package row.",
     "The Rust signing receipt records cryptographic signature validity but unknown GPG owner certification. The CI Cargo review is prerequisite-only and retains explicit evidence gaps.",
     "The Linux AArch64 profile remains a byte-preserved prospective candidate; it is not a tracked sealed host profile or host admission."
   ],
-  "schema": "ami-rust-bare-target-libraries-inputs-proposal-v1",
+  "schema": "ami-rust-bare-target-libraries-inputs-proposal-v2",
   "scope": "Prospective internal bare-target Rust library producer inputs; no public package, SDK acceptance, L1/RC acceptance, or publication claim.",
   "status": "PROPOSAL_ONLY_INTERNAL_PRODUCER_INPUTS_NOT_ADMITTED",
   "target": {
