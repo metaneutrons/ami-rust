@@ -14,7 +14,7 @@ from ci_artifact_admission import admit
 
 
 MIB = 1024 ** 2
-POOL = 2048 * MIB
+POOL = json.loads((Path(__file__).parent / "ci-artifact-policy.json").read_text())["CI_artifact_pool_bytes"]
 TEST_ENV = {
     'GITHUB_REPOSITORY': ci_artifact_admission.REPOSITORY,
     'GH_TOKEN': 'fixture-only-token',
@@ -197,14 +197,16 @@ class MainAdmission(unittest.TestCase):
         self.assertEqual(ci_sdk.MAX_OUTPUT_BYTES, 32 * MIB - 64 * 1024)
 
     def test_retained_cargo_target_libraries_and_full_consumer_coexist(self):
-        # Retained API inventory measured once on 2026-10-22; not a live claim.
+        # Preserve the 2026-10-22 measurement under its historical pool.
+        historical_pool = 2048 * MIB
         existing = 670354805
         target_libraries = 3 * 128 * MIB
         consumers = sum(ci_artifact_admission.NATIVE_ARTIFACT_CEILINGS.values())
         page = {'total_count': 1, 'artifacts': [{'id': 1, 'size_in_bytes': existing}]}
         reservation = target_libraries + consumers
+        self.assertEqual(admit([page], historical_pool, reservation)['existing_artifact_bytes'], existing)
+        self.assertEqual(historical_pool - existing - reservation, 604713611)
         self.assertEqual(admit([page], POOL, reservation)['existing_artifact_bytes'], existing)
-        self.assertEqual(POOL - existing - reservation, 604713611)
         with self.assertRaisesRegex(ValueError, 'quota'):
             admit([page], 1280 * MIB, reservation)
 

@@ -12,6 +12,17 @@ on:
         default: three-host-v2
         required: true
 
+      host:
+        description: Native host to qualify; reuse accepted artifacts from other hosts
+        type: choice
+        options:
+          - all
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - aarch64-apple-darwin
+        default: all
+        required: true
+
 permissions:
   contents: read
   actions: read
@@ -23,20 +34,14 @@ concurrency:
 
 jobs:
   native:
-    name: Native ${{ matrix.host.triple }}
-    runs-on: ${{ matrix.host.runner }}
+    name: Native ${{ matrix.triple }}
+    runs-on: ${{ matrix.triple == 'aarch64-apple-darwin' && 'macos-26' || matrix.triple == 'aarch64-unknown-linux-gnu' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
-        host:
-          - triple: x86_64-unknown-linux-gnu
-            runner: ubuntu-24.04
-          - triple: aarch64-unknown-linux-gnu
-            runner: ubuntu-24.04-arm
-          - triple: aarch64-apple-darwin
-            runner: macos-26
+        triple: ${{ inputs.host == 'all' && fromJSON('["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "aarch64-apple-darwin"]') || fromJSON(format('["{0}"]', inputs.host)) }}
     steps:
       - id: preflight
         name: Check protected source and capacity before work
@@ -50,10 +55,23 @@ jobs:
           REF_PROTECTED: ${{ github.ref_protected }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
-          TRIPLE: ${{ matrix.host.triple }}
+          TRIPLE: ${{ matrix.triple }}
+          REQUESTED_HOST: ${{ inputs.host }}
         run: |
           set -euo pipefail
           umask 077
+          case "$REQUESTED_HOST" in
+            all|x86_64-unknown-linux-gnu|aarch64-unknown-linux-gnu|aarch64-apple-darwin) ;;
+            *) echo "unsupported native host selection" >&2; exit 1 ;;
+          esac
+          case "$TRIPLE" in
+            x86_64-unknown-linux-gnu|aarch64-unknown-linux-gnu|aarch64-apple-darwin) ;;
+            *) echo "unsupported native host matrix value" >&2; exit 1 ;;
+          esac
+          if [ "$REQUESTED_HOST" != all ] && [ "$REQUESTED_HOST" != "$TRIPLE" ]; then
+            echo "native host selection differs from matrix" >&2
+            exit 1
+          fi
           campaign_start=$(date +%s)
           attempt="$RUNNER_TEMP/ami-rust-native-cargo/$RUN_ID-$RUN_ATTEMPT/$TRIPLE"
           managed="$attempt/managed"
@@ -200,7 +218,7 @@ jobs:
         if: steps.preflight.outcome == 'success' && steps.checkout.outcome == 'success'
         shell: bash
         env:
-          NATIVE_HOST_TRIPLE: ${{ matrix.host.triple }}
+          NATIVE_HOST_TRIPLE: ${{ matrix.triple }}
           NATIVE_CARGO_RECIPE: ${{ inputs.recipe }}
           NATIVE_EVENT_NAME: ${{ github.event_name }}
           NATIVE_REPOSITORY: ${{ github.repository }}
@@ -227,7 +245,7 @@ jobs:
           PREFLIGHT_OUTCOME: ${{ steps.preflight.outcome }}
           CHECKOUT_OUTCOME: ${{ steps.checkout.outcome }}
           QUALIFY_OUTCOME: ${{ steps.qualify.outcome }}
-          TRIPLE: ${{ matrix.host.triple }}
+          TRIPLE: ${{ matrix.triple }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
           CAMPAIGN_START_EPOCH: ${{ env.NATIVE_CAMPAIGN_START_EPOCH }}
@@ -328,8 +346,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: native-cargo-component-${{ matrix.host.triple }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/ami-rust-native-cargo/${{ github.run_id }}-${{ github.run_attempt }}/${{ matrix.host.triple }}/outer-output/artifact/
+          name: native-cargo-component-${{ matrix.triple }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ami-rust-native-cargo/${{ github.run_id }}-${{ github.run_attempt }}/${{ matrix.triple }}/outer-output/artifact/
           if-no-files-found: error
           compression-level: 0
 
@@ -339,7 +357,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          ARTIFACT_NAME: native-cargo-component-${{ matrix.host.triple }}-${{ github.run_id }}-${{ github.run_attempt }}
+          ARTIFACT_NAME: native-cargo-component-${{ matrix.triple }}-${{ github.run_id }}-${{ github.run_attempt }}
           CAMPAIGN_START_EPOCH: ${{ env.NATIVE_CAMPAIGN_START_EPOCH }}
         run: |
           set -euo pipefail
