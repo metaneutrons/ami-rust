@@ -660,7 +660,7 @@ fn run_campaign(state: &mut RunState, raw_request: &[u8]) -> Result<Value> {
         },
         "trust_boundary":"The protected workflow authenticates run metadata, artifact identities and ZIP bytes before staging prerequisite roots. This local record verifies staged profile bytes; the embedded manifest is not GitHub authentication.",
         "source_candidate":{
-            "inputs_rs_sha256":"7935f15114c453f87db55d27013935a4b9413a16008c7392f296107a590df631",
+            "inputs_rs_sha256":"7d589d181de3b10e9b70c79be5156140403185d4f85eb01917c5dc78c8f392d4",
             "target_libraries_sha256":"4759fc1a0f2f74e1a624a6c7b62b5d9949d873f1ce05a61ba9825891bf327183",
             "target_spec_sha256":"de7a0024aa94269641e3e6d480ce8cd334962bf7e02592b0652e19e56b5fba71",
             "workspace_cargo_lock_sha256":input_lock_sha,

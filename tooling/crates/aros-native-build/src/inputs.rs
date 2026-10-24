@@ -261,7 +261,7 @@ impl Pins {
 fn embedded_pins_for_host(host: &str) -> Result<EmbeddedPins> {
     match host {
         "macos-aarch64" => Ok(EmbeddedPins {
-            rust: include_str!("../pins/macos-aarch64/rust.json"),
+            rust: include_str!("../pins/macos-aarch64/rust-runtime-v2.json"),
             cargo: include_str!("../pins/macos-aarch64/cargo.json"),
             collector: include_str!("../pins/macos-aarch64/collector.json"),
             llvm: include_str!("../pins/macos-aarch64/toolchain.json"),
@@ -959,7 +959,7 @@ mod tests {
     }
 
     #[test]
-    fn linux_aarch64_profiles_are_exact_candidates_and_existing_hosts_stay_fixed() {
+    fn macos_runtime_and_linux_aarch64_profiles_are_exact_candidates() {
         let arm = embedded_pins_for_host("linux-aarch64").unwrap();
         let expected = [
             (
@@ -1025,11 +1025,22 @@ mod tests {
                 .starts_with("linux-aarch64:x86_64-aros:sha256:")
         );
 
-        let old_hosts = [
+        let mac = Pins::for_host("macos-aarch64").unwrap();
+        assert_eq!(mac.rust.symlinks.len(), 3);
+        assert_eq!(
+            mac.rust
+                .symlinks
+                .iter()
+                .find(|link| link.path == "lib/rustlib/aarch64-apple-darwin/lib/libLLVM.dylib")
+                .map(|link| link.target.as_str()),
+            Some("../../../libLLVM.dylib")
+        );
+
+        let existing_hosts = [
             (
                 "macos-aarch64",
                 [
-                    "9acf02ab3d4a22137b6c5f82294e35c518ff1ffdbad5a701d5f3cdb0910668ea",
+                    "02eecb396c56bd134cb4dc732d30898b03ab9a84ad1143f5d09c0a6b25fc466e",
                     "2f081118d19e93b95304c95440d82d1f3d022fb063e4ae7ad1b89285ceddbe39",
                     "34e7e069a72ac84d980f15c797b4250f324eee19088f55d135c9e4eafa0d88de",
                     "28237af9576e852451fcdf0470a904edb34a70232feb41d0c56be246313baadf",
@@ -1047,7 +1058,7 @@ mod tests {
                 ],
             ),
         ];
-        for (host, hashes) in old_hosts {
+        for (host, hashes) in existing_hosts {
             let pins = embedded_pins_for_host(host).unwrap();
             let actual =
                 [pins.rust, pins.cargo, pins.collector, pins.llvm, pins.csdk].map(digest_text);
