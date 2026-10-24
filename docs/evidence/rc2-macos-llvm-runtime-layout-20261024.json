@@ -57,7 +57,34 @@
       "result_sha256": "536be53e57fe6bc3073b88c01a6859a6559d8f43a732584f2f300b95fe751575",
       "scope": "Functional development replay of the exact CI fixture commands; no complete RSS, SDK-consumer or release-authentication claim."
     },
-    "linux_affected_source_tests": "PENDING"
+    "linux_affected_source_tests": {
+      "status": "PASS",
+      "source_commit": "702ee0765ae75b9b2c9b30ac8cfccb3119396b69",
+      "source_archive_sha256": "b08d04efc01987bde13e9b4601af75559bda6006d3c5c8f7cfe574425c92d5e9",
+      "native_host": "Linux x86-64",
+      "core_assembler_passed": 15,
+      "other_workspace_passed": 132,
+      "other_workspace_ignored": 9,
+      "failed": 0,
+      "report_sha256": "30b8aedb69feb2b3530576703d0db20cc3db99ba5898f3a4040335b760dfd917",
+      "commands": [
+        {
+          "command": "core-native-prefix",
+          "result_sha256": "59ba6b7906d3753843fcea55d7612b3f51d1589fc5b38b51b6b810aba25c09b2",
+          "elapsed_seconds": 50.734725162,
+          "aggregate_peak_rss_bytes": 1740230656,
+          "workspace_peak_bytes": 1657424814
+        },
+        {
+          "command": "workspace-excluding-core",
+          "result_sha256": "85f778a6232bf4b21927955796d73dcf37e66951b33dcfbed9275be9b8f00896",
+          "elapsed_seconds": 58.983844388,
+          "aggregate_peak_rss_bytes": 1308704768,
+          "workspace_peak_bytes": 2008847738
+        }
+      ],
+      "scope": "Separate bounded local development gate; not an extension of the closed prerequisite campaign and not a full core suite, SDK or RC2 acceptance."
+    }
   },
   "fresh_macos_cargo": {
     "bytes": 38204560,
