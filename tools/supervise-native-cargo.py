@@ -330,6 +330,7 @@ def _own_hwm_bytes() -> int:
 
 def _verify_inputs(repo: Path, managed: Path, outer_output: Path) -> tuple[str, str, str, Path]:
     env = os.environ
+    native_recipe()
     required = ("RUNNER_TEMP", "GITHUB_WORKSPACE", "GITHUB_SHA", "GITHUB_REPOSITORY",
                 "GITHUB_REF", "GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT", "NATIVE_HOST_TRIPLE",
                 "NATIVE_EVENT_NAME", "NATIVE_REPOSITORY", "NATIVE_REF_NAME",
@@ -385,6 +386,13 @@ def _verify_inputs(repo: Path, managed: Path, outer_output: Path) -> tuple[str, 
     return triple, head, tree, artifact
 
 
+def native_recipe() -> str:
+    recipe = os.environ.get("NATIVE_CARGO_RECIPE", "three-host-v2")
+    if recipe not in ("three-host-v2", "three-host-v3"):
+        raise ValueError("unsupported native Cargo recipe")
+    return recipe
+
+
 def _supervised_env() -> dict[str, str]:
     keys = (
         "PATH", "HOME", "RUNNER_TEMP", "GITHUB_WORKSPACE", "GITHUB_SHA", "GITHUB_REPOSITORY",
@@ -395,6 +403,7 @@ def _supervised_env() -> dict[str, str]:
     )
     result = {key: os.environ[key] for key in keys if os.environ.get(key) is not None}
     result.setdefault("PATH", "/usr/bin:/bin")
+    result["NATIVE_CARGO_RECIPE"] = native_recipe()
     return result
 
 

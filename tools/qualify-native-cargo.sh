@@ -9,7 +9,6 @@ readonly HELPER_RECORD_SCHEMA=ami-rust-native-command-qualification-record-v1
 readonly CARGO_SOURCE_COMMIT=3efb1f477e99b42974b982d939fd100303cdf7db
 readonly RUSTC_COMMIT=48a229ceaefd4985c50990b14116b6d856af0985
 readonly CARGO_COMMIT=797e8a9bca276c1c9f9f738d2a20f484fa4eea9d
-readonly SOURCE_PATCH_SHA=1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f
 readonly RESOURCE_POLICY_SHA=b9a5fbfff842847c30b5f56ea4e1d3a368f4bda30689f0407ed9d33610571646
 readonly MAX_SECONDS=1200
 readonly HELPER_MAX_RSS=3758096384
@@ -27,6 +26,10 @@ case "$HOST_OS" in
   *) echo "unsupported native runner OS: $HOST_OS" >&2; exit 1 ;;
 esac
 readonly REPO="$GITHUB_WORKSPACE/source"
+# shellcheck source=tools/native-cargo-recipe.sh
+source "$REPO/tools/native-cargo-recipe.sh"
+native_cargo_select_recipe "$REPO" "${NATIVE_CARGO_RECIPE-three-host-v2}"
+readonly RECIPE_NAME RECIPE RECIPE_SOURCE_SHA SOURCE_PATCH_SHA
 readonly ROOT="${NATIVE_MANAGED_ROOT:?preflight must create the managed root}"
 readonly CAMPAIGN_START="${NATIVE_CAMPAIGN_START_EPOCH:?preflight must start the campaign clock}"
 readonly BOOTSTRAP="$ROOT/bootstrap"
@@ -627,12 +630,12 @@ failure_stage=inputs
 require_sha "$bootstrap_pins" "$expected_bootstrap_sha"
 require_sha "$REPO/tools/bootstrap-host-rust.sh" dfa41aa97181d7b2516e8f4b42b18793a2f35cdba969dd430be269adcf1754a3
 require_sha "$REPO/tooling/Cargo.toml" 13ac0ca9ac4437c7ac77b066b5a044ea30f935ffef0446dad7146132eda12a3f
-require_sha "$REPO/tooling/Cargo.lock" 9268b294c6d697a3914b735f775a0c2b0543e775de3f6bf10b2f964baf5de6cd
+require_sha "$REPO/tooling/Cargo.lock" eebb986b7c8eb7c9f6476a866b6def2491cb89445b1c69a6c9164ccb9a4ff7b2
 require_sha "$REPO/release/ci-resources.json" "$RESOURCE_POLICY_SHA"
-require_sha "$REPO/host/cargo-repro/three-host-v2/source.json" 73c9fc79976541cb43cefb39ce878218a3245493e86bb37fac449ec3bee00a52
-require_sha "$REPO/host/cargo-repro/three-host-v2/cargo-metadata.patch" "$SOURCE_PATCH_SHA"
-require_sha "$REPO/host/cargo-repro/three-host-v2/openssl-overlay.json" 676f1c208fe63f57014120f7461383a9f1da351565a5ea8b9dfe8a2dd109e944
-require_sha "$REPO/host/cargo-repro/three-host-v2/openssl-paths.patch" 0bc0e316c16658c7be01baa8d14070efebbe0b115a26224b2ae75ac12667069e
+require_sha "$RECIPE/source.json" "$RECIPE_SOURCE_SHA"
+require_sha "$RECIPE/cargo-metadata.patch" "$SOURCE_PATCH_SHA"
+require_sha "$RECIPE/openssl-overlay.json" 676f1c208fe63f57014120f7461383a9f1da351565a5ea8b9dfe8a2dd109e944
+require_sha "$RECIPE/openssl-paths.patch" 0bc0e316c16658c7be01baa8d14070efebbe0b115a26224b2ae75ac12667069e
 policy_sha=$(sha256_file "$REPO/release/ci-resources.json")
 tooling_lock_sha=$(sha256_file "$REPO/tooling/Cargo.lock")
 command cp "$bootstrap_pins" "$SETUP/bootstrap-pins.json"
@@ -649,7 +652,7 @@ jq -n \
   --arg tooling_manifest_sha256 13ac0ca9ac4437c7ac77b066b5a044ea30f935ffef0446dad7146132eda12a3f \
   --arg tooling_lock_sha256 "$tooling_lock_sha" \
   --arg resource_policy_sha256 "$policy_sha" \
-  --arg recipe_source_sha256 73c9fc79976541cb43cefb39ce878218a3245493e86bb37fac449ec3bee00a52 \
+  --arg recipe_source_sha256 "$RECIPE_SOURCE_SHA" \
   --arg cargo_source_patch_sha256 "$SOURCE_PATCH_SHA" \
   --arg overlay_pin_sha256 676f1c208fe63f57014120f7461383a9f1da351565a5ea8b9dfe8a2dd109e944 \
   --arg overlay_patch_sha256 0bc0e316c16658c7be01baa8d14070efebbe0b115a26224b2ae75ac12667069e \
@@ -800,34 +803,49 @@ test "$source_commit" = "$CARGO_SOURCE_COMMIT"
 
 phase=source-patch-apply
 failure_stage=$phase
+# The source pin was byte-verified above. Check every approved preimage,
+# changed path and postimage, including v3's two additional compiler files.
+source_paths=()
+original_expected=()
+patched_expected=()
+while IFS=$'\t' read -r path original patched; do
+  source_paths+=("$path")
+  original_expected+=("$original")
+  patched_expected+=("$patched")
+done < <(jq -er '[{path,original_sha256,patched_sha256}] + .additional_files
+  | sort_by(.path)[] | [.path,.original_sha256,.patched_sha256] | @tsv' "$RECIPE/source.json")
+test "${#source_paths[@]}" -gt 0
 run_q cargo-source-original-hashes "$SHA256_PROGRAM" "$UPSTREAM" "$git_environment" \
-  "${sha256_args[@]}" src/compiler/build_runner/compilation_files.rs src/workspace/features.rs
+  "${sha256_args[@]}" "${source_paths[@]}"
 original_hashes=()
 while IFS= read -r value; do original_hashes+=("$value"); done \
   < <(gzip -cd "$LAST_RECORD/stdout.raw.gz" | awk '{print $1}')
-test "${#original_hashes[@]}" -eq 2
-test "${original_hashes[0]}" = 275e1ff7e6512bbbb3b30a7f0ceb9c7d455745e6aafce0484cb73d8fe31e0e67
-test "${original_hashes[1]}" = 2747b5598654963df7d9270b07fc7dbd80a700cf219b26db71b0d2291ea74638
+test "${#original_hashes[@]}" -eq "${#source_paths[@]}"
+for ((i=0; i<${#source_paths[@]}; i++)); do
+  test "${original_hashes[i]}" = "${original_expected[i]}"
+done
 run_q cargo-source-apply-check /usr/bin/git "$UPSTREAM" "$git_environment" \
-  apply --check "$REPO/host/cargo-repro/three-host-v2/cargo-metadata.patch"
+  apply --check "$RECIPE/cargo-metadata.patch"
 run_q cargo-source-apply /usr/bin/git "$UPSTREAM" "$git_environment" \
-  apply "$REPO/host/cargo-repro/three-host-v2/cargo-metadata.patch"
+  apply "$RECIPE/cargo-metadata.patch"
 run_q cargo-source-changed-paths /usr/bin/git "$UPSTREAM" "$git_environment" \
   diff --name-only --no-renames
 changed_paths=()
 while IFS= read -r value; do changed_paths+=("$value"); done \
   < <(gzip -cd "$LAST_RECORD/stdout.raw.gz")
-test "${#changed_paths[@]}" -eq 2
-test "${changed_paths[0]}" = src/compiler/build_runner/compilation_files.rs
-test "${changed_paths[1]}" = src/workspace/features.rs
+test "${#changed_paths[@]}" -eq "${#source_paths[@]}"
+for ((i=0; i<${#source_paths[@]}; i++)); do
+  test "${changed_paths[i]}" = "${source_paths[i]}"
+done
 run_q cargo-source-patched-hashes "$SHA256_PROGRAM" "$UPSTREAM" "$git_environment" \
-  "${sha256_args[@]}" src/compiler/build_runner/compilation_files.rs src/workspace/features.rs
+  "${sha256_args[@]}" "${source_paths[@]}"
 patched_hashes=()
 while IFS= read -r value; do patched_hashes+=("$value"); done \
   < <(gzip -cd "$LAST_RECORD/stdout.raw.gz" | awk '{print $1}')
-test "${#patched_hashes[@]}" -eq 2
-test "${patched_hashes[0]}" = b572e74e742cca08765540aa9f611b1877defc08d146cff52fcd9b0c039106db
-test "${patched_hashes[1]}" = 0db8ba62877729fdee23ee8ae26f11a7b79fdd8bf086845a53c5f097eb1eacc3
+test "${#patched_hashes[@]}" -eq "${#source_paths[@]}"
+for ((i=0; i<${#source_paths[@]}; i++)); do
+  test "${patched_hashes[i]}" = "${patched_expected[i]}"
+done
 
 phase=producer-provision
 failure_stage=$phase
@@ -839,7 +857,7 @@ run_q producer-provision "$xtask_binary" "$UPSTREAM" "$environment_json" \
   cargo-repro-producer provision \
   --source "$UPSTREAM" --host-rust "$BOOTSTRAP/toolchain" \
   --work "$provision_work" --vendor "$provision_vendor" --record "$provision_record" \
-  --recipe "$REPO/host/cargo-repro/three-host-v2" \
+  --recipe "$RECIPE" \
   --resource-policy "$REPO/release/ci-resources.json" --profile release
 test -f "$provision_record/inputs.json"
 test -f "$provision_record/result.json"
@@ -856,14 +874,14 @@ overlay_receipt="$PRODUCER/overlay/receipt.json"
 run_q overlay-prepare "$xtask_binary" "$UPSTREAM" "$environment_json" \
   cargo-vendor-overlay prepare \
   --source-vendor "$provision_vendor" --output-vendor "$overlay_vendor" \
-  --receipt "$overlay_receipt" --recipe "$REPO/host/cargo-repro/three-host-v2"
+  --receipt "$overlay_receipt" --recipe "$RECIPE"
 test -f "$overlay_receipt"
 phase=overlay-verify
 failure_stage=$phase
 run_q overlay-verify "$xtask_binary" "$UPSTREAM" "$environment_json" \
   cargo-vendor-overlay verify \
   --vendor "$overlay_vendor" --receipt "$overlay_receipt" \
-  --recipe "$REPO/host/cargo-repro/three-host-v2"
+  --recipe "$RECIPE"
 
 phase=overlay-receipt-corruption-control
 failure_stage=$phase
@@ -875,7 +893,7 @@ test "$(sha256_file "$corrupt_receipt")" != "$original_overlay_receipt_sha"
 if run_q expected-corrupted-overlay-receipt-rejection "$xtask_binary" "$UPSTREAM" "$environment_json" \
   cargo-vendor-overlay verify \
   --vendor "$overlay_vendor" --receipt "$corrupt_receipt" \
-  --recipe "$REPO/host/cargo-repro/three-host-v2"; then
+  --recipe "$RECIPE"; then
   echo "corrupted overlay receipt was unexpectedly accepted" >&2
   exit 1
 else
@@ -913,7 +931,7 @@ run_q producer-build "$xtask_binary" "$UPSTREAM" "$environment_json" \
   cargo-repro-producer build \
   --source "$UPSTREAM" --host-rust "$BOOTSTRAP/toolchain" \
   --work "$build_work" --vendor "$overlay_vendor" --record "$build_record" \
-  --recipe "$REPO/host/cargo-repro/three-host-v2" \
+  --recipe "$RECIPE" \
   --resource-policy "$REPO/release/ci-resources.json" \
   --vendor-overlay-receipt "$overlay_receipt" --profile release
 test -f "$build_record/inputs.json"
@@ -1131,7 +1149,7 @@ if run_q expected-wrong-host-rejection "$xtask_binary" "$UPSTREAM" "$environment
   cargo-repro-producer provision \
   --source "$UPSTREAM" --host-rust "$fake_host_rust" \
   --work "$fake_work" --vendor "$fake_vendor" --record "$fake_producer_record" \
-  --recipe "$REPO/host/cargo-repro/three-host-v2" \
+  --recipe "$RECIPE" \
   --resource-policy "$REPO/release/ci-resources.json" --profile release; then
   echo "wrong-host fake compiler was unexpectedly accepted" >&2
   exit 1

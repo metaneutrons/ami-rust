@@ -186,3 +186,51 @@ jobs:
           test "$(jq 'length' <<<"$sizes")" -eq 1
           test "$(jq -er '.[0]' <<<"$sizes")" -le 67108864
           test "$(($(date +%s) - NATIVE_CAMPAIGN_START_EPOCH))" -le 5400
+
+  compare:
+    name: Compare all three native Cargo proofs
+    needs: qualify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the exact qualified source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Download only this run and attempt's three host proofs
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_REPOSITORY" = metaneutrons/ami-rust
+          test "$GITHUB_REF" = refs/heads/main
+          proofs="$RUNNER_TEMP/native-cargo-three-host-proofs"
+          mkdir -m 700 "$proofs"
+          for host in macos-aarch64 linux-x86_64 linux-aarch64; do
+            name="native-cargo-consumer-$host-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+            gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+              --name "$name" --dir "$proofs/$host"
+          done
+
+      - name: Build the pinned internal comparator and compare original bytes
+        timeout-minutes: 12
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tools/compare-native-cargo-proofs.sh \
+            "$RUNNER_TEMP/native-cargo-three-host-proofs" \
+            "$RUNNER_TEMP/native-cargo-three-host-build" \
+            "$RUNNER_TEMP/native-cargo-three-host-result"
+
+      - name: Retain the exact three-host comparison receipt
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-cargo-three-host-comparison-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-cargo-three-host-result/
+          if-no-files-found: error
+          compression-level: 0

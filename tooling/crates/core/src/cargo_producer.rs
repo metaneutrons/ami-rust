@@ -37,8 +37,22 @@ use std::{
     time::Duration,
 };
 
-const SOURCE_PIN_SHA256: &str = "73c9fc79976541cb43cefb39ce878218a3245493e86bb37fac449ec3bee00a52";
-const PATCH_SHA256: &str = "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f";
+const SOURCE_PIN_V2_SHA256: &str =
+    "73c9fc79976541cb43cefb39ce878218a3245493e86bb37fac449ec3bee00a52";
+const PATCH_V2_SHA256: &str = "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f";
+const SOURCE_PIN_V3_SHA256: &str =
+    "9c8ac1d58262c73116c74172c93c345196bd8ffa3995bebba3d1f8ea00bc59ce";
+const PATCH_V3_SHA256: &str = "2c3ab831d216cc4395decc4bcc307a1d9bac6b6936cd01d7c496c44e55d9826b";
+const SOURCE_PROFILES: [SourceProfile; 2] = [
+    SourceProfile {
+        source_pin_sha256: SOURCE_PIN_V2_SHA256,
+        patch_sha256: PATCH_V2_SHA256,
+    },
+    SourceProfile {
+        source_pin_sha256: SOURCE_PIN_V3_SHA256,
+        patch_sha256: PATCH_V3_SHA256,
+    },
+];
 const RECEIPT_SCHEMA: &str = "ami-rust-cargo-prerequisite-producer-v1";
 const CLAIM: &str =
     "pinned host Cargo prerequisite producer only; not SDK or release qualification";
@@ -135,7 +149,14 @@ impl Default for ResourceProfile {
 struct LoadedPlan {
     pin: SourcePin,
     pin_sha256: String,
+    patch_sha256: String,
     patch_path: PathBuf,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct SourceProfile {
+    source_pin_sha256: &'static str,
+    patch_sha256: &'static str,
 }
 
 #[derive(Clone, Debug)]
@@ -232,7 +253,7 @@ pub fn produce(options: ProducerOptions) -> Result<Value> {
         &changed_paths,
         &additional_digests,
     )?;
-    if sha256_file(&plan.patch_path)? != PATCH_SHA256 {
+    if sha256_file(&plan.patch_path)? != plan.patch_sha256 {
         return Err(Refusal::new("pinned Cargo source patch identity mismatch"));
     }
 
@@ -326,7 +347,7 @@ pub fn produce(options: ProducerOptions) -> Result<Value> {
         "profile": options.profile,
         "upstream_commit": plan.pin.commit,
         "source_pin_sha256": plan.pin_sha256,
-        "patch_sha256": PATCH_SHA256,
+        "patch_sha256": plan.patch_sha256,
         "producer_sha256": producer_sha256,
         "producer_executable": path_text(&executable, "producer executable path")?,
         "producer_executable_sha256": executable_sha256,
@@ -736,11 +757,12 @@ fn load_pinned_plan(recipe: &Path) -> Result<LoadedPlan> {
         JsonProfile::PackageMetadataStateSelection.max_bytes(),
     )?;
     let pin_sha256 = sha256_bytes(&pin_raw);
-    if pin_sha256 != SOURCE_PIN_SHA256 {
-        return Err(Refusal::new("pinned Cargo source recipe identity mismatch"));
-    }
+    let profile = SOURCE_PROFILES
+        .iter()
+        .find(|profile| profile.source_pin_sha256 == pin_sha256)
+        .ok_or_else(|| Refusal::new("pinned Cargo source recipe identity mismatch"))?;
     let pin: SourcePin = parse_json(&pin_raw, JsonProfile::PackageMetadataStateSelection)?;
-    if pin.patch_sha256 != PATCH_SHA256
+    if pin.patch_sha256 != profile.patch_sha256
         || pin.upstream != "https://github.com/rust-lang/cargo"
         || pin.commit != "3efb1f477e99b42974b982d939fd100303cdf7db"
         || !is_sha256_digest(&pin.original_sha256)
@@ -750,6 +772,20 @@ fn load_pinned_plan(recipe: &Path) -> Result<LoadedPlan> {
             "pinned Cargo source recipe fields are inconsistent",
         ));
     }
+    validate_source_pin_files(&pin)?;
+    let patch_path = recipe.join("cargo-metadata.patch");
+    if sha256_file(&patch_path)? != profile.patch_sha256 {
+        return Err(Refusal::new("pinned Cargo source patch identity mismatch"));
+    }
+    Ok(LoadedPlan {
+        pin,
+        pin_sha256,
+        patch_sha256: profile.patch_sha256.to_owned(),
+        patch_path,
+    })
+}
+
+fn validate_source_pin_files(pin: &SourcePin) -> Result<()> {
     validate_relative_inventory_path(&pin.path)?;
     let mut paths = BTreeSet::new();
     paths.insert(pin.path.clone());
@@ -764,15 +800,7 @@ fn load_pinned_plan(recipe: &Path) -> Result<LoadedPlan> {
             ));
         }
     }
-    let patch_path = recipe.join("cargo-metadata.patch");
-    if sha256_file(&patch_path)? != PATCH_SHA256 {
-        return Err(Refusal::new("pinned Cargo source patch identity mismatch"));
-    }
-    Ok(LoadedPlan {
-        pin,
-        pin_sha256,
-        patch_path,
-    })
+    Ok(())
 }
 
 fn validate_source_checkout(
@@ -1512,8 +1540,64 @@ mod tests {
             .canonicalize()
             .unwrap();
         let plan = load_pinned_plan(&recipe).unwrap();
-        assert_eq!(plan.pin_sha256, SOURCE_PIN_SHA256);
-        assert_eq!(sha256_file(&plan.patch_path).unwrap(), PATCH_SHA256);
+        assert_eq!(plan.pin_sha256, SOURCE_PIN_V2_SHA256);
+        assert_eq!(plan.patch_sha256, PATCH_V2_SHA256);
+        assert_eq!(sha256_file(&plan.patch_path).unwrap(), PATCH_V2_SHA256);
+    }
+
+    #[test]
+    fn three_host_v3_recipe_loads_only_its_exact_pin_patch_and_four_file_inventory() {
+        let recipe = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../host/cargo-repro/three-host-v3")
+            .canonicalize()
+            .unwrap();
+        let plan = load_pinned_plan(&recipe).unwrap();
+        assert_eq!(plan.pin_sha256, SOURCE_PIN_V3_SHA256);
+        assert_eq!(plan.patch_sha256, PATCH_V3_SHA256);
+        assert_eq!(sha256_file(&plan.patch_path).unwrap(), PATCH_V3_SHA256);
+        assert_eq!(plan.pin.additional_files.len(), 3);
+        assert_eq!(
+            plan.pin
+                .additional_files
+                .iter()
+                .map(|row| row.path.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "src/workspace/features.rs",
+                "src/compiler/build_runner/mod.rs",
+                "src/compiler/fingerprint/mod.rs"
+            ]
+        );
+    }
+
+    #[test]
+    fn v3_recipe_refuses_copied_unknown_pin_and_wrong_patch_bytes() {
+        let recipe = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../host/cargo-repro/three-host-v3")
+            .canonicalize()
+            .unwrap();
+        let root = TempDir::new();
+
+        let unknown_pin = root.path().join("unknown-pin");
+        copy_recipe(&recipe, &unknown_pin);
+        let mut pin = fs::read(unknown_pin.join("source.json")).unwrap();
+        pin.push(b' ');
+        fs::write(unknown_pin.join("source.json"), pin).unwrap();
+        assert!(load_pinned_plan(&unknown_pin).is_err());
+
+        let wrong_patch = root.path().join("wrong-patch");
+        copy_recipe(&recipe, &wrong_patch);
+        let mut patch = fs::read(wrong_patch.join("cargo-metadata.patch")).unwrap();
+        patch.push(b'\n');
+        fs::write(wrong_patch.join("cargo-metadata.patch"), patch).unwrap();
+        assert!(load_pinned_plan(&wrong_patch).is_err());
+    }
+
+    fn copy_recipe(source: &Path, destination: &Path) {
+        fs::create_dir(destination).unwrap();
+        for name in ["source.json", "cargo-metadata.patch"] {
+            fs::copy(source.join(name), destination.join(name)).unwrap();
+        }
     }
 
     fn fixture_pin() -> SourcePin {
@@ -1523,7 +1607,7 @@ mod tests {
             path: "src/lib.rs".to_owned(),
             original_sha256: sha256_bytes(b"original"),
             patched_sha256: sha256_bytes(b"patched"),
-            patch_sha256: PATCH_SHA256.to_owned(),
+            patch_sha256: PATCH_V2_SHA256.to_owned(),
             purpose: "fixture".to_owned(),
             scope: "fixture".to_owned(),
             rustc_or_rust_src_changes: false,
@@ -1596,6 +1680,106 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn v3_source_checkout_requires_all_four_exact_paths_and_postimages() {
+        let recipe = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../host/cargo-repro/three-host-v3")
+            .canonicalize()
+            .unwrap();
+        let plan = load_pinned_plan(&recipe).unwrap();
+        let mut changed = vec![plan.pin.path.clone()];
+        changed.extend(plan.pin.additional_files.iter().map(|row| row.path.clone()));
+        let additional = plan
+            .pin
+            .additional_files
+            .iter()
+            .map(|row| (row.path.clone(), row.patched_sha256.clone()))
+            .collect::<BTreeMap<_, _>>();
+        assert!(validate_source_pin_files(&plan.pin).is_ok());
+        assert!(
+            validate_source_checkout(
+                &plan.pin,
+                &plan.pin.commit,
+                &plan.pin.patched_sha256,
+                &changed,
+                &additional
+            )
+            .is_ok()
+        );
+
+        assert!(
+            validate_source_checkout(
+                &plan.pin,
+                &plan.pin.commit,
+                &sha256_bytes(b"wrong primary postimage"),
+                &changed,
+                &additional
+            )
+            .is_err()
+        );
+
+        let mut missing = changed.clone();
+        missing.pop();
+        assert!(
+            validate_source_checkout(
+                &plan.pin,
+                &plan.pin.commit,
+                &plan.pin.patched_sha256,
+                &missing,
+                &additional
+            )
+            .is_err()
+        );
+
+        let mut extra = changed.clone();
+        extra.push("src/compiler/extra.rs".to_owned());
+        assert!(
+            validate_source_checkout(
+                &plan.pin,
+                &plan.pin.commit,
+                &plan.pin.patched_sha256,
+                &extra,
+                &additional
+            )
+            .is_err()
+        );
+
+        let mut wrong_postimage = additional.clone();
+        wrong_postimage.insert(
+            plan.pin.additional_files[2].path.clone(),
+            sha256_bytes(b"wrong postimage"),
+        );
+        assert!(
+            validate_source_checkout(
+                &plan.pin,
+                &plan.pin.commit,
+                &plan.pin.patched_sha256,
+                &changed,
+                &wrong_postimage
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn source_pin_file_inventory_rejects_unsafe_and_duplicate_paths() {
+        let pin = load_pinned_plan(
+            &Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../../host/cargo-repro/three-host-v3")
+                .canonicalize()
+                .unwrap(),
+        )
+        .unwrap()
+        .pin;
+        let mut duplicate = pin.clone();
+        duplicate.additional_files[0].path = duplicate.path.clone();
+        assert!(validate_source_pin_files(&duplicate).is_err());
+
+        let mut unsafe_path = pin;
+        unsafe_path.additional_files[0].path = "../outside.rs".to_owned();
+        assert!(validate_source_pin_files(&unsafe_path).is_err());
     }
 
     #[test]
