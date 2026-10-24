@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import importlib.util
-import contextlib
 import hashlib
 import json
 import os
@@ -34,11 +33,15 @@ def load_module(name: str, path: Path):
 driver = load_module("csdk_supervision_driver_fixture", DRIVER_PATH)
 ci_cargo = load_module("csdk_supervision_ci_cargo_fixture", RELEASE / "ci_cargo.py")
 producer = load_module("csdk_supervision_producer_fixture", RELEASE / "csdk_producer.py")
+# Six-second cold-start control plus five-second descendant startup, with
+# bounded import/exec headroom. This is fixture setup, not a producer deadline.
+FIXTURE_STARTUP_TIMEOUT_SECONDS = 20.0
 
 
 COMPILER_SOURCE = """#!PYTHON
 import json, os, signal, subprocess, sys, time
 from pathlib import Path
+time.sleep(float(os.environ.get("CSDK_FIXTURE_STARTUP_DELAY", "0")))
 pid_file = Path(os.environ["CSDK_FIXTURE_PIDS"])
 ready = Path(os.environ["CSDK_FIXTURE_DESCENDANT_READY"])
 marker = Path(os.environ["CSDK_FIXTURE_MARKER"])
@@ -94,21 +97,25 @@ worker_pid_tmp = worker_pid_file.with_name(worker_pid_file.name + ".tmp")
 worker_pid_tmp.write_text(json.dumps({"pid": os.getpid(), "ppid": os.getppid(),
                                       "pgid": os.getpgrp()}))
 os.replace(worker_pid_tmp, worker_pid_file)
-def alive(pid):
-    try: os.kill(pid, 0)
+def alive(pid, expected_group):
+    # Darwin kill(pid, 0) also succeeds for an unreaped zombie, whose old
+    # process group can already reject killpg with EPERM.
+    try: actual_group = os.getpgid(pid)
     except ProcessLookupError: return False
+    if actual_group != expected_group:
+        raise RuntimeError("fixture process group identity changed")
     return True
 def fixture_rows():
     worker = json.loads(worker_pid_file.read_text())
     worker_pid = worker["pid"]
     rows = []
-    if alive(worker_pid): rows.append((worker_pid, os.getppid(), worker["pgid"], 2048))
+    if alive(worker_pid, worker["pgid"]): rows.append((worker_pid, os.getppid(), worker["pgid"], 2048))
     pid_file = Path(os.environ["CSDK_FIXTURE_PIDS"])
     if pid_file.is_file():
         values = json.loads(pid_file.read_text())
-        if alive(values["clang_pid"]):
+        if alive(values["clang_pid"], values["clang_pgid"]):
             rows.append((values["clang_pid"], worker_pid, values["clang_pgid"], 2048))
-        if alive(values["descendant_pid"]):
+        if alive(values["descendant_pid"], values["descendant_pgid"]):
             rows.append((values["descendant_pid"], values["clang_pid"],
                          values["descendant_pgid"], 2048))
     return rows
@@ -139,7 +146,7 @@ raise SystemExit("fixture compile unexpectedly completed")
 """
 
 
-def write_fixture(root: Path) -> tuple[Path, Path, dict[str, str]]:
+def write_fixture(root: Path, *, startup_delay: float = 0) -> tuple[Path, Path, dict[str, str]]:
     fixture = root / "compile-fixture.py"
     fixture.write_text(FIXTURE_SOURCE.replace("COMPILER_SOURCE", repr(COMPILER_SOURCE)))
     fixture.chmod(0o600)
@@ -152,6 +159,7 @@ def write_fixture(root: Path) -> tuple[Path, Path, dict[str, str]]:
         "CSDK_FIXTURE_MARKER": str(state / "descendant-stopped"),
         "CSDK_FIXTURE_CLEANUP_READY": str(state / "compiler-cleanup-ready"),
         "CSDK_FIXTURE_STUBBORN_PID": str(state / "stubborn-pid"),
+        "CSDK_FIXTURE_STARTUP_DELAY": str(startup_delay),
     })
     return fixture, state, env
 
@@ -253,10 +261,12 @@ def fixture_process_rows(root: Path):
             ])
     for row in records:
         try:
-            os.kill(row["pid"], 0)
+            actual_group = os.getpgid(row["pid"])
         except ProcessLookupError:
             continue
-        rows.append((row["pid"], row["ppid"], row["pgid"], 2048))
+        if actual_group != row["pgid"]:
+            raise RuntimeError("fixture process group identity changed")
+        rows.append((row["pid"], row["ppid"], actual_group, 2048))
     return rows
 
 
@@ -266,10 +276,12 @@ def duplicate_sigterm_after_cleanup_starts(root: Path):
 
     def signal_twice():
         marker = root / "state" / "compiler-cleanup-ready"
-        deadline = time.monotonic() + 10
+        deadline = time.monotonic() + FIXTURE_STARTUP_TIMEOUT_SECONDS + 5
         while time.monotonic() < deadline and not marker.is_file():
             time.sleep(0.01)
         try:
+            if not marker.is_file():
+                raise TimeoutError("fixture compiler cleanup did not start")
             worker = json.loads((root / "worker-pid.json").read_text())
             os.kill(worker["pid"], signal.SIGTERM)
             sent.set()
@@ -313,11 +325,62 @@ def signal_driver_twice_around_cleanup(root: Path):
     return sent, thread, errors
 
 
-def process_rows_fixture_context(root: Path):
-    if sys.platform == "darwin":
-        return mock.patch.object(ci_cargo, "process_rows",
-                                 side_effect=lambda **_kwargs: fixture_process_rows(root))
-    return contextlib.nullcontext()
+def wait_fixture_ready(path: Path, *, timeout: float = FIXTURE_STARTUP_TIMEOUT_SECONDS):
+    deadline = time.monotonic() + timeout
+    while not path.is_file():
+        if time.monotonic() >= deadline:
+            root = path.parent.parent if path.parent.name == "state" else path.parent
+            names = ("worker-pid.json", "state/descendant-ready", "state/clang-pids.json",
+                     "fallback-pids.json", "inner-result.json", "nouveau-plan.json",
+                     "compile-work/nouveau-logs/0000.stderr.log")
+            diagnostics = {"awaited": str(path.relative_to(root)),
+                           "startup_timeout_seconds": timeout,
+                           "present": {name: (root / name).is_file() for name in names}}
+            remaining_bytes = 1024
+            for name in names:
+                try:
+                    with (root / name).open("rb") as stream:
+                        captured = stream.read(remaining_bytes)
+                except OSError:
+                    continue
+                remaining_bytes -= len(captured)
+                diagnostics[name] = captured.decode("utf-8", errors="replace")
+                if not remaining_bytes:
+                    break
+            print("fixture startup diagnostics: "
+                  + json.dumps(diagnostics, sort_keys=True)[:2048],
+                  file=sys.stderr, flush=True)
+            raise TimeoutError("fixture process tree did not become ready")
+        time.sleep(0.01)
+
+
+def process_rows_fixture_context(root: Path, *, fallback: bool = False):
+    original_reader = ci_cargo.process_rows
+    first_census = True
+    startup_failed = False
+
+    def rows(**kwargs):
+        nonlocal first_census, startup_failed
+        if first_census:
+            first_census = False
+            # These tests exercise shutdown of a complete process tree. The
+            # first census has a separate bounded fixture-startup handshake,
+            # so the short timeout cannot fire before signal handlers exist.
+            ready = root / ("fallback-pids.json" if fallback else "state/clang-pids.json")
+            try:
+                wait_fixture_ready(ready)
+            except TimeoutError:
+                startup_failed = True
+                raise
+        # Missing journals cannot prove a partial tree is complete. Preserve
+        # the initial monitor failure and use the native census for cleanup.
+        if startup_failed:
+            return original_reader(**kwargs)
+        if sys.platform == "darwin":
+            return fixture_process_rows(root)
+        return original_reader(**kwargs)
+
+    return mock.patch.object(ci_cargo, "process_rows", side_effect=rows)
 
 
 class ProducerTimeoutTests(unittest.TestCase):
@@ -363,7 +426,7 @@ class ProducerTimeoutTests(unittest.TestCase):
                             stdout=stdout, stderr=stderr, timeout=1.0,
                             label="UNIT_FIXTURE producer deadline", timeout_record=timeout_record,
                             ci_cargo_module=ci_cargo)
-            thread.join(timeout=1)
+            thread.join(timeout=FIXTURE_STARTUP_TIMEOUT_SECONDS + 6)
             self.assertTrue(sent.is_set(), errors)
             self.assertFalse(errors)
             record = json.loads(timeout_record.read_text())
@@ -493,7 +556,7 @@ class ProducerTimeoutTests(unittest.TestCase):
             stdout_path, stderr_path = root / "producer.stdout.log", root / "producer.stderr.log"
             timeout_record = root / "producer-timeout.json"
             command = fallback_command(root)
-            with process_rows_fixture_context(root):
+            with process_rows_fixture_context(root, fallback=True):
                 with stdout_path.open("xb") as stdout, stderr_path.open("xb") as stderr:
                     with self.assertRaisesRegex(TimeoutError, "SIGKILL fallback failed: producer deadline"):
                         driver.run_child_with_deadline(
@@ -521,9 +584,15 @@ class ProducerTimeoutTests(unittest.TestCase):
             self.assertFalse((root / "csdk-output" / "csdk-producer.json").exists())
 
     def test_outer_supervisor_deadline_signals_and_reaps_clang_group(self):
+        self.check_outer_supervisor_deadline()
+
+    def test_outer_supervisor_deadline_with_slow_fixture_startup(self):
+        self.check_outer_supervisor_deadline(startup_delay=6.0)
+
+    def check_outer_supervisor_deadline(self, *, startup_delay: float = 0):
         with tempfile.TemporaryDirectory(prefix="csdk-outer-timeout-") as temp:
             root = Path(temp)
-            fixture, state, env = write_fixture(root)
+            fixture, state, env = write_fixture(root, startup_delay=startup_delay)
             work, output = root / "supervisor-work", root / "supervisor-output"
             logs = work / "observer-logs"
             for path in (work, output, logs): path.mkdir(parents=True, exist_ok=True)
@@ -534,7 +603,7 @@ class ProducerTimeoutTests(unittest.TestCase):
                     supervisor.run(command_for(fixture, state), cwd=root,
                                    label="outer-deadline-fixture", timeout=1.0,
                                    cleanup_descendant_groups=True)
-            thread.join(timeout=1)
+            thread.join(timeout=FIXTURE_STARTUP_TIMEOUT_SECONDS + 6)
             self.assertTrue(sent.is_set(), errors)
             self.assertFalse(errors)
             self.assertEqual(len(supervisor.commands), 1)
@@ -556,7 +625,7 @@ class ProducerTimeoutTests(unittest.TestCase):
             logs = work / "observer-logs"
             for path in (work, output, logs): path.mkdir(parents=True, exist_ok=True)
             supervisor = ci_cargo.Supervisor(work, output, env, logs)
-            with process_rows_fixture_context(root):
+            with process_rows_fixture_context(root, fallback=True):
                 with self.assertRaisesRegex(RuntimeError, "outer-fallback-fixture failed: timeout"):
                     supervisor.run(fallback_command(root), cwd=root,
                                    label="outer-fallback-fixture", timeout=1.5,
@@ -578,6 +647,79 @@ class ProducerTimeoutTests(unittest.TestCase):
             self.assertTrue((logs / "outer-fallback-fixture.stdout.log").is_file())
             self.assertTrue((logs / "outer-fallback-fixture.stderr.log").is_file())
             self.assertFalse((output / "csdk-producer.json").exists())
+
+
+class FixtureObserverTests(unittest.TestCase):
+    def test_missing_readiness_still_discovers_and_stops_separate_group(self):
+        with tempfile.TemporaryDirectory(prefix="csdk-fixture-partial-tree-") as temp:
+            root = Path(temp)
+            ready = root / "unrecorded-child-pid"
+            child_source = (
+                "import os,signal,time; from pathlib import Path; "
+                "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+                f"Path({str(ready)!r}).write_text(str(os.getpid())); "
+                "time.sleep(30)")
+            parent_source = (
+                "import subprocess,sys,time; "
+                f"subprocess.Popen([sys.executable,'-c',{child_source!r}], process_group=0); "
+                "time.sleep(30)")
+            logs = root / "logs"
+            logs.mkdir()
+            supervisor = ci_cargo.Supervisor(root, root / "output", dict(os.environ), logs)
+            original_wait = wait_fixture_ready
+
+            def withhold_journal(_path):
+                original_wait(ready)
+                raise TimeoutError("synthetic missing fixture journal")
+
+            try:
+                with mock.patch.dict(globals(), {"wait_fixture_ready": withhold_journal}):
+                    with process_rows_fixture_context(root):
+                        with self.assertRaisesRegex(RuntimeError, "monitor failure"):
+                            supervisor.run([sys.executable, "-c", parent_source], cwd=root,
+                                           label="partial-tree", timeout=10,
+                                           cleanup_descendant_groups=True)
+                child_pid = int(ready.read_text())
+                row = supervisor.commands[0]
+                self.assertIn(child_pid, row["tracked_descendant_process_group_ids"])
+                self.assertIn(child_pid, row["descendant_process_group_cleanup"]["sigkill_group_ids"])
+                assert_dead(self, child_pid)
+                self.assertFalse((root / "output/csdk-producer.json").exists())
+            finally:
+                # A regression must not leave its deliberately stubborn child
+                # running even when the discovery assertion fails.
+                if ready.is_file():
+                    pid = int(ready.read_text())
+                    try:
+                        if os.getpgid(pid) != pid:
+                            raise RuntimeError("fixture child group identity changed")
+                        os.killpg(pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+
+    def test_group_census_uses_current_membership_and_fails_closed(self):
+        with tempfile.TemporaryDirectory(prefix="csdk-fixture-census-") as temp:
+            root = Path(temp)
+            (root / "worker-pid.json").write_text(json.dumps(
+                {"pid": 12345, "ppid": 12344, "pgid": 12345}))
+            with mock.patch.object(os, "getpgid", return_value=12345):
+                self.assertEqual(fixture_process_rows(root), [(12345, 12344, 12345, 2048)])
+            # A zombie may still pass kill(pid, 0), but is no longer a member
+            # of a signalable process group on Darwin.
+            with mock.patch.object(os, "kill", return_value=None), \
+                    mock.patch.object(os, "getpgid", side_effect=ProcessLookupError):
+                self.assertEqual(fixture_process_rows(root), [])
+            with mock.patch.object(os, "getpgid", side_effect=PermissionError):
+                with self.assertRaises(PermissionError):
+                    fixture_process_rows(root)
+            with mock.patch.object(os, "getpgid", return_value=54321):
+                with self.assertRaisesRegex(RuntimeError, "identity changed"):
+                    fixture_process_rows(root)
+
+    def test_missing_fixture_readiness_is_a_bounded_failure(self):
+        with tempfile.TemporaryDirectory(prefix="csdk-fixture-not-ready-") as temp:
+            with self.assertRaisesRegex(TimeoutError, "did not become ready"):
+                wait_fixture_ready(Path(temp) / "missing", timeout=0.01)
 
 
 class BoundedCleanupTests(unittest.TestCase):

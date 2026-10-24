@@ -1,0 +1,49 @@
+{
+  "schema": "ami-rust-local-supervision-fixture-correction-v1",
+  "completed_utc": "2026-10-24T05:12:35.572286+00:00",
+  "source_base": "73a4f5ae8ce0629c94108c6155a02253f7b31a9b",
+  "changed_fixture": "release/test_csdk_supervision.py",
+  "fixture_sha256": "1c31f97073515c676334f6e82ac6305773172f77d52e2ea49692098f9463c324",
+  "status": "PASS_EXACT_CANDIDATE_LOCAL_CI_INSTALLER_COMMANDS_BOTH_HOSTS",
+  "diagnosis": {
+    "startup": "Original one-second outer deadline could fire before compiler/descendant handlers existed; an injected 1.25-second startup reproduced the original assertion failure.",
+    "darwin_membership": "A separate owned unreaped-child counter-probe returned kill(pid,0) success, getpgid ESRCH and killpg EPERM. This reproduces the stale zombie membership failure class; it does not prove the exact state of the original hosted PID.",
+    "additional_local_failure": "One complete local replay reached the old five-second fixture-readiness bound. Its temporary tree was removed, so the precise stalled milestone remains unknown; the raw failed result is retained.",
+    "correction": "Fresh kernel process-group membership replaces kill-zero plus cached group rows in the Darwin fixture. Permission failures and changed identities remain errors. A separate twenty-second fixture startup envelope covers the six-second delayed-start control, five-second child readiness and import/exec headroom. Missing readiness remains a failure, reports bounded milestone diagnostics and uses the native census for cleanup."
+  },
+  "controls": [
+    "Six-second delayed fixture startup with unchanged one-second producer timeout: actual cleanup/receipt assertions pass.",
+    "Missing readiness with an unjournaled separate-group child: native census discovers it, SIGKILL cleanup is recorded, child is dead, no candidate accepted.",
+    "Missing readiness is bounded; current membership, ESRCH, PermissionError and changed PGID cases are covered."
+  ],
+  "hosts": {
+    "macos-aarch64": {
+      "python": "3.15.0 (main, Oct  9 2026, 11:16:41) [Clang 21.0.0 (clang-2100.3.34.2)]",
+      "commands_passed": 43,
+      "commands_failed": 0,
+      "elapsed_seconds": 116.834,
+      "supervision_tests_run": 16,
+      "supervision_tests_skipped": 1,
+      "replay_result_sha256": "fb17b0d51cebb9e2c340b69c54cc26bcb4d8f3134f9957983cdb1ebc83a6919c",
+      "supervision_log_sha256": "3aa1d718409e0d5d6dadce30bed268a805e8e31f0c6336009e1ae29a0c7285b3",
+      "contract_probes": "10 real-Cargo-enabled tests passed; native pinned Cargo 1.98.1 explicitly supplied"
+    },
+    "linux-x86_64": {
+      "python": "3.14.7 (main, Aug 14 2026, 06:38:32) [GCC 16.2.1 20260810]",
+      "commands_passed": 43,
+      "commands_failed": 0,
+      "elapsed_seconds": 143.014,
+      "supervision_tests_run": 16,
+      "supervision_tests_skipped": 0,
+      "replay_result_sha256": "cb6dbbb61426e7362d004797f79cbf4b2f6ba0490e88efbe33ae41bf99ca23a6",
+      "supervision_log_sha256": "bac3a3163f56a49d3ee363770da249804c72445c20ef1c6967f98b4ee11b6a34",
+      "contract_probes": "10 real-Cargo-enabled tests passed; native pinned Cargo 1.98.1 explicitly supplied"
+    }
+  },
+  "scope": "Functional development replay of all 43 commands in the CI installer step; production supervision, deadlines, Rust/Cargo patch, target and boot baseline unchanged. No SDK/resource qualification, RC2 acceptance or publication.",
+  "retained_limitations": [
+    "The fixture readiness wait occurs within the first census before the outer elapsed-time check; delayed-start control proves cleanup after readiness, not exact one-second wall-clock deadline latency.",
+    "The existing macOS fixture census still uses synthetic RSS and cached parent relationships; real Linux process-tree coverage remains required.",
+    "An intermediate local summary computed its fixture digest after a source edit; it is explicitly excluded from exact-source acceptance. Final accepted replay verifies the frozen fixture digest at start and end."
+  ]
+}
