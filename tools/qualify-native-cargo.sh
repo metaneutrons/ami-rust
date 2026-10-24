@@ -628,7 +628,7 @@ esac
 phase=input-binding
 failure_stage=inputs
 require_sha "$bootstrap_pins" "$expected_bootstrap_sha"
-require_sha "$REPO/tools/bootstrap-host-rust.sh" dfa41aa97181d7b2516e8f4b42b18793a2f35cdba969dd430be269adcf1754a3
+require_sha "$REPO/tools/bootstrap-host-rust.sh" 38909d2a4c44e3bc6d2e2ab225936f793785b6c410a0d1b0c218e66bd778fff9
 require_sha "$REPO/tooling/Cargo.toml" 13ac0ca9ac4437c7ac77b066b5a044ea30f935ffef0446dad7146132eda12a3f
 require_sha "$REPO/tooling/Cargo.lock" eebb986b7c8eb7c9f6476a866b6def2491cb89445b1c69a6c9164ccb9a4ff7b2
 require_sha "$REPO/release/ci-resources.json" "$RESOURCE_POLICY_SHA"
@@ -648,7 +648,7 @@ jq -n \
   --arg source_head "$source_head" \
   --arg triple "$TRIPLE" \
   --arg bootstrap_pins_sha256 "$expected_bootstrap_sha" \
-  --arg bootstrap_script_sha256 dfa41aa97181d7b2516e8f4b42b18793a2f35cdba969dd430be269adcf1754a3 \
+  --arg bootstrap_script_sha256 38909d2a4c44e3bc6d2e2ab225936f793785b6c410a0d1b0c218e66bd778fff9 \
   --arg tooling_manifest_sha256 13ac0ca9ac4437c7ac77b066b5a044ea30f935ffef0446dad7146132eda12a3f \
   --arg tooling_lock_sha256 "$tooling_lock_sha" \
   --arg resource_policy_sha256 "$policy_sha" \

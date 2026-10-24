@@ -27,7 +27,7 @@ use std::{
 
 const REQUEST_SCHEMA: &str = "ami-rust-native-prefix-compose-request-v1";
 const EXPECTED_INPUTS_RS_SHA256: &str =
-    "7935f15114c453f87db55d27013935a4b9413a16008c7392f296107a590df631";
+    "7d589d181de3b10e9b70c79be5156140403185d4f85eb01917c5dc78c8f392d4";
 const EXPECTED_TARGET_LIBRARIES_SHA256: &str =
     "4759fc1a0f2f74e1a624a6c7b62b5d9949d873f1ce05a61ba9825891bf327183";
 const EXPECTED_TARGET_PIN_SHA256: &str =
@@ -46,7 +46,10 @@ const MAX_PATH_COMPONENTS: usize = 128;
 const MAX_LINK_TARGET_BYTES: usize = 4_096;
 const MAX_LINK_RESOLUTION_STEPS: usize = 256;
 
-const MAC_RUST: &str = include_str!("../../aros-native-build/pins/macos-aarch64/rust.json");
+const MAC_RUST: &str =
+    include_str!("../../aros-native-build/pins/macos-aarch64/rust-runtime-v2.json");
+const EXPECTED_MAC_RUST_SHA256: &str =
+    "02eecb396c56bd134cb4dc732d30898b03ab9a84ad1143f5d09c0a6b25fc466e";
 const MAC_CARGO: &str = include_str!("../../aros-native-build/pins/macos-aarch64/cargo.json");
 const MAC_LLVM: &str = include_str!("../../aros-native-build/pins/macos-aarch64/toolchain.json");
 const MAC_CSDK: &str = include_str!("../../aros-native-build/pins/macos-aarch64/csdk.json");
@@ -527,6 +530,11 @@ fn verify_source_profile_files(source_root: &Path) -> Result<()> {
             EXPECTED_INPUTS_RS_SHA256,
         ),
         (
+            "tooling/crates/aros-native-build/pins/macos-aarch64/rust-runtime-v2.json",
+            MAC_RUST.as_bytes(),
+            EXPECTED_MAC_RUST_SHA256,
+        ),
+        (
             "tooling/crates/aros-native-build/pins/target.json",
             TARGET_PIN.as_bytes(),
             EXPECTED_TARGET_PIN_SHA256,
@@ -563,10 +571,7 @@ fn require_candidate_profile_sources() -> Result<()> {
         ));
     }
     for (raw, expected) in [
-        (
-            MAC_RUST,
-            "9acf02ab3d4a22137b6c5f82294e35c518ff1ffdbad5a701d5f3cdb0910668ea",
-        ),
+        (MAC_RUST, EXPECTED_MAC_RUST_SHA256),
         (
             MAC_CARGO,
             "2f081118d19e93b95304c95440d82d1f3d022fb063e4ae7ad1b89285ceddbe39",

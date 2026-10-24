@@ -1,0 +1,113 @@
+{
+  "schema": "ami-rust-rc2-macos-llvm-runtime-remediation-v1",
+  "scope": "Local runtime-layout remediation and Cargo prerequisite evidence. This does not accept an SDK, protected distribution chain or RC2 release.",
+  "base_commit": "72fd7f5a2543a60301061e30d4cca02895e8c8f6",
+  "defect": "Pinned macOS rust-objcopy loads @rpath/libLLVM.dylib through its host rustlib directory, while the installed LLVM library is at the toolchain root. The missing relative alias caused stripping warnings. Separated component assembly must generate the alias rather than read it from the Rust component.",
+  "change": {
+    "alias_path": "lib/rustlib/aarch64-apple-darwin/lib/libLLVM.dylib",
+    "relative_target": "../../../libLLVM.dylib",
+    "new_runtime_profile": "tooling/crates/aros-native-build/pins/macos-aarch64/rust-runtime-v2.json",
+    "new_profile_sha256": "02eecb396c56bd134cb4dc732d30898b03ab9a84ad1143f5d09c0a6b25fc466e",
+    "historical_rust_profile_unchanged_sha256": "9acf02ab3d4a22137b6c5f82294e35c518ff1ffdbad5a701d5f3cdb0910668ea",
+    "compiler_library_bytes_rewritten": false,
+    "DYLD_workaround": false,
+    "guards": "Only the exact selected Mac alias is generated; wrong targets, unsupported hosts and file/link collisions fail. Required source-material inventories include the profile and the policy sources."
+  },
+  "source_sha256": {
+    "release/ci_auth.py": "0bc52bc17ba75d410f13479e7f5a51d6f83e5154c1b47dfdc1afcd8586f4d18a",
+    "release/native-tooling-inputs.json": "bc0907093a43533022c1db826dc56f5485a4f8698e751cb10bcc45d4022deab8",
+    "release/test_bare_target_libraries.py": "e76322f43a9e6b8716eecd0867ddc27df525f9d7d8142c2ff33a3ac8818041d0",
+    "release/test_native_tooling_materials.py": "3f7dcf449dd0e6d2a33f0d94b1d1209840d544267b4c3eae4cb0d00060013068",
+    "tooling/crates/aros-native-build/pins/macos-aarch64/rust-runtime-v2.json": "02eecb396c56bd134cb4dc732d30898b03ab9a84ad1143f5d09c0a6b25fc466e",
+    "tooling/crates/aros-native-build/src/inputs.rs": "7d589d181de3b10e9b70c79be5156140403185d4f85eb01917c5dc78c8f392d4",
+    "tooling/crates/core/src/native_prefix.rs": "243f4f6fbecdd514b15e5022614ea1c237b5ab0dcee8da6eb7e1e5be8c11fefc",
+    "tooling/crates/core/src/publisher_materials.rs": "0fca1c808b524e4cbf1a726c31445fc8dbfd222595529b9b1a5eaacd3baa701e",
+    "tooling/crates/xtask/src/native_cargo_qualification.rs": "a25fadf91aa38dda19170fd2bc94af253187933f5f1ffe9a67c31f774185b98d",
+    "tooling/crates/xtask/src/native_prefix_compose.rs": "8360244ad14c6dddf976a9172fca1ea1ebe37d5bfffca69ab47f7279ad8d7974",
+    "tools/bootstrap-host-rust.sh": "38909d2a4c44e3bc6d2e2ab225936f793785b6c410a0d1b0c218e66bd778fff9",
+    "tools/qualify-native-cargo.sh": "76852b7ec90ae162df3eacdcec729fdc85b0362921bd28c6283d629988a93f18",
+    "tools/supervise-bare-target-libraries.py": "0cf95781bf82c27121e3c9a13a96a92f5d1bc92f65d39ac015cf2f903184d12e"
+  },
+  "local_checks": {
+    "focused_assembler_tests": {
+      "passed": 15,
+      "failed": 0
+    },
+    "current_runtime_profile_test": {
+      "passed": 1,
+      "failed": 0
+    },
+    "rustfmt": "PASS",
+    "native_tooling_material_tests": {
+      "passed": 10,
+      "failed": 0
+    },
+    "fresh_bootstrap": "PASS: unchanged authenticated compiler/library bytes, relative alias and rust-objcopy loader smoke",
+    "fresh_composed_prefix": "PASS: 9477 files,25 links, exact runtime alias; rustc/Cargo/rust-objcopy version smokes without DYLD overrides",
+    "direct_fresh_strip_controls": {
+      "status": "PASS for fixed stable and composed nightly tools",
+      "result_sha256": "f137acdf6b26f1fa891da0d08bc590ac44d1cc3e3f7896cd703b515ee8c7d83e",
+      "behavior": "DWARF removed from disposable Mach-O copies; original object, __TEXT,__text and tool/library identities preserved."
+    },
+    "final_python315_ci_fixture_replay": {
+      "status": "PASS",
+      "commands": 43,
+      "interpreter": "Python 3.15.0",
+      "compatibility_shim": false,
+      "result_sha256": "536be53e57fe6bc3073b88c01a6859a6559d8f43a732584f2f300b95fe751575",
+      "scope": "Functional development replay of the exact CI fixture commands; no complete RSS, SDK-consumer or release-authentication claim."
+    },
+    "linux_affected_source_tests": {
+      "status": "PASS",
+      "source_commit": "702ee0765ae75b9b2c9b30ac8cfccb3119396b69",
+      "source_archive_sha256": "b08d04efc01987bde13e9b4601af75559bda6006d3c5c8f7cfe574425c92d5e9",
+      "native_host": "Linux x86-64",
+      "core_assembler_passed": 15,
+      "other_workspace_passed": 132,
+      "other_workspace_ignored": 9,
+      "failed": 0,
+      "report_sha256": "30b8aedb69feb2b3530576703d0db20cc3db99ba5898f3a4040335b760dfd917",
+      "commands": [
+        {
+          "command": "core-native-prefix",
+          "result_sha256": "59ba6b7906d3753843fcea55d7612b3f51d1589fc5b38b51b6b810aba25c09b2",
+          "elapsed_seconds": 50.734725162,
+          "aggregate_peak_rss_bytes": 1740230656,
+          "workspace_peak_bytes": 1657424814
+        },
+        {
+          "command": "workspace-excluding-core",
+          "result_sha256": "85f778a6232bf4b21927955796d73dcf37e66951b33dcfbed9275be9b8f00896",
+          "elapsed_seconds": 58.983844388,
+          "aggregate_peak_rss_bytes": 1308704768,
+          "workspace_peak_bytes": 2008847738
+        }
+      ],
+      "scope": "Separate bounded local development gate; not an extension of the closed prerequisite campaign and not a full core suite, SDK or RC2 acceptance."
+    }
+  },
+  "fresh_macos_cargo": {
+    "bytes": 38204560,
+    "sha256": "671bc15372da8d9abfe15dadbcc4ac00c61fe2f16c1fad86361dc8bcc99396e3",
+    "compiler_warnings": 0,
+    "outer_result_sha256": "13335f1036fdb5b10cb21ce327add4283cef3b373c2430092fca5e202f200c0f",
+    "inner_result_sha256": "231d09aeebe123a1599cf06bf9d4db5250c2f8f89aab968a86635a016ccd32af",
+    "local_path_scan_hits": [],
+    "scope": "Standalone local all-static v3 prerequisite; older artifacts and failed captures retained."
+  },
+  "independent_review": {
+    "verdict": "PASS for source patch and retained local evidence",
+    "result_sha256": "a67a066163896f4a900777957d0e2832d4727b70a19ef3153ed2d270e62c8e5e"
+  },
+  "limits": [
+    "Composition intentionally uses the currently pinned old Cargo component; final three-host consumer qualification must bind the separately produced Cargo artifacts through explicit candidate identities.",
+    "The earlier broad Rust workspace/fixture passes predate the final assembler patch. The current focused source checks above are recorded separately.",
+    "Initial Mac two-root application outputs were built with the earlier prerequisite Cargo and require final-input replay. All changed final AROS outputs require the full runtime/memory matrix.",
+    "No target specification, target libraries, AROS boot/ABI baseline or protected AROS checkout was changed. No SDK is published by this change."
+  ],
+  "baseline": {
+    "ISO_sha256": "9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1",
+    "QEMU_sha256": "a1b97665fb9f341a65acf9b0e7dc4c7235972aae61182545ed1aacf5ffca87fa"
+  },
+  "private_evidence_packet": "evidence/rc1-native-qualification-flow-20261019/rc2-production-v3-local-20261024-a1"
+}

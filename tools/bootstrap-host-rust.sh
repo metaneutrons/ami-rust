@@ -62,6 +62,54 @@ for cli_component in rustc cargo rust-std; do
   bash "$cli_prefix/unpacked/$cli_name/install.sh" --prefix="$cli_prefix/toolchain" --disable-ldconfig
 done
 
+if [ "$cli_triple" = aarch64-apple-darwin ]; then
+  cli_llvm_library="$cli_prefix/toolchain/lib/libLLVM.dylib"
+  cli_objcopy="$cli_prefix/toolchain/lib/rustlib/aarch64-apple-darwin/bin/rust-objcopy"
+  cli_objcopy_lib="$cli_prefix/toolchain/lib/rustlib/aarch64-apple-darwin/lib"
+  cli_llvm_alias="$cli_objcopy_lib/libLLVM.dylib"
+  cli_llvm_alias_target=../../../libLLVM.dylib
+
+  if [ ! -f "$cli_llvm_library" ]; then
+    echo "installed macOS Rust toolchain is missing lib/libLLVM.dylib" >&2
+    exit 1
+  fi
+  if [ ! -f "$cli_objcopy" ] || [ ! -x "$cli_objcopy" ]; then
+    echo "installed macOS Rust toolchain is missing executable rust-objcopy" >&2
+    exit 1
+  fi
+
+  mkdir -p -- "$cli_objcopy_lib"
+  if [ -L "$cli_llvm_alias" ]; then
+    if [ "$(readlink "$cli_llvm_alias")" != "$cli_llvm_alias_target" ] \
+      || [ ! "$cli_llvm_alias" -ef "$cli_llvm_library" ]; then
+      echo "installed macOS Rust toolchain has an unexpected libLLVM.dylib alias" >&2
+      exit 1
+    fi
+  elif [ -e "$cli_llvm_alias" ]; then
+    echo "refusing to replace existing rust-objcopy libLLVM.dylib file" >&2
+    exit 1
+  else
+    ln -s "$cli_llvm_alias_target" "$cli_llvm_alias"
+  fi
+
+  if [ ! -L "$cli_llvm_alias" ] || [ ! "$cli_llvm_alias" -ef "$cli_llvm_library" ]; then
+    echo "macOS Rust libLLVM.dylib alias does not resolve to the installed library" >&2
+    exit 1
+  fi
+  # Clear only loader override variables for this smoke command; preserve the caller's environment.
+  /usr/bin/env \
+    -u DYLD_LIBRARY_PATH \
+    -u DYLD_FRAMEWORK_PATH \
+    -u DYLD_FALLBACK_LIBRARY_PATH \
+    -u DYLD_FALLBACK_FRAMEWORK_PATH \
+    -u DYLD_VERSIONED_LIBRARY_PATH \
+    -u DYLD_VERSIONED_FRAMEWORK_PATH \
+    -u DYLD_INSERT_LIBRARIES \
+    -u DYLD_ROOT_PATH \
+    -u DYLD_IMAGE_SUFFIX \
+    "$cli_objcopy" --version
+fi
+
 cli_version=$("$cli_prefix/toolchain/bin/rustc" -Vv)
 case "$cli_version" in *"commit-hash: $cli_commit"*) ;; *) echo "host compiler mismatch" >&2; exit 1 ;; esac
 printf '%s\n' "$cli_version"

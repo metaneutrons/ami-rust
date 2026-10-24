@@ -37,8 +37,11 @@ const COLLECTOR_DESTINATION_PATH: &str = "bin/collect-aros";
 const TARGET_SPEC_PATH: &str = "lib/rustlib/x86_64-aros/x86_64-aros.json";
 const TARGET_ALIAS_PATH: &str = "lib/rustlib/x86_64-aros/target.json";
 const TARGET_ALIAS: &str = "x86_64-aros.json";
+const MACOS_AARCH64_RUST_HOST_TRIPLE: &str = "aarch64-apple-darwin";
 const RUST_HOST_LINKER_ALIAS_SUFFIX: &str = "/bin/aros-link";
 const RUST_HOST_LINKER_ALIAS_TARGET: &str = "../../../../bin/aros-link";
+const RUST_HOST_LLVM_RUNTIME_ALIAS_SUFFIX: &str = "/lib/libLLVM.dylib";
+const RUST_HOST_LLVM_RUNTIME_ALIAS_TARGET: &str = "../../../libLLVM.dylib";
 const TARGET_LIBRARIES_PREFIX: &str = "lib/rustlib/x86_64-aros/lib";
 const LLVM_PREFIX: &str = "libexec/aros/llvm";
 const CSDK_PREFIX: &str = "lib/aros/c-sdk";
@@ -164,6 +167,9 @@ struct PrefixPlan {
 fn is_generated_rust_alias_path(path: &str, rust_host_triple: &str) -> bool {
     path == TARGET_ALIAS_PATH
         || path == format!("lib/rustlib/{rust_host_triple}{RUST_HOST_LINKER_ALIAS_SUFFIX}")
+        || (rust_host_triple == MACOS_AARCH64_RUST_HOST_TRIPLE
+            && path
+                == format!("lib/rustlib/{rust_host_triple}{RUST_HOST_LLVM_RUNTIME_ALIAS_SUFFIX}"))
 }
 
 fn validate_generated_rust_aliases(
@@ -199,6 +205,28 @@ fn validate_generated_rust_aliases(
     {
         return Err(Refusal::new(
             "Rust profile host aros-link alias does not match the selected host",
+        ));
+    }
+
+    let llvm_runtime_aliases = rust
+        .symlinks
+        .iter()
+        .filter(|link| link.path.ends_with(RUST_HOST_LLVM_RUNTIME_ALIAS_SUFFIX))
+        .collect::<Vec<_>>();
+    if rust_host_triple == MACOS_AARCH64_RUST_HOST_TRIPLE {
+        let expected_path =
+            format!("lib/rustlib/{rust_host_triple}{RUST_HOST_LLVM_RUNTIME_ALIAS_SUFFIX}");
+        if llvm_runtime_aliases.len() != 1
+            || llvm_runtime_aliases[0].path != expected_path
+            || llvm_runtime_aliases[0].target != RUST_HOST_LLVM_RUNTIME_ALIAS_TARGET
+        {
+            return Err(Refusal::new(
+                "Rust profile macOS LLVM runtime alias does not match the selected host",
+            ));
+        }
+    } else if !llvm_runtime_aliases.is_empty() {
+        return Err(Refusal::new(
+            "Rust profile contains an unsupported LLVM runtime alias",
         ));
     }
     Ok(())
@@ -1386,6 +1414,41 @@ mod tests {
         }
     }
 
+    fn configure_macos_runtime_alias(fixture: &mut Fixture) {
+        let linux_linker_alias =
+            format!("lib/rustlib/x86_64-unknown-linux-gnu{RUST_HOST_LINKER_ALIAS_SUFFIX}");
+        fs::remove_file(fixture.rust.root.join(&linux_linker_alias)).unwrap();
+        fixture
+            .rust
+            .symlinks
+            .retain(|link| link.path != linux_linker_alias);
+
+        fixture.rust.symlinks.push(LinkIdentity {
+            path: format!(
+                "lib/rustlib/{MACOS_AARCH64_RUST_HOST_TRIPLE}{RUST_HOST_LINKER_ALIAS_SUFFIX}"
+            ),
+            target: RUST_HOST_LINKER_ALIAS_TARGET.to_owned(),
+        });
+        fixture.rust.symlinks.push(LinkIdentity {
+            path: format!(
+                "lib/rustlib/{MACOS_AARCH64_RUST_HOST_TRIPLE}{RUST_HOST_LLVM_RUNTIME_ALIAS_SUFFIX}"
+            ),
+            target: RUST_HOST_LLVM_RUNTIME_ALIAS_TARGET.to_owned(),
+        });
+        fixture.rust.files.push(write_identity(
+            &fixture.rust.root,
+            "lib/libLLVM.dylib",
+            b"Mac LLVM runtime",
+        ));
+    }
+
+    fn macos_spec<'a>(fixture: &'a Fixture, destination: &'a Path) -> NativePrefixSpec<'a> {
+        let mut spec = fixture.spec(destination);
+        spec.host_key = "macos-aarch64";
+        spec.rust_host_triple = MACOS_AARCH64_RUST_HOST_TRIPLE;
+        spec
+    }
+
     impl Drop for Fixture {
         fn drop(&mut self) {
             fs::remove_dir_all(&self.root).unwrap();
@@ -1559,6 +1622,120 @@ mod tests {
             },
         )
         .unwrap();
+    }
+
+    #[test]
+    fn generates_exact_macos_llvm_runtime_alias_without_a_source_link() {
+        let mut fixture = Fixture::new();
+        configure_macos_runtime_alias(&mut fixture);
+        let alias_path = format!(
+            "lib/rustlib/{MACOS_AARCH64_RUST_HOST_TRIPLE}{RUST_HOST_LLVM_RUNTIME_ALIAS_SUFFIX}"
+        );
+        assert!(!fixture.rust.root.join(&alias_path).exists());
+
+        let parent = fixture.root.join("Mac runtime alias output");
+        fs::create_dir(&parent).unwrap();
+        let destination = parent.join("prefix");
+        let receipt =
+            assemble_native_prefix(macos_spec(&fixture, &destination), || Ok(())).unwrap();
+
+        assert!(receipt.symlinks.iter().any(|link| {
+            link.path == alias_path && link.target == RUST_HOST_LLVM_RUNTIME_ALIAS_TARGET
+        }));
+        assert_eq!(
+            fs::read_link(destination.join(alias_path)).unwrap(),
+            Path::new(RUST_HOST_LLVM_RUNTIME_ALIAS_TARGET)
+        );
+        assert_eq!(
+            fs::read(destination.join("lib/libLLVM.dylib")).unwrap(),
+            b"Mac LLVM runtime"
+        );
+        verify_complete(
+            &destination,
+            &receipt.files,
+            &receipt.symlinks,
+            InventoryLimits {
+                max_tree_entries: 4096,
+                max_link_resolution_steps: 64,
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn refuses_wrong_macos_llvm_runtime_alias_target_before_opening_source_link() {
+        let mut fixture = Fixture::new();
+        configure_macos_runtime_alias(&mut fixture);
+        let alias_path = format!(
+            "lib/rustlib/{MACOS_AARCH64_RUST_HOST_TRIPLE}{RUST_HOST_LLVM_RUNTIME_ALIAS_SUFFIX}"
+        );
+        fixture
+            .rust
+            .symlinks
+            .iter_mut()
+            .find(|link| link.path == alias_path)
+            .unwrap()
+            .target = "../../../other.dylib".to_owned();
+
+        let parent = fixture.root.join("wrong Mac runtime alias output");
+        fs::create_dir(&parent).unwrap();
+        let destination = parent.join("prefix");
+        let error =
+            assemble_native_prefix(macos_spec(&fixture, &destination), || Ok(())).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("Rust profile macOS LLVM runtime alias does not match the selected host")
+        );
+        assert!(!destination.exists());
+        assert_no_stage(&parent);
+    }
+
+    #[test]
+    fn refuses_conflicting_macos_llvm_runtime_alias_file_and_link_rows() {
+        let mut fixture = Fixture::new();
+        configure_macos_runtime_alias(&mut fixture);
+        let alias_path = format!(
+            "lib/rustlib/{MACOS_AARCH64_RUST_HOST_TRIPLE}{RUST_HOST_LLVM_RUNTIME_ALIAS_SUFFIX}"
+        );
+        fixture.rust.files.push(FileIdentity {
+            path: alias_path,
+            bytes: 8,
+            sha256: sha256_bytes(b"conflict"),
+            mode: Some(0o755),
+        });
+
+        let parent = fixture.root.join("conflicting Mac runtime alias output");
+        fs::create_dir(&parent).unwrap();
+        let destination = parent.join("prefix");
+        let error =
+            assemble_native_prefix(macos_spec(&fixture, &destination), || Ok(())).unwrap_err();
+        assert!(error.to_string().contains("duplicate paths"));
+        assert!(!destination.exists());
+        assert_no_stage(&parent);
+    }
+
+    #[test]
+    fn refuses_macos_llvm_runtime_alias_for_an_unsupported_host() {
+        let mut fixture = Fixture::new();
+        fixture.rust.symlinks.push(LinkIdentity {
+            path: format!(
+                "lib/rustlib/x86_64-unknown-linux-gnu{RUST_HOST_LLVM_RUNTIME_ALIAS_SUFFIX}"
+            ),
+            target: RUST_HOST_LLVM_RUNTIME_ALIAS_TARGET.to_owned(),
+        });
+
+        let parent = fixture.root.join("unsupported runtime alias output");
+        fs::create_dir(&parent).unwrap();
+        let destination = parent.join("prefix");
+        let error = assemble_native_prefix(fixture.spec(&destination), || Ok(())).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("Rust profile contains an unsupported LLVM runtime alias")
+        );
+        assert!(!destination.exists());
+        assert_no_stage(&parent);
     }
 
     #[test]
