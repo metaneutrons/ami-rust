@@ -1,0 +1,23 @@
+[package]
+name = "ami-rust-minimal"
+version.workspace = true
+edition.workspace = true
+publish = false
+autobins = false
+autolib = false
+license.workspace = true
+readme = "README.md"
+[[bin]]
+name = "ami-rust-minimal"
+path = "src/main.rs"
+
+[features]
+default = []
+alloc = ["aros-runtime/alloc"]
+[dependencies]
+aros-runtime = { version = "=0.1.0", path = "../../crates/aros-runtime" }
+aros-sys = { version = "=0.1.0", path = "../../crates/aros-sys" }
+aros-sdk = { version = "=0.1.0", path = "../../crates/aros-sdk" }
+
+[build-dependencies]
+aros-native-build = { version = "=0.2.0", path = "../../tooling/crates/aros-native-build" }

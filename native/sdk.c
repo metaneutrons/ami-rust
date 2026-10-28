@@ -1,0 +1,439 @@
+/* Native bridge for the bounded M1 SDK. AROS contracts: see THIRD_PARTY_NOTICES.md. */
+#include "sdk.h"
+#include <exec/execbase.h>
+#include <exec/memory.h>
+#include <exec/ports.h>
+#include <exec/tasks.h>
+#include <dos/dosextens.h>
+#include <proto/exec.h>
+#include <proto/dos.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <setjmp.h>
+#include "compatibility-gates.h"
+#include "test-controls.h"
+#ifdef AMI_SDK_TESTING
+#include "test-file-controls.h"
+#endif
+
+#define KIND_FILE 1UL
+#define KIND_LIBRARY 2UL
+#define KIND_SIGNAL 3UL
+#define KIND_PORT 4UL
+#define KIND_MESSAGE 5UL
+#define OUTPUT_TOKEN UINT64_C(0xff00000000000001)
+#define ERROR_OUTPUT_TOKEN UINT64_C(0xff00000000000002)
+struct Block { struct Block *next,*prev;void *user;size_t size,align,total,charge; };
+struct FileSlot { uint64_t token;BPTR handle; };
+struct LibSlot { uint64_t token;struct Library *handle; };
+struct SignalSlot { uint64_t token;int bit,port_owned; };
+struct PortSlot { uint64_t token;struct MsgPort *handle;int signal_slot; };
+struct MessageSlot { uint64_t token;struct Message native;uint8_t payload[256];size_t size;uint64_t queued_port,reply_port;int queued,state; };
+static struct FileSlot files[16];
+static struct LibSlot libraries[4];
+static struct SignalSlot signals[4];
+static struct PortSlot ports[2];
+static struct MessageSlot messages[8];
+static struct Block *blocks;
+static struct Task *owner;
+static struct Library *mandatory_dos;
+static int active,closing,callback_active,claimed,initialized,fatal_started;
+static jmp_buf cleanup_resume;
+static int cleanup_resume_ready,cleanup_error;
+static int argument_count;
+static char **arguments;
+static uint64_t sequence,context_key;
+static SdkStats stats;
+/* Default production observer: independent debugger can observe depth directly. */
+volatile uint64_t ami_sdk_diagnostic_depth;
+static uint64_t next_token(unsigned kind,size_t slot) {
+ if (test_hit(9)) return 0;
+ if (sequence >= UINT64_C(0x0000ffffffffffff)) return 0;
+ return ((uint64_t)kind<<56)|((++sequence)<<8)|(slot+1);
+}
+static int refuse(SdkError *e,int kind,int64_t native) {if(e){e->kind=kind;e->native=native;}++stats.refusals;return -1;}
+static int clear_error(SdkError *e) {if(e){e->kind=0;e->native=0;}return 0;}
+static int own(uint64_t key,SdkError *e) {
+ clear_error(e);
+ if (!active || closing || !owner || key!=context_key || FindTask(NULL)!=owner) return refuse(e,4,0);
+ return 0;
+}
+static int index_of(uint64_t token,unsigned kind,size_t cap) {
+ size_t slot=(size_t)(token&255U);
+ if (!token || (token>>56)!=kind || !slot || slot>cap) return -1;
+ return (int)(slot-1);
+}
+static int byte_name(const uint8_t *p) {
+ if (!p) return 0;
+ for(size_t i=0;i<128;i++)if(!p[i])return 1;
+ return 0;
+}
+static int argument_gate(int argc,char **argv) {
+ if(argc<=0 || argc>32 || !argv)return 10;
+ size_t bytes=0;
+ for(int i=0;i<argc;i++){
+  if(!argv[i])return 10;
+  size_t n=0;while(n<4096 && argv[i][n])++n;
+  if(n==4096 || bytes>4096-(n+1))return 10;
+  bytes+=n+1;
+ }
+ return 0;
+}
+int sdk_begin(int argc,char **argv) {
+ int invalid=argument_gate(argc,argv);if(invalid)return invalid;
+ if(initialized || active || closing || !SysBase || !DOSBase)return 20;
+ if(!compatible_exec(&SysBase->LibNode) || !compatible_dos(&DOSBase->dl_lib))return 20;
+ initialized=1;owner=FindTask(NULL);if(!owner)return 20;
+ mandatory_dos=test_hit(13)?NULL:OpenLibrary((CONST_STRPTR)"dos.library",0);if(!mandatory_dos){owner=NULL;return 20;}
+ argument_count=argc;arguments=argv;context_key=next_token(0x41,0);
+ if(!context_key){CloseLibrary(mandatory_dos);mandatory_dos=NULL;owner=NULL;return 20;}
+ claimed=0;active=1;return 0;
+}
+uint64_t sdk_context(void) {return active && !closing && owner==FindTask(NULL)?context_key:0;}
+uint64_t sdk_claim_context(void) {uint64_t key=sdk_context();if(!key||claimed)return 0;claimed=1;return key;}
+size_t sdk_arg_count(uint64_t key) {return own(key,NULL)==0?(size_t)argument_count:0;}
+const uint8_t *sdk_arg(uint64_t key,size_t i,size_t *length) {
+ if(own(key,NULL)||!length||i>=(size_t)argument_count)return NULL;
+ const uint8_t *p=(const uint8_t *)arguments[i];*length=0;while(p[*length])++*length;return p;
+}
+void *sdk_alloc(size_t size,size_t align) {
+ AmiSdkAllocationLayout layout;size_t next_charge;
+ if(!active || closing || owner!=FindTask(NULL) || ami_sdk_diagnostic_depth ||
+    !ami_sdk_allocation_layout(size,align,sizeof(struct Block),&layout) ||
+    !ami_sdk_allocation_add_charge(stats.backing_charge,layout.charge,&next_charge)){++stats.refusals;return NULL;}
+ if(test_hit(9)){++stats.refusals;return NULL;}
+ struct Block *b=(struct Block *)AllocMem(layout.total,MEMF_ANY);if(!b){++stats.refusals;return NULL;}
+ uintptr_t user_address;
+ if(!ami_sdk_allocation_user_address((uintptr_t)b,&layout,&user_address)){
+  FreeMem(b,layout.total);++stats.refusals;return NULL;
+ }
+ b->user=(void *)user_address;
+ b->size=size;b->align=align;b->total=layout.total;b->charge=layout.charge;b->prev=NULL;b->next=blocks;
+ if(blocks)blocks->prev=b;blocks=b;
+ ++stats.blocks;stats.backing_charge=next_charge;if(stats.backing_charge>stats.peak_charge)stats.peak_charge=stats.backing_charge;
+ return b->user;
+}
+void sdk_dealloc(void *p,size_t size,size_t align) {
+ if(!active || closing || owner!=FindTask(NULL)){++stats.refusals;return;}
+ struct Block *b=blocks;while(b && b->user!=p)b=b->next;
+ if(!b || b->size!=size || b->align!=align){++stats.refusals;return;}
+ if(b->prev)b->prev->next=b->next;else blocks=b->next;
+ if(b->next)b->next->prev=b->prev;
+ size_t total=b->total;--stats.blocks;stats.backing_charge-=b->charge;FreeMem(b,total);
+}
+void sdk_diagnostic(const uint8_t *label,size_t length,uint64_t code) {
+ uint8_t buffer[256];size_t n=0;
+ ++ami_sdk_diagnostic_depth;
+#ifdef AMI_SDK_TESTING
+ if(test_hit(14) || (secondary_on_diagnostic && closing)){secondary_on_diagnostic=0;sdk_fatal(14);}
+ /* Positive detection controls allocate inside the actual SDK diagnostic
+    window. The pool is created before entry, so pool use cannot hide here. */
+ uint32_t probe=diagnostic_probe;diagnostic_probe=0;
+ if(probe)ami_test_measurement_expected(probe);
+ if(probe==1){APTR p=AllocMem(1,MEMF_ANY);if(p)FreeMem(p,1);}
+ if(probe==2){void *p=malloc(1);if(p){*(volatile uint8_t *)p=0x61;__asm__ volatile(""::"r"(p):"memory");free(p);}}
+ if(probe==3 && diagnostic_pool){APTR p=AllocPooled(diagnostic_pool,1);if(p)FreePooled(diagnostic_pool,p,1);}
+ if(probe)ami_test_measurement_expected(0);
+#endif
+ if(label){if(length>230)length=230;for(size_t i=0;i<length;i++)buffer[n++]=label[i];}
+ buffer[n++]=' ';uint8_t digits[20];size_t k=0;
+ do{digits[k++]=(uint8_t)('0'+code%10);code/=10;}while(code && k<20);
+ while(k)buffer[n++]=digits[--k];buffer[n++]='\n';
+ for(size_t i=0;i<n;i++)RawPutChar(buffer[i]);
+ --ami_sdk_diagnostic_depth;
+}
+SdkStats sdk_stats(void) {return stats;}
+uint64_t sdk_library_open(uint64_t key,const uint8_t *name,uint16_t version,SdkError *e) {
+ if(own(key,e))return 0;if(!byte_name(name)){refuse(e,2,0);return 0;}
+ size_t i=0;while(i<4 && libraries[i].token)++i;if(i==4){refuse(e,3,4);return 0;}
+ uint64_t token=next_token(KIND_LIBRARY,i);if(!token){refuse(e,3,0);return 0;}
+ libraries[i]=(struct LibSlot){token,NULL};
+ struct Library *l=OpenLibrary((CONST_STRPTR)name,version);if(!l){libraries[i]=(struct LibSlot){0};refuse(e,1,0);return 0;}
+ libraries[i]=(struct LibSlot){token,l};++stats.libraries;return token;
+}
+int sdk_library_close(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;int i=index_of(token,KIND_LIBRARY,4);
+ if(i<0 || libraries[i].token!=token)return refuse(e,5,0);
+ struct Library *l=libraries[i].handle;if(!l)return refuse(e,5,0);libraries[i]=(struct LibSlot){0};--stats.libraries;CloseLibrary(l);return 0;
+}
+uint64_t sdk_file_open(uint64_t key,const uint8_t *path,int32_t mode,SdkError *e) {
+ if(own(key,e))return 0;if(!byte_name(path) || mode<0 || mode>2){refuse(e,2,0);return 0;}
+ size_t i=0;while(i<16 && files[i].token)++i;if(i==16){refuse(e,3,16);return 0;}
+ uint64_t token=next_token(KIND_FILE,i);if(!token){refuse(e,3,0);return 0;}
+ files[i]=(struct FileSlot){token,BNULL};
+ BPTR f=Open((CONST_STRPTR)path,mode==0?MODE_OLDFILE:mode==1?MODE_NEWFILE:MODE_READWRITE);
+ if(!f){SIPTR error=IoErr();files[i]=(struct FileSlot){0};refuse(e,1,error);return 0;}
+ files[i]=(struct FileSlot){token,f};++stats.files;return token;
+}
+int sdk_file_close(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;int i=index_of(token,KIND_FILE,16);
+ if(i<0 || files[i].token!=token)return refuse(e,5,0);
+ BPTR f=files[i].handle;if(!f)return refuse(e,5,0);files[i]=(struct FileSlot){0};--stats.files;
+ BOOL ok=Close(f);if(!ok){SIPTR error=IoErr();return refuse(e,1,error);}return 0;
+}
+uint64_t sdk_stdout(uint64_t key) {return own(key,NULL)==0?OUTPUT_TOKEN:0;}
+uint64_t sdk_stderr(uint64_t key) {
+ /* Only a DOS Process has pr_CES/pr_COS. Never cast an arbitrary Exec task. */
+ return own(key,NULL)==0 && owner->tc_Node.ln_Type==NT_PROCESS?ERROR_OUTPUT_TOKEN:0;
+}
+int64_t sdk_file_io(uint64_t key,uint64_t token,uint8_t *buffer,size_t n,int32_t writing,SdkError *e) {
+ if(own(key,e))return -1;
+ if(n>65536 || (n && !buffer) || (writing!=0 && writing!=1))return refuse(e,2,0);
+ BPTR f;
+ if(token==OUTPUT_TOKEN){if(!writing)return refuse(e,5,0);f=Output();if(!f)return refuse(e,1,0);}
+ else if(token==ERROR_OUTPUT_TOKEN){
+  if(!writing || owner->tc_Node.ln_Type!=NT_PROCESS)return refuse(e,5,0);
+  /* Process-owned borrowed streams: resolve on each write and never close. */
+  struct Process *process=(struct Process *)owner;
+  f=process->pr_CES?process->pr_CES:process->pr_COS;
+  if(!f)return refuse(e,1,0);
+ }
+ else{int i=index_of(token,KIND_FILE,16);if(i<0 || files[i].token!=token)return refuse(e,5,0);f=files[i].handle;}
+ LONG result=writing?Write(f,buffer,(LONG)n):Read(f,buffer,(LONG)n);
+ if(result<0){SIPTR error=IoErr();return refuse(e,1,error);}return (int64_t)result;
+}
+#ifdef AMI_SDK_TESTING
+#include "test-stderr-controls.h"
+#endif
+uint64_t sdk_signal_new(uint64_t key,SdkError *e) {
+ if(own(key,e))return 0;size_t i=0;while(i<4 && signals[i].token)++i;
+ if(i==4){refuse(e,3,4);return 0;}uint64_t token=next_token(KIND_SIGNAL,i);if(!token){refuse(e,3,0);return 0;}
+ signals[i]=(struct SignalSlot){token,-1,0};
+ BYTE bit=AllocSignal(-1);if(bit<0){signals[i]=(struct SignalSlot){0};refuse(e,1,0);return 0;}
+ signals[i]=(struct SignalSlot){token,bit,0};++stats.signals;return token;
+}
+int sdk_signal_drop(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;int i=index_of(token,KIND_SIGNAL,4);
+ if(i<0 || signals[i].token!=token || (signals[i].port_owned || signals[i].bit<0))return refuse(e,5,0);
+ int bit=signals[i].bit;signals[i]=(struct SignalSlot){0};--stats.signals;SetSignal(0,1UL<<bit);FreeSignal(bit);return 0;
+}
+int sdk_signal_post(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;int i=index_of(token,KIND_SIGNAL,4);
+ if(i<0 || signals[i].token!=token || (signals[i].port_owned || signals[i].bit<0))return refuse(e,5,0);
+ Signal(owner,1UL<<signals[i].bit);return 0;
+}
+int sdk_signal_wait(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;int i=index_of(token,KIND_SIGNAL,4);
+ if(i<0 || signals[i].token!=token || (signals[i].port_owned || signals[i].bit<0))return refuse(e,5,0);
+ Wait(1UL<<signals[i].bit);return 0;
+}
+uint64_t sdk_port_new(uint64_t key,SdkError *e) {
+ if(own(key,e))return 0;size_t i=0,s=0;while(i<2 && ports[i].token)++i;while(s<4 && signals[s].token)++s;
+ if(i==2 || s==4){refuse(e,3,i==2?2:4);return 0;}
+ uint64_t token=next_token(KIND_PORT,i),sig=next_token(KIND_SIGNAL,s);
+ if(!token||!sig){refuse(e,3,0);return 0;}
+ ports[i]=(struct PortSlot){token,NULL,(int)s};signals[s]=(struct SignalSlot){sig,-1,1};
+ struct MsgPort *port=CreateMsgPort();if(!port){ports[i]=(struct PortSlot){0};signals[s]=(struct SignalSlot){0};refuse(e,1,0);return 0;}
+ ports[i]=(struct PortSlot){token,port,(int)s};signals[s]=(struct SignalSlot){sig,port->mp_SigBit,1};++stats.ports;++stats.signals;return token;
+}
+static int message_index(uint64_t token) {int i=index_of(token,KIND_MESSAGE,8);return i>=0 && messages[i].token==token?i:-1;}
+static void detach_message(struct MessageSlot *m) {
+ if(m->queued){Remove(&m->native.mn_Node);m->queued=0;m->queued_port=0;}
+}
+static void clear_port(size_t i) {
+ uint64_t token=ports[i].token;struct MsgPort *port=ports[i].handle;int s=ports[i].signal_slot;
+ for(size_t n=0;n<8;n++)if(messages[n].token){
+  if(messages[n].queued_port==token){detach_message(&messages[n]);messages[n].state=0;messages[n].reply_port=0;messages[n].native.mn_ReplyPort=NULL;if(messages[n].state==2)messages[n].state=0;}
+  if(messages[n].reply_port==token){messages[n].reply_port=0;messages[n].native.mn_ReplyPort=NULL;if(messages[n].state==2)messages[n].state=0;}
+ }
+ ports[i]=(struct PortSlot){0};signals[s]=(struct SignalSlot){0};--stats.ports;--stats.signals;
+ SetSignal(0,1UL<<port->mp_SigBit);DeleteMsgPort(port);
+}
+int sdk_port_drop(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;int i=index_of(token,KIND_PORT,2);if(i<0 || ports[i].token!=token || !ports[i].handle)return refuse(e,5,0);clear_port((size_t)i);return 0;
+}
+uint64_t sdk_message_new(uint64_t key,const uint8_t *data,size_t n,SdkError *e) {
+ if(own(key,e))return 0;if(n>256 || (n && !data)){refuse(e,2,0);return 0;}
+ size_t i=0;while(i<8 && messages[i].token)++i;if(i==8){refuse(e,3,8);return 0;}
+ uint64_t token=next_token(KIND_MESSAGE,i);if(!token){refuse(e,3,0);return 0;}
+ struct MessageSlot *m=&messages[i];memset(m,0,sizeof(*m));m->token=token;m->size=n;m->native.mn_Length=sizeof(m->native)+256;
+ for(size_t k=0;k<n;k++)m->payload[k]=data[k];++stats.messages;return token;
+}
+int sdk_message_drop(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;int i=message_index(token);if(i<0)return refuse(e,5,0);detach_message(&messages[i]);memset(&messages[i],0,sizeof(messages[i]));--stats.messages;return 0;
+}
+int sdk_message_copy(uint64_t key,uint64_t token,uint8_t *out,size_t cap,SdkError *e) {
+ if(own(key,e))return -1;int i=message_index(token);if(i<0 || messages[i].queued)return refuse(e,5,0);
+ struct MessageSlot *m=&messages[i];if(cap<m->size || (m->size && !out))return refuse(e,2,0);
+ for(size_t k=0;k<m->size;k++)out[k]=m->payload[k];return (int)m->size;
+}
+int sdk_port_put(uint64_t key,uint64_t port_token,uint64_t message_token,uint64_t reply_token,SdkError *e) {
+ if(own(key,e))return -1;int p=index_of(port_token,KIND_PORT,2),r=index_of(reply_token,KIND_PORT,2),m=message_index(message_token);
+ if(p<0 || r<0 || m<0 || ports[p].token!=port_token || ports[r].token!=reply_token || messages[m].state!=0)return refuse(e,5,0);
+ struct MessageSlot *msg=&messages[m];msg->reply_port=reply_token;msg->native.mn_ReplyPort=ports[r].handle;msg->queued=1;msg->state=1;msg->queued_port=port_token;PutMsg(ports[p].handle,&msg->native);return 0;
+}
+int sdk_port_receive(uint64_t key,uint64_t port_token,uint64_t message_token,SdkError *e) {
+ if(own(key,e))return -1;int p=index_of(port_token,KIND_PORT,2),m=message_index(message_token);
+ if(p<0 || m<0 || ports[p].token!=port_token)return refuse(e,5,0);
+ struct MessageSlot *msg=&messages[m];struct MsgPort *port=ports[p].handle;
+ struct Node *head=port->mp_MsgList.lh_Head;
+ if(head==(struct Node *)&port->mp_MsgList.lh_Tail)return 0;
+ if(head!=&msg->native.mn_Node || !msg->queued || msg->queued_port!=port_token)return refuse(e,5,0);
+ struct Message *got=GetMsg(port);if(got!=&msg->native)return refuse(e,5,0);
+ msg->queued=0;msg->queued_port=0;msg->state=msg->state==1 && msg->reply_port?2:0;return 1;
+}
+int sdk_message_reply(uint64_t key,uint64_t message_token,SdkError *e) {
+ if(own(key,e))return -1;int m=message_index(message_token);if(m<0)return refuse(e,5,0);
+ struct MessageSlot *msg=&messages[m];int p=index_of(msg->reply_port,KIND_PORT,2);
+ if(msg->state!=2 || msg->queued || p<0 || ports[p].token!=msg->reply_port || msg->native.mn_ReplyPort!=ports[p].handle)return refuse(e,5,0);
+ msg->queued=1;msg->state=3;msg->queued_port=msg->reply_port;ReplyMsg(&msg->native);return 0;
+}
+int sdk_callback(uint64_t key,uint64_t (*callback)(void *,uint64_t),void *data,uint64_t value,uint64_t *out,SdkError *e) {
+ if(own(key,e))return -1;if(callback_active || !callback || !data || !out)return refuse(e,5,0);
+ callback_active=1;*out=callback(data,value);callback_active=0;return 0;
+}
+#ifdef AMI_SDK_TESTING
+static uint64_t counter_callback(void *p,uint64_t value){++*(unsigned *)p;return value;}
+static int test_report_ledgers(void) {
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] blocks",18,stats.blocks);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] backing",19,stats.backing_charge);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] files",17,stats.files);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] libraries",21,stats.libraries);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] ports",17,stats.ports);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] signals",19,stats.signals);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] messages",20,stats.messages);
+ sdk_diagnostic((const uint8_t *)"[m1-native] live",16,backend_live());
+ sdk_diagnostic((const uint8_t *)"[m1-native] errors",18,backend_errors);
+ sdk_diagnostic((const uint8_t *)"[m1-native] signal-mask-delta",29,(uint64_t)(FindTask(NULL)->tc_SigAlloc^initial_signal_mask));
+ return backend_live()||backend_errors||FindTask(NULL)->tc_SigAlloc!=initial_signal_mask?20:0;
+}
+#endif
+static int cleanup_remaining(void) {
+#ifdef AMI_SDK_TESTING
+ test_stderr_restore();
+ ami_test_phase(4);
+#endif
+ closing=1;callback_active=1;cleanup_error=0;cleanup_resume_ready=1;
+ /* Native releases retire their registry record first. A fatal diagnostic
+    during a release resumes this C drain iteratively, with no Rust frame or
+    recursive teardown retry. Locals are recreated after the setjmp return. */
+ if(setjmp(cleanup_resume)){cleanup_error=20;ami_sdk_diagnostic_depth=0;}
+ for(size_t i=0;i<8;i++)if(messages[i].token){detach_message(&messages[i]);memset(&messages[i],0,sizeof(messages[i]));--stats.messages;}
+ for(size_t i=0;i<16;i++)if(files[i].token){BPTR f=files[i].handle;files[i]=(struct FileSlot){0};if(!f)continue;--stats.files;if(!Close(f)){SIPTR error=IoErr();sdk_diagnostic((const uint8_t *)"close",5,(uint64_t)error);cleanup_error=20;}}
+ for(size_t i=0;i<4;i++)if(libraries[i].token){struct Library *l=libraries[i].handle;libraries[i]=(struct LibSlot){0};if(l){--stats.libraries;CloseLibrary(l);}}
+ for(size_t i=0;i<2;i++)if(ports[i].token){if(ports[i].handle)clear_port(i);else{signals[ports[i].signal_slot]=(struct SignalSlot){0};ports[i]=(struct PortSlot){0};}}
+ for(size_t i=0;i<4;i++)if(signals[i].token){int bit=signals[i].bit;signals[i]=(struct SignalSlot){0};if(bit>=0){--stats.signals;SetSignal(0,1UL<<bit);FreeSignal(bit);}}
+ while(blocks){struct Block *b=blocks;blocks=b->next;size_t total=b->total;--stats.blocks;stats.backing_charge-=b->charge;FreeMem(b,total);}
+ if(mandatory_dos){struct Library *l=mandatory_dos;mandatory_dos=NULL;CloseLibrary(l);}
+#ifdef AMI_SDK_TESTING
+ if(diagnostic_pool){APTR pool=diagnostic_pool;diagnostic_pool=NULL;DeletePool(pool);}
+#endif
+#ifdef AMI_SDK_TESTING
+ if(test_report_ledgers())cleanup_error=20;
+#endif
+ uint64_t expired_key=context_key;
+ arguments=NULL;argument_count=0;context_key=0;active=0;closing=0;owner=NULL;cleanup_resume_ready=0;
+#ifdef AMI_SDK_TESTING
+ SdkError expired_error;uint64_t expired_out=0;unsigned expired_calls=0;
+ int expired_ok=sdk_callback(expired_key,counter_callback,&expired_calls,0,&expired_out,&expired_error)==-1 && expired_error.kind==4 && !expired_calls;
+ sdk_diagnostic((const uint8_t *)"[m1-counter] expired",20,expired_ok);
+ if(!expired_ok)cleanup_error=20;
+#else
+ (void)expired_key;
+#endif
+ return cleanup_error;
+}
+int sdk_end(void) {
+ if(!active || closing || owner!=FindTask(NULL))return 20;
+ return cleanup_remaining();
+}
+_Noreturn void sdk_fatal(uint64_t reason) {
+ if(closing){
+  fatal_started=1;
+  /* Fixed secondary record, inside the existing diagnostic window. It cannot
+     re-enter the formatter or a registered Rust callback. */
+  static const uint8_t text[]="ami-rust fatal during cleanup\n";
+  for(size_t i=0;i<sizeof(text)-1;i++)RawPutChar(text[i]);
+  if(cleanup_resume_ready && owner==FindTask(NULL))longjmp(cleanup_resume,1);
+  _Exit(20);
+ }
+ if(!fatal_started){fatal_started=1;sdk_diagnostic((const uint8_t *)"ami-rust fatal",14,reason);}
+ else{
+  static const uint8_t text[]="ami-rust nested fatal\n";
+  for(size_t i=0;i<sizeof(text)-1;i++)RawPutChar(text[i]);
+  /* The original formatter frame is abandoned by this nonreturning path. */
+  ami_sdk_diagnostic_depth=0;
+ }
+ if(active && owner==FindTask(NULL)){int result=cleanup_remaining();(void)result;}
+ /* Pinned _Exit skips user exit hooks and goes to native startup teardown. */
+ _Exit(20);
+}
+extern int rust_sdk_main(void);
+int main(int argc,char **argv) {
+#ifdef AMI_SDK_TESTING
+ if(!(argc>1 && !strcmp(argv[1],"missing-window")))ami_test_bind_diagnostics(&ami_sdk_diagnostic_depth);
+ initial_signal_mask=FindTask(NULL)->tc_SigAlloc;
+ if(argc>1 && (!strcmp(argv[1],"startup-fail")||!strcmp(argv[1],"fault13")))sdk_test_fault(13,1);
+ if(argc>1 && !strcmp(argv[1],"startup-slot"))sdk_test_fault(9,1);
+ if(argc>1 && !strcmp(argv[1],"diag-direct"))diagnostic_probe=1;
+ if(argc>1 && !strcmp(argv[1],"diag-malloc"))diagnostic_probe=2;
+ if(argc>1 && !strcmp(argv[1],"diag-pool"))diagnostic_probe=3;
+#endif
+ int result=sdk_begin(argc,argv);if(result){
+#ifdef AMI_SDK_TESTING
+ ami_test_phase(4);
+ if(test_report_ledgers())return 20;
+#endif
+ return result;
+ }
+#ifdef AMI_SDK_TESTING
+ if(diagnostic_probe==3){diagnostic_pool=CreatePool(MEMF_ANY,4096,1024);if(!diagnostic_pool)return 20;}
+#endif
+#ifdef AMI_SDK_TESTING
+ ami_test_phase(3);
+ if(diagnostic_probe)ami_test_measurement_expected(diagnostic_probe);
+ /* Bounded qualification controls exercise the actual argument/owner/cap
+    branches without creating a foreign task or exhausting global memory. */
+ struct Library copied_header=SysBase->LibNode;
+ int compatibility_ok=compatible_exec(&copied_header);
+ copied_header.lib_Version=50;compatibility_ok=compatibility_ok && !compatible_exec(&copied_header);
+ copied_header.lib_Version=51;copied_header.lib_NegSize=169*LIB_VECTSIZE-1;
+ compatibility_ok=compatibility_ok && !compatible_exec(&copied_header);
+ copied_header=DOSBase->dl_lib;compatibility_ok=compatibility_ok && compatible_dos(&copied_header);
+ copied_header.lib_Version=49;compatibility_ok=compatibility_ok && !compatible_dos(&copied_header);
+ copied_header.lib_Version=50;copied_header.lib_NegSize=77*LIB_VECTSIZE-1;
+ compatibility_ok=compatibility_ok && !compatible_dos(&copied_header);
+ sdk_diagnostic((const uint8_t *)"[m1-counter] compatibility",26,compatibility_ok);
+ char argument_bytes[4097];char *argument_rows[33];
+ memset(argument_bytes,'x',sizeof(argument_bytes));argument_bytes[4095]=0;
+ for(size_t i=0;i<33;i++)argument_rows[i]=(char *)"";
+ int argument_ok=argument_gate(32,argument_rows)==0 && argument_gate(33,argument_rows)==10;
+ argument_rows[0]=argument_bytes;argument_ok=argument_ok && argument_gate(1,argument_rows)==0;
+ argument_bytes[4095]='x';argument_bytes[4096]=0;argument_ok=argument_ok && argument_gate(1,argument_rows)==10;
+ argument_rows[0]=NULL;argument_ok=argument_ok && argument_gate(1,argument_rows)==10;
+ argument_rows[0]=argument_bytes;argument_rows[1]=(char *)"";
+ argument_bytes[4094]=0;argument_ok=argument_ok && argument_gate(2,argument_rows)==0;
+ argument_bytes[4094]='x';argument_bytes[4095]=0;argument_ok=argument_ok && argument_gate(2,argument_rows)==10;
+ argument_bytes[127]=0;for(size_t i=0;i<32;i++)argument_rows[i]=argument_bytes;
+ argument_ok=argument_ok && argument_gate(32,argument_rows)==0;
+ argument_bytes[127]='x';argument_bytes[128]=0;argument_ok=argument_ok && argument_gate(32,argument_rows)==10;
+ uint64_t saved_backend_errors=backend_errors;
+ /* Checker copy only: no fake pointer is passed to an OS release. */
+ backend_acquire(1,UINTPTR_MAX,64);
+ int release_once=backend_release(1,UINTPTR_MAX,64);
+ int duplicate_refused=!backend_release(1,UINTPTR_MAX,64) && backend_errors==saved_backend_errors+1;
+ backend_errors=saved_backend_errors;
+ int allocation_checkers_ok=release_once && duplicate_refused;
+ sdk_diagnostic((const uint8_t *)"[m1-counter] allocation-checkers",32,allocation_checkers_ok);
+ size_t before_charge=stats.backing_charge;uint64_t before_live=backend_live();
+ stats.backing_charge=SIZE_MAX;void *overflow_probe=sdk_alloc(64,4096);
+ int charge_overflow_ok=!overflow_probe && stats.backing_charge==SIZE_MAX && backend_live()==before_live;
+ if(overflow_probe)sdk_dealloc(overflow_probe,64,4096);
+ stats.backing_charge=before_charge;
+ struct Task *saved_owner=owner;owner=(struct Task *)((uintptr_t)owner^1);
+ SdkError owner_error;uint64_t owner_out=0;unsigned owner_calls=0;
+ int owner_ok=sdk_callback(context_key,counter_callback,&owner_calls,0,&owner_out,&owner_error)==-1 && owner_error.kind==4 && !owner_calls && sdk_context()==0;
+ owner=saved_owner;
+ sdk_diagnostic((const uint8_t *)"[m1-counter] arguments",22,argument_ok);
+ sdk_diagnostic((const uint8_t *)"[m1-counter] charge-overflow",sizeof("[m1-counter] charge-overflow")-1,charge_overflow_ok);
+ sdk_diagnostic((const uint8_t *)"[m1-counter] task-owner",23,owner_ok);
+ if(!argument_ok || !charge_overflow_ok || !owner_ok || !compatibility_ok || !allocation_checkers_ok){int closed=sdk_end();(void)closed;return 20;}
+ if(argc>1 && !strcmp(argv[1],"calibrate") && ami_stack_calibrate()){int failed_cleanup=sdk_end();(void)failed_cleanup;return 20;}
+ if(argc>1 && !strcmp(argv[1],"cleanup-secondary")){sdk_test_fault(5,1);secondary_on_diagnostic=1;}
+#endif
+ result=rust_sdk_main();int closed=sdk_end();
+
+ if(closed || fatal_started)return 20;
+ return result==0||result==10||result==20?result:20;
+}

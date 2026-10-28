@@ -1,0 +1,10 @@
+Stack 131072
+M1TESTS:AMIRUST
+Echo "SDK_RC=$RC" >> RAM:m1-status
+C:Version
+Echo "AFTER_SDK_RC=$RC" >> RAM:m1-status
+M1TESTS:M1STATUS RAM:m1-status
+Echo "HELPER_RC=$RC" >> RAM:m1-status
+C:Version
+Echo "AFTER_HELPER_RC=$RC" >> RAM:m1-status
+M1TESTS:M1STATUS RAM:m1-status

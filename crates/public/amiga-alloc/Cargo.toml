@@ -1,0 +1,12 @@
+[package]
+name = "amiga-alloc"
+version.workspace = true
+edition.workspace = true
+publish = false
+description = "Public facade for the Exec-backed allocator on the selected x86-64 AROS ABI-v1."
+repository = "https://github.com/metaneutrons/ami-rust"
+homepage = "https://github.com/metaneutrons/ami-rust"
+license.workspace = true
+readme = "README.md"
+[dependencies]
+aros-alloc = { version = "=0.1.0", path = "../../../crates/aros-alloc" }

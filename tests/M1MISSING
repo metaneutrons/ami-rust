@@ -1,0 +1,8 @@
+Stack 131072
+M1TESTS:M1WATCH M1TESTS:M1CORE missing-window WINDOW
+Echo "WINDOW=$RC" >RAM:ami-rust-m1/status.txt
+Version
+Echo "CONTROL_RC=$RC" >>RAM:ami-rust-m1/status.txt
+M1TESTS:M1STATUS RAM:ami-rust-m1/status.txt
+Echo "HELPER_RC=$RC" >>RAM:ami-rust-m1/status.txt
+M1TESTS:M1STATUS RAM:ami-rust-m1/status.txt

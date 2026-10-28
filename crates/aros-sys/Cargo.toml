@@ -1,0 +1,10 @@
+[package]
+name = "aros-sys"
+version.workspace = true
+edition.workspace = true
+publish = false
+description = "Raw, allocation-free Rust ABI declarations and calls for the selected x86-64 AROS ABI-v1 bridge."
+repository = "https://github.com/metaneutrons/ami-rust"
+homepage = "https://github.com/metaneutrons/ami-rust"
+license-file = "LICENSE"
+readme = "README.md"

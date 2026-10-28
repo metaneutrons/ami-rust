@@ -1,0 +1,20 @@
+[package]
+name = "ami-rust-sha256sum"
+version.workspace = true
+edition.workspace = true
+publish = false
+autobins = false
+autolib = false
+license.workspace = true
+
+readme = "README.md"
+[[bin]]
+name = "ami-rust-sha256sum"
+path = "src/main.rs"
+
+[dependencies]
+amiga-os = { version = "=0.1.0", path = "../../crates/public/amiga-os" }
+sha2 = { version = "=0.10.9", default-features = false }
+
+[build-dependencies]
+aros-native-build = { version = "=0.2.0", path = "../../tooling/crates/aros-native-build" }
