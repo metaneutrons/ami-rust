@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: Rust workspace (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            triple: x86_64-unknown-linux-gnu
+          - os: macos-26
+            triple: aarch64-apple-darwin
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Build the pinned Rust maintainer task
+        env:
+          HOST_TRIPLE: ${{ matrix.triple }}
+        shell: bash
+        run: bash tools/build-maintainer-task.sh "$RUNNER_TEMP/ami-rust-ci" "$HOST_TRIPLE"
+
+      - name: Check the Rust workspace and release components offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/ami-rust-ci"
+          toolchain="$work/bootstrap/toolchain"
+          mkdir -m 700 "$work/test-target"
+          env -i \
+            HOME="$work/home" TMPDIR="$work/tmp" \
+            PATH="$toolchain/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+            CARGO_HOME="$work/cargo-home" CARGO_TARGET_DIR="$work/test-target" \
+            CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0 CARGO_NET_OFFLINE=true \
+            RUSTC="$toolchain/bin/rustc" RUSTDOC="$toolchain/bin/rustdoc" \
+            RUSTC_WRAPPER='' RUSTC_WORKSPACE_WRAPPER='' \
+            LC_ALL=C TZ=UTC SOURCE_DATE_EPOCH=1791936000 \
+            "$toolchain/bin/cargo" check --workspace --all-targets --locked --offline \
+              --manifest-path tooling/Cargo.toml -j 2
+          for filter in production_contract toolchain_release; do
+            env -i \
+              HOME="$work/home" TMPDIR="$work/tmp" \
+              PATH="$toolchain/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+              CARGO_HOME="$work/cargo-home" CARGO_TARGET_DIR="$work/test-target" \
+              CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0 CARGO_NET_OFFLINE=true \
+              RUSTC="$toolchain/bin/rustc" RUSTDOC="$toolchain/bin/rustdoc" \
+              RUSTC_WRAPPER='' RUSTC_WORKSPACE_WRAPPER='' \
+              LC_ALL=C TZ=UTC SOURCE_DATE_EPOCH=1791936000 \
+              "$toolchain/bin/cargo" test --package ami-rust-core --lib "$filter" \
+                --locked --offline --manifest-path tooling/Cargo.toml -j 2
+          done
+
+      - name: Check the frozen production contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/ami-rust-ci/target/release/ami-rust-xtask" \
+            toolchain-release-cutover check \
+            --source-root "$GITHUB_WORKSPACE" \
+            --contract release/rust-production-contract.json \
+            --version "$(<version.txt)" \
+            --output "$RUNNER_TEMP/rp4-contract-check.json"
+
+  ci-success:
+    name: CI Success
+    if: always()
+    needs: rust
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require the Rust workspace on both supported development hosts
+        env:
+          RUST_RESULT: ${{ needs.rust.result }}
+        run: test "$RUST_RESULT" = success

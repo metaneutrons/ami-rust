@@ -1,0 +1,59 @@
+name: Toolchain pull-request check
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/toolchain-*.yml
+      - release/rust-production-contract.json
+      - release/rust-production-target-libraries.json
+      - tooling/crates/core/src/production_contract.rs
+      - tooling/crates/core/src/toolchain_package.rs
+      - tooling/crates/core/src/toolchain_release_rustup.rs
+      - tooling/crates/xtask/src/main.rs
+      - tooling/crates/xtask/src/consumer_observe.rs
+      - tooling/crates/xtask/src/consumer_report.rs
+      - tooling/crates/xtask/src/consumer_runtime.rs
+      - tooling/crates/xtask/src/target_rlib_compare.rs
+      - tooling/crates/xtask/src/toolchain_producer.rs
+      - tooling/crates/xtask/src/toolchain_release_cutover.rs
+      - tooling/crates/xtask/src/toolchain_sign.rs
+      - release/maintainer-rust-bootstrap-inputs.json
+      - tools/bootstrap-host-rust.sh
+      - tools/build-maintainer-task.sh
+      - tools/consumer-enforcement-adapter/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: toolchain-pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Rust production contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the pinned maintainer task
+        shell: bash
+        run: bash tools/build-maintainer-task.sh "$RUNNER_TEMP/rp3-pr-build" x86_64-unknown-linux-gnu
+
+      - name: Check the three Rust entry points and frozen contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/rp3-pr-build/target/release/ami-rust-xtask" \
+            toolchain-release-cutover check \
+            --source-root "$GITHUB_WORKSPACE" \
+            --contract release/rust-production-contract.json \
+            --version "$(<version.txt)" \
+            --output "$RUNNER_TEMP/rp3-pr-check.json"
+          jq -e '.status == "RP3_RUST_ENTRY_POINTS_READY" and .publication_authorized == false' \
+            "$RUNNER_TEMP/rp3-pr-check.json" >/dev/null

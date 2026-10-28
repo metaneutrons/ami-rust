@@ -1,0 +1,56 @@
+name: Bug report
+description: Report a reproducible defect in ami-rust
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve ami-rust. Please remove secrets and private paths from logs.
+  - type: input
+    id: version
+    attributes:
+      label: ami-rust version or commit
+      placeholder: 0.1.0 or a full commit SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: host
+    attributes:
+      label: Host
+      options:
+        - macOS ARM64
+        - Linux x86-64
+        - Linux ARM64
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the observed and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide the smallest complete sequence of commands or source needed to reproduce the defect.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Include relevant Cargo, rustc, linker or AROS output.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched the existing issues.
+          required: true
+        - label: I removed credentials and private information from the report.
+          required: true

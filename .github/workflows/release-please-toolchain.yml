@@ -1,0 +1,119 @@
+name: Release Please (SDK)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Check SDK release scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out source without retaining credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify SDK-only version scope and refusal controls
+        run: |
+          set -euo pipefail
+          version=$(<version.txt)
+          [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          major=${BASH_REMATCH[1]}
+          minor=${BASH_REMATCH[2]}
+          test "$major" -gt 0 || test "$minor" -ge 1
+          test -f CHANGELOG.md
+          jq -e \
+            'keys == ["$schema", "packages"] and
+             (.packages | type == "object" and keys == ["."] and
+              .["."] == {"release-type":"simple","package-name":"ami-rust","changelog-path":"CHANGELOG.md","version-file":"version.txt","initial-version":"0.1.0","bump-minor-pre-major":true,"include-component-in-tag":false})' \
+            release-please-config.json >/dev/null
+          manifest_version=$(jq -er '.["."]' .release-please-manifest.json)
+          if test "$version:$manifest_version" = 0.1.0:0.0.0; then
+            : # Clean repository bootstrap before the initial release proposal.
+          else
+            test "$manifest_version" = "$version"
+          fi
+
+  release-please:
+    name: Open SDK release proposal
+    needs: preflight
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      && github.repository == 'metaneutrons/ami-rust'
+      && github.ref == 'refs/heads/main'
+      && github.ref_protected
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: release-please
+    concurrency:
+      group: toolchain-release-mutations
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - name: Validate dedicated Release Please App references
+        shell: bash
+        env:
+          RELEASE_PLEASE_CLIENT_ID: ${{ vars.RELEASE_PLEASE_CLIENT_ID }}
+          RELEASE_PLEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$RELEASE_PLEASE_CLIENT_ID"
+          case "$RELEASE_PLEASE_CLIENT_ID" in *[[:space:]]*) exit 1 ;; esac
+          test -n "$RELEASE_PLEASE_APP_PRIVATE_KEY"
+          key_file="$(mktemp)"
+          chmod 600 "$key_file"
+          trap 'rm -f "$key_file"' EXIT
+          printf '%s' "$RELEASE_PLEASE_APP_PRIVATE_KEY" > "$key_file"
+          openssl pkey -in "$key_file" -noout >/dev/null 2>&1
+
+      - name: Mint repository-scoped App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_PLEASE_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Confirm repository access without changing it
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          EXPECTED_REPOSITORY_ID: ${{ github.event.repository.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_REPOSITORY_ID" =~ ^[1-9][0-9]*$ ]]
+          test "$GITHUB_REPOSITORY" = metaneutrons/ami-rust
+          # The mint action enforces requested grants. Check its actual reach
+          # without writing labels, branches, tags, releases or package assets.
+          gh api --hostname github.com --paginate --slurp installation/repositories |
+            jq -e --arg repository "$GITHUB_REPOSITORY" --argjson id "$EXPECTED_REPOSITORY_ID" '
+              [.[].repositories[]] as $repositories |
+              ($repositories | length) == 1 and
+              $repositories[0].full_name == $repository and
+              $repositories[0].id == $id
+            ' >/dev/null
+
+      - name: Create or update the SDK release proposal
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          # The protected publisher creates the tag/draft at catalog commit c.
+          # Release Please selects version/tag naming through this normal PR.
+          skip-github-release: true

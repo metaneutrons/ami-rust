@@ -1,0 +1,380 @@
+name: Protected toolchain release
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Prepare the catalog, publish a new draft, or recover an existing draft
+        type: choice
+        options: [prepare-catalog, publish, recover]
+        default: prepare-catalog
+      qualification_run_id:
+        description: Successful exact-candidate workflow run ID
+        required: true
+        type: string
+      qualification_run_attempt:
+        description: Exact workflow run attempt
+        required: true
+        type: string
+      version:
+        description: Stable SDK version
+        required: true
+        type: string
+      catalog_commit:
+        description: Commit containing only the reviewed catalog bytes; empty for prepare-catalog
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: toolchain-release-mutations
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Sign, attest and read back the exact candidate
+    if: github.repository == 'metaneutrons/ami-rust' && github.ref == 'refs/heads/main' && github.ref_protected
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: release
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - name: Require the protected release context
+        env:
+          MODE: ${{ inputs.mode }}
+          QUALIFICATION_RUN_ID: ${{ inputs.qualification_run_id }}
+          QUALIFICATION_RUN_ATTEMPT: ${{ inputs.qualification_run_attempt }}
+          VERSION: ${{ inputs.version }}
+          CATALOG_COMMIT: ${{ inputs.catalog_commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME:$GITHUB_REF_PROTECTED" = workflow_dispatch:true
+          [[ "$QUALIFICATION_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$QUALIFICATION_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]
+          [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          if test "$MODE" = prepare-catalog; then
+            test -z "$CATALOG_COMMIT"
+          else
+            [[ "$CATALOG_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          fi
+
+      - name: Check out the exact protected publisher source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Build the pinned maintainer task
+        if: inputs.mode != 'prepare-catalog'
+        shell: bash
+        run: bash tools/build-maintainer-task.sh "$RUNNER_TEMP/rp3-release-task" x86_64-unknown-linux-gnu
+
+      - name: Check out the exact reviewed rustup catalog commit
+        if: inputs.mode != 'prepare-catalog'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.catalog_commit }}
+          path: rp3-catalog
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Authenticate the selected qualification run and artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QUALIFICATION_RUN_ID: ${{ inputs.qualification_run_id }}
+          QUALIFICATION_RUN_ATTEMPT: ${{ inputs.qualification_run_attempt }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$QUALIFICATION_RUN_ID/attempts/$QUALIFICATION_RUN_ATTEMPT" > "$RUNNER_TEMP/rp3-run.json"
+          jq -e --argjson id "$QUALIFICATION_RUN_ID" --argjson attempt "$QUALIFICATION_RUN_ATTEMPT" '
+            .id == $id and .run_attempt == $attempt and .event == "workflow_dispatch" and
+            .head_branch == "main" and .path == ".github/workflows/toolchain-qualify.yml" and
+            .status == "completed" and .conclusion == "success" and
+            .repository.full_name == "metaneutrons/ami-rust"
+          ' "$RUNNER_TEMP/rp3-run.json" >/dev/null
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$QUALIFICATION_RUN_ID/artifacts?per_page=100" > "$RUNNER_TEMP/rp3-artifacts.json"
+          jq -e --arg name "rp3-candidate-$QUALIFICATION_RUN_ID-$QUALIFICATION_RUN_ATTEMPT" '
+            [.artifacts[] | select(.name == $name and .expired == false and .size_in_bytes > 0 and (.digest | test("^sha256:[0-9a-f]{64}$")))] | length == 1
+          ' "$RUNNER_TEMP/rp3-artifacts.json" >/dev/null
+
+      - name: Download the exact assembled candidate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rp3-candidate-${{ inputs.qualification_run_id }}-${{ inputs.qualification_run_attempt }}
+          run-id: ${{ inputs.qualification_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/rp3-assembly
+
+      - name: Verify the exact candidate selection
+        env:
+          QUALIFICATION_RUN_ID: ${{ inputs.qualification_run_id }}
+          QUALIFICATION_RUN_ATTEMPT: ${{ inputs.qualification_run_attempt }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_commit=$(jq -er '.head_sha' "$RUNNER_TEMP/rp3-run.json")
+          jq -e --arg version "$VERSION" '
+            .schema == "ami-rust-rp3-assembly-result-v1" and
+            .status == "CATALOG_READY_FOR_REVIEW" and .version == $version and
+            .release_tag == ("v" + $version) and .catalog_commit == null and
+            .publication_authorized == false and .raw_subject_count > 0
+          ' "$RUNNER_TEMP/rp3-assembly/assembly-result.json" >/dev/null
+          jq -e --arg version "$VERSION" --arg source "$source_commit" \
+            --argjson run "$QUALIFICATION_RUN_ID" --argjson attempt "$QUALIFICATION_RUN_ATTEMPT" '
+            .schema == "ami-rust-rp3-publication-inventory-v1" and
+            .status == "CATALOG_READY_FOR_REVIEW" and .version == $version and
+            .source.commit == $source and .catalog_commit == null and
+            .qualification.run_id == $run and .qualification.run_attempt == $attempt and
+            .publication_authorized == false
+          ' "$RUNNER_TEMP/rp3-assembly/candidate/publication-inventory.json" >/dev/null
+          jq -e '
+            .schema == "ami-rust-rp3-signature-plan-v1" and
+            .status == "READY_FOR_PROTECTED_SIGNATURES" and
+            .subject_count == (.signature_subjects | length) and
+            .subject_count == (.subjects | length)
+          ' "$RUNNER_TEMP/rp3-assembly/signature-plan.json" >/dev/null
+
+      - name: Return the exact two catalog files for normal review
+        if: inputs.mode == 'prepare-catalog'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rp3-rustup-catalog-${{ inputs.version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/rp3-assembly/distribution/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Verify the selected catalog commit and candidate source ancestry
+        if: inputs.mode != 'prepare-catalog'
+        env:
+          CATALOG_COMMIT: ${{ inputs.catalog_commit }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$CATALOG_COMMIT" "$GITHUB_SHA"
+          source_commit=$(jq -er '.head_sha' "$RUNNER_TEMP/rp3-run.json")
+          git merge-base --is-ancestor "$source_commit" "$CATALOG_COMMIT"
+          expected="$RUNNER_TEMP/rp3-assembly/distribution/rustup/$VERSION/dist"
+          git diff --name-only "$source_commit" "$CATALOG_COMMIT" > "$RUNNER_TEMP/catalog-delta.txt"
+          printf 'distribution/rustup/%s/dist/channel-rust-%s.toml\ndistribution/rustup/%s/dist/channel-rust-%s.toml.sha256\n' \
+            "$VERSION" "$VERSION" "$VERSION" "$VERSION" > "$RUNNER_TEMP/expected-catalog-delta.txt"
+          cmp "$RUNNER_TEMP/catalog-delta.txt" "$RUNNER_TEMP/expected-catalog-delta.txt"
+          for suffix in toml toml.sha256; do
+            git show "$CATALOG_COMMIT:distribution/rustup/$VERSION/dist/channel-rust-$VERSION.$suffix" > "$RUNNER_TEMP/catalog-$suffix"
+            cmp "$RUNNER_TEMP/catalog-$suffix" "$expected/channel-rust-$VERSION.$suffix"
+          done
+
+      - name: Acquire source-pinned signing tools
+        if: inputs.mode != 'prepare-catalog'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/rp3-tools" "$RUNNER_TEMP/rp3-tool-downloads" "$RUNNER_TEMP/rp3-signing-logs"
+          for name in gh cosign; do
+            url=$(jq -er --arg name "$name" '.hosts["linux-x86_64"][$name].url' release/ci-auth-tools.json)
+            bytes=$(jq -er --arg name "$name" '.hosts["linux-x86_64"][$name].bytes' release/ci-auth-tools.json)
+            digest=$(jq -er --arg name "$name" '.hosts["linux-x86_64"][$name].sha256' release/ci-auth-tools.json)
+            curl --proto '=https' --proto-redir '=https' --tlsv1.2 --fail --location --max-time 120 --max-filesize "$bytes" \
+              --output "$RUNNER_TEMP/rp3-tool-downloads/$name" "$url"
+            test "$(wc -c < "$RUNNER_TEMP/rp3-tool-downloads/$name")" = "$bytes"
+            printf '%s  %s\n' "$digest" "$RUNNER_TEMP/rp3-tool-downloads/$name" | sha256sum --check --status
+            if test "$name" = gh; then
+              member=$(jq -er '.hosts["linux-x86_64"].gh.archive_member' release/ci-auth-tools.json)
+              tar -xOzf "$RUNNER_TEMP/rp3-tool-downloads/gh" "$member" > "$RUNNER_TEMP/rp3-tools/gh"
+            else
+              command cp "$RUNNER_TEMP/rp3-tool-downloads/cosign" "$RUNNER_TEMP/rp3-tools/cosign"
+            fi
+            chmod 700 "$RUNNER_TEMP/rp3-tools/$name"
+          done
+
+      - name: Bind the exact reviewed catalog commit
+        if: inputs.mode != 'prepare-catalog'
+        env:
+          CATALOG_COMMIT: ${{ inputs.catalog_commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/rp3-release-task/target/release/ami-rust-xtask" \
+            toolchain-release-cutover bind-catalog \
+            --assembly-root "$RUNNER_TEMP/rp3-assembly" \
+            --catalog-root "$GITHUB_WORKSPACE/rp3-catalog" \
+            --catalog-commit "$CATALOG_COMMIT"
+
+      - id: release-state
+        name: Select a new, draft or already-public release state
+        if: inputs.mode != 'prepare-catalog'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ inputs.mode }}
+          VERSION: ${{ inputs.version }}
+          CATALOG_COMMIT: ${{ inputs.catalog_commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          gh="$RUNNER_TEMP/rp3-tools/gh"
+          if test "$MODE" = publish; then
+            if "$gh" release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo 'release already exists; select recover for the exact existing release' >&2
+              exit 1
+            fi
+            echo 'public=false' >> "$GITHUB_OUTPUT"
+            echo 'draft=false' >> "$GITHUB_OUTPUT"
+          else
+            "$gh" release view "$tag" --repo "$GITHUB_REPOSITORY" \
+              --json isDraft,targetCommitish > "$RUNNER_TEMP/rp3-existing-release.json"
+            jq -e --arg commit "$CATALOG_COMMIT" '.targetCommitish == $commit' \
+              "$RUNNER_TEMP/rp3-existing-release.json" >/dev/null
+            draft=$(jq -r .isDraft "$RUNNER_TEMP/rp3-existing-release.json")
+            echo "draft=$draft" >> "$GITHUB_OUTPUT"
+            if test "$draft" = true; then
+              echo 'public=false' >> "$GITHUB_OUTPUT"
+            else
+              echo 'public=true' >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Recover the exact already-public release without replacing bytes
+        if: inputs.mode == 'recover' && steps.release-state.outputs.public == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -m 700 "$RUNNER_TEMP/rp3-existing-public"
+          "$RUNNER_TEMP/rp3-tools/gh" release download "v$VERSION" --repo "$GITHUB_REPOSITORY" \
+            --dir "$RUNNER_TEMP/rp3-existing-public"
+          "$RUNNER_TEMP/rp3-release-task/target/release/ami-rust-xtask" \
+            toolchain-release-cutover recover-public \
+            --assembly-root "$RUNNER_TEMP/rp3-assembly" \
+            --download "$RUNNER_TEMP/rp3-existing-public"
+
+      - name: Sign every exact release subject
+        if: inputs.mode != 'prepare-catalog' && steps.release-state.outputs.public != 'true'
+        shell: bash
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          umask 077
+          jq -n '{ACTIONS_ID_TOKEN_REQUEST_TOKEN:env.ACTIONS_ID_TOKEN_REQUEST_TOKEN,ACTIONS_ID_TOKEN_REQUEST_URL:env.ACTIONS_ID_TOKEN_REQUEST_URL}' \
+            > "$RUNNER_TEMP/rp3-signing-credential.json"
+          chmod 600 "$RUNNER_TEMP/rp3-signing-credential.json"
+          "$RUNNER_TEMP/rp3-release-task/target/release/ami-rust-xtask" toolchain-sign \
+            --plan "$RUNNER_TEMP/rp3-assembly/signature-plan.json" \
+            --payloads "$RUNNER_TEMP/rp3-assembly/candidate" \
+            --source-root "$GITHUB_WORKSPACE" \
+            --gh "$RUNNER_TEMP/rp3-tools/gh" --cosign "$RUNNER_TEMP/rp3-tools/cosign" \
+            --host linux-x86_64 --credentials "$RUNNER_TEMP/rp3-signing-credential.json" \
+            --logs "$RUNNER_TEMP/rp3-signing-logs"
+          "$RUNNER_TEMP/rp3-release-task/target/release/ami-rust-xtask" \
+            toolchain-release-cutover finalize --assembly-root "$RUNNER_TEMP/rp3-assembly"
+
+      - id: attest
+        name: Attest the complete signed release set
+        if: inputs.mode != 'prepare-catalog' && steps.release-state.outputs.public != 'true'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-checksums: ${{ runner.temp }}/rp3-assembly/attestation-subjects.sha256
+
+      - name: Create or recover the unpublished draft and upload exact bytes
+        if: inputs.mode != 'prepare-catalog' && steps.release-state.outputs.public != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ inputs.mode }}
+          VERSION: ${{ inputs.version }}
+          CATALOG_COMMIT: ${{ inputs.catalog_commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          gh="$RUNNER_TEMP/rp3-tools/gh"
+          if test "$MODE" = publish; then
+            "$gh" release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$CATALOG_COMMIT" --draft --prerelease --title "$tag" \
+              --notes "Exact ami-rust $VERSION toolchain candidate. Latest promotion follows separate release acceptance."
+          fi
+          is_draft=$("$gh" release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)
+          if test "$MODE" = recover && test "$is_draft" = true; then
+            "$gh" release upload "$tag" --repo "$GITHUB_REPOSITORY" --clobber "$RUNNER_TEMP/rp3-assembly/candidate/"*
+          elif test "$MODE" = publish; then
+            "$gh" release upload "$tag" --repo "$GITHUB_REPOSITORY" "$RUNNER_TEMP/rp3-assembly/candidate/"*
+          fi
+
+      - name: Download and verify every staged draft byte
+        if: inputs.mode != 'prepare-catalog'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -m 700 "$RUNNER_TEMP/rp3-public-readback"
+          "$RUNNER_TEMP/rp3-tools/gh" release download "v$VERSION" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/rp3-public-readback"
+          "$RUNNER_TEMP/rp3-release-task/target/release/ami-rust-xtask" \
+            toolchain-release-cutover verify-readback \
+            --assembly-root "$RUNNER_TEMP/rp3-assembly" --download "$RUNNER_TEMP/rp3-public-readback"
+
+      - name: Expose the verified candidate as a prerelease
+        if: inputs.mode != 'prepare-catalog'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test "$("$RUNNER_TEMP/rp3-tools/gh" release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true; then
+            "$RUNNER_TEMP/rp3-tools/gh" release edit "v$VERSION" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease=true
+          fi
+
+      - name: Read back every byte and signature anonymously
+        if: inputs.mode != 'prepare-catalog'
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -m 700 "$RUNNER_TEMP/rp3-anonymous-readback"
+          jq -r '.files[].name' "$RUNNER_TEMP/rp3-assembly/final-readback.json" |
+          while IFS= read -r name; do
+            curl --proto '=https' --proto-redir '=https' --tlsv1.2 --fail --location --max-time 300 \
+              --output "$RUNNER_TEMP/rp3-anonymous-readback/$name" \
+              "https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/$name"
+          done
+          "$RUNNER_TEMP/rp3-release-task/target/release/ami-rust-xtask" \
+            toolchain-release-cutover verify-readback \
+            --assembly-root "$RUNNER_TEMP/rp3-assembly" --download "$RUNNER_TEMP/rp3-anonymous-readback"
+          identity="https://github.com/metaneutrons/ami-rust/.github/workflows/toolchain-release.yml@refs/heads/main"
+          jq -r '.signature_subjects[]' "$RUNNER_TEMP/rp3-assembly/signature-plan.json" |
+          while IFS= read -r subject; do
+            "$RUNNER_TEMP/rp3-tools/cosign" verify-blob --offline \
+              --bundle "$RUNNER_TEMP/rp3-anonymous-readback/$subject.sigstore.json" \
+              --certificate-identity "$identity" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              "$RUNNER_TEMP/rp3-anonymous-readback/$subject" >/dev/null
+          done
+
+      - name: Expose a stable non-latest candidate after complete anonymous readback
+        if: inputs.mode != 'prepare-catalog'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test "$("$RUNNER_TEMP/rp3-tools/gh" release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)" = true; then
+            "$RUNNER_TEMP/rp3-tools/gh" release edit "v$VERSION" --repo "$GITHUB_REPOSITORY" \
+              --prerelease=false --latest=false
+          fi
