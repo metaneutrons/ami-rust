@@ -3,7 +3,7 @@
 
 use core::panic::PanicInfo;
 
-use aros_sdk::Context;
+use aros::Context;
 
 #[panic_handler]
 fn panic(_: &PanicInfo<'_>) -> ! {
@@ -14,7 +14,7 @@ pub fn escape_borrowed_callback(
     context: &Context,
 ) -> impl FnMut(u64) -> u64 + 'static {
     let mut callback = |value: u64| context.key().wrapping_add(value);
-    let _ = aros_sdk::call(context, &mut callback, 0);
+    let _ = aros::call(context, &mut callback, 0);
     callback
 }
 

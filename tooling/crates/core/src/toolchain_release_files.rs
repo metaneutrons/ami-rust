@@ -327,11 +327,9 @@ mod tests {
                         "archive": artifact(format!("{name}-0.2.0.crate"), &mut payloads),
                         "dependencies": match name {
                             "aros-native-build" => vec!["aros-elf"],
-                            "aros-alloc" => vec!["aros-sys"],
-                            "aros-runtime" => vec!["aros-sys", "aros-alloc"],
-                            "aros-sdk" => vec!["aros-runtime", "aros-sys"],
-                            "amiga-alloc" => vec!["aros-alloc"],
-                            "amiga-os" => vec!["aros-runtime", "aros-sdk"],
+                            "aros" => vec!["aros-sys"],
+                            "aros-mui-sys" => vec!["aros-sys"],
+                            "aros-mui" => vec!["aros", "aros-sys", "aros-mui-sys"],
                             _ => Vec::<&str>::new(),
                         },
                     })
@@ -365,7 +363,7 @@ mod tests {
                 value["rustup_distribution"][key] = json!({"name":name,"bytes":contents.len(),"sha256":crate::digest::sha256_bytes(contents.as_bytes())});
                 payloads.insert(name, contents.into_bytes());
             }
-            assert_eq!(payloads.len(), 30);
+            assert_eq!(payloads.len(), 28);
             for (name, bytes) in &payloads {
                 fs::write(root.path().join(name), bytes).expect("write payload fixture");
             }
@@ -398,9 +396,9 @@ mod tests {
             .map(|bytes| u64::try_from(bytes.len()).unwrap())
             .sum::<u64>();
         assert_eq!(readback.scope, READBACK_SCOPE);
-        assert_eq!(readback.file_count, 30);
+        assert_eq!(readback.file_count, 28);
         assert_eq!(readback.total_bytes, expected_total);
-        assert_eq!(readback.files.len(), 30);
+        assert_eq!(readback.files.len(), 28);
         for row in &readback.files {
             let bytes = &fixture.payloads[&row.name];
             assert_eq!(row.bytes, u64::try_from(bytes.len()).unwrap());

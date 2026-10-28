@@ -22,13 +22,11 @@ pub use rustup::{
 const SCHEMA_V2: &str = "ami-rust-toolchain-release-v2";
 const SCHEMA_V3: &str = "ami-rust-toolchain-release-v3";
 const TARGET: &str = "x86_64-aros";
-const CRATES: [&str; 8] = [
+const CRATES: [&str; 6] = [
+    "aros",
     "aros-sys",
-    "aros-alloc",
-    "aros-runtime",
-    "aros-sdk",
-    "amiga-alloc",
-    "amiga-os",
+    "aros-mui-sys",
+    "aros-mui",
     "aros-elf",
     "aros-native-build",
 ];
@@ -355,7 +353,7 @@ impl ToolchainRelease {
         let names: BTreeSet<_> = self.crates.iter().map(|row| row.name.as_str()).collect();
         if self.crates.len() != CRATES.len() || names != CRATES.into_iter().collect() {
             return Err(Refusal::new(
-                "toolchain release requires the eight public crates; amiga-sys is unpublished compatibility source",
+                "toolchain release requires the complete public and supporting crate set",
             ));
         }
         for row in &self.crates {
@@ -369,7 +367,7 @@ impl ToolchainRelease {
                 || deps.contains(row.name.as_str())
             {
                 return Err(Refusal::new(
-                    "invalid public crate workspace dependency set",
+                    "invalid release crate workspace dependency set",
                 ));
             }
         }
@@ -399,7 +397,7 @@ impl ToolchainRelease {
                 .collect();
             if ready.is_empty() {
                 return Err(Refusal::new(
-                    "public crate dependency graph has a cycle or missing dependency",
+                    "release crate dependency graph has a cycle or missing dependency",
                 ));
             }
             for name in ready {

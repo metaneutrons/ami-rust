@@ -1,12 +1,16 @@
 [package]
-name = "aros-alloc"
+name = "aros-mui-sys"
 version.workspace = true
 edition.workspace = true
 publish = false
-description = "Exec-backed Rust allocator for the selected x86-64 AROS ABI-v1."
+description = "Raw MUI ABI access for the selected AROS ABI profile."
 repository = "https://github.com/metaneutrons/ami-rust"
 homepage = "https://github.com/metaneutrons/ami-rust"
-license.workspace = true
+license-file = "../aros-sys/LICENSE"
 readme = "README.md"
+
 [dependencies]
 aros-sys = { version = "=0.1.0", path = "../aros-sys" }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("aros"))'] }

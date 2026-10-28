@@ -29,11 +29,9 @@ fn candidate() -> Value {
                 "archive": file(format!("{name}-{version}.crate")),
                 "dependencies": match name {
                     "aros-native-build" => vec!["aros-elf"],
-                "aros-alloc" => vec!["aros-sys"],
-                "aros-runtime" => vec!["aros-sys", "aros-alloc"],
-                "aros-sdk" => vec!["aros-runtime", "aros-sys"],
-                    "amiga-alloc" => vec!["aros-alloc"],
-                "amiga-os" => vec!["aros-runtime", "aros-sdk"],
+                    "aros" => vec!["aros-sys"],
+                    "aros-mui-sys" => vec!["aros-sys"],
+                    "aros-mui" => vec!["aros", "aros-sys", "aros-mui-sys"],
                     _ => Vec::new(),
                 },
             })
@@ -76,10 +74,10 @@ fn complete_three_host_inventory_derives_one_asset_set_and_crate_order() {
     assert_eq!(release.toolchain_name(), "aros-0.2.0");
     assert_eq!(release.package_prefix(), "libexec/ami-rust/0.2.0");
     let assets = release.expected_assets();
-    // Twenty-four payloads each have an SBOM/signature, seven metadata files
+    // Twenty-two payloads each have an SBOM/signature, seven metadata files
     // each have one signature, plus the self-excluding final checksum file.
-    assert_eq!(assets.len(), 87);
-    assert_eq!(release.unsigned_payloads().len(), 30);
+    assert_eq!(assets.len(), 81);
+    assert_eq!(release.unsigned_payloads().len(), 28);
     assert_eq!(
         release.rustup_dist_server(),
         format!(
@@ -118,8 +116,8 @@ fn v3_native_reference_application_is_a_payload_and_v2_rejects_it() {
     });
     let release = parse_toolchain_release(&serde_json::to_vec(&v3).unwrap()).unwrap();
     let assets = release.expected_assets();
-    assert_eq!(release.unsigned_payloads().len(), 31);
-    assert_eq!(assets.len(), 90);
+    assert_eq!(release.unsigned_payloads().len(), 29);
+    assert_eq!(assets.len(), 84);
     assert!(assets.contains(&"ami-rust-sha256sum-0.2.0-x86_64-aros.tar.xz".to_owned()));
     assert!(assets.contains(&"ami-rust-sha256sum-0.2.0-x86_64-aros.tar.xz.spdx.json".to_owned()));
     assert!(
@@ -171,7 +169,7 @@ fn historical_cli_and_incomplete_or_forged_crate_inventory_refuse() {
     launcher["host_launchers"] = json!({});
     assert!(!accepts(&launcher));
     let mut occupied = valid.clone();
-    occupied["crates"][0]["name"] = json!("amiga-sys");
+    occupied["crates"][0]["name"] = json!("amiga-os");
     assert!(!accepts(&occupied));
     let mut mismatched_archive = valid.clone();
     mismatched_archive["crates"][0]["version"] = json!("0.1.0");
@@ -234,7 +232,12 @@ fn fresh_stable_version_is_required_and_input_order_is_irrelevant() {
     assert_eq!(a.expected_assets(), b.expected_assets());
     let mut separate_crate_version = valid.clone();
     separate_crate_version["crates"][0]["version"] = json!("0.1.0");
-    separate_crate_version["crates"][0]["archive"]["name"] = json!("aros-sys-0.1.0.crate");
+    let first_name = separate_crate_version["crates"][0]["name"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    separate_crate_version["crates"][0]["archive"]["name"] =
+        json!(format!("{first_name}-0.1.0.crate"));
     assert!(accepts(&separate_crate_version));
 }
 

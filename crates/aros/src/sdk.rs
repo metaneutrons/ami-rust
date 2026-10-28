@@ -11,11 +11,9 @@
 //! are an implementation candidate; this crate does not claim native
 //! qualification or compatibility beyond the pinned M1 inputs.
 
-#![no_std]
-
 use core::{ffi::c_void, marker::PhantomData, mem};
 
-pub use aros_runtime::{AppStatus, Context};
+use crate::Context;
 use aros_sys::{self as sys, SdkError};
 
 const MAX_PATH_BYTES: usize = sys::MAX_PATH_BYTES - 1;
@@ -434,7 +432,11 @@ impl<'ctx> Stderr<'ctx> {
         // The key is a live borrowed owner-task witness, not an OS pointer.
         let token = unsafe { sys::sdk_stderr(context.key()) };
         require_token(token, Operation::Stderr)?;
-        Ok(Self { context, token, _task_affine: PhantomData })
+        Ok(Self {
+            context,
+            token,
+            _task_affine: PhantomData,
+        })
     }
 
     /// Writes at most 64 KiB, preserving native errors and short transfers.
@@ -449,8 +451,14 @@ impl<'ctx> Stderr<'ctx> {
         // The bridge reads this slice synchronously for writing == 1 and
         // does not retain its pointer or close the borrowed native handle.
         let result = unsafe {
-            sys::sdk_file_io(self.context.key(), self.token,
-                buffer.as_ptr() as *mut u8, buffer.len(), 1, &mut native_error)
+            sys::sdk_file_io(
+                self.context.key(),
+                self.token,
+                buffer.as_ptr() as *mut u8,
+                buffer.len(),
+                1,
+                &mut native_error,
+            )
         };
         if result < 0 {
             return Err(Error::native(Operation::Stderr, native_error));
@@ -506,6 +514,19 @@ impl<'ctx> Library<'ctx> {
             token,
             _task_affine: PhantomData,
         })
+    }
+
+    /// Borrows the native library base for a library-specific raw ABI crate.
+    ///
+    /// # Safety
+    ///
+    /// The pointer must not be retained beyond `self`, used from another task,
+    /// closed directly, or passed to an API for a different library.
+    pub unsafe fn raw_base(&self) -> Option<*mut c_void> {
+        // SAFETY: this handle remains owned and the native registry validates
+        // its context, task, token kind, slot and live library pointer.
+        let base = unsafe { sys::sdk_library_base(self.context.key(), self.token) };
+        (!base.is_null()).then_some(base)
     }
 
     /// Closes the library and consumes this handle even when native close fails.

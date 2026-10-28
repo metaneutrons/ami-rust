@@ -1,7 +1,6 @@
 //! Native permission and file-metadata proof for M1-T07.
 
-use aros_runtime::{AppStatus, Context};
-use aros_sdk::{BytePath, Error, ErrorKind, File, FileMode};
+use aros::{AppStatus, BytePath, Context, Error, ErrorKind, File, FileMode};
 use aros_sys::SdkStats;
 
 const FILE_LENGTH: usize = 64;
@@ -252,12 +251,7 @@ fn typed_os_refusal(context: &Context, path: &BytePath) -> RefusalOutcome {
     }
 }
 
-fn fail(
-    context: &Context,
-    code: u64,
-    stats: SdkStats,
-    status: AppStatus,
-) -> AppStatus {
+fn fail(context: &Context, code: u64, stats: SdkStats, status: AppStatus) -> AppStatus {
     context.diagnostic(b"m1-t07-file-protection-failure", code);
     let current = context.statistics();
     if !live_resources_equal(stats, current) {
@@ -289,7 +283,11 @@ pub fn run(context: &Context) -> AppStatus {
         context,
         &protected_path,
         &protected_expected,
-        [STAGE_PROTECTED_CREATE, STAGE_PROTECTED_WRITE, STAGE_PROTECTED_CREATE_CLOSE],
+        [
+            STAGE_PROTECTED_CREATE,
+            STAGE_PROTECTED_WRITE,
+            STAGE_PROTECTED_CREATE_CLOSE,
+        ],
     ) {
         return fail(context, 1, baseline_resources, AppStatus::Error);
     }
@@ -297,7 +295,11 @@ pub fn run(context: &Context) -> AppStatus {
         context,
         &sentinel_path,
         &sentinel_expected,
-        [STAGE_SENTINEL_CREATE, STAGE_SENTINEL_WRITE, STAGE_SENTINEL_CLOSE],
+        [
+            STAGE_SENTINEL_CREATE,
+            STAGE_SENTINEL_WRITE,
+            STAGE_SENTINEL_CLOSE,
+        ],
     ) {
         return fail(context, 2, baseline_resources, AppStatus::Error);
     }
@@ -317,12 +319,20 @@ pub fn run(context: &Context) -> AppStatus {
         context,
         &protected_path,
         &mut protected_before_bytes,
-        [STAGE_BASELINE_READ, STAGE_BASELINE_READ, STAGE_BASELINE_READ],
+        [
+            STAGE_BASELINE_READ,
+            STAGE_BASELINE_READ,
+            STAGE_BASELINE_READ,
+        ],
     ) || !read_fixture(
         context,
         &sentinel_path,
         &mut sentinel_before_bytes,
-        [STAGE_BASELINE_READ, STAGE_BASELINE_READ, STAGE_BASELINE_READ],
+        [
+            STAGE_BASELINE_READ,
+            STAGE_BASELINE_READ,
+            STAGE_BASELINE_READ,
+        ],
     ) {
         return fail(context, 5, baseline_resources, AppStatus::Error);
     }
@@ -370,13 +380,21 @@ pub fn run(context: &Context) -> AppStatus {
         context,
         &protected_path,
         &mut protected_after_bytes,
-        [STAGE_RESTORED_READ, STAGE_RESTORED_READ, STAGE_RESTORED_CLOSE],
+        [
+            STAGE_RESTORED_READ,
+            STAGE_RESTORED_READ,
+            STAGE_RESTORED_CLOSE,
+        ],
     );
     let sentinel_read_after = read_fixture(
         context,
         &sentinel_path,
         &mut sentinel_after_bytes,
-        [STAGE_RESTORED_READ, STAGE_RESTORED_READ, STAGE_RESTORED_CLOSE],
+        [
+            STAGE_RESTORED_READ,
+            STAGE_RESTORED_READ,
+            STAGE_RESTORED_CLOSE,
+        ],
     );
 
     let native_after_ok = protected_after.is_ok() && sentinel_after.is_ok();

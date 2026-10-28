@@ -12,7 +12,7 @@ name = "ami-rust-dependencies"
 path = "src/main.rs"
 
 [dependencies]
-aros-runtime = { version = "=0.1.0", path = "../../crates/aros-runtime", features = ["alloc"] }
+aros = { version = "=0.1.0", path = "../../crates/aros", features = ["alloc"] }
 aros-sys = { version = "=0.1.0", path = "../../crates/aros-sys" }
 serde = { version = "=1.0.228", default-features = false, features = ["alloc", "derive"] }
 serde_json = { version = "=1.0.145", default-features = false, features = ["alloc"] }

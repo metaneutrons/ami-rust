@@ -1,16 +1,15 @@
 [package]
-name = "aros-runtime"
+name = "aros-mui"
 version.workspace = true
 edition.workspace = true
 publish = false
-description = "Task-affine native runtime and entry support for the selected x86-64 AROS ABI-v1."
+description = "Task-affine safe MUI object lifecycle for the selected AROS ABI profile."
 repository = "https://github.com/metaneutrons/ami-rust"
 homepage = "https://github.com/metaneutrons/ami-rust"
 license.workspace = true
 readme = "README.md"
-[features]
-default = []
-alloc = ["dep:aros-alloc"]
+
 [dependencies]
+aros = { version = "=0.1.0", path = "../aros", default-features = false }
 aros-sys = { version = "=0.1.0", path = "../aros-sys" }
-aros-alloc = { version = "=0.1.0", path = "../aros-alloc", optional = true }
+aros-mui-sys = { version = "=0.1.0", path = "../aros-mui-sys" }

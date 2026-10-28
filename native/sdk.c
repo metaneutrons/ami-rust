@@ -152,6 +152,11 @@ uint64_t sdk_library_open(uint64_t key,const uint8_t *name,uint16_t version,SdkE
  struct Library *l=OpenLibrary((CONST_STRPTR)name,version);if(!l){libraries[i]=(struct LibSlot){0};refuse(e,1,0);return 0;}
  libraries[i]=(struct LibSlot){token,l};++stats.libraries;return token;
 }
+void *sdk_library_base(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return NULL;int i=index_of(token,KIND_LIBRARY,4);
+ if(i<0 || libraries[i].token!=token || !libraries[i].handle){refuse(NULL,5,0);return NULL;}
+ return libraries[i].handle;
+}
 int sdk_library_close(uint64_t key,uint64_t token,SdkError *e) {
  if(own(key,e))return -1;int i=index_of(token,KIND_LIBRARY,4);
  if(i<0 || libraries[i].token!=token)return refuse(e,5,0);

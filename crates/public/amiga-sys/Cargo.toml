@@ -1,9 +1,0 @@
-[package]
-name = "amiga-sys"
-version.workspace = true
-edition.workspace = true
-publish = false
-license.workspace = true
-readme = "README.md"
-[dependencies]
-aros-sys = { version = "=0.1.0", path = "../../../crates/aros-sys" }

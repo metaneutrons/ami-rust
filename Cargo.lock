@@ -6,8 +6,8 @@ version = 4
 name = "ami-rust-dependencies"
 version = "0.1.0"
 dependencies = [
+ "aros",
  "aros-native-build",
- "aros-runtime",
  "aros-sys",
  "ed25519-dalek",
  "serde",
@@ -18,9 +18,8 @@ dependencies = [
 name = "ami-rust-minimal"
 version = "0.1.0"
 dependencies = [
+ "aros",
  "aros-native-build",
- "aros-runtime",
- "aros-sdk",
  "aros-sys",
 ]
 
@@ -28,10 +27,8 @@ dependencies = [
 name = "ami-rust-qualification"
 version = "0.1.0"
 dependencies = [
- "aros-alloc",
+ "aros",
  "aros-native-build",
- "aros-runtime",
- "aros-sdk",
  "aros-sys",
 ]
 
@@ -39,35 +36,13 @@ dependencies = [
 name = "ami-rust-sha256sum"
 version = "0.1.0"
 dependencies = [
- "amiga-os",
+ "aros",
  "aros-native-build",
  "sha2 0.10.9",
 ]
 
 [[package]]
-name = "amiga-alloc"
-version = "0.1.0"
-dependencies = [
- "aros-alloc",
-]
-
-[[package]]
-name = "amiga-os"
-version = "0.1.0"
-dependencies = [
- "aros-runtime",
- "aros-sdk",
-]
-
-[[package]]
-name = "amiga-sys"
-version = "0.1.0"
-dependencies = [
- "aros-sys",
-]
-
-[[package]]
-name = "aros-alloc"
+name = "aros"
 version = "0.1.0"
 dependencies = [
  "aros-sys",
@@ -83,6 +58,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "aros-mui"
+version = "0.1.0"
+dependencies = [
+ "aros",
+ "aros-mui-sys",
+ "aros-sys",
+]
+
+[[package]]
+name = "aros-mui-sys"
+version = "0.1.0"
+dependencies = [
+ "aros-sys",
+]
+
+[[package]]
 name = "aros-native-build"
 version = "0.2.0"
 dependencies = [
@@ -91,22 +82,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.11.1",
-]
-
-[[package]]
-name = "aros-runtime"
-version = "0.1.0"
-dependencies = [
- "aros-alloc",
- "aros-sys",
-]
-
-[[package]]
-name = "aros-sdk"
-version = "0.1.0"
-dependencies = [
- "aros-runtime",
- "aros-sys",
 ]
 
 [[package]]

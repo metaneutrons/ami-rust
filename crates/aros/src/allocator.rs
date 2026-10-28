@@ -1,5 +1,4 @@
-#![no_std]
-//! Public-Exec-backed global allocator; installed explicitly by the application.
+//! Exec-backed global allocator; installed explicitly by the application.
 use core::alloc::{GlobalAlloc, Layout};
 use core::ptr;
 
@@ -25,11 +24,18 @@ unsafe impl GlobalAlloc for ExecAllocator {
         pointer
     }
     unsafe fn realloc(&self, pointer: *mut u8, old: Layout, new_size: usize) -> *mut u8 {
-        let Ok(new) = Layout::from_size_align(new_size, old.align()) else { return ptr::null_mut(); };
+        let Ok(new) = Layout::from_size_align(new_size, old.align()) else {
+            return ptr::null_mut();
+        };
         let fresh = unsafe { self.alloc(new) };
-        if fresh.is_null() { return fresh; }
+        if fresh.is_null() {
+            return fresh;
+        }
         // SAFETY: allocations are disjoint; preserve the entire valid prefix.
-        unsafe { ptr::copy_nonoverlapping(pointer, fresh, core::cmp::min(old.size(), new_size)); self.dealloc(pointer, old); }
+        unsafe {
+            ptr::copy_nonoverlapping(pointer, fresh, core::cmp::min(old.size(), new_size));
+            self.dealloc(pointer, old);
+        }
         fresh
     }
 }
