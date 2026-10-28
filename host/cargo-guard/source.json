@@ -1,0 +1,53 @@
+{
+  "schema": "ami-rust-experimental-cargo-guard-source-v1",
+  "upstream_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+  "base_patches": [
+    {
+      "repository_path": "host/cargo-repro/cargo-metadata.patch",
+      "sha256": "1f22b7e2c6a7f4469cc6c2f4a84019d8d8ade558e78241d1e996d88a7f1de97f"
+    },
+    {
+      "repository_path": "host/cargo-storage/cargo-storage.patch",
+      "sha256": "220b426e66497fbe8a4c5d9f1783848262e7e963261623019d5fb46cdacda497"
+    }
+  ],
+  "additional_patch": {
+    "repository_path": "host/cargo-guard/cargo-guard.patch",
+    "sha256": "e8e2cd451a3d5b5c444b2254ac744360af1fcf185fbadd87e4e834cb382c5280"
+  },
+  "changed_files": [
+    {
+      "path": "src/bin/cargo/cli.rs",
+      "before_sha256": "83f924ab914bdeebc182f77a8f3311b2be408a2a0aeac44d0e77020d66e2391e",
+      "after_sha256": "0ae37c3d3d91498ccb1fba46eb8910d9323509dd20af1dd072a0c7cb1edbf7e5"
+    },
+    {
+      "path": "src/bin/cargo/main.rs",
+      "before_sha256": "9d2d4045dbb45fdb62bc7d98f2d036d9d9ed9e6fe18037167d621e2f3b620808",
+      "after_sha256": "cb34946166c17168aac431c7ed461668e00366d5414816459a3cfc7b4b1deabf"
+    },
+    {
+      "path": "src/context/ami_guard.rs",
+      "before_sha256": null,
+      "after_sha256": "ab2b20e1fb1b988c4240e54daf501536674e3e2cb5357fe001c75b5ba4c97b29"
+    },
+    {
+      "path": "src/context/mod.rs",
+      "before_sha256": "5c4a89ac9ab4aaaa48af4cb11413b7d71e434d46f69a98f7e32247292011dc3b",
+      "after_sha256": "6977d871f0cd8d7c8ccd4c27219b30487a828e17bf9863787b9362305213869d"
+    },
+    {
+      "path": "src/sources/config.rs",
+      "before_sha256": "ec11e042d9d05e54e1395fff96dc6f699f0123112e4b8fe4a5c8c1402d1d65b2",
+      "after_sha256": "cb771913c46c76efbb09ccc67a73c28ca502dfc3807447eb047ba310b989faa8"
+    }
+  ],
+  "effective_source": {
+    "algorithm": "SHA-256 of sorted compact JSON relative-file-path to SHA-256 map, UTF-8",
+    "file_count": 2929,
+    "sha256": "c74b94bc2b061c81dff2643c2dd810132576bad86e6a1ce551fd1df23f3f5ff9"
+  },
+  "symlink_count": 121,
+  "qualified_component": false,
+  "status": "experimental-patch-only-not-selected-by-existing-producers"
+}

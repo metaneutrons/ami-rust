@@ -1,0 +1,216 @@
+{
+  "budgets": {
+    "aggregate_log_bytes_per_command": 16777216,
+    "campaign_seconds": 5400,
+    "elapsed_seconds_before_final_receipt": 32,
+    "finalization_reserve_seconds": 300,
+    "full_campaign_aggregate_rss_claimed": false,
+    "full_campaign_rss_owner": "trusted outer sealed-X supervisor",
+    "measured_work_window_seconds": 5100,
+    "pending_receipt_included_in_final_workspace_bound_check": true,
+    "per_command_aggregate_rss_bytes": 4294967296,
+    "per_command_seconds": 1200,
+    "success_receipt_rename_is_last_fallible_operation": true,
+    "workspace_bytes": 12884901888,
+    "workspace_bytes_before_final_receipt": 793300444
+  },
+  "component_inventory_path": "component-inventory.json",
+  "host": "macos-aarch64",
+  "input_component_counts": {
+    "cross_component_aros_link_alias_excluded": 1,
+    "installer_admin_excluded": 3,
+    "installer_admin_paths_allowlist": [
+      "lib/rustlib/components",
+      "lib/rustlib/install.log",
+      "lib/rustlib/manifest-cargo",
+      "lib/rustlib/manifest-rustc",
+      "lib/rustlib/manifest-rust-src",
+      "lib/rustlib/manifest-rust-std-aarch64-apple-darwin",
+      "lib/rustlib/rust-installer-version",
+      "lib/rustlib/uninstall.sh"
+    ],
+    "macos_llvm_runtime_alias_added": true,
+    "native_host_std": 59,
+    "official_cargo_excluded": 44,
+    "rust_src": 3731,
+    "rustc_payload": 45,
+    "target_spec_row_explicitly_readded": 0
+  },
+  "input_profile_sha256": "9acf02ab3d4a22137b6c5f82294e35c518ff1ffdbad5a701d5f3cdb0910668ea",
+  "libraries": [
+    {
+      "bytes": 68233854,
+      "crate": "core",
+      "path": "libcore-7f112bce470cf4f4.rlib",
+      "sha256": "d5a7cb027f0eaa13e0348975cc3bdd6e0a589ab689a4214b9e1af5b9b2a1e7ed",
+      "source_filename": "libcore-7f112bce470cf4f4.rlib"
+    },
+    {
+      "bytes": 8500718,
+      "crate": "alloc",
+      "path": "liballoc-67cdea426a6788d2.rlib",
+      "sha256": "1a72320b657515188fc51d0b958197c10e9712b956a5e67727ae607ea42a1e4f",
+      "source_filename": "liballoc-67cdea426a6788d2.rlib"
+    },
+    {
+      "bytes": 2446116,
+      "crate": "compiler_builtins",
+      "path": "libcompiler_builtins-6ba5292693f8f158.rlib",
+      "sha256": "4434274348872c049d5d2624b3d9d5b37e2844cbba51f89e768d44aa8584c8ec",
+      "source_filename": "libcompiler_builtins-6ba5292693f8f158.rlib"
+    }
+  ],
+  "limitations": [
+    "The Rust component subset is not a complete SDK or composed host toolchain.",
+    "This producer does not qualify a C SDK, linker runtime, AROS execution, L1, or RC acceptance.",
+    "The per-command records do not establish full-invocation aggregate RSS; the trusted outer supervisor owns that measurement.",
+    "The Linux AArch64 candidate remains prospective data and does not admit that host."
+  ],
+  "macos_rust_objcopy_llvm_runtime_alias": {
+    "authenticated_source_file": {
+      "bytes": 143609472,
+      "path": "lib/libLLVM.dylib",
+      "sha256": "f875883949c8ff96b94faca6a295f66302ae305ce897165fc8765d5ba2d73573"
+    },
+    "link": {
+      "path": "lib/rustlib/aarch64-apple-darwin/lib/libLLVM.dylib",
+      "target": "../../../libLLVM.dylib"
+    },
+    "purpose": "resolve the pinned macOS rust-objcopy @rpath/libLLVM.dylib from the authenticated root Rust component file"
+  },
+  "native_cargo_override": {
+    "bytes": 39348200,
+    "historical_official_cargo": {
+      "bytes": 32170408,
+      "path": "bin/cargo",
+      "sha256": "37e07284393e4c979d0cf8d0efc62e4c29b64424a0d10123a616aec790056333"
+    },
+    "replaces_official_cargo_component": true,
+    "sha256": "4b9264c8796bc594fb0b04fcd023020173f456fde355634760d429765b89486d"
+  },
+  "qualification_commands": [
+    {
+      "aggregate_peak_rss_bytes": 32833536,
+      "child_exit_code": 0,
+      "label": "rustc-version",
+      "passed": true,
+      "peak_log_bytes": 210,
+      "peak_workspace_bytes": 554755993,
+      "record_path": "/Users/runner/work/_temp/ami-rust-bare-target-libraries/39807569612-1/macos-aarch64/outer-output/artifact/producer/records/rustc-version/result.json",
+      "request_path": "/Users/runner/work/_temp/ami-rust-bare-target-libraries/39807569612-1/macos-aarch64/outer-output/artifact/producer/requests/rustc-version.json",
+      "request_sha256": "114e9da4d50c94daa3353a2b7705ba55447e4734e0f8b807b78823e5fcb193db",
+      "result_sha256": "bef8c39fa16fe04f082ac86be0939bd06a7b7e5ffccbcfcd9421f502ed27c960"
+    },
+    {
+      "aggregate_peak_rss_bytes": 33144832,
+      "child_exit_code": 0,
+      "label": "rustc-sysroot",
+      "passed": true,
+      "peak_log_bytes": 338,
+      "peak_workspace_bytes": 554760380,
+      "record_path": "/Users/runner/work/_temp/ami-rust-bare-target-libraries/39807569612-1/macos-aarch64/outer-output/artifact/producer/records/rustc-sysroot/result.json",
+      "request_path": "/Users/runner/work/_temp/ami-rust-bare-target-libraries/39807569612-1/macos-aarch64/outer-output/artifact/producer/requests/rustc-sysroot.json",
+      "request_sha256": "36291b78c7251019ac25cad6e5ab56aae4939cb5bccd848e20f8668960defc80",
+      "result_sha256": "4e3430db13216f561ff7eb82e49248ea678c5c1bebffc308ed53838d809d73f3"
+    },
+    {
+      "aggregate_peak_rss_bytes": 34095104,
+      "child_exit_code": 0,
+      "label": "cargo-version",
+      "passed": true,
+      "peak_log_bytes": 673,
+      "peak_workspace_bytes": 554764977,
+      "record_path": "/Users/runner/work/_temp/ami-rust-bare-target-libraries/39807569612-1/macos-aarch64/outer-output/artifact/producer/records/cargo-version/result.json",
+      "request_path": "/Users/runner/work/_temp/ami-rust-bare-target-libraries/39807569612-1/macos-aarch64/outer-output/artifact/producer/requests/cargo-version.json",
+      "request_sha256": "a7e3e0be2ef7b3f95db46af021e57ccbe514f705e3e7d142951d8d5e28bc4073",
+      "result_sha256": "c9b1de357c3939eadc639f383dd2162b090d703fcb8531db843412016fd2eb85"
+    },
+    {
+      "aggregate_peak_rss_bytes": 22724608,
+      "child_exit_code": 0,
+      "label": "rust-objcopy-version",
+      "passed": true,
+      "peak_log_bytes": 802,
+      "peak_workspace_bytes": 554769422,
+      "record_path": "/Users/runner/work/_temp/ami-rust-bare-target-libraries/39807569612-1/macos-aarch64/outer-output/artifact/producer/records/rust-objcopy-version/result.json",
+      "request_path": "/Users/runner/work/_temp/ami-rust-bare-target-libraries/39807569612-1/macos-aarch64/outer-output/artifact/producer/requests/rust-objcopy-version.json",
+      "request_sha256": "a7f493c35d373209d97976a306190e04cac9a7faadd93570a3241feaf5106d02",
+      "result_sha256": "af9204703020d3b3e1eecba92eae73ee3b6ef4b98501ecc51b4b4e2a37c2d5fd"
+    },
+    {
+      "aggregate_peak_rss_bytes": 1632501760,
+      "child_exit_code": 0,
+      "label": "source-production",
+      "passed": true,
+      "peak_log_bytes": 52706,
+      "peak_workspace_bytes": 714119756,
+      "record_path": "/Users/runner/work/_temp/ami-rust-bare-target-libraries/39807569612-1/macos-aarch64/outer-output/artifact/producer/records/source-production/result.json",
+      "request_path": "/Users/runner/work/_temp/ami-rust-bare-target-libraries/39807569612-1/macos-aarch64/outer-output/artifact/producer/requests/source-production.json",
+      "request_sha256": "e7f8ce5b32b7f5ac0a80a3b321173127727a75dc319694035b0a67dae237535d",
+      "result_sha256": "f5b6c2a3955bbc70a068bfa30cd523f3a1ede8066ddca854cdf75018edb398fd"
+    }
+  ],
+  "recipe": {
+    "build_flags": [
+      "-Zjson-target-spec",
+      "-Zami-rust-reproducible-cross",
+      "-Zbuild-std=core,alloc",
+      "-Zbuild-std-features=compiler-builtins-mem",
+      "build",
+      "--target=x86_64-aros",
+      "--release",
+      "--locked",
+      "--offline",
+      "--lib",
+      "-j2",
+      "-vv",
+      "--message-format=json-render-diagnostics"
+    ],
+    "network": "offline",
+    "rustflags": [
+      "-Zunstable-options",
+      "-Copt-level=2",
+      "-Cpanic=abort",
+      "-Ccodegen-units=1",
+      "-Cembed-bitcode=no",
+      "-Clto=off",
+      "--remap-path-prefix=/Users/runner/work/_temp/ami-rust-bare-target-libraries/39807569612-1/macos-aarch64/managed/bare-target-producer-work=/build",
+      "--remap-path-prefix=/Users/runner/work/_temp/ami-rust-bare-target-libraries/39807569612-1/macos-aarch64/managed/bare-target-producer-work/toolchain=/rust-toolchain",
+      "--remap-path-prefix=/Users/runner/work/_temp/ami-rust-bare-target-libraries/39807569612-1/macos-aarch64/outer-output/artifact/producer=/output"
+    ],
+    "source_date_epoch": 1791936000,
+    "stale_target_libraries_loaded": false,
+    "target": "x86_64-aros"
+  },
+  "rust_source_library_lock": {
+    "bytes": 10042,
+    "path": "lib/rustlib/src/rust/library/Cargo.lock",
+    "sha256": "75848db58a70444bfb62c649b103d19c5d92fede325eb0c8c0e5442848448669"
+  },
+  "rustc_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
+  "schema": "ami-rust-bare-target-library-producer-v1",
+  "scope": "source-built x86_64-aros core, alloc, and compiler_builtins rlibs from pinned rustc/rust-std/rust-src components",
+  "scoped_component_inventory_sha256": "aa8513bf30033841846a0ce9002bb17f20d850ceace064f131f17668878a6e1d",
+  "source_and_output_postchecks": {
+    "native_cargo_unchanged": true,
+    "private_component_stage_unchanged_after_build": true,
+    "probe_cargo_lock_unchanged": true,
+    "rust_library_lock_unchanged": true,
+    "selected_rust_component_files_unchanged": true,
+    "target_pin_and_spec_unchanged": true
+  },
+  "status": "PRODUCED_BARE_TARGET_LIBRARIES_NOT_L1_OR_RC_QUALIFICATION",
+  "target": "x86_64-aros",
+  "target_pin": {
+    "epoch": 1791936000,
+    "sha256": "33fdd3d97053370eb3db9e05ea75721dafcfc7f4b5f8c218acaab1911984c341"
+  },
+  "target_spec": {
+    "alias": {
+      "path": "lib/rustlib/x86_64-aros/target.json",
+      "target": "x86_64-aros.json"
+    },
+    "bytes": 955,
+    "sha256": "de7a0024aa94269641e3e6d480ce8cd334962bf7e02592b0652e19e56b5fba71"
+  }
+}

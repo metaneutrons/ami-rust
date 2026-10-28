@@ -1,0 +1,75 @@
+{
+  "hosts": {
+    "linux-x86_64": {
+      "cosign": {
+        "binary_bytes": 141178250,
+        "binary_sha256": "4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71",
+        "bytes": 141178250,
+        "sha256": "4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71",
+        "url": "https://github.com/sigstore/cosign/releases/download/v3.1.3/cosign-linux-amd64",
+        "version": "3.1.3"
+      },
+      "gh": {
+        "archive_member": "gh_2.102.0_linux_amd64/bin/gh",
+        "binary_bytes": 42086560,
+        "binary_sha256": "7469124f706944133d6a169691dd1c6c3511b12e85878d255e044e2948df4c9b",
+        "bytes": 15319960,
+        "sha256": "bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386",
+        "url": "https://github.com/cli/cli/releases/download/v2.102.0/gh_2.102.0_linux_amd64.tar.gz",
+        "version": "2.102.0"
+      }
+    },
+    "macos-aarch64": {
+      "cosign": {
+        "binary_bytes": 139618946,
+        "binary_sha256": "5cf948c2f4dfe59687bdd0b8523709067383e03982cc543475c8a7dc70e92a76",
+        "bytes": 139618946,
+        "sha256": "5cf948c2f4dfe59687bdd0b8523709067383e03982cc543475c8a7dc70e92a76",
+        "url": "https://github.com/sigstore/cosign/releases/download/v3.1.3/cosign-darwin-arm64",
+        "version": "3.1.3"
+      },
+      "gh": {
+        "archive_member": "gh_2.102.0_macOS_arm64/bin/gh",
+        "binary_bytes": 39834784,
+        "binary_sha256": "8a4258433c81106343144857750316241759d06dcf16265cf3c4864a8f2f2ad6",
+        "bytes": 14359983,
+        "sha256": "da922c20d1792e5b2cbf375593d7a658acf034c12c84e007e71c76ef959c337e",
+        "url": "https://github.com/cli/cli/releases/download/v2.102.0/gh_2.102.0_macOS_arm64.zip",
+        "version": "2.102.0"
+      }
+    },
+    "linux-aarch64": {
+      "cosign": {
+        "binary_bytes": 132747403,
+        "binary_sha256": "c5d324e091826b0d7a78eb16fef316450b4eb9aaec045611c08ba06f5e73220a",
+        "bytes": 132747403,
+        "sha256": "c5d324e091826b0d7a78eb16fef316450b4eb9aaec045611c08ba06f5e73220a",
+        "url": "https://github.com/sigstore/cosign/releases/download/v3.1.3/cosign-linux-arm64",
+        "version": "3.1.3"
+      },
+      "gh": {
+        "archive_member": "gh_2.102.0_linux_arm64/bin/gh",
+        "binary_bytes": 39059616,
+        "binary_sha256": "93308395c2d296a63a662742c6366e4db413d2a4870d07bd9b84e491c065d65d",
+        "bytes": 13917794,
+        "sha256": "7862c86c72f43df3a2d93ddde6f473285b4e2af61b494849846827e513ef6484",
+        "url": "https://github.com/cli/cli/releases/download/v2.102.0/gh_2.102.0_linux_arm64.tar.gz",
+        "version": "2.102.0"
+      }
+    }
+  },
+  "roots": {
+    "cosign": {
+      "bytes": 5748,
+      "path": "release/trust/sigstore-trusted-root.json",
+      "sha256": "05a094edfa2e8eb7d1b4b37244e28ffb6d86b8b86ce3eb122b644b4335ae4dc1"
+    },
+    "gh": {
+      "bytes": 34634,
+      "path": "release/trust/github-trusted-root.jsonl",
+      "sha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c"
+    }
+  },
+  "schema": "ami-rust-ci-auth-tools-v1",
+  "trust_boundary": "Exact publisher workflow source and input manifest pinned outside candidate; tool/runtime/roots are explicit verifier TCB, not established by candidate claims."
+}

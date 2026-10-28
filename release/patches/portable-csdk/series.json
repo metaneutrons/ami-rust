@@ -1,0 +1,62 @@
+{
+  "notes": [
+    "Both frozen public-header callers are covered: AROS.cmake (525 outputs) and GenmoduleHeaders.cmake (5 outputs).",
+    "Source patches are prepared only; complete fresh two-host production and qualification remain pending.",
+    "Baseline/protected checkout bytes are unchanged.",
+    "libaom metadata uses the explicit AROS target identity: no standalone libm exists in the pinned C-SDK; APPLE/WIN32 describe the target, not the build host."
+  ],
+  "original_csdk_sha256": "70cc3e45969c6e1eca7e4c5c2183429b88424f6c22c8ec6bb90e6cc70452ab87",
+  "original_source_capsule_sha256": "7e62e28fb025e31aacdd3b6a6d14cef7d76703eb59dbaca02f2e2b4de68c6914",
+  "patches": [
+    {
+      "after_sha256": "6fbef4531616054b7a653ebf5b4c5cbed8fdf54bc4d1bb098decef25d78a52ca",
+      "base": {
+        "commit": "b399c714560e6629b4084290ce5575513521c8e3"
+      },
+      "before_sha256": "21cfbca9effc1f6406f0004832dadea83876dbd570328957b03d27c2c17db959",
+      "component": "aros-tools",
+      "patch": "0001-relative-genmodule-provenance.patch",
+      "patch_sha256": "835dabf373a5b9ec43ff1dc305e3f090f0962e89953f7fd512a1702b95ce52c7",
+      "path": "crates/aros-cmake-engine/engine/GenmoduleHeaders.cmake"
+    },
+    {
+      "after_sha256": "95a4118f7987ba7d9de7bcc6f397ca9361a6802e5764c28db8a0c61981a98601",
+      "base": {
+        "commit": "e0d5e367d15cc7da4ebac8f9db17868756c79569",
+        "compiler_flag_status": "PENDING_EXACT_LLVM11_PROBE"
+      },
+      "before_sha256": "c898a8d335c36c6371a39f65f1685c431e5c003ebea7fb2a27f346a6d8660a78",
+      "component": "AROS-NX",
+      "patch": "0002-relative-nouveau-diagnostics.patch",
+      "patch_sha256": "731a3c0ac20ef78525b0b8eacd6b3b09df91dd6ea749031d624c93b8b0173543",
+      "path": "workbench/hidds/nouveau/mmakefile.src"
+    },
+    {
+      "after_sha256": "8833578cfd9807ade9540afd2680bd32002e655eefc8e5446245a0e784ce2708",
+      "base": {
+        "archive_sha256": "9e9775180dec7dfd61a79e00bda3809d43891aee6b2e331ff7f26986207ea22e",
+        "original_aros_patch_sha256": "c3caf62de4cd3524ddcf7c1b0111909c6d0f44081200324ab12090fcd8fb48ce",
+        "version": "3.12.1"
+      },
+      "before_sha256": "64cf5b1270215adcca2304a89244adfcd3bda77400b1adc3fc69a8308a59725e",
+      "component": "libaom",
+      "patch": "0003-relocatable-aom-pkgconfig.patch",
+      "patch_sha256": "8be21d1549e0fbcc0943b40388e38c19146057f92c2f3bad26aeb120a239c516",
+      "path": "build/cmake/pkg_config.cmake"
+    },
+    {
+      "after_sha256": "76953410a31c2fc889fff37340543b5a4a2c324e63f7fbe69fddad083f11e47b",
+      "base": {
+        "commit": "b399c714560e6629b4084290ce5575513521c8e3"
+      },
+      "before_sha256": "8c18fb4997f89ae04259969ef415e19bb862b18dd332877697c909690f7b3d29",
+      "component": "aros-tools",
+      "patch": "0004-relative-public-module-provenance.patch",
+      "patch_sha256": "bce2fd7c57ddb99cc1270fb58216c6cb6e30c293f18ae91c7051c75b3a1c0357",
+      "path": "crates/aros-cmake-engine/engine/AROS.cmake"
+    }
+  ],
+  "revision": 2,
+  "schema": "ami-rust-portable-csdk-patches-v1",
+  "status": "PREPARED_NOT_QUALIFIED"
+}

@@ -1,0 +1,23 @@
+--- a/build/cmake/pkg_config.cmake
++++ b/build/cmake/pkg_config.cmake
+@@ -42,7 +42,8 @@
+ set(pkgconfig_file "${AOM_CONFIG_DIR}/aom.pc")
+ string(TOLOWER ${CMAKE_PROJECT_NAME} pkg_name)
+ file(WRITE "${pkgconfig_file}" "# libaom pkg-config.\n")
+-file(APPEND "${pkgconfig_file}" "prefix=${prefix}\n")
++# aom.pc is installed below <Developer>/lib/pkgconfig; keep it relocatable.
++file(APPEND "${pkgconfig_file}" "prefix=\${pcfiledir}/../..\n")
+ file(APPEND "${pkgconfig_file}" "exec_prefix=\${prefix}\n")
+ file(APPEND "${pkgconfig_file}" "includedir=\${prefix}/${includedir}\n")
+ file(APPEND "${pkgconfig_file}" "libdir=\${exec_prefix}/${libdir}\n\n")
+@@ -61,7 +62,9 @@
+ file(APPEND "${pkgconfig_file}" "\nConflicts:\n")
+ file(APPEND "${pkgconfig_file}" "Libs: -L\${libdir} -l${pkg_name}\n")
+ file(APPEND "${pkgconfig_file}" "Libs.private:")
+-if(NOT WIN32 AND NOT APPLE)
++# AROS provides math through stdc rather than a separate libm.
++# Use the target identity when this script runs on a Linux build host.
++if(NOT WIN32 AND NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "AROS")
+   file(APPEND "${pkgconfig_file}" " -lm")
+ endif()
+ if(CONFIG_MULTITHREAD AND CMAKE_THREAD_LIBS_INIT)

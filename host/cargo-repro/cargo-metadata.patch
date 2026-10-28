@@ -1,0 +1,55 @@
+--- a/src/compiler/build_runner/compilation_files.rs
++++ b/src/compiler/build_runner/compilation_files.rs
+@@ -878,6 +878,16 @@
+ 
+ /// Hash the version of rustc being used during the build process.
+ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher, unit: &Unit) {
++    // ami-rust uses fresh private output/Cargo directories for each SDK build.
++    // Host build-script identities otherwise propagate into target metadata,
++    // even though the target compiler and all inputs are pinned. Keep the
++    // upstream cache policy unless this dedicated cross-build mode is explicit.
++    let sdk_cross_metadata = !bcx.build_config.requested_kinds.is_empty()
++        && bcx.build_config.requested_kinds.iter().all(|kind| !kind.is_host())
++        && bcx.gctx.cli_unstable().ami_rust_reproducible_cross;
++    if sdk_cross_metadata {
++        "ami-rust-private-cross-metadata-v1".hash(hasher);
++    }
+     let vers = &bcx.rustc().version;
+     if vers.pre.is_empty() || bcx.gctx.cli_unstable().separate_nightlies {
+         // For stable, keep the artifacts separate. This helps if someone is
+@@ -886,7 +896,7 @@
+         // omitted since rustc should produce the same output for each target
+         // regardless of the host.
+         for line in bcx.rustc().verbose_version.lines() {
+-            if unit.kind.is_host() || !line.starts_with("host: ") {
++            if (unit.kind.is_host() && !sdk_cross_metadata) || !line.starts_with("host: ") {
+                 line.hash(hasher);
+             }
+         }
+@@ -902,7 +912,7 @@
+     // Keep "host" since some people switch hosts to implicitly change
+     // targets, (like gnu vs musl or gnu vs msvc). In the future, we may want
+     // to consider hashing `unit.kind.short_name()` instead.
+-    if unit.kind.is_host() {
++    if unit.kind.is_host() && !sdk_cross_metadata {
+         bcx.rustc().host.hash(hasher);
+     }
+     // None of the other lines are important. Currently they are:
+--- a/src/workspace/features.rs
++++ b/src/workspace/features.rs
+@@ -874,6 +874,7 @@
+     // All other unstable features.
+     // Please keep this list lexicographically ordered.
+     advanced_env: bool,
++    ami_rust_reproducible_cross: bool = ("ami-rust private cross-build metadata; requires fresh private caches"),
+     any_build_script_metadata: bool = ("Allow any build script to specify env vars via cargo::metadata=key=value"),
+     asymmetric_token: bool = ("Allows authenticating with asymmetric tokens"),
+     avoid_dev_deps: bool = ("Avoid installing dev-dependencies if possible"),
+@@ -1461,6 +1462,7 @@
+                 )?
+             }
+             "host-config" => self.host_config = parse_empty(k, v)?,
++            "ami-rust-reproducible-cross" => self.ami_rust_reproducible_cross = parse_empty(k, v)?,
+             "json-target-spec" => self.json_target_spec = parse_empty(k, v)?,
+             "min-publish-age" => self.min_publish_age = parse_empty(k, v)?,
+             "hint-msrv" => self.hint_msrv = parse_empty(k, v)?,

@@ -1,0 +1,11 @@
+--- a/tools/genmodule/functionhead.c
++++ b/tools/genmodule/functionhead.c
+@@ -469,7 +469,7 @@
+ 
+     /* Regular argument */
+     endname = end;
+-    while (!isspace(*(end-1)) && *(end-1)!='*')
++    while (begin == end || (!isspace(*(end-1)) && *(end-1)!='*'))
+     {
+         if (begin == end)
+         {

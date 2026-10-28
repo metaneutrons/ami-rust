@@ -1,0 +1,32 @@
+[workspace]
+resolver = "3"
+members = ["crates/core", "crates/xtask", "crates/aros-elf", "crates/aros-native-build"]
+
+[workspace.package]
+version = "0.2.0-dev"
+edition = "2024"
+rust-version = "1.98.1"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace.dependencies]
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = { version = "=1.0.145", features = ["unbounded_depth", "raw_value"] }
+sha2 = "=0.11.1"
+tar = { version = "=0.4.46", default-features = false }
+flate2 = { version = "=1.1.10", default-features = false, features = ["rust_backend"] }
+lzma-rust2 = { version = "=0.22.0", default-features = false, features = ["std", "xz"] }
+libc = "=0.2.191"
+
+[profile.release]
+opt-level = 2
+lto = false
+codegen-units = 1
+# Remove linker debug-origin records; preserve ordinary symbol names.
+strip = "debuginfo"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }

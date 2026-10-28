@@ -1,0 +1,17 @@
+{
+  "sdk_source": "952a0f8e62f084dc480ffd9aaaa4c2e18b5ae03c",
+  "target": "x86_64-aros",
+  "abi": "v1",
+  "source_path": "examples/sha256sum/src/main.rs",
+  "source_sha256": "89fb976edacc103e7cf7ac0710b06f365ea436f40227b8c9832f53e64668d971",
+  "recipe_files": {
+    "Cargo.toml": "3b1fe0b5f869cc0684512a1433bb623c904d92440bab5d16d3746ea30dc33afb",
+    "Cargo.lock": "96790f1b0113859e279fbb5924aa80b48ea1610f1314436a4aca74bd7487d8bf",
+    "build.rs": "23a5f500c95a6165b466086ad4d0e460e8a9c7af48ab06b066b56bde8e3bffb2",
+    "config.toml.in": "0827925534cafec719759676376ee6154521bacca7e850e16877b59920dfef17"
+  },
+  "executable": {
+    "bytes": 928240,
+    "sha256": "72c4b8fbc566044542292d9cab47b08598dbacfbe10b65d856abf59c4b680663"
+  }
+}

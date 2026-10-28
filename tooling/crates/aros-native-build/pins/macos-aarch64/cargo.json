@@ -1,0 +1,116 @@
+{
+  "files": [
+    {
+      "bytes": 38204560,
+      "path": "bin/cargo",
+      "sha256": "671bc15372da8d9abfe15dadbcc4ac00c61fe2f16c1fad86361dc8bcc99396e3"
+    },
+    {
+      "bytes": 4680,
+      "path": "producer.json",
+      "sha256": "f999ca30585f8f6dd1b6bf4a7d4b11f798ad823624c63a8e2cf3703c49cee9aa"
+    }
+  ],
+  "producer_identity_spec": {
+    "bytes": 4680,
+    "record": {
+      "artifact": {
+        "bytes": 38204560,
+        "path": "bin/cargo",
+        "sha256": "671bc15372da8d9abfe15dadbcc4ac00c61fe2f16c1fad86361dc8bcc99396e3",
+        "version": "cargo 1.99.0 (3efb1f477 2026-07-17)\nrelease: 1.99.0\ncommit-hash: 3efb1f477e99b42974b982d939fd100303cdf7db\ncommit-date: 2026-07-17\nhost: aarch64-apple-darwin\nlibgit2: 1.9.4 (sys:0.21.0 vendored)\nlibcurl: 8.7.1 (sys:0.4.90+curl-8.21.0 system ssl:(SecureTransport) LibreSSL/3.3.6)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Mac OS 26.6.2 [64-bit]\n"
+      },
+      "claim": "Canonical component companion derived from reviewed protected producer records; not an original upstream producer payload or complete SDK qualification.",
+      "evidence": {
+        "build_inputs_sha256": "cca0ded20ffcafe5850732625511496829cdddea07b420b15d6da0f9a692b75e",
+        "build_result_sha256": "5d178fb97504db66560d7b7892e2326e5d39d971fb78125e0a403b09d0eb7820",
+        "outer_result_sha256": "7fb9e2e26b7b051ed8554086683e8ca9a31d2eb5e3af8823716177f3d0eaa522",
+        "review": {
+          "path": "evidence/rc1-native-qualification-flow-20261019/rc2-remaining-controls-local-20261024-a1/protected-macos-cargo-prerequisite-a1/independent-macos-artifacts-review-a1.json",
+          "sha256": "215121ef7c21f1dfae59853efec0dd70b6d15cbc418d84ba309c855bdd0fb42e",
+          "verdict": "PASS_MACOS_CARGO_COMPONENT_PREREQUISITE"
+        }
+      },
+      "host": "macos-aarch64",
+      "producer": {
+        "artifact_id": 12559051826,
+        "artifact_name": "native-cargo-component-aarch64-apple-darwin-40089115388-1",
+        "attempt": 1,
+        "component_job": {
+          "id": 120857976530,
+          "name": "Native aarch64-apple-darwin",
+          "run_conclusion": "success",
+          "runner_label": "macos-26"
+        },
+        "head": "e845cf88e89be929deb7799f0db4161d93bba890",
+        "native_host": "aarch64-apple-darwin",
+        "payload_bytes": 38204560,
+        "payload_path": "cargo",
+        "payload_sha256": "671bc15372da8d9abfe15dadbcc4ac00c61fe2f16c1fad86361dc8bcc99396e3",
+        "repository": "metaneutrons/ami-rust",
+        "run_id": 40089115388,
+        "tree": "408e232e6889cd6c84c217eef297157547399cae",
+        "workflow": ".github/workflows/cargo-native-prerequisite.yml",
+        "workflow_sha256": "eb620b5c4622b824c1f765fd1ed09f46c2449b1449d22f99ba9bc7eb25a75e35",
+        "zip_bytes": 44862463,
+        "zip_sha256": "29dc70f7fa2ada59abcab817b6d894af5525d9d6da1d6732f838abcbc84d34a3"
+      },
+      "qualification_only": true,
+      "rust_target": "aarch64-apple-darwin",
+      "schema": "ami-rust-authenticated-cargo-component-v1",
+      "source_and_build": {
+        "budgets": {
+          "jobs": 2,
+          "log_bytes": 16777216,
+          "rss_bytes": 4294967296,
+          "seconds": 1200,
+          "workspace_bytes": 12884901888
+        },
+        "build_environment": {
+          "CARGO_BUILD_JOBS": "2",
+          "CARGO_INCREMENTAL": "0",
+          "CARGO_NET_OFFLINE": "true",
+          "CARGO_PROFILE_DEV_DEBUG": "0",
+          "CARGO_PROFILE_DEV_INCREMENTAL": "false",
+          "CARGO_PROFILE_RELEASE_CODEGEN_UNITS": "16",
+          "CARGO_PROFILE_RELEASE_DEBUG": "0",
+          "CARGO_PROFILE_RELEASE_INCREMENTAL": "false",
+          "CARGO_PROFILE_RELEASE_LTO": "false",
+          "CARGO_PROFILE_RELEASE_OPT_LEVEL": "2",
+          "SOURCE_DATE_EPOCH": "1791936000"
+        },
+        "cargo_lock_sha256": "b4ccfa53ccf8d7360c0359c1533d801759629f9cdd486d9a0a88e512717058d9",
+        "compiler": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: aarch64-apple-darwin\nrelease: 1.98.1\nLLVM version: 22.1.8\n",
+        "host": "macos-aarch64",
+        "macos_oso_prefix_strip_enabled": true,
+        "native_host_triple": "aarch64-apple-darwin",
+        "overlay_verifier_sha256": "2b0e4c6b5307446615a198fb485987db2342ebde1be86996f996a53bb1b48649",
+        "patch_sha256": "2c3ab831d216cc4395decc4bcc307a1d9bac6b6936cd01d7c496c44e55d9826b",
+        "producer_executable_sha256": "26a398f420c9105d092ccc33a7f21be7f484dd94505787b8592b3d431c7b6300",
+        "producer_sha256": "c6432ce8039976c3d50f2e76365b17c0f9cdd9b50307dc56c55f18b1ac3f3d0d",
+        "profile": "release",
+        "remap_destinations": [
+          "/cargo-source",
+          "/cargo-build",
+          "/cargo-vendor"
+        ],
+        "schema": "ami-rust-cargo-prerequisite-producer-input-v1",
+        "source_pin_sha256": "9c8ac1d58262c73116c74172c93c345196bd8ffa3995bebba3d1f8ea00bc59ce",
+        "upstream_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+        "vendor_overlay": {
+          "inventory_directories": 4338,
+          "inventory_files": 30517,
+          "patch_sha256": "0bc0e316c16658c7be01baa8d14070efebbe0b115a26224b2ae75ac12667069e",
+          "pin_sha256": "676f1c208fe63f57014120f7461383a9f1da351565a5ea8b9dfe8a2dd109e944",
+          "receipt_sha256": "0771fa4c79400977cd35455a80f7ec9e9ae309d096db069c5bad8cd5eb5ac17a"
+        }
+      }
+    },
+    "record_is_derived_canonical_companion": true,
+    "record_is_exact_producer_json_payload": false,
+    "schema": "ami-rust-authenticated-cargo-component-v1",
+    "serialization": "UTF-8 JSON with sorted keys, two-space indentation, and one trailing LF",
+    "sha256": "f999ca30585f8f6dd1b6bf4a7d4b11f798ad823624c63a8e2cf3703c49cee9aa"
+  },
+  "symlinks": []
+}

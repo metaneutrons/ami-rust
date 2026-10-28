@@ -1,0 +1,870 @@
+{
+  "schema": "ami-rust-native-reference-v1",
+  "basis": {
+    "source_record_sha256": "8916ae5fd5d9403f1b0592555f0c26e474893a913a4fe925b66d8c4fd1aa2250",
+    "source_record_path": "release/candidate-r4/reference-artifacts.json",
+    "native_qualification_path": "release/candidate-r4/qualification.json",
+    "native_qualification_sha256": "c5e559f592c7300b502ebf976ecd5b65c9191a130dbc2f7b5c9ed68a7045982c",
+    "native_source_commit": "1d0fe4f10c8f264fd4b8fd50baccadd34869a802",
+    "native_profile_source_sdk_archive_sha256": "fec161ac9d80f3775ce413e45279cc708dfe0e14403879001ff2cdcd249c3e34",
+    "native_runtime_inputs": "The R4 native profile qualifies the changed memory-policy allocator/runtime implementation from source commit 1d0fe4f10c8f264fd4b8fd50baccadd34869a802 and source SDK archive SHA-256 fec161ac9d80f3775ce413e45279cc708dfe0e14403879001ff2cdcd249c3e34. Compiler and Rust target input pins remain unchanged; final candidate consumer outputs must be compared with these canonical maps before R1 acceptance."
+  },
+  "hosts": {
+    "linux-x86_64": {
+      "dependencies": {
+        "AMIRUST": {
+          "bytes": 1501568,
+          "sha256": "e9282cb51537e141f22c3e7d22059e64292e79679865d63f9499a63ad0342bb9"
+        },
+        "application.a": {
+          "bytes": 1695950,
+          "sha256": "35c9291334786680614956387a44213bb846eb527096fedb9df2b2bed21890aa"
+        },
+        "bind.o": {
+          "bytes": 1160,
+          "sha256": "3dff2a3625afc389e162880b5e0e44f746fcf25361378906766f504083968967"
+        },
+        "entry.o": {
+          "bytes": 4888,
+          "sha256": "8dc6a3bfa07bc0fb04d565713c172b4df17d5d2c9b84092abd1def915a85cbb1"
+        },
+        "layout.o": {
+          "bytes": 1648,
+          "sha256": "de661b23f7725307138a6c4358af8f90c1c9a1b6aa097ac193a5afcf93af874c"
+        },
+        "sdk.o": {
+          "bytes": 45624,
+          "sha256": "66e47e5395d0e39623a0af443c7088da88268f24184b8f72be4447cc94baaeea"
+        },
+        "startup.o": {
+          "bytes": 3832,
+          "sha256": "0ca30233bb169b694f552929627962f8be7935f0674565e6ed1114a86d00d99b"
+        },
+        "target/release/deps/liballoc-fdc13dd8ec57eb82.rlib": {
+          "bytes": 8501678,
+          "sha256": "9abb60e44dca9f621530478465b0ae8024291331effd8d8cfc32c7df326fd691"
+        },
+        "target/release/deps/libami_rust_dependencies-ffbbc414df4df99b.a": {
+          "bytes": 1695950,
+          "sha256": "35c9291334786680614956387a44213bb846eb527096fedb9df2b2bed21890aa"
+        },
+        "target/release/deps/libaros_alloc-52914fe3a165b2d5.rlib": {
+          "bytes": 8582,
+          "sha256": "85a6cb58a7e657b806a30eea02ce076a8a696c02ac960334643bb4ecf67cdc5a"
+        },
+        "target/release/deps/libaros_runtime-f5b00db52b2ffc48.rlib": {
+          "bytes": 17780,
+          "sha256": "cfb4ec7445e847220d10682dbd2661b2a87cdd0047722617521d2971f6b8b991"
+        },
+        "target/release/deps/libaros_sys-be407af0b9b64cbb.rlib": {
+          "bytes": 75062,
+          "sha256": "67ee5af264b430b81d88fc5f13b953d482815ac92996ba99a7916bf0795b3ec2"
+        },
+        "target/release/deps/libblock_buffer-4888af1b638a7d57.rlib": {
+          "bytes": 69070,
+          "sha256": "14c2190f95b50c1c26d3999343fae5d4aca7c20c02b4f1224f8184950d1853fb"
+        },
+        "target/release/deps/libcfg_if-ea82873b7cd1628e.rlib": {
+          "bytes": 8866,
+          "sha256": "2d2d6001786f13fae0d9932777584d8e74f4b853a14ed4a14fc82bc5fee241cc"
+        },
+        "target/release/deps/libcompiler_builtins-e338c14d9dc031f6.rlib": {
+          "bytes": 2447068,
+          "sha256": "7f6fb1d30ad93b2e0fe70ca4096df86733fbddfe295a0fd8436a0a42d0e6fc60"
+        },
+        "target/release/deps/libcore-141bfcd02ef2299c.rlib": {
+          "bytes": 68234814,
+          "sha256": "bc299428fda7c4e0b59d149487183cc1f982a9fea1aca91bf27624db543cb6de"
+        },
+        "target/release/deps/libcpufeatures-1b57b9619a3c2cb4.rlib": {
+          "bytes": 42140,
+          "sha256": "9b3b118840323206989914887772056e17df97b30e899fd0e7f0234a0ca94000"
+        },
+        "target/release/deps/libcrypto_common-eb7e13d0b1666b51.rlib": {
+          "bytes": 34154,
+          "sha256": "c199bae140092cf5d8162eb253e050fc4ad915db5ba36cfe27c9c536e3ea575c"
+        },
+        "target/release/deps/libcurve25519_dalek-e6b2baccf7ea5fa1.rlib": {
+          "bytes": 1615078,
+          "sha256": "2dfa46828838df9c1de7dc3504ab8bc87dd5ff9915bfa70dc3be7bace1a65b27"
+        },
+        "target/release/deps/libdigest-351fadc1860b7b5d.rlib": {
+          "bytes": 174404,
+          "sha256": "0d313f5808e46b372a4fec88cb33c70621be26ec37bbe5045eb7fbd061b30d26"
+        },
+        "target/release/deps/libed25519-6762aa4d3ee9a373.rlib": {
+          "bytes": 50388,
+          "sha256": "1ae1a8abaf96197e151055621f0902f78e0249ee5d2036949f4fb4572ee4ec2d"
+        },
+        "target/release/deps/libed25519_dalek-a8ddfcdaa73c5d6b.rlib": {
+          "bytes": 143148,
+          "sha256": "5d1a641a42d092e232b4b68378be7c20bc1755bc22a858cef737c90f03acb0a4"
+        },
+        "target/release/deps/libgeneric_array-e7669baee0f3713c.rlib": {
+          "bytes": 980876,
+          "sha256": "f139a0f34d7f0fc1ca3c33a2b50e5ab8ef2b36500e36c35aaec0890742b781f3"
+        },
+        "target/release/deps/libitoa-308c2436d95f8b19.rlib": {
+          "bytes": 87236,
+          "sha256": "3e0b12f9935e6a3ce02e395ed8a434014b88aa632b8d3bdbf27b746b7541b7fe"
+        },
+        "target/release/deps/libmemchr-cc220295c5852ccb.rlib": {
+          "bytes": 1566258,
+          "sha256": "6cc3f3c40fbe70d88269208dc2e879f2acdb71edb71722681cf656c5e63c2592"
+        },
+        "target/release/deps/libryu-3fc5a2b6f1e77603.rlib": {
+          "bytes": 78754,
+          "sha256": "99613cc11acb1c66f8968d4c07531f722e48ca1cc7cde7597d0d6266a4870cae"
+        },
+        "target/release/deps/libserde-b024f4eba383325c.rlib": {
+          "bytes": 976116,
+          "sha256": "319416820af11db3d04abbe0f4ca66c8ac226edf522ae8c83c0489c53ec45fce"
+        },
+        "target/release/deps/libserde_core-3d88d6e1a80cce12.rlib": {
+          "bytes": 5036736,
+          "sha256": "aa62e987804ebdb0bbf1927c38bb7269f97b9bbe54bff737dfc1aaa0d8affb47"
+        },
+        "target/release/deps/libserde_json-f45eef2229f9e10f.rlib": {
+          "bytes": 1832740,
+          "sha256": "31c01afc7abdb9731b90c18625f81e31c861cc1c903bade0ccf05a4f890d3b8e"
+        },
+        "target/release/deps/libsha2-8da1f83ce5ea948b.rlib": {
+          "bytes": 837902,
+          "sha256": "581c18e64a60522eb69c255f90142dc276e4fb2f8615f626d921110dbe675fa1"
+        },
+        "target/release/deps/libsignature-8fab44bb93e8a9ba.rlib": {
+          "bytes": 40976,
+          "sha256": "e71d33b0bfef4b64310c14e4e33e5f57f47fe2c1c9bdf4693fddca052886adab"
+        },
+        "target/release/deps/libsubtle-b507526e3ce822c7.rlib": {
+          "bytes": 133258,
+          "sha256": "2eb5ff88716194b0460841daddf9bbc20bcd08740c4a48ff98ab712416a901fa"
+        },
+        "target/release/deps/libtypenum-aeb3430f7ad46d1c.rlib": {
+          "bytes": 2858436,
+          "sha256": "c9c3f0d058628acfca211a6c862603d3fb9c347ae03836b7830e2d21a2caa917"
+        },
+        "target/release/deps/libzeroize-20c85e0b66ca8d3a.rlib": {
+          "bytes": 522484,
+          "sha256": "9266134e0dbb44b807957520b527f51ba3ef0970f06e9c0c4ff4a4d250b79249"
+        },
+        "target/release/libami_rust_dependencies.a": {
+          "bytes": 1695950,
+          "sha256": "35c9291334786680614956387a44213bb846eb527096fedb9df2b2bed21890aa"
+        }
+      },
+      "minimal-alloc": {
+        "AMIRUST": {
+          "bytes": 885856,
+          "sha256": "5c4749ead23831c357af7826449b5cd29112760ae901240cf4d99bcf85bcff1e"
+        },
+        "application.a": {
+          "bytes": 949308,
+          "sha256": "5644a51046a774a6f6b2420c474a27edfddd534300f965e85d8d690ebff3f93f"
+        },
+        "entry.o": {
+          "bytes": 1488,
+          "sha256": "a2b6b80ccad4a3c459bb95f33904d90b0f9f99a94b61f6600667194b007eb7b2"
+        },
+        "layout.o": {
+          "bytes": 1648,
+          "sha256": "de661b23f7725307138a6c4358af8f90c1c9a1b6aa097ac193a5afcf93af874c"
+        },
+        "sdk.o": {
+          "bytes": 26704,
+          "sha256": "1a803009479ab98b25c3562bee206b5fcf764591260f71be6cb4dbd8b5bd6fc5"
+        },
+        "startup.o": {
+          "bytes": 3832,
+          "sha256": "0ca30233bb169b694f552929627962f8be7935f0674565e6ed1114a86d00d99b"
+        },
+        "target/release/deps/liballoc-fdc13dd8ec57eb82.rlib": {
+          "bytes": 8501678,
+          "sha256": "9abb60e44dca9f621530478465b0ae8024291331effd8d8cfc32c7df326fd691"
+        },
+        "target/release/deps/libami_rust_minimal-93d7d46a107d243f.a": {
+          "bytes": 949308,
+          "sha256": "5644a51046a774a6f6b2420c474a27edfddd534300f965e85d8d690ebff3f93f"
+        },
+        "target/release/deps/libaros_alloc-52914fe3a165b2d5.rlib": {
+          "bytes": 8582,
+          "sha256": "85a6cb58a7e657b806a30eea02ce076a8a696c02ac960334643bb4ecf67cdc5a"
+        },
+        "target/release/deps/libaros_runtime-f5b00db52b2ffc48.rlib": {
+          "bytes": 17780,
+          "sha256": "cfb4ec7445e847220d10682dbd2661b2a87cdd0047722617521d2971f6b8b991"
+        },
+        "target/release/deps/libaros_sdk-eeac8596471a56da.rlib": {
+          "bytes": 94090,
+          "sha256": "853350674b1d5a36e91ea1e451ab505bf0d0d64c656f88665d6b6fb2541f0b68"
+        },
+        "target/release/deps/libaros_sys-be407af0b9b64cbb.rlib": {
+          "bytes": 75062,
+          "sha256": "67ee5af264b430b81d88fc5f13b953d482815ac92996ba99a7916bf0795b3ec2"
+        },
+        "target/release/deps/libcompiler_builtins-e338c14d9dc031f6.rlib": {
+          "bytes": 2447068,
+          "sha256": "7f6fb1d30ad93b2e0fe70ca4096df86733fbddfe295a0fd8436a0a42d0e6fc60"
+        },
+        "target/release/deps/libcore-141bfcd02ef2299c.rlib": {
+          "bytes": 68234814,
+          "sha256": "bc299428fda7c4e0b59d149487183cc1f982a9fea1aca91bf27624db543cb6de"
+        },
+        "target/release/libami_rust_minimal.a": {
+          "bytes": 949308,
+          "sha256": "5644a51046a774a6f6b2420c474a27edfddd534300f965e85d8d690ebff3f93f"
+        }
+      },
+      "minimal-noalloc": {
+        "AMIRUST": {
+          "bytes": 359616,
+          "sha256": "5a932c76d1f791c4ac4cd1dd267506bae3d25d4ea94209356f08a255f3af296e"
+        },
+        "application.a": {
+          "bytes": 839534,
+          "sha256": "b2aee3e080e4ebe412240d0fd3bb37ae7e08713822d00f749c1fa34216bb607e"
+        },
+        "entry.o": {
+          "bytes": 1488,
+          "sha256": "a2b6b80ccad4a3c459bb95f33904d90b0f9f99a94b61f6600667194b007eb7b2"
+        },
+        "layout.o": {
+          "bytes": 1648,
+          "sha256": "de661b23f7725307138a6c4358af8f90c1c9a1b6aa097ac193a5afcf93af874c"
+        },
+        "sdk.o": {
+          "bytes": 26704,
+          "sha256": "1a803009479ab98b25c3562bee206b5fcf764591260f71be6cb4dbd8b5bd6fc5"
+        },
+        "startup.o": {
+          "bytes": 3832,
+          "sha256": "0ca30233bb169b694f552929627962f8be7935f0674565e6ed1114a86d00d99b"
+        },
+        "target/release/deps/liballoc-fdc13dd8ec57eb82.rlib": {
+          "bytes": 8501678,
+          "sha256": "9abb60e44dca9f621530478465b0ae8024291331effd8d8cfc32c7df326fd691"
+        },
+        "target/release/deps/libami_rust_minimal-1cdfc8697c01fd13.a": {
+          "bytes": 839534,
+          "sha256": "b2aee3e080e4ebe412240d0fd3bb37ae7e08713822d00f749c1fa34216bb607e"
+        },
+        "target/release/deps/libaros_runtime-5995b018ac52a073.rlib": {
+          "bytes": 17572,
+          "sha256": "337e535078a0aa261c1e1ea0c2592593fde602dff9fbb6009aae46401d1c4d45"
+        },
+        "target/release/deps/libaros_sdk-b10893f006f6dfb1.rlib": {
+          "bytes": 94042,
+          "sha256": "d6886096c073f42ca108b7057db73e8ca7eb4d0c8807efc547f1fcfe0f925352"
+        },
+        "target/release/deps/libaros_sys-be407af0b9b64cbb.rlib": {
+          "bytes": 75062,
+          "sha256": "67ee5af264b430b81d88fc5f13b953d482815ac92996ba99a7916bf0795b3ec2"
+        },
+        "target/release/deps/libcompiler_builtins-e338c14d9dc031f6.rlib": {
+          "bytes": 2447068,
+          "sha256": "7f6fb1d30ad93b2e0fe70ca4096df86733fbddfe295a0fd8436a0a42d0e6fc60"
+        },
+        "target/release/deps/libcore-141bfcd02ef2299c.rlib": {
+          "bytes": 68234814,
+          "sha256": "bc299428fda7c4e0b59d149487183cc1f982a9fea1aca91bf27624db543cb6de"
+        },
+        "target/release/libami_rust_minimal.a": {
+          "bytes": 839534,
+          "sha256": "b2aee3e080e4ebe412240d0fd3bb37ae7e08713822d00f749c1fa34216bb607e"
+        }
+      },
+      "qualification": {
+        "AMIRUST": {
+          "bytes": 1029880,
+          "sha256": "7299ddb4a2a243a4fdb51c6657aefc02675b5bf6953a38c8d3583fc7f0e06906"
+        },
+        "application.a": {
+          "bytes": 1088678,
+          "sha256": "0fdcfe0b7cada1afe514196b1eea15c5c9a49bf0c9394ef550fef35a1f0d5052"
+        },
+        "bind.o": {
+          "bytes": 1160,
+          "sha256": "3dff2a3625afc389e162880b5e0e44f746fcf25361378906766f504083968967"
+        },
+        "entry.o": {
+          "bytes": 4888,
+          "sha256": "8dc6a3bfa07bc0fb04d565713c172b4df17d5d2c9b84092abd1def915a85cbb1"
+        },
+        "layout.o": {
+          "bytes": 1648,
+          "sha256": "de661b23f7725307138a6c4358af8f90c1c9a1b6aa097ac193a5afcf93af874c"
+        },
+        "sdk.o": {
+          "bytes": 45624,
+          "sha256": "66e47e5395d0e39623a0af443c7088da88268f24184b8f72be4447cc94baaeea"
+        },
+        "startup.o": {
+          "bytes": 3832,
+          "sha256": "0ca30233bb169b694f552929627962f8be7935f0674565e6ed1114a86d00d99b"
+        },
+        "target/release/deps/liballoc-fdc13dd8ec57eb82.rlib": {
+          "bytes": 8501678,
+          "sha256": "9abb60e44dca9f621530478465b0ae8024291331effd8d8cfc32c7df326fd691"
+        },
+        "target/release/deps/libami_rust_qualification-a2f5c31c5b4cb16f.a": {
+          "bytes": 1088678,
+          "sha256": "0fdcfe0b7cada1afe514196b1eea15c5c9a49bf0c9394ef550fef35a1f0d5052"
+        },
+        "target/release/deps/libaros_alloc-52914fe3a165b2d5.rlib": {
+          "bytes": 8582,
+          "sha256": "85a6cb58a7e657b806a30eea02ce076a8a696c02ac960334643bb4ecf67cdc5a"
+        },
+        "target/release/deps/libaros_runtime-f5b00db52b2ffc48.rlib": {
+          "bytes": 17780,
+          "sha256": "cfb4ec7445e847220d10682dbd2661b2a87cdd0047722617521d2971f6b8b991"
+        },
+        "target/release/deps/libaros_sdk-eeac8596471a56da.rlib": {
+          "bytes": 94090,
+          "sha256": "853350674b1d5a36e91ea1e451ab505bf0d0d64c656f88665d6b6fb2541f0b68"
+        },
+        "target/release/deps/libaros_sys-be407af0b9b64cbb.rlib": {
+          "bytes": 75062,
+          "sha256": "67ee5af264b430b81d88fc5f13b953d482815ac92996ba99a7916bf0795b3ec2"
+        },
+        "target/release/deps/libcompiler_builtins-e338c14d9dc031f6.rlib": {
+          "bytes": 2447068,
+          "sha256": "7f6fb1d30ad93b2e0fe70ca4096df86733fbddfe295a0fd8436a0a42d0e6fc60"
+        },
+        "target/release/deps/libcore-141bfcd02ef2299c.rlib": {
+          "bytes": 68234814,
+          "sha256": "bc299428fda7c4e0b59d149487183cc1f982a9fea1aca91bf27624db543cb6de"
+        },
+        "target/release/libami_rust_qualification.a": {
+          "bytes": 1088678,
+          "sha256": "0fdcfe0b7cada1afe514196b1eea15c5c9a49bf0c9394ef550fef35a1f0d5052"
+        }
+      },
+      "sha256sum": {
+        "AMIRUST": {
+          "bytes": 928208,
+          "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162"
+        },
+        "application.a": {
+          "bytes": 1007484,
+          "sha256": "4d9406dd55946acebd5994cb32947998885100adab49c24472563b6494a9a4ad"
+        },
+        "entry.o": {
+          "bytes": 1488,
+          "sha256": "a2b6b80ccad4a3c459bb95f33904d90b0f9f99a94b61f6600667194b007eb7b2"
+        },
+        "layout.o": {
+          "bytes": 1648,
+          "sha256": "de661b23f7725307138a6c4358af8f90c1c9a1b6aa097ac193a5afcf93af874c"
+        },
+        "sdk.o": {
+          "bytes": 26704,
+          "sha256": "1a803009479ab98b25c3562bee206b5fcf764591260f71be6cb4dbd8b5bd6fc5"
+        },
+        "startup.o": {
+          "bytes": 3832,
+          "sha256": "0ca30233bb169b694f552929627962f8be7935f0674565e6ed1114a86d00d99b"
+        },
+        "target/release/deps/liballoc-fdc13dd8ec57eb82.rlib": {
+          "bytes": 8501678,
+          "sha256": "9abb60e44dca9f621530478465b0ae8024291331effd8d8cfc32c7df326fd691"
+        },
+        "target/release/deps/libami_rust_sha256sum-165303c1efae1d49.a": {
+          "bytes": 1007484,
+          "sha256": "4d9406dd55946acebd5994cb32947998885100adab49c24472563b6494a9a4ad"
+        },
+        "target/release/deps/libamiga_os-578134ddf7585ee1.rlib": {
+          "bytes": 5438,
+          "sha256": "c504d45d1fc3ebc0dab8855d41d060ee3c0c5dcbb5bd9f1f9c1cdf3158861889"
+        },
+        "target/release/deps/libaros_alloc-52914fe3a165b2d5.rlib": {
+          "bytes": 8582,
+          "sha256": "85a6cb58a7e657b806a30eea02ce076a8a696c02ac960334643bb4ecf67cdc5a"
+        },
+        "target/release/deps/libaros_runtime-f5b00db52b2ffc48.rlib": {
+          "bytes": 17780,
+          "sha256": "cfb4ec7445e847220d10682dbd2661b2a87cdd0047722617521d2971f6b8b991"
+        },
+        "target/release/deps/libaros_sdk-eeac8596471a56da.rlib": {
+          "bytes": 94090,
+          "sha256": "853350674b1d5a36e91ea1e451ab505bf0d0d64c656f88665d6b6fb2541f0b68"
+        },
+        "target/release/deps/libaros_sys-be407af0b9b64cbb.rlib": {
+          "bytes": 75062,
+          "sha256": "67ee5af264b430b81d88fc5f13b953d482815ac92996ba99a7916bf0795b3ec2"
+        },
+        "target/release/deps/libblock_buffer-4888af1b638a7d57.rlib": {
+          "bytes": 69070,
+          "sha256": "14c2190f95b50c1c26d3999343fae5d4aca7c20c02b4f1224f8184950d1853fb"
+        },
+        "target/release/deps/libcfg_if-ea82873b7cd1628e.rlib": {
+          "bytes": 8866,
+          "sha256": "2d2d6001786f13fae0d9932777584d8e74f4b853a14ed4a14fc82bc5fee241cc"
+        },
+        "target/release/deps/libcompiler_builtins-e338c14d9dc031f6.rlib": {
+          "bytes": 2447068,
+          "sha256": "7f6fb1d30ad93b2e0fe70ca4096df86733fbddfe295a0fd8436a0a42d0e6fc60"
+        },
+        "target/release/deps/libcore-141bfcd02ef2299c.rlib": {
+          "bytes": 68234814,
+          "sha256": "bc299428fda7c4e0b59d149487183cc1f982a9fea1aca91bf27624db543cb6de"
+        },
+        "target/release/deps/libcpufeatures-1b57b9619a3c2cb4.rlib": {
+          "bytes": 42140,
+          "sha256": "9b3b118840323206989914887772056e17df97b30e899fd0e7f0234a0ca94000"
+        },
+        "target/release/deps/libcrypto_common-eb7e13d0b1666b51.rlib": {
+          "bytes": 34154,
+          "sha256": "c199bae140092cf5d8162eb253e050fc4ad915db5ba36cfe27c9c536e3ea575c"
+        },
+        "target/release/deps/libdigest-351fadc1860b7b5d.rlib": {
+          "bytes": 174404,
+          "sha256": "0d313f5808e46b372a4fec88cb33c70621be26ec37bbe5045eb7fbd061b30d26"
+        },
+        "target/release/deps/libgeneric_array-e7669baee0f3713c.rlib": {
+          "bytes": 980876,
+          "sha256": "f139a0f34d7f0fc1ca3c33a2b50e5ab8ef2b36500e36c35aaec0890742b781f3"
+        },
+        "target/release/deps/libsha2-8da1f83ce5ea948b.rlib": {
+          "bytes": 837902,
+          "sha256": "581c18e64a60522eb69c255f90142dc276e4fb2f8615f626d921110dbe675fa1"
+        },
+        "target/release/deps/libtypenum-aeb3430f7ad46d1c.rlib": {
+          "bytes": 2858436,
+          "sha256": "c9c3f0d058628acfca211a6c862603d3fb9c347ae03836b7830e2d21a2caa917"
+        },
+        "target/release/libami_rust_sha256sum.a": {
+          "bytes": 1007484,
+          "sha256": "4d9406dd55946acebd5994cb32947998885100adab49c24472563b6494a9a4ad"
+        }
+      }
+    },
+    "macos-aarch64": {
+      "dependencies": {
+        "AMIRUST": {
+          "bytes": 1501568,
+          "sha256": "e9282cb51537e141f22c3e7d22059e64292e79679865d63f9499a63ad0342bb9"
+        },
+        "application.a": {
+          "bytes": 1695950,
+          "sha256": "35c9291334786680614956387a44213bb846eb527096fedb9df2b2bed21890aa"
+        },
+        "bind.o": {
+          "bytes": 1160,
+          "sha256": "3dff2a3625afc389e162880b5e0e44f746fcf25361378906766f504083968967"
+        },
+        "entry.o": {
+          "bytes": 4888,
+          "sha256": "8dc6a3bfa07bc0fb04d565713c172b4df17d5d2c9b84092abd1def915a85cbb1"
+        },
+        "layout.o": {
+          "bytes": 1648,
+          "sha256": "de661b23f7725307138a6c4358af8f90c1c9a1b6aa097ac193a5afcf93af874c"
+        },
+        "sdk.o": {
+          "bytes": 45624,
+          "sha256": "66e47e5395d0e39623a0af443c7088da88268f24184b8f72be4447cc94baaeea"
+        },
+        "startup.o": {
+          "bytes": 3832,
+          "sha256": "0ca30233bb169b694f552929627962f8be7935f0674565e6ed1114a86d00d99b"
+        },
+        "target/release/deps/liballoc-fdc13dd8ec57eb82.rlib": {
+          "bytes": 8501678,
+          "sha256": "9abb60e44dca9f621530478465b0ae8024291331effd8d8cfc32c7df326fd691"
+        },
+        "target/release/deps/libami_rust_dependencies-ffbbc414df4df99b.a": {
+          "bytes": 1695950,
+          "sha256": "35c9291334786680614956387a44213bb846eb527096fedb9df2b2bed21890aa"
+        },
+        "target/release/deps/libaros_alloc-52914fe3a165b2d5.rlib": {
+          "bytes": 8582,
+          "sha256": "85a6cb58a7e657b806a30eea02ce076a8a696c02ac960334643bb4ecf67cdc5a"
+        },
+        "target/release/deps/libaros_runtime-f5b00db52b2ffc48.rlib": {
+          "bytes": 17780,
+          "sha256": "cfb4ec7445e847220d10682dbd2661b2a87cdd0047722617521d2971f6b8b991"
+        },
+        "target/release/deps/libaros_sys-be407af0b9b64cbb.rlib": {
+          "bytes": 75062,
+          "sha256": "67ee5af264b430b81d88fc5f13b953d482815ac92996ba99a7916bf0795b3ec2"
+        },
+        "target/release/deps/libblock_buffer-4888af1b638a7d57.rlib": {
+          "bytes": 69070,
+          "sha256": "14c2190f95b50c1c26d3999343fae5d4aca7c20c02b4f1224f8184950d1853fb"
+        },
+        "target/release/deps/libcfg_if-ea82873b7cd1628e.rlib": {
+          "bytes": 8866,
+          "sha256": "2d2d6001786f13fae0d9932777584d8e74f4b853a14ed4a14fc82bc5fee241cc"
+        },
+        "target/release/deps/libcompiler_builtins-e338c14d9dc031f6.rlib": {
+          "bytes": 2447068,
+          "sha256": "7f6fb1d30ad93b2e0fe70ca4096df86733fbddfe295a0fd8436a0a42d0e6fc60"
+        },
+        "target/release/deps/libcore-141bfcd02ef2299c.rlib": {
+          "bytes": 68234814,
+          "sha256": "bc299428fda7c4e0b59d149487183cc1f982a9fea1aca91bf27624db543cb6de"
+        },
+        "target/release/deps/libcpufeatures-1b57b9619a3c2cb4.rlib": {
+          "bytes": 42140,
+          "sha256": "9b3b118840323206989914887772056e17df97b30e899fd0e7f0234a0ca94000"
+        },
+        "target/release/deps/libcrypto_common-eb7e13d0b1666b51.rlib": {
+          "bytes": 34154,
+          "sha256": "c199bae140092cf5d8162eb253e050fc4ad915db5ba36cfe27c9c536e3ea575c"
+        },
+        "target/release/deps/libcurve25519_dalek-e6b2baccf7ea5fa1.rlib": {
+          "bytes": 1615078,
+          "sha256": "f0d30727919affc8b61548603113422cf78e1bb4efef371f6614d323d146d184"
+        },
+        "target/release/deps/libdigest-351fadc1860b7b5d.rlib": {
+          "bytes": 174404,
+          "sha256": "0d313f5808e46b372a4fec88cb33c70621be26ec37bbe5045eb7fbd061b30d26"
+        },
+        "target/release/deps/libed25519-6762aa4d3ee9a373.rlib": {
+          "bytes": 50388,
+          "sha256": "1ae1a8abaf96197e151055621f0902f78e0249ee5d2036949f4fb4572ee4ec2d"
+        },
+        "target/release/deps/libed25519_dalek-a8ddfcdaa73c5d6b.rlib": {
+          "bytes": 143148,
+          "sha256": "b4b67d8943e0e42888d6652403cc7bf24654f8aeec9284132dbfc340874ce96c"
+        },
+        "target/release/deps/libgeneric_array-e7669baee0f3713c.rlib": {
+          "bytes": 980876,
+          "sha256": "f139a0f34d7f0fc1ca3c33a2b50e5ab8ef2b36500e36c35aaec0890742b781f3"
+        },
+        "target/release/deps/libitoa-308c2436d95f8b19.rlib": {
+          "bytes": 87236,
+          "sha256": "3e0b12f9935e6a3ce02e395ed8a434014b88aa632b8d3bdbf27b746b7541b7fe"
+        },
+        "target/release/deps/libmemchr-cc220295c5852ccb.rlib": {
+          "bytes": 1566258,
+          "sha256": "6cc3f3c40fbe70d88269208dc2e879f2acdb71edb71722681cf656c5e63c2592"
+        },
+        "target/release/deps/libryu-3fc5a2b6f1e77603.rlib": {
+          "bytes": 78754,
+          "sha256": "99613cc11acb1c66f8968d4c07531f722e48ca1cc7cde7597d0d6266a4870cae"
+        },
+        "target/release/deps/libserde-b024f4eba383325c.rlib": {
+          "bytes": 976116,
+          "sha256": "4c71db2d018433a346acf1703e4d67a4550a6f51188b49c118ec5607c1345521"
+        },
+        "target/release/deps/libserde_core-3d88d6e1a80cce12.rlib": {
+          "bytes": 5036736,
+          "sha256": "aa62e987804ebdb0bbf1927c38bb7269f97b9bbe54bff737dfc1aaa0d8affb47"
+        },
+        "target/release/deps/libserde_json-f45eef2229f9e10f.rlib": {
+          "bytes": 1832740,
+          "sha256": "31c01afc7abdb9731b90c18625f81e31c861cc1c903bade0ccf05a4f890d3b8e"
+        },
+        "target/release/deps/libsha2-8da1f83ce5ea948b.rlib": {
+          "bytes": 837902,
+          "sha256": "581c18e64a60522eb69c255f90142dc276e4fb2f8615f626d921110dbe675fa1"
+        },
+        "target/release/deps/libsignature-8fab44bb93e8a9ba.rlib": {
+          "bytes": 40976,
+          "sha256": "e71d33b0bfef4b64310c14e4e33e5f57f47fe2c1c9bdf4693fddca052886adab"
+        },
+        "target/release/deps/libsubtle-b507526e3ce822c7.rlib": {
+          "bytes": 133258,
+          "sha256": "2eb5ff88716194b0460841daddf9bbc20bcd08740c4a48ff98ab712416a901fa"
+        },
+        "target/release/deps/libtypenum-aeb3430f7ad46d1c.rlib": {
+          "bytes": 2858436,
+          "sha256": "c9c3f0d058628acfca211a6c862603d3fb9c347ae03836b7830e2d21a2caa917"
+        },
+        "target/release/deps/libzeroize-20c85e0b66ca8d3a.rlib": {
+          "bytes": 522484,
+          "sha256": "9266134e0dbb44b807957520b527f51ba3ef0970f06e9c0c4ff4a4d250b79249"
+        },
+        "target/release/libami_rust_dependencies.a": {
+          "bytes": 1695950,
+          "sha256": "35c9291334786680614956387a44213bb846eb527096fedb9df2b2bed21890aa"
+        }
+      },
+      "minimal-alloc": {
+        "AMIRUST": {
+          "bytes": 885856,
+          "sha256": "5c4749ead23831c357af7826449b5cd29112760ae901240cf4d99bcf85bcff1e"
+        },
+        "application.a": {
+          "bytes": 949308,
+          "sha256": "5644a51046a774a6f6b2420c474a27edfddd534300f965e85d8d690ebff3f93f"
+        },
+        "entry.o": {
+          "bytes": 1488,
+          "sha256": "a2b6b80ccad4a3c459bb95f33904d90b0f9f99a94b61f6600667194b007eb7b2"
+        },
+        "layout.o": {
+          "bytes": 1648,
+          "sha256": "de661b23f7725307138a6c4358af8f90c1c9a1b6aa097ac193a5afcf93af874c"
+        },
+        "sdk.o": {
+          "bytes": 26704,
+          "sha256": "1a803009479ab98b25c3562bee206b5fcf764591260f71be6cb4dbd8b5bd6fc5"
+        },
+        "startup.o": {
+          "bytes": 3832,
+          "sha256": "0ca30233bb169b694f552929627962f8be7935f0674565e6ed1114a86d00d99b"
+        },
+        "target/release/deps/liballoc-fdc13dd8ec57eb82.rlib": {
+          "bytes": 8501678,
+          "sha256": "9abb60e44dca9f621530478465b0ae8024291331effd8d8cfc32c7df326fd691"
+        },
+        "target/release/deps/libami_rust_minimal-93d7d46a107d243f.a": {
+          "bytes": 949308,
+          "sha256": "5644a51046a774a6f6b2420c474a27edfddd534300f965e85d8d690ebff3f93f"
+        },
+        "target/release/deps/libaros_alloc-52914fe3a165b2d5.rlib": {
+          "bytes": 8582,
+          "sha256": "85a6cb58a7e657b806a30eea02ce076a8a696c02ac960334643bb4ecf67cdc5a"
+        },
+        "target/release/deps/libaros_runtime-f5b00db52b2ffc48.rlib": {
+          "bytes": 17780,
+          "sha256": "cfb4ec7445e847220d10682dbd2661b2a87cdd0047722617521d2971f6b8b991"
+        },
+        "target/release/deps/libaros_sdk-eeac8596471a56da.rlib": {
+          "bytes": 94090,
+          "sha256": "853350674b1d5a36e91ea1e451ab505bf0d0d64c656f88665d6b6fb2541f0b68"
+        },
+        "target/release/deps/libaros_sys-be407af0b9b64cbb.rlib": {
+          "bytes": 75062,
+          "sha256": "67ee5af264b430b81d88fc5f13b953d482815ac92996ba99a7916bf0795b3ec2"
+        },
+        "target/release/deps/libcompiler_builtins-e338c14d9dc031f6.rlib": {
+          "bytes": 2447068,
+          "sha256": "7f6fb1d30ad93b2e0fe70ca4096df86733fbddfe295a0fd8436a0a42d0e6fc60"
+        },
+        "target/release/deps/libcore-141bfcd02ef2299c.rlib": {
+          "bytes": 68234814,
+          "sha256": "bc299428fda7c4e0b59d149487183cc1f982a9fea1aca91bf27624db543cb6de"
+        },
+        "target/release/libami_rust_minimal.a": {
+          "bytes": 949308,
+          "sha256": "5644a51046a774a6f6b2420c474a27edfddd534300f965e85d8d690ebff3f93f"
+        }
+      },
+      "minimal-noalloc": {
+        "AMIRUST": {
+          "bytes": 359616,
+          "sha256": "5a932c76d1f791c4ac4cd1dd267506bae3d25d4ea94209356f08a255f3af296e"
+        },
+        "application.a": {
+          "bytes": 839534,
+          "sha256": "b2aee3e080e4ebe412240d0fd3bb37ae7e08713822d00f749c1fa34216bb607e"
+        },
+        "entry.o": {
+          "bytes": 1488,
+          "sha256": "a2b6b80ccad4a3c459bb95f33904d90b0f9f99a94b61f6600667194b007eb7b2"
+        },
+        "layout.o": {
+          "bytes": 1648,
+          "sha256": "de661b23f7725307138a6c4358af8f90c1c9a1b6aa097ac193a5afcf93af874c"
+        },
+        "sdk.o": {
+          "bytes": 26704,
+          "sha256": "1a803009479ab98b25c3562bee206b5fcf764591260f71be6cb4dbd8b5bd6fc5"
+        },
+        "startup.o": {
+          "bytes": 3832,
+          "sha256": "0ca30233bb169b694f552929627962f8be7935f0674565e6ed1114a86d00d99b"
+        },
+        "target/release/deps/liballoc-fdc13dd8ec57eb82.rlib": {
+          "bytes": 8501678,
+          "sha256": "9abb60e44dca9f621530478465b0ae8024291331effd8d8cfc32c7df326fd691"
+        },
+        "target/release/deps/libami_rust_minimal-1cdfc8697c01fd13.a": {
+          "bytes": 839534,
+          "sha256": "b2aee3e080e4ebe412240d0fd3bb37ae7e08713822d00f749c1fa34216bb607e"
+        },
+        "target/release/deps/libaros_runtime-5995b018ac52a073.rlib": {
+          "bytes": 17572,
+          "sha256": "337e535078a0aa261c1e1ea0c2592593fde602dff9fbb6009aae46401d1c4d45"
+        },
+        "target/release/deps/libaros_sdk-b10893f006f6dfb1.rlib": {
+          "bytes": 94042,
+          "sha256": "d6886096c073f42ca108b7057db73e8ca7eb4d0c8807efc547f1fcfe0f925352"
+        },
+        "target/release/deps/libaros_sys-be407af0b9b64cbb.rlib": {
+          "bytes": 75062,
+          "sha256": "67ee5af264b430b81d88fc5f13b953d482815ac92996ba99a7916bf0795b3ec2"
+        },
+        "target/release/deps/libcompiler_builtins-e338c14d9dc031f6.rlib": {
+          "bytes": 2447068,
+          "sha256": "7f6fb1d30ad93b2e0fe70ca4096df86733fbddfe295a0fd8436a0a42d0e6fc60"
+        },
+        "target/release/deps/libcore-141bfcd02ef2299c.rlib": {
+          "bytes": 68234814,
+          "sha256": "bc299428fda7c4e0b59d149487183cc1f982a9fea1aca91bf27624db543cb6de"
+        },
+        "target/release/libami_rust_minimal.a": {
+          "bytes": 839534,
+          "sha256": "b2aee3e080e4ebe412240d0fd3bb37ae7e08713822d00f749c1fa34216bb607e"
+        }
+      },
+      "qualification": {
+        "AMIRUST": {
+          "bytes": 1029880,
+          "sha256": "7299ddb4a2a243a4fdb51c6657aefc02675b5bf6953a38c8d3583fc7f0e06906"
+        },
+        "application.a": {
+          "bytes": 1088678,
+          "sha256": "0fdcfe0b7cada1afe514196b1eea15c5c9a49bf0c9394ef550fef35a1f0d5052"
+        },
+        "bind.o": {
+          "bytes": 1160,
+          "sha256": "3dff2a3625afc389e162880b5e0e44f746fcf25361378906766f504083968967"
+        },
+        "entry.o": {
+          "bytes": 4888,
+          "sha256": "8dc6a3bfa07bc0fb04d565713c172b4df17d5d2c9b84092abd1def915a85cbb1"
+        },
+        "layout.o": {
+          "bytes": 1648,
+          "sha256": "de661b23f7725307138a6c4358af8f90c1c9a1b6aa097ac193a5afcf93af874c"
+        },
+        "sdk.o": {
+          "bytes": 45624,
+          "sha256": "66e47e5395d0e39623a0af443c7088da88268f24184b8f72be4447cc94baaeea"
+        },
+        "startup.o": {
+          "bytes": 3832,
+          "sha256": "0ca30233bb169b694f552929627962f8be7935f0674565e6ed1114a86d00d99b"
+        },
+        "target/release/deps/liballoc-fdc13dd8ec57eb82.rlib": {
+          "bytes": 8501678,
+          "sha256": "9abb60e44dca9f621530478465b0ae8024291331effd8d8cfc32c7df326fd691"
+        },
+        "target/release/deps/libami_rust_qualification-a2f5c31c5b4cb16f.a": {
+          "bytes": 1088678,
+          "sha256": "0fdcfe0b7cada1afe514196b1eea15c5c9a49bf0c9394ef550fef35a1f0d5052"
+        },
+        "target/release/deps/libaros_alloc-52914fe3a165b2d5.rlib": {
+          "bytes": 8582,
+          "sha256": "85a6cb58a7e657b806a30eea02ce076a8a696c02ac960334643bb4ecf67cdc5a"
+        },
+        "target/release/deps/libaros_runtime-f5b00db52b2ffc48.rlib": {
+          "bytes": 17780,
+          "sha256": "cfb4ec7445e847220d10682dbd2661b2a87cdd0047722617521d2971f6b8b991"
+        },
+        "target/release/deps/libaros_sdk-eeac8596471a56da.rlib": {
+          "bytes": 94090,
+          "sha256": "853350674b1d5a36e91ea1e451ab505bf0d0d64c656f88665d6b6fb2541f0b68"
+        },
+        "target/release/deps/libaros_sys-be407af0b9b64cbb.rlib": {
+          "bytes": 75062,
+          "sha256": "67ee5af264b430b81d88fc5f13b953d482815ac92996ba99a7916bf0795b3ec2"
+        },
+        "target/release/deps/libcompiler_builtins-e338c14d9dc031f6.rlib": {
+          "bytes": 2447068,
+          "sha256": "7f6fb1d30ad93b2e0fe70ca4096df86733fbddfe295a0fd8436a0a42d0e6fc60"
+        },
+        "target/release/deps/libcore-141bfcd02ef2299c.rlib": {
+          "bytes": 68234814,
+          "sha256": "bc299428fda7c4e0b59d149487183cc1f982a9fea1aca91bf27624db543cb6de"
+        },
+        "target/release/libami_rust_qualification.a": {
+          "bytes": 1088678,
+          "sha256": "0fdcfe0b7cada1afe514196b1eea15c5c9a49bf0c9394ef550fef35a1f0d5052"
+        }
+      },
+      "sha256sum": {
+        "AMIRUST": {
+          "bytes": 928208,
+          "sha256": "85a2171d918423eb56b1a65757b72597e8902dad72f3a924fe277d253b7db162"
+        },
+        "application.a": {
+          "bytes": 1007484,
+          "sha256": "4d9406dd55946acebd5994cb32947998885100adab49c24472563b6494a9a4ad"
+        },
+        "entry.o": {
+          "bytes": 1488,
+          "sha256": "a2b6b80ccad4a3c459bb95f33904d90b0f9f99a94b61f6600667194b007eb7b2"
+        },
+        "layout.o": {
+          "bytes": 1648,
+          "sha256": "de661b23f7725307138a6c4358af8f90c1c9a1b6aa097ac193a5afcf93af874c"
+        },
+        "sdk.o": {
+          "bytes": 26704,
+          "sha256": "1a803009479ab98b25c3562bee206b5fcf764591260f71be6cb4dbd8b5bd6fc5"
+        },
+        "startup.o": {
+          "bytes": 3832,
+          "sha256": "0ca30233bb169b694f552929627962f8be7935f0674565e6ed1114a86d00d99b"
+        },
+        "target/release/deps/liballoc-fdc13dd8ec57eb82.rlib": {
+          "bytes": 8501678,
+          "sha256": "9abb60e44dca9f621530478465b0ae8024291331effd8d8cfc32c7df326fd691"
+        },
+        "target/release/deps/libami_rust_sha256sum-165303c1efae1d49.a": {
+          "bytes": 1007484,
+          "sha256": "4d9406dd55946acebd5994cb32947998885100adab49c24472563b6494a9a4ad"
+        },
+        "target/release/deps/libamiga_os-578134ddf7585ee1.rlib": {
+          "bytes": 5438,
+          "sha256": "c504d45d1fc3ebc0dab8855d41d060ee3c0c5dcbb5bd9f1f9c1cdf3158861889"
+        },
+        "target/release/deps/libaros_alloc-52914fe3a165b2d5.rlib": {
+          "bytes": 8582,
+          "sha256": "85a6cb58a7e657b806a30eea02ce076a8a696c02ac960334643bb4ecf67cdc5a"
+        },
+        "target/release/deps/libaros_runtime-f5b00db52b2ffc48.rlib": {
+          "bytes": 17780,
+          "sha256": "cfb4ec7445e847220d10682dbd2661b2a87cdd0047722617521d2971f6b8b991"
+        },
+        "target/release/deps/libaros_sdk-eeac8596471a56da.rlib": {
+          "bytes": 94090,
+          "sha256": "853350674b1d5a36e91ea1e451ab505bf0d0d64c656f88665d6b6fb2541f0b68"
+        },
+        "target/release/deps/libaros_sys-be407af0b9b64cbb.rlib": {
+          "bytes": 75062,
+          "sha256": "67ee5af264b430b81d88fc5f13b953d482815ac92996ba99a7916bf0795b3ec2"
+        },
+        "target/release/deps/libblock_buffer-4888af1b638a7d57.rlib": {
+          "bytes": 69070,
+          "sha256": "14c2190f95b50c1c26d3999343fae5d4aca7c20c02b4f1224f8184950d1853fb"
+        },
+        "target/release/deps/libcfg_if-ea82873b7cd1628e.rlib": {
+          "bytes": 8866,
+          "sha256": "2d2d6001786f13fae0d9932777584d8e74f4b853a14ed4a14fc82bc5fee241cc"
+        },
+        "target/release/deps/libcompiler_builtins-e338c14d9dc031f6.rlib": {
+          "bytes": 2447068,
+          "sha256": "7f6fb1d30ad93b2e0fe70ca4096df86733fbddfe295a0fd8436a0a42d0e6fc60"
+        },
+        "target/release/deps/libcore-141bfcd02ef2299c.rlib": {
+          "bytes": 68234814,
+          "sha256": "bc299428fda7c4e0b59d149487183cc1f982a9fea1aca91bf27624db543cb6de"
+        },
+        "target/release/deps/libcpufeatures-1b57b9619a3c2cb4.rlib": {
+          "bytes": 42140,
+          "sha256": "9b3b118840323206989914887772056e17df97b30e899fd0e7f0234a0ca94000"
+        },
+        "target/release/deps/libcrypto_common-eb7e13d0b1666b51.rlib": {
+          "bytes": 34154,
+          "sha256": "c199bae140092cf5d8162eb253e050fc4ad915db5ba36cfe27c9c536e3ea575c"
+        },
+        "target/release/deps/libdigest-351fadc1860b7b5d.rlib": {
+          "bytes": 174404,
+          "sha256": "0d313f5808e46b372a4fec88cb33c70621be26ec37bbe5045eb7fbd061b30d26"
+        },
+        "target/release/deps/libgeneric_array-e7669baee0f3713c.rlib": {
+          "bytes": 980876,
+          "sha256": "f139a0f34d7f0fc1ca3c33a2b50e5ab8ef2b36500e36c35aaec0890742b781f3"
+        },
+        "target/release/deps/libsha2-8da1f83ce5ea948b.rlib": {
+          "bytes": 837902,
+          "sha256": "581c18e64a60522eb69c255f90142dc276e4fb2f8615f626d921110dbe675fa1"
+        },
+        "target/release/deps/libtypenum-aeb3430f7ad46d1c.rlib": {
+          "bytes": 2858436,
+          "sha256": "c9c3f0d058628acfca211a6c862603d3fb9c347ae03836b7830e2d21a2caa917"
+        },
+        "target/release/libami_rust_sha256sum.a": {
+          "bytes": 1007484,
+          "sha256": "4d9406dd55946acebd5994cb32947998885100adab49c24472563b6494a9a4ad"
+        }
+      }
+    }
+  }
+}

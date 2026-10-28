@@ -1,0 +1,760 @@
+diff --git a/src/compiler/fingerprint/mod.rs b/src/compiler/fingerprint/mod.rs
+index a5d75ae..1cd9b5c 100644
+--- a/src/compiler/fingerprint/mod.rs
++++ b/src/compiler/fingerprint/mod.rs
+@@ -981,6 +981,7 @@ impl LocalFingerprint {
+                 }
+                 if *checksum {
+                     Ok(find_stale_file(
++                        gctx,
+                         mtime_cache,
+                         checksum_cache,
+                         &dep_info,
+@@ -989,6 +990,7 @@ impl LocalFingerprint {
+                     ))
+                 } else {
+                     Ok(find_stale_file(
++                        gctx,
+                         mtime_cache,
+                         checksum_cache,
+                         &dep_info,
+@@ -1001,6 +1003,7 @@ impl LocalFingerprint {
+             // We need to verify that no paths listed in `paths` are newer than
+             // the `output` path itself, or the last time the build script ran.
+             LocalFingerprint::RerunIfChanged { output, paths } => Ok(find_stale_file(
++                gctx,
+                 mtime_cache,
+                 checksum_cache,
+                 &build_root.join(output),
+@@ -2065,6 +2068,7 @@ fn pkg_fingerprint(bcx: &BuildContext<'_, '_>, pkg: &Package) -> CargoResult<Str
+ 
+ /// The `reference` file is considered as "stale" if any file from `paths` has a newer mtime.
+ fn find_stale_file<I, P>(
++    gctx: &GlobalContext,
+     mtime_cache: &mut HashMap<PathBuf, FileTime>,
+     checksum_cache: &mut HashMap<PathBuf, Checksum>,
+     reference: &Path,
+@@ -2084,7 +2088,13 @@ where
+         }
+     };
+ 
+-    let skippable_dirs = if let Ok(cargo_home) = home::cargo_home() {
++    let fingerprint_home = if gctx.ami_storage_is_active() {
++        Some(gctx.cache_home().as_path_unlocked().to_owned())
++    } else {
++        // Preserve the original independent lookup when the selector is absent.
++        home::cargo_home().ok()
++    };
++    let skippable_dirs = if let Some(cargo_home) = fingerprint_home {
+         let skippable_dirs: Vec<_> = ["git", "registry"]
+             .into_iter()
+             .map(|subfolder| cargo_home.join(subfolder))
+diff --git a/src/context/mod.rs b/src/context/mod.rs
+index 15674c8..3b90c42 100644
+--- a/src/context/mod.rs
++++ b/src/context/mod.rs
+@@ -130,6 +130,9 @@ pub use path::ResolveTemplateError;
+ mod target;
+ pub use target::{TargetCfgConfig, TargetConfig};
+ 
++#[cfg(unix)]
++mod ami_storage;
++
+ mod environment;
+ use environment::Env;
+ 
+@@ -210,6 +213,8 @@ pub struct CredentialCacheValue {
+ pub struct GlobalContext {
+     /// The location of the user's Cargo home directory. OS-dependent.
+     home_path: Filesystem,
++    /// Optional downstream cache root; configuration/credentials retain home_path.
++    ami_cache_path: Option<Filesystem>,
+     /// Information about how to write messages to the shell
+     shell: Mutex<Shell>,
+     /// A collection of configuration options
+@@ -372,6 +377,7 @@ impl GlobalContext {
+ 
+         GlobalContext {
+             home_path: Filesystem::new(homedir),
++            ami_cache_path: None,
+             shell: Mutex::new(shell),
+             cwd,
+             search_stop_path: None,
+@@ -428,7 +434,7 @@ impl GlobalContext {
+                  This probably means that $HOME was not set."
+             )
+         })?;
+-        Ok(GlobalContext::new(shell, cwd, homedir))
++        GlobalContext::new(shell, cwd, homedir).with_ami_storage()
+     }
+ 
+     /// Gets the user's Cargo home directory (OS-dependent).
+@@ -436,6 +442,73 @@ impl GlobalContext {
+         &self.home_path
+     }
+ 
++    /// Apply the downstream storage selector to a freshly constructed context.
++    /// Explicit `new` callers opt in; the CLI default opts in before any work.
++    pub fn with_ami_storage(mut self) -> CargoResult<Self> {
++        let Some(raw) = self.get_env_os("AMI_RUST_CARGO_STORAGE_ROOT") else {
++            return Ok(self);
++        };
++        #[cfg(unix)]
++        {
++            let root = Self::checked_ami_storage_root(Path::new(raw))?;
++            self.ami_cache_path = Some(Filesystem::new(root));
++            Ok(self)
++        }
++        #[cfg(not(unix))]
++        {
++            let _ = raw;
++            bail!("AMI_RUST_CARGO_STORAGE_ROOT is supported only on Unix hosts")
++        }
++    }
++
++    /// Cache/data root, independent of original configuration and credentials.
++    pub fn cache_home(&self) -> &Filesystem {
++        self.ami_cache_path.as_ref().unwrap_or_else(|| self.home())
++    }
++
++    /// Whether the downstream explicit cache selector is active.
++    pub fn ami_storage_is_active(&self) -> bool {
++        self.ami_cache_path.is_some()
++    }
++
++    #[cfg(unix)]
++    fn checked_ami_storage_root(path: &Path) -> CargoResult<PathBuf> {
++        // SAFETY: geteuid has no arguments or memory preconditions.
++        let uid = unsafe { libc::geteuid() };
++        ami_storage::validate_storage_root(path, uid).context("invalid AMI_RUST_CARGO_STORAGE_ROOT")
++    }
++
++    /// Check the full resolved selector before workspace/completion work.
++    /// This deliberately bypasses the filtered/cached child-environment map.
++    pub fn check_ami_storage_environment(&self) -> CargoResult<()> {
++        self.recheck_ami_storage()?;
++        if self.ami_storage_is_active() {
++            self.check_ami_storage_env_config(&self.get::<EnvConfig>("env")?)?;
++        }
++        Ok(())
++    }
++
++    fn check_ami_storage_env_config(&self, env_config: &EnvConfig) -> CargoResult<()> {
++        if let Some(root) = &self.ami_cache_path {
++            if let Some(value) = env_config.get("AMI_RUST_CARGO_STORAGE_ROOT") {
++                if &*value.resolve(self.cwd()) != root.as_path_unlocked().as_os_str() {
++                    bail!(
++                        "conflicting AMI_RUST_CARGO_STORAGE_ROOT in the `[env]` configuration table"
++                    );
++                }
++            }
++        }
++        Ok(())
++    }
++
++    fn recheck_ami_storage(&self) -> CargoResult<()> {
++        #[cfg(unix)]
++        if let Some(root) = &self.ami_cache_path {
++            Self::checked_ami_storage_root(root.as_path_unlocked())?;
++        }
++        Ok(())
++    }
++
+     /// Returns a path to display to the user with the location of their home
+     /// config file (to only be used for displaying a diagnostics suggestion,
+     /// such as recommending where to add a config value).
+@@ -450,7 +523,7 @@ impl GlobalContext {
+ 
+     /// Gets the Cargo Git directory (`<cargo_home>/git`).
+     pub fn git_path(&self) -> Filesystem {
+-        self.home_path.join("git")
++        self.cache_home().join("git")
+     }
+ 
+     /// Gets the directory of code sources Cargo checkouts from Git bare repos
+@@ -467,7 +540,7 @@ impl GlobalContext {
+ 
+     /// Gets the Cargo base directory for all registry information (`<cargo_home>/registry`).
+     pub fn registry_base_path(&self) -> Filesystem {
+-        self.home_path.join("registry")
++        self.cache_home().join("registry")
+     }
+ 
+     /// Gets the Cargo registry index directory (`<cargo_home>/registry/index`).
+@@ -671,6 +744,7 @@ impl GlobalContext {
+     ///
+     /// There is not a need to also call [`Self::reload_rooted_at`].
+     pub fn reload_cwd(&mut self) -> CargoResult<()> {
++        self.recheck_ami_storage()?;
+         let cwd =
+             env::current_dir().context("couldn't get the current directory of the process")?;
+         let homedir = homedir(&cwd).ok_or_else(|| {
+@@ -693,6 +767,7 @@ impl GlobalContext {
+         self.values.replace(values);
+         self.merge_cli_args()?;
+         self.load_unstable_flags_from_config()?;
++        self.check_ami_storage_environment()?;
+         Ok(())
+     }
+ 
+@@ -755,29 +830,35 @@ impl GlobalContext {
+         val: &ConfigRelativePath,
+         workspace_manifest_path: &Path,
+     ) -> CargoResult<Filesystem> {
++        let workspace_root = workspace_manifest_path.parent().unwrap();
++        let cache_home = self.cache_home().as_path_unlocked();
++        let path_value = |path: &Path, description: &str| -> CargoResult<std::ffi::OsString> {
++            if self.ami_storage_is_active() {
++                Ok(path.as_os_str().to_owned())
++            } else {
++                // Preserve the original selector-absent validation and resolver.
++                Ok(path
++                    .to_str()
++                    .with_context(|| format!("{description} was not valid utf-8"))?
++                    .into())
++            }
++        };
+         let replacements = [
+             (
+                 "{workspace-root}",
+-                workspace_manifest_path
+-                    .parent()
+-                    .unwrap()
+-                    .to_str()
+-                    .context("workspace root was not valid utf-8")?
+-                    .to_string(),
+-            ),
+-            (
+-                "{cargo-cache-home}",
+-                self.home()
+-                    .as_path_unlocked()
+-                    .to_str()
+-                    .context("cargo home was not valid utf-8")?
+-                    .to_string(),
++                path_value(workspace_root, "workspace root")?,
+             ),
++            ("{cargo-cache-home}", path_value(cache_home, "cargo home")?),
+             ("{workspace-path-hash}", {
+                 let real_path = std::fs::canonicalize(workspace_manifest_path)
+                     .unwrap_or_else(|_err| workspace_manifest_path.to_owned());
+                 let hash = crate::util::hex::short_hash(&real_path);
+-                format!("{}{}{}", &hash[0..2], std::path::MAIN_SEPARATOR, &hash[2..])
++                std::ffi::OsString::from(format!(
++                    "{}{}{}",
++                    &hash[0..2],
++                    std::path::MAIN_SEPARATOR,
++                    &hash[2..]
++                ))
+             }),
+         ];
+ 
+@@ -786,9 +867,28 @@ impl GlobalContext {
+             .map(|(key, _)| key[1..key.len() - 1].to_string())
+             .collect_vec();
+ 
+-        let path = val
+-            .resolve_templated_path(self, replacements)
+-            .map_err(|e| match e {
++        let original_resolver = || {
++            val.resolve_templated_path(
++                self,
++                replacements.iter().map(|(key, value)| {
++                    (
++                        *key,
++                        value
++                            .to_str()
++                            .expect("selector-absent values were checked as utf-8"),
++                    )
++                }),
++            )
++        };
++        #[cfg(unix)]
++        let resolved = if self.ami_storage_is_active() {
++            val.resolve_templated_os_path(self, &replacements)
++        } else {
++            original_resolver()
++        };
++        #[cfg(not(unix))]
++        let resolved = original_resolver();
++        let path = resolved.map_err(|e| match e {
+                 path::ResolveTemplateError::UnexpectedVariable {
+                     variable,
+                     raw_template,
+@@ -1163,6 +1263,7 @@ impl GlobalContext {
+         unstable_flags: &[String],
+         cli_config: &[String],
+     ) -> CargoResult<()> {
++        self.recheck_ami_storage()?;
+         for warning in self
+             .unstable_flags
+             .parse(unstable_flags, self.nightly_features_allowed)?
+@@ -1180,6 +1281,8 @@ impl GlobalContext {
+         }
+ 
+         self.load_unstable_flags_from_config()?;
++        // Metadata/cache hits may never request a child environment.
++        self.check_ami_storage_environment()?;
+ 
+         // Ignore errors in the configuration files. We don't want basic
+         // commands like `cargo version` to error out due to config file
+@@ -1981,6 +2084,7 @@ impl GlobalContext {
+         let env_config = self.env_config.try_borrow_with(|| {
+             CargoResult::Ok(Arc::new({
+                 let env_config = self.get::<EnvConfig>("env")?;
++                self.check_ami_storage_env_config(&env_config)?;
+                 // Reasons for disallowing these values:
+                 //
+                 // - CARGO_HOME: The initial call to cargo does not honor this value
+@@ -2128,7 +2232,7 @@ impl GlobalContext {
+             "package cache lock is not currently held, Cargo forgot to call \
+              `acquire_package_cache_lock` before we got to this stack frame",
+         );
+-        assert!(ret.starts_with(self.home_path.as_path_unlocked()));
++        assert!(ret.starts_with(self.cache_home().as_path_unlocked()));
+         ret
+     }
+ 
+diff --git a/src/context/path.rs b/src/context/path.rs
+index a2f1f22..c0ff9d9 100644
+--- a/src/context/path.rs
++++ b/src/context/path.rs
+@@ -75,6 +75,20 @@ impl ConfigRelativePath {
+         Ok(self.0.definition.root(gctx.cwd()).join(&value))
+     }
+ 
++    /// Resolve the same template grammar while keeping replacement paths as OS strings.
++    /// Used only by the downstream selected storage path; stock callers are unchanged.
++    #[cfg(unix)]
++    pub(super) fn resolve_templated_os_path(
++        &self,
++        gctx: &GlobalContext,
++        replacements: &[(&str, std::ffi::OsString)],
++    ) -> Result<PathBuf, ResolveTemplateError> {
++        // Cargo's existing validator owns unknown-variable/bracket diagnostics.
++        self.resolve_templated_path(gctx, replacements.iter().map(|(key, _)| (*key, "")))?;
++        let value = super::ami_storage::expand_checked_os_template(&self.0.val, replacements);
++        Ok(self.0.definition.root(gctx.cwd()).join(value))
++    }
++
+     /// Resolves this configuration-relative path to either an absolute path or
+     /// something appropriate to execute from `PATH`.
+     ///
+diff --git a/src/ops/cargo_fix/mod.rs b/src/ops/cargo_fix/mod.rs
+index 90aeb7a..1fcfa8a 100644
+--- a/src/ops/cargo_fix/mod.rs
++++ b/src/ops/cargo_fix/mod.rs
+@@ -1030,6 +1030,7 @@ fn rustfix_and_fix(
+     let mut num_suggestion = 0;
+     // It's safe since we won't read any content under home dir.
+     let home_path = gctx.home().as_path_unlocked();
++    let cache_path = gctx.cache_home().as_path_unlocked();
+     for suggestion in suggestions {
+         trace!("suggestion");
+         // Make sure we've got a file associated with this suggestion and all
+@@ -1050,7 +1051,7 @@ fn rustfix_and_fix(
+ 
+         let file_path = Path::new(&file_name);
+         // Do not write into registry cache. See rust-lang/cargo#9857.
+-        if file_path.starts_with(home_path) {
++        if file_path.starts_with(home_path) || file_path.starts_with(cache_path) {
+             continue;
+         }
+         // Do not write into standard library source. See rust-lang/cargo#9857.
+diff --git a/src/ops/cargo_report/util.rs b/src/ops/cargo_report/util.rs
+index 2c34836..f935e65 100644
+--- a/src/ops/cargo_report/util.rs
++++ b/src/ops/cargo_report/util.rs
+@@ -19,7 +19,7 @@ pub fn list_log_files(
+     gctx: &GlobalContext,
+     ws: Option<&Workspace<'_>>,
+ ) -> CargoResult<Box<dyn Iterator<Item = (PathBuf, RunId)>>> {
+-    let log_dir = gctx.home().join("log");
++    let log_dir = gctx.cache_home().join("log");
+     let log_dir = log_dir.as_path_unlocked();
+ 
+     if !log_dir.exists() {
+diff --git a/src/util/cache_lock.rs b/src/util/cache_lock.rs
+index 068e1bb..c0e5dbb 100644
+--- a/src/util/cache_lock.rs
++++ b/src/util/cache_lock.rs
+@@ -218,19 +218,20 @@ impl RecursiveLock {
+     fn lock_shared_blocking(&mut self, gctx: &GlobalContext, description: &'static str) {
+         if self.count == 0 {
+             self.is_exclusive = false;
+-            self.lock = match gctx
+-                .home()
+-                .open_ro_shared_create(self.filename, gctx, description)
+-            {
+-                Ok(lock) => Some(lock),
+-                Err(e) => {
+-                    // There is no error here because locking is mostly a
+-                    // best-effort attempt. If cargo home is read-only, we don't
+-                    // want to fail just because we couldn't create the lock file.
+-                    tracing::warn!("failed to acquire cache lock {}: {e:?}", self.filename);
+-                    None
+-                }
+-            };
++            self.lock =
++                match gctx
++                    .cache_home()
++                    .open_ro_shared_create(self.filename, gctx, description)
++                {
++                    Ok(lock) => Some(lock),
++                    Err(e) => {
++                        // There is no error here because locking is mostly a
++                        // best-effort attempt. If cargo home is read-only, we don't
++                        // want to fail just because we couldn't create the lock file.
++                        tracing::warn!("failed to acquire cache lock {}: {e:?}", self.filename);
++                        None
++                    }
++                };
+         }
+         self.increment();
+     }
+@@ -239,7 +240,7 @@ impl RecursiveLock {
+     fn lock_shared_nonblocking(&mut self, gctx: &GlobalContext) -> LockingResult {
+         if self.count == 0 {
+             self.is_exclusive = false;
+-            self.lock = match gctx.home().try_open_ro_shared_create(self.filename) {
++            self.lock = match gctx.cache_home().try_open_ro_shared_create(self.filename) {
+                 Ok(Some(lock)) => Some(lock),
+                 Ok(None) => {
+                     return WouldBlock;
+@@ -286,7 +287,7 @@ impl RecursiveLock {
+         if self.count == 0 {
+             self.is_exclusive = true;
+             match gctx
+-                .home()
++                .cache_home()
+                 .open_rw_exclusive_create(self.filename, gctx, description)
+             {
+                 Ok(lock) => self.lock = Some(lock),
+@@ -321,7 +322,10 @@ impl RecursiveLock {
+     fn lock_exclusive_nonblocking(&mut self, gctx: &GlobalContext) -> CargoResult<LockingResult> {
+         if self.count == 0 {
+             self.is_exclusive = true;
+-            match gctx.home().try_open_rw_exclusive_create(self.filename) {
++            match gctx
++                .cache_home()
++                .try_open_rw_exclusive_create(self.filename)
++            {
+                 Ok(Some(lock)) => self.lock = Some(lock),
+                 Ok(None) => return Ok(WouldBlock),
+                 Err(e) => {
+diff --git a/src/util/command_prelude.rs b/src/util/command_prelude.rs
+index f3ba638..c3d2e13 100644
+--- a/src/util/command_prelude.rs
++++ b/src/util/command_prelude.rs
+@@ -1463,7 +1463,9 @@ pub fn get_direct_dependencies_pkg_name_candidates() -> Vec<clap_complete::Compl
+ 
+ fn get_dependencies_from_metadata() -> CargoResult<(Vec<Dependency>, Vec<Dependency>)> {
+     let cwd = std::env::current_dir()?;
+-    let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
++    let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?)
++        .with_ami_storage()?;
++    gctx.check_ami_storage_environment()?;
+     let ws = Workspace::new(&find_root_manifest_for_wd(&cwd)?, &gctx)?;
+     let current_package = ws.current().ok();
+ 
+@@ -1488,7 +1490,8 @@ fn get_dependencies_from_metadata() -> CargoResult<(Vec<Dependency>, Vec<Depende
+ 
+ pub fn new_gctx_for_completions() -> CargoResult<GlobalContext> {
+     let cwd = std::env::current_dir()?;
+-    let mut gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
++    let mut gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?)
++        .with_ami_storage()?;
+ 
+     let verbose = 0;
+     let quiet = true;
+diff --git a/src/util/logger.rs b/src/util/logger.rs
+index 50a964b..2a57a70 100644
+--- a/src/util/logger.rs
++++ b/src/util/logger.rs
+@@ -29,7 +29,7 @@ impl FileLogger {
+         let analysis = ws.gctx().build_config()?.analysis.as_ref();
+         match (analysis, ws.gctx().cli_unstable().build_analysis) {
+             (Some(analysis), true) if analysis.enabled => {
+-                let log_dir = ws.gctx().home().join("log");
++                let log_dir = ws.gctx().cache_home().join("log");
+                 paths::create_dir_all(log_dir.as_path_unlocked())?;
+ 
+                 let filename = format!("{run_id}.jsonl");
+diff --git a/src/workspace/global_cache_tracker.rs b/src/workspace/global_cache_tracker.rs
+index 27adaa6..24ad605 100644
+--- a/src/workspace/global_cache_tracker.rs
++++ b/src/workspace/global_cache_tracker.rs
+@@ -366,7 +366,7 @@ impl GlobalCacheTracker {
+ 
+     /// The path to the database.
+     pub fn db_path(gctx: &GlobalContext) -> Filesystem {
+-        gctx.home().join(GLOBAL_CACHE_FILENAME)
++        gctx.cache_home().join(GLOBAL_CACHE_FILENAME)
+     }
+ 
+     /// Given an encoded registry name, returns its ID.
+diff --git a/src/workspace/workspace.rs b/src/workspace/workspace.rs
+index 98b4e6d..d23c43c 100644
+--- a/src/workspace/workspace.rs
++++ b/src/workspace/workspace.rs
+@@ -2300,7 +2300,7 @@ fn find_root_iter<'a>(
+         // crates.io crates into the workspace by accident.
+         .take_while(|path| {
+             if let Some(last) = path.last {
+-                gctx.home() != last
++                gctx.home() != last && gctx.cache_home() != last
+             } else {
+                 true
+             }
+diff --git a/src/context/ami_storage.rs b/src/context/ami_storage.rs
+new file mode 100644
+index 0000000..1a1241b
+--- /dev/null
++++ b/src/context/ami_storage.rs
+@@ -0,0 +1,247 @@
++//! Validation for the downstream explicit Cargo cache-storage selector.
++//!
++//! This validates a local writable-store location, not an authenticated SDK.
++//! Configuration and credential paths continue to use the original Cargo home.
++
++use std::ffi::{OsStr, OsString};
++use std::io;
++use std::path::{Path, PathBuf};
++
++/// Expand already-validated template keys without converting OS paths to text.
++/// Replacement values are literal and are never scanned as template syntax.
++pub(super) fn expand_checked_os_template(
++    mut template: &str,
++    replacements: &[(&str, OsString)],
++) -> OsString {
++    let mut result = OsString::new();
++    loop {
++        let next = replacements
++            .iter()
++            .filter_map(|(key, value)| template.find(key).map(|index| (index, *key, value)))
++            .min_by_key(|(index, _, _)| *index);
++        let Some((index, key, value)) = next else {
++            result.push(OsStr::new(template));
++            return result;
++        };
++        result.push(OsStr::new(&template[..index]));
++        result.push(value);
++        template = &template[index + key.len()..];
++    }
++}
++
++#[cfg(unix)]
++pub(super) fn validate_storage_root(root: &Path, effective_uid: u32) -> io::Result<PathBuf> {
++    use std::os::unix::fs::MetadataExt;
++
++    if root.as_os_str().is_empty() || !root.is_absolute() {
++        return Err(io::Error::new(
++            io::ErrorKind::InvalidInput,
++            "storage root must be a nonempty absolute path",
++        ));
++    }
++    let canonical = root.canonicalize()?;
++    if canonical.as_os_str() != root.as_os_str() {
++        return Err(io::Error::new(
++            io::ErrorKind::InvalidInput,
++            "storage root must use its canonical path without symlink aliases",
++        ));
++    }
++    let metadata = std::fs::symlink_metadata(&canonical)?;
++    if !metadata.is_dir() {
++        return Err(io::Error::new(
++            io::ErrorKind::NotADirectory,
++            "storage root must be an existing directory",
++        ));
++    }
++    if metadata.uid() != effective_uid || metadata.mode() & 0o022 != 0 {
++        return Err(io::Error::new(
++            io::ErrorKind::PermissionDenied,
++            "storage root must be owned by the effective user and not writable by group or others",
++        ));
++    }
++    Ok(canonical)
++}
++
++#[cfg(all(test, unix))]
++mod tests {
++    use super::*;
++    use std::fs;
++    use std::os::unix::fs::{MetadataExt, PermissionsExt, symlink};
++    use std::sync::atomic::{AtomicU64, Ordering};
++
++    struct Fixture(PathBuf);
++
++    impl Fixture {
++        fn new() -> Self {
++            static NEXT: AtomicU64 = AtomicU64::new(0);
++            let parent = std::env::temp_dir().canonicalize().unwrap();
++            let root = parent.join(format!(
++                "ami-cargo-storage-{}-{}-{}",
++                std::process::id(),
++                std::time::SystemTime::now()
++                    .duration_since(std::time::UNIX_EPOCH)
++                    .unwrap()
++                    .as_nanos(),
++                NEXT.fetch_add(1, Ordering::Relaxed),
++            ));
++            fs::create_dir(&root).unwrap();
++            fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).unwrap();
++            Self(root)
++        }
++
++        fn cache(&self) -> PathBuf {
++            let path = self.0.join("cache with spaces and Ω");
++            fs::create_dir(&path).unwrap();
++            fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
++            path
++        }
++
++        fn uid(&self) -> u32 {
++            fs::metadata(&self.0).unwrap().uid()
++        }
++    }
++
++    impl Drop for Fixture {
++        fn drop(&mut self) {
++            fs::remove_dir_all(&self.0).expect("remove owned storage fixture");
++        }
++    }
++
++    #[test]
++    fn accepts_owned_readable_cache_without_requiring_private_read_bits() {
++        let fixture = Fixture::new();
++        let cache = fixture.cache();
++        assert_eq!(validate_storage_root(&cache, fixture.uid()).unwrap(), cache);
++    }
++
++    #[test]
++    fn refuses_empty_and_relative_paths_without_creating_them() {
++        for path in ["", "relative-cache", "../cache"] {
++            assert_eq!(
++                validate_storage_root(Path::new(path), 0)
++                    .unwrap_err()
++                    .kind(),
++                io::ErrorKind::InvalidInput,
++            );
++        }
++    }
++
++    #[test]
++    fn refuses_missing_root_and_regular_file() {
++        let fixture = Fixture::new();
++        let missing = fixture.0.join("missing");
++        assert_eq!(
++            validate_storage_root(&missing, fixture.uid())
++                .unwrap_err()
++                .kind(),
++            io::ErrorKind::NotFound,
++        );
++        assert!(!missing.exists());
++        let file = fixture.0.join("file");
++        fs::write(&file, b"not a directory").unwrap();
++        assert_eq!(
++            validate_storage_root(&file, fixture.uid())
++                .unwrap_err()
++                .kind(),
++            io::ErrorKind::NotADirectory,
++        );
++    }
++
++    #[test]
++    fn refuses_wrong_owner_and_group_or_other_writable_roots() {
++        let fixture = Fixture::new();
++        let cache = fixture.cache();
++        assert!(validate_storage_root(&cache, fixture.uid()).is_ok());
++        assert_eq!(
++            validate_storage_root(&cache, fixture.uid().wrapping_add(1))
++                .unwrap_err()
++                .kind(),
++            io::ErrorKind::PermissionDenied,
++        );
++        for mode in [0o775, 0o757, 0o777] {
++            fs::set_permissions(&cache, fs::Permissions::from_mode(mode)).unwrap();
++            assert_eq!(
++                validate_storage_root(&cache, fixture.uid())
++                    .unwrap_err()
++                    .kind(),
++                io::ErrorKind::PermissionDenied,
++            );
++        }
++    }
++
++    #[test]
++    fn refuses_symlink_and_noncanonical_spelling() {
++        let fixture = Fixture::new();
++        let cache = fixture.cache();
++        let alias = fixture.0.join("alias");
++        symlink(&cache, &alias).unwrap();
++        assert_eq!(
++            validate_storage_root(&alias, fixture.uid())
++                .unwrap_err()
++                .kind(),
++            io::ErrorKind::InvalidInput,
++        );
++        let spelled = PathBuf::from(format!("{}/.", cache.display()));
++        assert_eq!(
++            validate_storage_root(&spelled, fixture.uid())
++                .unwrap_err()
++                .kind(),
++            io::ErrorKind::InvalidInput,
++        );
++        assert!(validate_storage_root(&cache, fixture.uid()).is_ok());
++    }
++
++    #[cfg(target_os = "linux")]
++    #[test]
++    fn accepts_non_utf8_os_path_without_text_conversion() {
++        use std::os::unix::ffi::OsStringExt;
++        let fixture = Fixture::new();
++        let path = fixture
++            .0
++            .join(std::ffi::OsString::from_vec(b"cache-\xff".to_vec()));
++        fs::create_dir(&path).unwrap();
++        fs::set_permissions(&path, fs::Permissions::from_mode(0o700)).unwrap();
++        assert_eq!(validate_storage_root(&path, fixture.uid()).unwrap(), path);
++    }
++    #[test]
++    fn expands_literal_paths_without_requiring_text_conversion() {
++        use std::os::unix::ffi::{OsStrExt, OsStringExt};
++        let root = OsString::from_vec(b"/cache-\xff with spaces/{literal}".to_vec());
++        let values = [
++            ("{cargo-cache-home}", root.clone()),
++            ("{workspace-path-hash}", OsString::from("ab/cd")),
++        ];
++        let path =
++            expand_checked_os_template("{cargo-cache-home}/build/{workspace-path-hash}", &values);
++        assert_eq!(
++            path.as_bytes(),
++            b"/cache-\xff with spaces/{literal}/build/ab/cd"
++        );
++        assert_eq!(
++            expand_checked_os_template("ordinary/build", &values),
++            OsStr::new("ordinary/build")
++        );
++    }
++
++    #[test]
++    fn substitutes_repeated_keys_and_keeps_replacement_values_literal() {
++        let values = [
++            ("{root}", OsString::from("/cache/{hash}")),
++            ("{hash}", OsString::from("ab")),
++        ];
++        assert_eq!(
++            expand_checked_os_template("{root}/{hash}/{root}", &values),
++            OsStr::new("/cache/{hash}/ab//cache/{hash}")
++        );
++    }
++
++    #[test]
++    fn preserves_empty_and_keyless_templates() {
++        let values = [("{root}", OsString::from("/cache"))];
++        assert_eq!(expand_checked_os_template("", &values), OsStr::new(""));
++        assert_eq!(
++            expand_checked_os_template("relative path/Ω", &values),
++            OsStr::new("relative path/Ω")
++        );
++    }
++}

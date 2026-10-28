@@ -1,0 +1,29 @@
+{
+  "schema": "ami-rust-portable-csdk-patches-v1",
+  "patches": [
+    {
+      "component": "AROS-NX",
+      "path": "tools/genmodule/functionhead.c",
+      "patch": "0001-genmodule-void-short-circuit.patch",
+      "before_sha256": "65a5f5da665c35431dae85beba4a63f74d041489d8c308ea30b07b91a3c5588a",
+      "after_sha256": "d267630e0f84add1620411fe2e0d09df4ed22c7c931ded71bad75394304ecd33",
+      "patch_sha256": "706317e3620a4fc1717f9f8f3e4091ccce65e0828586013f96f8a9f982a12be4"
+    },
+    {
+      "component": "AROS-NX",
+      "path": "tools/genmodule/writeincinline.c",
+      "patch": "0002-genmodule-suffix-vla-inline.patch",
+      "before_sha256": "80fcd1ad441f0649c7c3e51e2fc2564e42812ce242a80ae95d8fd89516393121",
+      "after_sha256": "0d99a364dccdda2d14e8055644f046cb53308db86943bb3a7caa4638afff95b3",
+      "patch_sha256": "8186b095e165a4f8ef4265193139ca9397e54ee0342b7c5179d3f0f425ab612a"
+    },
+    {
+      "component": "AROS-NX",
+      "path": "tools/genmodule/writeincdefines.c",
+      "patch": "0003-genmodule-suffix-vla-defines.patch",
+      "before_sha256": "c74c07f022f40deb5e6d8a7a034a9aa4d41e807b3fd648a5e2cb607406f14c6d",
+      "after_sha256": "a08dac7b317a592d1ef97c7a00024bde561182c3be9c503b2ee4c9b26a3cd0f8",
+      "patch_sha256": "43f1ded9da3464f83be448b17890057906fd5bf0d6d839805e357d6eab870eb6"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+target-applies-to-host = false
+[host]
+rustflags = ["-Zunstable-options", "--remap-path-prefix=@WORK@=/build", "--remap-path-prefix=@SDK_PREFIX@=/ami-rust-toolchain", "--remap-path-prefix=@WORK@/sha256sum/cargo-home/git/checkouts=/cargo-git", "--remap-path-prefix=@WORK@/sha256sum/cargo-home/registry/src=/cargo-registry"]
+
+[unstable]
+host-config = true
+target-applies-to-host = true
+ami-rust-reproducible-cross = true
+[target.x86_64-aros]
+linker = "@SDK_PREFIX@/bin/aros-link"

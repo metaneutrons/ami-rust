@@ -1,0 +1,24 @@
+{
+  "schema": "aros-target-library-candidate-v1",
+  "target": "x86_64-aros",
+  "rustc_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
+  "origin": "RP2 source build from the frozen Rust inputs and paired Cargo; qualification evidence is recorded separately.",
+  "files": [
+    {
+      "path": "liballoc-a8926594d1dd6f2d.rlib",
+      "bytes": 8500718,
+      "sha256": "896e84c3f1bcfb7751c3ef32f268cb46b69b54dc98b74ce9be4ea41d736e3a6b"
+    },
+    {
+      "path": "libcompiler_builtins-f1ffd4f38a1097f8.rlib",
+      "bytes": 2446116,
+      "sha256": "d9e07bda344b637d8cc4c8d6300cfa14b551ea5b231ddd33f886071043dfa783"
+    },
+    {
+      "path": "libcore-0d12afe981e24cf4.rlib",
+      "bytes": 68233854,
+      "sha256": "319c99ae25a1311e3e978fe361947a6ddb34beaa5da8667d13304081f26135a9"
+    }
+  ],
+  "symlinks": []
+}

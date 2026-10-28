@@ -1,0 +1,240 @@
+{
+  "schema": "ami-rust-native-cargo-consumer-inputs-v1",
+  "sources": {
+    "ci_sdk_inputs": {
+      "path": "release/ci-sdk-inputs.json",
+      "sha256": "70ea2900ba0e61213c6636fe1ee1c9bb0666e975847aee5ee5dc52797b437162",
+      "role": "Pinned macOS and Linux x86_64 Rust installer, LLVM, and collector rows.",
+      "note": "Existing checked-in input authority; values are copied unchanged.",
+      "scope": "repository"
+    },
+    "bare_target_libraries_inputs": {
+      "path": "release/bare-target-libraries-inputs.json",
+      "sha256": "3887976912a7cc67d207bcb17c207ddf2521daef0d810c5daaaf7c9c2814eb79",
+      "role": "ARM64 rustc, rust-std, and rust-src rows.",
+      "note": "Existing checked-in input authority; all three rows cross-check against retained signed archive metadata.",
+      "scope": "repository"
+    },
+    "arm_rust_archive_inputs": {
+      "path": "evidence/rc1-native-qualification-flow-20261019/rc2-linux-aarch64-rust-archives-a1/inputs.json",
+      "sha256": "f80be16acb4c7be78edce853b99eb2a63e204aa41ca97bb8fbbd3308c2de7d0e",
+      "role": "Official nightly ARM64 Cargo archive URL, byte count, and SHA-256.",
+      "note": "All four retained ARM64 Rust component archives were checked for exact bytes, SHA-256, and archive root.",
+      "scope": "retained-private-evidence"
+    },
+    "arm_rust_authentication": {
+      "path": "evidence/rc1-native-qualification-flow-20261019/rc2-linux-aarch64-rust-authentication-a1/result.json",
+      "sha256": "2f608afa72e1407ba733c2aa7f7051d0fe857d9beb36f80be900f9ff5bb59c5d",
+      "role": "Official Rust channel authentication record.",
+      "note": "Retained PASS result for the ARM64 official-channel package rows.",
+      "scope": "retained-private-evidence"
+    },
+    "rust_src_authentication": {
+      "path": "evidence/rc1-native-qualification-flow-20261019/rc2-linux-aarch64-rust-src-authenticated-archive-a1/result.json",
+      "sha256": "a8352c222e8209e601a185b5849d735028ed9e11157e8b6b7726bf71b8e47568",
+      "role": "Shared rust-src archive authentication record.",
+      "note": "Retained PASS_ARCHIVE_AUTHENTICATED_AND_SOURCE_ROWS_MATCH result.",
+      "scope": "retained-private-evidence"
+    },
+    "portable_csdk_spec": {
+      "path": "release/portable-csdk/spec.json",
+      "sha256": "1b6f413082dc2ee087d91bc9838850a9f42f7f4a28829bfcb88d60ed1dacfdb3",
+      "role": "ARM64 LLVM archive and shared CSDK archive pins.",
+      "note": "CSDK archive bytes/hash were checked; its sole archive root is Developer.",
+      "scope": "repository"
+    },
+    "arm_collector_auth_inputs": {
+      "path": "evidence/rc1-native-qualification-flow-20261019/rc2-linux-aarch64-collector-tar-auth-source-license-a1/inputs.json",
+      "sha256": "ced4a57c3ae664172da0404d5676ebd7f0209227fe2c5207c73d96d11ff93096",
+      "role": "ARM64 collector signed-asset identity and inventory evidence.",
+      "note": "Binds exact release asset identity, bytes, digest, and archive root.",
+      "scope": "retained-private-evidence"
+    },
+    "arm_collector_signature_result": {
+      "path": "evidence/rc1-native-qualification-flow-20261019/rc2-linux-aarch64-c-tool-signatures-a1/output/result.json",
+      "sha256": "2fb4d149418584ceea3db396477505f2e8cc57e5fa1508a0e305f39db0e127c7",
+      "role": "Prior direct Cosign verification result for the exact collector asset.",
+      "note": "Retained PASS_PINNED_COSIGN_ARCHIVE_SUBJECT_RELEASE_IDENTITY_AND_COUNTERS; not rerun.",
+      "scope": "retained-private-evidence"
+    },
+    "arm_collector_candidate_inputs": {
+      "path": "evidence/rc1-native-qualification-flow-20261019/rc2-linux-aarch64-collector-tar-candidate-a1/inputs.json",
+      "sha256": "b22aa36d0efa931e9a303b48fc54051e83c8d8003946a53f1c17315f75f45e80",
+      "role": "Collector TAR acquisition and inventory receipt.",
+      "note": "Exact bytes, URL, and SHA-256 cross-match signed archive evidence.",
+      "scope": "retained-private-evidence"
+    }
+  },
+  "hosts": {
+    "macos-aarch64": {
+      "rust_host_triple": "aarch64-apple-darwin",
+      "rust": {
+        "archives": [
+          {
+            "component": "rustc",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rustc-nightly-aarch64-apple-darwin.tar.xz",
+            "bytes": 51581740,
+            "sha256": "80803ea169647e026499a205269c46a2632a14f312478b1ec8a089c322f55a88",
+            "archive_root": "rustc-nightly-aarch64-apple-darwin"
+          },
+          {
+            "component": "rust-std",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rust-std-nightly-aarch64-apple-darwin.tar.xz",
+            "bytes": 30504920,
+            "sha256": "06268b6cd0fdaccd7e36a5731dcba1d0fb8b44cf01b874ac772001a1b5aba9eb",
+            "archive_root": "rust-std-nightly-aarch64-apple-darwin"
+          },
+          {
+            "component": "rust-src",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rust-src-nightly.tar.xz",
+            "bytes": 5934836,
+            "sha256": "8de4a7bc2ba7fd977a3ec74ae2794fee99c6f987e5f022ba2ff4b0ca8a5d1004",
+            "archive_root": "rust-src-nightly"
+          },
+          {
+            "component": "cargo",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/cargo-nightly-aarch64-apple-darwin.tar.xz",
+            "bytes": 8947472,
+            "sha256": "01a4aa9cbbbd0a799f134b530d4ce3e913ae3aaa73bbad0417d4ae4ecc1fc4bd",
+            "archive_root": "cargo-nightly-aarch64-apple-darwin"
+          }
+        ],
+        "remove_installer_administrative_files": [
+          "lib/rustlib/install.log",
+          "lib/rustlib/manifest-cargo",
+          "lib/rustlib/manifest-rust-src",
+          "lib/rustlib/manifest-rust-std-aarch64-apple-darwin",
+          "lib/rustlib/manifest-rustc"
+        ]
+      },
+      "llvm": {
+        "url": "https://github.com/metaneutrons/aros-toolchains/releases/download/v0.1.4/aros-toolchain-v1-llvm11.0.0-macos-aarch64-pc-x86_64.tar.xz",
+        "bytes": 26451000,
+        "sha256": "969d150761a2a999a43992660ab6c84d8ab07c1396ce49b17024bb5b08993342",
+        "archive_root": "toolchain"
+      },
+      "collector": {
+        "url": "https://github.com/metaneutrons/aros-tools/releases/download/v0.3.19/aros-tools-v0.3.19-aarch64-apple-darwin.tar.gz",
+        "bytes": 15697348,
+        "sha256": "8eb7c8e1ea40dae35943295c01b208a07b4264cf6c41e9b498f3fb0493e44625",
+        "archive_root": "aros-tools-v0.3.19-aarch64-apple-darwin"
+      }
+    },
+    "linux-x86_64": {
+      "rust_host_triple": "x86_64-unknown-linux-gnu",
+      "rust": {
+        "archives": [
+          {
+            "component": "rustc",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz",
+            "bytes": 85397620,
+            "sha256": "a0f5685f293fb6fc2c3b0ba1e67f24a38c688259ad1b4f04596ec4c86ec5a435",
+            "archive_root": "rustc-nightly-x86_64-unknown-linux-gnu"
+          },
+          {
+            "component": "rust-std",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz",
+            "bytes": 31384072,
+            "sha256": "d04688ad62025ca2afe16e86243994c43fa63802934ca3f64290756dc792a200",
+            "archive_root": "rust-std-nightly-x86_64-unknown-linux-gnu"
+          },
+          {
+            "component": "rust-src",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rust-src-nightly.tar.xz",
+            "bytes": 5934836,
+            "sha256": "8de4a7bc2ba7fd977a3ec74ae2794fee99c6f987e5f022ba2ff4b0ca8a5d1004",
+            "archive_root": "rust-src-nightly"
+          },
+          {
+            "component": "cargo",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz",
+            "bytes": 10935476,
+            "sha256": "f909437ddd1790402eab07d178d3d6ca3a901bd0928f686157ea4dfd559974d8",
+            "archive_root": "cargo-nightly-x86_64-unknown-linux-gnu"
+          }
+        ],
+        "remove_installer_administrative_files": [
+          "lib/rustlib/install.log",
+          "lib/rustlib/manifest-cargo",
+          "lib/rustlib/manifest-rust-src",
+          "lib/rustlib/manifest-rust-std-x86_64-unknown-linux-gnu",
+          "lib/rustlib/manifest-rustc"
+        ]
+      },
+      "llvm": {
+        "url": "https://github.com/metaneutrons/aros-toolchains/releases/download/v0.1.4/aros-toolchain-v1-llvm11.0.0-linux-x86_64-pc-x86_64.tar.xz",
+        "bytes": 38647276,
+        "sha256": "9661c2a000893f811a2bb0c442d9121e74cb0a2743b8d541e121061713bcbcaf",
+        "archive_root": "toolchain"
+      },
+      "collector": {
+        "url": "https://github.com/metaneutrons/aros-tools/releases/download/v0.3.19/aros-tools-v0.3.19-x86_64-unknown-linux-gnu.tar.gz",
+        "bytes": 17612628,
+        "sha256": "96b0219d6cf29460fee07fd415978f52bc91d2d8ac3f484195cb63f7e11d984a",
+        "archive_root": "aros-tools-v0.3.19-x86_64-unknown-linux-gnu"
+      }
+    },
+    "linux-aarch64": {
+      "rust_host_triple": "aarch64-unknown-linux-gnu",
+      "rust": {
+        "archives": [
+          {
+            "component": "rustc",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rustc-nightly-aarch64-unknown-linux-gnu.tar.xz",
+            "bytes": 69887392,
+            "sha256": "c47f347181aaca8640fa98ada7ba7b88baff2f7b77aeb2b44c86efa3c888190b",
+            "archive_root": "rustc-nightly-aarch64-unknown-linux-gnu"
+          },
+          {
+            "component": "rust-std",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rust-std-nightly-aarch64-unknown-linux-gnu.tar.xz",
+            "bytes": 31586332,
+            "sha256": "498101e6afae426eb8689a1a79c2958c5bf42c20edc1d7346a98179a2e67c7c8",
+            "archive_root": "rust-std-nightly-aarch64-unknown-linux-gnu"
+          },
+          {
+            "component": "rust-src",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/rust-src-nightly.tar.xz",
+            "bytes": 5934836,
+            "sha256": "8de4a7bc2ba7fd977a3ec74ae2794fee99c6f987e5f022ba2ff4b0ca8a5d1004",
+            "archive_root": "rust-src-nightly"
+          },
+          {
+            "component": "cargo",
+            "url": "https://static.rust-lang.org/dist/2026-09-18/cargo-nightly-aarch64-unknown-linux-gnu.tar.xz",
+            "bytes": 10571572,
+            "sha256": "adff85d2e0c165b55ebf526c7af195affa46a476fa0a1b64c7a99ba120c3b254",
+            "archive_root": "cargo-nightly-aarch64-unknown-linux-gnu"
+          }
+        ],
+        "remove_installer_administrative_files": [
+          "lib/rustlib/install.log",
+          "lib/rustlib/manifest-cargo",
+          "lib/rustlib/manifest-rust-src",
+          "lib/rustlib/manifest-rust-std-aarch64-unknown-linux-gnu",
+          "lib/rustlib/manifest-rustc"
+        ]
+      },
+      "llvm": {
+        "url": "https://github.com/metaneutrons/aros-toolchains/releases/download/v0.1.4/aros-toolchain-v1-llvm11.0.0-linux-aarch64-pc-x86_64.tar.xz",
+        "bytes": 35097912,
+        "sha256": "8d9be3b71eb02f60177c77ed62931caf4ebedd9c34b6ca9312b57157685c572e",
+        "archive_root": "toolchain"
+      },
+      "collector": {
+        "url": "https://github.com/metaneutrons/aros-tools/releases/download/v0.3.19/aros-tools-v0.3.19-aarch64-unknown-linux-gnu.tar.gz",
+        "bytes": 16951197,
+        "sha256": "d3cdfb860c4bb381a2bb1540959f9d895ab2101cdda64dd21450c8878c72bef3",
+        "archive_root": "aros-tools-v0.3.19-aarch64-unknown-linux-gnu"
+      }
+    }
+  },
+  "shared": {
+    "csdk": {
+      "path": "release/inputs/portable-csdk.tar.xz",
+      "bytes": 5619304,
+      "sha256": "942417c7b82218f5704eba168922fc348dc0ce5c17a236139c3353775209b99b",
+      "archive_root": "Developer"
+    }
+  }
+}

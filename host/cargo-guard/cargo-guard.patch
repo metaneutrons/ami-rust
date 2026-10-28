@@ -1,0 +1,983 @@
+diff --git a/src/bin/cargo/cli.rs b/src/bin/cargo/cli.rs
+--- a/src/bin/cargo/cli.rs
++++ b/src/bin/cargo/cli.rs
+@@ -61,21 +61,40 @@
+         == Some("help")
+     {
+         // Don't let config errors get in the way of parsing arguments
+-        let _ = configure_gctx(gctx, &expanded_args, None, global_args, None);
++        let configured = configure_gctx(gctx, &expanded_args, None, global_args, None);
++        if gctx.ami_guard_is_requested() {
++            configured?;
++        }
+         print_zhelp(gctx);
+     } else if expanded_args.flag("version") {
+         // Don't let config errors get in the way of parsing arguments
+-        let _ = configure_gctx(gctx, &expanded_args, None, global_args, None);
++        let configured = configure_gctx(gctx, &expanded_args, None, global_args, None);
++        if gctx.ami_guard_is_requested() {
++            configured?;
++        }
+         let version = get_version_string(is_verbose);
+         drop_print!(gctx, "{}", version);
+     } else if let Some(code) = expanded_args.get_one::<String>("explain") {
++        if gctx.ami_guard_is_requested() {
++            return Err(anyhow!(
++                "unsupported compiler explanation in the selected ami-rust Cargo route"
++            )
++            .into());
++        }
+         // Don't let config errors get in the way of parsing arguments
+-        let _ = configure_gctx(gctx, &expanded_args, None, global_args, None);
++        let configured = configure_gctx(gctx, &expanded_args, None, global_args, None);
++        if gctx.ami_guard_is_requested() {
++            configured?;
++        }
+         let mut process = gctx.load_global_rustc(None)?.process();
+         process.arg("--explain").arg(code).exec()?;
+     } else if expanded_args.flag("list") {
++        gctx.check_ami_guard_command("--list")?;
+         // Don't let config errors get in the way of parsing arguments
+-        let _ = configure_gctx(gctx, &expanded_args, None, global_args, None);
++        let configured = configure_gctx(gctx, &expanded_args, None, global_args, None);
++        if gctx.ami_guard_is_requested() {
++            configured?;
++        }
+         print_list(gctx, is_verbose);
+     } else {
+         let (cmd, subcommand_args) = match expanded_args.subcommand() {
+@@ -86,6 +105,7 @@
+                 return Ok(());
+             }
+         };
++        gctx.check_ami_guard_command(cmd)?;
+         let exec = Exec::infer(cmd)?;
+         configure_gctx(
+             gctx,
+@@ -94,6 +114,7 @@
+             global_args,
+             Some(&exec),
+         )?;
++        gctx.validate_ami_guard_command(cmd, subcommand_args)?;
+         super::init_git();
+ 
+         exec.exec(gctx, subcommand_args)?;
+diff --git a/src/bin/cargo/main.rs b/src/bin/cargo/main.rs
+--- a/src/bin/cargo/main.rs
++++ b/src/bin/cargo/main.rs
+@@ -24,6 +24,17 @@
+             cargo::exit_with_error(e.into(), &mut shell)
+         }
+     };
++
++    if gctx.ami_guard_is_requested()
++        && (gctx.get_env_os("CARGO_COMPLETE").is_some()
++            || cargo::ops::fix_get_proxy_lock_addr().is_some())
++    {
++        cargo::exit_with_error(
++            anyhow::anyhow!("unsupported early dispatch in the selected ami-rust Cargo route")
++                .into(),
++            &mut *gctx.shell(),
++        );
++    }
+ 
+     let nightly_features_allowed = matches!(&*features::channel(), "nightly" | "dev");
+     if nightly_features_allowed {
+diff --git a/src/context/ami_guard.rs b/src/context/ami_guard.rs
+new file mode 100644
+--- /dev/null
++++ b/src/context/ami_guard.rs
+@@ -0,0 +1,596 @@
++//! Downstream Cargo-owned input validation before activation configuration wins.
++//!
++//! These selectors are private launcher plumbing, not publisher authentication.
++//! The selected native role must authenticate its activation and this engine.
++//! No configuration record is written to disk or printed as diagnostics.
++
++use super::{CV, OptValue, StringList};
++use super::{ConfigKey, ConfigRelativePath, ConfigValue, Definition, EnvConfig, GlobalContext};
++use crate::CargoResult;
++use crate::util::command_prelude::ArgMatchesExt;
++use anyhow::{Context as _, bail};
++use serde::Deserialize;
++use serde_json::{Map, Value as Json, json};
++use std::ffi::OsStr;
++use std::io::{ErrorKind, Write};
++use std::path::{Path, PathBuf};
++use std::process::{Command, Stdio};
++use std::time::{Duration, Instant};
++
++const CALLBACK: &str = "AMI_RUST_CARGO_GUARD";
++const OVERLAY: &str = "AMI_RUST_CARGO_OVERLAY";
++const MAX_RECORD_BYTES: usize = 1024 * 1024;
++const CALLBACK_SECONDS: u64 = 30;
++
++impl GlobalContext {
++    /// Any partial private request must fail closed, including informational CLI branches.
++    pub fn ami_guard_is_requested(&self) -> bool {
++        self.get_env_os(CALLBACK).is_some() || self.get_env_os(OVERLAY).is_some()
++    }
++
++    /// Check the documented selected route before external subcommand lookup.
++    pub fn check_ami_guard_command(&self, command: &str) -> CargoResult<()> {
++        if self.ami_guard_is_requested() && !matches!(command, "metadata" | "check" | "build") {
++            bail!("unsupported command in the selected ami-rust Cargo route");
++        }
++        Ok(())
++    }
++
++    fn ami_guard_paths(&self) -> CargoResult<(PathBuf, PathBuf)> {
++        let callback = self
++            .get_env_os(CALLBACK)
++            .context("missing ami-rust Cargo guard selector")?;
++        let overlay = self
++            .get_env_os(OVERLAY)
++            .context("missing ami-rust Cargo overlay selector")?;
++        let callback = checked_file(Path::new(callback), true)?;
++        let overlay = checked_file(Path::new(overlay), false)?;
++        if self.get_env_os("CARGO_CACHE_RUSTC_INFO") != Some(OsStr::new("0")) {
++            bail!("selected ami-rust Cargo requires compiler-info disk caching disabled");
++        }
++        Ok((callback, overlay))
++    }
++
++    fn ami_guard_caches_empty(&self) -> CargoResult<()> {
++        if self.net_config.get().is_some()
++            || self.build_config.get().is_some()
++            || self.target_cfgs.get().is_some()
++            || self.env_config.get().is_some()
++            || self.http_config.get().is_some()
++            || self.http_async.get().is_some()
++            || self.rustdoc.get().is_some()
++            || self.global_cache_tracker.get().is_some()
++            || self.deferred_global_last_use.get().is_some()
++        {
++            bail!("ami-rust Cargo configuration guard reached after derived configuration use");
++        }
++        Ok(())
++    }
++
++    pub(super) fn configure_ami_guard(&mut self, target_dir: &Option<PathBuf>) -> CargoResult<()> {
++        if !self.ami_guard_is_requested() {
++            return Ok(());
++        }
++        let (callback, overlay) = self.ami_guard_paths()?;
++        if self.cli_unstable().script {
++            bail!("Cargo script mode is outside the selected ami-rust command surface");
++        }
++        self.ami_guard_caches_empty()?;
++        // Direct typed getters only: the generated overlay has not been merged yet.
++        let mut record = self.ami_guard_configuration("configuration")?;
++        record["cli_target_dir"] = optional_path(target_dir.as_deref())?;
++        record["overlay"] = json!(path_text(&overlay)?);
++        self.ami_guard_overlay_not_loaded(&overlay)?;
++        validate_callback(&callback, &record)?;
++        self.ami_guard_caches_empty()?;
++        let entry = path_text(&overlay)?.to_owned();
++        let additions = self
++            .cli_config_slice_as_table(std::slice::from_ref(&entry), super::WhyLoad::AmiOverlay)?;
++        self.merge_cli_table(additions)?;
++        self.cli_config.get_or_insert_default().push(entry);
++        self.load_unstable_flags_from_config()?;
++        self.check_ami_storage_environment()?;
++        // The callback cannot authorize a lifecycle that initialized stale typed caches.
++        self.ami_guard_caches_empty()?;
++        Ok(())
++    }
++
++    fn ami_guard_overlay_not_loaded(&self, overlay: &Path) -> CargoResult<()> {
++        let parsed = self.ami_loaded_config_paths.lock().unwrap();
++        #[cfg(unix)]
++        let overlay_identity = {
++            use std::os::unix::fs::MetadataExt;
++            let metadata = std::fs::metadata(overlay)?;
++            (metadata.dev(), metadata.ino())
++        };
++        for path in parsed.iter() {
++            let mut matches = path == overlay;
++            #[cfg(unix)]
++            {
++                use std::os::unix::fs::MetadataExt;
++                let metadata = std::fs::metadata(path)
++                    .context("cannot recheck parsed Cargo configuration identity")?;
++                matches |= (metadata.dev(), metadata.ino()) == overlay_identity;
++            }
++            if matches {
++                bail!("generated ami-rust overlay already loaded through user configuration");
++            }
++        }
++        Ok(())
++    }
++
++    /// Runs even for metadata --no-deps and cache-hit commands, before source/layout work.
++    pub fn validate_ami_guard_command(
++        &self,
++        command: &str,
++        args: &clap::ArgMatches,
++    ) -> CargoResult<()> {
++        if !self.ami_guard_is_requested() {
++            return Ok(());
++        }
++        self.check_ami_guard_command(command)?;
++        let (callback, _) = self.ami_guard_paths()?;
++        let mut record = self.ami_guard_configuration("command")?;
++        record["command"] = json!(command);
++        let mut options = Map::new();
++        for key in [
++            "manifest-path",
++            "target-dir",
++            "artifact-dir",
++            "target",
++            "filter-platform",
++            "package",
++            "exclude",
++            "features",
++            "bin",
++            "example",
++            "test",
++            "bench",
++            "profile",
++            "message-format",
++        ] {
++            if let Ok(Some(values)) = args.try_get_many::<String>(key) {
++                options.insert(key.to_owned(), json!(values.collect::<Vec<_>>()));
++            }
++            if let Ok(Some(values)) = args.try_get_many::<PathBuf>(key) {
++                let paths = values
++                    .map(|path| path_text(path))
++                    .collect::<CargoResult<Vec<_>>>()?;
++                options.insert(key.to_owned(), json!(paths));
++            }
++        }
++        for key in [
++            "workspace",
++            "lib",
++            "bins",
++            "examples",
++            "tests",
++            "benches",
++            "unit-graph",
++            "all-features",
++            "no-default-features",
++            "release",
++            "all-targets",
++            "no-deps",
++            "locked",
++            "offline",
++            "frozen",
++        ] {
++            if let Ok(Some(value)) = args.try_get_one::<bool>(key) {
++                options.insert(key.to_owned(), json!(value));
++            }
++        }
++        record["options"] = Json::Object(options);
++        // Cargo's manifest/workspace resolver owns these paths. This performs no
++        // dependency resolution, compiler query, package-cache lock or Layout creation.
++        let workspace = args.workspace(self)?;
++        record["workspace"] = json!({
++            "manifest": path_text(workspace.root_manifest())?,
++            "root": path_text(workspace.root())?,
++            "target_dir": path_text(workspace.target_dir().as_path_unlocked())?,
++            "build_dir": path_text(workspace.build_dir().as_path_unlocked())?,
++        });
++        validate_callback(&callback, &record)
++    }
++
++    fn ami_guard_configuration(&self, phase: &str) -> CargoResult<Json> {
++        let mut config = Map::new();
++        for key in [
++            "rustc",
++            "rustc-wrapper",
++            "rustc-workspace-wrapper",
++            "rustdoc",
++            "target-dir",
++            "build-dir",
++            "artifact-dir",
++        ] {
++            let value: Option<ConfigRelativePath> = self.get(&format!("build.{key}"))?;
++            if let Some(value) = value {
++                let resolved = if matches!(
++                    key,
++                    "rustc" | "rustc-wrapper" | "rustc-workspace-wrapper" | "rustdoc"
++                ) {
++                    value.resolve_program(self)
++                } else {
++                    value.resolve_path(self)
++                };
++                config.insert(
++                    format!("build.{key}"),
++                    json!({
++                        "value": value.raw_value(), "resolved": path_text(&resolved)?,
++                        "origin": origin(&value.value().definition)?,
++                    }),
++                );
++            }
++        }
++        for key in ["build.target", "build.rustflags", "build.rustdocflags"] {
++            let value: OptValue<StringList> = self.get(key)?;
++            if let Some(value) = value {
++                config.insert(
++                    key.to_owned(),
++                    json!({"value":value.val.as_slice(),"origin":origin(&value.definition)?}),
++                );
++            }
++        }
++        // Keep the complete origin-bearing target/host/unstable control subtrees.
++        // Later target/cfg fixed-point and actual compiler-role validation remain required.
++        let mut nodes = 16384;
++        let mut origins = Map::new();
++        if let Some(CV::Table(build, _)) = self.values()?.get("build") {
++            for key in [
++                "rustc",
++                "rustc-wrapper",
++                "rustc-workspace-wrapper",
++                "rustdoc",
++                "target",
++                "rustflags",
++                "rustdocflags",
++                "target-dir",
++                "build-dir",
++                "artifact-dir",
++            ] {
++                if let Some(value) = build.get(key) {
++                    origins.insert(format!("build.{key}"), config_tree(value, &mut nodes, 0)?);
++                }
++            }
++        }
++        for key in ["target", "host", "unstable", "target-applies-to-host"] {
++            if let Some(value) = self.values()?.get(key) {
++                config.insert(key.to_owned(), config_tree(value, &mut nodes, 0)?);
++            }
++        }
++        // Typed getters apply Cargo's environment precedence without filling derived caches.
++        // A ConfigKey is built segment-by-segment so cfg keys containing dots stay literal.
++        let mut typed_targets = Map::new();
++        for table in ["target", "host"] {
++            if let Some(CV::Table(entries, _)) = self.values()?.get(table) {
++                for name in entries.keys() {
++                    for field in ["linker", "rustflags", "rustdocflags"] {
++                        let mut key = ConfigKey::new();
++                        key.push(table);
++                        key.push(name);
++                        key.push(field);
++                        let snapshot = if field == "linker" {
++                            let value: OptValue<ConfigRelativePath> =
++                                self.ami_guard_get(key.clone())?;
++                            value.map(|v| Ok::<_, anyhow::Error>(json!({"value":v.val.raw_value(),
++                                "resolved":path_text(&v.val.resolve_program(self))?,"origin":origin(&v.definition)?}))).transpose()?
++                        } else {
++                            let value: OptValue<StringList> = self.ami_guard_get(key.clone())?;
++                            value.map(|v| Ok::<_, anyhow::Error>(json!({"value":v.val.as_slice(),"origin":origin(&v.definition)?}))).transpose()?
++                        };
++                        if let Some(value) = snapshot {
++                            typed_targets.insert(key.to_string(), value);
++                        }
++                    }
++                }
++            }
++        }
++        let mut environment = Map::new();
++        for key in self
++            .env
++            .keys_str()
++            .filter(|key| control_environment_key(key))
++        {
++            let value = self
++                .get_env_os(key)
++                .context("missing selected environment value")?;
++            let text = value
++                .to_str()
++                .context("ami-rust compiler control environment is not UTF-8")?;
++            environment.insert(key.to_owned(), json!(text));
++        }
++        let env_config: EnvConfig = self.get("env")?;
++        let mut child_environment = Map::new();
++        for (key, value) in env_config
++            .iter()
++            .filter(|(key, _)| control_environment_key(key))
++        {
++            let value_text = value.resolve(self.cwd());
++            child_environment.insert(key.clone(), json!({
++                "value": value_text.to_str().context("ami-rust configured child control is not UTF-8")?,
++                "force": value.is_force(),
++            }));
++        }
++        Ok(json!({
++            "schema":"ami-rust-cargo-inputs-v1", "phase":phase,
++            "cwd":path_text(self.cwd())?, "cargo_home":path_text(self.home_path.as_path_unlocked())?,
++            "configuration":config, "configuration_origins":origins, "target_configuration":typed_targets,
++            "unstable_cli":self.unstable_flags_cli,
++            "environment":environment, "child_environment":child_environment,
++            "sources":crate::sources::config::ami_rust_source_definitions(self)?,
++        }))
++    }
++
++    fn ami_guard_get<'de, T: Deserialize<'de>>(&self, key: ConfigKey) -> CargoResult<T> {
++        T::deserialize(super::de::Deserializer {
++            gctx: self,
++            key,
++            env_prefix_ok: true,
++        })
++        .map_err(Into::into)
++    }
++}
++
++fn control_environment_key(key: &str) -> bool {
++    matches!(
++        key,
++        "RUSTC"
++            | "RUSTC_WRAPPER"
++            | "RUSTC_WORKSPACE_WRAPPER"
++            | "RUSTDOC"
++            | "RUSTFLAGS"
++            | "RUSTDOCFLAGS"
++            | "CARGO_ENCODED_RUSTFLAGS"
++            | "CARGO_ENCODED_RUSTDOCFLAGS"
++            | "CARGO_TARGET_DIR"
++            | "CARGO_CACHE_RUSTC_INFO"
++            | "RUSTUP_HOME"
++            | "RUSTUP_TOOLCHAIN"
++            | "PATH"
++            | "AMI_RUST_BUILD_HELPER"
++            | "AMI_RUST_BUILD_INVOCATION"
++            | "AMI_RUST_CARGO_STORAGE_ROOT"
++            | CALLBACK
++            | OVERLAY
++    ) || key.starts_with("CARGO_BUILD_")
++        || key.starts_with("CARGO_UNSTABLE_")
++        || (key.starts_with("CARGO_TARGET_")
++            && (key.ends_with("_LINKER")
++                || key.ends_with("_RUSTFLAGS")
++                || key.ends_with("_RUSTDOCFLAGS")))
++}
++
++fn path_text(path: &Path) -> CargoResult<&str> {
++    path.to_str()
++        .context("ami-rust compiler-bound path is not UTF-8")
++}
++
++fn optional_path(path: Option<&Path>) -> CargoResult<Json> {
++    path.map(path_text).transpose().map(|path| json!(path))
++}
++
++fn origin(definition: &Definition) -> CargoResult<Json> {
++    Ok(match definition {
++        Definition::BuiltIn => json!({"kind":"built-in"}),
++        Definition::Path(path) => json!({"kind":"path","path":path_text(path)?}),
++        Definition::Environment(name) => json!({"kind":"environment","name":name}),
++        Definition::Cli(None) => json!({"kind":"cli"}),
++        Definition::Cli(Some(path)) => json!({"kind":"cli-file","path":path_text(path)?}),
++    })
++}
++
++fn config_tree(value: &ConfigValue, remaining: &mut usize, depth: usize) -> CargoResult<Json> {
++    if *remaining == 0 || depth > 32 {
++        bail!("ami-rust build-control record exceeds structural bound");
++    }
++    *remaining -= 1;
++    let (value, def) = match value {
++        CV::String(value, def) => (json!(value), def),
++        CV::Integer(value, def) => (json!(value), def),
++        CV::Boolean(value, def) => (json!(value), def),
++        CV::List(values, def) => (
++            Json::Array(
++                values
++                    .iter()
++                    .map(|v| config_tree(v, remaining, depth + 1))
++                    .collect::<CargoResult<_>>()?,
++            ),
++            def,
++        ),
++        CV::Table(values, def) => {
++            let mut output = Map::new();
++            for (key, value) in values {
++                output.insert(key.clone(), config_tree(value, remaining, depth + 1)?);
++            }
++            (Json::Object(output), def)
++        }
++    };
++    Ok(json!({"value":value,"origin":origin(def)?}))
++}
++
++fn checked_file(path: &Path, executable: bool) -> CargoResult<PathBuf> {
++    if !path.is_absolute() || path.as_os_str().is_empty() {
++        bail!("ami-rust guard inputs require absolute local paths");
++    }
++    let canonical = path
++        .canonicalize()
++        .context("cannot resolve ami-rust guard input")?;
++    if canonical.as_os_str() != path.as_os_str() {
++        bail!("ami-rust guard input uses a noncanonical path");
++    }
++    let metadata =
++        std::fs::symlink_metadata(path).context("cannot inspect ami-rust guard input")?;
++    if !metadata.is_file() {
++        bail!("ami-rust guard input is not a regular file");
++    }
++    #[cfg(unix)]
++    {
++        use std::os::unix::fs::MetadataExt;
++        let uid = unsafe { libc::geteuid() };
++        if metadata.uid() != uid
++            || metadata.mode() & 0o022 != 0
++            || (executable && metadata.mode() & 0o111 == 0)
++        {
++            bail!("ami-rust guard input ownership or permissions are invalid");
++        }
++    }
++    #[cfg(not(unix))]
++    {
++        let _ = executable;
++        bail!("ami-rust selected Cargo guard requires a supported Unix host");
++    }
++    Ok(canonical)
++}
++
++fn validate_callback(callback: &Path, record: &Json) -> CargoResult<()> {
++    let raw = serde_json::to_vec(record)?;
++    if raw.len() > MAX_RECORD_BYTES {
++        bail!("ami-rust Cargo input record exceeds byte bound");
++    }
++    #[cfg(unix)]
++    {
++        use std::os::fd::AsRawFd;
++        let mut child = Command::new(callback)
++            .arg("--ami-rust-cargo-guard-v1")
++            .stdin(Stdio::piped())
++            .stdout(Stdio::null())
++            .stderr(Stdio::null())
++            .spawn()
++            .context("cannot start selected ami-rust Cargo validation role")?;
++        let result = (|| {
++            let mut stdin = child
++                .stdin
++                .take()
++                .context("missing Cargo guard input pipe")?;
++            let fd = stdin.as_raw_fd();
++            let flags = unsafe { libc::fcntl(fd, libc::F_GETFL) };
++            if flags < 0 || unsafe { libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) } < 0
++            {
++                bail!("cannot bound selected Cargo guard input pipe");
++            }
++            let start = Instant::now();
++            let mut offset = 0;
++            loop {
++                if start.elapsed() >= Duration::from_secs(CALLBACK_SECONDS) {
++                    bail!("selected Cargo validation role timed out");
++                }
++                if let Some(status) = child.try_wait()? {
++                    if offset != raw.len() || !status.success() {
++                        bail!("selected Cargo validation role refused inputs");
++                    }
++                    return Ok(());
++                }
++                if offset < raw.len() {
++                    match stdin.write(&raw[offset..]) {
++                        Ok(0) => bail!("selected Cargo validation role closed its input"),
++                        Ok(count) => offset += count,
++                        Err(error)
++                            if matches!(
++                                error.kind(),
++                                ErrorKind::WouldBlock | ErrorKind::Interrupted
++                            ) =>
++                        {
++                            ()
++                        }
++                        Err(_) => bail!("cannot deliver selected Cargo validation inputs"),
++                    }
++                }
++                if offset == raw.len() {
++                    break;
++                }
++                std::thread::sleep(Duration::from_millis(5));
++            }
++            drop(stdin);
++            loop {
++                if let Some(status) = child.try_wait()? {
++                    if !status.success() {
++                        bail!("selected Cargo validation role refused inputs");
++                    }
++                    return Ok(());
++                }
++                if start.elapsed() >= Duration::from_secs(CALLBACK_SECONDS) {
++                    bail!("selected Cargo validation role timed out");
++                }
++                std::thread::sleep(Duration::from_millis(5));
++            }
++        })();
++        if result.is_err() {
++            let _ = child.kill();
++            let _ = child.wait();
++        }
++        result
++    }
++    #[cfg(not(unix))]
++    {
++        let _ = (callback, raw);
++        bail!("unsupported selected Cargo guard host");
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn origins_do_not_collapse_cli_file_or_different_files() {
++        assert_ne!(
++            origin(&Definition::Path("/a/config".into())).unwrap(),
++            origin(&Definition::Path("/b/config".into())).unwrap()
++        );
++        assert_ne!(
++            origin(&Definition::Path("/a/config".into())).unwrap(),
++            origin(&Definition::Cli(Some("/a/config".into()))).unwrap()
++        );
++    }
++
++    #[test]
++    fn configuration_tree_preserves_each_array_item_origin_and_bounds() {
++        let list = CV::List(
++            vec![
++                CV::String("one".into(), Definition::Path("/a/config".into())),
++                CV::String("two".into(), Definition::Cli(None)),
++            ],
++            Definition::BuiltIn,
++        );
++        let record = config_tree(&list, &mut 3, 0).unwrap();
++        assert_eq!(record["value"][0]["origin"]["kind"], "path");
++        assert_eq!(record["value"][1]["origin"]["kind"], "cli");
++        assert!(config_tree(&list, &mut 2, 0).is_err());
++    }
++
++    #[test]
++    fn selector_absent_keeps_guard_inactive_and_does_not_touch_config() {
++        let mut context =
++            GlobalContext::new(crate::Shell::new(), "/".into(), "/nonexistent-home".into());
++        context.set_env(Default::default());
++        assert!(!context.ami_guard_is_requested());
++        context.configure_ami_guard(&None).unwrap();
++        assert!(context.values.get().is_none());
++    }
++
++    #[test]
++    fn partial_selection_and_populated_caches_refuse() {
++        let mut context =
++            GlobalContext::new(crate::Shell::new(), "/".into(), "/nonexistent-home".into());
++        context.set_env(
++            [(CALLBACK.to_owned(), "/missing-callback".to_owned())]
++                .into_iter()
++                .collect(),
++        );
++        assert!(context.ami_guard_is_requested());
++        assert!(context.configure_ami_guard(&None).is_err());
++        assert!(context.check_ami_guard_command("install").is_err());
++        assert!(context.check_ami_guard_command("metadata").is_ok());
++        context
++            .net_config
++            .set(super::super::CargoNetConfig {
++                retry: None,
++                offline: None,
++                git_fetch_with_cli: None,
++                ssh: None,
++            })
++            .unwrap();
++        assert!(context.ami_guard_caches_empty().is_err());
++    }
++}
+diff --git a/src/context/mod.rs b/src/context/mod.rs
+--- a/src/context/mod.rs
++++ b/src/context/mod.rs
+@@ -130,6 +130,7 @@
+ mod target;
+ pub use target::{TargetCfgConfig, TargetConfig};
+ 
++mod ami_guard;
+ #[cfg(unix)]
+ mod ami_storage;
+ 
+@@ -195,6 +196,8 @@
+     /// Indirect configs loaded via [`ConfigInclude`] are also seen as from cli args,
+     /// if the initial config is being loaded from cli.
+     Cli,
++    /// A self-contained generated overlay, retaining CLI-file origins.
++    AmiOverlay,
+     /// Loaded due to config file discovery.
+     FileDiscovery,
+ }
+@@ -215,6 +218,8 @@
+     home_path: Filesystem,
+     /// Optional downstream cache root; configuration/credentials retain home_path.
+     ami_cache_path: Option<Filesystem>,
++    /// Canonical config files actually parsed for this selected invocation.
++    ami_loaded_config_paths: Mutex<HashSet<PathBuf>>,
+     /// Information about how to write messages to the shell
+     shell: Mutex<Shell>,
+     /// A collection of configuration options
+@@ -378,6 +383,7 @@
+         GlobalContext {
+             home_path: Filesystem::new(homedir),
+             ami_cache_path: None,
++            ami_loaded_config_paths: Default::default(),
+             shell: Mutex::new(shell),
+             cwd,
+             search_stop_path: None,
+@@ -1283,6 +1289,7 @@
+         self.load_unstable_flags_from_config()?;
+         // Metadata/cache hits may never request a child environment.
+         self.check_ami_storage_environment()?;
++        self.configure_ami_guard(target_dir)?;
+ 
+         // Ignore errors in the configuration files. We don't want basic
+         // commands like `cargo version` to error out due to config file
+@@ -1504,15 +1511,26 @@
+                 path.display()
+             );
+         }
++        if matches!(why_load, WhyLoad::AmiOverlay)
++            && Some(path.as_os_str()) != self.get_env_os("AMI_RUST_CARGO_OVERLAY")
++        {
++            bail!("generated ami-rust overlay must be self-contained");
++        }
+         tracing::debug!(?path, ?why_load, includes, "load config from file");
+ 
+         let contents = fs::read_to_string(path)
+             .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
++        if self.ami_guard_is_requested() {
++            self.ami_loaded_config_paths.lock().unwrap().insert(
++                path.canonicalize()
++                    .context("cannot identify parsed ami-rust Cargo configuration")?,
++            );
++        }
+         let toml = parse_document(&contents, path, self).with_context(|| {
+             format!("could not parse TOML configuration in `{}`", path.display())
+         })?;
+         let def = match why_load {
+-            WhyLoad::Cli => Definition::Cli(Some(path.into())),
++            WhyLoad::Cli | WhyLoad::AmiOverlay => Definition::Cli(Some(path.into())),
+             WhyLoad::FileDiscovery => Definition::Path(path.into()),
+         };
+         let value = CV::from_toml(def, toml::Value::Table(toml)).with_context(|| {
+@@ -1658,16 +1676,23 @@
+ 
+     /// Parses the CLI config args and returns them as a table.
+     pub(crate) fn cli_args_as_table(&self) -> CargoResult<ConfigValue> {
++        self.cli_config_slice_as_table(self.cli_config.as_deref().unwrap_or_default(), WhyLoad::Cli)
++    }
++
++    // Parse only the new owned overlay, preserving Cargo's include/origin rules.
++    // Replaying all user CLI arguments here would concatenate arrays twice.
++    fn cli_config_slice_as_table(
++        &self,
++        cli_args: &[String],
++        why_load: WhyLoad,
++    ) -> CargoResult<ConfigValue> {
+         let mut loaded_args = CV::Table(HashMap::default(), Definition::Cli(None));
+-        let Some(cli_args) = &self.cli_config else {
+-            return Ok(loaded_args);
+-        };
+         let mut seen = HashSet::default();
+         for arg in cli_args {
+             let arg_as_path = self.cwd.join(arg);
+             let tmp_table = if !arg.is_empty() && arg_as_path.exists() {
+                 // --config path_to_file
+-                self._load_file(&arg_as_path, &mut seen, true, WhyLoad::Cli)
++                self._load_file(&arg_as_path, &mut seen, true, why_load)
+                     .with_context(|| {
+                         format!("failed to load config from `{}`", arg_as_path.display())
+                     })?
+@@ -1720,7 +1745,7 @@
+                     .with_context(|| format!("failed to convert --config argument `{arg}`"))?
+             };
+             let tmp_table = self
+-                .load_includes(tmp_table, &mut HashSet::default(), WhyLoad::Cli)
++                .load_includes(tmp_table, &mut HashSet::default(), why_load)
+                 .context("failed to load --config include".to_string())?;
+             loaded_args
+                 .merge(tmp_table, true)
+@@ -1732,6 +1757,10 @@
+     /// Add config arguments passed on the command line.
+     fn merge_cli_args(&mut self) -> CargoResult<()> {
+         let cv_from_cli = self.cli_args_as_table()?;
++        self.merge_cli_table(cv_from_cli)
++    }
++
++    fn merge_cli_table(&mut self, cv_from_cli: ConfigValue) -> CargoResult<()> {
+         assert!(cv_from_cli.is_table(), "cv from CLI must be a table");
+ 
+         let root_cv = mem::take(self.values_mut()?);
+diff --git a/src/sources/config.rs b/src/sources/config.rs
+--- a/src/sources/config.rs
++++ b/src/sources/config.rs
+@@ -6,7 +6,7 @@
+ 
+ use crate::util::data_structures::HashMap;
+ 
+-use crate::context::{self, ConfigRelativePath, OptValue};
++use crate::context::{self, ConfigRelativePath, Definition, OptValue};
+ use crate::sources::overlay::DependencyConfusionThreatOverlaySource;
+ use crate::sources::source::Source;
+ use crate::sources::{CRATES_IO_REGISTRY, ReplacedSource};
+@@ -16,6 +16,8 @@
+ use crate::workspace::SourceId;
+ 
+ use anyhow::{Context as _, bail};
++use serde_json::{Value as JsonValue, json};
++use std::path::Path;
+ use tracing::debug;
+ use url::Url;
+ 
+@@ -55,6 +57,106 @@
+     rev: OptValue<String>,
+ }
+ 
++fn source_definitions(
++    gctx: &GlobalContext,
++) -> CargoResult<Option<HashMap<String, SourceConfigDef>>> {
++    Ok(gctx.get("source")?)
++}
++
++fn source_path_to_string(path: &Path) -> CargoResult<String> {
++    path.to_str()
++        .map(str::to_owned)
++        .ok_or_else(|| anyhow::anyhow!("source configuration path is not valid UTF-8"))
++}
++
++fn definition_json(definition: &Definition) -> CargoResult<JsonValue> {
++    Ok(match definition {
++        Definition::BuiltIn => json!({"kind": "built-in"}),
++        Definition::Path(path) => json!({
++            "kind": "path",
++            "path": source_path_to_string(path)?,
++        }),
++        Definition::Environment(name) => json!({
++            "kind": "environment",
++            "name": name,
++        }),
++        Definition::Cli(None) => json!({"kind": "cli"}),
++        Definition::Cli(Some(path)) => json!({
++            "kind": "cli-file",
++            "path": source_path_to_string(path)?,
++        }),
++    })
++}
++
++fn scalar_definition_json(value: &context::Value<String>) -> CargoResult<JsonValue> {
++    Ok(json!({
++        "value": value.val.as_str(),
++        "origin": definition_json(&value.definition)?,
++    }))
++}
++
++fn path_definition_json(path: &ConfigRelativePath, gctx: &GlobalContext) -> CargoResult<JsonValue> {
++    Ok(json!({
++        "value": path.raw_value(),
++        "origin": definition_json(&path.value().definition)?,
++        "resolved-path": source_path_to_string(&path.resolve_path(gctx))?,
++    }))
++}
++
++fn insert_scalar_definition(
++    fields: &mut serde_json::Map<String, JsonValue>,
++    key: &str,
++    value: &OptValue<String>,
++) -> CargoResult<()> {
++    if let Some(value) = value {
++        fields.insert(key.to_owned(), scalar_definition_json(value)?);
++    }
++    Ok(())
++}
++
++fn insert_path_definition(
++    fields: &mut serde_json::Map<String, JsonValue>,
++    key: &str,
++    value: &Option<ConfigRelativePath>,
++    gctx: &GlobalContext,
++) -> CargoResult<()> {
++    if let Some(value) = value {
++        fields.insert(key.to_owned(), path_definition_json(value, gctx)?);
++    }
++    Ok(())
++}
++
++/// Returns source configuration definitions without constructing source IDs.
++pub(crate) fn ami_rust_source_definitions(gctx: &GlobalContext) -> CargoResult<JsonValue> {
++    let Some(sources) = source_definitions(gctx)? else {
++        return Ok(json!({}));
++    };
++
++    let mut sources: Vec<_> = sources.into_iter().collect();
++    sources.sort_unstable_by(|left, right| left.0.cmp(&right.0));
++
++    let mut result = serde_json::Map::new();
++    for (name, definition) in sources {
++        let mut fields = serde_json::Map::new();
++        insert_scalar_definition(&mut fields, "replace-with", &definition.replace_with)?;
++        insert_path_definition(&mut fields, "directory", &definition.directory, gctx)?;
++        insert_scalar_definition(&mut fields, "registry", &definition.registry)?;
++        insert_path_definition(
++            &mut fields,
++            "local-registry",
++            &definition.local_registry,
++            gctx,
++        )?;
++        insert_scalar_definition(&mut fields, "git", &definition.git)?;
++        insert_scalar_definition(&mut fields, "branch", &definition.branch)?;
++        insert_scalar_definition(&mut fields, "tag", &definition.tag)?;
++        insert_scalar_definition(&mut fields, "rev", &definition.rev)?;
++        result.insert(name, JsonValue::Object(fields));
++    }
++
++    Ok(JsonValue::Object(result))
++}
++
+ /// Configuration for a particular source, found in TOML looking like:
+ ///
+ /// ```toml
+@@ -81,7 +183,7 @@
+     /// replacement configurations.
+     pub fn new(gctx: &'gctx GlobalContext) -> CargoResult<SourceConfigMap<'gctx>> {
+         let mut base = SourceConfigMap::empty(gctx)?;
+-        let sources: Option<HashMap<String, SourceConfigDef>> = gctx.get("source")?;
++        let sources = source_definitions(gctx)?;
+         if let Some(sources) = sources {
+             for (key, value) in sources.into_iter() {
+                 base.add_config(key, value)?;
+@@ -344,3 +446,38 @@
+         }
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::definition_json;
++    use crate::context::Definition;
++    use serde_json::json;
++    use std::path::PathBuf;
++
++    #[test]
++    fn source_definition_origins_are_machine_readable() {
++        assert_eq!(
++            definition_json(&Definition::BuiltIn).unwrap(),
++            json!({"kind":"built-in"})
++        );
++        assert_eq!(
++            definition_json(&Definition::Path(PathBuf::from("/tmp/.cargo/config.toml"))).unwrap(),
++            json!({"kind":"path","path":"/tmp/.cargo/config.toml"})
++        );
++        assert_eq!(
++            definition_json(&Definition::Environment("CARGO_SOURCE_FOO_GIT".to_owned())).unwrap(),
++            json!({"kind":"environment","name":"CARGO_SOURCE_FOO_GIT"})
++        );
++        assert_eq!(
++            definition_json(&Definition::Cli(None)).unwrap(),
++            json!({"kind":"cli"})
++        );
++        assert_eq!(
++            definition_json(&Definition::Cli(Some(PathBuf::from(
++                "/tmp/cli-config.toml"
++            ))))
++            .unwrap(),
++            json!({"kind":"cli-file","path":"/tmp/cli-config.toml"})
++        );
++    }
++}

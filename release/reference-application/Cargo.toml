@@ -1,0 +1,40 @@
+# Substitute 952a0f8e62f084dc480ffd9aaaa4c2e18b5ae03c in every own-crate dependency with the authenticated
+# final sourcef's exact full 40-character Git commit before Cargo is invoked.
+[package]
+name = "ami-rust-sha256sum"
+version = "0.0.0"
+edition = "2024"
+publish = false
+autolib = false
+autobins = false
+license = "MIT OR Apache-2.0"
+
+[[bin]]
+name = "ami-rust-sha256sum"
+path = "src/main.rs"
+
+[workspace]
+
+[dependencies]
+aros-sys = { git = "https://github.com/metaneutrons/ami-rust", rev = "952a0f8e62f084dc480ffd9aaaa4c2e18b5ae03c", version = "=0.1.0" }
+aros-alloc = { git = "https://github.com/metaneutrons/ami-rust", rev = "952a0f8e62f084dc480ffd9aaaa4c2e18b5ae03c", version = "=0.1.0" }
+aros-runtime = { git = "https://github.com/metaneutrons/ami-rust", rev = "952a0f8e62f084dc480ffd9aaaa4c2e18b5ae03c", version = "=0.1.0" }
+aros-sdk = { git = "https://github.com/metaneutrons/ami-rust", rev = "952a0f8e62f084dc480ffd9aaaa4c2e18b5ae03c", version = "=0.1.0" }
+amiga-alloc = { git = "https://github.com/metaneutrons/ami-rust", rev = "952a0f8e62f084dc480ffd9aaaa4c2e18b5ae03c", version = "=0.1.0" }
+amiga-os = { git = "https://github.com/metaneutrons/ami-rust", rev = "952a0f8e62f084dc480ffd9aaaa4c2e18b5ae03c", version = "=0.1.0" }
+sha2 = { version = "=0.10.9", default-features = false }
+
+[build-dependencies]
+aros-elf = { git = "https://github.com/metaneutrons/ami-rust", rev = "952a0f8e62f084dc480ffd9aaaa4c2e18b5ae03c", version = "=0.2.0" }
+aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", rev = "952a0f8e62f084dc480ffd9aaaa4c2e18b5ae03c", version = "=0.2.0" }
+[profile.release]
+opt-level = 2
+panic = "abort"
+lto = false
+codegen-units = 1
+incremental = false
+debug = 0
+strip = "none"
+
+[profile.release.package.compiler_builtins]
+codegen-units = 1

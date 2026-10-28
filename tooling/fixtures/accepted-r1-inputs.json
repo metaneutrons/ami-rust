@@ -1,0 +1,739 @@
+{
+  "schema": "ami-rust-accepted-r1-inputs-v1",
+  "baseline_scope": {
+    "kind": "historical-accepted-r1-source-and-sdk-inputs",
+    "fresh_qualification_claim": false,
+    "note": "These digests pin the unchanged source and SDK payload recorded by the completed 0.1.0 R1 acceptance and public release summary. They do not qualify this fixture, the new Rust consumer, or any future build."
+  },
+  "accepted_release": {
+    "version": "0.1.0",
+    "tag": "v0.1.0",
+    "release_id": 416548451,
+    "source": {
+      "commit": "b4ebb9cce5decd01616b75acf451d0eba9995ee3",
+      "tree": "c5d9eed6b057ddadd17356801f8b3897e3e430dc",
+      "identity": "b4ebb9cce5decd01616b75acf451d0eba9995ee3",
+      "manifest": {
+        "archive_path": "contract/source.json",
+        "bytes": 4022,
+        "sha256": "819168fd1e3c2dbefcb5b73313d08bec996fae4f46b4e57348b7eae864f7a7f5"
+      }
+    },
+    "public_provenance": {
+      "r1_release_summary": {
+        "path": "docs/evidence/r1-0.1.0.json",
+        "bytes": 30033,
+        "sha256": "aebf973449b3d323037af3c7b1901299f8e0e38fc6072b962a0e1b457b071957",
+        "repository_commit": "8faa0a17e422389208c1797340656668d77ceb46",
+        "status": "R1_PUBLISHED_GO"
+      },
+      "release_status": {
+        "path": "docs/release-status.md",
+        "bytes": 6934,
+        "sha256": "93e4a97341994b59cdf784916cf50bd6476c383d19f33ed72aaa3cc2f4e5e546",
+        "repository_commit": "8faa0a17e422389208c1797340656668d77ceb46"
+      },
+      "qualification_acceptance": {
+        "path": "../../qualification/r1-hosted/final-source-replacement-a7-20261018/independent-acceptance-v2.json",
+        "bytes": 104242,
+        "sha256": "1efa7553577d685bfa4726ea45e8f8cb78e45052495454e16fccaf35f029bcdb",
+        "status": "R1_QUALIFIED",
+        "R1_accepted": true,
+        "overall_R1_complete_at_acceptance": false
+      },
+      "independent_qualification_review": {
+        "path": "../../qualification/r1-hosted/final-source-replacement-a7-20261018/independent-acceptance-review.json",
+        "bytes": 113633,
+        "sha256": "d724d9d071633ad63010bb677f4049f341ae9119c6ced60bf115eeb993070d83",
+        "status": "PASS_ALL_32_CURRENT_CANDIDATE_CRITERIA"
+      },
+      "final_release_decision": {
+        "path": "../../qualification/r1-hosted/final-release-route-replacement-20261018/r1-final-decision.json",
+        "bytes": 8430,
+        "sha256": "b41a7a5172834ebeb3b402b4461b340620d620b63eb0e06b9f8d5e9000961c3a",
+        "status": "GO_R1_COMPLETE"
+      },
+      "sdk_host_readback_set": {
+        "path": "../../qualification/r1-hosted/final-sdk-0.1.0-replacement-20261018/qualified-sdk-readback-set.json",
+        "bytes": 8824,
+        "sha256": "e6d06637a2975be362eb9171a94bcf31cfd1261e1c2886e9007790b6168f55b5",
+        "run_id": 39121017959,
+        "run_attempt": 1,
+        "workflow_sha": "b4ebb9cce5decd01616b75acf451d0eba9995ee3"
+      },
+      "sdk_host_readbacks": [
+        {
+          "host": "linux-x86_64",
+          "path": "../../qualification/r1-hosted/final-sdk-0.1.0-replacement-20261018/linux-x86_64-readback/readback.json",
+          "bytes": 6951,
+          "sha256": "da58d352a736cf94826796b4bd50870299502b6d659309d1a7d9d365704cd7f5"
+        },
+        {
+          "host": "macos-aarch64",
+          "path": "../../qualification/r1-hosted/final-sdk-0.1.0-replacement-20261018/macos-aarch64-readback/readback.json",
+          "bytes": 6951,
+          "sha256": "cb22c536fe54c7518461b8a50973b994a0d16a3b599ece3cecbd25f3fe171090"
+        }
+      ],
+      "public_release_archive_asset": {
+        "path": "ami-rust-0.1.0-release.tar.xz",
+        "bytes": 25902508,
+        "sha256": "f4a8cbc562d3c43c573a5a34ddfa99d74928ded94c47df45f4182fde71567d5c",
+        "recorded_by": "docs/evidence/r1-0.1.0.json"
+      }
+    },
+    "release_manifest": {
+      "path": "../../qualification/r1-hosted/artifact-transport-diagnosis-20261018/distribution-readback/authenticated-linux/release.json",
+      "bytes": 33761,
+      "sha256": "cd9adcf44264c86eb0bdea35bb16c02529c8ae5b051d4a9dd3aa6007f0972b65"
+    },
+    "sdk_archive": {
+      "path": "../../qualification/r1-hosted/artifact-transport-diagnosis-20261018/distribution-readback/authenticated-linux/sdk.tar.xz",
+      "bytes": 598584,
+      "sha256": "087f69659f1d0d5136b2c07789488c23dd52ca7b38b21579183620a5fbc61dd4",
+      "archive_asset_path": "sdk.tar.xz"
+    },
+    "sdk_manifest": {
+      "archive_path": "contract/sdk.json",
+      "bytes": 28992,
+      "sha256": "c9ad5878d4ef336ad3284d9993554677dadf421092d889548bc3e06f99f1a14e"
+    }
+  },
+  "sdk_target": {
+    "rust_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
+    "rust_llvm": "23.1.1",
+    "source_identity": "b4ebb9cce5decd01616b75acf451d0eba9995ee3",
+    "source_date_epoch": 1791936000
+  },
+  "component_manifests": [
+    {
+      "host": "linux-x86_64",
+      "component": "cargo",
+      "path": "host/profiles/linux-x86_64/cargo.json",
+      "bytes": 5556,
+      "sha256": "85f5bb754c7f11429dc1a58a2adc1256b9ad4da1f7a47926629e1f94dd92ead8"
+    },
+    {
+      "host": "linux-x86_64",
+      "component": "collector",
+      "path": "host/profiles/linux-x86_64/collector.json",
+      "bytes": 1556,
+      "sha256": "0e97967a63d6ec868edcf26e2b2c08a9c36a292416aa0f7ae016564369551caa"
+    },
+    {
+      "host": "linux-x86_64",
+      "component": "csdk",
+      "path": "host/profiles/linux-x86_64/csdk.json",
+      "bytes": 467692,
+      "sha256": "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337"
+    },
+    {
+      "host": "linux-x86_64",
+      "component": "rust",
+      "path": "host/profiles/linux-x86_64/rust.json",
+      "bytes": 782808,
+      "sha256": "e409faec69a97407fbbfa40188644e7032b19824118994160aed80c3d50850bb"
+    },
+    {
+      "host": "linux-x86_64",
+      "component": "toolchain",
+      "path": "host/profiles/linux-x86_64/toolchain.json",
+      "bytes": 488625,
+      "sha256": "a68f0d3d6b6d9e9678dca0af25b083d6b00f67fd4f806adcb6a2e16af1a19a6d"
+    },
+    {
+      "host": "linux-x86_64",
+      "component": "vendor",
+      "path": "host/profiles/linux-x86_64/vendor.json",
+      "bytes": 517214,
+      "sha256": "f5fcdd2d3daaae4d2f40d69269c49533fc40adc807c555f2213238b2c3557ad6"
+    },
+    {
+      "host": "macos-aarch64",
+      "component": "cargo",
+      "path": "host/profiles/macos-aarch64/cargo.json",
+      "bytes": 5540,
+      "sha256": "2f081118d19e93b95304c95440d82d1f3d022fb063e4ae7ad1b89285ceddbe39"
+    },
+    {
+      "host": "macos-aarch64",
+      "component": "collector",
+      "path": "host/profiles/macos-aarch64/collector.json",
+      "bytes": 192,
+      "sha256": "34e7e069a72ac84d980f15c797b4250f324eee19088f55d135c9e4eafa0d88de"
+    },
+    {
+      "host": "macos-aarch64",
+      "component": "csdk",
+      "path": "host/profiles/macos-aarch64/csdk.json",
+      "bytes": 467692,
+      "sha256": "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337"
+    },
+    {
+      "host": "macos-aarch64",
+      "component": "rust",
+      "path": "host/profiles/macos-aarch64/rust.json",
+      "bytes": 782230,
+      "sha256": "21d2c186d5ed597f31fed82c306ac790dc11a5cb2f136e52e237bd15f4a55c18"
+    },
+    {
+      "host": "macos-aarch64",
+      "component": "toolchain",
+      "path": "host/profiles/macos-aarch64/toolchain.json",
+      "bytes": 477516,
+      "sha256": "28237af9576e852451fcdf0470a904edb34a70232feb41d0c56be246313baadf"
+    },
+    {
+      "host": "macos-aarch64",
+      "component": "vendor",
+      "path": "host/profiles/macos-aarch64/vendor.json",
+      "bytes": 517214,
+      "sha256": "f5fcdd2d3daaae4d2f40d69269c49533fc40adc807c555f2213238b2c3557ad6"
+    }
+  ],
+  "sdk_target_inputs": {
+    "selection_rule": "Include every regular file member of the accepted sdk.tar.xz whose archive-relative path is Cargo.toml or Cargo.lock, or begins with native/, targets/, crates/, examples/, or tests/. Exclude directories, contract/, host/, documentation, and all other paths.",
+    "counts_by_prefix": {
+      "native/": 9,
+      "targets/": 1,
+      "crates/": 16,
+      "examples/": 5,
+      "tests/": 23
+    },
+    "root_cargo_files": [
+      "Cargo.lock",
+      "Cargo.toml"
+    ],
+    "file_count": 56,
+    "files": [
+      {
+        "path": "Cargo.lock",
+        "bytes": 9278,
+        "sha256": "193e4abca19f511cd264375dfdc05c915b8182988de55e60b49553140b2b1596"
+      },
+      {
+        "path": "Cargo.toml",
+        "bytes": 575,
+        "sha256": "8edb690125132926abf28096664e9488ddace323474e8c74361330c63f37e123"
+      },
+      {
+        "path": "crates/aros-alloc/Cargo.toml",
+        "bytes": 181,
+        "sha256": "9eb8af032826719a580f41bfe67238af2a173b88fd4119ad345149b47ad67f17"
+      },
+      {
+        "path": "crates/aros-alloc/src/lib.rs",
+        "bytes": 1764,
+        "sha256": "3789bcb03a0ce38b06ffa6d9f3ed658564904e407ee5b86d3e717173c1e73282"
+      },
+      {
+        "path": "crates/aros-runtime/Cargo.toml",
+        "bytes": 291,
+        "sha256": "f66e8a26481b800ca9078a6f3ab1cf3341ee033803681007b34971135cc0eb5e"
+      },
+      {
+        "path": "crates/aros-runtime/src/lib.rs",
+        "bytes": 3053,
+        "sha256": "14e2b1b19294e155e40fa44d5830db7dd7dc0e4a2cd2b6919bcc63d82570bcc8"
+      },
+      {
+        "path": "crates/aros-sdk/Cargo.toml",
+        "bytes": 379,
+        "sha256": "e5ce8a548c7353e6b2bff3d1127b00836f83d3e5f0018caf9ac929d81a3f1060"
+      },
+      {
+        "path": "crates/aros-sdk/src/lib.rs",
+        "bytes": 25432,
+        "sha256": "559cbe2400f78e8255f182a3b8a6d3858de2370f7665c53b8cde79ab03ab3493"
+      },
+      {
+        "path": "crates/aros-sys/Cargo.toml",
+        "bytes": 128,
+        "sha256": "6a23728201bc76c346e672296ae9be0a487b047e1e2ec4bdcbe929e1cfb579bb"
+      },
+      {
+        "path": "crates/aros-sys/LICENSE",
+        "bytes": 37628,
+        "sha256": "e624036c03e1e98fa7df3ef84161fd22ace61998e2fdd077c5a92221547cc5fb"
+      },
+      {
+        "path": "crates/aros-sys/MODIFICATIONS.md",
+        "bytes": 1296,
+        "sha256": "2b672cfad8162acd93ee0b1234a42841905be29252161890a07efe292063bea7"
+      },
+      {
+        "path": "crates/aros-sys/src/lib.rs",
+        "bytes": 12136,
+        "sha256": "f9814d7eb83656ab4878877ab28d56062ebe3defa675e896717785bd24ef3337"
+      },
+      {
+        "path": "crates/public/amiga-alloc/Cargo.toml",
+        "bytes": 199,
+        "sha256": "358e8b9d007886fa1633b295464e5539404feebc4031dfe56fb99bbf33d2091a"
+      },
+      {
+        "path": "crates/public/amiga-alloc/src/lib.rs",
+        "bytes": 187,
+        "sha256": "2e271c9ac442725dc36c5864b91116885be127fc018d945a2953a38dee0faa11"
+      },
+      {
+        "path": "crates/public/amiga-os/Cargo.toml",
+        "bytes": 311,
+        "sha256": "0d383edc8901e755f3a4f99cf3da018eda0e6a796ea9dbb6161db7957e322adb"
+      },
+      {
+        "path": "crates/public/amiga-os/src/lib.rs",
+        "bytes": 224,
+        "sha256": "ef95abf82376459f1913412541b9c5a763eed39c0e52ce1f364011742a2fb870"
+      },
+      {
+        "path": "crates/public/amiga-sys/Cargo.toml",
+        "bytes": 193,
+        "sha256": "6a4a644d274cea78833b72ed3d5adc1e8b55a8579abffb2546991020f603eb93"
+      },
+      {
+        "path": "crates/public/amiga-sys/src/lib.rs",
+        "bytes": 201,
+        "sha256": "877b9b93baa138a0490ee448b61e0f87aa6778562c313db5fbe111744859d91a"
+      },
+      {
+        "path": "examples/minimal/Cargo.toml",
+        "bytes": 385,
+        "sha256": "9670c6bbb08bb06ed4246093ddc6d8c8e824457881f9cde5c1fc8cd13da471ec"
+      },
+      {
+        "path": "examples/minimal/src/lib.rs",
+        "bytes": 1801,
+        "sha256": "6fa1fdaa8827a37b8f939ba003864dff93c5e4948041668915ba8d0eec67a07c"
+      },
+      {
+        "path": "examples/sha256sum/Cargo.toml",
+        "bytes": 298,
+        "sha256": "e32582bd36fa6b74464f6919271fac4d9544c5e58fa072dcbd444a04f0b93150"
+      },
+      {
+        "path": "examples/sha256sum/README.md",
+        "bytes": 1481,
+        "sha256": "18c643a43b6f5c7675ce25d9ed3c25c552a9928df0ae71a83f2ea49b4c42e18b"
+      },
+      {
+        "path": "examples/sha256sum/src/lib.rs",
+        "bytes": 13129,
+        "sha256": "dd5fbe9f84ddfaf1da149328c60644222373298ce29a3f7f8b6a5f272d8faadd"
+      },
+      {
+        "path": "native/compatibility-gates.h",
+        "bytes": 369,
+        "sha256": "6be572122966216b963258405d883ad89bbcd7e2710e4ad739df9044a64dea14"
+      },
+      {
+        "path": "native/entry.c",
+        "bytes": 1526,
+        "sha256": "5c9ccb3353d5ea1cac13f126b07ea0ac1bcb746b651c22eb8ba7b86fd42c4cda"
+      },
+      {
+        "path": "native/layout.c",
+        "bytes": 2869,
+        "sha256": "01ac3478b1950affd3328d2508bef5a8f0ee3c3b483c1b4ab0508cabc5be0f71"
+      },
+      {
+        "path": "native/sdk.c",
+        "bytes": 25753,
+        "sha256": "66ee66b3888a998abf99026a6e16320c8af9840b0d37c2bd239e203c11ce189c"
+      },
+      {
+        "path": "native/sdk.h",
+        "bytes": 4781,
+        "sha256": "5bfa5447c5d2f8d1a5abc9bd4ba2cb968d74ed5c9d7bdaf4ef2a523799e30799"
+      },
+      {
+        "path": "native/stack-probe.h",
+        "bytes": 2526,
+        "sha256": "5bc1e980aafd723063e2ee309aed70109134d088478d93872157178558bfd502"
+      },
+      {
+        "path": "native/test-controls.h",
+        "bytes": 4105,
+        "sha256": "d3db2929b77c1a8ade09cf160a81701b3c01c8fda36c259a83ddd9125dfb34cc"
+      },
+      {
+        "path": "native/test-file-controls.h",
+        "bytes": 4266,
+        "sha256": "266f73d10c34844b544cad9900b80e9e4d8a9678f5bd6e94eb35d1fd82c813c4"
+      },
+      {
+        "path": "native/test-stderr-controls.h",
+        "bytes": 1516,
+        "sha256": "4694aed8d5782cd2347988233bf100184bf326cec5f94feb061513333e8115d3"
+      },
+      {
+        "path": "targets/x86_64-aros.json",
+        "bytes": 955,
+        "sha256": "de7a0024aa94269641e3e6d480ce8cd334962bf7e02592b0652e19e56b5fba71"
+      },
+      {
+        "path": "tests/M1FULL",
+        "bytes": 4691,
+        "sha256": "26e9414571e82c00dee275a858a1037f3958d24cd5c3076a37d4e7cfd1981f53"
+      },
+      {
+        "path": "tests/M1MISSING",
+        "bytes": 309,
+        "sha256": "1956183e596825c24fe792c4b39f61439c16178ee0d48df71d9f9765e7ce213c"
+      },
+      {
+        "path": "tests/M1SCRIPT",
+        "bytes": 269,
+        "sha256": "be9c8db777f55d27d2f42123e9218e3221717cdd4dbf1d0d7be92de7be9af79f"
+      },
+      {
+        "path": "tests/R1STDERR",
+        "bytes": 183,
+        "sha256": "18658cf700e09e3e1ab4d8d479cdc1473b788803215e863396122cbb0a89a87f"
+      },
+      {
+        "path": "tests/compile-fail/Cargo.lock",
+        "bytes": 432,
+        "sha256": "86821efabe15c8efc2b1602b47ea030bd67a6b847dc1a4773835e81ad97e7b89"
+      },
+      {
+        "path": "tests/compile-fail/Cargo.toml",
+        "bytes": 764,
+        "sha256": "44be7868d5ddabe67b21a872737f5e10515442a4266af84b6514d2c018902a6a"
+      },
+      {
+        "path": "tests/compile-fail/fixtures/borrowed_callback_escape.rs",
+        "bytes": 454,
+        "sha256": "69ac2e2136a2dc77a79cac73d3e4de550cb0656a46da22d60cb90c20420a1b3c"
+      },
+      {
+        "path": "tests/compile-fail/fixtures/clone_file.rs",
+        "bytes": 472,
+        "sha256": "17b8e3096137c16691a8fcaa9ec27f6b1cb5fd5fb28eaf2756c46f810920e866"
+      },
+      {
+        "path": "tests/compile-fail/fixtures/context_exit.rs",
+        "bytes": 445,
+        "sha256": "48e027b20b178c288fc5c3be23cad9d493481bdc0331eb16e97cd16cdfe0a49c"
+      },
+      {
+        "path": "tests/compile-fail/fixtures/positive_safe.rs",
+        "bytes": 493,
+        "sha256": "127f2cb4e1b59f93f1eacbb51bb90e44377fd97d8523b4c5b3c45b33ef48bdd8"
+      },
+      {
+        "path": "tests/compile-fail/fixtures/send_file.rs",
+        "bytes": 484,
+        "sha256": "4d2c23ba8a62ef039f2b534899400cb712e5282ddebfe55a5a380770d9c3137b"
+      },
+      {
+        "path": "tests/compile-fail/fixtures/sync_file.rs",
+        "bytes": 483,
+        "sha256": "9cad90c301d5be720780366c36818f74118e6845945455748623513afaff2293"
+      },
+      {
+        "path": "tests/compile-fail/fixtures/target_std.rs",
+        "bytes": 41,
+        "sha256": "49f5059c24b5faaae2edeab875dfe4a0bacd805da4d126914a64884a291c4e40"
+      },
+      {
+        "path": "tests/compile-fail/fixtures/use_after_close.rs",
+        "bytes": 499,
+        "sha256": "4afd8e8b8f57051b7cfa44dda232dc2835e112b509057105cc5db303e09153bf"
+      },
+      {
+        "path": "tests/dependencies/Cargo.toml",
+        "bytes": 566,
+        "sha256": "3d427f4e0aeec26eb1654df41cc80812a04ad527994cac9709373bbc3c18c99c"
+      },
+      {
+        "path": "tests/dependencies/src/lib.rs",
+        "bytes": 2152,
+        "sha256": "1846cec5ee3a3450f55c0ddd43305cf2083d746dc0a2ea13617f75b47954c18a"
+      },
+      {
+        "path": "tests/measurement/ami_test_bind_diagnostics.c",
+        "bytes": 942,
+        "sha256": "6b90f9d5f95ace3d50f3347e7301cdcf9c6b8de461319c2b60bf3f60f15129ac"
+      },
+      {
+        "path": "tests/qualification/Cargo.toml",
+        "bytes": 401,
+        "sha256": "cd5e91ea0e2efef3675b46324f5162bfa803a3434fedfd7bf57182f96c03c5bc"
+      },
+      {
+        "path": "tests/qualification/src/file_protection.rs",
+        "bytes": 15255,
+        "sha256": "4ab633ce2b70c6df6018097cac550dfa660c8740ba1173500ed110fc67d104e1"
+      },
+      {
+        "path": "tests/qualification/src/lib.rs",
+        "bytes": 77137,
+        "sha256": "6228d77218ad1516e8eda06bdd9c5105a43c8975bb58e4bbcc5a8c378e3b9eaf"
+      },
+      {
+        "path": "tests/qualification/src/stderr.rs",
+        "bytes": 15414,
+        "sha256": "50c3e69f78222272d52c19f100943a4acb1bbba76a1d6b850767b6172506f103"
+      },
+      {
+        "path": "tests/status.c",
+        "bytes": 583,
+        "sha256": "0fa67d206705bfc93e0cb568f4b31fc33d54739eabbf7286bac7ca242314c4ff"
+      },
+      {
+        "path": "tests/stderr-launcher.c",
+        "bytes": 3278,
+        "sha256": "ada07d46360d66d5b46352293c98d8fe8657c6a5de10f713fcb40c1842d0e9b1"
+      }
+    ]
+  },
+  "runtime_acquisition": {
+    "accepted_source": {
+      "path": "release/ci-sdk-inputs.json",
+      "source_commit": "b4ebb9cce5decd01616b75acf451d0eba9995ee3",
+      "bytes": 6451,
+      "sha256": "df4494bfc3590b97c5a8d5fe126842c56d801787ffb49dead0b9e58c9a3c3ded"
+    },
+    "rust": {
+      "channel": "nightly-2026-09-18",
+      "commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
+      "llvm": "23.1.1",
+      "channel_manifest": {
+        "url": "https://static.rust-lang.org/dist/2026-09-18/channel-rust-nightly.toml",
+        "sha256": "2b7ae1e4e2d50e09e80312706032ee8409ff7ace5c7d4faa78c40dce2c58c86d"
+      },
+      "hosts": {
+        "linux-x86_64": {
+          "rust": {
+            "kind": "rust-installer",
+            "archive_order": [
+              "rustc",
+              "rust-std",
+              "rust-src",
+              "cargo"
+            ],
+            "archives": [
+              {
+                "component": "rustc",
+                "url": "https://static.rust-lang.org/dist/2026-09-18/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz",
+                "bytes": 85397620,
+                "sha256": "a0f5685f293fb6fc2c3b0ba1e67f24a38c688259ad1b4f04596ec4c86ec5a435"
+              },
+              {
+                "component": "rust-std",
+                "url": "https://static.rust-lang.org/dist/2026-09-18/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz",
+                "bytes": 31384072,
+                "sha256": "d04688ad62025ca2afe16e86243994c43fa63802934ca3f64290756dc792a200"
+              },
+              {
+                "component": "rust-src",
+                "url": "https://static.rust-lang.org/dist/2026-09-18/rust-src-nightly.tar.xz",
+                "bytes": 5934836,
+                "sha256": "8de4a7bc2ba7fd977a3ec74ae2794fee99c6f987e5f022ba2ff4b0ca8a5d1004"
+              },
+              {
+                "component": "cargo",
+                "url": "https://static.rust-lang.org/dist/2026-09-18/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz",
+                "bytes": 10935476,
+                "sha256": "f909437ddd1790402eab07d178d3d6ca3a901bd0928f686157ea4dfd559974d8"
+              }
+            ],
+            "remove_installer_administrative_files": [
+              "lib/rustlib/install.log",
+              "lib/rustlib/manifest-cargo",
+              "lib/rustlib/manifest-rust-src",
+              "lib/rustlib/manifest-rust-std-x86_64-unknown-linux-gnu",
+              "lib/rustlib/manifest-rustc"
+            ]
+          },
+          "toolchain": {
+            "archive_root": "toolchain",
+            "bytes": 38647276,
+            "kind": "tar",
+            "sha256": "9661c2a000893f811a2bb0c442d9121e74cb0a2743b8d541e121061713bcbcaf",
+            "url": "https://github.com/metaneutrons/aros-toolchains/releases/download/v0.1.4/aros-toolchain-v1-llvm11.0.0-linux-x86_64-pc-x86_64.tar.xz"
+          },
+          "collector": {
+            "archive_root": "aros-tools-v0.3.19-x86_64-unknown-linux-gnu",
+            "bytes": 17612628,
+            "kind": "tar",
+            "sha256": "96b0219d6cf29460fee07fd415978f52bc91d2d8ac3f484195cb63f7e11d984a",
+            "url": "https://github.com/metaneutrons/aros-tools/releases/download/v0.3.19/aros-tools-v0.3.19-x86_64-unknown-linux-gnu.tar.gz"
+          }
+        },
+        "macos-aarch64": {
+          "rust": {
+            "kind": "rust-installer",
+            "archive_order": [
+              "rustc",
+              "rust-std",
+              "rust-src",
+              "cargo"
+            ],
+            "archives": [
+              {
+                "component": "rustc",
+                "url": "https://static.rust-lang.org/dist/2026-09-18/rustc-nightly-aarch64-apple-darwin.tar.xz",
+                "bytes": 51581740,
+                "sha256": "80803ea169647e026499a205269c46a2632a14f312478b1ec8a089c322f55a88"
+              },
+              {
+                "component": "rust-std",
+                "url": "https://static.rust-lang.org/dist/2026-09-18/rust-std-nightly-aarch64-apple-darwin.tar.xz",
+                "bytes": 30504920,
+                "sha256": "06268b6cd0fdaccd7e36a5731dcba1d0fb8b44cf01b874ac772001a1b5aba9eb"
+              },
+              {
+                "component": "rust-src",
+                "url": "https://static.rust-lang.org/dist/2026-09-18/rust-src-nightly.tar.xz",
+                "bytes": 5934836,
+                "sha256": "8de4a7bc2ba7fd977a3ec74ae2794fee99c6f987e5f022ba2ff4b0ca8a5d1004"
+              },
+              {
+                "component": "cargo",
+                "url": "https://static.rust-lang.org/dist/2026-09-18/cargo-nightly-aarch64-apple-darwin.tar.xz",
+                "bytes": 8947472,
+                "sha256": "01a4aa9cbbbd0a799f134b530d4ce3e913ae3aaa73bbad0417d4ae4ecc1fc4bd"
+              }
+            ],
+            "remove_installer_administrative_files": [
+              "lib/rustlib/install.log",
+              "lib/rustlib/manifest-cargo",
+              "lib/rustlib/manifest-rust-src",
+              "lib/rustlib/manifest-rust-std-aarch64-apple-darwin",
+              "lib/rustlib/manifest-rustc"
+            ]
+          },
+          "toolchain": {
+            "archive_root": "toolchain",
+            "bytes": 26451000,
+            "kind": "tar",
+            "sha256": "969d150761a2a999a43992660ab6c84d8ab07c1396ce49b17024bb5b08993342",
+            "url": "https://github.com/metaneutrons/aros-toolchains/releases/download/v0.1.4/aros-toolchain-v1-llvm11.0.0-macos-aarch64-pc-x86_64.tar.xz"
+          },
+          "collector": {
+            "archive_root": "aros-tools-v0.3.19-aarch64-apple-darwin",
+            "bytes": 15697348,
+            "kind": "tar",
+            "sha256": "8eb7c8e1ea40dae35943295c01b208a07b4264cf6c41e9b498f3fb0493e44625",
+            "url": "https://github.com/metaneutrons/aros-tools/releases/download/v0.3.19/aros-tools-v0.3.19-aarch64-apple-darwin.tar.gz"
+          }
+        }
+      }
+    },
+    "shared_archives": {
+      "vendor": {
+        "archive_root": "vendor",
+        "bytes": 3264952,
+        "kind": "repository-tar",
+        "path": "release/inputs/vendor.tar.xz",
+        "sha256": "84fb6e3e1710f13e85450cce1db541c3967520f996a3f17efbd5a7a8345b1c7e"
+      },
+      "portable_csdk": {
+        "selection": "portable_csdk.candidate from accepted release/portable-csdk/spec.json; the original csdk pin in ci-sdk-inputs is intentionally not selected",
+        "spec": {
+          "path": "release/portable-csdk/spec.json",
+          "source_commit": "b4ebb9cce5decd01616b75acf451d0eba9995ee3",
+          "bytes": 2900,
+          "sha256": "7cb73dd7057feac1bf1a7f1bbf2172934cc06555e2b83938a93cb1b2bfe3178f"
+        },
+        "archive": {
+          "name": "csdk-component.tar.xz",
+          "path": "release/inputs/portable-csdk.tar.xz",
+          "bytes": 5619304,
+          "sha256": "942417c7b82218f5704eba168922fc348dc0ce5c17a236139c3353775209b99b"
+        },
+        "profile": {
+          "path": "release/portable-csdk/profile.json",
+          "bytes": 467692,
+          "sha256": "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337"
+        }
+      }
+    },
+    "authenticated_bundle_cargo_assets": {
+      "source_manifest_sha256": "cd9adcf44264c86eb0bdea35bb16c02529c8ae5b051d4a9dd3aa6007f0972b65",
+      "assets": [
+        {
+          "host": "linux-x86_64",
+          "path": "cargo-linux-x86_64.tar.xz",
+          "bytes": 11104752,
+          "sha256": "a5f3ec8f2bb9616dcd06b6fb314798eadac2dbc4be2dfd999d781d948336dab2"
+        },
+        {
+          "host": "macos-aarch64",
+          "path": "cargo-macos-aarch64.tar.xz",
+          "bytes": 9239480,
+          "sha256": "195e8dd8c7c5f7f0893889ed33459911d53d5830eaba65945c66bc0a7e39b001"
+        }
+      ]
+    },
+    "authentication": {
+      "tool_pin_manifest": {
+        "path": "release/ci-auth-tools.json",
+        "source_commit": "b4ebb9cce5decd01616b75acf451d0eba9995ee3",
+        "bytes": 2374,
+        "sha256": "af65c3de18a30319934e8ac0536edab4ca2a7c6281270448ea258308d7f25eb2",
+        "schema": "ami-rust-ci-auth-tools-v1"
+      },
+      "trust_roots": {
+        "cosign": {
+          "path": "release/trust/sigstore-trusted-root.json",
+          "bytes": 5748,
+          "sha256": "05a094edfa2e8eb7d1b4b37244e28ffb6d86b8b86ce3eb122b644b4335ae4dc1"
+        },
+        "gh": {
+          "path": "release/trust/github-trusted-root.jsonl",
+          "bytes": 34634,
+          "sha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c"
+        }
+      },
+      "tools_by_host": {
+        "linux-x86_64": {
+          "cosign": {
+            "version": "3.1.3",
+            "url": "https://github.com/sigstore/cosign/releases/download/v3.1.3/cosign-linux-amd64",
+            "download_bytes": 141178250,
+            "download_sha256": "4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71",
+            "binary_bytes": 141178250,
+            "binary_sha256": "4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71"
+          },
+          "gh": {
+            "version": "2.102.0",
+            "url": "https://github.com/cli/cli/releases/download/v2.102.0/gh_2.102.0_linux_amd64.tar.gz",
+            "download_bytes": 15319960,
+            "download_sha256": "bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386",
+            "binary_bytes": 42086560,
+            "binary_sha256": "7469124f706944133d6a169691dd1c6c3511b12e85878d255e044e2948df4c9b",
+            "archive_member": "gh_2.102.0_linux_amd64/bin/gh"
+          }
+        },
+        "macos-aarch64": {
+          "cosign": {
+            "version": "3.1.3",
+            "url": "https://github.com/sigstore/cosign/releases/download/v3.1.3/cosign-darwin-arm64",
+            "download_bytes": 139618946,
+            "download_sha256": "5cf948c2f4dfe59687bdd0b8523709067383e03982cc543475c8a7dc70e92a76",
+            "binary_bytes": 139618946,
+            "binary_sha256": "5cf948c2f4dfe59687bdd0b8523709067383e03982cc543475c8a7dc70e92a76"
+          },
+          "gh": {
+            "version": "2.102.0",
+            "url": "https://github.com/cli/cli/releases/download/v2.102.0/gh_2.102.0_macOS_arm64.zip",
+            "download_bytes": 14359983,
+            "download_sha256": "da922c20d1792e5b2cbf375593d7a658acf034c12c84e007e71c76ef959c337e",
+            "binary_bytes": 39834784,
+            "binary_sha256": "8a4258433c81106343144857750316241759d06dcf16265cf3c4864a8f2f2ad6",
+            "archive_member": "gh_2.102.0_macOS_arm64/bin/gh"
+          }
+        }
+      },
+      "tool_pin_scope": "Versions, download and executable digests are copied from accepted ci-auth-tools.json. This fixture step did not re-download or execute gh/cosign binaries."
+    },
+    "projection_excludes": [
+      "release/ci-python-inputs.json",
+      "release/ci-bootstrap-inputs.json Python and producer_helpers sections",
+      "historical Python interpreter, producer-script, and release-helper pins"
+    ]
+  }
+}

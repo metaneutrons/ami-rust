@@ -1,0 +1,30 @@
+{
+  "upstream": "https://github.com/rust-lang/cargo",
+  "commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
+  "path": "src/compiler/build_runner/compilation_files.rs",
+  "original_sha256": "275e1ff7e6512bbbb3b30a7f0ceb9c7d455745e6aafce0484cb73d8fe31e0e67",
+  "patched_sha256": "64ccbcd27a167cc5b3d50ad22022b93ea74f6657536246ff29358747121873df",
+  "patch_sha256": "2c3ab831d216cc4395decc4bcc307a1d9bac6b6936cd01d7c496c44e55d9826b",
+  "purpose": "development-only target symbol metadata projection; unqualified candidate",
+  "scope": "Explicit actual cross target only. Native host symbol/cache identities stay upstream. Full dependency cache graph remains host-specific.",
+  "rustc_or_rust_src_changes": false,
+  "additional_files": [
+    {
+      "path": "src/workspace/features.rs",
+      "original_sha256": "2747b5598654963df7d9270b07fc7dbd80a700cf219b26db71b0d2291ea74638",
+      "patched_sha256": "b2cb2c2becdefc6b5e2aed7842c7e8433f634fe024f4b4ce3aa5b8fb6d60601b"
+    },
+    {
+      "path": "src/compiler/build_runner/mod.rs",
+      "original_sha256": "fe2c9967fd3b1375e259d151a4ba5e7d46314a568fce936972278413991bd67e",
+      "patched_sha256": "44c5d4478efb938411483734afc14cd2b8db4c2467b46e063410ee9cb49bb7f4"
+    },
+    {
+      "path": "src/compiler/fingerprint/mod.rs",
+      "original_sha256": "3de51e1d00105f5fe434c81e9dfdeeb4cfb038753504b6217da3b4365d75b475",
+      "patched_sha256": "236a722438335270c31975cabe223cb2c276a53338e3ebfb803e4b8cc19c66c3"
+    }
+  ],
+  "opt_in": "-Zami-rust-reproducible-cross or [unstable] ami-rust-reproducible-cross=true",
+  "environment_marker_required": false
+}

@@ -1,0 +1,38 @@
+--- a/tools/genmodule/writeincinline.c
++++ b/tools/genmodule/writeincinline.c
+@@ -85,7 +85,7 @@
+                 lastname = arglistit->name;
+                 assert(lastname != NULL);
+ 
+-                if (*(funclistit->name + strlen(funclistit->name) - 1) == 'A')
++                if (strlen(funclistit->name) > 0 && *(funclistit->name + strlen(funclistit->name) - 1) == 'A')
+                 {
+                     funclistit->varargtype = 1;
+                     varargname = strdup(funclistit->name);
+@@ -93,7 +93,7 @@
+                     if (arglistit && strncmp(arglistit->arg, "RAWARG", 6) == 0)
+                         funclistit->varargtype = 3;
+                 }
+-                else if (strcmp(funclistit->name + strlen(funclistit->name) - 7, "TagList") == 0)
++                else if (strlen(funclistit->name) >= 7 && strcmp(funclistit->name + strlen(funclistit->name) - 7, "TagList") == 0)
+                 {
+                     funclistit->varargtype = 1;
+                     /* TagList has to be changed to Tags at the end of the functionname */
+@@ -101,7 +101,7 @@
+                     varargname[strlen(funclistit->name)-4] = 's';
+                     varargname[strlen(funclistit->name)-3] = '\0';
+                 }
+-                else if (strcmp(funclistit->name + strlen(funclistit->name) - 4, "Args") == 0
++                else if (strlen(funclistit->name) >= 4 && strcmp(funclistit->name + strlen(funclistit->name) - 4, "Args") == 0
+                          && (strcasecmp(lastname, "args") == 0 || strcasecmp(lastname, "arglist") == 0)
+                 )
+                 {
+@@ -222,7 +222,7 @@
+ {
+     struct functionarg *arglistit;
+     int count, isvoid;
+-    int argtypes[funclistit->argcount];
++    int argtypes[funclistit->argcount ? funclistit->argcount : 1];
+ 
+     isvoid = strcmp(funclistit->type, "void") == 0
+         || strcmp(funclistit->type, "VOID") == 0;

@@ -1,0 +1,1824 @@
+{
+  "host_rust_toolchain_review": {
+    "documents": [
+      {
+        "bytes": 15380909,
+        "entries_without_named_notice_files": 122,
+        "in_libstd_yes_entries": 142,
+        "out_of_tree_package_entries": 1570,
+        "path_within_toolchain": "share/doc/rust/COPYRIGHT.html",
+        "sha256": "5b0c93fc4e6d4b072eaa521b1762d1e746f4c368f65e81a0e5308e2772dac85e"
+      },
+      {
+        "bytes": 1512520,
+        "entries_without_named_notice_files": 12,
+        "in_libstd_yes_entries": 0,
+        "out_of_tree_package_entries": 142,
+        "path_within_toolchain": "share/doc/rust/COPYRIGHT-library.html",
+        "sha256": "68129500b616d5838629e68f55ff3aed5e096dacf60ce9eb41bbe599a563afa6"
+      }
+    ],
+    "exact_package_identity_overlap_with_standard_library_document": [
+      "itoa-1.0.18",
+      "ryu-1.0.23",
+      "serde-1.0.228",
+      "serde_core-1.0.228",
+      "serde_derive-1.0.228"
+    ],
+    "not_included_in_the_29_crate_license_file_set": true,
+    "scope_note": "The generated standard-library copyright document spans the toolchain build and multiple targets. It does not identify which conditional/runtime components are present in each final native ami-rust binary.",
+    "status": "SEPARATE_RUNTIME_NOTICE_SCOPE_REQUIRES_TARGET_BINARY_REVIEW",
+    "supplemental_standard_library_notice": {
+      "bytes": 1512520,
+      "copied_path": "licenses/rust-1.98.1-COPYRIGHT-library.html",
+      "copy_mode": "exact byte copy from pinned local Rust 1.98.1 host toolchain",
+      "scope": "Supplemental upstream standard-library notice document; separate from the 31 unique reviewed application crate license texts.",
+      "sha256": "68129500b616d5838629e68f55ff3aed5e096dacf60ce9eb41bbe599a563afa6",
+      "source_path_within_toolchain": "share/doc/rust/COPYRIGHT-library.html"
+    },
+    "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01), host aarch64-apple-darwin, LLVM 22.1.8",
+    "toolchain_root": "1.98.1-aarch64-apple-darwin"
+  },
+  "packages": [
+    {
+      "authors_from_crate_manifest": [
+        "Jonas Schievink <jonasschievink@gmail.com>",
+        "oyvindln <oyvindln@users.noreply.github.com>"
+      ],
+      "crate_archive": {
+        "bytes": 13366,
+        "checksum_from_lock": "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa",
+        "filename": "adler2-2.0.1.crate",
+        "sha256": "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
+      },
+      "declared_license": "0BSD OR MIT OR Apache-2.0",
+      "name": "adler2",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "Copyright (C) Jonas Schievink <jonasschievink@gmail.com>"
+          ],
+          "copied_text_path": "licenses/sha256-861399f8c21c042b110517e76dc6b63a2b334276c8cf17412fc3c8908ca8dc17.txt",
+          "source_bytes": 665,
+          "source_name": "LICENSE-0BSD",
+          "source_path": "LICENSE-0BSD",
+          "source_sha256": "861399f8c21c042b110517e76dc6b63a2b334276c8cf17412fc3c8908ca8dc17"
+        },
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright [yyyy] [name of copyright owner]"
+          ],
+          "copied_text_path": "licenses/sha256-8ada45cd9f843acf64e4722ae262c622a2b3b3007c7310ef36ac1061a30f6adb.txt",
+          "source_bytes": 10860,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "8ada45cd9f843acf64e4722ae262c622a2b3b3007c7310ef36ac1061a30f6adb"
+        },
+        {
+          "attribution_lines": [
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "source_bytes": 1023,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "2.0.1"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "RustCrypto Developers"
+      ],
+      "crate_archive": {
+        "bytes": 15902,
+        "checksum_from_lock": "d2f6c7dbe95a6ed67ad9f18e57daf93a2f034c524b99fd2b76d18fdfeb6660aa",
+        "filename": "block-buffer-0.12.1.crate",
+        "sha256": "d2f6c7dbe95a6ed67ad9f18e57daf93a2f034c524b99fd2b76d18fdfeb6660aa"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "block-buffer",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright [yyyy] [name of copyright owner]"
+          ],
+          "copied_text_path": "licenses/sha256-a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5.txt",
+          "source_bytes": 10849,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) 2018-2025 The RustCrypto Project Developers",
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-98181e7249d0c01737645ec982499ce99a0f07eb8f7d625b8840d799d10dbc01.txt",
+          "source_bytes": 1082,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "98181e7249d0c01737645ec982499ce99a0f07eb8f7d625b8840d799d10dbc01"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "0.12.1"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "Alex Crichton <alex@alexcrichton.com>"
+      ],
+      "crate_archive": {
+        "bytes": 9578,
+        "checksum_from_lock": "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600",
+        "filename": "cfg-if-1.0.5.crate",
+        "sha256": "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "cfg-if",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright [yyyy] [name of copyright owner]"
+          ],
+          "copied_text_path": "licenses/sha256-a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "source_bytes": 10847,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) 2014 Alex Crichton",
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397.txt",
+          "source_bytes": 1057,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "1.0.5"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "RustCrypto Developers"
+      ],
+      "crate_archive": {
+        "bytes": 61449,
+        "checksum_from_lock": "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c",
+        "filename": "const-oid-0.10.2.crate",
+        "sha256": "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
+      },
+      "declared_license": "Apache-2.0 OR MIT",
+      "name": "const-oid",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright [yyyy] [name of copyright owner]"
+          ],
+          "copied_text_path": "licenses/sha256-a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5.txt",
+          "source_bytes": 10849,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) 2020-2026 The RustCrypto Project Developers",
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-73b9dc2e79c7308998dd30296e073aefaefb944a68fb89aa412c23c0edcabcaa.txt",
+          "source_bytes": 1082,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "73b9dc2e79c7308998dd30296e073aefaefb944a68fb89aa412c23c0edcabcaa"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "0.10.2"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "RustCrypto Developers"
+      ],
+      "crate_archive": {
+        "bytes": 14272,
+        "checksum_from_lock": "5ca28b0ae3115b884660db4118d803791fd6756b6e88f39c0f3f7859060d7566",
+        "filename": "cpufeatures-0.3.1.crate",
+        "sha256": "5ca28b0ae3115b884660db4118d803791fd6756b6e88f39c0f3f7859060d7566"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "cpufeatures",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright [yyyy] [name of copyright owner]"
+          ],
+          "copied_text_path": "licenses/sha256-a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5.txt",
+          "source_bytes": 10849,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) 2020-2026 The RustCrypto Project Developers",
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-73b9dc2e79c7308998dd30296e073aefaefb944a68fb89aa412c23c0edcabcaa.txt",
+          "source_bytes": 1082,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "73b9dc2e79c7308998dd30296e073aefaefb944a68fb89aa412c23c0edcabcaa"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "0.3.1"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "Sam Rijs <srijs@airpost.net>",
+        "Alex Crichton <alex@alexcrichton.com>"
+      ],
+      "crate_archive": {
+        "bytes": 48100,
+        "checksum_from_lock": "01a7799fd6b852db0e61728dde9a204c423b44d689dbd432522543614b490e78",
+        "filename": "crc32fast-1.5.2.crate",
+        "sha256": "01a7799fd6b852db0e61728dde9a204c423b44d689dbd432522543614b490e78"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "crc32fast",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright {yyyy} {name of copyright owner}"
+          ],
+          "copied_text_path": "licenses/sha256-c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08.txt",
+          "source_bytes": 11358,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) 2018 Sam Rijs, Alex Crichton and contributors",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ],
+          "copied_text_path": "licenses/sha256-61d383b05b87d78f94d2937e2580cce47226d17823c0430fbcad09596537efcf.txt",
+          "source_bytes": 1097,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "61d383b05b87d78f94d2937e2580cce47226d17823c0430fbcad09596537efcf"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "1.5.2"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "RustCrypto Developers"
+      ],
+      "crate_archive": {
+        "bytes": 15449,
+        "checksum_from_lock": "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453",
+        "filename": "crypto-common-0.2.2.crate",
+        "sha256": "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "crypto-common",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright [yyyy] [name of copyright owner]"
+          ],
+          "copied_text_path": "licenses/sha256-a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5.txt",
+          "source_bytes": 10849,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) 2021-2026 RustCrypto Developers",
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-d2e7ec5355c96eeade56b09187ceb48a6a30299da3ce7531a66d3d11405ab963.txt",
+          "source_bytes": 1070,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "d2e7ec5355c96eeade56b09187ceb48a6a30299da3ce7531a66d3d11405ab963"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "0.2.2"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "RustCrypto Developers"
+      ],
+      "crate_archive": {
+        "bytes": 28955,
+        "checksum_from_lock": "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2",
+        "filename": "digest-0.11.3.crate",
+        "sha256": "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "digest",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright [yyyy] [name of copyright owner]"
+          ],
+          "copied_text_path": "licenses/sha256-a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5.txt",
+          "source_bytes": 10849,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) 2017-2025 RustCrypto Developers",
+            "Copyright (c) 2017 Artyom Pavlov",
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-af59cea35d7f5e2777a713b8d155d65efa2c339eb43f3c14e868c6ac8506edad.txt",
+          "source_bytes": 1103,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "af59cea35d7f5e2777a713b8d155d65efa2c339eb43f3c14e868c6ac8506edad"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "0.11.3"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "Alex Crichton <alex@alexcrichton.com>"
+      ],
+      "crate_archive": {
+        "bytes": 16977,
+        "checksum_from_lock": "5c287a33c7f0a620c38e641e7f60827713987b3c0f26e8ddc9462cc69cf75759",
+        "filename": "filetime-0.2.29.crate",
+        "sha256": "5c287a33c7f0a620c38e641e7f60827713987b3c0f26e8ddc9462cc69cf75759"
+      },
+      "declared_license": "MIT/Apache-2.0",
+      "name": "filetime",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright [yyyy] [name of copyright owner]"
+          ],
+          "copied_text_path": "licenses/sha256-a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "source_bytes": 10847,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) 2014 Alex Crichton",
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397.txt",
+          "source_bytes": 1057,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "0.2.29"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "Alex Crichton <alex@alexcrichton.com>",
+        "Josh Triplett <josh@joshtriplett.org>"
+      ],
+      "crate_archive": {
+        "bytes": 80244,
+        "checksum_from_lock": "6e634e2e0ebac1ee034020da1ca582e17ffe4e0f5e985823721e168928136dcb",
+        "filename": "flate2-1.1.10.crate",
+        "sha256": "6e634e2e0ebac1ee034020da1ca582e17ffe4e0f5e985823721e168928136dcb"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "flate2",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright [yyyy] [name of copyright owner]"
+          ],
+          "copied_text_path": "licenses/sha256-a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "source_bytes": 10847,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) 2014-2026 Alex Crichton",
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-025436edff4cfcdde17a5811fdea78892d8482efd1abdec5a17872d07a4f2112.txt",
+          "source_bytes": 1062,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "025436edff4cfcdde17a5811fdea78892d8482efd1abdec5a17872d07a4f2112"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "1.1.10"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "RustCrypto Developers"
+      ],
+      "crate_archive": {
+        "bytes": 36801,
+        "checksum_from_lock": "27f864f10dfb56725ce5ce5472bc52252c8f93a4ab86327122cebf62c5f59a17",
+        "filename": "hybrid-array-0.4.15.crate",
+        "sha256": "27f864f10dfb56725ce5ce5472bc52252c8f93a4ab86327122cebf62c5f59a17"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "hybrid-array",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright [yyyy] [name of copyright owner]"
+          ],
+          "copied_text_path": "licenses/sha256-a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5.txt",
+          "source_bytes": 10849,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) 2022-2026 The RustCrypto Project Developers",
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-70c9d40f1f9545c3f133b8a67206e89da850f6468eed072281bb3701514114a9.txt",
+          "source_bytes": 1082,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "70c9d40f1f9545c3f133b8a67206e89da850f6468eed072281bb3701514114a9"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "0.4.15"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "crate_archive": {
+        "bytes": 15935,
+        "checksum_from_lock": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682",
+        "filename": "itoa-1.0.18.crate",
+        "sha256": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "itoa",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and"
+          ],
+          "copied_text_path": "licenses/sha256-62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "source_bytes": 9723,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "attribution_lines": [
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "source_bytes": 1023,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "1.0.18"
+    },
+    {
+      "authors_from_crate_manifest": [],
+      "crate_archive": {
+        "bytes": 855401,
+        "checksum_from_lock": "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a",
+        "filename": "libc-0.2.191.crate",
+        "sha256": "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "libc",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and"
+          ],
+          "copied_text_path": "licenses/sha256-62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "source_bytes": 9723,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) The Rust Project Developers",
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-123a331b5dbf04c30097fa43b8f858bc85df671fe776de498d01f3d6b7c1f69e.txt",
+          "source_bytes": 1066,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "123a331b5dbf04c30097fa43b8f858bc85df671fe776de498d01f3d6b7c1f69e"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "0.2.191"
+    },
+    {
+      "authors_from_crate_manifest": [],
+      "crate_archive": {
+        "bytes": 224044,
+        "checksum_from_lock": "7277c9742229dc25243236d578b6471a798c554512c6f6a04365ec2e87c2a3bb",
+        "filename": "lzma-rust2-0.22.0.crate",
+        "sha256": "7277c9742229dc25243236d578b6471a798c554512c6f6a04365ec2e87c2a3bb"
+      },
+      "declared_license": "Apache-2.0",
+      "name": "lzma-rust2",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright [yyyy] [name of copyright owner]"
+          ],
+          "copied_text_path": "licenses/sha256-43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1.txt",
+          "source_bytes": 11356,
+          "source_name": "LICENSE",
+          "source_path": "LICENSE",
+          "source_sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+        }
+      ],
+      "selected_permission": "Apache-2.0",
+      "version": "0.22.0"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "Andrew Gallant <jamslam@gmail.com>",
+        "bluss"
+      ],
+      "crate_archive": {
+        "bytes": 99165,
+        "checksum_from_lock": "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98",
+        "filename": "memchr-2.8.3.crate",
+        "sha256": "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
+      },
+      "declared_license": "Unlicense OR MIT",
+      "name": "memchr",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [],
+          "copied_text_path": "licenses/sha256-01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f.txt",
+          "source_bytes": 126,
+          "source_name": "COPYING",
+          "source_path": "COPYING",
+          "source_sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) 2015 Andrew Gallant",
+            "The above copyright notice and this permission notice shall be included in",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ],
+          "copied_text_path": "licenses/sha256-0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f.txt",
+          "source_bytes": 1081,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "2.8.3"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "Frommi <daniil.liferenko@gmail.com>",
+        "oyvindln <oyvindln@users.noreply.github.com>",
+        "Rich Geldreich richgel99@gmail.com"
+      ],
+      "crate_archive": {
+        "bytes": 70519,
+        "checksum_from_lock": "b63fbc4a50860e98e7b2aa7804ded1db5cbc3aff9193adaff57a6931bf7c4b4c",
+        "filename": "miniz_oxide-0.9.1.crate",
+        "sha256": "b63fbc4a50860e98e7b2aa7804ded1db5cbc3aff9193adaff57a6931bf7c4b4c"
+      },
+      "declared_license": "MIT OR Zlib OR Apache-2.0",
+      "name": "miniz_oxide",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "Copyright 2013-2014 RAD Game Tools and Valve Software",
+            "Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC",
+            "Copyright (c) 2017 Frommi",
+            "Copyright (c) 2017-2024 oyvindln",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ],
+          "copied_text_path": "licenses/sha256-4108245a1f2df9d4e94df8abed5b4ba0759bb2f9b40a6b939f1be141077ae50b.txt",
+          "source_bytes": 1213,
+          "source_name": "LICENSE",
+          "source_path": "LICENSE",
+          "source_sha256": "4108245a1f2df9d4e94df8abed5b4ba0759bb2f9b40a6b939f1be141077ae50b"
+        },
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and"
+          ],
+          "copied_text_path": "licenses/sha256-0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594.txt",
+          "source_bytes": 10174,
+          "source_name": "LICENSE-APACHE.md",
+          "source_path": "LICENSE-APACHE.md",
+          "source_sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+        },
+        {
+          "attribution_lines": [
+            "Copyright 2013-2014 RAD Game Tools and Valve Software",
+            "Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC",
+            "Copyright (c) 2017 Frommi",
+            "Copyright (c) 2017-2024 oyvindln",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ],
+          "copied_text_path": "licenses/sha256-799e9ca9d179295ef372f25d3769cdda7d25bb2668add6a6a1e22d1e4c678b8d.txt",
+          "source_bytes": 1212,
+          "source_name": "LICENSE-MIT.md",
+          "source_path": "LICENSE-MIT.md",
+          "source_sha256": "799e9ca9d179295ef372f25d3769cdda7d25bb2668add6a6a1e22d1e4c678b8d"
+        },
+        {
+          "attribution_lines": [
+            "Copyright 2013-2014 RAD Game Tools and Valve Software",
+            "Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC",
+            "Copyright (c) 2020 Frommi",
+            "Copyright (c) 2017-2024 oyvindln"
+          ],
+          "copied_text_path": "licenses/sha256-0a54e647fe54104658b5e563c04c6f9edf251710e47bce692e0bd990a4ddaa39.txt",
+          "source_bytes": 984,
+          "source_name": "LICENSE-ZLIB.md",
+          "source_path": "LICENSE-ZLIB.md",
+          "source_sha256": "0a54e647fe54104658b5e563c04c6f9edf251710e47bce692e0bd990a4ddaa39"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "0.9.1"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "David Tolnay <dtolnay@gmail.com>",
+        "Alex Crichton <alex@alexcrichton.com>"
+      ],
+      "crate_archive": {
+        "bytes": 59588,
+        "checksum_from_lock": "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9",
+        "filename": "proc-macro2-1.0.107.crate",
+        "sha256": "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "proc-macro2",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and"
+          ],
+          "copied_text_path": "licenses/sha256-62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "source_bytes": 9723,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "attribution_lines": [
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "source_bytes": 1023,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "1.0.107"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "crate_archive": {
+        "bytes": 31622,
+        "checksum_from_lock": "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001",
+        "filename": "quote-1.0.47.crate",
+        "sha256": "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "quote",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and"
+          ],
+          "copied_text_path": "licenses/sha256-62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "source_bytes": 9723,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "attribution_lines": [
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "source_bytes": 1023,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "1.0.47"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "crate_archive": {
+        "bytes": 52823,
+        "checksum_from_lock": "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f",
+        "filename": "ryu-1.0.23.crate",
+        "sha256": "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
+      },
+      "declared_license": "Apache-2.0 OR BSL-1.0",
+      "name": "ryu",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and"
+          ],
+          "copied_text_path": "licenses/sha256-62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "source_bytes": 9723,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "attribution_lines": [
+            "The copyright notices in the Software and this entire statement, including",
+            "SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE"
+          ],
+          "copied_text_path": "licenses/sha256-c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566.txt",
+          "source_bytes": 1338,
+          "source_name": "LICENSE-BOOST",
+          "source_path": "LICENSE-BOOST",
+          "source_sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566"
+        }
+      ],
+      "selected_permission": "Apache-2.0",
+      "version": "1.0.23"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "Erick Tryzelaar <erick.tryzelaar@gmail.com>",
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "crate_archive": {
+        "bytes": 83652,
+        "checksum_from_lock": "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e",
+        "filename": "serde-1.0.228.crate",
+        "sha256": "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "serde",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and"
+          ],
+          "copied_text_path": "licenses/sha256-62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "source_bytes": 9723,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "attribution_lines": [
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "source_bytes": 1023,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "1.0.228"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "Erick Tryzelaar <erick.tryzelaar@gmail.com>",
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "crate_archive": {
+        "bytes": 63111,
+        "checksum_from_lock": "41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad",
+        "filename": "serde_core-1.0.228.crate",
+        "sha256": "41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "serde_core",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and"
+          ],
+          "copied_text_path": "licenses/sha256-62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "source_bytes": 9723,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "attribution_lines": [
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "source_bytes": 1023,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "1.0.228"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "Erick Tryzelaar <erick.tryzelaar@gmail.com>",
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "crate_archive": {
+        "bytes": 59605,
+        "checksum_from_lock": "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79",
+        "filename": "serde_derive-1.0.228.crate",
+        "sha256": "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "serde_derive",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and"
+          ],
+          "copied_text_path": "licenses/sha256-62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "source_bytes": 9723,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "attribution_lines": [
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "source_bytes": 1023,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "1.0.228"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "Erick Tryzelaar <erick.tryzelaar@gmail.com>",
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "crate_archive": {
+        "bytes": 155748,
+        "checksum_from_lock": "402a6f66d8c709116cf22f558eab210f5a50187f702eb4d7e5ef38d9a7f1c79c",
+        "filename": "serde_json-1.0.145.crate",
+        "sha256": "402a6f66d8c709116cf22f558eab210f5a50187f702eb4d7e5ef38d9a7f1c79c"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "serde_json",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and"
+          ],
+          "copied_text_path": "licenses/sha256-62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "source_bytes": 9723,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "attribution_lines": [
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "source_bytes": 1023,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "1.0.145"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "RustCrypto Developers"
+      ],
+      "crate_archive": {
+        "bytes": 32748,
+        "checksum_from_lock": "47d7069beb7d6ac7b9acd1039986e73443f24234f41074da099d6f994ac9ad19",
+        "filename": "sha2-0.11.1.crate",
+        "sha256": "47d7069beb7d6ac7b9acd1039986e73443f24234f41074da099d6f994ac9ad19"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "sha2",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright [yyyy] [name of copyright owner]"
+          ],
+          "copied_text_path": "licenses/sha256-a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5.txt",
+          "source_bytes": 10849,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) 2016-2026 The RustCrypto Project Developers",
+            "Copyright (c) 2016 Artyom Pavlov",
+            "Copyright (c) 2009-2013 Mozilla Foundation",
+            "Copyright (c) 2006-2009 Graydon Hoare",
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-831e0f43ad0bf014c1c4fec5767aae470434c1d66d6e671be2d823e729063e25.txt",
+          "source_bytes": 1196,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "831e0f43ad0bf014c1c4fec5767aae470434c1d66d6e671be2d823e729063e25"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "0.11.1"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "Marvin Countryman <me@maar.vin>"
+      ],
+      "crate_archive": {
+        "bytes": 18760,
+        "checksum_from_lock": "3a219298ac11a56ea9a6d2120044824d6f01aeb034955e7af7bc16858527deea",
+        "filename": "simd-adler32-0.3.10.crate",
+        "sha256": "3a219298ac11a56ea9a6d2120044824d6f01aeb034955e7af7bc16858527deea"
+      },
+      "declared_license": "MIT",
+      "name": "simd-adler32",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "Copyright (c) [2021] [Marvin Countryman]",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ],
+          "copied_text_path": "licenses/sha256-42a35170233e83e18856792e748de4c1ce4a63b2afce9a370c89ef3fe23f9f2d.txt",
+          "source_bytes": 1078,
+          "source_name": "LICENSE.md",
+          "source_path": "LICENSE.md",
+          "source_sha256": "42a35170233e83e18856792e748de4c1ce4a63b2afce9a370c89ef3fe23f9f2d"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "0.3.10"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "crate_archive": {
+        "bytes": 307407,
+        "checksum_from_lock": "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297",
+        "filename": "syn-2.0.119.crate",
+        "sha256": "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "syn",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and"
+          ],
+          "copied_text_path": "licenses/sha256-62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "source_bytes": 9723,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "attribution_lines": [
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "source_bytes": 1023,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "2.0.119"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "Alex Crichton <alex@alexcrichton.com>"
+      ],
+      "crate_archive": {
+        "bytes": 70809,
+        "checksum_from_lock": "3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840",
+        "filename": "tar-0.4.46.crate",
+        "sha256": "3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "tar",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright [yyyy] [name of copyright owner]"
+          ],
+          "copied_text_path": "licenses/sha256-a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "source_bytes": 10847,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) The tar-rs Project Contributors",
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-8ca6b96cea9e67c6c5c63f452c31bd396db8bd2406231fdea5d48ef462b48077.txt",
+          "source_bytes": 1070,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "8ca6b96cea9e67c6c5c63f452c31bd396db8bd2406231fdea5d48ef462b48077"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "0.4.46"
+    },
+    {
+      "authors_from_crate_manifest": [],
+      "crate_archive": {
+        "bytes": 105479,
+        "checksum_from_lock": "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20",
+        "filename": "typenum-1.20.1.crate",
+        "sha256": "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
+      },
+      "declared_license": "MIT OR Apache-2.0",
+      "name": "typenum",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [],
+          "copied_text_path": "licenses/sha256-db11fec9946737df39ca3898d9cd8c10ec6f6c3a884a6802b0ad0b81b4e8f23a.txt",
+          "source_bytes": 17,
+          "source_name": "LICENSE",
+          "source_path": "LICENSE",
+          "source_sha256": "db11fec9946737df39ca3898d9cd8c10ec6f6c3a884a6802b0ad0b81b4e8f23a"
+        },
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and",
+            "same \"printed page\" as the copyright notice for easier",
+            "Copyright 2014 Paho Lurie-Gregg"
+          ],
+          "copied_text_path": "licenses/sha256-516b24e051bf5630880ebbd55c40a25ce9552ebaf8970a53e8976eb70e522406.txt",
+          "source_bytes": 10835,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "516b24e051bf5630880ebbd55c40a25ce9552ebaf8970a53e8976eb70e522406"
+        },
+        {
+          "attribution_lines": [
+            "Copyright (c) 2014 Paho Lurie-Gregg",
+            "The above copyright notice and this permission notice shall be included in all",
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+          ],
+          "copied_text_path": "licenses/sha256-a825bd853ab71619a4923d7b4311221427848070ff44d990da39b0b274c1683f.txt",
+          "source_bytes": 1083,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "a825bd853ab71619a4923d7b4311221427848070ff44d990da39b0b274c1683f"
+        }
+      ],
+      "selected_permission": "MIT",
+      "version": "1.20.1"
+    },
+    {
+      "authors_from_crate_manifest": [
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "crate_archive": {
+        "bytes": 48807,
+        "checksum_from_lock": "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563",
+        "filename": "unicode-ident-1.0.27.crate",
+        "sha256": "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563"
+      },
+      "declared_license": "(MIT OR Apache-2.0) AND Unicode-3.0",
+      "name": "unicode-ident",
+      "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+      "reviewed_license_files": [
+        {
+          "attribution_lines": [
+            "\"Licensor\" shall mean the copyright owner or entity authorized by",
+            "the copyright owner that is granting the License.",
+            "copyright notice that is included in or attached to the work",
+            "submitted to Licensor for inclusion in the Work by the copyright owner",
+            "the copyright owner. For the purposes of this definition, \"submitted\"",
+            "designated in writing by the copyright owner as \"Not a Contribution.\"",
+            "2. Grant of Copyright License. Subject to the terms and conditions of",
+            "copyright license to reproduce, prepare Derivative Works of,",
+            "that You distribute, all copyright, patent, trademark, and",
+            "attribution notices from the Source form of the Work,",
+            "include a readable copy of the attribution notices contained",
+            "do not modify the License. You may add Your own attribution",
+            "that such additional attribution notices cannot be construed",
+            "You may add Your own copyright statement to Your modifications and"
+          ],
+          "copied_text_path": "licenses/sha256-62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "source_bytes": 9723,
+          "source_name": "LICENSE-APACHE",
+          "source_path": "LICENSE-APACHE",
+          "source_sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "attribution_lines": [
+            "The above copyright notice and this permission notice",
+            "SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+          ],
+          "copied_text_path": "licenses/sha256-23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "source_bytes": 1023,
+          "source_name": "LICENSE-MIT",
+          "source_path": "LICENSE-MIT",
+          "source_sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        },
+        {
+          "attribution_lines": [
+            "COPYRIGHT AND PERMISSION NOTICE",
+            "Copyright © 1991-2023 Unicode, Inc.",
+            "this copyright and permission notice appear with all copies of the Data",
+            "Files or Software, or (b) this copyright and permission notice appear in",
+            "IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE",
+            "Except as contained in this notice, the name of a copyright holder shall",
+            "authorization of the copyright holder."
+          ],
+          "copied_text_path": "licenses/sha256-f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1.txt",
+          "source_bytes": 1995,
+          "source_name": "LICENSE-UNICODE",
+          "source_path": "LICENSE-UNICODE",
+          "source_sha256": "f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1"
+        }
+      ],
+      "selected_permission": "MIT AND Unicode-3.0",
+      "version": "1.0.27"
+    }
+  ],
+  "reviewed_license_file_identity_count": 61,
+  "schema": "ami-rust-third-party-input-inventory-v1",
+  "source_evidence": {
+    "dependency_review": {
+      "path": "tooling/third-party/reviews/dependency-review.json",
+      "reviewed_file_identities": 61,
+      "reviewed_lock_sha256": "cc3ac7771a692dc1c2b154ad6962285209b4d7b1eeb5c918d98ece8ac7aeee66",
+      "sha256": "1d4f158ee8b59a35647e9cf00e266a93affcb83c79c8d4087ecb211a38d3191e",
+      "status": "LICENSE_AND_SOURCE_REVIEW_IN_PROGRESS_NOT_ACCEPTED"
+    },
+    "lock_files": [
+      {
+        "bytes": 6692,
+        "path": "tools/host-contract-deps/Cargo.lock",
+        "registry_package_count": 29,
+        "role": "A2 reviewed candidate lock",
+        "sha256": "cc3ac7771a692dc1c2b154ad6962285209b4d7b1eeb5c918d98ece8ac7aeee66"
+      },
+      {
+        "bytes": 6933,
+        "path": "tooling/Cargo.lock",
+        "registry_package_count": 29,
+        "role": "native host producer lock; registry identities/checksums equal A2 candidate",
+        "sha256": "b825f28b7530920b0b8b9d359abad658bc52453ab6ae631b75651162928c7322"
+      }
+    ],
+    "registry_cache_evidence": {
+      "all_archive_sha256_values_match_reviewed_lock_checksums": true,
+      "all_registry_identity_and_checksum_rows_match_native_tooling_lock": true,
+      "archive_count_verified": 29,
+      "registry_name": "index.crates.io-1949cf8c6b5b557f",
+      "reviewed_crate_identity_count": 29,
+      "source": "local Cargo registry cache from actual-host-build-development-a1"
+    },
+    "selection_review": {
+      "path": "tooling/third-party/reviews/selection-review.json",
+      "selected_on": "2026-10-19",
+      "sha256": "54edc42b856f12548d9fce52cc8fa0dd0f10b925c168ded54e3f961592525854",
+      "status": "DEPENDENCY_SOURCE_LICENSE_SELECTION_APPROVED_PENDING_HOST_QUALIFICATION"
+    }
+  },
+  "status": "EXACT_REVIEWED_INPUTS_NOT_RELEASE_ACCEPTANCE",
+  "unique_license_text_hash_count": 31,
+  "unique_license_texts": [
+    {
+      "bytes": 126,
+      "path": "licenses/sha256-01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f.txt",
+      "sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f"
+    },
+    {
+      "bytes": 1062,
+      "path": "licenses/sha256-025436edff4cfcdde17a5811fdea78892d8482efd1abdec5a17872d07a4f2112.txt",
+      "sha256": "025436edff4cfcdde17a5811fdea78892d8482efd1abdec5a17872d07a4f2112"
+    },
+    {
+      "bytes": 984,
+      "path": "licenses/sha256-0a54e647fe54104658b5e563c04c6f9edf251710e47bce692e0bd990a4ddaa39.txt",
+      "sha256": "0a54e647fe54104658b5e563c04c6f9edf251710e47bce692e0bd990a4ddaa39"
+    },
+    {
+      "bytes": 10174,
+      "path": "licenses/sha256-0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594.txt",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+    },
+    {
+      "bytes": 1081,
+      "path": "licenses/sha256-0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f.txt",
+      "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f"
+    },
+    {
+      "bytes": 1066,
+      "path": "licenses/sha256-123a331b5dbf04c30097fa43b8f858bc85df671fe776de498d01f3d6b7c1f69e.txt",
+      "sha256": "123a331b5dbf04c30097fa43b8f858bc85df671fe776de498d01f3d6b7c1f69e"
+    },
+    {
+      "bytes": 1023,
+      "path": "licenses/sha256-23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
+    {
+      "bytes": 1057,
+      "path": "licenses/sha256-378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397.txt",
+      "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397"
+    },
+    {
+      "bytes": 1213,
+      "path": "licenses/sha256-4108245a1f2df9d4e94df8abed5b4ba0759bb2f9b40a6b939f1be141077ae50b.txt",
+      "sha256": "4108245a1f2df9d4e94df8abed5b4ba0759bb2f9b40a6b939f1be141077ae50b"
+    },
+    {
+      "bytes": 1078,
+      "path": "licenses/sha256-42a35170233e83e18856792e748de4c1ce4a63b2afce9a370c89ef3fe23f9f2d.txt",
+      "sha256": "42a35170233e83e18856792e748de4c1ce4a63b2afce9a370c89ef3fe23f9f2d"
+    },
+    {
+      "bytes": 11356,
+      "path": "licenses/sha256-43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1.txt",
+      "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+    },
+    {
+      "bytes": 10835,
+      "path": "licenses/sha256-516b24e051bf5630880ebbd55c40a25ce9552ebaf8970a53e8976eb70e522406.txt",
+      "sha256": "516b24e051bf5630880ebbd55c40a25ce9552ebaf8970a53e8976eb70e522406"
+    },
+    {
+      "bytes": 1097,
+      "path": "licenses/sha256-61d383b05b87d78f94d2937e2580cce47226d17823c0430fbcad09596537efcf.txt",
+      "sha256": "61d383b05b87d78f94d2937e2580cce47226d17823c0430fbcad09596537efcf"
+    },
+    {
+      "bytes": 9723,
+      "path": "licenses/sha256-62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+    },
+    {
+      "bytes": 1082,
+      "path": "licenses/sha256-70c9d40f1f9545c3f133b8a67206e89da850f6468eed072281bb3701514114a9.txt",
+      "sha256": "70c9d40f1f9545c3f133b8a67206e89da850f6468eed072281bb3701514114a9"
+    },
+    {
+      "bytes": 1082,
+      "path": "licenses/sha256-73b9dc2e79c7308998dd30296e073aefaefb944a68fb89aa412c23c0edcabcaa.txt",
+      "sha256": "73b9dc2e79c7308998dd30296e073aefaefb944a68fb89aa412c23c0edcabcaa"
+    },
+    {
+      "bytes": 1212,
+      "path": "licenses/sha256-799e9ca9d179295ef372f25d3769cdda7d25bb2668add6a6a1e22d1e4c678b8d.txt",
+      "sha256": "799e9ca9d179295ef372f25d3769cdda7d25bb2668add6a6a1e22d1e4c678b8d"
+    },
+    {
+      "bytes": 1196,
+      "path": "licenses/sha256-831e0f43ad0bf014c1c4fec5767aae470434c1d66d6e671be2d823e729063e25.txt",
+      "sha256": "831e0f43ad0bf014c1c4fec5767aae470434c1d66d6e671be2d823e729063e25"
+    },
+    {
+      "bytes": 665,
+      "path": "licenses/sha256-861399f8c21c042b110517e76dc6b63a2b334276c8cf17412fc3c8908ca8dc17.txt",
+      "sha256": "861399f8c21c042b110517e76dc6b63a2b334276c8cf17412fc3c8908ca8dc17"
+    },
+    {
+      "bytes": 10860,
+      "path": "licenses/sha256-8ada45cd9f843acf64e4722ae262c622a2b3b3007c7310ef36ac1061a30f6adb.txt",
+      "sha256": "8ada45cd9f843acf64e4722ae262c622a2b3b3007c7310ef36ac1061a30f6adb"
+    },
+    {
+      "bytes": 1070,
+      "path": "licenses/sha256-8ca6b96cea9e67c6c5c63f452c31bd396db8bd2406231fdea5d48ef462b48077.txt",
+      "sha256": "8ca6b96cea9e67c6c5c63f452c31bd396db8bd2406231fdea5d48ef462b48077"
+    },
+    {
+      "bytes": 1082,
+      "path": "licenses/sha256-98181e7249d0c01737645ec982499ce99a0f07eb8f7d625b8840d799d10dbc01.txt",
+      "sha256": "98181e7249d0c01737645ec982499ce99a0f07eb8f7d625b8840d799d10dbc01"
+    },
+    {
+      "bytes": 10847,
+      "path": "licenses/sha256-a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    {
+      "bytes": 1083,
+      "path": "licenses/sha256-a825bd853ab71619a4923d7b4311221427848070ff44d990da39b0b274c1683f.txt",
+      "sha256": "a825bd853ab71619a4923d7b4311221427848070ff44d990da39b0b274c1683f"
+    },
+    {
+      "bytes": 10849,
+      "path": "licenses/sha256-a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5.txt",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5"
+    },
+    {
+      "bytes": 1103,
+      "path": "licenses/sha256-af59cea35d7f5e2777a713b8d155d65efa2c339eb43f3c14e868c6ac8506edad.txt",
+      "sha256": "af59cea35d7f5e2777a713b8d155d65efa2c339eb43f3c14e868c6ac8506edad"
+    },
+    {
+      "bytes": 11358,
+      "path": "licenses/sha256-c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08.txt",
+      "sha256": "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08"
+    },
+    {
+      "bytes": 1338,
+      "path": "licenses/sha256-c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566.txt",
+      "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566"
+    },
+    {
+      "bytes": 1070,
+      "path": "licenses/sha256-d2e7ec5355c96eeade56b09187ceb48a6a30299da3ce7531a66d3d11405ab963.txt",
+      "sha256": "d2e7ec5355c96eeade56b09187ceb48a6a30299da3ce7531a66d3d11405ab963"
+    },
+    {
+      "bytes": 17,
+      "path": "licenses/sha256-db11fec9946737df39ca3898d9cd8c10ec6f6c3a884a6802b0ad0b81b4e8f23a.txt",
+      "sha256": "db11fec9946737df39ca3898d9cd8c10ec6f6c3a884a6802b0ad0b81b4e8f23a"
+    },
+    {
+      "bytes": 1995,
+      "path": "licenses/sha256-f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1.txt",
+      "sha256": "f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1"
+    }
+  ]
+}

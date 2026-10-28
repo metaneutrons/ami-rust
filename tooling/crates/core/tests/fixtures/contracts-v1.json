@@ -1,0 +1,1041 @@
+{
+  "schema": "ami-rust-cli-contract-v1",
+  "document_status": "frozen_RC0_design_for_RC1_not_implementation_or_release_acceptance",
+  "date": "2026-10-18",
+  "source_survey": {
+    "document": "docs/rust-cli-migration/consumer-contracts.md",
+    "recorded_checkout": "d7ac89004a8f805e6f1e3efaf9242fed976803ab",
+    "plan": "docs/rust-cli-cargo-migration-plan.md",
+    "plan_revision": 2
+  },
+  "qualification": {
+    "rc0_a1_a2": "Contract and reviewed 29-crate development candidate accepted; see rc0-acceptance.md for exact evidence. Production lock/feature changes require their own review.",
+    "rc0_a3": "Minimal normal-Cargo native design passed two fresh roots on both hosts in 39170474195; production guards and full build matrix remain RC1/RC2.",
+    "rc0_a4": "Named controlled harness routes passed both hosts; full supported process/provenance closure remains RC1-RC5.",
+    "implementation": "No production Rust consumer, runtime or release acceptance is established by RC0.",
+    "dependency_status": "Selected exact standalone lock cc3ac7771a692dc1c2b154ad6962285209b4d7b1eeb5c918d98ece8ac7aeee66; source/license/advisory review plus 13 API tests both hosts passed."
+  },
+  "observed_interfaces": {
+    "package_launcher": {
+      "commands": [
+        "ami-rust --version",
+        "ami-rust verify-package",
+        "ami-rust prepare --state ABSOLUTE_FRESH_STATE",
+        "ami-rust new --state STATE --project ABSOLUTE_PROJECT",
+        "ami-rust build --state STATE --project ABSOLUTE_PROJECT --output-dir FRESH [--package NAME] [-- CARGO_ARGS...]",
+        "ami-rust check-inputs --state STATE"
+      ],
+      "version_output": "ami-rust SDK_VERSION (packaging PACKAGING_REVISION)",
+      "build_defaults": {
+        "package": "hello-aros",
+        "fixed_cargo_arguments": [
+          "build",
+          "--manifest-path PROJECT/Cargo.toml",
+          "--package NAME",
+          "--release",
+          "--locked",
+          "--offline"
+        ],
+        "accepted_forwarded_options": [
+          "--features VALUE at most once",
+          "--no-default-features at most once"
+        ],
+        "rejected": "unknown or repeated recipe options; arbitrary Cargo options are not forwarded"
+      },
+      "package_integrity": "Every successfully parsed command verifies the package inventory, exact file set, regular files/no symlinks, modes, sizes, SHA-256 values, required control files and pinned assets.",
+      "state": {
+        "prepare_path": "normalized absolute path with no symlink components, fresh, existing parent; caller is not root",
+        "directory": "mode 0700; later use requires real directory owned by current UID with no group/world permissions",
+        "separation": "state and package trees are disjoint, except explicitly permitted retained launcher below state",
+        "failure": "partially prepared state remains for diagnosis",
+        "retention": "versioned launcher/package are retained; after preparation the launcher uses the Python interpreter inside that state",
+        "ready_json": {
+          "schema": "ami-rust-package-state-v1",
+          "required_identity": [
+            "status=READY",
+            "host",
+            "sdk_version",
+            "package_version",
+            "source_commit",
+            "manifest_sha256"
+          ],
+          "verification": "checks schema, READY status and host/source/manifest/SDK identity; package_version is recorded but is not compared by ready_state"
+        }
+      },
+      "exit_status": {
+        "success_help_version": 0,
+        "argparse_error": 2,
+        "caught_value_os_or_subprocess_error": 2,
+        "child_nonnegative_return_code": "passed through unchanged",
+        "child_signal_n": "min(255, 128 + N)",
+        "other_uncaught_exception": 1
+      }
+    },
+    "direct_sdk_cli": {
+      "commands": [
+        "ami-rust --version",
+        "ami-rust verify --sdk-lock FILE",
+        "ami-rust build --sdk-lock FILE --output-dir FRESH -- CARGO_ARGS..."
+      ],
+      "accepted_argv_rules": [
+        "Help only as exact argv [-h] or [--help]; version only as exact argv [--version].",
+        "verify accepts one --sdk-lock value and no separator or forwarded arguments.",
+        "build accepts one --sdk-lock, one --output-dir, a required -- separator and at least one forwarded Cargo argument.",
+        "Unknown or repeated host options and missing values are refused."
+      ],
+      "build_recipe_options": [
+        "build",
+        "--manifest-path PATH",
+        "--package NAME or -p NAME",
+        "--release",
+        "--locked",
+        "--offline",
+        "--features VALUE at most once",
+        "--no-default-features at most once"
+      ],
+      "recipe_constraints": [
+        "build, --manifest-path, --package, --release, --locked and --offline are required.",
+        "The selected manifest must have an adjacent Cargo.lock.",
+        "Ambient Cargo configuration in the build output ancestry is rejected."
+      ],
+      "verification_claim": "Checks project-selected SDK, host, component and Cargo pins. It is not independent release authentication, R1 qualification or a guarantee against concurrent mutation of other SDK/prerequisite files.",
+      "output_and_lock": {
+        "output": "fresh path with existing parent; existing output is refused",
+        "build_lock": "output/build.lock is opened exclusively and held with nonblocking exclusive flock; contention refuses",
+        "failure": "after the output tree is created, failures retain output/logs/results; early validation may fail before creation; no failed build writes a successful receipt",
+        "receipt": "build-receipt.json is written only after a complete native build and artifact audit; it currently has no schema"
+      },
+      "exit_status": {
+        "success_help_version": 0,
+        "invocation_or_validation_refusal": 2,
+        "nonnegative_build_driver_return_code": "passed through unchanged",
+        "build_driver_signal_n": "min(255, 128 + N)",
+        "supervised_build_child_signal_n": "130 from the driver for a signaled supervised child",
+        "monitor_failure": "stop process group; return child nonzero code if present, otherwise 1"
+      }
+    },
+    "release_bundle_helpers": {
+      "production_commands": [
+        "install_publisher.py verify --bundle BUNDLE --policy EXTERNAL_POLICY",
+        "install_publisher.py install --bundle BUNDLE --policy EXTERNAL_POLICY --prefix FRESH_PREFIX [--receipt-pin FRESH_EXTERNAL_FILE]",
+        "install_publisher.py uninstall --prefix PREFIX --receipt-sha256 SHA256",
+        "install_publisher.py lock --prefix PREFIX --selection SELECTION --project PROJECT --output FRESH_FILE"
+      ],
+      "legacy_qualification_only_commands": [
+        "install.py verify --bundle BUNDLE --trust EXTERNAL_TRUST",
+        "install.py install --bundle BUNDLE --trust EXTERNAL_TRUST --prefix FRESH_PREFIX [--receipt-pin FRESH_EXTERNAL_FILE]",
+        "install.py uninstall --prefix PREFIX --receipt-sha256 SHA256",
+        "install.py lock --prefix PREFIX --selection SELECTION --project PROJECT --output FRESH_FILE"
+      ],
+      "legacy_route_claim": "Offline OpenSSH signature verification only; no GitHub Actions/Cosign provenance, publisher identity binding or R1 qualification. Never a silent production fallback.",
+      "production_trust": {
+        "external_policy": "required and outside release bundle",
+        "policy_fields": [
+          "schema",
+          "repository",
+          "workflow",
+          "workflow_sha",
+          "source_sha",
+          "source_ref",
+          "oidc_issuer",
+          "cert_identity",
+          "inputs_manifest_sha256",
+          "allowed_host_profiles",
+          "gh",
+          "cosign",
+          "gh_trusted_roots",
+          "cosign_trusted_root"
+        ],
+        "independent_inputs": "Pinned gh/Cosign binaries and GitHub/Sigstore roots are externally supplied protected regular files, hash checked and outside the candidate bundle; exact repository/workflow/source/ref/OIDC/certificate/input identity is checked.",
+        "current_tools_and_roots": {
+          "gh": "2.102.0",
+          "cosign": "3.1.3",
+          "github_root_sha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c",
+          "sigstore_root_sha256": "05a094edfa2e8eb7d1b4b37244e28ffb6d86b8b86ce3eb122b644b4335ae4dc1"
+        },
+        "claim_limit": "Verified publisher evidence and candidate bytes do not establish R1 qualification or acceptance."
+      },
+      "install_state": {
+        "prefix": "fresh normalized absolute path; cannot be root, home, cwd or an ancestor of cwd; secure user-owned parent",
+        "staging": "private sibling mode 0700; exact payload and SDK inventory built before publication",
+        "publication": "fsync tree then exclusive atomic sibling rename; macOS renamex_np(RENAME_EXCL), Linux renameat2(RENAME_NOREPLACE); otherwise fail closed",
+        "receipt_pin": "optional at install time; fresh file outside prefix; lowercase receipt SHA-256 followed by LF, written after publication",
+        "post_publication_failure": "pin failure or SIGTERM after publication returns 1 and leaves the prefix; diagnostic contains prefix and receipt digest",
+        "uninstall": "requires external receipt digest; validates exact receipt/tree, renames to hidden tombstone, verifies again, then deletes; failed recheck rolls back; interrupted deletion leaves tombstone"
+      },
+      "ownership": {
+        "actor": "current user; preparation refuses UID 0",
+        "prefix": "current-user-owned and not group/world writable",
+        "receipt": "current-user-owned regular non-symlink file, not group/world writable",
+        "receipt_pin_parent": "secure user-owned directory; pin is outside installation tree",
+        "archive_inventory": "exact paths/files; type, mode, size, digest and directory tree checked; no extras or missing entries"
+      },
+      "exit_status": {
+        "success": 0,
+        "refusal_trust_archive_io_or_subprocess_error": 2,
+        "post_publication_pin_failure_or_sigterm": 1
+      }
+    },
+    "current_records": {
+      "selection_json": {
+        "schema": "none",
+        "fields": "python plus components with exactly rust, cargo, toolchain, collector, csdk and vendor",
+        "validation": "component roots are absolute canonical real directories; Python is an absolute executable; component roots are separate"
+      },
+      "project_lock_v1": {
+        "schema": "ami-rust-project-lock-v1",
+        "fields": {
+          "sdk": [
+            "root",
+            "manifest",
+            "manifest_sha256"
+          ],
+          "host": [
+            "platform",
+            "python",
+            "python_sha256"
+          ],
+          "components": [
+            "rust",
+            "cargo",
+            "toolchain",
+            "collector",
+            "csdk",
+            "vendor"
+          ],
+          "cargo": [
+            "manifest_sha256",
+            "lock_sha256"
+          ]
+        },
+        "validation": "UTF-8 JSON <= 1 MiB; recursively duplicate-key rejecting; schema, SDK manifest/inventory, host, Python digest, exact components and Cargo.toml/Cargo.lock hashes checked",
+        "claim": "pin consistency only, not independent publisher authentication"
+      },
+      "install_receipts": {
+        "legacy_schema": "ami-rust-install-receipt-v1",
+        "production_schema": "ami-rust-install-receipt-v2",
+        "fields": "exact keys: schema, publisher, release_manifest_sha256, sdk_manifest_sha256, version, inventory; v2 also requires authentication",
+        "claim": "v2 binds production authentication; v1 is legacy qualification-only"
+      },
+      "native_build_receipt": {
+        "schema": "none",
+        "fields": [
+          "status",
+          "claim",
+          "host",
+          "platform",
+          "host_ram_bytes",
+          "source_date_epoch",
+          "project_lock_sha256",
+          "sdk_manifest_sha256",
+          "prerequisite_inventory_counts",
+          "compiler_verbose",
+          "forwarded_cargo_arguments",
+          "verbose_build_script_lines",
+          "deterministic_rust_flags",
+          "canonical_artifacts",
+          "elapsed_seconds",
+          "commands",
+          "cargo_frontend",
+          "host_capacity"
+        ],
+        "claim": "native build only; runtime and release qualification need separate evidence"
+      },
+      "consumer_preparation": {
+        "schema": "ami-rust-consumer-preparation-v1",
+        "claim_fields": [
+          "installed=false",
+          "R1_accepted=false"
+        ]
+      }
+    }
+  },
+  "proposed_schema_policy": {
+    "json_rules": [
+      "UTF-8 without BOM; enforce each format byte limit before parsing.",
+      "Reject duplicate object keys recursively and reject NaN/Infinity.",
+      "Require a known exact schema discriminator before interpreting fields or mutating.",
+      "Require exact fields for trust, state, selection, lock, receipts, manifests and inventory rows; new decision-bearing fields require a new schema version.",
+      "Only diagnostics may contain an explicit extensions object. Extensions are bounded, ignored by policy decisions and cannot shadow a defined field.",
+      "Require lowercase 64-character SHA-256; reject ambiguous paths, prohibited symlink components, noncanonical component roots, duplicate inventory entries and extra/missing inventory items.",
+      "Do not rewrite/re-serialize records on read; signatures and hashes apply to original bytes.",
+      "Generate deterministic UTF-8 records with LF termination; hashes bind the emitted bytes exactly."
+    ],
+    "version_negotiation": {
+      "unknown_or_missing_schema": "refuse before mutation",
+      "unknown_security_field": "refuse",
+      "future_schema": "no best-effort fallback",
+      "historical_support": "only exact formats and operations in the compatibility table"
+    },
+    "compatibility_table": [
+      {
+        "record": "ami-rust-package-state-v1",
+        "read": "read-only inspection/dry-run migration; never execute retained Python launcher/interpreter",
+        "write": "fresh ami-rust-package-state-v2; never rewrite ready.json"
+      },
+      {
+        "record": "selection.json without schema",
+        "read": "only with explicit migration; revalidate receipt, exact inventory and six roots; preserve consistency-only claim; never execute Python path",
+        "write": "separate ami-rust-selection-v2"
+      },
+      {
+        "record": "ami-rust-project-lock-v1",
+        "read": "read-only inspection; never launch pinned Python",
+        "write": "separate ami-rust-project-lock-v2 only after SDK/components/Cargo hashes revalidate"
+      },
+      {
+        "record": "ami-rust-install-receipt-v1",
+        "read": "legacy qualification/inspection and exact-owner uninstall only; never production trust",
+        "write": "never rewrite; new release writes v3"
+      },
+      {
+        "record": "ami-rust-install-receipt-v2",
+        "read": "validate current authentication/exact inventory for inspection or uninstall",
+        "write": "never rewrite; new release-v2 install writes v3"
+      },
+      {
+        "record": "ami-rust-release-v1",
+        "read": "legacy qualification verifier only",
+        "write": "new Rust binaries use ami-rust-release-v2 with host_interpreters removed and exact host_launchers"
+      },
+      {
+        "record": "ami-rust-consumer-preparation-v1",
+        "read": "historical evidence; installed=false and R1_accepted=false",
+        "write": "Rust replacement, if emitted, uses ami-rust-consumer-preparation-v2 with the same evidence-only claim"
+      },
+      {
+        "record": "schema-less build-receipt.json",
+        "read": "historical report only",
+        "write": "ami-rust-native-build-receipt-v1"
+      }
+    ],
+    "proposed_new_records": [
+      {
+        "schema": "ami-rust-package-state-v2",
+        "exact_fields": [
+          "schema",
+          "status",
+          "host",
+          "sdk_version",
+          "package_version",
+          "source_commit",
+          "manifest_sha256",
+          "install_receipt_sha256",
+          "cli_sha256",
+          "core_sha256"
+        ],
+        "invariants": "PREPARED or READY; fresh private current-user state; supported host; receipt/core/CLI match installed inventory; no Python path/hash"
+      },
+      {
+        "schema": "ami-rust-selection-v2",
+        "exact_fields": [
+          "schema",
+          "host",
+          "install_receipt_sha256",
+          "components"
+        ],
+        "invariants": "components are exactly rust, cargo, toolchain, collector, csdk, vendor; absolute canonical real directories; no overlaps"
+      },
+      {
+        "schema": "ami-rust-project-lock-v2",
+        "exact_fields": [
+          "schema",
+          "sdk",
+          "host",
+          "components",
+          "cargo"
+        ],
+        "field_shapes": {
+          "sdk": [
+            "root",
+            "manifest",
+            "manifest_sha256",
+            "install_receipt_sha256"
+          ],
+          "host": [
+            "platform",
+            "cli_sha256",
+            "core_sha256"
+          ],
+          "components": [
+            "rust",
+            "cargo",
+            "toolchain",
+            "collector",
+            "csdk",
+            "vendor"
+          ],
+          "cargo": [
+            "manifest_sha256",
+            "lock_sha256"
+          ]
+        },
+        "invariants": "Preserve v1 SDK/host/component/Cargo binding; remove Python path/hash; require receipt/host/CLI/core identity; no publisher or R1 claim"
+      },
+      {
+        "schema": "ami-rust-release-v2",
+        "exact_fields": [
+          "schema",
+          "version",
+          "qualification_only",
+          "sdk_archive",
+          "sdk_manifest_sha256",
+          "assets",
+          "sdk_files",
+          "producer",
+          "host_launchers"
+        ],
+        "host_launchers_shape": "exact macos-aarch64 and linux-x86_64 entries; each binds path/bytes/sha256 to the release asset inventory",
+        "invariants": "replace v1 host_interpreters with exact native host launcher/core identities; trust policy and verifier/root files remain external",
+        "container_profile": {
+          "asset_rows": 512,
+          "asset_bytes": 16777216,
+          "total_asset_bytes": 67108864,
+          "physical_bundle_files": 512,
+          "total_physical_bundle_bytes": 67108864,
+          "legacy_release_v1_total_bytes": 33554432,
+          "decision": "prospective native format only; see native-installation.md#container-profiles"
+        }
+      },
+      {
+        "schema": "ami-rust-install-receipt-v3",
+        "exact_fields": [
+          "schema",
+          "publisher",
+          "release_manifest_sha256",
+          "sdk_manifest_sha256",
+          "version",
+          "inventory",
+          "authentication",
+          "host",
+          "cli_sha256",
+          "core_sha256"
+        ],
+        "invariants": "bind release-v2 authentication and host-native CLI/core bytes; exact inventory and external receipt pin semantics continue",
+        "container_profile": {
+          "total_inventory_bytes": 134217728,
+          "total_installed_bytes_including_receipt": 134217728,
+          "legacy_v1_v2_total_bytes": 67108864,
+          "decision": "prospective native format only; see native-installation.md#container-profiles"
+        }
+      },
+      {
+        "schema": "ami-rust-native-build-receipt-v1",
+        "exact_fields": [
+          "schema",
+          "status",
+          "claim",
+          "host",
+          "platform",
+          "host_ram_bytes",
+          "source_date_epoch",
+          "project_lock_sha256",
+          "sdk_manifest_sha256",
+          "prerequisite_inventory_counts",
+          "compiler_verbose",
+          "forwarded_cargo_arguments",
+          "verbose_build_script_lines",
+          "deterministic_rust_flags",
+          "canonical_artifacts",
+          "elapsed_seconds",
+          "commands",
+          "cargo_frontend",
+          "host_capacity"
+        ],
+        "invariants": "PASS only after final artifact audit; native-build-only claim; exact artifact/command inventories; no success receipt on failure"
+      },
+      {
+        "schema": "ami-rust-consumer-preparation-v2",
+        "required_fields": [
+          "schema",
+          "status",
+          "host",
+          "source_policy",
+          "policy_sha256",
+          "selection_path",
+          "component_roots",
+          "components",
+          "capacity",
+          "commands",
+          "installed",
+          "R1_accepted"
+        ],
+        "invariants": "evidence-only; installed=false and R1_accepted=false; no Python executable/interpreter fields"
+      }
+    ],
+    "migration": {
+      "command": "ami-rust migrate --dry-run --project DIR",
+      "default": "dry-run with no filesystem changes",
+      "explicit_write": "ami-rust migrate --project DIR --from-lock OLD --install-prefix PREFIX --receipt-sha256 SHA256 --output FRESH_LOCK",
+      "rules": [
+        "Never overwrite an old lock, selection, manifest, receipt, source file, Cargo.toml or Cargo.lock.",
+        "Never execute Python referenced by old state, selection, lock or receipt.",
+        "Never change Cargo.toml, Cargo.lock, rust-toolchain.toml, workspace membership, global Cargo/rustup configuration or compiler selection.",
+        "Revalidate old lock and current components against the installed receipt/inventory and an externally stored receipt digest; recompute project/SDK hashes; bind v2 to receipt/host/CLI/core; write only separate fresh output. Retain the pin-consistency-only claim; migration does not independently reauthenticate publisher trust.",
+        "Missing, changed, linked, ambiguous, unsupported or wrongly owned inputs refuse without output mutation.",
+        "State v1 is not upgraded in place; prepare fresh v2 and retain old state."
+      ]
+    },
+    "metadata_limits": {
+      "scope": "New Rust host contract parser; these input limits do not cap AROS application memory or executable size. Component archive bounds remain tied to their separately authenticated inventory/resource profile.",
+      "unit": "bytes",
+      "json_max_container_depth": 128,
+      "package_metadata_state_selection": 2097152,
+      "project_lock": 1048576,
+      "sdk_component_manifest": 16777216,
+      "release_manifest_and_install_receipt": 4194304,
+      "publisher_policy_and_authentication_metadata": 1048576,
+      "github_attestation_bundle": 2097152,
+      "cosign_bundle": 1048576,
+      "trusted_root": 16777216,
+      "behavior": "Read a regular non-symlink file with a bound before parsing; enforce the same bound while reading to refuse growth. UTF-8 without BOM, one JSON value, recursive unique keys; exact schema validation follows. Security limits are tested at boundary and one byte/depth beyond."
+    },
+    "static_core_binding": {
+      "artifact": "One native ami-rust executable per host, statically linking the shared Rust host core.",
+      "frontends": "Install cargo-ami as a byte-identical regular-file copy of ami-rust; argv0 and the Cargo-injected ami token select frontend normalization. Both call the same parser/dispatcher.",
+      "cli_sha256": "SHA-256 over the exact accepted native executable file bytes.",
+      "core_sha256": "The same containing executable SHA-256, equal to cli_sha256 for this static-core contract. No separate .rlib, dynamic library or source-tree digest is substituted.",
+      "other_helpers": "Any separate compiler guard or linker executable has its own exact authenticated inventory entry; reusing the core source does not exempt its executable bytes from verification.",
+      "alias_verification": "Both frontend paths must be owned regular executable files with the same accepted byte length and digest; replacing either with a different program fails package/retained-inventory validation.",
+      "retention": "Retained copies bind their own original host/CLI/SDK/package identities; a newer global CLI never silently reinterprets an older retained record."
+    }
+  },
+  "future_frontend_contract": {
+    "status": "proposed_for_RC1",
+    "canonical_frontend": "one shared parser/dispatcher/core; cargo-ami removes Cargo's injected command token and calls the same core",
+    "argv_parity": "for same command, argv, host and environment, both frontends have the same validation order, status, output schema and filesystem effects",
+    "capability_matrix": [
+      {
+        "capability": "version",
+        "ami_rust": "ami-rust --version",
+        "cargo_ami": "cargo ami --version"
+      },
+      {
+        "capability": "verify package",
+        "ami_rust": "ami-rust verify-package",
+        "cargo_ami": "cargo ami verify-package"
+      },
+      {
+        "capability": "prepare",
+        "ami_rust": "ami-rust prepare --state FRESH",
+        "cargo_ami": "cargo ami prepare --state FRESH"
+      },
+      {
+        "capability": "new project",
+        "ami_rust": "ami-rust new --state STATE --project ABSOLUTE_PROJECT",
+        "cargo_ami": "cargo ami new --state STATE --project ABSOLUTE_PROJECT"
+      },
+      {
+        "capability": "build project",
+        "ami_rust": "ami-rust build --state STATE --project ABSOLUTE_PROJECT --output-dir FRESH [--package NAME] [-- CARGO_ARGS...]",
+        "cargo_ami": "cargo ami build --state STATE --project ABSOLUTE_PROJECT --output-dir FRESH [--package NAME] [-- CARGO_ARGS...]"
+      },
+      {
+        "capability": "check inputs",
+        "ami_rust": "ami-rust check-inputs --state STATE",
+        "cargo_ami": "cargo ami check-inputs --state STATE"
+      },
+      {
+        "capability": "verify SDK lock",
+        "ami_rust": "ami-rust verify --sdk-lock FILE",
+        "cargo_ami": "cargo ami verify --sdk-lock FILE"
+      },
+      {
+        "capability": "build with SDK lock",
+        "ami_rust": "ami-rust build --sdk-lock FILE --output-dir FRESH -- CARGO_ARGS...",
+        "cargo_ami": "cargo ami build --sdk-lock FILE --output-dir FRESH -- CARGO_ARGS..."
+      },
+      {
+        "capability": "verify release",
+        "ami_rust": "ami-rust verify --bundle BUNDLE --policy EXTERNAL_POLICY",
+        "cargo_ami": "cargo ami verify --bundle BUNDLE --policy EXTERNAL_POLICY"
+      },
+      {
+        "capability": "install release",
+        "ami_rust": "ami-rust install --bundle BUNDLE --policy EXTERNAL_POLICY --prefix FRESH_PREFIX [--receipt-pin FRESH_EXTERNAL_FILE]",
+        "cargo_ami": "cargo ami install --bundle BUNDLE --policy EXTERNAL_POLICY --prefix FRESH_PREFIX [--receipt-pin FRESH_EXTERNAL_FILE]"
+      },
+      {
+        "capability": "lock project",
+        "ami_rust": "ami-rust lock --prefix PREFIX --selection SELECTION --project PROJECT --output FRESH_FILE",
+        "cargo_ami": "cargo ami lock --prefix PREFIX --selection SELECTION --project PROJECT --output FRESH_FILE"
+      },
+      {
+        "capability": "uninstall",
+        "ami_rust": "ami-rust uninstall --prefix PREFIX --receipt-sha256 SHA256",
+        "cargo_ami": "cargo ami uninstall --prefix PREFIX --receipt-sha256 SHA256"
+      },
+      {
+        "capability": "inspect or migrate",
+        "ami_rust": "ami-rust migrate --dry-run --project DIR; explicit fresh output for writes",
+        "cargo_ami": "cargo ami migrate --dry-run --project DIR; explicit fresh output for writes"
+      }
+    ],
+    "outside_scope": [
+      "No general Cargo option pass-through; keep the locked/offline recipe.",
+      "cargo metadata/check/build after project activation is a separate RC2 capability, not alias for cargo ami build.",
+      "cargo test/run, arbitrary rust-analyzer builds and unrelated targets are not current or RC0-approved.",
+      "Legacy offline SSH verifier/installer is not a production fallback."
+    ],
+    "future_exit_mapping": {
+      "success_help_version": 0,
+      "invocation_schema_trust_archive_ownership_or_io_refusal": 2,
+      "child_nonnegative_return_code": "passed through exactly",
+      "child_signal_n": "min(255, 128 + N)",
+      "supervised_build_child_signal_n": "130 until explicit contract revision",
+      "monitor_failure": "stop process group; return child nonzero code if present, otherwise 1",
+      "post_publication_pin_failure_or_sigterm": "1 and leave installed prefix plus receipt digest available"
+    },
+    "version_output_schema": {
+      "status": "proposed_for_RC1",
+      "stdout": "one UTF-8 JSON object followed by LF; identical for ami-rust and cargo ami",
+      "schema": "ami-rust-version-v1",
+      "exact_fields": [
+        "schema",
+        "cli_version",
+        "sdk_version",
+        "packaging_revision"
+      ],
+      "types": {
+        "schema": "string",
+        "cli_version": "string",
+        "sdk_version": "string",
+        "packaging_revision": "integer"
+      },
+      "identity_rule": "CLI version identifies the host executable/core; SDK version identifies the target SDK; packaging_revision identifies the package adapter generation"
+    }
+  },
+  "dependency_proposal": {
+    "host_compiler": {
+      "version": "1.98.1",
+      "selection": "reuse authenticated host Rust bootstrap input for macos-aarch64 and linux-x86_64",
+      "scope": "host CLI/core only; preserve target SDK nightly-2026-09-18, commit 330d317121e16b5db8e5adc63595910528ff2ee7 and target Cargo producer"
+    },
+    "direct_crates": [
+      {
+        "crate": "serde",
+        "version": "=1.0.228",
+        "checksum": "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e",
+        "license": "MIT OR Apache-2.0",
+        "msrv": "1.56",
+        "features": [
+          "std",
+          "derive"
+        ],
+        "purpose": "typed schema serialization/deserialization; exact version already in root lock/vendor",
+        "status": "Selected in exact standalone lock; reviewed source/licenses/advisories; both-host API fixtures passed"
+      },
+      {
+        "crate": "serde_json",
+        "version": "=1.0.145",
+        "checksum": "402a6f66d8c709116cf22f558eab210f5a50187f702eb4d7e5ef38d9a7f1c79c",
+        "license": "MIT OR Apache-2.0",
+        "msrv": "1.61",
+        "features": [
+          "std"
+        ],
+        "purpose": "bounded JSON; recursive custom visitor rejects duplicate keys before typed decoding; exact version already in root lock/vendor",
+        "status": "Selected in exact standalone lock; reviewed source/licenses/advisories; both-host API fixtures passed"
+      },
+      {
+        "crate": "sha2",
+        "version": "=0.11.1",
+        "checksum": "47d7069beb7d6ac7b9acd1039986e73443f24234f41074da099d6f994ac9ad19",
+        "license": "MIT OR Apache-2.0",
+        "msrv": "1.88",
+        "features": [
+          "alloc",
+          "oid"
+        ],
+        "purpose": "SHA-256; shared with lzma-rust2 xz feature so host lock has one sha2 version; leave target graph sha2 0.10.9 unchanged",
+        "status": "Selected in exact standalone lock; reviewed source/licenses/advisories; both-host API fixtures passed",
+        "default_features": true
+      },
+      {
+        "crate": "tar",
+        "version": "=0.4.46",
+        "checksum": "3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840",
+        "license": "MIT OR Apache-2.0",
+        "msrv": "1.63",
+        "features": [],
+        "purpose": "streaming TAR; default-features=false excludes xattr",
+        "security_floor": "0.4.45+; 0.4.46 is above affected <=0.4.44 ranges in GHSA-gchp-q4r4-x4ff and GHSA-j4xf-2g29-59ph",
+        "status": "Selected in exact standalone lock; reviewed source/licenses/advisories; both-host API fixtures passed",
+        "default_features": false
+      },
+      {
+        "crate": "flate2",
+        "version": "=1.1.10",
+        "checksum": "6e634e2e0ebac1ee034020da1ca582e17ffe4e0f5e985823721e168928136dcb",
+        "license": "MIT OR Apache-2.0",
+        "msrv": "1.67",
+        "features": [
+          "rust_backend"
+        ],
+        "purpose": "gzip with pure-Rust backend; default-features=false, no external zlib",
+        "status": "Selected in exact standalone lock; reviewed source/licenses/advisories; both-host API fixtures passed",
+        "default_features": false
+      },
+      {
+        "crate": "lzma-rust2",
+        "version": "=0.22.0",
+        "checksum": "7277c9742229dc25243236d578b6471a798c554512c6f6a04365ec2e87c2a3bb",
+        "license": "Apache-2.0",
+        "msrv": "1.85",
+        "features": [
+          "std",
+          "xz"
+        ],
+        "purpose": "XZ processing with decoder memory bound; default-features=false; enable std,xz only; do not enable optimization",
+        "status": "Selected in exact standalone lock; reviewed source/licenses/advisories; both-host API fixtures passed",
+        "review_basis": "XZ memory-limit API and bounded controls reviewed; RustSec0.22.2 audit has zero known findings against database999ec89d5d3f10f20be14750ec8c2d8b44e0ac9b. Full-input/stream policy remains a production RC1 test.",
+        "default_features": false
+      }
+    ],
+    "resolution_rules": [
+      "All entries are conditional exact direct-version candidates, not a frozen dependency selection.",
+      "Use a separate host-core workspace and lockfile; do not alter target SDK manifests or locks.",
+      "Pin each direct version exactly and commit the complete transitive lock/checksums before implementation builds.",
+      "Reuse existing serde/serde_json; direct sha2 0.11.1 shares with XZ while target sha2 0.10.9 stays unchanged.",
+      "No clap; use a small manual parser to preserve separators, duplicate rejection, fixed recipe, forwarding and statuses.",
+      "No new cryptographic protocol; reuse externally pinned qualified gh/Cosign tools, roots and policy.",
+      "Selected feature sets have no host-native C dependency; macos-aarch64/linux-x86_64 support is plausible under Rust 1.98.1, not qualified until both-host builds.",
+      "Before freeze, review the complete exact lock for licenses and advisories, exercise the selected APIs and build on both supported hosts."
+    ],
+    "status": "Exact 29-registry-crate development selection: source/license/advisory review and thirteen API fixtures passed on both supported hosts in run 39172161086, candidate 844f52d. Production host-core integration remains RC1; any graph/feature changes require reviewed new identities.",
+    "selection_record": "host-dependency-selection.md and tools/host-contract-deps/Cargo.lock; exact 29-crate candidate under native-host qualification"
+  },
+  "proposed_fixtures": [
+    {
+      "id": "version-output-identities",
+      "case": "Run --version through each native frontend on both supported hosts.",
+      "expect": "exit 0; exactly ami-rust-version-v1 fields and types; CLI, SDK, and packaging identities match fixture inputs; frontend outputs are byte-identical"
+    },
+    {
+      "id": "cli-alias-parity",
+      "case": "Run each shared command through ami-rust and cargo ami with the same host/environment.",
+      "expect": "same status, output schema, validation order and filesystem effects; cargo-ami only removes injected token"
+    },
+    {
+      "id": "options-separator",
+      "case": "No args, exact help/version, unknown/repeated/missing options, missing separator, empty forwarded args and valid options after separator.",
+      "expect": "success/help/version 0; malformed/refused 2; forwarded Cargo args are not re-parsed"
+    },
+    {
+      "id": "child-status",
+      "case": "Child exits 37; build driver is signaled N; supervised Cargo child is signaled.",
+      "expect": "37 passes through; signaled driver maps min(255,128+N); signaled supervised child maps 130; monitor failure stops process group and returns its nonzero child status or 1"
+    },
+    {
+      "id": "json-duplicates",
+      "case": "Duplicate top-level and nested keys in lock, policy, manifest, receipt/auth; NaN and Infinity.",
+      "expect": "all refused before file creation, rename or tool execution"
+    },
+    {
+      "id": "schema-evolution",
+      "case": "Missing/unknown schema, unknown security field, diagnostics extension.",
+      "expect": "fail closed except documented non-decision diagnostics extensions"
+    },
+    {
+      "id": "identity-pins",
+      "case": "Mutate SDK, host, components, Cargo.toml, Cargo.lock, CLI/core or receipt; linked and noncanonical roots.",
+      "expect": "every mismatch refuses with no publisher or R1 claim"
+    },
+    {
+      "id": "hostile-archives",
+      "case": "Absolute/parent paths, links, duplicates, PAX/GNU path-size conflicts, case collisions, special files, extras/missing, truncation.",
+      "expect": "no escape from private staging, no prefix publication"
+    },
+    {
+      "id": "compression-bounds",
+      "case": "XZ dictionary/index memory bombs, invalid blocks/index/CRC, truncated/concatenated streams; gzip corruption/truncation and decompression expansion; TAR member-count, per-member and total expanded-byte limits.",
+      "expect": "bounded memory and output, deterministic refusal, no publication or panic"
+    },
+    {
+      "id": "external-trust",
+      "case": "Policy/tool/root inside bundle, changed hash, wrong repo/workflow/source/ref/OIDC/cert/inputs, missing attestations.",
+      "expect": "refuse before extraction; no SSH fallback"
+    },
+    {
+      "id": "ownership-and-modes",
+      "case": "Root, existing paths, symlink, wrong owner, writable state/prefix/receipt, root/home/cwd ancestor, overlap.",
+      "expect": "refuse before writes; prepared state 0700"
+    },
+    {
+      "id": "build-lock",
+      "case": "Existing output, missing parent, lock contention, child interruption and audit failure.",
+      "expect": "refuse; preserve failure logs/results; no PASS receipt"
+    },
+    {
+      "id": "receipt-pin",
+      "case": "Force receipt pin failure or SIGTERM after prefix publication.",
+      "expect": "status 1, keep prefix, report prefix+digest; normal pin is digest+LF"
+    },
+    {
+      "id": "uninstall-recovery",
+      "case": "Wrong digest, extra/missing file, modified receipt, interrupted deletion.",
+      "expect": "no deletion on validation failure; rollback before deletion; leave tombstone on interrupted deletion"
+    },
+    {
+      "id": "migration-preserves-inputs",
+      "case": "Dry-run legacy records; explicit fresh output; occupied output; changed project; wrong external receipt digest.",
+      "expect": "dry-run has no writes; wrong external receipt digest refuses; migration never runs Python or edits old records/Cargo files"
+    },
+    {
+      "id": "two-host-parity",
+      "case": "Same public and hostile-input suite on macOS 26 arm64 and Ubuntu 24.04 x86_64.",
+      "expect": "same contract both hosts; RC1 evidence, not established here"
+    },
+    {
+      "id": "python-closure-controls",
+      "case": "Observed native pass plus direct, shebang, absolute-path and transitive Python controls.",
+      "expect": "supported path has no Python; each control detected/refused on both hosts; RC0-A4 remains open until observed"
+    }
+  ],
+  "executable_closure_gaps": [
+    {
+      "scope": "tracked Python inventory",
+      "evidence": "python-dependencies.json assigns 104 tracked files: 26 public consumer/RC1 and 78 release/test/maintainer/RC4; every path has RC5 closure and replacement/removal condition",
+      "replacement_removal": "Use that per-file registry; public files leave closure after two-host parity and no imports/execution; internal uses leave after actual protected workflows pass; RC5 requires proven no-Python supported workflows on both hosts."
+    },
+    {
+      "scope": "public runtime",
+      "evidence": "package launcher/worker, CPython 3.12.15 bootstrap, host CLI/build/contracts/compact_sections/elf_audit, release installer/verifier/new_project and ci_verify",
+      "replacement_removal": "Rust shared core plus explicit pinned verifier tools; remove public Python runtime, embedded interpreter and hidden first-build bootstrap after parity and closure evidence."
+    },
+    {
+      "scope": "Cargo producer",
+      "evidence": "Python overlay/producer drivers; target vendor archive has 3,924 entries, one Python utility, 12 build.rs and seven process-spawn sites; static source review found no Python invocation in build.rs, but execution of the utility/spawned tools remains unproven",
+      "replacement_removal": "Rust xtask or reviewed non-Python producer; observe real process tree and port/remove any executed Python; remove drivers after Rust positive/counter fixtures and protected workflow."
+    },
+    {
+      "scope": "C-SDK producer",
+      "evidence": "corresponding-source archive has 33,043 entries and 71 Python sources; its Ninja graph has 72 Python command records: nine RUN_PYTHON, 54 PYTHON_EXECUTABLE and nine direct scripts. The prior count of 69 omitted three direct kickstart/localise-symbols.py edges; bounded current producer is not full Ninja",
+      "replacement_removal": "RC5 supports the existing bounded portable C-SDK derivation only. The full upstream Ninja graph and its 72 Python command records are inert corresponding-source/recipe data, excluded from active execution. Any selected interpreter-dependent edge in the bounded path remains RC4 replacement work and requires actual two-host RC5 qualification. Full Ninja execution is outside the supported producer; adding it requires a separately reviewed executable closure."
+    },
+    {
+      "scope": "protected workflows",
+      "evidence": "ci, cargo-qualify, packages, public-replay and sdk-qualify still call Python production/test/verification paths",
+      "replacement_removal": "Replace each production call or keep residuals under RC4 only until actual protected workflows stop importing/executing them; qualify both hosts."
+    }
+  ],
+  "source_anchors": [
+    {
+      "path": "packaging/cli.py",
+      "lines": [
+        48,
+        85
+      ],
+      "claim": "package inventory"
+    },
+    {
+      "path": "packaging/cli.py",
+      "lines": [
+        109,
+        112
+      ],
+      "claim": "check=True child call"
+    },
+    {
+      "path": "packaging/cli.py",
+      "lines": [
+        114,
+        188
+      ],
+      "claim": "state path, ownership and readiness"
+    },
+    {
+      "path": "packaging/cli.py",
+      "lines": [
+        191,
+        255
+      ],
+      "claim": "package commands and exit mapping"
+    },
+    {
+      "path": "host/cli.py",
+      "lines": [
+        322,
+        446
+      ],
+      "claim": "direct options, verification claim and exits"
+    },
+    {
+      "path": "host/build.py",
+      "lines": [
+        76,
+        115
+      ],
+      "claim": "Cargo recipe and ambient config"
+    },
+    {
+      "path": "host/build.py",
+      "lines": [
+        144,
+        194
+      ],
+      "claim": "fresh build output and lock"
+    },
+    {
+      "path": "host/build.py",
+      "lines": [
+        198,
+        231
+      ],
+      "claim": "child supervision and failure evidence"
+    },
+    {
+      "path": "host/build.py",
+      "lines": [
+        267,
+        310
+      ],
+      "claim": "artifact audit, receipt and exits"
+    },
+    {
+      "path": "host/contracts.py",
+      "lines": [
+        22,
+        40
+      ],
+      "claim": "JSON bounds, duplicate keys and portable paths"
+    },
+    {
+      "path": "host/contracts.py",
+      "lines": [
+        155,
+        203
+      ],
+      "claim": "project lock validation"
+    },
+    {
+      "path": "release/install_publisher.py",
+      "lines": [
+        29,
+        79
+      ],
+      "claim": "external policy/trust boundary"
+    },
+    {
+      "path": "release/install_publisher.py",
+      "lines": [
+        146,
+        195
+      ],
+      "claim": "production command and exit status"
+    },
+    {
+      "path": "release/verify_publisher.py",
+      "lines": [
+        222,
+        270
+      ],
+      "claim": "exact policy and binary/root hashes"
+    },
+    {
+      "path": "release/install.py",
+      "lines": [
+        585,
+        621
+      ],
+      "claim": "secure owner/mode requirements"
+    },
+    {
+      "path": "release/install.py",
+      "lines": [
+        695,
+        818
+      ],
+      "claim": "fresh paths and atomic writes"
+    },
+    {
+      "path": "release/install.py",
+      "lines": [
+        870,
+        945
+      ],
+      "claim": "stage, receipt, publication and pin failure"
+    },
+    {
+      "path": "release/install.py",
+      "lines": [
+        1012,
+        1085
+      ],
+      "claim": "strict receipt and installed inventory"
+    },
+    {
+      "path": "release/install.py",
+      "lines": [
+        1117,
+        1141
+      ],
+      "claim": "tombstone uninstall recovery"
+    },
+    {
+      "path": "release/install.py",
+      "lines": [
+        1144,
+        1177
+      ],
+      "claim": "current selection format"
+    },
+    {
+      "path": "release/install.py",
+      "lines": [
+        1184,
+        1255
+      ],
+      "claim": "lock generation and consistency claim"
+    },
+    {
+      "path": "release/ci_verify.py",
+      "lines": [
+        649,
+        680
+      ],
+      "claim": "preparation evidence not installed/R1"
+    },
+    {
+      "path": "release/ci-auth-tools.json",
+      "lines": [
+        1,
+        55
+      ],
+      "claim": "GH/Cosign pins and roots"
+    },
+    {
+      "path": "release/ci-bootstrap-inputs.json",
+      "lines": [
+        76,
+        132
+      ],
+      "claim": "authenticated host Rust 1.98.1"
+    },
+    {
+      "path": "docs/compatibility.md",
+      "lines": [
+        8,
+        16
+      ],
+      "claim": "supported hosts and target toolchain"
+    },
+    {
+      "path": "docs/rust-cli-cargo-migration-plan.md",
+      "lines": [
+        123,
+        148
+      ],
+      "claim": "future capabilities and compiler policy"
+    },
+    {
+      "path": "docs/rust-cli-cargo-migration-plan.md",
+      "lines": [
+        155,
+        183
+      ],
+      "claim": "RC0 acceptance"
+    }
+  ],
+  "compatibility_fixture_pins": "legacy-fixture-pins.json"
+}

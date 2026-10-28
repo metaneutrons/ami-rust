@@ -1,0 +1,158 @@
+{
+  "schema": "ami-rust-toolchain-capsule-inputs-v1",
+  "source_inputs": [
+    {
+      "role": "rust-src-library-archive",
+      "filename": "rust-src-nightly.tar.xz",
+      "bytes": 5934836,
+      "sha256": "8de4a7bc2ba7fd977a3ec74ae2794fee99c6f987e5f022ba2ff4b0ca8a5d1004",
+      "url": "https://static.rust-lang.org/dist/2026-09-18/rust-src-nightly.tar.xz"
+    },
+    {
+      "role": "llvm11-source-lock",
+      "filename": "llvm-11.0.0.sources.json",
+      "bytes": 4084,
+      "sha256": "88c89a65bba42a0d2f49fb5d193c03872307b9a46a4c6eb9f043aec0e4fd34d8",
+      "path": "release/source-inputs/llvm-11.0.0.sources.json"
+    },
+    {
+      "role": "llvm11-clang-archive",
+      "filename": "clang-11.0.0.src.tar.xz",
+      "bytes": 14982988,
+      "sha256": "0f96acace1e8326b39f220ba19e055ba99b0ab21c2475042dbc6a482649c5209",
+      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-11.0.0/clang-11.0.0.src.tar.xz"
+    },
+    {
+      "role": "llvm11-clang-aros-patch",
+      "filename": "clang-11.0.0.src-aros.diff",
+      "bytes": 31807,
+      "sha256": "291500abb7518c6b1f9b95c61492dafea9091faeebb380f95b6cc9e1fe057500",
+      "url": "https://raw.githubusercontent.com/metaneutrons/AROS-NX/cb6974f1c3de43c6f1168d69039af7c32e56153c/tools/crosstools/llvm/clang-11.0.0.src-aros.diff"
+    },
+    {
+      "role": "llvm11-compiler-rt-archive",
+      "filename": "compiler-rt-11.0.0.src.tar.xz",
+      "bytes": 2141408,
+      "sha256": "374aff82ff573a449f9aabbd330a5d0a441181c535a3599996127378112db234",
+      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-11.0.0/compiler-rt-11.0.0.src.tar.xz"
+    },
+    {
+      "role": "llvm11-compiler-rt-aros-patch",
+      "filename": "compiler-rt-11.0.0.src-aros.diff",
+      "bytes": 614,
+      "sha256": "b50d7fca056d5988347ca01a3894f695066e295699c8828c8a6e50624509aafa",
+      "url": "https://raw.githubusercontent.com/metaneutrons/AROS-NX/cb6974f1c3de43c6f1168d69039af7c32e56153c/tools/crosstools/llvm/compiler-rt-11.0.0.src-aros.diff"
+    },
+    {
+      "role": "llvm11-libcxx-archive",
+      "filename": "libcxx-11.0.0.src.tar.xz",
+      "bytes": 1892416,
+      "sha256": "6c1ee6690122f2711a77bc19241834a9219dda5036e1597bfa397f341a9b8b7a",
+      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-11.0.0/libcxx-11.0.0.src.tar.xz"
+    },
+    {
+      "role": "llvm11-libcxx-aros-patch",
+      "filename": "libcxx-11.0.0.src-aros.diff",
+      "bytes": 3815,
+      "sha256": "47912736d05722da2e4c974c775951c0c70631214efd948adda4e7c6ba361a61",
+      "url": "https://raw.githubusercontent.com/metaneutrons/AROS-NX/cb6974f1c3de43c6f1168d69039af7c32e56153c/tools/crosstools/llvm/libcxx-11.0.0.src-aros.diff"
+    },
+    {
+      "role": "llvm11-libcxxabi-archive",
+      "filename": "libcxxabi-11.0.0.src.tar.xz",
+      "bytes": 554284,
+      "sha256": "58697d4427b7a854ec7529337477eb4fba16407222390ad81a40d125673e4c15",
+      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-11.0.0/libcxxabi-11.0.0.src.tar.xz"
+    },
+    {
+      "role": "llvm11-libcxxabi-aros-patch",
+      "filename": "libcxxabi-11.0.0.src-aros.diff",
+      "bytes": 3109,
+      "sha256": "c75ca9fb89296861d4e840eaeda5485a49427e507f196b4ad0d1ebbfc3e675b2",
+      "url": "https://raw.githubusercontent.com/metaneutrons/AROS-NX/cb6974f1c3de43c6f1168d69039af7c32e56153c/tools/crosstools/llvm/libcxxabi-11.0.0.src-aros.diff"
+    },
+    {
+      "role": "llvm11-libunwind-archive",
+      "filename": "libunwind-11.0.0.src.tar.xz",
+      "bytes": 97168,
+      "sha256": "8455011c33b14abfe57b2fd9803fb610316b16d4c9818bec552287e2ba68922f",
+      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-11.0.0/libunwind-11.0.0.src.tar.xz"
+    },
+    {
+      "role": "llvm11-libunwind-aros-patch",
+      "filename": "libunwind-11.0.0.src-aros.diff",
+      "bytes": 628,
+      "sha256": "9ce6f344bd5ac226e5e3dae9129ead3c7d48af7bf2ce53bd67419394dd97a509",
+      "url": "https://raw.githubusercontent.com/metaneutrons/AROS-NX/cb6974f1c3de43c6f1168d69039af7c32e56153c/tools/crosstools/llvm/libunwind-11.0.0.src-aros.diff"
+    },
+    {
+      "role": "llvm11-lld-archive",
+      "filename": "lld-11.0.0.src.tar.xz",
+      "bytes": 1247188,
+      "sha256": "efe7be4a7b7cdc6f3bcf222827c6f837439e6e656d12d6c885d5c8a80ff4fd1c",
+      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-11.0.0/lld-11.0.0.src.tar.xz"
+    },
+    {
+      "role": "llvm11-lld-aros-patch",
+      "filename": "lld-11.0.0.src-aros.diff",
+      "bytes": 956,
+      "sha256": "837036571082ec0c9ddd7da2852637a7cc8373d68743727d6f06791df4f10011",
+      "url": "https://raw.githubusercontent.com/metaneutrons/AROS-NX/cb6974f1c3de43c6f1168d69039af7c32e56153c/tools/crosstools/llvm/lld-11.0.0.src-aros.diff"
+    },
+    {
+      "role": "llvm11-llvm-archive",
+      "filename": "llvm-11.0.0.src.tar.xz",
+      "bytes": 39480848,
+      "sha256": "913f68c898dfb4a03b397c5e11c6a2f39d0f22ed7665c9cefa87a34423a72469",
+      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-11.0.0/llvm-11.0.0.src.tar.xz"
+    },
+    {
+      "role": "llvm11-llvm-aros-patch",
+      "filename": "llvm-11.0.0.src-aros.diff",
+      "bytes": 2544,
+      "sha256": "4adeef40baf368ba75672309b83096d246ea85b927dcc7ee9b632fcef9981cb9",
+      "url": "https://raw.githubusercontent.com/metaneutrons/AROS-NX/cb6974f1c3de43c6f1168d69039af7c32e56153c/tools/crosstools/llvm/llvm-11.0.0.src-aros.diff"
+    }
+  ],
+  "vendor_inputs": [
+    {
+      "role": "native-vendor-archive",
+      "path": "release/inputs/native-cargo-vendor.tar.xz",
+      "bytes": 2331800,
+      "sha256": "dea3c4d945f31406cdfe824581592a9253f1afcffe8423e8a1bc9f528b2267b0"
+    },
+    {
+      "role": "native-vendor-manifest",
+      "path": "release/native-cargo-vendor-inputs.json",
+      "bytes": 14950,
+      "sha256": "7a1a501c1766c52769171efe58354a0736983a88ad017e118519384cfda23418"
+    },
+    {
+      "role": "root-Cargo-lock",
+      "path": "Cargo.lock",
+      "bytes": 11325,
+      "sha256": "8cb678cb35902b837c5806a398f2de73c0f39024624b642a313916119b600280"
+    },
+    {
+      "role": "tooling-Cargo-lock",
+      "path": "tooling/Cargo.lock",
+      "bytes": 7135,
+      "sha256": "8a34bfca70bdef21e2a977b4cbb3cf78e0b00d31b17af6fa780a9abeb195ba6e"
+    },
+    {
+      "role": "native-tooling-manifest",
+      "path": "release/native-tooling-inputs.json",
+      "bytes": 29558,
+      "sha256": "bc0907093a43533022c1db826dc56f5485a4f8698e751cb10bcc45d4022deab8"
+    },
+    {
+      "role": "legacy-vendor-archive",
+      "path": "release/inputs/vendor.tar.xz",
+      "bytes": 3264952,
+      "sha256": "84fb6e3e1710f13e85450cce1db541c3967520f996a3f17efbd5a7a8345b1c7e"
+    }
+  ],
+  "source_scope": "Repository Git blobs include original CSDK/collector and Cargo MPL source capsules and maintained patches. Additional inputs preserve Rust library sources and native LLVM11 sources/patches; not full upstream Rust compiler/LLVM23 or full Cargo/vendor source.",
+  "distributed_rust_source_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
+  "cargo_source_commit": "3efb1f477e99b42974b982d939fd100303cdf7db"
+}

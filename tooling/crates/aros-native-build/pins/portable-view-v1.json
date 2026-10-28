@@ -1,0 +1,32 @@
+{
+  "schema": "ami-rust-portable-view-v1",
+  "parent_view": "ami-rust-public-sdk-exclusion-policy-v1",
+  "links": "copy-resolved-regular-file",
+  "permissions": "owner-derived-rustup-permissions-v1",
+  "omitted_installer_files": [
+    "lib/rustlib/components",
+    "lib/rustlib/rust-installer-version"
+  ],
+  "omitted_root_tool_aliases": [
+    {
+      "path": "bin/llvm-objdump",
+      "target": "../libexec/aros/llvm/bin/llvm-objdump"
+    },
+    {
+      "path": "bin/llvm-nm",
+      "target": "../libexec/aros/llvm/bin/llvm-nm"
+    },
+    {
+      "path": "bin/llvm-ar",
+      "target": "../libexec/aros/llvm/bin/llvm-ar"
+    },
+    {
+      "path": "bin/llvm-strip",
+      "target": "../libexec/aros/llvm/bin/llvm-strip"
+    },
+    {
+      "path": "bin/ld.lld",
+      "target": "../libexec/aros/llvm/bin/ld.lld"
+    }
+  ]
+}

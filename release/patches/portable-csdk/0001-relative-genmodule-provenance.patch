@@ -1,0 +1,30 @@
+--- a/crates/aros-cmake-engine/engine/GenmoduleHeaders.cmake
++++ b/crates/aros-cmake-engine/engine/GenmoduleHeaders.cmake
+@@ -56,6 +56,15 @@
+        IS_SYMLINK "${_config}")
+         message(FATAL_ERROR
+             "aros_materialize_genmodule_headers: CONFIG is missing or not a regular file: ${_config}")
++    endif()
++
++    # Keep the public provenance banner independent of the checkout prefix.
++    # The dependency still names the complete config path; only argv and cwd
++    # change, so the unmodified generator reads exactly the same source file.
++    file(RELATIVE_PATH _config_arg "${AROS_SOURCE_DIR}" "${_config}")
++    if(IS_ABSOLUTE "${_config_arg}")
++        message(FATAL_ERROR
++            "aros_materialize_genmodule_headers: CONFIG must be relative to the source volume")
+     endif()
+ 
+     foreach(_field MODULE MODTYPE INCLUDE_NAME)
+@@ -139,9 +148,10 @@
+         OUTPUT ${_private_headers} ${_published_headers}
+         COMMAND "${CMAKE_COMMAND}" -E make_directory
+             "${_private_include}" ${_private_dirs}
+-        COMMAND "${AROS_HOST_GENMODULE}" -c "${_config}" -d "${_private_include}"
++        COMMAND "${AROS_HOST_GENMODULE}" -c "${_config_arg}" -d "${_private_include}"
+             writeincludes "${GMH_MODULE}" "${GMH_MODTYPE}"
+         ${_publish_commands}
++        WORKING_DIRECTORY "${AROS_SOURCE_DIR}"
+         DEPENDS "${AROS_HOST_GENMODULE}" "${_config}"
+         COMMENT "Generating exact ${GMH_MODULE}.${GMH_MODTYPE} public headers"
+         VERBATIM)

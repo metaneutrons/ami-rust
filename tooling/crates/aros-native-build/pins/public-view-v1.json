@@ -1,0 +1,142 @@
+{
+  "schema": "ami-rust-public-sdk-exclusion-policy-v1",
+  "version": 1,
+  "components": [
+    "llvm",
+    "rust"
+  ],
+  "exclusions": [
+    {
+      "component": "llvm",
+      "path": "bin/git-clang-format",
+      "bytes": 21426,
+      "sha256": "9739e2bbf8695af69020835bb70b676f3398012cdb16cc73da1cf91a522f4bc2"
+    },
+    {
+      "component": "llvm",
+      "path": "bin/hmaptool",
+      "bytes": 9974,
+      "sha256": "b65f78686ee849cefd72d0b62f59423085da66db747b2c34a9c70ee041f33c5f"
+    },
+    {
+      "component": "llvm",
+      "path": "share/clang/clang-format-diff.py",
+      "bytes": 4878,
+      "sha256": "dd4301de43de2a63ba390475afc3ac52a19b5d67d8d6c9407d261f844dd54c82"
+    },
+    {
+      "component": "llvm",
+      "path": "share/clang/clang-format-sublime.py",
+      "bytes": 2502,
+      "sha256": "f78b159b5b01b4a6cd168d98e2a315d84234a34d6e73ae14e64eb92f7df6635b"
+    },
+    {
+      "component": "llvm",
+      "path": "share/clang/clang-format.py",
+      "bytes": 5982,
+      "sha256": "36ba7aa047f8a8ac8fdc278aaa733de801cc84dea60a4210973fd3e4f0d2a330"
+    },
+    {
+      "component": "llvm",
+      "path": "share/clang/clang-rename.py",
+      "bytes": 2050,
+      "sha256": "9bd04c5159dce657ae36cd489634bf133cdd5766fa474bd74d58e641587a64df"
+    },
+    {
+      "component": "llvm",
+      "path": "share/opt-viewer/opt-diff.py",
+      "bytes": 2570,
+      "sha256": "ea78f43cf73e983a4af495f6b06aba8e89d7c7c3142c3235cfacb3e295735697"
+    },
+    {
+      "component": "llvm",
+      "path": "share/opt-viewer/opt-stats.py",
+      "bytes": 2529,
+      "sha256": "fafc5ad75e9e57695d698cc401e29abfd5b298147a3527c8cf21dde0fb6d0478"
+    },
+    {
+      "component": "llvm",
+      "path": "share/opt-viewer/opt-viewer.py",
+      "bytes": 12986,
+      "sha256": "f6d8147b716fb043c8250886a5071eabbcc86db1be5c9ce6b944525f068627d1"
+    },
+    {
+      "component": "llvm",
+      "path": "share/opt-viewer/optpmap.py",
+      "bytes": 1743,
+      "sha256": "6e59db13286ffb2d30c3042892be58dc02cf8c3c5df4d472ea29b31a62efbbf8"
+    },
+    {
+      "component": "llvm",
+      "path": "share/opt-viewer/optrecord.py",
+      "bytes": 10277,
+      "sha256": "aedb98a30c3073714cee32c3bf982d0d776d203ce77b9c407912c9e262b7c2b7"
+    },
+    {
+      "component": "rust",
+      "path": "bin/rust-gdb",
+      "bytes": 1413,
+      "sha256": "7054a508ece38b5bb81860e8ddbcd62021fab6432026789970ebbba8b84f6163"
+    },
+    {
+      "component": "rust",
+      "path": "bin/rust-gdbgui",
+      "bytes": 2160,
+      "sha256": "bc60613775a098e59b49fa4584cea73631697fe1456c44284c337d6700340315"
+    },
+    {
+      "component": "rust",
+      "path": "bin/rust-lldb",
+      "bytes": 1371,
+      "sha256": "f9c40edb1b5943ce8dc18d1d1e9fc62e49486a0229bf655affee52e968c19168"
+    },
+    {
+      "component": "rust",
+      "path": "lib/rustlib/etc/gdb_load_rust_pretty_printers.py",
+      "bytes": 504,
+      "sha256": "a32e7857651bc7ed7c52dfc71131cbbea01a5cd1886399876032c4de60fa4886"
+    },
+    {
+      "component": "rust",
+      "path": "lib/rustlib/etc/gdb_lookup.py",
+      "bytes": 3833,
+      "sha256": "e0b68235a6c2874ef24922e2cd903baf91b258b9590a60ab8779b989d84927ae"
+    },
+    {
+      "component": "rust",
+      "path": "lib/rustlib/etc/gdb_providers.py",
+      "bytes": 16948,
+      "sha256": "6f54f281ccb052450a01357b2b71b91f2cc1bfdbd3de7898345c95ab9754be1b"
+    },
+    {
+      "component": "rust",
+      "path": "lib/rustlib/etc/gdb_trim_paths.py",
+      "bytes": 2350,
+      "sha256": "c701d5655e26feda1d71b1687eddb10f489142df54222ade0461de30d8298039"
+    },
+    {
+      "component": "rust",
+      "path": "lib/rustlib/etc/lldb_lookup.py",
+      "bytes": 19627,
+      "sha256": "2897829e35237aef9d572e6c4019281f650a42097fc454c39063e9de3f55725c"
+    },
+    {
+      "component": "rust",
+      "path": "lib/rustlib/etc/lldb_providers.py",
+      "bytes": 59662,
+      "sha256": "db23835a7e669d87d23a59925fa8488b0f40d3246a2fce78e139bfbefb911ece"
+    },
+    {
+      "component": "rust",
+      "path": "lib/rustlib/etc/lldb_trim_paths.py",
+      "bytes": 2840,
+      "sha256": "053e336fdbfafacbb0e7204cf4a9e9b3f691e5784f03521ee9f48c4257f43641"
+    },
+    {
+      "component": "rust",
+      "path": "lib/rustlib/etc/rust_types.py",
+      "bytes": 4232,
+      "sha256": "e1bb4a46461b943999c9e2346c71808168a982cbf812587622d9c807f32d5bb5"
+    }
+  ]
+}

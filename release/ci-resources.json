@@ -1,0 +1,61 @@
+{
+  "adoption_is_not_qualification": true,
+  "authority": "Owner explicitly replaced petty local file/archive quotas with realistic free-space accounting on 2026-10-16; standard hosted runners and protected R1 qualification remain authorised",
+  "basis": {
+    "capacity_run": "https://github.com/metaneutrons/ami-rust/actions/runs/38807604508",
+    "max_retained_observed_RSS_bytes": 2336669696,
+    "max_retained_observed_workspace_bytes": 2808530761,
+    "old_runtime_budget_sha256": "eb842c642fbed2f88433750c4c51dd493eb2ecb3d20d49b73cbea1c2176b8a39"
+  },
+  "build": {
+    "jobs": 2,
+    "log_bytes": 16777216,
+    "rss_bytes": 4294967296,
+    "seconds": 1200,
+    "workspace_bytes": 12884901888
+  },
+  "campaign": {
+    "old_clocks_not_reset": true,
+    "review_reserve_seconds": 300,
+    "seconds": 5400
+  },
+  "effective_scope": "New local preparation/evidence work uses free-space headroom; hosted build/runtime limits and sealed previous campaigns unchanged",
+  "host_capacity": {
+    "disk_free_minimum_bytes": 25769803776,
+    "ram_minimum_bytes": 6442450944,
+    "schema": "ami-rust-host-capacity-v1"
+  },
+  "local_storage": {
+    "basis": "Two existing 12 GiB build workspaces plus 8 GiB recovery headroom; add the estimated peak of each large operation before admission",
+    "fixed_archive_quota_bytes": null,
+    "minimum_free_bytes": 34359738368,
+    "mode": "free-space-headroom",
+    "per_file_quotas": false,
+    "preserve_existing_evidence": true,
+    "schema": "ami-rust-local-storage-v2"
+  },
+  "retention": {
+    "CI_artifact_pool_bytes": 536870912,
+    "all_old_external_holdings_preserved": true,
+    "local_archive_policy": "local_storage; former fixed local quotas are historical only"
+  },
+  "runtime_budgets": "All guest/heap/stack/native code-size/ABI/baseline/runtime limits remain exactly those in inputs/budgets.json",
+  "schema": "ami-rust-hosted-resources-v1",
+  "transient_CI": {
+    "global_logical_bytes": 25769803776,
+    "includes": [
+      "download archives",
+      "source and dependency trees",
+      "all installed prerequisite components including bootstraps",
+      "Cargo caches and targets",
+      "SDK build roots",
+      "logs",
+      "checkout Git data",
+      "staging and tool-controlled HOME/temp directories"
+    ],
+    "max_parallel_jobs": 2,
+    "no_cleanup_assumed_without_receipt": true,
+    "per_job_logical_bytes": 12884901888,
+    "retained_uploads_charge_retention": true
+  }
+}

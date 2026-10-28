@@ -1,0 +1,322 @@
+--- a/src/compiler/build_runner/compilation_files.rs
++++ b/src/compiler/build_runner/compilation_files.rs
+@@ -727,6 +727,87 @@
+     let c_extra_filename = use_extra_filename(bcx, unit);
+     let pkg_dir = use_pkg_dir(bcx, unit);
+ 
++    let cross_metadata = build_runner.ami_rust_target_metadata(unit);
++    let mut shared_hasher = metadata_seed(unit, build_runner, false);
++    if cross_metadata {
++        // Invalidate target caches when this opt-in metadata recipe changes.
++        super::AMI_RUST_CROSS_METADATA_VERSION.hash(&mut shared_hasher);
++    }
++
++    let mut c_metadata_hasher = shared_hasher.clone();
++    // Mix in the target-metadata of all the dependencies of this target.
++    let mut dep_c_metadata_hashes = build_runner
++        .unit_deps(unit)
++        .iter()
++        .zip(&deps_metadata)
++        .map(|(dep, metadata)| {
++            if cross_metadata && dep.unit.kind.is_host() {
++                host_tool_projection(&dep.unit, build_runner, metas)
++            } else {
++                metadata.c_metadata
++            }
++        })
++        .collect::<Vec<_>>();
++    dep_c_metadata_hashes.sort();
++    dep_c_metadata_hashes.hash(&mut c_metadata_hasher);
++
++    let mut unit_id_hasher = shared_hasher.clone();
++    // Mix in the target-metadata of all the dependencies of this target.
++    let mut dep_unit_id_hashes = deps_metadata.iter().map(|m| m.unit_id).collect::<Vec<_>>();
++    dep_unit_id_hashes.sort();
++    dep_unit_id_hashes.hash(&mut unit_id_hasher);
++    // Avoid trashing the caches on RUSTFLAGS changing via `unit_id`
++    //
++    // Limited to `unit_id` to help with reproducible build / PGO issues.
++    let default = Vec::new();
++    let extra_args = build_runner.bcx.extra_args_for(unit).unwrap_or(&default);
++    if !has_remap_path_prefix(&extra_args) {
++        extra_args.hash(&mut unit_id_hasher);
++    }
++    if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
++        if !has_remap_path_prefix(&unit.rustdocflags) {
++            unit.rustdocflags.hash(&mut unit_id_hasher);
++        }
++    } else {
++        if !has_remap_path_prefix(&unit.rustflags) {
++            unit.rustflags.hash(&mut unit_id_hasher);
++        }
++    }
++
++    let c_metadata = UnitHash(Hasher::finish(&c_metadata_hasher));
++    let unit_id = UnitHash(Hasher::finish(&unit_id_hasher));
++
++    Metadata {
++        unit_id,
++        c_metadata,
++        c_extra_filename,
++        pkg_dir,
++    }
++}
++
++/// Opt in only for an actual cross build. An explicit native --target must
++/// retain upstream symbol and cache identities, including for cargo install.
++pub(super) fn cross_metadata_enabled(bcx: &BuildContext<'_, '_>) -> bool {
++    bcx.gctx.cli_unstable().ami_rust_reproducible_cross
++        && !bcx.build_config.requested_kinds.is_empty()
++        && bcx
++            .build_config
++            .requested_kinds
++            .iter()
++            .all(|kind| match kind {
++                CompileKind::Host => false,
++                CompileKind::Target(target) => target.rustc_target() != bcx.rustc().host,
++            })
++}
++
++/// Unit-local inputs shared by upstream symbol/cache metadata. The only
++/// projection-specific omission is the native compiler's host identity.
++fn metadata_seed(
++    unit: &Unit,
++    build_runner: &BuildRunner<'_, '_>,
++    omit_host_identity: bool,
++) -> StableHasher {
++    let bcx = &build_runner.bcx;
+     let mut shared_hasher = StableHasher::new();
+ 
+     METADATA_VERSION.hash(&mut shared_hasher);
+@@ -770,7 +851,7 @@
+     unit.target.name().hash(&mut shared_hasher);
+     unit.target.kind().hash(&mut shared_hasher);
+ 
+-    hash_rustc_version(bcx, &mut shared_hasher, unit);
++    hash_rustc_version(bcx, &mut shared_hasher, unit, omit_host_identity);
+ 
+     if build_runner.bcx.ws.is_member(&unit.pkg) {
+         // This is primarily here for clippy. This ensures that the clippy
+@@ -819,47 +900,86 @@
+         target_configs_are_different.hash(&mut shared_hasher);
+     }
+ 
+-    let mut c_metadata_hasher = shared_hasher.clone();
+-    // Mix in the target-metadata of all the dependencies of this target.
+-    let mut dep_c_metadata_hashes = deps_metadata
+-        .iter()
+-        .map(|m| m.c_metadata)
+-        .collect::<Vec<_>>();
+-    dep_c_metadata_hashes.sort();
+-    dep_c_metadata_hashes.hash(&mut c_metadata_hasher);
+-
+-    let mut unit_id_hasher = shared_hasher.clone();
+-    // Mix in the target-metadata of all the dependencies of this target.
+-    let mut dep_unit_id_hashes = deps_metadata.iter().map(|m| m.unit_id).collect::<Vec<_>>();
+-    dep_unit_id_hashes.sort();
+-    dep_unit_id_hashes.hash(&mut unit_id_hasher);
+-    // Avoid trashing the caches on RUSTFLAGS changing via `unit_id`
+-    //
+-    // Limited to `unit_id` to help with reproducible build / PGO issues.
+-    let default = Vec::new();
+-    let extra_args = build_runner.bcx.extra_args_for(unit).unwrap_or(&default);
+-    if !has_remap_path_prefix(&extra_args) {
+-        extra_args.hash(&mut unit_id_hasher);
+-    }
+-    if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
+-        if !has_remap_path_prefix(&unit.rustdocflags) {
+-            unit.rustdocflags.hash(&mut unit_id_hasher);
+-        }
+-    } else {
+-        if !has_remap_path_prefix(&unit.rustflags) {
+-            unit.rustflags.hash(&mut unit_id_hasher);
+-        }
+-    }
+-
+-    let c_metadata = UnitHash(Hasher::finish(&c_metadata_hasher));
+-    let unit_id = UnitHash(Hasher::finish(&unit_id_hasher));
+-
+-    Metadata {
+-        unit_id,
+-        c_metadata,
+-        c_extra_filename,
+-        pkg_dir,
+-    }
++    shared_hasher
++}
++
++/// Project a host tool's reachable unit identities into target symbols, while
++/// keeping its actual native metadata and dependency graph in the cache key.
++/// Redundant host cfg edges may differ across hosts without changing this set.
++/// Different reachable packages, features, profiles or roles remain different.
++fn host_tool_projection(
++    root: &Unit,
++    build_runner: &BuildRunner<'_, '_>,
++    metas: &mut HashMap<Unit, Metadata>,
++) -> UnitHash {
++    // Distinct Cargo units can have the same local descriptor but different
++    // dependency contexts (Unit::dep_hash). Never normalize such simultaneous
++    // variants into one target namespace. Scan the invocation, not just one
++    // closure, so separately consumed host roots are covered too.
++    let mut by_descriptor = HashMap::<UnitHash, &Unit>::default();
++    let mut ambiguous = std::collections::HashSet::new();
++    for unit in build_runner
++        .bcx
++        .unit_graph
++        .keys()
++        .filter(|u| u.kind.is_host())
++    {
++        let descriptor = UnitHash(Hasher::finish(&host_tool_seed(unit, build_runner)));
++        if let Some(previous) = by_descriptor.insert(descriptor, unit) {
++            if previous != unit {
++                ambiguous.insert(descriptor);
++            }
++        }
++    }
++    let root_descriptor = UnitHash(Hasher::finish(&host_tool_seed(root, build_runner)));
++    let mut pending = vec![root.clone()];
++    let mut visited = std::collections::HashSet::new();
++    let mut identities = std::collections::BTreeSet::new();
++    while let Some(unit) = pending.pop() {
++        if !visited.insert(unit.clone()) {
++            continue;
++        }
++        if !unit.kind.is_host() {
++            // Cross-built artifact dependencies are not host implementation
++            // details: retain their actual target metadata as an opaque leaf.
++            identities.insert((1_u8, metadata_of(&unit, build_runner, metas).c_metadata));
++            continue;
++        }
++        let descriptor = UnitHash(Hasher::finish(&host_tool_seed(&unit, build_runner)));
++        if ambiguous.contains(&descriptor) {
++            // Preserve the upstream distinction, accepting an observable
++            // cross-host mismatch instead of merging distinct crate instances.
++            let mut fallback = StableHasher::new();
++            "ami-rust-native-host-fallback-v3".hash(&mut fallback);
++            metadata_of(root, build_runner, metas)
++                .c_metadata
++                .hash(&mut fallback);
++            return UnitHash(Hasher::finish(&fallback));
++        }
++        identities.insert((0_u8, descriptor));
++        pending.extend(
++            build_runner
++                .unit_deps(&unit)
++                .iter()
++                .map(|dep| dep.unit.clone()),
++        );
++    }
++    let mut hasher = StableHasher::new();
++    "ami-rust-host-tool-closure-v3".hash(&mut hasher);
++    root_descriptor.hash(&mut hasher);
++    identities.hash(&mut hasher);
++    UnitHash(Hasher::finish(&hasher))
++}
++
++/// Unit-local host descriptor; dependency context is checked separately above.
++fn host_tool_seed(unit: &Unit, build_runner: &BuildRunner<'_, '_>) -> StableHasher {
++    let mut seed = metadata_seed(unit, build_runner, true);
++    unit.artifact.hash(&mut seed);
++    unit.artifact_target_for_features
++        .map(|target| target.fingerprint_hash())
++        .hash(&mut seed);
++    unit.skip_non_compile_time_dep.hash(&mut seed);
++    seed
+ }
+ 
+ /// HACK: Detect the *potential* presence of `--remap-path-prefix`
+@@ -877,7 +997,12 @@
+ }
+ 
+ /// Hash the version of rustc being used during the build process.
+-fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher, unit: &Unit) {
++fn hash_rustc_version(
++    bcx: &BuildContext<'_, '_>,
++    hasher: &mut StableHasher,
++    unit: &Unit,
++    omit_host_identity: bool,
++) {
+     let vers = &bcx.rustc().version;
+     if vers.pre.is_empty() || bcx.gctx.cli_unstable().separate_nightlies {
+         // For stable, keep the artifacts separate. This helps if someone is
+@@ -886,7 +1011,7 @@
+         // omitted since rustc should produce the same output for each target
+         // regardless of the host.
+         for line in bcx.rustc().verbose_version.lines() {
+-            if unit.kind.is_host() || !line.starts_with("host: ") {
++            if (unit.kind.is_host() && !omit_host_identity) || !line.starts_with("host: ") {
+                 line.hash(hasher);
+             }
+         }
+@@ -902,7 +1027,7 @@
+     // Keep "host" since some people switch hosts to implicitly change
+     // targets, (like gnu vs musl or gnu vs msvc). In the future, we may want
+     // to consider hashing `unit.kind.short_name()` instead.
+-    if unit.kind.is_host() {
++    if unit.kind.is_host() && !omit_host_identity {
+         bcx.rustc().host.hash(hasher);
+     }
+     // None of the other lines are important. Currently they are:
+--- a/src/workspace/features.rs
++++ b/src/workspace/features.rs
+@@ -874,6 +874,7 @@
+     // All other unstable features.
+     // Please keep this list lexicographically ordered.
+     advanced_env: bool,
++    ami_rust_reproducible_cross: bool = ("ami-rust target symbol metadata projection for explicit cross builds"),
+     any_build_script_metadata: bool = ("Allow any build script to specify env vars via cargo::metadata=key=value"),
+     asymmetric_token: bool = ("Allows authenticating with asymmetric tokens"),
+     avoid_dev_deps: bool = ("Avoid installing dev-dependencies if possible"),
+@@ -1461,6 +1462,7 @@
+                 )?
+             }
+             "host-config" => self.host_config = parse_empty(k, v)?,
++            "ami-rust-reproducible-cross" => self.ami_rust_reproducible_cross = parse_empty(k, v)?,
+             "json-target-spec" => self.json_target_spec = parse_empty(k, v)?,
+             "min-publish-age" => self.min_publish_age = parse_empty(k, v)?,
+             "hint-msrv" => self.hint_msrv = parse_empty(k, v)?,
+--- a/src/compiler/build_runner/mod.rs
++++ b/src/compiler/build_runner/mod.rs
+@@ -30,6 +30,9 @@
+ mod compilation_files;
+ use self::compilation_files::CompilationFiles;
+ pub use self::compilation_files::{Metadata, OutputFile, UnitHash};
++
++/// Version of the opt-in target symbol recipe and its cache fingerprint.
++pub(super) const AMI_RUST_CROSS_METADATA_VERSION: &str = "ami-rust-cross-target-metadata-v3";
+ 
+ /// Collection of all the stuff that is needed to perform a build.
+ ///
+@@ -505,6 +508,11 @@
+             }
+         }
+         Ok(())
++    }
++
++    /// Native host units and explicit native targets retain upstream behavior.
++    pub(super) fn ami_rust_target_metadata(&self, unit: &Unit) -> bool {
++        !unit.kind.is_host() && compilation_files::cross_metadata_enabled(self.bcx)
+     }
+ 
+     pub fn files(&self) -> &CompilationFiles<'a, 'gctx> {
+--- a/src/compiler/fingerprint/mod.rs
++++ b/src/compiler/fingerprint/mod.rs
+@@ -1664,6 +1664,18 @@
+         .not()
+         .hash(&mut config);
+ 
++    // Some output layouts omit the metadata hash from their paths. Bind the
++    // recipe and actual target symbol metadata into the fingerprint as well,
++    // so toggling this opt-in cannot reuse an artifact with stale symbols.
++    if build_runner.ami_rust_target_metadata(unit) {
++        super::build_runner::AMI_RUST_CROSS_METADATA_VERSION.hash(&mut config);
++        build_runner
++            .files()
++            .metadata(unit)
++            .c_metadata()
++            .hash(&mut config);
++    }
++
+     let compile_kind = unit.kind.fingerprint_hash();
+     let mut declared_features = unit.pkg.summary().features().keys().collect::<Vec<_>>();
+     declared_features.sort(); // to avoid useless rebuild if the user orders it's features

@@ -1,0 +1,28 @@
+--- a/crates/aros-cmake-engine/engine/AROS.cmake
++++ b/crates/aros-cmake-engine/engine/AROS.cmake
+@@ -3967,13 +3967,24 @@
+         # this exact declaration owns; Ninja will now require the rule below and
+         # cannot consume the transient wrong arosx headers.
+         file(REMOVE ${_published_headers})
++        # Public provenance must not depend on the source checkout prefix.
++        # Keep absolute dependency paths and all other generator arguments.
++        file(RELATIVE_PATH _header_conf "${AROS_SOURCE_DIR}" "${_conf}")
++        if(IS_ABSOLUTE "${_header_conf}")
++            message(FATAL_ERROR
++                "${GM_MMAKE_ID}: public header config must be on the source volume")
++        endif()
++        set(_header_opts ${_opts})
++        list(REMOVE_AT _header_opts 1)
++        list(INSERT _header_opts 1 "${_header_conf}")
+         add_custom_command(
+             OUTPUT ${_private_headers} ${_published_headers}
+             COMMAND "${CMAKE_COMMAND}" -E make_directory
+                 "${_include_dir}" ${_private_include_dirs} ${_publish_dirs}
+-            COMMAND "${AROS_HOST_GENMODULE}" ${_opts} -d "${_include_dir}"
++            COMMAND "${AROS_HOST_GENMODULE}" ${_header_opts} -d "${_include_dir}"
+                 writeincludes "${GM_TARGET}" "${GM_MODTYPE}"
+             ${_publish_commands}
++            WORKING_DIRECTORY "${AROS_SOURCE_DIR}"
+             DEPENDS "${AROS_HOST_GENMODULE}" ${_config_inputs}
+             COMMENT "Generating exact ${GM_TARGET}.${GM_MODTYPE} ABI headers"
+             VERBATIM)

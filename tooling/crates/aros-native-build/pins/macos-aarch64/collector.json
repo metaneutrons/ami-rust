@@ -1,0 +1,10 @@
+{
+  "files": [
+    {
+      "path": "bin/aros-collect",
+      "bytes": 1359984,
+      "sha256": "c1f235509e5f69109699dc9b9f47bf5294052fa6a993403040ac892ca2e6d79f"
+    }
+  ],
+  "symlinks": []
+}

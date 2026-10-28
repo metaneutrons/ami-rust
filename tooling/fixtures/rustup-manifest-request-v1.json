@@ -1,0 +1,69 @@
+{
+  "version": "0.2.0",
+  "epoch": 1792870000,
+  "rust_version": "1.100.0-nightly (330d31712 2026-09-17)",
+  "cargo_version": "1.99.0 (3efb1f477 2026-07-17)",
+  "release_tag": "v0.2.0",
+  "hosts": [
+    {
+      "host": "macos-aarch64",
+      "components": {
+        "rustc": {
+          "name": "ami-rust-rustc-0.2.0-macos-aarch64.tar.xz",
+          "bytes": 42,
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "cargo": {
+          "name": "ami-rust-cargo-0.2.0-macos-aarch64.tar.xz",
+          "bytes": 42,
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "rust_std": {
+          "name": "ami-rust-rust-std-0.2.0-macos-aarch64.tar.xz",
+          "bytes": 42,
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    },
+    {
+      "host": "linux-x86_64",
+      "components": {
+        "rustc": {
+          "name": "ami-rust-rustc-0.2.0-linux-x86_64.tar.xz",
+          "bytes": 42,
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "cargo": {
+          "name": "ami-rust-cargo-0.2.0-linux-x86_64.tar.xz",
+          "bytes": 42,
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "rust_std": {
+          "name": "ami-rust-rust-std-0.2.0-linux-x86_64.tar.xz",
+          "bytes": 42,
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    },
+    {
+      "host": "linux-aarch64",
+      "components": {
+        "rustc": {
+          "name": "ami-rust-rustc-0.2.0-linux-aarch64.tar.xz",
+          "bytes": 42,
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "cargo": {
+          "name": "ami-rust-cargo-0.2.0-linux-aarch64.tar.xz",
+          "bytes": 42,
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "rust_std": {
+          "name": "ami-rust-rust-std-0.2.0-linux-aarch64.tar.xz",
+          "bytes": 42,
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    }
+  ]
+}
