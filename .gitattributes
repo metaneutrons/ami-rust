@@ -1,0 +1,6 @@
+* -text
+
+# Preserve versioned third-party patch context byte for byte.
+release/patches/** -whitespace
+host/cargo-storage/*.patch -whitespace
+host/cargo-guard/*.patch -whitespace
