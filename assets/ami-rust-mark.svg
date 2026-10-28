@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="208" height="208" viewBox="0 0 208 208" role="img" aria-labelledby="title desc"><title id="title">ami-rust logo</title><desc id="desc">A faceted coral letter A with three small coloured pixels.</desc><defs>
+  <linearGradient id="ember" x1="25" y1="20" x2="185" y2="180" gradientUnits="userSpaceOnUse"><stop stop-color="#ffb27a"/><stop offset=".48" stop-color="#ff6b4a"/><stop offset="1" stop-color="#e54567"/></linearGradient>
+</defs>
+<path fill="url(#ember)" fill-rule="evenodd" d="M88 18h31l76 164h-45l-17-40H71l-17 40H9L88 18zm15 48-19 46h39l-20-46z"/>
+<path fill="#ffd2a6" d="m88 18 15 48-19 46H62z" opacity=".65"/>
+<path fill="#c33757" d="m133 142 17 40h45l-18-40z"/>
+<path fill="#7dd3fc" d="M162 34h14v14h-14z"/>
+<path fill="#8b9cfa" d="M184 56h10v10h-10z"/>
+<path fill="#ffb27a" d="M178 14h8v8h-8z"/>
+</svg>

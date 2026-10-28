@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="460" viewBox="0 0 1280 460" role="img" aria-labelledby="title desc">
+<title id="title">ami-rust — Rust for AROS</title>
+<desc id="desc">A coral A monogram and ami-rust wordmark on a midnight-blue field. Cross-compile on macOS and Linux. Run native on AROS x86-64.</desc>
+<defs>
+ <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#111c30"/><stop offset="1" stop-color="#080d17"/></linearGradient>
+ <linearGradient id="stripe"><stop stop-color="#ffb27a"/><stop offset=".32" stop-color="#ff6b4a"/><stop offset=".62" stop-color="#e54567"/><stop offset="1" stop-color="#7dd3fc"/></linearGradient>
+ <radialGradient id="glow"><stop stop-color="#ff6b4a" stop-opacity=".11"/><stop offset="1" stop-color="#ff6b4a" stop-opacity="0"/></radialGradient>
+ <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0v32" fill="none" stroke="#b7cdf2" stroke-opacity=".045"/></pattern>
+ <clipPath id="frame"><rect width="1280" height="460" rx="24"/></clipPath>
+</defs>
+<g clip-path="url(#frame)">
+ <rect width="1280" height="460" fill="url(#bg)"/>
+ <rect width="1280" height="460" fill="url(#grid)"/>
+ <ellipse cx="230" cy="226" rx="370" ry="330" fill="url(#glow)"/>
+ <g fill="none" stroke="#7dd3fc" stroke-opacity=".07"><circle cx="1190" cy="470" r="240"/><circle cx="1190" cy="470" r="300"/><circle cx="1190" cy="470" r="360"/></g>
+ <rect width="1280" height="4" fill="url(#stripe)"/>
+ <text x="78" y="67" fill="#9bacc7" font-family="monospace" font-size="14" letter-spacing="3">AMIGA SPIRIT. MODERN RUST.</text>
+ <g transform="translate(76 115) scale(1.12)"><defs>
+  <linearGradient id="ember" x1="25" y1="20" x2="185" y2="180" gradientUnits="userSpaceOnUse"><stop stop-color="#ffb27a"/><stop offset=".48" stop-color="#ff6b4a"/><stop offset="1" stop-color="#e54567"/></linearGradient>
+</defs>
+<path fill="url(#ember)" fill-rule="evenodd" d="M88 18h31l76 164h-45l-17-40H71l-17 40H9L88 18zm15 48-19 46h39l-20-46z"/>
+<path fill="#ffd2a6" d="m88 18 15 48-19 46H62z" opacity=".65"/>
+<path fill="#c33757" d="m133 142 17 40h45l-18-40z"/>
+<path fill="#7dd3fc" d="M162 34h14v14h-14z"/>
+<path fill="#8b9cfa" d="M184 56h10v10h-10z"/>
+<path fill="#ffb27a" d="M178 14h8v8h-8z"/>
+</g>
+ <text x="332" y="221" fill="#f2f5fc" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="112" letter-spacing="-6">ami-rust</text>
+ <text x="337" y="269" fill="#b7c5dc" font-family="Arial, Helvetica, sans-serif" font-size="27">Rust for AROS. Built to run native.</text>
+ <path d="M80 345h1120" stroke="#8195b5" stroke-opacity=".18"/>
+ <g font-family="monospace" font-size="17"><text x="80" y="394" fill="#d4def0">macOS / Linux</text><path d="M280 388h74m-8-7 8 7-8 7" fill="none" stroke="#ff8b65" stroke-width="2"/><text x="378" y="394" fill="#d4def0">AROS x86-64</text><text x="1200" y="394" fill="#91a4c1" text-anchor="end">no_std + alloc · ABI-v1</text></g>
+</g></svg>
