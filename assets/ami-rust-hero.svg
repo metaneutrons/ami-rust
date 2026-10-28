@@ -21,9 +21,9 @@
 <path fill="url(#ember)" fill-rule="evenodd" d="M88 18h31l76 164h-45l-17-40H71l-17 40H9L88 18zm15 48-19 46h39l-20-46z"/>
 <path fill="#ffd2a6" d="m88 18 15 48-19 46H62z" opacity=".65"/>
 <path fill="#c33757" d="m133 142 17 40h45l-18-40z"/>
-<path fill="#7dd3fc" d="M162 34h14v14h-14z"/>
-<path fill="#8b9cfa" d="M184 56h10v10h-10z"/>
-<path fill="#ffb27a" d="M178 14h8v8h-8z"/>
+<path fill="#7dd3fc" d="M162 38h14v14h-14z"/>
+<path fill="#8b9cfa" d="M184 60h10v10h-10z"/>
+<path fill="#ffb27a" d="M178 18h8v8h-8z"/>
 </g>
  <text x="332" y="221" fill="#f2f5fc" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="112" letter-spacing="-6">ami-rust</text>
  <text x="337" y="269" fill="#b7c5dc" font-family="Arial, Helvetica, sans-serif" font-size="27">Rust for AROS. Built to run native.</text>
