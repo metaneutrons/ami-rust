@@ -8,9 +8,11 @@ reference-program code, file and whole-memory thresholds do not constrain
 arbitrary applications. The fixed startup stack and other stated API capacities
 remain unchanged.
 
-The source SDK targets the exact pinned native x86-64 ABI-v1 image. Target std,
-foreign-task APIs, asynchronous callbacks, native AROS-hosted Rust tools,
-hardware and other CPU/ABI combinations remain outside scope. The
+The qualified source SDK targets the exact pinned native x86-64 ABI-v1 image.
+An x86-64 ABI-v11 target identity and MUI library-call backend exist as
+unqualified implementation work; they are not part of the qualified SDK yet.
+Target std, foreign-task APIs, asynchronous callbacks, native AROS-hosted Rust
+tools, hardware and other CPU/ABI combinations remain outside scope. The
 [compatibility profile](compatibility.md) records the host and target identities.
 Qualification is limited to the exact artifact bytes and host profile it
 identifies; it does not establish acceptance for another artifact or release.
@@ -49,11 +51,12 @@ initial safe surface covers error access, explicit close and RAII disposal;
 typed safe builders are future library-specific work.
 
 `aros-mui-sys` exposes the corresponding unsafe vector calls
-`mui_new_object_a`, `mui_dispose_object`, `mui_error` and `mui_set_error`. They
-use the negative pointer-vector layout from the pinned x86-64 AROS ABI-v1 SDK.
-No variadic MUI interface is exposed. Additional architectures require their
-own qualified vector backend before these calls can be claimed there.
-This new MUI source surface has not yet received native AROS qualification.
+`mui_new_object_a`, `mui_dispose_object`, `mui_error` and `mui_set_error`. Both
+x86-64 backends use the negative pointer-vector layout. ABI-v1 passes the
+library base as the final ordinary C argument; ABI-v11 places it in `r12` and
+otherwise follows the SysV argument registers. No variadic MUI interface is
+exposed. Additional architectures require their own qualified vector backend.
+Neither MUI backend has yet received native AROS qualification.
 
 Global allocator refusal is distinct from a fallible API error. A Rust
 fallible allocation operation such as `Vec::try_reserve` reports refusal in

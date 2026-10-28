@@ -1,14 +1,23 @@
 #![no_std]
-//! Raw MUI vector calls for the selected AROS x86-64 ABI-v1 profile.
+//! Raw MUI vector calls for the selected AROS x86-64 ABI profile.
 
 #[cfg(all(target_os = "aros", not(target_arch = "x86_64")))]
 compile_error!("aros-mui-sys currently implements only the x86-64 AROS vector ABI");
+#[cfg(all(
+    target_os = "aros",
+    not(any(target_abi = "", target_abi = "abi1", target_abi = "abi11"))
+))]
+compile_error!("aros-mui-sys requires AROS ABI-v1 or ABI-v11");
 
 use aros_sys::Library;
-use core::{
-    ffi::{c_char, c_void},
-    mem,
-};
+use core::ffi::{c_char, c_void};
+
+#[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
+#[path = "x86_64_abi1.rs"]
+mod backend;
+#[cfg(all(target_os = "aros", target_abi = "abi11"))]
+#[path = "x86_64_abi11.rs"]
+mod backend;
 
 /// Minimum muimaster.library API version used by this initial surface.
 pub const MUI_API_VERSION: u16 = 19;
@@ -39,11 +48,6 @@ impl TagItem {
 
 pub type Object = c_void;
 
-unsafe fn vector(base: *mut Library, offset: usize) -> *const c_void {
-    // SAFETY: AROS library bases follow their negative pointer-vector table.
-    unsafe { base.cast::<*const c_void>().sub(offset).read() }
-}
-
 /// Calls `MUI_NewObjectA` (muimaster vector 5).
 ///
 /// # Safety
@@ -56,11 +60,8 @@ pub unsafe fn mui_new_object_a(
     class_id: *const c_char,
     tags: *mut TagItem,
 ) -> *mut Object {
-    type Function = unsafe extern "C" fn(*const c_char, *mut TagItem, *mut Library) -> *mut Object;
-    // SAFETY: vector 5 has the signature declared by the pinned MUI headers.
-    let function: Function = unsafe { mem::transmute(vector(base, 5)) };
     // SAFETY: the caller supplies the complete native call contract.
-    unsafe { function(class_id, tags, base) }
+    unsafe { backend::new_object_a(base, class_id, tags) }
 }
 
 /// Calls `MUI_DisposeObject` (muimaster vector 6).
@@ -69,11 +70,8 @@ pub unsafe fn mui_new_object_a(
 ///
 /// `base` and `object` must be live and belong to the same MUI lifecycle.
 pub unsafe fn mui_dispose_object(base: *mut Library, object: *mut Object) {
-    type Function = unsafe extern "C" fn(*mut Object, *mut Library);
-    // SAFETY: vector 6 has the signature declared by the pinned MUI headers.
-    let function: Function = unsafe { mem::transmute(vector(base, 6)) };
     // SAFETY: the caller supplies the complete native call contract.
-    unsafe { function(object, base) }
+    unsafe { backend::dispose_object(base, object) }
 }
 
 /// Calls `MUI_Error` (muimaster vector 11).
@@ -82,11 +80,8 @@ pub unsafe fn mui_dispose_object(base: *mut Library, object: *mut Object) {
 ///
 /// `base` must be a live muimaster.library base of at least version 19.
 pub unsafe fn mui_error(base: *mut Library) -> i32 {
-    type Function = unsafe extern "C" fn(*mut Library) -> i32;
-    // SAFETY: vector 11 has the signature declared by the pinned MUI headers.
-    let function: Function = unsafe { mem::transmute(vector(base, 11)) };
     // SAFETY: the caller supplies the complete native call contract.
-    unsafe { function(base) }
+    unsafe { backend::error(base) }
 }
 
 /// Calls `MUI_SetError` (muimaster vector 12).
@@ -95,11 +90,8 @@ pub unsafe fn mui_error(base: *mut Library) -> i32 {
 ///
 /// `base` must be a live muimaster.library base of at least version 19.
 pub unsafe fn mui_set_error(base: *mut Library, error: i32) -> i32 {
-    type Function = unsafe extern "C" fn(i32, *mut Library) -> i32;
-    // SAFETY: vector 12 has the signature declared by the pinned MUI headers.
-    let function: Function = unsafe { mem::transmute(vector(base, 12)) };
     // SAFETY: the caller supplies the complete native call contract.
-    unsafe { function(error, base) }
+    unsafe { backend::set_error(base, error) }
 }
 
 #[cfg(test)]

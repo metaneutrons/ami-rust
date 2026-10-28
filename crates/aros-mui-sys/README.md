@@ -3,10 +3,13 @@
 Raw, unsafe MUI calls for the selected AROS ABI profile. The initial surface
 contains the non-variadic object lifecycle and error calls needed by
 `aros-mui`. Calls dispatch through the library vector table defined by the
-pinned AROS SDK.
+pinned AROS SDK. The x86-64 backend supports the ABI-v1 base-last call contract
+and the ABI-v11 `r12` library-base contract.
 
 Applications normally use `aros-mui`. Direct use of this crate requires the
 caller to keep the library base and every pointer valid for the complete call.
+The ABI-v11 backend is compile-checked against its explicit Rust target but has
+not yet completed native AROS runtime qualification.
 
 The package-level license reference and `MODIFICATIONS.md` preserve the AROS
 Public License 1.1 scope and source history. Original ami-rust contributions
