@@ -5,7 +5,7 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 
-use amiga_os::{AppStatus, BytePath, Context, Error, File, FileMode, Stderr, Stdout};
+use aros::{AppStatus, BytePath, Context, Error, File, FileMode, Stderr, Stdout};
 use sha2::{Digest, Sha256};
 
 const READ_BUFFER_SIZE: usize = 4096;
@@ -355,7 +355,7 @@ fn application(context: &Context) -> AppStatus {
 }
 
 #[cfg(not(test))]
-amiga_os::entry!(application, alloc);
+aros::entry!(application, alloc);
 
 #[cfg(test)]
 extern crate std;
@@ -391,9 +391,9 @@ mod tests {
     fn formats_signed_native_boundaries_and_preserves_raw_path_bytes() {
         let mut output = [0; ERROR_LINE_BUFFER_SIZE];
         let error = Error {
-            kind: amiga_os::ErrorKind::Native,
+            kind: aros::ErrorKind::Native,
             native: i64::MIN,
-            operation: amiga_os::Operation::Stderr,
+            operation: aros::Operation::Stderr,
         };
 
         let line = format_error_line(
@@ -410,9 +410,9 @@ mod tests {
         );
 
         let error = Error {
-            kind: amiga_os::ErrorKind::State,
+            kind: aros::ErrorKind::State,
             native: i64::MAX,
-            operation: amiga_os::Operation::FileRead,
+            operation: aros::Operation::FileRead,
         };
         let line = format_error_line(b"sha256sum: stdout error", None, error, &mut output).unwrap();
 
@@ -427,9 +427,9 @@ mod tests {
         let path = [b'x'; MAX_ARGUMENT_BYTES];
         let mut output = [0; ERROR_LINE_BUFFER_SIZE];
         let error = Error {
-            kind: amiga_os::ErrorKind::Input,
+            kind: aros::ErrorKind::Input,
             native: 0,
-            operation: amiga_os::Operation::Path,
+            operation: aros::Operation::Path,
         };
 
         let line =

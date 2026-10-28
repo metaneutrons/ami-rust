@@ -1,12 +1,15 @@
 [package]
-name = "aros-alloc"
+name = "aros-mui"
 version.workspace = true
 edition.workspace = true
 publish = false
-description = "Exec-backed Rust allocator for the selected x86-64 AROS ABI-v1."
+description = "Task-affine safe MUI object lifecycle for the selected AROS ABI profile."
 repository = "https://github.com/metaneutrons/ami-rust"
 homepage = "https://github.com/metaneutrons/ami-rust"
 license.workspace = true
 readme = "README.md"
+
 [dependencies]
+aros = { version = "=0.1.0", path = "../aros", default-features = false }
 aros-sys = { version = "=0.1.0", path = "../aros-sys" }
+aros-mui-sys = { version = "=0.1.0", path = "../aros-mui-sys" }

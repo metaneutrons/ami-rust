@@ -3,7 +3,7 @@
 
 use core::panic::PanicInfo;
 
-use aros_sdk::{BytePath, Context, Error, File, FileMode};
+use aros::{BytePath, Context, Error, File, FileMode};
 
 #[panic_handler]
 fn panic(_: &PanicInfo<'_>) -> ! {

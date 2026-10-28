@@ -1,0 +1,19 @@
+[package]
+name = "aros-mui-sys"
+version.workspace = true
+edition.workspace = true
+publish = false
+description = "Raw MUI ABI access for the selected AROS ABI profile."
+repository = "https://github.com/metaneutrons/ami-rust"
+homepage = "https://github.com/metaneutrons/ami-rust"
+license-file = "../aros-sys/LICENSE"
+readme = "README.md"
+
+[dependencies]
+aros-sys = { version = "=0.1.0", path = "../aros-sys" }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(target_os, values("aros"))',
+    'cfg(target_abi, values("", "abi1", "abi11"))',
+] }

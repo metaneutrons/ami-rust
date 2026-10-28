@@ -4,10 +4,11 @@
 //! available only in the `AMI_SDK_TESTING` native bridge.
 
 use super::{
-    reset_fault, same_resources, set_fault, FAULT_SHORT_WRITE, FAULT_WRITE, FAULT_ZERO_WRITE,
+    FAULT_SHORT_WRITE, FAULT_WRITE, FAULT_ZERO_WRITE, reset_fault, same_resources, set_fault,
 };
-use aros_runtime::{AppStatus, Context};
-use aros_sdk::{BytePath, Error, ErrorKind, File, FileMode, Operation, Stderr, Stdout};
+use aros::{
+    AppStatus, BytePath, Context, Error, ErrorKind, File, FileMode, Operation, Stderr, Stdout,
+};
 use aros_sys::{self as sys, SdkError};
 
 const STDERR_PATH: &[u8] = b"RAM:ami-rust-m1/stderr-fixture.bin\0";
@@ -19,7 +20,8 @@ const AFTER_ZERO: &[u8] = b"stderr-after-zero\n";
 const FALLBACK: &[u8] = b"stderr-fallback\n";
 const NULL_HANDLE: &[u8] = b"must-not-be-written\n";
 const STDOUT_PROBE: &[u8] = b"[r1-stderr] stdout remains separate\n";
-const EXPECTED_FILE: &[u8] = b"stderr-direct\nstderr-drop-safe\nstderr-short-write\nstderr-after-zero\nstderr-fallback\n";
+const EXPECTED_FILE: &[u8] =
+    b"stderr-direct\nstderr-drop-safe\nstderr-short-write\nstderr-after-zero\nstderr-fallback\n";
 const NATIVE_WRITE_ERROR: i64 = 0x1_2345_6789;
 const EXPECTED_CHECKS: u64 = 27;
 
@@ -33,12 +35,7 @@ fn fail(context: &Context, case: u64) -> Result<(), u64> {
     Err(case)
 }
 
-fn check(
-    context: &Context,
-    checks: &mut u64,
-    condition: bool,
-    case: u64,
-) -> Result<(), u64> {
+fn check(context: &Context, checks: &mut u64, condition: bool, case: u64) -> Result<(), u64> {
     if condition {
         *checks += 1;
         Ok(())
@@ -49,10 +46,7 @@ fn check(
 
 fn report_error(context: &Context, error: Error) {
     context.diagnostic(b"[r1-stderr] error-class", error.kind as u64);
-    context.diagnostic(
-        b"[r1-stderr] error-operation",
-        error.operation as u8 as u64,
-    );
+    context.diagnostic(b"[r1-stderr] error-operation", error.operation as u8 as u64);
     context.diagnostic(b"[r1-stderr] error-native", error.native as u64);
 }
 
@@ -129,16 +123,8 @@ fn preflight(context: &Context, checks: &mut u64) -> Result<(), u64> {
     let before_write = context.statistics();
     let mut byte = 0u8;
     let mut native_error = SdkError::default();
-    let result = unsafe {
-        sys::sdk_file_io(
-            invalid_key,
-            valid_token,
-            &mut byte,
-            1,
-            1,
-            &mut native_error,
-        )
-    };
+    let result =
+        unsafe { sys::sdk_file_io(invalid_key, valid_token, &mut byte, 1, 1, &mut native_error) };
     let after_write = context.statistics();
     check(
         context,
@@ -213,11 +199,7 @@ impl RawFileGuard {
         let token = core::mem::replace(&mut self.token, 0);
         let mut error = SdkError::default();
         let result = unsafe { sys::sdk_file_close(self.key, token, &mut error) };
-        if result == 0 {
-            Ok(())
-        } else {
-            Err(error)
-        }
+        if result == 0 { Ok(()) } else { Err(error) }
     }
 }
 
@@ -378,14 +360,7 @@ fn run_redirected_writes(
     let mut fault = FaultGuard::arm(FAULT_ZERO_WRITE);
     let result = stderr.write_all(b"zero-progress\n");
     fault.reset();
-    check_stderr_error(
-        context,
-        checks,
-        result,
-        ErrorKind::ZeroProgress,
-        0,
-        15,
-    )?;
+    check_stderr_error(context, checks, result, ErrorKind::ZeroProgress, 0, 15)?;
     check_write(context, checks, stderr.write_all(AFTER_ZERO), 16)?;
 
     if !redirect.restore() {

@@ -23,8 +23,9 @@ use core::{
     mem, ptr,
 };
 
-use aros_runtime::{AppStatus, Context};
-use aros_sdk::{BytePath, Error, ErrorKind, File, FileMode, Library, Message, Port, Signal};
+use aros::{
+    AppStatus, BytePath, Context, Error, ErrorKind, File, FileMode, Library, Message, Port, Signal,
+};
 use aros_sys::{self as sys, SdkError, SdkStats};
 
 const CALLBACK_SENTINEL: u64 = 0x4152_4f53_5255_5354;
@@ -110,7 +111,7 @@ fn expected_raw_error(
     context: &Context,
     error: SdkError,
     expected_kind: ErrorKind,
-    operation: aros_sdk::Operation,
+    operation: aros::Operation,
 ) -> bool {
     let actual_kind = match error.kind {
         sys::ERROR_KIND_INPUT => ErrorKind::Input,
@@ -134,7 +135,7 @@ fn expect_raw_owner_refusal(
     context: &Context,
     result: i32,
     error: SdkError,
-    operation: aros_sdk::Operation,
+    operation: aros::Operation,
 ) -> bool {
     result == -1
         && error.kind == sys::ERROR_KIND_OWNER
@@ -231,7 +232,7 @@ fn abi_and_callbacks(context: &Context) -> bool {
                 0
             }
         };
-        match aros_sdk::call(context, &mut callback, input) {
+        match aros::call(context, &mut callback, input) {
             Ok(CALLBACK_SENTINEL) => {}
             Ok(actual) => {
                 context.diagnostic(b"qualification-callback-actual", actual);
@@ -339,7 +340,7 @@ fn allocation_limits(context: &Context) -> bool {
         return false;
     }
     unsafe { sys::sdk_dealloc(zero.cast(), 0, 16) };
-    let allocator = aros_alloc::ExecAllocator;
+    let allocator = aros::ExecAllocator;
 
     let layout = match Layout::from_size_align(64, 64) {
         Ok(layout) => layout,
@@ -876,7 +877,7 @@ fn file_and_path_cases(context: &Context) -> bool {
     let stale = Error {
         kind: ErrorKind::State,
         native: raw_error.native,
-        operation: aros_sdk::Operation::FileClose,
+        operation: aros::Operation::FileClose,
     };
     report_error(context, stale);
     if context.statistics().files != baseline.files + 1 {
@@ -1219,7 +1220,7 @@ fn nested_callback_refused(context: &Context, value: u64) -> bool {
         invoked = true;
         input
     };
-    let result = aros_sdk::call(context, &mut nested, value);
+    let result = aros::call(context, &mut nested, value);
     drop(nested);
     matches!(result, Err(error) if error.kind == ErrorKind::State) && !invoked
 }
@@ -1243,7 +1244,7 @@ fn callback_cases(context: &Context) -> bool {
             nested_refused = nested_callback_refused(context, input);
             CALLBACK_SENTINEL
         };
-        let result = aros_sdk::call(context, &mut callback, round);
+        let result = aros::call(context, &mut callback, round);
         if !callback_result_has_sentinel(result) || !nested_refused {
             return false;
         }
@@ -1251,7 +1252,7 @@ fn callback_cases(context: &Context) -> bool {
 
     let wrong_sentinel = CALLBACK_SENTINEL ^ 1;
     let mut wrong_callback = |_| wrong_sentinel;
-    let wrong_result = aros_sdk::call(context, &mut wrong_callback, 0x1234);
+    let wrong_result = aros::call(context, &mut wrong_callback, 0x1234);
     if callback_result_has_sentinel(wrong_result)
         || !matches!(wrong_result, Ok(value) if value == wrong_sentinel)
     {
@@ -1280,7 +1281,7 @@ fn callback_cases(context: &Context) -> bool {
             context,
             native_error,
             ErrorKind::Owner,
-            aros_sdk::Operation::Callback,
+            aros::Operation::Callback,
         )
     {
         context.diagnostic(
@@ -1325,43 +1326,28 @@ fn callback_cases(context: &Context) -> bool {
     let wrong_key = context.key().wrapping_add(1);
     let mut owner_error = SdkError::default();
     let refused = unsafe { sys::sdk_signal_post(wrong_key, signal, &mut owner_error) };
-    if !expect_raw_owner_refusal(
-        context,
-        refused,
-        owner_error,
-        aros_sdk::Operation::SignalPost,
-    ) {
+    if !expect_raw_owner_refusal(context, refused, owner_error, aros::Operation::SignalPost) {
         return false;
     }
     owner_error = SdkError::default();
     let refused = unsafe { sys::sdk_signal_drop(wrong_key, signal, &mut owner_error) };
-    if !expect_raw_owner_refusal(
-        context,
-        refused,
-        owner_error,
-        aros_sdk::Operation::SignalDrop,
-    ) {
+    if !expect_raw_owner_refusal(context, refused, owner_error, aros::Operation::SignalDrop) {
         return false;
     }
 
     owner_error = SdkError::default();
     let refused = unsafe { sys::sdk_port_drop(wrong_key, port, &mut owner_error) };
-    if !expect_raw_owner_refusal(context, refused, owner_error, aros_sdk::Operation::PortDrop) {
+    if !expect_raw_owner_refusal(context, refused, owner_error, aros::Operation::PortDrop) {
         return false;
     }
     owner_error = SdkError::default();
     let refused = unsafe { sys::sdk_port_put(wrong_key, port, message, port, &mut owner_error) };
-    if !expect_raw_owner_refusal(context, refused, owner_error, aros_sdk::Operation::PortSend) {
+    if !expect_raw_owner_refusal(context, refused, owner_error, aros::Operation::PortSend) {
         return false;
     }
     owner_error = SdkError::default();
     let refused = unsafe { sys::sdk_port_receive(wrong_key, port, message, &mut owner_error) };
-    if !expect_raw_owner_refusal(
-        context,
-        refused,
-        owner_error,
-        aros_sdk::Operation::PortReceive,
-    ) {
+    if !expect_raw_owner_refusal(context, refused, owner_error, aros::Operation::PortReceive) {
         return false;
     }
 
@@ -1376,33 +1362,20 @@ fn callback_cases(context: &Context) -> bool {
             &mut owner_error,
         )
     };
-    if !expect_raw_owner_refusal(
-        context,
-        refused,
-        owner_error,
-        aros_sdk::Operation::MessageCopy,
-    ) || copied != [0xa5; 32]
+    if !expect_raw_owner_refusal(context, refused, owner_error, aros::Operation::MessageCopy)
+        || copied != [0xa5; 32]
     {
         return false;
     }
     owner_error = SdkError::default();
     let refused = unsafe { sys::sdk_message_reply(wrong_key, message, &mut owner_error) };
-    if !expect_raw_owner_refusal(
-        context,
-        refused,
-        owner_error,
-        aros_sdk::Operation::MessageReply,
-    ) {
+    if !expect_raw_owner_refusal(context, refused, owner_error, aros::Operation::MessageReply) {
         return false;
     }
     owner_error = SdkError::default();
     let refused = unsafe { sys::sdk_message_drop(wrong_key, message, &mut owner_error) };
-    if !expect_raw_owner_refusal(
-        context,
-        refused,
-        owner_error,
-        aros_sdk::Operation::MessageDrop,
-    ) || !same_resources(live, context.statistics())
+    if !expect_raw_owner_refusal(context, refused, owner_error, aros::Operation::MessageDrop)
+        || !same_resources(live, context.statistics())
     {
         return false;
     }
@@ -1551,7 +1524,7 @@ fn fault_mode(context: &Context, site: u32) -> bool {
                 Ok(layout) => layout,
                 Err(_) => return false,
             };
-            let allocator = aros_alloc::ExecAllocator;
+            let allocator = aros::ExecAllocator;
             let old = unsafe { GlobalAlloc::alloc(&allocator, layout) };
             if old.is_null() {
                 return false;
@@ -1725,7 +1698,7 @@ fn fault_mode(context: &Context, site: u32) -> bool {
                 Ok(layout) => layout,
                 Err(_) => return false,
             };
-            let allocator = aros_alloc::ExecAllocator;
+            let allocator = aros::ExecAllocator;
             let old = unsafe { GlobalAlloc::alloc(&allocator, layout) };
             if old.is_null() || !unsafe { check_or_fill_pattern(old, 64, 3, 7, true) } {
                 if !old.is_null() {
@@ -2287,10 +2260,10 @@ fn application(context: &Context) -> AppStatus {
             set_fault(FAULT_ALLOC);
             // SAFETY: a valid Layout with a deterministic native OOM injection.
             // This does not exhaust the guest or depend on a product quota.
-            let refused = unsafe { GlobalAlloc::alloc(&aros_alloc::ExecAllocator, layout) };
+            let refused = unsafe { GlobalAlloc::alloc(&aros::ExecAllocator, layout) };
             reset_fault();
             if !refused.is_null() {
-                unsafe { GlobalAlloc::dealloc(&aros_alloc::ExecAllocator, refused, layout) };
+                unsafe { GlobalAlloc::dealloc(&aros::ExecAllocator, refused, layout) };
                 return fatal(context, 17);
             }
             alloc::alloc::handle_alloc_error(layout)
@@ -2300,7 +2273,7 @@ fn application(context: &Context) -> AppStatus {
                 return fatal(context, 18);
             }
             let mut callback = |_| -> u64 { panic!("panic inside synchronous callback") };
-            let _ = aros_sdk::call(context, &mut callback, 0x4152_4f53);
+            let _ = aros::call(context, &mut callback, 0x4152_4f53);
             fatal(context, 19)
         }
         Some("secondaryfatal") => {
@@ -2324,4 +2297,4 @@ fn application(context: &Context) -> AppStatus {
     }
 }
 
-aros_runtime::entry!(application, alloc);
+aros::entry!(application, alloc);

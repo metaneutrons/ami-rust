@@ -277,14 +277,10 @@ unsafe extern "C" {
         minimum_version: u16,
         error: *mut SdkError,
     ) -> u64;
+    pub fn sdk_library_base(context: u64, library: u64) -> *mut c_void;
     pub fn sdk_library_close(context: u64, library: u64, error: *mut SdkError) -> c_int;
 
-    pub fn sdk_file_open(
-        context: u64,
-        path: *const u8,
-        mode: i32,
-        error: *mut SdkError,
-    ) -> u64;
+    pub fn sdk_file_open(context: u64, path: *const u8, mode: i32, error: *mut SdkError) -> u64;
     pub fn sdk_file_close(context: u64, file: u64, error: *mut SdkError) -> c_int;
     pub fn sdk_file_io(
         context: u64,
@@ -325,12 +321,7 @@ unsafe extern "C" {
         reply_port: u64,
         error: *mut SdkError,
     ) -> c_int;
-    pub fn sdk_port_receive(
-        context: u64,
-        port: u64,
-        message: u64,
-        error: *mut SdkError,
-    ) -> c_int;
+    pub fn sdk_port_receive(context: u64, port: u64, message: u64, error: *mut SdkError) -> c_int;
     pub fn sdk_message_reply(context: u64, message: u64, error: *mut SdkError) -> c_int;
 
     pub fn sdk_callback(

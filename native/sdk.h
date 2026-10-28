@@ -82,6 +82,7 @@ void sdk_diagnostic(const uint8_t *,size_t,uint64_t);
 _Noreturn void sdk_fatal(uint64_t);
 SdkStats sdk_stats(void);
 uint64_t sdk_library_open(uint64_t,const uint8_t *,uint16_t,SdkError *);
+void *sdk_library_base(uint64_t,uint64_t);
 int sdk_library_close(uint64_t,uint64_t,SdkError *);
 uint64_t sdk_file_open(uint64_t,const uint8_t *,int32_t,SdkError *);
 int sdk_file_close(uint64_t,uint64_t,SdkError *);

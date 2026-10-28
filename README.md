@@ -63,11 +63,15 @@ cargo +aros build --target x86_64-aros --release --locked --offline
 
 The libraries are normal Cargo dependencies. They remain Git-delivered until
 their names and public APIs are stable enough for an intentional crates.io
-publication. The source tree currently contains:
+publication. The public base set is:
 
-- `aros-sys`, `aros-alloc`, `aros-runtime`, and `aros-sdk`;
-- `amiga-sys`, `amiga-alloc`, and `amiga-os`;
-- the focused maintainer crates `aros-elf` and `aros-native-build`.
+- `aros` for entry, allocation and the safe core API;
+- `aros-sys` for raw AROS ABI declarations;
+- `aros-mui` for task-affine MUI ownership;
+- `aros-mui-sys` for raw MUI vector calls.
+
+The focused `aros-elf` and `aros-native-build` crates are maintainer and build
+support, not application API crates.
 
 See the [API guide](docs/api.md) and the
 [SHA-256 example](examples/sha256sum/README.md).

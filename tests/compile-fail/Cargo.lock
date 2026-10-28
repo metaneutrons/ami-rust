@@ -3,17 +3,9 @@
 version = 4
 
 [[package]]
-name = "aros-runtime"
+name = "aros"
 version = "0.1.0"
 dependencies = [
- "aros-sys",
-]
-
-[[package]]
-name = "aros-sdk"
-version = "0.1.0"
-dependencies = [
- "aros-runtime",
  "aros-sys",
 ]
 
@@ -25,5 +17,5 @@ version = "0.1.0"
 name = "m1-compile-fail-fixtures"
 version = "0.1.0"
 dependencies = [
- "aros-sdk",
+ "aros",
 ]

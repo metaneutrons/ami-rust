@@ -8,29 +8,27 @@ reference-program code, file and whole-memory thresholds do not constrain
 arbitrary applications. The fixed startup stack and other stated API capacities
 remain unchanged.
 
-The source SDK targets the exact pinned native x86-64 ABI-v1 image. Target std,
-foreign-task APIs, asynchronous callbacks, native AROS-hosted Rust tools,
-hardware and other CPU/ABI combinations remain outside scope. The
+The qualified source SDK targets the exact pinned native x86-64 ABI-v1 image.
+An x86-64 ABI-v11 target identity and MUI library-call backend exist as
+unqualified implementation work; they are not part of the qualified SDK yet.
+Target std, foreign-task APIs, asynchronous callbacks, native AROS-hosted Rust
+tools, hardware and other CPU/ABI combinations remain outside scope. The
 [compatibility profile](compatibility.md) records the host and target identities.
 Qualification is limited to the exact artifact bytes and host profile it
 identifies; it does not establish acceptance for another artifact or release.
 
-## Source-level `amiga-os` public API index
+## Source-level `aros` public API index
 
-`amiga-os` is the `no_std` task-affine facade. This index records the current
-source reexports and signatures; it does not promise API stability. The
-`aros-sys` crate is the intended public package for the raw ABI; other
-`aros-*` names below identify implementation and qualification crates rather
-than additional consumer APIs. `amiga-sys` remains an unpublished local
-compatibility facade because the 2026-10-21 namespace survey recorded that
-crates.io name as registered to an unrelated project. Use `aros-sys` only at
-the unsafe raw ABI boundary; raw calls sit outside the safe guarantees
-summarized here.
+`aros` is the `no_std` task-affine application crate. It contains the qualified
+runtime, allocator and core SDK implementation instead of exposing those as
+separate application dependencies. `aros-sys` is the raw ABI package. Optional
+libraries use focused pairs; the initial pair is `aros-mui` and
+`aros-mui-sys`. These source APIs are not yet a stability promise.
 
 | Surface | Current signature and semantics |
 | --- | --- |
-| Entry and status | `amiga_os::entry!(application)` installs the entry for `application: fn(&Context) -> AppStatus`; `amiga_os::entry!(application, alloc)` also installs the global allocator when the default `alloc` feature is enabled. `AppStatus` is `Success = 0`, `Error = 10`, or `Fatal = 20`. |
-| `Context` | `Context::args(&self) -> Args<'_>` yields borrowed argument byte slices for the active application frame (`Args` is the returned iterator type, not separately re-exported by the facade); `Context::diagnostic(&self, label: &[u8], code: u64)` emits a bounded diagnostic; `Context::statistics(&self) -> aros_sys::SdkStats` returns native resource counters from the raw ABI exposed by `aros-sys`. The context is supplied by the entry and is task-affine. |
+| Entry and status | `aros::entry!(application)` installs the entry for `application: fn(&Context) -> AppStatus`; `aros::entry!(application, alloc)` also installs the global allocator when the default `alloc` feature is enabled. `AppStatus` is `Success = 0`, `Error = 10`, or `Fatal = 20`. |
+| `Context` | `Context::args(&self) -> Args<'_>` yields borrowed argument byte slices for the active application frame; `Context::diagnostic(&self, label: &[u8], code: u64)` emits a bounded diagnostic; `Context::statistics(&self) -> aros_sys::SdkStats` returns native resource counters from the raw ABI exposed by `aros-sys`. The context is supplied by the entry and is task-affine. |
 | Errors | `ErrorKind` is `Native`, `Input`, `Limit`, `Owner`, `State`, `Eof`, or `ZeroProgress`; `Operation` identifies the operation. `Error { kind: ErrorKind, native: i64, operation: Operation }` is allocation-free and has `kind_code(self) -> u8`. There is no `OutOfMemory` error kind. |
 | Paths and files | `BytePath::new(path: &[u8]) -> Result<Self, Error>` rejects embedded NUL and payloads over 127 bytes; `len(&self) -> usize` and `is_empty(&self) -> bool` inspect it. `FileMode` is `ReadExisting`, `CreateTruncate`, or `ReadWrite`. `File::open(context: &'ctx Context, path: &BytePath, mode: FileMode) -> Result<File<'ctx>, Error>` creates an owned context-bound handle. `File::read(&mut self, &mut [u8]) -> Result<usize, Error>`, `File::write(&mut self, &[u8]) -> Result<usize, Error>`, `File::read_exact(&mut self, &mut [u8]) -> Result<(), Error>`, `File::write_all(&mut self, &[u8]) -> Result<(), Error>`, and consuming `File::close(self) -> Result<(), Error>` operate on borrowed buffers; one transfer is at most 64 KiB. |
 | Standard streams | `Stdout::new(context: &'ctx Context) -> Result<Stdout<'ctx>, Error>` and `Stderr::new(context: &'ctx Context) -> Result<Stderr<'ctx>, Error>` borrow process handles. `Stdout::write(&mut self, &[u8]) -> Result<usize, Error>` and `Stdout::write_all(&mut self, &[u8]) -> Result<(), Error>` write borrowed buffers; `Stderr::write(&mut self, &[u8]) -> Result<usize, Error>` and `Stderr::write_all(&mut self, &[u8]) -> Result<(), Error>` do the same for standard error. Each single transfer is at most 64 KiB. `Stderr` requires a DOS process and selects `pr_CES`, falling back to `pr_COS`; neither wrapper closes its borrowed handle. A DOS handler may allocate while writing. |
@@ -41,6 +39,24 @@ summarized here.
 Owned handles borrow their creating context and remain confined to that task;
 the context and handles are neither `Send` nor `Sync`. `aros-sys` is the
 separate unsafe raw ABI boundary.
+
+## MUI base set
+
+`aros-mui` opens `muimaster.library` explicitly at API version 19. `Mui` owns
+that reference; every `Object` borrows its `Mui` owner and is disposed before
+the library can close. The unsafe `Mui::new_object_raw` accepts a `CStr` class
+identifier and a mutable, `TAG_DONE`-terminated `TagItem` slice. It remains
+unsafe because class-specific tag values may contain native pointers. The
+initial safe surface covers error access, explicit close and RAII disposal;
+typed safe builders are future library-specific work.
+
+`aros-mui-sys` exposes the corresponding unsafe vector calls
+`mui_new_object_a`, `mui_dispose_object`, `mui_error` and `mui_set_error`. Both
+x86-64 backends use the negative pointer-vector layout. ABI-v1 passes the
+library base as the final ordinary C argument; ABI-v11 places it in `r12` and
+otherwise follows the SysV argument registers. No variadic MUI interface is
+exposed. Additional architectures require their own qualified vector backend.
+Neither MUI backend has yet received native AROS qualification.
 
 Global allocator refusal is distinct from a fallible API error. A Rust
 fallible allocation operation such as `Vec::try_reserve` reports refusal in
@@ -60,21 +76,21 @@ inventory, not a consumer API list or a separate compatibility promise.
 | Boundary | Preconditions and enforcement | Native qualification |
 | --- | --- | --- |
 | aros-sys raw externs and ABI structs | Caller owns valid pointers, buffers, C callbacks and native lifecycle. C/Rust independently compare all 81 exposed layout/scalar values. BPTR is the pinned identity pointer; IoErr remains signed 64-bit. | ABI1..10; malformed ELF/layout copied controls |
-| aros-alloc GlobalAlloc | Rust Layout; original base and exact requested layout retained in C intrusive records. Allocate/copy/free realloc leaves old block untouched on refusal; zeroed memory and zero-size request follow the same ownership path. No TLSF private API in product. | ALLOC, CHURN, FAULT1, FAULT9, OOM |
-| aros-runtime Context and entry macro | Native C main alone initializes once and calls one Rust entry. A scoped HRTB closure borrows a non-Send/non-Sync Context; argv borrows valid bounded C storage only while active. C boundary, rather than Context Drop, drains forgotten global resources after Rust returns. | ABI1..10, EXPECTED, FALLIBLE, FORGOT; compile lifetime failures |
+| `aros` allocator module | Rust Layout; original base and exact requested layout retained in C intrusive records. Allocate/copy/free realloc leaves old block untouched on refusal; zeroed memory and zero-size request follow the same ownership path. No TLSF private API in product. | ALLOC, CHURN, FAULT1, FAULT9, OOM |
+| `aros` runtime module | Native C main alone initializes once and calls one Rust entry. A scoped HRTB closure borrows a non-Send/non-Sync Context; argv borrows valid bounded C storage only while active. C boundary, rather than Context Drop, drains forgotten global resources after Rust returns. | ABI1..10, EXPECTED, FALLIBLE, FORGOT; compile lifetime failures |
 | File / borrowed Stdout | BytePath owns at most 128 bytes including NUL; modes explicit, transfers at most 64 KiB. Buffers remain borrowed for synchronous C call. File token consumed before Close even on failure. Stdout never closes its borrowed handle. IoErr captured immediately before any other native call. | FILES, PROTECTED, FAULT2..5/10..12 |
 | R1 candidate borrowed Stderr | The owner must be a DOS Process before casting its Task header. Each write selects `pr_CES`, falling back to `pr_COS` when null; neither process-owned handle is registered or closed. The wrapper borrows Context, is neither Send nor Sync, and shares bounded Write/short-transfer/zero-progress/native-error handling with file I/O. Stack-only error formatting does not establish allocation-free DOS handlers. | R3 full48 and production31 records cover redirection, fallback, errors, diagnostics and final M1 regression on exact candidate native bytes. |
-| Library | Four owned optional references; mandatory DOS separate. Native library pointer is never exposed as a safe arbitrary-call capability. | LIBRARIES, FAULT6/9, STARTFAIL |
+| Library | Four owned optional references; mandatory DOS separate. `raw_base` is an explicitly unsafe, lifetime-bounded escape hatch used by typed library crates such as `aros-mui`; ordinary safe consumers receive no arbitrary-call capability. | LIBRARIES, FAULT6/9, STARTFAIL |
 | Signal, Port, Message | Owner task only, four signal bits including two port-owned bits; eight static stable messages, 256 bytes each. Product C registry is authoritative queue state. Port destruction detaches local queued messages before DeleteMsgPort; owned bits released exactly once. No foreign or published port. | PORTS, FAULT7..9, forgotten and fatal cleanup cases |
 | Synchronous callback trampoline | Rust CallbackFrame remains on the live stack, C cannot retain its address. Owner/key and nested-call guard precede user dereference. No unwind: panic follows nonreturning abort path. | CALLBACKS, CBPANIC; callback-escape compile refusal |
 | Diagnostics and fatal boundary | Borrowed label, scalar and fixed 256-byte C buffer; truncate label to 230 bytes. No user Display, lazy worker or heap formatting. Every RawPutChar chain is watched for owner allocator entries. C setjmp checkpoint exists only inside live cleanup; longjmp never returns into Rust. Registry progress is global and each record retires before native release. | DIAG_NORMAL/LONG, CALDIAG1..3, PANIC, OOM, SECONDARY, CLEANSECOND |
 | Stock startup and entry | Exact 131072-byte stack and Exec/DOS headers checked before stock startup. Linker uses an isolated renamed copy of immutable startup.o. All loader/startup/teardown allocations included by whole-physical inventory. | CAL, every native mode; upstream and compatibility inventories |
 
-The raw extern declaration in aros-sys is unsafe by design. In aros-runtime the
+The raw extern declaration in aros-sys is unsafe by design. In the `aros` runtime the
 only pointer-to-slice conversion uses argv storage bounded by native argument
 validation and scoped to the context. The entry macro claims the context once;
-its panic/OOM hooks never return. In aros-alloc allocation, copy, zeroing and
-release operate on the owned blocks and Layout supplied by Rust. In aros-sdk
+its panic/OOM hooks never return. In the `aros` allocator, copy, zeroing and
+release operate on the owned blocks and Layout supplied by Rust. In the safe API
 each unsafe call passes a live context key, a private token, a bounded borrowed
 buffer and stack SdkError; success/failure conversion does not allocate. File,
 library, signal, port and message Drop clear the token before release. The
