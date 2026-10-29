@@ -7,6 +7,7 @@ mod consumer_observe;
 mod consumer_report;
 mod consumer_runtime;
 mod csdk_producer;
+mod mui_api_model;
 mod native_cargo_compare;
 mod native_cargo_qualification;
 mod native_prefix_compose;
@@ -79,12 +80,23 @@ fn run() -> Result<()> {
         Some("toolchain-publisher-finalize") => toolchain_publisher_finalize::run(arguments),
         Some("toolchain-sign") => toolchain_sign::run(arguments),
         Some("toolchain-producer") => toolchain_producer::run(arguments),
+        Some("generate") => run_generator(false, arguments),
+        Some("check") => run_generator(true, arguments),
         Some("native-package-verify") => run_native_package_verify(arguments),
         Some("native-consumer-observe") => consumer_observe::run(arguments),
         Some("qualification-command") => qualification_command::run(arguments),
         Some("native-prepare-interruption") => prepare_sigterm::run(arguments),
         _ => Err(Refusal::new(
-            "usage: ami-rust-xtask {--cargo-plugin|--rc2-git-credential|cargo-storage-probe|cargo-storage-lifecycle-probe|cargo-storage-registry-probe|cargo-storage-nested-probe|cargo-storage-concurrent-gc-probe|cargo-storage-git-helper-probe|native-package-verify|native-consumer-observe|qualification-command|native-prepare-interruption|bare-target-libraries|native-prefix-compose|native-cargo-qualification|native-cargo-compare|cargo-repro-producer|csdk-producer|cargo-vendor-overlay|toolchain-producer|toolchain-release-inventory|toolchain-release-capsules|toolchain-release-cutover|toolchain-capsule-acquire|toolchain-publisher-finalize|toolchain-sign} OPTIONS; composition does not accept a release",
+            "usage: ami-rust-xtask {generate mui|check mui|--cargo-plugin|--rc2-git-credential|cargo-storage-probe|cargo-storage-lifecycle-probe|cargo-storage-registry-probe|cargo-storage-nested-probe|cargo-storage-concurrent-gc-probe|cargo-storage-git-helper-probe|native-package-verify|native-consumer-observe|qualification-command|native-prepare-interruption|bare-target-libraries|native-prefix-compose|native-cargo-qualification|native-cargo-compare|cargo-repro-producer|csdk-producer|cargo-vendor-overlay|toolchain-producer|toolchain-release-inventory|toolchain-release-capsules|toolchain-release-cutover|toolchain-capsule-acquire|toolchain-publisher-finalize|toolchain-sign} OPTIONS; composition does not accept a release",
+        )),
+    }
+}
+
+fn run_generator(check: bool, mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
+    match arguments.next().as_deref().and_then(|value| value.to_str()) {
+        Some("mui") => mui_api_model::run(check, arguments),
+        _ => Err(Refusal::new(
+            "generator must be named: {generate|check} mui",
         )),
     }
 }

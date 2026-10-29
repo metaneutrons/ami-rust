@@ -5,6 +5,11 @@ Rust backends from two complete SDKs; generated sources and provenance are
 committed. Consumers do not run the generator and do not need an AROS source
 checkout.
 
+The complete MUI class surface has a separate canonical model in
+[`mui/`](mui/README.md). It is generated from pinned source commits because the
+public class hierarchy and per-symbol metadata do not all exist in the binary
+SDK headers.
+
 The current pinned inputs are the ABI-v1 Developer SDK derived from AROS-NX
 commit `e0d5e367d15cc7da4ebac8f9db17868756c79569` and the Deadwood ABI-v11
 2026.09 Development SDK from release commit

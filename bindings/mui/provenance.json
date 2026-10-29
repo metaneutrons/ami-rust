@@ -1,0 +1,1382 @@
+{
+  "schema": "ami-rust-mui-provenance-v1",
+  "generator": "0.2.0-dev",
+  "sources_sha256": "09b0e2baf902c8d95a43b41369a2aafe5d2c5ce61c9230255c4ec1fdd2961d2c",
+  "overrides_sha256": "e3f489f4e61f071a6b2d380e62c4a897ad768733611b747e0695112e480882c3",
+  "inputs": [
+    {
+      "abi": "abi1",
+      "repository": "https://github.com/metaneutrons/AROS-NX.git",
+      "commit": "e0d5e367d15cc7da4ebac8f9db17868756c79569",
+      "files": [
+        {
+          "path": "workbench/libs/muimaster/classes/aboutmui.c",
+          "role": "class_descriptor_source",
+          "sha256": "02678a45ce392e79eb3f670639921960e52dec54b4d8957322408a81e64f0cb3"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/aboutmui.h",
+          "role": "public_header",
+          "sha256": "d91b618543ab5262a6b3f30821389c844427ada822901f3bf2fd9e91e0a67f96"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/application.c",
+          "role": "class_descriptor_source",
+          "sha256": "9496a791964e0974abc8bcce4966b332f1095c4934fe320983827c0955497ccc"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/application.h",
+          "role": "public_header",
+          "sha256": "2094d4d0c666335799447c872c4e3cb270923cbb70e8870c53ec23d1b9c4a0e6"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/area.c",
+          "role": "class_descriptor_source",
+          "sha256": "2e9fb94ad48d26319a10f62cbc07bc430953b2bacda63170e11bcc942c701cda"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/area.h",
+          "role": "public_header",
+          "sha256": "708731041a0a14353dcd6c56e6b24bfcf881de4767f9caa30a03ee946d982eb8"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/balance.c",
+          "role": "class_descriptor_source",
+          "sha256": "5747f704a71396b8fbb472eafa05f65642f2ceef7946d3f68462eaa21fd2e28a"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/balance.h",
+          "role": "public_header",
+          "sha256": "5fcbeca5930493533c5cb636b6906d754ac0f5fb6a38e6fa635945321d46baa9"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/bitmap.c",
+          "role": "class_descriptor_source",
+          "sha256": "f77039cef80ecdcca864345d31b418cf9a71acc132e012516d55113ab76cf93f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/bitmap.h",
+          "role": "public_header",
+          "sha256": "d7f5d24b62a36e057ec27d3817f9e4352c3f3ec323599bb26489605af7e44314"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/bodychunk.c",
+          "role": "class_descriptor_source",
+          "sha256": "8f30a170eccf78918cd607adcad6f097568dc71de82f02e9f22ed99b0c4dbe5f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/bodychunk.h",
+          "role": "public_header",
+          "sha256": "516bf4ae2195b53b919965e10ddfd0f7853da34096e30cbca2656f024190cabe"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/boopsi.c",
+          "role": "class_descriptor_source",
+          "sha256": "5bd5fd20eb13536a0e7066b6103d664f87402af9af439b2cb8eb516773d98c74"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/boopsi.h",
+          "role": "public_header",
+          "sha256": "4db28810d26f04d4904fec24fc6e57547e8d51e29d0dc11b0f4f6c1edf661f99"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/chunkyimage.c",
+          "role": "class_descriptor_source",
+          "sha256": "f404a60a6b3e39b969b4d303e3ed335eef8a2e3f1518403945e02a7b47e3e972"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/chunkyimage.h",
+          "role": "public_header",
+          "sha256": "f46ba6f27fbf5676af96fe3a554c38f0bdee65d76075062fafb3aad14e33430e"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/coloradjust.c",
+          "role": "class_descriptor_source",
+          "sha256": "7e28333981f877d76028a68e0f5403cf088e4333950346486eaee127be0d7f76"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/coloradjust.h",
+          "role": "public_header",
+          "sha256": "ea8cfd992210d92cad9556d29535d1dcfa3b50d54b3229837f61d5ff2948855d"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/colorfield.c",
+          "role": "class_descriptor_source",
+          "sha256": "dcf71af731b64584fa953fa768361ab48a5d5ef6e6204a5aa1c91ed7dd351c63"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/colorfield.h",
+          "role": "public_header",
+          "sha256": "1a0ce814407dbc090dae33be831f33ba089d34bfb8b1622a6c5af5715d1d2c8d"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/configdata.c",
+          "role": "class_descriptor_source",
+          "sha256": "4461326e560d7949d32b98d35f00158dac62dadac2537b10593f1494f7b224a5"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/configdata.h",
+          "role": "public_header",
+          "sha256": "637215d3cdf5307c0305aebd5d0c47d17895a80d290cb8788457e9f222d1c1a6"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/crawling.c",
+          "role": "class_descriptor_source",
+          "sha256": "521a9936bb331b17228e156fd196de81ce9d8fc1686c34f0e38b9f760eaaba53"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/crawling.h",
+          "role": "public_header",
+          "sha256": "078d7151344796ee566926cc585c7d55ce2307eb621aa5a78808ae2b8f7fcb6e"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/cycle.c",
+          "role": "class_descriptor_source",
+          "sha256": "ba0b020b8f8090f3698643b71eb2d62d524051a1e686f27c7e2ecb92fc815d5c"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/cycle.h",
+          "role": "public_header",
+          "sha256": "5064b0e5717d48406d45568a91d99b5d6d85ad7fe4e4449f2fe208d587a2fcf4"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/dataspace.c",
+          "role": "class_descriptor_source",
+          "sha256": "3ad71f3f43eb4c4ab7add072a2040c25b16a4dcde59d1b74bd9b34ddb5affd91"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/dataspace.h",
+          "role": "public_header",
+          "sha256": "27a795f39d13a9433fa133b1f8f52545b453b0bac04efbf5e2d435384afb636a"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/dirlist.c",
+          "role": "class_descriptor_source",
+          "sha256": "2c3c4154f8fac036f9bafc6062e17be2755f16a1f072889f8c663ff1086d5e35"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/dirlist.h",
+          "role": "public_header",
+          "sha256": "6199e9987d547ce16934e6025cf2b62916ba7618c46adbd9ca1ca3ed7c76e301"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/dtpic.c",
+          "role": "class_descriptor_source",
+          "sha256": "480053943c40e86a10d03d99b08f2376afec6eb25bd6a00749dcd878e2b0bffa"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/dtpic.h",
+          "role": "public_header",
+          "sha256": "cb98d53eb5e66ebbf9bbdec1556da7553eaf145855927413988a212c768c2a9b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/family.c",
+          "role": "class_descriptor_source",
+          "sha256": "2b24d0e1dc99292cb50f7248c795de214e886bfc4f11b3c9f129056a3114a454"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/family.h",
+          "role": "public_header",
+          "sha256": "ee61a9cb7728d8df072ac418946704c3932cc732e12140a474242395703446a4"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/floattext.c",
+          "role": "class_descriptor_source",
+          "sha256": "fb73cdb8845fa0899b2b565866e5c9d88b8dc7dd067594b1416789f696169597"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/floattext.h",
+          "role": "public_header",
+          "sha256": "8468414c69f52bfbf6db171d3b02d843c9a5513b9aaeae3b0320dbf0605b3fb8"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/frameadjust.c",
+          "role": "class_descriptor_source",
+          "sha256": "8b3455d595a5bc0abaaaa577c9665ecdf31ffa96c54035f74461ddb2fbea78ff"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/frameadjust.h",
+          "role": "public_header",
+          "sha256": "23419fb903df2a64e0f2249eaaf14091cbdbdfb3a765b2f35ab4528184e8cc17"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/framedisplay.c",
+          "role": "class_descriptor_source",
+          "sha256": "936456784df5c3232ca480acb05f33bf7d059b45027f67507146635709f4563d"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/framedisplay.h",
+          "role": "public_header",
+          "sha256": "1ab89cc38332215dfad7ef8747813957305c4e9b092642b44dd62bf8070d7b9c"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/gauge.c",
+          "role": "class_descriptor_source",
+          "sha256": "5eb93067fdbf8e73bc172640fe2683aaf2f4f0420db88a30941697cd5c3a74e3"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/gauge.h",
+          "role": "public_header",
+          "sha256": "beb1391322509fbbe3c08dc900cc1f8267d5025fa56fa532c081570e51da9b0b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/group.c",
+          "role": "class_descriptor_source",
+          "sha256": "1e05ab1ef3ab131f184448dc795d9678ecfd14d50cf4ec870a29ed5b5320c673"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/group.h",
+          "role": "public_header",
+          "sha256": "30f228bb008c955a7d64f37788134678e12dda4a151370c4658604d469442573"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/image.c",
+          "role": "class_descriptor_source",
+          "sha256": "d21f88f9d49bcd4c472753a4f1116a616c2dbb06413948ccf167b225352cebde"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/image.h",
+          "role": "public_header",
+          "sha256": "a747ec388ed853848640a9f791f742e9e5c79d86ab62f1737644f69241519a62"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/imageadjust.c",
+          "role": "class_descriptor_source",
+          "sha256": "a318421b1f8b390143d6e78e8773ec4879527b3dd8912a677652cc1ac4a7bc53"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/imageadjust.h",
+          "role": "public_header",
+          "sha256": "64b16ede99fe30f504bc3d89eaae5cf88bc531139e11db8c573ea5292127935a"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/imagedisplay.c",
+          "role": "class_descriptor_source",
+          "sha256": "15a0ec2ae3800a8247dfd9f34b8a98d6bfcf4b012abdd63765405b2442dd9151"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/imagedisplay.h",
+          "role": "public_header",
+          "sha256": "072f01556b51ba4cd36368931609173e10317153a3f9781e16732c5493ad98b6"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/knob.c",
+          "role": "class_descriptor_source",
+          "sha256": "4db7aa1cffac698c099c858b997597b5ba08fcd842e96597abc8061f70ed479d"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/knob.h",
+          "role": "public_header",
+          "sha256": "83ec58b09db91a116ece47575544d3b717fcb6e6b19789fab662fc06b19051a1"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/levelmeter.c",
+          "role": "class_descriptor_source",
+          "sha256": "1cd870d55c445591772c3677ce66a13171932c64583a7434b48b92dad152d9b9"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/levelmeter.h",
+          "role": "public_header",
+          "sha256": "7586685f16c66af163fe23b028eb6d3040b2574b53fb51d4a8aa4912c3b826fd"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/list.c",
+          "role": "class_descriptor_source",
+          "sha256": "4bfa26f6ea831acee9cce9932a02ad830f2f76018b0891c4f5d469d0de28ffb9"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/list.h",
+          "role": "public_header",
+          "sha256": "18adec858311cb43763d16d9297f89a3fc8c56e43d7a0fc304449ff42f271fbf"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/listview.c",
+          "role": "class_descriptor_source",
+          "sha256": "6a6797e1fd1797b84f974d3760bbeb6253ef13fad3be42b644d7b074298e00a8"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/listview.h",
+          "role": "public_header",
+          "sha256": "0e4e4a52184de81f6d4e686568b863e9ae687f4c5457ed9824bcebb08a6b639d"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/mccprefs.c",
+          "role": "class_descriptor_source",
+          "sha256": "502dbed48f8e4d607426fac54524726548140afe0e9b6a08c431e91c8f7e13f3"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/mccprefs.h",
+          "role": "public_header",
+          "sha256": "a549070a0df1aad877561c71fe01d6108d1b489c7d80658c23c39696738e5b13"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/menuitem.c",
+          "role": "class_descriptor_source",
+          "sha256": "c3f1390c4e936fc8474fc74fbb8a5394921957ed37f00da56aaa8872884d1fd2"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/menuitem.h",
+          "role": "public_header",
+          "sha256": "e9807c82a60ce0b0a94c5f6738f3623ec4726d14a64cb93b4b9088af936d86e4"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/notify.c",
+          "role": "class_descriptor_source",
+          "sha256": "38fd667f1698a6e8b2fcd385863ecc9cd8702196b6075dd87aba193bf66c4d4f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/notify.h",
+          "role": "public_header",
+          "sha256": "0044ab6aac2ae3d89f2b0c254675d2f80d40b2d09ce1f819d24b9ca5ff573e8f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/numeric.c",
+          "role": "class_descriptor_source",
+          "sha256": "b3caed9f1c3b4180f7d4a4587a2d105efdcf96af5bb2e86b35faf9f3f11cffd1"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/numeric.h",
+          "role": "public_header",
+          "sha256": "6b67e8b231ede142bce351183039512b86e9a14f38643bba02d825163652c516"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/numericbutton.c",
+          "role": "class_descriptor_source",
+          "sha256": "7091a9152fc24b6c24673a6e8848f30fa5cc8e732277fe1301d1c5aab5ddec43"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/numericbutton.h",
+          "role": "public_header",
+          "sha256": "e4f52d973786c4720cdf833ea627a347deeda053a69a7152295aff970fa3fb4f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/palette.c",
+          "role": "class_descriptor_source",
+          "sha256": "aa82a3f9e5931d3e474d7002608d474b1c397b95444bb5f4f0e9a3748b05b979"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/palette.h",
+          "role": "public_header",
+          "sha256": "5cbc50eaef819a38392f7a2889c8cb6d250a9380c2885d8ad77bee09e2078b8b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/panel.c",
+          "role": "class_descriptor_source",
+          "sha256": "f2ad627e1f626626808579577da50b0de8e9a509aa98467d598a557f1dee899b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/panel.h",
+          "role": "public_header",
+          "sha256": "a3db2fa33b8f4a46c824862a9aef17266a0900a146f28aba0e847794aa12d521"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/panelgroup.c",
+          "role": "class_descriptor_source",
+          "sha256": "621c67cb841f1a8bdc930e76c785cfaec85f3fa5aa53b4d44713b6c539d3a9e7"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/panelgroup.h",
+          "role": "public_header",
+          "sha256": "fd96e4cf5c6353cc7efb1de94e55ad6d6c25bf0f621d31cbb1e042f6c6312cba"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/penadjust.c",
+          "role": "class_descriptor_source",
+          "sha256": "5ea1ae40fecef0878d45f659ea660fbc420d296ed912be4307d7cd5da3a42d10"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/penadjust.h",
+          "role": "public_header",
+          "sha256": "cb394e1a45dad1981843e13c1f6ae10706a6f479a6fcb295fe467b34c6405c79"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/pendisplay.c",
+          "role": "class_descriptor_source",
+          "sha256": "80beaafc935de489dc31ee1b8c682d6147b402f3926ca3a9a667dfca459685af"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/pendisplay.h",
+          "role": "public_header",
+          "sha256": "ba49435eb29b5a04690fdfb190cc8388ced78f29979f87ae0235631c6d295dfe"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/pixmap.c",
+          "role": "class_descriptor_source",
+          "sha256": "576480a7fd70b79465c77b245963838f22883d1ef7b9f860c8d8ea7a492d7c15"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/pixmap.h",
+          "role": "public_header",
+          "sha256": "8740f3099bcccc561965f5cb31186a6a8e394f865d58a189552b6dc6d09e201d"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popasl.c",
+          "role": "class_descriptor_source",
+          "sha256": "a78fb500c3ad194ea56ff28faa31a5dae9647888ad3e38dad1d60dae701356bf"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popasl.h",
+          "role": "public_header",
+          "sha256": "d6f751e651f16862f93e323f960ec93fa4960a63078e0ac1f80d219919879e0c"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popframe.c",
+          "role": "class_descriptor_source",
+          "sha256": "f219e0e2440d72584538b24c81ce9589e18e08d6f4690f02bc44ac4b03ee540d"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popframe.h",
+          "role": "public_header",
+          "sha256": "cda0f9a5e4231ee7511a0db271137455f62be7af9a0021d070cda4c0fc58e872"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popimage.c",
+          "role": "class_descriptor_source",
+          "sha256": "5eec4cf9227eee8b70748e376b5584bbf8a79c80c0e2cdd559344d077b4aeea6"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popimage.h",
+          "role": "public_header",
+          "sha256": "405be9043ba79d16fcdede7fbc0e7e8358e9b7c75b1d69169b1d7bd9a7b24f59"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/poplist.c",
+          "role": "class_descriptor_source",
+          "sha256": "6d0f49c97b5274edf0944707fd1d9c3c90cad27332781ab18a050b1389d8cb69"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/poplist.h",
+          "role": "public_header",
+          "sha256": "03811b443c474a99c849971b86af0d6576a538c75ef376fb5909c48415008f62"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popobject.c",
+          "role": "class_descriptor_source",
+          "sha256": "461fdf88774869ce016497c5f09032117c3e081d440ad4c9aabfc89f30fb7ca0"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popobject.h",
+          "role": "public_header",
+          "sha256": "8ccb1e41b366591a41a5edd56df9058846fcdd9a6ab1c93ab6767fa607e850cb"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/poppen.c",
+          "role": "class_descriptor_source",
+          "sha256": "ad845ec4642aa2b61b6c3007160ca1df152418c8fd51943722696467ab843f1e"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/poppen.h",
+          "role": "public_header",
+          "sha256": "ddc7a4ed666005b2069e3ff852de02c4a278c04e3a5f533d409eaf2d28f9934e"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popscreen.c",
+          "role": "class_descriptor_source",
+          "sha256": "48db751536d3df157eaab56559d54e3c57c753c2d77e0119d5dbd4b524b2a604"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popscreen.h",
+          "role": "public_header",
+          "sha256": "c6ce7b310ca08374ca67718401bb80debc6700ee646c0ccc9d57813cd32f5087"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popstring.c",
+          "role": "class_descriptor_source",
+          "sha256": "2123fc0e6541e514aa3f3d685306c166fde1713ab126589d7d6c6ac8228cd80b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popstring.h",
+          "role": "public_header",
+          "sha256": "34b36d954ebe3eb338292c279ef4fa3e223c30fcdcd86114d6587e3fc34d5bad"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/process.c",
+          "role": "class_descriptor_source",
+          "sha256": "134ffd8d0d301b9bd5bab730a05e3afc249850e878bd8bfd4b7e10f1cd0f36b7"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/process.h",
+          "role": "public_header",
+          "sha256": "8bbfe93b70db69f864035776211164a5721ee9a993959959b6f4d8fd14761044"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/prop.c",
+          "role": "class_descriptor_source",
+          "sha256": "f1039a27876ba0b3cfc4d8396bf358cc6fa9eb5558f4f388b5b8197b5c3bf5f8"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/prop.h",
+          "role": "public_header",
+          "sha256": "fae6373b38e8a778633d2defbbd21ed7b0f4863fd20a1221edd0046d0a1a272f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/radio.c",
+          "role": "class_descriptor_source",
+          "sha256": "a35a7c46f2816736d3bf85a1c06b877299496cb040bd2b5272c730c5849000d4"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/radio.h",
+          "role": "public_header",
+          "sha256": "c1a5c2cdecc8aa19b8492a2d24d1cbefa9e708f612855db5d74e2e10ebfdce4f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/rectangle.c",
+          "role": "class_descriptor_source",
+          "sha256": "71286a508e38d608beed5bae2705011132c3376600019d66ebcb407c6a8cf973"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/rectangle.h",
+          "role": "public_header",
+          "sha256": "956881fd4121e3eb6c659b78dca1b9a78118bc1dba96f5d275a4f25a2b263b1e"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/register.c",
+          "role": "class_descriptor_source",
+          "sha256": "1a26fd268edef560d53ac5d58eeda04aa1561375ad28e17d5579689fccf6f71b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/register.h",
+          "role": "public_header",
+          "sha256": "db65d6195af718292f3282c4649d6c2b957a741d5609f9592c8ec7a0804cf658"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scale.c",
+          "role": "class_descriptor_source",
+          "sha256": "9ed5798e7ea27dd7974a12e7ea9bb3bc6cf9845c1ae3250b18967fd0c95cab69"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scale.h",
+          "role": "public_header",
+          "sha256": "7be4372cc25e4d2767dc3928083a276f02481fedb2caee1b1b7e74884392dcf9"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scrollbar.c",
+          "role": "class_descriptor_source",
+          "sha256": "44cd9e705740cf76afa279b4df09f8d048c459e59f9f5acbf53755e236fa5cc5"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scrollbar.h",
+          "role": "public_header",
+          "sha256": "26339657a2201aeb5bd7c84b36f17517e2aa24512a8daae64700bdec6c1af2b0"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scrollbutton.c",
+          "role": "class_descriptor_source",
+          "sha256": "e446a3cb2e283e075ee5d2ecf7d7cfb55838990b94c109a142655aa11e25bd12"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scrollbutton.h",
+          "role": "public_header",
+          "sha256": "2c587fc72db508cc0160bf614eacc4700956eec9986aea5607f5a3cf5f992f48"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scrollgroup.c",
+          "role": "class_descriptor_source",
+          "sha256": "2185bb387604d3536bd201a9af4bc42e79a2faca46dde0ee0f8e38df74b51762"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scrollgroup.h",
+          "role": "public_header",
+          "sha256": "06b3c49f464f62d2d157ff7190f61b0ee7661f8819e443ed10767b359bd18839"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/semaphore.c",
+          "role": "class_descriptor_source",
+          "sha256": "6c631591d498590839e39f11a39f51817602201e700e610653d8bfd2cd423bab"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/semaphore.h",
+          "role": "public_header",
+          "sha256": "4ac2a4dbc286d3f67c77c9f420cc2d03f1cc010b2789cfa6f99cc7e4931cb193"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/settings.c",
+          "role": "class_descriptor_source",
+          "sha256": "671b76c3e1081069ca4313f67a5cc1198d0c0c753ec179c03c25599d1f2d992b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/settings.h",
+          "role": "public_header",
+          "sha256": "9ca75d83554b7e0b54987c42924dd9bab16257773482c131cda5f4399400fa17"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/settingsgroup.c",
+          "role": "class_descriptor_source",
+          "sha256": "4c1ef9f3162550f214fdba8ec03eeb263caaef0a411efd33439718a1904d3743"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/settingsgroup.h",
+          "role": "public_header",
+          "sha256": "77ea85e7a9eb3a2c1b95d6c43779ddae42ab396a6080a1b2df31cf44deb90d22"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/slider.c",
+          "role": "class_descriptor_source",
+          "sha256": "16604eabfa7bcf9330819616ebfa8c4496f0664ab75b1e0e177d9ebb44a19222"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/slider.h",
+          "role": "public_header",
+          "sha256": "7764bec849325ca669ec6fdeac060f82a08888c0fdb8120a063b6469358d769b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/string.c",
+          "role": "class_descriptor_source",
+          "sha256": "289245d7091b6bd3cdacde9d81f4ca3a24d34e05b96b240275346b99374aac72"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/string.h",
+          "role": "public_header",
+          "sha256": "965c13a6734c53bc3111774e88f9667b2d7178808880cae4f1e221f0e2be8e92"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/text.c",
+          "role": "class_descriptor_source",
+          "sha256": "e111663398512db195a1cfc2c8431707b72fbe26d09b56912e1c670a3486da6b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/text.h",
+          "role": "public_header",
+          "sha256": "de730d06506474b48f389fda4ce3da0521e6177cbf54f8123635146991556c70"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/title.c",
+          "role": "class_descriptor_source",
+          "sha256": "8a60e38b5566349678af99b33f709b86839b5a05ba08588f0bfb4a2f86506e1f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/title.h",
+          "role": "public_header",
+          "sha256": "3716e13c874d7fe6da843fda45c58773ecc9b962e12ded984df6f180d1c2e115"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/virtgroup.c",
+          "role": "class_descriptor_source",
+          "sha256": "7392258e9e98c58090b8a47113833fb190f8f7476d8e327373eefbb6b8e0c663"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/virtgroup.h",
+          "role": "public_header",
+          "sha256": "fae7c0b7c4da4224014cd1335fd191b369d176c074e83a18e145d6d4bec595c6"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/volumelist.c",
+          "role": "class_descriptor_source",
+          "sha256": "9b66f1c22c30361e2fcb4ef08e6d6d55881a904f86785a59b2d89d597bbb6039"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/volumelist.h",
+          "role": "public_header",
+          "sha256": "7b18b3a0678687c65495d1c6ad8d73e2d5befb2e7ce89f91d46b31344d1ef3e9"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/window.c",
+          "role": "class_descriptor_source",
+          "sha256": "bf545868fc4cfe36fb095c98421a82273b68b318887a8442fd361b3b3f78cad7"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/window.h",
+          "role": "public_header",
+          "sha256": "2cc9b70a81762d7abdf568fda8fef0917e831533217cdff01285f6eb06556f2c"
+        },
+        {
+          "path": "workbench/libs/muimaster/macros.h",
+          "role": "public_header",
+          "sha256": "8d33820fb39cd8ca05a7c8fc5c042648b3376a8b6aad25e3eab5b6357c26d926"
+        },
+        {
+          "path": "workbench/libs/muimaster/mui.h",
+          "role": "public_header",
+          "sha256": "e77e37d8b75815df3bc72d165eeb664a38971238831d106b962a459da38aba2c"
+        },
+        {
+          "path": "workbench/libs/muimaster/mui_identifiers.h",
+          "role": "public_header",
+          "sha256": "2a84297d281786818cef70f32170b9a89b8f63c3611e76c2f26c5609dcfaa99e"
+        }
+      ]
+    },
+    {
+      "abi": "abi11",
+      "repository": "https://github.com/deadwood2/AROS.git",
+      "commit": "fbc242c1046cffb5e5827a4626ee62bdd45664e9",
+      "files": [
+        {
+          "path": "workbench/libs/muimaster/classes/aboutmui.c",
+          "role": "class_descriptor_source",
+          "sha256": "02678a45ce392e79eb3f670639921960e52dec54b4d8957322408a81e64f0cb3"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/aboutmui.h",
+          "role": "public_header",
+          "sha256": "d91b618543ab5262a6b3f30821389c844427ada822901f3bf2fd9e91e0a67f96"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/application.c",
+          "role": "class_descriptor_source",
+          "sha256": "ef936ec6380d14092f7de031f125492319d8323fc335bfd70684cbd58ac47161"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/application.h",
+          "role": "public_header",
+          "sha256": "2094d4d0c666335799447c872c4e3cb270923cbb70e8870c53ec23d1b9c4a0e6"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/area.c",
+          "role": "class_descriptor_source",
+          "sha256": "2e9fb94ad48d26319a10f62cbc07bc430953b2bacda63170e11bcc942c701cda"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/area.h",
+          "role": "public_header",
+          "sha256": "708731041a0a14353dcd6c56e6b24bfcf881de4767f9caa30a03ee946d982eb8"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/balance.c",
+          "role": "class_descriptor_source",
+          "sha256": "5747f704a71396b8fbb472eafa05f65642f2ceef7946d3f68462eaa21fd2e28a"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/balance.h",
+          "role": "public_header",
+          "sha256": "5fcbeca5930493533c5cb636b6906d754ac0f5fb6a38e6fa635945321d46baa9"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/bitmap.c",
+          "role": "class_descriptor_source",
+          "sha256": "f77039cef80ecdcca864345d31b418cf9a71acc132e012516d55113ab76cf93f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/bitmap.h",
+          "role": "public_header",
+          "sha256": "d7f5d24b62a36e057ec27d3817f9e4352c3f3ec323599bb26489605af7e44314"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/bodychunk.c",
+          "role": "class_descriptor_source",
+          "sha256": "8f30a170eccf78918cd607adcad6f097568dc71de82f02e9f22ed99b0c4dbe5f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/bodychunk.h",
+          "role": "public_header",
+          "sha256": "516bf4ae2195b53b919965e10ddfd0f7853da34096e30cbca2656f024190cabe"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/boopsi.c",
+          "role": "class_descriptor_source",
+          "sha256": "5bd5fd20eb13536a0e7066b6103d664f87402af9af439b2cb8eb516773d98c74"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/boopsi.h",
+          "role": "public_header",
+          "sha256": "4db28810d26f04d4904fec24fc6e57547e8d51e29d0dc11b0f4f6c1edf661f99"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/chunkyimage.c",
+          "role": "class_descriptor_source",
+          "sha256": "f404a60a6b3e39b969b4d303e3ed335eef8a2e3f1518403945e02a7b47e3e972"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/chunkyimage.h",
+          "role": "public_header",
+          "sha256": "f46ba6f27fbf5676af96fe3a554c38f0bdee65d76075062fafb3aad14e33430e"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/coloradjust.c",
+          "role": "class_descriptor_source",
+          "sha256": "7e28333981f877d76028a68e0f5403cf088e4333950346486eaee127be0d7f76"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/coloradjust.h",
+          "role": "public_header",
+          "sha256": "ea8cfd992210d92cad9556d29535d1dcfa3b50d54b3229837f61d5ff2948855d"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/colorfield.c",
+          "role": "class_descriptor_source",
+          "sha256": "dcf71af731b64584fa953fa768361ab48a5d5ef6e6204a5aa1c91ed7dd351c63"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/colorfield.h",
+          "role": "public_header",
+          "sha256": "1a0ce814407dbc090dae33be831f33ba089d34bfb8b1622a6c5af5715d1d2c8d"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/configdata.c",
+          "role": "class_descriptor_source",
+          "sha256": "4461326e560d7949d32b98d35f00158dac62dadac2537b10593f1494f7b224a5"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/configdata.h",
+          "role": "public_header",
+          "sha256": "637215d3cdf5307c0305aebd5d0c47d17895a80d290cb8788457e9f222d1c1a6"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/crawling.c",
+          "role": "class_descriptor_source",
+          "sha256": "521a9936bb331b17228e156fd196de81ce9d8fc1686c34f0e38b9f760eaaba53"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/crawling.h",
+          "role": "public_header",
+          "sha256": "078d7151344796ee566926cc585c7d55ce2307eb621aa5a78808ae2b8f7fcb6e"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/cycle.c",
+          "role": "class_descriptor_source",
+          "sha256": "ba0b020b8f8090f3698643b71eb2d62d524051a1e686f27c7e2ecb92fc815d5c"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/cycle.h",
+          "role": "public_header",
+          "sha256": "5064b0e5717d48406d45568a91d99b5d6d85ad7fe4e4449f2fe208d587a2fcf4"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/dataspace.c",
+          "role": "class_descriptor_source",
+          "sha256": "3ad71f3f43eb4c4ab7add072a2040c25b16a4dcde59d1b74bd9b34ddb5affd91"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/dataspace.h",
+          "role": "public_header",
+          "sha256": "27a795f39d13a9433fa133b1f8f52545b453b0bac04efbf5e2d435384afb636a"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/dirlist.c",
+          "role": "class_descriptor_source",
+          "sha256": "2c3c4154f8fac036f9bafc6062e17be2755f16a1f072889f8c663ff1086d5e35"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/dirlist.h",
+          "role": "public_header",
+          "sha256": "6199e9987d547ce16934e6025cf2b62916ba7618c46adbd9ca1ca3ed7c76e301"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/dtpic.c",
+          "role": "class_descriptor_source",
+          "sha256": "c18803acec5599eaf199df93321f80a94d5434aaa01f17d0544a65c36c550552"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/dtpic.h",
+          "role": "public_header",
+          "sha256": "cb98d53eb5e66ebbf9bbdec1556da7553eaf145855927413988a212c768c2a9b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/family.c",
+          "role": "class_descriptor_source",
+          "sha256": "2b24d0e1dc99292cb50f7248c795de214e886bfc4f11b3c9f129056a3114a454"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/family.h",
+          "role": "public_header",
+          "sha256": "ee61a9cb7728d8df072ac418946704c3932cc732e12140a474242395703446a4"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/floattext.c",
+          "role": "class_descriptor_source",
+          "sha256": "fb73cdb8845fa0899b2b565866e5c9d88b8dc7dd067594b1416789f696169597"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/floattext.h",
+          "role": "public_header",
+          "sha256": "8468414c69f52bfbf6db171d3b02d843c9a5513b9aaeae3b0320dbf0605b3fb8"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/frameadjust.c",
+          "role": "class_descriptor_source",
+          "sha256": "8b3455d595a5bc0abaaaa577c9665ecdf31ffa96c54035f74461ddb2fbea78ff"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/frameadjust.h",
+          "role": "public_header",
+          "sha256": "23419fb903df2a64e0f2249eaaf14091cbdbdfb3a765b2f35ab4528184e8cc17"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/framedisplay.c",
+          "role": "class_descriptor_source",
+          "sha256": "936456784df5c3232ca480acb05f33bf7d059b45027f67507146635709f4563d"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/framedisplay.h",
+          "role": "public_header",
+          "sha256": "1ab89cc38332215dfad7ef8747813957305c4e9b092642b44dd62bf8070d7b9c"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/gauge.c",
+          "role": "class_descriptor_source",
+          "sha256": "5eb93067fdbf8e73bc172640fe2683aaf2f4f0420db88a30941697cd5c3a74e3"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/gauge.h",
+          "role": "public_header",
+          "sha256": "beb1391322509fbbe3c08dc900cc1f8267d5025fa56fa532c081570e51da9b0b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/group.c",
+          "role": "class_descriptor_source",
+          "sha256": "1e05ab1ef3ab131f184448dc795d9678ecfd14d50cf4ec870a29ed5b5320c673"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/group.h",
+          "role": "public_header",
+          "sha256": "30f228bb008c955a7d64f37788134678e12dda4a151370c4658604d469442573"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/image.c",
+          "role": "class_descriptor_source",
+          "sha256": "d21f88f9d49bcd4c472753a4f1116a616c2dbb06413948ccf167b225352cebde"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/image.h",
+          "role": "public_header",
+          "sha256": "a747ec388ed853848640a9f791f742e9e5c79d86ab62f1737644f69241519a62"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/imageadjust.c",
+          "role": "class_descriptor_source",
+          "sha256": "a318421b1f8b390143d6e78e8773ec4879527b3dd8912a677652cc1ac4a7bc53"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/imageadjust.h",
+          "role": "public_header",
+          "sha256": "64b16ede99fe30f504bc3d89eaae5cf88bc531139e11db8c573ea5292127935a"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/imagedisplay.c",
+          "role": "class_descriptor_source",
+          "sha256": "15a0ec2ae3800a8247dfd9f34b8a98d6bfcf4b012abdd63765405b2442dd9151"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/imagedisplay.h",
+          "role": "public_header",
+          "sha256": "072f01556b51ba4cd36368931609173e10317153a3f9781e16732c5493ad98b6"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/knob.c",
+          "role": "class_descriptor_source",
+          "sha256": "4db7aa1cffac698c099c858b997597b5ba08fcd842e96597abc8061f70ed479d"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/knob.h",
+          "role": "public_header",
+          "sha256": "83ec58b09db91a116ece47575544d3b717fcb6e6b19789fab662fc06b19051a1"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/levelmeter.c",
+          "role": "class_descriptor_source",
+          "sha256": "1cd870d55c445591772c3677ce66a13171932c64583a7434b48b92dad152d9b9"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/levelmeter.h",
+          "role": "public_header",
+          "sha256": "7586685f16c66af163fe23b028eb6d3040b2574b53fb51d4a8aa4912c3b826fd"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/list.c",
+          "role": "class_descriptor_source",
+          "sha256": "4bfa26f6ea831acee9cce9932a02ad830f2f76018b0891c4f5d469d0de28ffb9"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/list.h",
+          "role": "public_header",
+          "sha256": "18adec858311cb43763d16d9297f89a3fc8c56e43d7a0fc304449ff42f271fbf"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/listview.c",
+          "role": "class_descriptor_source",
+          "sha256": "6a6797e1fd1797b84f974d3760bbeb6253ef13fad3be42b644d7b074298e00a8"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/listview.h",
+          "role": "public_header",
+          "sha256": "0e4e4a52184de81f6d4e686568b863e9ae687f4c5457ed9824bcebb08a6b639d"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/mccprefs.c",
+          "role": "class_descriptor_source",
+          "sha256": "502dbed48f8e4d607426fac54524726548140afe0e9b6a08c431e91c8f7e13f3"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/mccprefs.h",
+          "role": "public_header",
+          "sha256": "a549070a0df1aad877561c71fe01d6108d1b489c7d80658c23c39696738e5b13"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/menuitem.c",
+          "role": "class_descriptor_source",
+          "sha256": "c3f1390c4e936fc8474fc74fbb8a5394921957ed37f00da56aaa8872884d1fd2"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/menuitem.h",
+          "role": "public_header",
+          "sha256": "e9807c82a60ce0b0a94c5f6738f3623ec4726d14a64cb93b4b9088af936d86e4"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/notify.c",
+          "role": "class_descriptor_source",
+          "sha256": "38fd667f1698a6e8b2fcd385863ecc9cd8702196b6075dd87aba193bf66c4d4f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/notify.h",
+          "role": "public_header",
+          "sha256": "e0adc30b5fa06bb6fd1b365eba4405455296ae2bb7c33b5c92577f470af92be0"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/numeric.c",
+          "role": "class_descriptor_source",
+          "sha256": "b3caed9f1c3b4180f7d4a4587a2d105efdcf96af5bb2e86b35faf9f3f11cffd1"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/numeric.h",
+          "role": "public_header",
+          "sha256": "6b67e8b231ede142bce351183039512b86e9a14f38643bba02d825163652c516"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/numericbutton.c",
+          "role": "class_descriptor_source",
+          "sha256": "7091a9152fc24b6c24673a6e8848f30fa5cc8e732277fe1301d1c5aab5ddec43"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/numericbutton.h",
+          "role": "public_header",
+          "sha256": "e4f52d973786c4720cdf833ea627a347deeda053a69a7152295aff970fa3fb4f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/palette.c",
+          "role": "class_descriptor_source",
+          "sha256": "aa82a3f9e5931d3e474d7002608d474b1c397b95444bb5f4f0e9a3748b05b979"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/palette.h",
+          "role": "public_header",
+          "sha256": "5cbc50eaef819a38392f7a2889c8cb6d250a9380c2885d8ad77bee09e2078b8b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/panel.c",
+          "role": "class_descriptor_source",
+          "sha256": "f2ad627e1f626626808579577da50b0de8e9a509aa98467d598a557f1dee899b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/panelgroup.c",
+          "role": "class_descriptor_source",
+          "sha256": "6fb0fdac980d729fa3eb68afcc75eff5b81ad1587a610998da5e940324274aef"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/penadjust.c",
+          "role": "class_descriptor_source",
+          "sha256": "5ea1ae40fecef0878d45f659ea660fbc420d296ed912be4307d7cd5da3a42d10"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/penadjust.h",
+          "role": "public_header",
+          "sha256": "cb394e1a45dad1981843e13c1f6ae10706a6f479a6fcb295fe467b34c6405c79"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/pendisplay.c",
+          "role": "class_descriptor_source",
+          "sha256": "80beaafc935de489dc31ee1b8c682d6147b402f3926ca3a9a667dfca459685af"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/pendisplay.h",
+          "role": "public_header",
+          "sha256": "ba49435eb29b5a04690fdfb190cc8388ced78f29979f87ae0235631c6d295dfe"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/pixmap.c",
+          "role": "class_descriptor_source",
+          "sha256": "576480a7fd70b79465c77b245963838f22883d1ef7b9f860c8d8ea7a492d7c15"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/pixmap.h",
+          "role": "public_header",
+          "sha256": "8740f3099bcccc561965f5cb31186a6a8e394f865d58a189552b6dc6d09e201d"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popasl.c",
+          "role": "class_descriptor_source",
+          "sha256": "a78fb500c3ad194ea56ff28faa31a5dae9647888ad3e38dad1d60dae701356bf"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popasl.h",
+          "role": "public_header",
+          "sha256": "d6f751e651f16862f93e323f960ec93fa4960a63078e0ac1f80d219919879e0c"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popframe.c",
+          "role": "class_descriptor_source",
+          "sha256": "f219e0e2440d72584538b24c81ce9589e18e08d6f4690f02bc44ac4b03ee540d"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popframe.h",
+          "role": "public_header",
+          "sha256": "cda0f9a5e4231ee7511a0db271137455f62be7af9a0021d070cda4c0fc58e872"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popimage.c",
+          "role": "class_descriptor_source",
+          "sha256": "5eec4cf9227eee8b70748e376b5584bbf8a79c80c0e2cdd559344d077b4aeea6"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popimage.h",
+          "role": "public_header",
+          "sha256": "405be9043ba79d16fcdede7fbc0e7e8358e9b7c75b1d69169b1d7bd9a7b24f59"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/poplist.c",
+          "role": "class_descriptor_source",
+          "sha256": "6d0f49c97b5274edf0944707fd1d9c3c90cad27332781ab18a050b1389d8cb69"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/poplist.h",
+          "role": "public_header",
+          "sha256": "03811b443c474a99c849971b86af0d6576a538c75ef376fb5909c48415008f62"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popobject.c",
+          "role": "class_descriptor_source",
+          "sha256": "461fdf88774869ce016497c5f09032117c3e081d440ad4c9aabfc89f30fb7ca0"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popobject.h",
+          "role": "public_header",
+          "sha256": "8ccb1e41b366591a41a5edd56df9058846fcdd9a6ab1c93ab6767fa607e850cb"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/poppen.c",
+          "role": "class_descriptor_source",
+          "sha256": "ad845ec4642aa2b61b6c3007160ca1df152418c8fd51943722696467ab843f1e"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/poppen.h",
+          "role": "public_header",
+          "sha256": "ddc7a4ed666005b2069e3ff852de02c4a278c04e3a5f533d409eaf2d28f9934e"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popscreen.c",
+          "role": "class_descriptor_source",
+          "sha256": "48db751536d3df157eaab56559d54e3c57c753c2d77e0119d5dbd4b524b2a604"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popscreen.h",
+          "role": "public_header",
+          "sha256": "c6ce7b310ca08374ca67718401bb80debc6700ee646c0ccc9d57813cd32f5087"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popstring.c",
+          "role": "class_descriptor_source",
+          "sha256": "2123fc0e6541e514aa3f3d685306c166fde1713ab126589d7d6c6ac8228cd80b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/popstring.h",
+          "role": "public_header",
+          "sha256": "34b36d954ebe3eb338292c279ef4fa3e223c30fcdcd86114d6587e3fc34d5bad"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/process.c",
+          "role": "class_descriptor_source",
+          "sha256": "134ffd8d0d301b9bd5bab730a05e3afc249850e878bd8bfd4b7e10f1cd0f36b7"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/process.h",
+          "role": "public_header",
+          "sha256": "8bbfe93b70db69f864035776211164a5721ee9a993959959b6f4d8fd14761044"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/prop.c",
+          "role": "class_descriptor_source",
+          "sha256": "f1039a27876ba0b3cfc4d8396bf358cc6fa9eb5558f4f388b5b8197b5c3bf5f8"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/prop.h",
+          "role": "public_header",
+          "sha256": "fae6373b38e8a778633d2defbbd21ed7b0f4863fd20a1221edd0046d0a1a272f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/radio.c",
+          "role": "class_descriptor_source",
+          "sha256": "a35a7c46f2816736d3bf85a1c06b877299496cb040bd2b5272c730c5849000d4"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/radio.h",
+          "role": "public_header",
+          "sha256": "c1a5c2cdecc8aa19b8492a2d24d1cbefa9e708f612855db5d74e2e10ebfdce4f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/rectangle.c",
+          "role": "class_descriptor_source",
+          "sha256": "71286a508e38d608beed5bae2705011132c3376600019d66ebcb407c6a8cf973"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/rectangle.h",
+          "role": "public_header",
+          "sha256": "956881fd4121e3eb6c659b78dca1b9a78118bc1dba96f5d275a4f25a2b263b1e"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/register.c",
+          "role": "class_descriptor_source",
+          "sha256": "1a26fd268edef560d53ac5d58eeda04aa1561375ad28e17d5579689fccf6f71b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/register.h",
+          "role": "public_header",
+          "sha256": "db65d6195af718292f3282c4649d6c2b957a741d5609f9592c8ec7a0804cf658"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scale.c",
+          "role": "class_descriptor_source",
+          "sha256": "9ed5798e7ea27dd7974a12e7ea9bb3bc6cf9845c1ae3250b18967fd0c95cab69"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scale.h",
+          "role": "public_header",
+          "sha256": "7be4372cc25e4d2767dc3928083a276f02481fedb2caee1b1b7e74884392dcf9"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scrollbar.c",
+          "role": "class_descriptor_source",
+          "sha256": "4adacfec84856811756fc9c68a72124a2e18c001c0ef7b366b5aa230201c0518"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scrollbar.h",
+          "role": "public_header",
+          "sha256": "d5d237bfb6162438b074eec83d4a8f5c04dcdf16539775969454e130b962f5de"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scrollbutton.c",
+          "role": "class_descriptor_source",
+          "sha256": "e446a3cb2e283e075ee5d2ecf7d7cfb55838990b94c109a142655aa11e25bd12"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scrollbutton.h",
+          "role": "public_header",
+          "sha256": "2c587fc72db508cc0160bf614eacc4700956eec9986aea5607f5a3cf5f992f48"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scrollgroup.c",
+          "role": "class_descriptor_source",
+          "sha256": "2185bb387604d3536bd201a9af4bc42e79a2faca46dde0ee0f8e38df74b51762"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/scrollgroup.h",
+          "role": "public_header",
+          "sha256": "06b3c49f464f62d2d157ff7190f61b0ee7661f8819e443ed10767b359bd18839"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/semaphore.c",
+          "role": "class_descriptor_source",
+          "sha256": "6c631591d498590839e39f11a39f51817602201e700e610653d8bfd2cd423bab"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/semaphore.h",
+          "role": "public_header",
+          "sha256": "4ac2a4dbc286d3f67c77c9f420cc2d03f1cc010b2789cfa6f99cc7e4931cb193"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/settings.c",
+          "role": "class_descriptor_source",
+          "sha256": "671b76c3e1081069ca4313f67a5cc1198d0c0c753ec179c03c25599d1f2d992b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/settings.h",
+          "role": "public_header",
+          "sha256": "9ca75d83554b7e0b54987c42924dd9bab16257773482c131cda5f4399400fa17"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/settingsgroup.c",
+          "role": "class_descriptor_source",
+          "sha256": "4c1ef9f3162550f214fdba8ec03eeb263caaef0a411efd33439718a1904d3743"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/settingsgroup.h",
+          "role": "public_header",
+          "sha256": "77ea85e7a9eb3a2c1b95d6c43779ddae42ab396a6080a1b2df31cf44deb90d22"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/slider.c",
+          "role": "class_descriptor_source",
+          "sha256": "16604eabfa7bcf9330819616ebfa8c4496f0664ab75b1e0e177d9ebb44a19222"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/slider.h",
+          "role": "public_header",
+          "sha256": "7764bec849325ca669ec6fdeac060f82a08888c0fdb8120a063b6469358d769b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/string.c",
+          "role": "class_descriptor_source",
+          "sha256": "289245d7091b6bd3cdacde9d81f4ca3a24d34e05b96b240275346b99374aac72"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/string.h",
+          "role": "public_header",
+          "sha256": "965c13a6734c53bc3111774e88f9667b2d7178808880cae4f1e221f0e2be8e92"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/text.c",
+          "role": "class_descriptor_source",
+          "sha256": "e111663398512db195a1cfc2c8431707b72fbe26d09b56912e1c670a3486da6b"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/text.h",
+          "role": "public_header",
+          "sha256": "de730d06506474b48f389fda4ce3da0521e6177cbf54f8123635146991556c70"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/title.c",
+          "role": "class_descriptor_source",
+          "sha256": "8a60e38b5566349678af99b33f709b86839b5a05ba08588f0bfb4a2f86506e1f"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/title.h",
+          "role": "public_header",
+          "sha256": "3716e13c874d7fe6da843fda45c58773ecc9b962e12ded984df6f180d1c2e115"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/virtgroup.c",
+          "role": "class_descriptor_source",
+          "sha256": "7392258e9e98c58090b8a47113833fb190f8f7476d8e327373eefbb6b8e0c663"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/virtgroup.h",
+          "role": "public_header",
+          "sha256": "fae7c0b7c4da4224014cd1335fd191b369d176c074e83a18e145d6d4bec595c6"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/volumelist.c",
+          "role": "class_descriptor_source",
+          "sha256": "9b66f1c22c30361e2fcb4ef08e6d6d55881a904f86785a59b2d89d597bbb6039"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/volumelist.h",
+          "role": "public_header",
+          "sha256": "7b18b3a0678687c65495d1c6ad8d73e2d5befb2e7ce89f91d46b31344d1ef3e9"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/window.c",
+          "role": "class_descriptor_source",
+          "sha256": "bf545868fc4cfe36fb095c98421a82273b68b318887a8442fd361b3b3f78cad7"
+        },
+        {
+          "path": "workbench/libs/muimaster/classes/window.h",
+          "role": "public_header",
+          "sha256": "2cc9b70a81762d7abdf568fda8fef0917e831533217cdff01285f6eb06556f2c"
+        },
+        {
+          "path": "workbench/libs/muimaster/macros.h",
+          "role": "public_header",
+          "sha256": "8d33820fb39cd8ca05a7c8fc5c042648b3376a8b6aad25e3eab5b6357c26d926"
+        },
+        {
+          "path": "workbench/libs/muimaster/mui.h",
+          "role": "public_header",
+          "sha256": "9723626f76199bd7a0e8c51be2c9f671255943f48c3b092b4aea7f675fb27bea"
+        },
+        {
+          "path": "workbench/libs/muimaster/mui_identifiers.h",
+          "role": "public_header",
+          "sha256": "2a84297d281786818cef70f32170b9a89b8f63c3611e76c2f26c5609dcfaa99e"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "schema": "ami-rust-mui-overrides-v1",
+  "superclasses": [
+    {
+      "class": "MUIC_Scrmodelist",
+      "superclass": "MUIC_List",
+      "reason": "Scrmodelist is a public special List class without a built-in class descriptor in either pinned source tree."
+    }
+  ],
+  "raw_expressions": []
+}

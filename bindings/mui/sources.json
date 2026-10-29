@@ -1,0 +1,19 @@
+{
+  "schema": "ami-rust-mui-sources-v1",
+  "inputs": [
+    {
+      "abi": "abi1",
+      "repository": "https://github.com/metaneutrons/AROS-NX.git",
+      "commit": "e0d5e367d15cc7da4ebac8f9db17868756c79569",
+      "root": "workbench/libs/muimaster",
+      "entry": "mui.h"
+    },
+    {
+      "abi": "abi11",
+      "repository": "https://github.com/deadwood2/AROS.git",
+      "commit": "fbc242c1046cffb5e5827a4626ee62bdd45664e9",
+      "root": "workbench/libs/muimaster",
+      "entry": "mui.h"
+    }
+  ]
+}
