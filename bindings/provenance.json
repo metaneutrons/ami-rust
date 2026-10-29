@@ -1,7 +1,7 @@
 {
   "schema": "ami-rust-aros-api-provenance-v1",
   "generator": "0.1.0",
-  "manifest_sha256": "f85d618858ef7587cf3a603646fcbfbac766b82a67b5462a451571ee1c661a36",
+  "manifest_sha256": "a83baf925cbe55594021796022f4b260e07345d63e7c933cb6a1759ad3c83eed",
   "inputs": [
     {
       "abi": "abi1",

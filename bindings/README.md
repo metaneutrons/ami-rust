@@ -28,6 +28,7 @@ cargo +1.98.1 run --manifest-path tooling/Cargo.toml -p aros-api-gen -- generate
 
 Use `check` with the same arguments to compare the committed files without
 modifying them. The generator verifies every selected function and vector
-against both SDKs. The initial generator deliberately refuses variadic APIs
-and functions requiring more than the six x86-64 register arguments. Such APIs
-need an explicit reviewed adapter rather than an inferred signature.
+against both SDKs. Variadic APIs remain excluded. The reviewed seven-argument
+`MUI_RequestA` signature uses an explicit ABI11 stack adapter; larger or
+otherwise nonordinary call shapes require another reviewed adapter rather than
+an inferred signature.

@@ -51,8 +51,140 @@ impl TagItem {
 pub type Window = c_void;
 /// Opaque Intuition window descriptor.
 pub type NewWindow = c_void;
-/// Opaque BOOPSI class handle.
-pub type IClass = c_void;
+/// Opaque BOOPSI object storage addressed after its private prefix.
+pub type Object = c_void;
+/// Raw BOOPSI message pointer.
+pub type Msg = *mut c_void;
+
+/// Prefix shared by AROS `MinNode` and the BOOPSI object header.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct MinNode {
+    pub successor: *mut MinNode,
+    pub predecessor: *mut MinNode,
+}
+
+/// AROS callback hook layout used by BOOPSI class dispatchers.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct Hook {
+    pub min_node: MinNode,
+    pub entry: *mut c_void,
+    pub sub_entry: *mut c_void,
+    pub data: *mut c_void,
+}
+
+/// Read-only AROS BOOPSI class layout required by the three `*MethodA`
+/// dispatch adapters.
+#[repr(C)]
+#[derive(Debug)]
+pub struct IClass {
+    pub dispatcher: Hook,
+    pub reserved: u32,
+    pub super_class: *mut IClass,
+    pub id: *const c_char,
+    pub instance_offset: u16,
+    pub instance_size: u16,
+    pub user_data: usize,
+    pub subclass_count: u32,
+    pub object_count: u32,
+    pub flags: u32,
+    pub object_size: u32,
+    pub memory_pool: *mut c_void,
+}
+
+type Dispatcher = unsafe extern "C" fn(*mut IClass, *mut Object, Msg) -> usize;
+
+/// Layout values for the BOOPSI records read by the raw dispatch adapters.
+#[doc(hidden)]
+pub const BOOPSI_LAYOUT_VALUES: [usize; 24] = [
+    core::mem::size_of::<MinNode>(),
+    core::mem::align_of::<MinNode>(),
+    core::mem::offset_of!(MinNode, successor),
+    core::mem::offset_of!(MinNode, predecessor),
+    core::mem::size_of::<Hook>(),
+    core::mem::align_of::<Hook>(),
+    core::mem::offset_of!(Hook, min_node),
+    core::mem::offset_of!(Hook, entry),
+    core::mem::offset_of!(Hook, sub_entry),
+    core::mem::offset_of!(Hook, data),
+    core::mem::size_of::<IClass>(),
+    core::mem::align_of::<IClass>(),
+    core::mem::offset_of!(IClass, dispatcher),
+    core::mem::offset_of!(IClass, reserved),
+    core::mem::offset_of!(IClass, super_class),
+    core::mem::offset_of!(IClass, id),
+    core::mem::offset_of!(IClass, instance_offset),
+    core::mem::offset_of!(IClass, instance_size),
+    core::mem::offset_of!(IClass, user_data),
+    core::mem::offset_of!(IClass, subclass_count),
+    core::mem::offset_of!(IClass, object_count),
+    core::mem::offset_of!(IClass, flags),
+    core::mem::offset_of!(IClass, object_size),
+    core::mem::offset_of!(IClass, memory_pool),
+];
+
+unsafe fn dispatch(class: *mut IClass, object: *mut Object, message: Msg) -> usize {
+    if class.is_null() || object.is_null() {
+        return 0;
+    }
+    // SAFETY: the caller guarantees a live class; `Hook` is the first member
+    // of `IClass`, exactly as required by AROS `CALLHOOKPKT`.
+    let entry = unsafe { (*class).dispatcher.entry };
+    if entry.is_null() {
+        return 0;
+    }
+    // SAFETY: the AROS x86-64 BOOPSI dispatcher contract is an ordinary C
+    // call with class, object and message arguments and an IPTR result.
+    let dispatcher: Dispatcher = unsafe { core::mem::transmute(entry) };
+    // SAFETY: validity of the native class, object and message is the caller's
+    // responsibility.
+    unsafe { dispatcher(class, object, message) }
+}
+
+/// Raw AROS `DoMethodA` adapter without a Rust variadic ABI.
+///
+/// # Safety
+///
+/// `object` must point to a live BOOPSI object whose native private prefix is
+/// present immediately before it, and `message` must match its method ID.
+pub unsafe fn do_method_a(object: *mut Object, message: Msg) -> usize {
+    if object.is_null() {
+        return 0;
+    }
+    // AROS guarantees that `o_Class` stays immediately before the public
+    // object pointer even if the private prefix grows or gains stricter
+    // alignment. Reading that final pointer avoids depending on the private
+    // prefix size.
+    let class = unsafe { object.cast::<*mut IClass>().sub(1).read() };
+    // SAFETY: forwarded from the public raw adapter contract.
+    unsafe { dispatch(class, object, message) }
+}
+
+/// Raw AROS `DoSuperMethodA` adapter without a Rust variadic ABI.
+///
+/// # Safety
+///
+/// `class`, `object` and `message` must form a valid BOOPSI dispatcher call.
+pub unsafe fn do_super_method_a(class: *mut IClass, object: *mut Object, message: Msg) -> usize {
+    if class.is_null() || object.is_null() {
+        return 0;
+    }
+    // SAFETY: the caller guarantees a live class layout.
+    let super_class = unsafe { (*class).super_class };
+    // SAFETY: forwarded from the public raw adapter contract.
+    unsafe { dispatch(super_class, object, message) }
+}
+
+/// Raw AROS `CoerceMethodA` adapter without a Rust variadic ABI.
+///
+/// # Safety
+///
+/// `class`, `object` and `message` must form a valid BOOPSI dispatcher call.
+pub unsafe fn coerce_method_a(class: *mut IClass, object: *mut Object, message: Msg) -> usize {
+    // SAFETY: forwarded from the public raw adapter contract.
+    unsafe { dispatch(class, object, message) }
+}
 
 #[cfg(all(target_os = "aros", not(target_arch = "x86_64")))]
 compile_error!("aros-sys currently implements only the x86-64 AROS vector ABI");

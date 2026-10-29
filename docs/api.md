@@ -8,14 +8,13 @@ reference-program code, file and whole-memory thresholds do not constrain
 arbitrary applications. The fixed startup stack and other stated API capacities
 remain unchanged.
 
-The qualified source SDK targets the exact pinned native x86-64 ABI-v1 image.
-An x86-64 ABI-v11 target identity and MUI library-call backend exist as
-unqualified implementation work; they are not part of the qualified SDK yet.
-Target std, foreign-task APIs, asynchronous callbacks, native AROS-hosted Rust
-tools, hardware and other CPU/ABI combinations remain outside scope. The
-[compatibility profile](compatibility.md) records the host and target identities.
-Qualification is limited to the exact artifact bytes and host profile it
-identifies; it does not establish acceptance for another artifact or release.
+The qualified source SDK targets the pinned native x86-64 ABI1 and ABI11
+images. Target std, foreign-task APIs, asynchronous callbacks, native
+AROS-hosted Rust tools, hardware and other CPU/ABI combinations remain outside
+scope. The [compatibility profile](compatibility.md) records the host and target
+identities. Qualification is limited to the exact artifact bytes and host
+profile it identifies; it does not establish acceptance for another artifact
+or release.
 
 ## Source-level `aros` public API index
 
@@ -31,8 +30,9 @@ locks, directory iteration, error retrieval and path operations; `utility`
 covers tag-list traversal; `intuition` covers basic windows and BOOPSI object
 attributes. All calls require an explicit live library base and remain unsafe.
 The committed allowlist is verified against both pinned SDKs before generation.
-Variadic functions and calls with more than six x86-64 register arguments are
-deliberately excluded until they receive an explicit reviewed adapter.
+Variadic functions remain excluded. Nonordinary call shapes require an
+explicit reviewed adapter; the seven-argument `MUI_RequestA` call has one for
+the ABI11 stack argument.
 
 | Surface | Current signature and semantics |
 | --- | --- |
@@ -59,13 +59,14 @@ unsafe because class-specific tag values may contain native pointers. The
 initial safe surface covers error access, explicit close and RAII disposal;
 typed safe builders are future library-specific work.
 
-`aros-mui-sys` exposes the corresponding unsafe vector calls
-`mui_new_object_a`, `mui_dispose_object`, `mui_error` and `mui_set_error`. Both
-x86-64 backends use the negative pointer-vector layout. ABI-v1 passes the
-library base as the final ordinary C argument; ABI-v11 places it in `r12` and
+`aros-mui-sys` exposes the complete reviewed non-variadic muimaster vector set
+and the generated public raw class, identifier, value, and message surface.
+Both x86-64 backends use the negative pointer-vector layout. ABI1 passes the
+library base as the final ordinary C argument; ABI11 places it in `r12` and
 otherwise follows the SysV argument registers. No variadic MUI interface is
 exposed. Additional architectures require their own qualified vector backend.
-Neither MUI backend has yet received native AROS qualification.
+The exact M3 candidates completed C-layout comparison and native application
+execution on ABI1 and ABI11; see [the M3 evidence](m3-qualification.md).
 
 Global allocator refusal is distinct from a fallible API error. A Rust
 fallible allocation operation such as `Vec::try_reserve` reports refusal in

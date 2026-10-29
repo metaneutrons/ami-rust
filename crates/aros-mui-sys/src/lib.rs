@@ -9,7 +9,7 @@ compile_error!("aros-mui-sys currently implements only the x86-64 AROS vector AB
 ))]
 compile_error!("aros-mui-sys requires AROS ABI-v1 or ABI-v11");
 
-use aros_sys::Library;
+use aros_sys::{IClass, Library};
 pub use aros_sys::{TAG_DONE, TAG_IGNORE, TAG_MORE, TAG_SKIP, TAG_USER, TagItem};
 use core::ffi::{c_char, c_void};
 
@@ -20,10 +20,83 @@ mod backend;
 #[path = "x86_64_abi11.rs"]
 mod backend;
 
+#[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
+#[path = "generated/x86_64_abi1.rs"]
+mod raw;
+#[cfg(all(target_os = "aros", target_abi = "abi11"))]
+#[path = "generated/x86_64_abi11.rs"]
+mod raw;
+
+pub use backend::{
+    add_clip_region as mui_add_clip_region, add_clipping as mui_add_clipping,
+    alloc_asl_request as mui_alloc_asl_request, asl_request as mui_asl_request,
+    begin_refresh as mui_begin_refresh, create_custom_class as mui_create_custom_class,
+    delete_custom_class as mui_delete_custom_class, end_refresh as mui_end_refresh,
+    free_asl_request as mui_free_asl_request, free_class as mui_free_class,
+    get_class as mui_get_class, layout as mui_layout, make_object_a as mui_make_object_a,
+    obtain_pen as mui_obtain_pen, redraw as mui_redraw, reject_idcmp as mui_reject_idcmp,
+    release_pen as mui_release_pen, remove_clip_region as mui_remove_clip_region,
+    remove_clipping as mui_remove_clipping, request_a as mui_request_a,
+    request_idcmp as mui_request_idcmp,
+};
+pub use raw::*;
+
 /// Minimum muimaster.library API version used by this initial surface.
 pub const MUI_API_VERSION: u16 = 19;
 
 pub type Object = c_void;
+
+/// Value stored with the x86-64 AROS `STACKED` field alignment.
+///
+/// MUI method messages apply this alignment to every field, including 32-bit
+/// integers. The wrapper preserves that native layout without exposing manual
+/// padding fields.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Stacked<T>(pub T);
+
+impl<T> Stacked<T> {
+    pub const fn new(value: T) -> Self {
+        Self(value)
+    }
+}
+
+impl<T> From<T> for Stacked<T> {
+    fn from(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
+/// Public layout of AROS `struct MUI_CustomClass`.
+#[repr(C)]
+#[derive(Debug)]
+pub struct MuiCustomClass {
+    pub user_data: *mut c_void,
+    pub utility_base: *mut Library,
+    pub dos_base: *mut Library,
+    pub graphics_base: *mut Library,
+    pub intuition_base: *mut Library,
+    pub super_class: *mut IClass,
+    pub class: *mut IClass,
+    /// Private muimaster-owned storage retained for exact C layout.
+    pub(crate) module: *mut Library,
+}
+
+/// Layout values for the public part and retained private tail of
+/// `MUI_CustomClass`.
+#[doc(hidden)]
+pub const MUI_CUSTOM_CLASS_LAYOUT_VALUES: [usize; 10] = [
+    core::mem::size_of::<MuiCustomClass>(),
+    core::mem::align_of::<MuiCustomClass>(),
+    core::mem::offset_of!(MuiCustomClass, user_data),
+    core::mem::offset_of!(MuiCustomClass, utility_base),
+    core::mem::offset_of!(MuiCustomClass, dos_base),
+    core::mem::offset_of!(MuiCustomClass, graphics_base),
+    core::mem::offset_of!(MuiCustomClass, intuition_base),
+    core::mem::offset_of!(MuiCustomClass, super_class),
+    core::mem::offset_of!(MuiCustomClass, class),
+    core::mem::offset_of!(MuiCustomClass, module),
+];
 
 /// Calls `MUI_NewObjectA` (muimaster vector 5).
 ///
