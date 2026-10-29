@@ -34,6 +34,7 @@ use std::{
 
 const RUST_CARGO_ROW: &str = "bin/cargo";
 const CARGO_PATH: &str = "bin/cargo";
+const AMI_RUST_NOTICE_PREFIX: &str = "share/doc/ami-rust/";
 const COLLECTOR_SOURCE_PATH: &str = "bin/aros-collect";
 const COLLECTOR_DESTINATION_PATH: &str = "bin/collect-aros";
 const SOURCE_TARGET_ALIAS_PATH: &str = "lib/rustlib/x86_64-aros/target.json";
@@ -804,7 +805,7 @@ fn preflight(
         .cargo
         .files
         .iter()
-        .filter(|row| row.path != CARGO_PATH)
+        .filter(|row| row.path != CARGO_PATH && !row.path.starts_with(AMI_RUST_NOTICE_PREFIX))
         .cloned()
         .collect::<Vec<_>>();
     let unmapped_collector_rows = spec
@@ -910,49 +911,64 @@ fn preflight(
         )
         .map_err(|_| Refusal::new("could not allocate native prefix symlink plan"))?;
 
-    let mut add_profile_files = |slot: usize,
-                                 profile: NativePrefixProfile<'_>,
-                                 prefix: &str,
-                                 excluded: &[&str],
-                                 selected_only: Option<&str>|
-     -> Result<()> {
-        for row in profile.files {
-            if excluded.contains(&row.path.as_str())
-                || selected_only.is_some_and(|selected| row.path != selected)
-            {
-                continue;
-            }
-            if let Some(policy) = public_view {
-                let component = match slot {
-                    0 => Some("rust"),
-                    2 => Some("llvm"),
-                    _ => None,
-                };
-                if let Some(component) = component
-                    && policy.lookup(component, &row.path, row.bytes, &row.sha256)?
+    {
+        let mut add_profile_files = |slot: usize,
+                                     profile: NativePrefixProfile<'_>,
+                                     prefix: &str,
+                                     excluded: &[&str],
+                                     selected_only: Option<&str>|
+         -> Result<()> {
+            for row in profile.files {
+                if excluded.contains(&row.path.as_str())
+                    || selected_only.is_some_and(|selected| row.path != selected)
                 {
                     continue;
                 }
+                if let Some(policy) = public_view {
+                    let component = match slot {
+                        0 => Some("rust"),
+                        2 => Some("llvm"),
+                        _ => None,
+                    };
+                    if let Some(component) = component
+                        && policy.lookup(component, &row.path, row.bytes, &row.sha256)?
+                    {
+                        continue;
+                    }
+                }
+                let destination = join_inventory_prefix(prefix, &row.path)?;
+                files.push(MappedFile {
+                    source_root: slot,
+                    source_path: row.path.clone(),
+                    source_mode: row.mode,
+                    output: FileIdentity {
+                        path: destination,
+                        bytes: row.bytes,
+                        sha256: row.sha256.clone(),
+                        mode: row.mode,
+                    },
+                });
             }
-            let destination = join_inventory_prefix(prefix, &row.path)?;
-            files.push(MappedFile {
-                source_root: slot,
-                source_path: row.path.clone(),
-                source_mode: row.mode,
-                output: FileIdentity {
-                    path: destination,
-                    bytes: row.bytes,
-                    sha256: row.sha256.clone(),
-                    mode: row.mode,
-                },
-            });
-        }
-        Ok(())
-    };
-    add_profile_files(0, spec.rust, "", &[RUST_CARGO_ROW], None)?;
-    add_profile_files(1, spec.cargo, "", &[], Some(CARGO_PATH))?;
-    add_profile_files(2, spec.llvm, LLVM_PREFIX, &[], None)?;
-    add_profile_files(3, spec.csdk, CSDK_PREFIX, &[], None)?;
+            Ok(())
+        };
+        add_profile_files(0, spec.rust, "", &[RUST_CARGO_ROW], None)?;
+        add_profile_files(1, spec.cargo, "", &[], Some(CARGO_PATH))?;
+        add_profile_files(2, spec.llvm, LLVM_PREFIX, &[], None)?;
+        add_profile_files(3, spec.csdk, CSDK_PREFIX, &[], None)?;
+    }
+    for row in spec
+        .cargo
+        .files
+        .iter()
+        .filter(|row| row.path.starts_with(AMI_RUST_NOTICE_PREFIX))
+    {
+        files.push(MappedFile {
+            source_root: 1,
+            source_path: row.path.clone(),
+            source_mode: row.mode,
+            output: row.clone(),
+        });
+    }
     for (index, component) in spec.additional_csdks.iter().enumerate() {
         let root = inputs.additional_csdks[index].root;
         for row in component.profile.files {
@@ -2147,7 +2163,12 @@ mod tests {
 
     #[test]
     fn assembles_fixed_prefix_and_preserves_full_authenticated_source_profiles() {
-        let fixture = Fixture::new();
+        let mut fixture = Fixture::new();
+        fixture.cargo.files.push(write_identity(
+            &fixture.cargo.root,
+            "share/doc/ami-rust/LICENSE.md",
+            b"project licence summary",
+        ));
         let parent = fixture.root.join("output parent with spaces");
         fs::create_dir(&parent).unwrap();
         let destination = parent.join("native prefix");
@@ -2171,6 +2192,16 @@ mod tests {
                 .unmapped_cargo_rows
                 .iter()
                 .any(|row| row.path == "producer.json")
+        );
+        assert!(
+            receipt
+                .unmapped_cargo_rows
+                .iter()
+                .all(|row| row.path != "share/doc/ami-rust/LICENSE.md")
+        );
+        assert_eq!(
+            fs::read(destination.join("share/doc/ami-rust/LICENSE.md")).unwrap(),
+            b"project licence summary"
         );
         assert_eq!(receipt.unmapped_collector_rows.len(), 9);
         for path in [
