@@ -1,0 +1,40 @@
+{
+  "schema": "ami-rust-mui-safe-overrides-v1",
+  "string_arrays": [
+    {
+      "attribute": "MUIA_Application_UsedClasses",
+      "reason": "The public contract is a NULL-terminated class-name array retained by the application."
+    },
+    {
+      "attribute": "MUIA_Cycle_Entries",
+      "reason": "The header spells this as STRPTR although the public contract is a NULL-terminated entry array."
+    },
+    {
+      "attribute": "MUIA_List_SourceArray",
+      "reason": "The default list constructor consumes a NULL-terminated string-entry array."
+    },
+    {
+      "attribute": "MUIA_Palette_Names",
+      "reason": "The public contract is a NULL-terminated palette-name array."
+    },
+    {
+      "attribute": "MUIA_Poplist_Array",
+      "reason": "The public contract is a NULL-terminated popup-entry array."
+    },
+    {
+      "attribute": "MUIA_Radio_Entries",
+      "reason": "The public contract is a NULL-terminated radio-entry array."
+    },
+    {
+      "attribute": "MUIA_Register_Titles",
+      "reason": "The public contract is a NULL-terminated register-title array retained by the object."
+    }
+  ],
+  "object_attributes": [
+    {
+      "attribute": "MUIA_Window_DefaultObject",
+      "class": "MUIC_Area",
+      "reason": "The window retains a same-scope Area object as its default keyboard target without transferring ownership."
+    }
+  ]
+}

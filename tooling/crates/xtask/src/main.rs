@@ -8,6 +8,7 @@ mod consumer_report;
 mod consumer_runtime;
 mod csdk_producer;
 mod mui_api_model;
+mod mui_safe_codegen;
 mod native_cargo_compare;
 mod native_cargo_qualification;
 mod native_prefix_compose;
