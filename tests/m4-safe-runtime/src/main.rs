@@ -5,11 +5,12 @@ use aros::{AppStatus, Context};
 use aros_mui::{
     Error, Mui,
     attributes::{
-        ActivePage, ApplicationBase, ApplicationTitle, Frame, FrameStyle, GroupActivePage,
-        GroupColumns, GroupHorizontal, TextContents, WindowDefaultObject, WindowOpen, WindowTitle,
+        ApplicationBase, ApplicationTitle, Frame, GroupActivePage, GroupColumns, GroupHoriz,
+        TextContents, WindowDefaultObject, WindowOpen, WindowTitle,
     },
     classes::{Application, Area, Group, Text, Window},
     methods::NoNotifySet,
+    values::{FrameValue, GroupActivePageValue},
 };
 
 fn safe_tree(mui: &Mui<'_>) -> Result<(), Error> {
@@ -17,15 +18,15 @@ fn safe_tree(mui: &Mui<'_>) -> Result<(), Error> {
         let text = scope
             .builder::<Text>()
             .with::<TextContents>(c"ami-rust M4 safe tree")?
-            .with::<Frame>(FrameStyle::Text)?
+            .with::<Frame>(FrameValue::Text)?
             .build()?;
 
         let group = scope
             .builder::<Group>()
-            .with::<GroupHorizontal>(false)?
+            .with::<GroupHoriz>(false)?
             .with::<GroupColumns>(1)?
-            .with::<GroupActivePage>(ActivePage::First)?
-            .with::<Frame>(FrameStyle::Group)?
+            .with::<GroupActivePage>(GroupActivePageValue::First)?
+            .with::<Frame>(FrameValue::Group)?
             .build()?;
         group.adopt(text)?;
 
@@ -52,7 +53,7 @@ fn safe_tree(mui: &Mui<'_>) -> Result<(), Error> {
         if window.get::<WindowOpen>()? {
             return Err(Error::NativeOperation);
         }
-        if group.get::<Frame>()? != FrameStyle::Group {
+        if group.get::<GroupActivePage>()? != GroupActivePageValue::First {
             return Err(Error::NativeOperation);
         }
         Ok(())
