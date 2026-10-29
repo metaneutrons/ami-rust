@@ -2,10 +2,12 @@
 
 Original Code: the AROS Development Team's native ABI declarations in
 compiler/include/exec/nodes.h, exec/lists.h, exec/libraries.h, exec/ports.h,
-dos/dos.h and aros/types/spinlock_s.h, at AROS-NX commit
+dos/dos.h, aros/types/spinlock_s.h, utility/hooks.h, intuition/classes.h and
+clib/alib_protos.h, at AROS-NX commit
 e0d5e367d15cc7da4ebac8f9db17868756c79569. Their full original source/notices
 are provided in the accompanying AROS source archive under the AROS Public
-License 1.1. All six hashes match the qualified Developer SDK copies.
+License 1.1. The original core-layout header hashes match the qualified
+Developer SDK copies.
 
 2026-10-14: Fabian Schmieder's ami-rust implementation translated the selected
 structures/types into Rust repr(C) declarations and added a bounded bridge ABI,
@@ -23,6 +25,13 @@ backends implement the ABI-v1 base-last convention and Deadwood AROS ABI-v11
 2026.09 `r12` library-base convention. The committed provenance record hashes
 all consulted `clib` and `defines` headers; no generated SDK source is required
 by consumers.
+
+2026-10-29: the M3 implementation added exact `MinNode`, `Hook`, and `IClass`
+representations plus non-variadic `DoMethodA`, `DoSuperMethodA`, and
+`CoerceMethodA` adapters. `DoMethodA` reads the guaranteed class-pointer slot
+immediately before the public object rather than depending on the private
+object-prefix size. Independent C layout comparison and native dual-ABI
+execution are recorded in `docs/m3-qualification.md`.
 
 Covered Code and its modifications remain subject to AROS Public License 1.1;
 the original ami-rust additions also have the owner-selected MIT OR Apache-2.0

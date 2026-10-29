@@ -1,0 +1,5 @@
+FailAt 21
+SYS:M3RUNTIME
+Echo "ami-rust M3 process returned $RC"
+Wait 60 SECS
+EndCLI

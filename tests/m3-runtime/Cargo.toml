@@ -1,0 +1,20 @@
+[package]
+name = "ami-rust-m3-runtime"
+version = "0.1.0"
+edition = "2024"
+publish = false
+autobins = false
+autolib = false
+license = "MIT OR Apache-2.0"
+
+[[bin]]
+name = "ami-rust-m3-runtime"
+path = "src/main.rs"
+
+[dependencies]
+aros = { version = "=0.1.0", path = "../../crates/aros" }
+aros-mui-sys = { version = "=0.1.0", path = "../../crates/aros-mui-sys" }
+aros-sys = { version = "=0.1.0", path = "../../crates/aros-sys" }
+
+[workspace]
+resolver = "3"

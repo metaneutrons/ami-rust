@@ -215,9 +215,9 @@ fn validate_manifest(manifest: &ApiManifest) -> Result<(), String> {
     }
     let mut names = BTreeSet::new();
     for function in &manifest.functions {
-        if function.arguments.len() > 6 {
+        if function.arguments.len() > 7 {
             return Err(format!(
-                "{} exceeds the supported six-register x86-64 call surface",
+                "{} exceeds the supported x86-64 register-plus-one-stack-argument call surface",
                 function.c_name
             ));
         }
@@ -381,7 +381,9 @@ fn generate_backend(manifest: &ApiManifest, crate_name: &str, abi: Abi) -> Resul
     if crate_name == "aros-sys" {
         output.push_str("use crate::*;\n");
     } else {
-        output.push_str("use super::{Library, Object, TagItem, c_char, c_void};\n");
+        output.push_str(
+            "use super::{IClass, Library, MuiCustomClass, Object, TagItem, c_char, c_void};\n",
+        );
     }
     match abi {
         Abi::V1 => {
@@ -502,17 +504,34 @@ fn generate_abi11_body(
             asm_result_type(function.result.kind)
         ));
     }
+    let stack_argument = function.arguments.get(REGISTERS.len());
     output.push_str(&format!(
         "{indent}    // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.\n\
          {indent}    unsafe {{\n\
          {indent}        asm!(\n\
-         {indent}            \"call {{function}}\",\n\
+         {}\
          {indent}            function = in(reg) function,\n\
-         {indent}            in(\"r12\") base,\n"
+         {indent}            in(\"r12\") base,\n",
+        if stack_argument.is_some() {
+            format!(
+                "{indent}            \"sub rsp, 16\",\n\
+                 {indent}            \"mov [rsp], {{stack_argument}}\",\n\
+                 {indent}            \"call {{function}}\",\n\
+                 {indent}            \"add rsp, 16\",\n"
+            )
+        } else {
+            format!("{indent}            \"call {{function}}\",\n")
+        }
     ));
     for (argument, register) in function.arguments.iter().zip(REGISTERS) {
         output.push_str(&format!(
             "{indent}            in(\"{register}\") {} as usize,\n",
+            argument.name
+        ));
+    }
+    if let Some(argument) = stack_argument {
+        output.push_str(&format!(
+            "{indent}            stack_argument = in(reg) {} as usize,\n",
             argument.name
         ));
     }

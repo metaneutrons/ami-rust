@@ -11,7 +11,9 @@ raw modules expose an initial non-variadic library surface:
 
 The generated vector backends support the ABI-v1 base-last contract and the
 ABI-v11 `r12` library-base contract. They are checked against both pinned SDKs;
-this source check is not a claim of ABI-v11 runtime qualification. The reviewed
+the BOOPSI `DoMethodA`, `DoSuperMethodA`, and `CoerceMethodA` adapters and both
+ABI paths have completed the native M3 qualification recorded in
+[`docs/m3-qualification.md`](../../docs/m3-qualification.md). The reviewed
 allowlist, generator instructions and input hashes live in `bindings/` at the
 repository root.
 
