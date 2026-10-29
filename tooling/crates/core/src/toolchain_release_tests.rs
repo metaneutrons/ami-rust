@@ -6,7 +6,7 @@ fn file(name: String) -> Value {
 }
 
 fn candidate() -> Value {
-    let version = "0.2.0";
+    let version = "0.1.0";
     let hosts: Vec<_> = ReleaseHost::ALL.into_iter().map(|host| {
         let base = format!("ami-rust-toolchain-{version}-{}", host.key());
         json!({
@@ -45,7 +45,7 @@ fn candidate() -> Value {
         "rustup_distribution": {
             "channel": version, "catalog_commit": "3".repeat(40),
             "rust_version": "1.100.0-nightly (330d31712 2026-09-17)",
-            "cargo_version": "1.99.0 (3efb1f477 2026-07-17)", "release_tag": "v0.2.0",
+            "cargo_version": "1.99.0 (3efb1f477 2026-07-17)", "release_tag": "v0.1.0",
             "manifest": file(format!("channel-rust-{version}.toml")),
             "checksum": file(format!("channel-rust-{version}.toml.sha256")),
         },
@@ -71,8 +71,8 @@ fn accepts(value: &Value) -> bool {
 #[test]
 fn complete_three_host_inventory_derives_one_asset_set_and_crate_order() {
     let release = parse_toolchain_release(&serde_json::to_vec(&candidate()).unwrap()).unwrap();
-    assert_eq!(release.toolchain_name(), "aros-0.2.0");
-    assert_eq!(release.package_prefix(), "libexec/ami-rust/0.2.0");
+    assert_eq!(release.toolchain_name(), "aros-0.1.0");
+    assert_eq!(release.package_prefix(), "libexec/ami-rust/0.1.0");
     let assets = release.expected_assets();
     // Twenty-two payloads each have an SBOM/signature, seven metadata files
     // each have one signature, plus the self-excluding final checksum file.
@@ -81,14 +81,14 @@ fn complete_three_host_inventory_derives_one_asset_set_and_crate_order() {
     assert_eq!(
         release.rustup_dist_server(),
         format!(
-            "https://raw.githubusercontent.com/metaneutrons/ami-rust/{}/distribution/rustup/0.2.0",
+            "https://raw.githubusercontent.com/metaneutrons/ami-rust/{}/distribution/rustup/0.1.0",
             "3".repeat(40),
         )
     );
-    assert!(assets.contains(&"channel-rust-0.2.0.toml.sha256.sigstore.json".to_owned()));
-    assert!(assets.contains(&"ami-rust-rust-std-0.2.0-linux-aarch64.tar.xz.spdx.json".to_owned()));
-    assert!(assets.contains(&"ami-rust_0.2.0-1_arm64.deb".to_owned()));
-    assert!(assets.contains(&"ami-rust-toolchain-0.2.0-macos-aarch64.tar.xz.spdx.json".to_owned()));
+    assert!(assets.contains(&"channel-rust-0.1.0.toml.sha256.sigstore.json".to_owned()));
+    assert!(assets.contains(&"ami-rust-rust-std-0.1.0-linux-aarch64.tar.xz.spdx.json".to_owned()));
+    assert!(assets.contains(&"ami-rust_0.1.0-1_arm64.deb".to_owned()));
+    assert!(assets.contains(&"ami-rust-toolchain-0.1.0-macos-aarch64.tar.xz.spdx.json".to_owned()));
     assert!(
         !assets
             .iter()
@@ -112,16 +112,16 @@ fn v3_native_reference_application_is_a_payload_and_v2_rejects_it() {
     v3["reference_application"] = json!({
         "target": "x86_64-aros",
         "abi": "v1",
-        "archive": file("ami-rust-sha256sum-0.2.0-x86_64-aros.tar.xz".to_owned()),
+        "archive": file("ami-rust-sha256sum-0.1.0-x86_64-aros.tar.xz".to_owned()),
     });
     let release = parse_toolchain_release(&serde_json::to_vec(&v3).unwrap()).unwrap();
     let assets = release.expected_assets();
     assert_eq!(release.unsigned_payloads().len(), 29);
     assert_eq!(assets.len(), 84);
-    assert!(assets.contains(&"ami-rust-sha256sum-0.2.0-x86_64-aros.tar.xz".to_owned()));
-    assert!(assets.contains(&"ami-rust-sha256sum-0.2.0-x86_64-aros.tar.xz.spdx.json".to_owned()));
+    assert!(assets.contains(&"ami-rust-sha256sum-0.1.0-x86_64-aros.tar.xz".to_owned()));
+    assert!(assets.contains(&"ami-rust-sha256sum-0.1.0-x86_64-aros.tar.xz.spdx.json".to_owned()));
     assert!(
-        assets.contains(&"ami-rust-sha256sum-0.2.0-x86_64-aros.tar.xz.sigstore.json".to_owned())
+        assets.contains(&"ami-rust-sha256sum-0.1.0-x86_64-aros.tar.xz.sigstore.json".to_owned())
     );
 
     let mut missing = v3.clone();
@@ -152,7 +152,7 @@ fn missing_duplicated_or_crossed_host_and_debian_identities_refuse() {
     duplicate["hosts"][2] = duplicate["hosts"][1].clone();
     assert!(!accepts(&duplicate));
     let mut crossed = valid.clone();
-    crossed["hosts"][2]["debian"]["name"] = json!("ami-rust_0.2.0-1_amd64.deb");
+    crossed["hosts"][2]["debian"]["name"] = json!("ami-rust_0.1.0-1_amd64.deb");
     assert!(!accepts(&crossed));
     let mut mac_deb = valid.clone();
     mac_deb["hosts"][0]["debian"] = valid["hosts"][1]["debian"].clone();
@@ -172,7 +172,7 @@ fn historical_cli_and_incomplete_or_forged_crate_inventory_refuse() {
     occupied["crates"][0]["name"] = json!("amiga-os");
     assert!(!accepts(&occupied));
     let mut mismatched_archive = valid.clone();
-    mismatched_archive["crates"][0]["version"] = json!("0.1.0");
+    mismatched_archive["crates"][0]["version"] = json!("0.2.0");
     assert!(!accepts(&mismatched_archive));
     let mut traversal = valid.clone();
     traversal["sources"]["name"] = json!("../sources.tar.xz");
@@ -209,12 +209,12 @@ fn dependency_cycles_unknown_edges_and_duplicate_json_keys_refuse() {
 fn fresh_stable_version_is_required_and_input_order_is_irrelevant() {
     let valid = candidate();
     for version in [
-        "0.1.0",
-        "00.2.0",
-        "0.2.0-dev",
-        "0.2.0+packaging.1",
-        "0.2",
-        "0.2.0/path",
+        "0.0.9",
+        "00.1.0",
+        "0.1.0-dev",
+        "0.1.0+packaging.1",
+        "0.1",
+        "0.1.0/path",
     ] {
         let mut invalid = valid.clone();
         invalid["version"] = json!(version);
@@ -231,13 +231,13 @@ fn fresh_stable_version_is_required_and_input_order_is_irrelevant() {
     );
     assert_eq!(a.expected_assets(), b.expected_assets());
     let mut separate_crate_version = valid.clone();
-    separate_crate_version["crates"][0]["version"] = json!("0.1.0");
+    separate_crate_version["crates"][0]["version"] = json!("0.2.0");
     let first_name = separate_crate_version["crates"][0]["name"]
         .as_str()
         .unwrap()
         .to_owned();
     separate_crate_version["crates"][0]["archive"]["name"] =
-        json!(format!("{first_name}-0.1.0.crate"));
+        json!(format!("{first_name}-0.2.0.crate"));
     assert!(accepts(&separate_crate_version));
 }
 
@@ -288,8 +288,8 @@ fn changed_component_or_manifest_checksum_cannot_keep_old_metadata_identity() {
     changed_component["hosts"][1]["rustup"]["cargo"]["sha256"] = json!("b".repeat(64));
     assert!(!accepts(&changed_component));
     for (field, value) in [
-        ("release_tag", "v0.2.0-qualification.0"),
-        ("release_tag", "v0.2.0/other"),
+        ("release_tag", "v0.1.0-qualification.0"),
+        ("release_tag", "v0.1.0/other"),
         ("rust_version", "forged\nversion"),
     ] {
         let mut bad = valid.clone();

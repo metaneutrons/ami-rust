@@ -33,8 +33,10 @@ pub struct RustupManifestFiles {
 }
 
 pub fn render_rustup_manifest(spec: &RustupManifestRequest) -> Result<RustupManifestFiles> {
-    if stable_version(&spec.version)? <= [0, 1, 0] {
-        return Err(Refusal::new("rustup requires a new stable SDK version"));
+    if stable_version(&spec.version)? < [0, 1, 0] {
+        return Err(Refusal::new(
+            "rustup requires stable SDK version 0.1.0 or newer",
+        ));
     }
     let date = date(spec.epoch)?;
     for version in [&spec.rust_version, &spec.cargo_version] {
