@@ -75,6 +75,25 @@ confined to aros-mui-sys. The complete generated safe/typed-unsafe/raw and
 ABI-availability inventory is in [the MUI API reference](mui-safe-api.md), with
 qualification evidence in [the M5 record](m5-qualification.md).
 
+M6 adds the interaction layer without widening the raw boundary. A typed
+`Object::notify` connects a generated readable attribute and checked `Trigger`
+to a return ID, a no-notify typed write, or a retained `Hook`. `Scope::hook`
+owns callback state until all native scope objects have been disposed; its
+handle cannot escape the scope, and nested mutable entry is refused.
+`Application::run` processes `MUIM_Application_NewInput` return IDs and waits on
+the native signal mask through the same task-affine `Context`.
+
+`Application::request` accepts synchronous requester strings only when the
+message contains no format conversion. Generated menu objects use the existing
+ownership ledger. `Scope::custom_class` supports regular MUI custom classes
+with fallible Rust instance data and declared argument-free methods. Unknown
+messages are forwarded to the native superclass; foreign custom message
+layouts remain an unsafe expert operation. The full execution evidence is in
+[the M6 record](m6-qualification.md).
+
+BOOPSI method dispatch uses a small C adapter built from AROS `OCLASS` and
+`CALLHOOKPKT`. Rust does not reproduce that compiler-sensitive call shape.
+
 `aros-mui-sys` exposes the complete reviewed non-variadic muimaster vector set
 and the generated public raw class, identifier, value, and message surface.
 Both x86-64 backends use the negative pointer-vector layout. ABI1 passes the
