@@ -9,6 +9,7 @@ extern crate alloc;
 
 mod attribute;
 mod class;
+mod method;
 mod object;
 #[path = "value.rs"]
 mod value_kind;
@@ -16,10 +17,15 @@ mod value_kind;
 pub mod attributes;
 pub mod classes;
 pub mod methods;
+pub mod values;
 
-pub use attribute::{Attribute, BuildAttribute, GetAttribute, SetAttribute};
+pub use attribute::{
+    Attribute, BuildAttribute, GetAttribute, RawAttribute, RawBuildAttribute, RawGetAttribute,
+    RawSetAttribute, SetAttribute,
+};
 pub use class::{Class, IsA, ParentOf};
+pub use method::RawMethod;
 pub use object::{Builder, Error, Mui, Object, Scope};
 #[doc(hidden)]
 pub use value_kind::DecodeValueKind;
-pub use value_kind::{ForeignPtr, MuiEnum, ValueKind, value};
+pub use value_kind::{ForeignPtr, MuiEnum, StringArray, ValueKind, value};

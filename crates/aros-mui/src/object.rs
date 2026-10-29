@@ -1,8 +1,9 @@
 use crate::{
-    BuildAttribute, Class, DecodeValueKind, GetAttribute, ParentOf, SetAttribute, ValueKind,
-    class::Attachment, methods::Method,
+    BuildAttribute, Class, DecodeValueKind, GetAttribute, ParentOf, RawBuildAttribute,
+    RawGetAttribute, RawMethod, RawSetAttribute, SetAttribute, StringArray, ValueKind,
+    class::Attachment, method::Method,
 };
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 use aros::{BytePath, Context, Library};
 use aros_mui_sys::{Stacked, TagItem, mui_dispose_object, mui_new_object_a};
 use core::{
@@ -26,6 +27,7 @@ pub enum Error {
     LibraryBaseUnavailable,
     NativeOperation,
     ObjectCreation,
+    NullValue,
     AlreadyOwned,
     OwnershipCycle,
     ParentOccupied,
@@ -82,6 +84,7 @@ impl<'ctx> Mui<'ctx> {
             mui_base: self.mui_base,
             intuition_base: self.intuition_base,
             entries: RefCell::new(Vec::new()),
+            string_arrays: RefCell::new(Vec::new()),
             _task_affine: PhantomData,
         };
         run(&scope)
@@ -136,6 +139,7 @@ pub struct Scope {
     mui_base: NonNull<aros_sys::Library>,
     intuition_base: NonNull<aros_sys::Library>,
     entries: RefCell<Vec<Entry>>,
+    string_arrays: RefCell<Vec<Box<[*const core::ffi::c_char]>>>,
     _task_affine: PhantomData<*mut ()>,
 }
 
@@ -146,6 +150,33 @@ impl Scope {
             tags: Vec::new(),
             _class: PhantomData,
         }
+    }
+
+    /// Retains a NULL-terminated native string array for this complete scope.
+    pub fn string_array<'scope>(
+        &'scope self,
+        strings: &[&'scope core::ffi::CStr],
+    ) -> Result<StringArray<'scope>, Error> {
+        let length = strings.len().checked_add(1).ok_or(Error::Allocation)?;
+        let mut pointers = Vec::new();
+        pointers
+            .try_reserve_exact(length)
+            .map_err(|_| Error::Allocation)?;
+        pointers.extend(strings.iter().map(|string| string.as_ptr()));
+        pointers.push(core::ptr::null());
+        let mut pointers = pointers.into_boxed_slice();
+        let pointer = NonNull::new(pointers.as_mut_ptr()).ok_or(Error::Allocation)?;
+        let mut retained = self
+            .string_arrays
+            .try_borrow_mut()
+            .map_err(|_| Error::Busy)?;
+        retained.try_reserve(1).map_err(|_| Error::Allocation)?;
+        retained.push(pointers);
+        Ok(StringArray {
+            pointer,
+            scope: self,
+            _lifetime: PhantomData,
+        })
     }
 
     fn create<C: Class>(&self, mut tags: Vec<TagItem>) -> Result<Object<'_, C>, Error> {
@@ -205,7 +236,7 @@ impl Scope {
     fn get<'scope, C, A>(
         &'scope self,
         object: Object<'scope, C>,
-    ) -> Result<<A::Value as ValueKind>::Input<'scope>, Error>
+    ) -> Result<<A::Value as ValueKind>::Output<'scope>, Error>
     where
         C: Class,
         A: GetAttribute<C>,
@@ -227,6 +258,47 @@ impl Scope {
             return Err(Error::AttributeUnavailable);
         }
         <A::Value as DecodeValueKind>::decode(self, raw)
+    }
+
+    unsafe fn set_raw<C, A>(&self, object: Object<'_, C>, value: usize) -> Result<(), Error>
+    where
+        C: Class,
+        A: RawSetAttribute<C>,
+    {
+        self.validate(object)?;
+        let mut tags = [TagItem::new(A::ID, value), TagItem::done()];
+        // SAFETY: the caller owns the complete native value contract.
+        unsafe {
+            aros_sys::intuition::set_attrs_a(
+                self.intuition_base.as_ptr(),
+                object.raw.as_ptr(),
+                tags.as_mut_ptr(),
+            )
+        };
+        Ok(())
+    }
+
+    unsafe fn get_raw<C, A>(&self, object: Object<'_, C>) -> Result<usize, Error>
+    where
+        C: Class,
+        A: RawGetAttribute<C>,
+    {
+        self.validate(object)?;
+        let mut value = 0usize;
+        // SAFETY: the caller interprets the returned native value.
+        let found = unsafe {
+            aros_sys::intuition::get_attr(
+                self.intuition_base.as_ptr(),
+                A::ID,
+                object.raw.as_ptr(),
+                &mut value,
+            )
+        };
+        if found == 0 {
+            Err(Error::AttributeUnavailable)
+        } else {
+            Ok(value)
+        }
     }
 
     fn validate<C: Class>(&self, object: Object<'_, C>) -> Result<(), Error> {
@@ -285,8 +357,13 @@ impl Scope {
         }
 
         let attached = match attachment {
-            Attachment::ApplicationWindow => self.add_application_window(parent.raw, child.raw),
-            Attachment::GroupChild => self.add_group_child(parent.raw, child.raw),
+            Attachment::ApplicationWindow | Attachment::FamilyChild | Attachment::GroupChild => {
+                self.add_member(parent.raw, child.raw)
+            }
+            Attachment::ApplicationMenustrip => {
+                self.set_application_menustrip(parent.raw, child.raw);
+                true
+            }
             Attachment::WindowRoot => {
                 self.set_window_root(parent.raw, child.raw);
                 true
@@ -308,7 +385,7 @@ impl Scope {
         }
     }
 
-    fn add_application_window(
+    fn add_member(
         &self,
         parent: NonNull<aros_mui_sys::Object>,
         child: NonNull<aros_mui_sys::Object>,
@@ -323,39 +400,38 @@ impl Scope {
             object: Stacked::new(child.as_ptr()),
         };
         // SAFETY: both typed objects are live and the message exactly follows
-        // `struct opMember` from the pinned Intuition class-user contract.
+        // `struct opMember`; the generated parent relation limits this call to
+        // native classes whose ownership contract is OM_ADDMEMBER.
         unsafe {
             aros_sys::do_method_a(parent.as_ptr().cast(), ptr::addr_of_mut!(message).cast());
         }
-        // Application.mui's OM_ADDMEMBER implementation has no native refusal
-        // path after receiving two live objects. Its return value is not part
-        // of the ownership contract.
-        true
-    }
-
-    fn add_group_child(
-        &self,
-        parent: NonNull<aros_mui_sys::Object>,
-        child: NonNull<aros_mui_sys::Object>,
-    ) -> bool {
-        #[repr(C)]
-        struct OpMember {
-            method_id: Stacked<u32>,
-            object: Stacked<*mut aros_mui_sys::Object>,
-        }
-        let mut message = OpMember {
-            method_id: Stacked::new(OM_ADDMEMBER),
-            object: Stacked::new(child.as_ptr()),
-        };
-        // SAFETY: both typed objects are live and the message exactly follows
-        // `struct opMember`; Group.mui owns OM_ADDMEMBER explicitly.
-        unsafe {
-            aros_sys::do_method_a(parent.as_ptr().cast(), ptr::addr_of_mut!(message).cast());
-        }
-        // Group.mui's OM_ADDMEMBER implementation has no native refusal path
+        // The supported implementations have no native refusal path
         // after receiving two live objects. Its return value is not part of
         // the ownership contract.
         true
+    }
+
+    fn set_application_menustrip(
+        &self,
+        parent: NonNull<aros_mui_sys::Object>,
+        child: NonNull<aros_mui_sys::Object>,
+    ) {
+        let mut tags = [
+            TagItem::new(
+                aros_mui_sys::MUIA_Application_Menustrip,
+                child.as_ptr().addr(),
+            ),
+            TagItem::done(),
+        ];
+        // SAFETY: the generated relation permits only Menustrip here and both
+        // native objects remain owned by this scope.
+        unsafe {
+            aros_sys::intuition::set_attrs_a(
+                self.intuition_base.as_ptr(),
+                parent.as_ptr(),
+                tags.as_mut_ptr(),
+            )
+        };
     }
 
     fn set_window_root(
@@ -435,7 +511,7 @@ impl<'scope, C: Class> Object<'scope, C> {
         self.scope.set::<C, A>(self, value)
     }
 
-    pub fn get<A>(self) -> Result<<A::Value as ValueKind>::Input<'scope>, Error>
+    pub fn get<A>(self) -> Result<<A::Value as ValueKind>::Output<'scope>, Error>
     where
         A: GetAttribute<C>,
         A::Value: DecodeValueKind,
@@ -447,6 +523,45 @@ impl<'scope, C: Class> Object<'scope, C> {
         // SAFETY: Method is sealed; its implementation receives the same live
         // typed object and scope used to validate all arguments.
         unsafe { M::invoke(self.scope, self, arguments) }
+    }
+
+    /// Dispatches a generated native message whose field contracts remain an
+    /// explicit expert boundary.
+    ///
+    /// # Safety
+    ///
+    /// Every pointer, lifetime, message ID, and retained resource in
+    /// `message` must satisfy the native MUI method contract.
+    pub unsafe fn call_raw<M: RawMethod<C>>(self, message: &mut M::Message) -> usize {
+        // SAFETY: delegated to the caller as documented above.
+        unsafe {
+            aros_sys::do_method_a(
+                self.raw.as_ptr().cast(),
+                core::ptr::from_mut(message).cast(),
+            )
+        }
+    }
+
+    /// Writes an attribute through its generated raw descriptor.
+    ///
+    /// # Safety
+    ///
+    /// `value` must satisfy the native type and retention contract reported by
+    /// `A::C_TYPE`.
+    pub unsafe fn set_raw<A: RawSetAttribute<C>>(self, value: usize) -> Result<(), Error> {
+        // SAFETY: delegated to the caller as documented above.
+        unsafe { self.scope.set_raw::<C, A>(self, value) }
+    }
+
+    /// Reads a native attribute without interpreting its value.
+    ///
+    /// # Safety
+    ///
+    /// The caller must interpret and retain the returned word according to
+    /// `A::C_TYPE`.
+    pub unsafe fn get_raw<A: RawGetAttribute<C>>(self) -> Result<usize, Error> {
+        // SAFETY: delegated to the caller as documented above.
+        unsafe { self.scope.get_raw::<C, A>(self) }
     }
 
     pub(crate) fn scope(self) -> &'scope Scope {
@@ -478,6 +593,18 @@ impl<'scope, C: Class> Builder<'scope, C> {
 
     pub fn build(self) -> Result<Object<'scope, C>, Error> {
         self.scope.create::<C>(self.tags)
+    }
+
+    /// Adds a generated raw construction attribute.
+    ///
+    /// # Safety
+    ///
+    /// `value` must satisfy the native type and retention contract reported by
+    /// `A::C_TYPE` for the complete scope lifetime.
+    pub unsafe fn with_raw<A: RawBuildAttribute<C>>(mut self, value: usize) -> Result<Self, Error> {
+        self.tags.try_reserve(1).map_err(|_| Error::Allocation)?;
+        self.tags.push(TagItem::new(A::ID, value));
+        Ok(self)
     }
 }
 

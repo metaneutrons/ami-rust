@@ -28,5 +28,5 @@
  <text x="332" y="221" fill="#f2f5fc" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="112" letter-spacing="-6">ami-rust</text>
  <text x="337" y="269" fill="#b7c5dc" font-family="Arial, Helvetica, sans-serif" font-size="27">Rust for AROS. Built to run native.</text>
  <path d="M80 345h1120" stroke="#8195b5" stroke-opacity=".18"/>
- <g font-family="monospace" font-size="17"><text x="80" y="394" fill="#d4def0">macOS / Linux</text><path d="M280 388h74m-8-7 8 7-8 7" fill="none" stroke="#ff8b65" stroke-width="2"/><text x="378" y="394" fill="#d4def0">AROS x86-64</text><text x="1200" y="394" fill="#91a4c1" text-anchor="end">no_std + alloc · ABI-v1</text></g>
+ <g font-family="monospace" font-size="17"><text x="80" y="394" fill="#d4def0">macOS / Linux</text><path d="M280 388h74m-8-7 8 7-8 7" fill="none" stroke="#ff8b65" stroke-width="2"/><text x="378" y="394" fill="#d4def0">AROS x86-64</text><text x="1200" y="394" fill="#91a4c1" text-anchor="end">no_std + alloc · ABI-v1 + ABI-v11</text></g>
 </g></svg>

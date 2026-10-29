@@ -61,13 +61,19 @@ cross-scope references, and a second root object for one window are rejected
 before a native call.
 
 The shared M4 core supplies sealed classes, builders, inheritance and parent
-relations, plus typed build/get/set attributes and typed methods. Its initial
-class set is `Application`, `Window`, `Group`, `Text`, `Area`, and `Notify`.
-Safe value kinds cover strings, booleans, fixed and pointer-sized integers,
-closed enums, and typed object references. Foreign pointers require explicit
-construction through unsafe `ForeignPtr`; raw tags, pointers, class IDs, and
-vector calls remain confined to `aros-mui-sys`. M5 will generate the remaining
-standard class wrappers from the canonical MUI model.
+relations, plus typed build/get/set attributes and typed methods. M5 generates
+all 72 public standard classes, their transitive inheritance and ownership
+relations, 454 classified attributes, 182 classified methods, and 252 public
+values from the canonical dual-ABI model. Safe value kinds cover strings,
+retained string arrays, booleans, fixed and pointer-sized integers, checked
+enums, and reviewed same-scope object references.
+
+Foreign pointers, incomplete native messages, and unproven retained-resource
+contracts require an explicit unsafe raw operation; they are listed rather than
+silently omitted. Raw tags, native pointers, class IDs, and vector calls remain
+confined to aros-mui-sys. The complete generated safe/typed-unsafe/raw and
+ABI-availability inventory is in [the MUI API reference](mui-safe-api.md), with
+qualification evidence in [the M5 record](m5-qualification.md).
 
 `aros-mui-sys` exposes the complete reviewed non-variadic muimaster vector set
 and the generated public raw class, identifier, value, and message surface.

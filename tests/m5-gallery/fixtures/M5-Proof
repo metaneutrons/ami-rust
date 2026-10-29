@@ -1,0 +1,5 @@
+FailAt 21
+SYS:M5GALLERY
+Echo "ami-rust M5 process returned $RC"
+Wait 60 SECS
+EndCLI

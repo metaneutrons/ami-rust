@@ -11,10 +11,17 @@ use std::{
 
 const SOURCES: &str = "bindings/mui/sources.json";
 const OVERRIDES: &str = "bindings/mui/overrides.json";
+const SAFE_OVERRIDES: &str = "bindings/mui/safe-overrides.json";
 const MODEL: &str = "bindings/mui/api.json";
 const PROVENANCE: &str = "bindings/mui/provenance.json";
 const RAW_ABI1: &str = "crates/aros-mui-sys/src/generated/x86_64_abi1.rs";
 const RAW_ABI11: &str = "crates/aros-mui-sys/src/generated/x86_64_abi11.rs";
+const SAFE_CLASSES: &str = "crates/aros-mui/src/classes.rs";
+const SAFE_ATTRIBUTES: &str = "crates/aros-mui/src/attributes.rs";
+const SAFE_METHODS: &str = "crates/aros-mui/src/methods.rs";
+const SAFE_VALUES: &str = "crates/aros-mui/src/values.rs";
+const SAFE_MANIFEST: &str = "bindings/mui/safe-api.json";
+const SAFE_DOCUMENTATION: &str = "docs/mui-safe-api.md";
 const C_ORACLE_ABI1: &str = "tests/m3-runtime/native/generated_abi1.c";
 const C_ORACLE_ABI11: &str = "tests/m3-runtime/native/generated_abi11.c";
 
@@ -243,6 +250,7 @@ fn run_inner(
     let options = parse_options(arguments)?;
     let source_bytes = fs::read(options.repository.join(SOURCES)).map_err(display)?;
     let override_bytes = fs::read(options.repository.join(OVERRIDES)).map_err(display)?;
+    let safe_override_bytes = fs::read(options.repository.join(SAFE_OVERRIDES)).map_err(display)?;
     let sources: SourceManifest = serde_json::from_slice(&source_bytes).map_err(display)?;
     let overrides: Overrides = serde_json::from_slice(&override_bytes).map_err(display)?;
     validate_configuration(&sources, &overrides, &options)?;
@@ -319,6 +327,7 @@ fn run_inner(
     let raw_abi11 = generate_raw_bindings(&model, "abi11")?;
     let c_oracle_abi1 = generate_c_oracle(&model, "abi1")?;
     let c_oracle_abi11 = generate_c_oracle(&model, "abi11")?;
+    let safe = super::mui_safe_codegen::generate(&model_bytes, &safe_override_bytes)?;
     emit(&options.repository.join(MODEL), &model_bytes, check)?;
     emit(
         &options.repository.join(PROVENANCE),
@@ -343,6 +352,36 @@ fn run_inner(
     emit(
         &options.repository.join(C_ORACLE_ABI11),
         c_oracle_abi11.as_bytes(),
+        check,
+    )?;
+    emit(
+        &options.repository.join(SAFE_CLASSES),
+        safe.classes.as_bytes(),
+        check,
+    )?;
+    emit(
+        &options.repository.join(SAFE_ATTRIBUTES),
+        safe.attributes.as_bytes(),
+        check,
+    )?;
+    emit(
+        &options.repository.join(SAFE_METHODS),
+        safe.methods.as_bytes(),
+        check,
+    )?;
+    emit(
+        &options.repository.join(SAFE_VALUES),
+        safe.values.as_bytes(),
+        check,
+    )?;
+    emit(
+        &options.repository.join(SAFE_MANIFEST),
+        &safe.manifest,
+        check,
+    )?;
+    emit(
+        &options.repository.join(SAFE_DOCUMENTATION),
+        safe.documentation.as_bytes(),
         check,
     )?;
     Ok(())
