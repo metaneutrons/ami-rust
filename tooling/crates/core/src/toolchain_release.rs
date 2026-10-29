@@ -262,9 +262,9 @@ impl ToolchainRelease {
                 ),
             )?;
         }
-        if version <= [0, 1, 0] || self.package_revision == 0 {
+        if version < [0, 1, 0] || self.package_revision == 0 {
             return Err(Refusal::new(
-                "toolchain release requires a new version and positive package revision",
+                "toolchain release requires version 0.1.0 or newer and a positive package revision",
             ));
         }
         if !commit_id(&self.source.commit)
