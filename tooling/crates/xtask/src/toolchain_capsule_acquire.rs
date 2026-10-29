@@ -343,8 +343,27 @@ fn source_identity(git: &Path, source: &Path, started: Instant) -> Result<Value>
 }
 
 fn verify_git_blob(git: &Path, source: &Path, relative: &str, expected: &[u8], started: Instant) -> Result<()> {
-    let output = git_output(git, source, &["show", &format!("HEAD:{relative}")], started)?;
-    if output != expected { return Err(Refusal::new("repository material differs from its pinned Git bytes")); }
+    let committed = text(&git_output(
+        git,
+        source,
+        &["rev-parse", &format!("HEAD:{relative}")],
+        started,
+    )?)?;
+    let checked_out = text(&git_output(
+        git,
+        source,
+        &["hash-object", "--no-filters", "--", relative],
+        started,
+    )?)?;
+    if !git_id(&committed)
+        || committed != checked_out
+        || ami_rust_core::digest::sha256_bytes(expected)
+            != ami_rust_core::digest::sha256_file(&source.join(relative))?
+    {
+        return Err(Refusal::new(
+            "repository material differs from its pinned Git bytes",
+        ));
+    }
     Ok(())
 }
 
