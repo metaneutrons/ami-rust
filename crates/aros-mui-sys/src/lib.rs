@@ -10,6 +10,7 @@ compile_error!("aros-mui-sys currently implements only the x86-64 AROS vector AB
 compile_error!("aros-mui-sys requires AROS ABI-v1 or ABI-v11");
 
 use aros_sys::Library;
+pub use aros_sys::{TAG_DONE, TAG_IGNORE, TAG_MORE, TAG_SKIP, TAG_USER, TagItem};
 use core::ffi::{c_char, c_void};
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
@@ -21,30 +22,6 @@ mod backend;
 
 /// Minimum muimaster.library API version used by this initial surface.
 pub const MUI_API_VERSION: u16 = 19;
-
-pub const TAG_DONE: u32 = 0;
-pub const TAG_IGNORE: u32 = 1;
-pub const TAG_MORE: u32 = 2;
-pub const TAG_SKIP: u32 = 3;
-pub const TAG_USER: u32 = 1 << 31;
-
-/// AROS `struct TagItem` for the pinned 64-bit ABI.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TagItem {
-    pub tag: u32,
-    pub data: usize,
-}
-
-impl TagItem {
-    pub const fn new(tag: u32, data: usize) -> Self {
-        Self { tag, data }
-    }
-
-    pub const fn done() -> Self {
-        Self::new(TAG_DONE, 0)
-    }
-}
 
 pub type Object = c_void;
 

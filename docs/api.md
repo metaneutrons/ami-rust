@@ -25,6 +25,15 @@ separate application dependencies. `aros-sys` is the raw ABI package. Optional
 libraries use focused pairs; the initial pair is `aros-mui` and
 `aros-mui-sys`. These source APIs are not yet a stability promise.
 
+The raw `aros-sys` library modules expose the first generated base set:
+`exec` covers library, signal and message-port primitives; `dos` covers files,
+locks, directory iteration, error retrieval and path operations; `utility`
+covers tag-list traversal; `intuition` covers basic windows and BOOPSI object
+attributes. All calls require an explicit live library base and remain unsafe.
+The committed allowlist is verified against both pinned SDKs before generation.
+Variadic functions and calls with more than six x86-64 register arguments are
+deliberately excluded until they receive an explicit reviewed adapter.
+
 | Surface | Current signature and semantics |
 | --- | --- |
 | Entry and status | `aros::entry!(application)` installs the entry for `application: fn(&Context) -> AppStatus`; `aros::entry!(application, alloc)` also installs the global allocator when the default `alloc` feature is enabled. `AppStatus` is `Success = 0`, `Error = 10`, or `Fatal = 20`. |

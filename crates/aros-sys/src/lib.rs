@@ -1,10 +1,11 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 
-//! Raw bindings for the private, native x86-64 AROS ABI-v1 bridge.
+//! Raw bindings for the native bridge and selected x86-64 AROS library APIs.
 //!
 //! The selected SDK headers are the source of the ABI contracts translated
-//! here. Their copyrights and licences remain with the AROS Development
+//! here. Generated library calls support ABI-v1 and ABI-v11 through separate
+//! backends. Their copyrights and licences remain with the AROS Development
 //! Team; these declarations do not relicense the SDK.
 
 use core::ffi::{c_char, c_int, c_void};
@@ -13,9 +14,56 @@ use core::mem::{align_of, offset_of, size_of};
 pub type APTR = *mut c_void;
 /// `AROS_FAST_BPTR` selects `APTR` for BPTR in the pinned x86-64 SDK.
 pub type BPTR = APTR;
+pub type BOOL = i16;
+pub type BYTE = i8;
 pub type IPTR = usize;
 pub type LONG = i32;
+pub type SIPTR = isize;
+pub type Tag = u32;
+pub type UBYTE = u8;
 pub type ULONG = u32;
+
+pub const TAG_DONE: u32 = 0;
+pub const TAG_IGNORE: u32 = 1;
+pub const TAG_MORE: u32 = 2;
+pub const TAG_SKIP: u32 = 3;
+pub const TAG_USER: u32 = 1 << 31;
+
+/// AROS `struct TagItem` for the selected 64-bit ABI.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TagItem {
+    pub tag: u32,
+    pub data: usize,
+}
+
+impl TagItem {
+    pub const fn new(tag: u32, data: usize) -> Self {
+        Self { tag, data }
+    }
+
+    pub const fn done() -> Self {
+        Self::new(TAG_DONE, 0)
+    }
+}
+
+/// Opaque Intuition window handle.
+pub type Window = c_void;
+/// Opaque Intuition window descriptor.
+pub type NewWindow = c_void;
+/// Opaque BOOPSI class handle.
+pub type IClass = c_void;
+
+#[cfg(all(target_os = "aros", not(target_arch = "x86_64")))]
+compile_error!("aros-sys currently implements only the x86-64 AROS vector ABI");
+#[cfg(all(
+    target_os = "aros",
+    not(any(target_abi = "", target_abi = "abi1", target_abi = "abi11"))
+))]
+compile_error!("aros-sys requires AROS ABI-v1 or ABI-v11");
+
+mod generated;
+pub use generated::{dos, exec, intuition, utility};
 
 /// The C bridge's error record (`native` holds the immediately captured
 /// native error, such as DOS `IoErr`).

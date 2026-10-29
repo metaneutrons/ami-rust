@@ -1,0 +1,107 @@
+{
+  "schema": "ami-rust-aros-api-provenance-v1",
+  "generator": "0.1.0",
+  "manifest_sha256": "f85d618858ef7587cf3a603646fcbfbac766b82a67b5462a451571ee1c661a36",
+  "inputs": [
+    {
+      "abi": "abi1",
+      "path": "clib/dos_protos.h",
+      "sha256": "8cf47bbac7b0fd5a0eb9e0630e56706fae99f88e882994f11fee0061c813e571"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/dos.h",
+      "sha256": "e4b95ecaa4ff6f0450a7296cd97ce1f4dc78037af9ec05006e3c4ac22325348e"
+    },
+    {
+      "abi": "abi1",
+      "path": "clib/exec_protos.h",
+      "sha256": "a7fad4716ef615921557d557664ae54e527eca3b0578896391607963ea8c9e41"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/exec.h",
+      "sha256": "a358ab8677dcfefb6325790b0e91ab52e8a9f3ac692508c518f97718dcd1c8ab"
+    },
+    {
+      "abi": "abi1",
+      "path": "clib/intuition_protos.h",
+      "sha256": "6c0d00908b77ad07348f17326c5a1e72a13889f87b8c14e27b54bb98e4e6cb15"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/intuition.h",
+      "sha256": "37c713a7751ca84b1f7a709d4be236e3dfcc89993285e3f2f7136e9aad9dc364"
+    },
+    {
+      "abi": "abi1",
+      "path": "clib/muimaster_protos.h",
+      "sha256": "07489366b7b2a6b42f56f6cbb2ff78345dcd7dff9d09037ddf0b4330419f856a"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/muimaster.h",
+      "sha256": "267e58ee9e8e431895a93026408dac988d3be3262cdac3e25a3fa29fba17cda5"
+    },
+    {
+      "abi": "abi1",
+      "path": "clib/utility_protos.h",
+      "sha256": "606be3b1d19916980ee10fc60bee8281799c2c09a869f0b03ea2309e6e57782f"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/utility.h",
+      "sha256": "bab081e9fa30e55254d719cdc812ed00e0575778bc3feadaf76714416bcecab4"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/dos_protos.h",
+      "sha256": "6ff5d9d96152ec53f715c7ba025d17ec1fceec573455973c6f3611e773aef7d0"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/dos.h",
+      "sha256": "bda72f94fc193f5f58e062a266fd5851abbfce017f9441850ee9f677850783e7"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/exec_protos.h",
+      "sha256": "f42d8b8df767ae007baa7128305ee24ec0dfd426f403934067a897efcb2e174e"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/exec.h",
+      "sha256": "f9a79343839877d4d1a6fefbb7f259f1fd60a38ebf39a6408cf9e2f27ed5d898"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/intuition_protos.h",
+      "sha256": "08a1bbabf11af89b93542faa8a060a16c32bf0e4c98167d303964f751de7f618"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/intuition.h",
+      "sha256": "34f36270b9a2b8c6f3372ece8661481995645e18aa303837dca4daf25626541d"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/muimaster_protos.h",
+      "sha256": "3f38b71ec33b06095e3df220093736d9587928f86660e6ae9113f566053b535a"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/muimaster.h",
+      "sha256": "176c21612cbb23ecf2e7488673cacec4d73437ce22f5694f28b9578263c9fbf0"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/utility_protos.h",
+      "sha256": "815d64187568f2a921ec18495221481aab104d88e598cd79a0ee123936751acb"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/utility.h",
+      "sha256": "c404bd062f3172c0e6598894d5658aaf502a34849e8b018687ecbf8e7198a291"
+    }
+  ]
+}

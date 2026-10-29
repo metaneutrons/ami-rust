@@ -3,8 +3,14 @@ name = "aros-sys"
 version.workspace = true
 edition.workspace = true
 publish = false
-description = "Raw, allocation-free Rust ABI declarations and calls for the selected x86-64 AROS ABI-v1 bridge."
+description = "Raw, allocation-free Rust declarations and vector calls for x86-64 AROS ABI-v1 and ABI-v11."
 repository = "https://github.com/metaneutrons/ami-rust"
 homepage = "https://github.com/metaneutrons/ami-rust"
 license-file = "LICENSE"
 readme = "README.md"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(target_os, values("aros"))',
+    'cfg(target_abi, values("", "abi1", "abi11"))',
+] }

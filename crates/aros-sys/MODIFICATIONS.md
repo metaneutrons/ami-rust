@@ -17,6 +17,13 @@ boundary. Packaging now records the applicable AROS scope explicitly without
 changing executable Rust/C implementation bytes. Source licensing notices and
 the modification record accompany every SDK source copy.
 
+2026-10-29: the reviewed API allowlist added generated raw Rust vector calls
+for selected Exec, DOS, Utility and Intuition functions. Separate x86-64
+backends implement the ABI-v1 base-last convention and Deadwood AROS ABI-v11
+2026.09 `r12` library-base convention. The committed provenance record hashes
+all consulted `clib` and `defines` headers; no generated SDK source is required
+by consumers.
+
 Covered Code and its modifications remain subject to AROS Public License 1.1;
 the original ami-rust additions also have the owner-selected MIT OR Apache-2.0
 grant to the extent that this does not relicense or restrict AROS Covered Code.
