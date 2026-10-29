@@ -6,13 +6,13 @@
   <a href="https://github.com/metaneutrons/ami-rust/actions/workflows/ci.yml"><img src="https://github.com/metaneutrons/ami-rust/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
   <img src="https://img.shields.io/badge/version-0.1.0%20pre--release-ff825e?style=flat-square" alt="Version 0.1.0 pre-release">
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-7c8cf8?style=flat-square" alt="License: MIT OR Apache-2.0"></a>
-  <a href="docs/compatibility.md"><img src="https://img.shields.io/badge/target-AROS%20x86--64%20ABI--v1-398f4f?style=flat-square" alt="Target: AROS x86-64 ABI-v1"></a>
+  <a href="docs/compatibility.md"><img src="https://img.shields.io/badge/target-AROS%20x86--64%20ABI--v1%20%2B%20ABI--v11-398f4f?style=flat-square" alt="Target: AROS x86-64 ABI-v1 and ABI-v11"></a>
   <a href="docs/api.md"><img src="https://img.shields.io/badge/Rust-no__std%20%2B%20alloc-91b8d6?style=flat-square" alt="Rust: no_std plus alloc"></a>
 </p>
 
 <p align="center">
   <strong>Build native AROS applications with standard Rust tools.</strong><br>
-  Cross-compile on macOS or Linux. Run on AROS x86-64 ABI-v1.
+  Cross-compile on macOS or Linux. Run on AROS x86-64 ABI-v1 or ABI-v11.
 </p>
 
 ## What ami-rust provides
@@ -31,9 +31,9 @@ macOS / Linux host
                           └── native AROS executable
 ```
 
-The initial target is deliberately narrow: **PC x86-64 AROS ABI-v1** with
-`no_std` and `alloc`. Full `std`, additional AROS architectures, and native
-AROS-hosted rustc/Cargo/rustup are future work.
+The initial targets are deliberately narrow: **PC x86-64 AROS ABI-v1 and
+ABI-v11** with `no_std` and `alloc`. Full `std`, additional AROS architectures,
+and native AROS-hosted rustc/Cargo/rustup are future work.
 
 ## Status
 
