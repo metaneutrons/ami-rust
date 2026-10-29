@@ -361,11 +361,12 @@ jobs:
             > "$components"
           sha256() { shasum -a 256 "$1" | awk '{print $1}'; }
           executables="$(jq -n \
+            --arg host_linker "$host_linker" \
             --arg linker "$sysroot/bin/aros-link" \
             --arg collector "$toolchain_root/bin/collect-aros-sdk" \
             --arg lld "$toolchain_root/bin/ld.lld" \
             --arg strip "$toolchain_root/bin/llvm-strip" \
-            '[$linker,$collector,$lld,$strip]')"
+            '[$host_linker,$linker,$collector,$lld,$strip]')"
           observer="$RUNNER_TEMP/rp4-maintainer/target/release/ami-rust-xtask"
           applications='[]'
           build_observations='[]'
