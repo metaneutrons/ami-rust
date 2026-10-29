@@ -9,13 +9,6 @@
       "url": "https://static.rust-lang.org/dist/2026-09-18/rust-src-nightly.tar.xz"
     },
     {
-      "role": "llvm11-source-lock",
-      "filename": "llvm-11.0.0.sources.json",
-      "bytes": 4084,
-      "sha256": "88c89a65bba42a0d2f49fb5d193c03872307b9a46a4c6eb9f043aec0e4fd34d8",
-      "path": "release/source-inputs/llvm-11.0.0.sources.json"
-    },
-    {
       "role": "llvm11-clang-archive",
       "filename": "clang-11.0.0.src.tar.xz",
       "bytes": 14982988,
