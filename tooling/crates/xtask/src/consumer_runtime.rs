@@ -1462,25 +1462,13 @@ mod tests {
         fs,
         os::unix::fs::{PermissionsExt, symlink},
         path::Path,
-        sync::atomic::{AtomicU64, Ordering},
-        time::{SystemTime, UNIX_EPOCH},
     };
-
-    static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
 
     struct Scratch(PathBuf);
 
     impl Scratch {
         fn new() -> Self {
-            let stamp = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .expect("clock should be after epoch")
-                .as_nanos();
-            let path = std::env::temp_dir().join(format!(
-                "ami-rust-consumer-runtime-{}-{stamp}-{}",
-                std::process::id(),
-                NEXT_TEMP.fetch_add(1, Ordering::Relaxed)
-            ));
+            let path = crate::test_support::temporary_root("consumer-runtime");
             fs::create_dir(&path).expect("create temporary test directory");
             Self(path)
         }

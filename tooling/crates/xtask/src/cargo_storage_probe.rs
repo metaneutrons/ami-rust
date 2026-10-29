@@ -2301,11 +2301,7 @@ mod tests {
     use super::*;
 
     fn root(label: &str) -> PathBuf {
-        let path = std::env::temp_dir().join(format!(
-            "ami-rust-storage-snapshot-{label}-{}-{}",
-            std::process::id(),
-            unix_millis()
-        ));
+        let path = crate::test_support::temporary_root(&format!("storage-snapshot-{label}"));
         create_private_directory(&path).unwrap();
         path
     }

@@ -1057,28 +1057,16 @@ mod tests {
     use std::{
         fs,
         os::unix::fs::symlink,
-        sync::atomic::{AtomicUsize, Ordering},
-        time::{SystemTime, UNIX_EPOCH},
     };
 
     const SOURCE_HEAD: &str = "0123456789abcdef0123456789abcdef01234567";
-    static NEXT_FIXTURE: AtomicUsize = AtomicUsize::new(0);
-
     struct Fixture {
         root: PathBuf,
     }
 
     impl Fixture {
         fn new() -> Self {
-            let nonce = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .expect("clock is after Unix epoch")
-                .as_nanos();
-            let sequence = NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed);
-            let root = std::env::temp_dir().join(format!(
-                "ami-rust-native-cargo-compare-{}-{nonce}-{sequence}",
-                std::process::id()
-            ));
+            let root = crate::test_support::temporary_root("native-cargo-compare");
             fs::create_dir(&root).expect("fixture root created");
             Self { root }
         }

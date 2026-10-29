@@ -14,6 +14,8 @@ mod native_prefix_compose;
 mod prepare_sigterm;
 mod qualification_command;
 mod target_rlib_compare;
+#[cfg(test)]
+mod test_support;
 mod toolchain_capsule_acquire;
 mod toolchain_producer;
 mod toolchain_publisher_finalize;
