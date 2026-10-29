@@ -1,4 +1,4 @@
-//! Internal maintainer producer for bare x86_64-aros Rust libraries.
+//! Internal maintainer producer for bare AROS Rust libraries.
 //!
 //! This stages only the exact pinned rustc, native host std, and rust-src
 //! components. Official Cargo and the composed SDK's host-bin/aros-link alias
@@ -29,19 +29,18 @@ use std::{
     time::Instant,
 };
 
-const TARGET: &str = "x86_64-aros";
+const SOURCE_PROFILE_TARGET: &str = "x86_64-aros";
 const RUST_COMMIT: &str = "330d317121e16b5db8e5adc63595910528ff2ee7";
 const LIBRARY_LOCK_PATH: &str = "lib/rustlib/src/rust/library/Cargo.lock";
 const LIBRARY_LOCK_BYTES: u64 = 10_042;
 const LIBRARY_LOCK_SHA256: &str =
     "75848db58a70444bfb62c649b103d19c5d92fede325eb0c8c0e5442848448669";
-const TARGET_PIN_BYTES: u64 = 256;
-const TARGET_PIN_SHA256: &str = "33fdd3d97053370eb3db9e05ea75721dafcfc7f4b5f8c218acaab1911984c341";
-const TARGET_SPEC_BYTES: u64 = 955;
-const TARGET_SPEC_SHA256: &str = "de7a0024aa94269641e3e6d480ce8cd334962bf7e02592b0652e19e56b5fba71";
-const TARGET_ALIAS_PATH: &str = "lib/rustlib/x86_64-aros/target.json";
-const TARGET_ALIAS: &str = "x86_64-aros.json";
-const TARGET_SPEC_PROFILE_PATH: &str = "lib/rustlib/x86_64-aros/x86_64-aros.json";
+const SOURCE_PROFILE_TARGET_SPEC_BYTES: u64 = 955;
+const SOURCE_PROFILE_TARGET_SPEC_SHA256: &str =
+    "de7a0024aa94269641e3e6d480ce8cd334962bf7e02592b0652e19e56b5fba71";
+const SOURCE_PROFILE_TARGET_ALIAS_PATH: &str = "lib/rustlib/x86_64-aros/target.json";
+const SOURCE_PROFILE_TARGET_ALIAS: &str = "x86_64-aros.json";
+const SOURCE_PROFILE_TARGET_SPEC_PATH: &str = "lib/rustlib/x86_64-aros/x86_64-aros.json";
 const MACOS_LLVM_SOURCE_PATH: &str = "lib/libLLVM.dylib";
 const MACOS_LLVM_SOURCE_BYTES: u64 = 143_609_472;
 const MACOS_LLVM_SOURCE_SHA256: &str =
@@ -83,8 +82,6 @@ const HOSTS: [HostPins; 3] = [
         cargo_rows: 44,
         historical_cargo_bytes: 32_170_408,
         historical_cargo_sha256: "37e07284393e4c979d0cf8d0efc62e4c29b64424a0d10123a616aec790056333",
-        native_cargo_bytes: 38_204_560,
-        native_cargo_sha256: "671bc15372da8d9abfe15dadbcc4ac00c61fe2f16c1fad86361dc8bcc99396e3",
     },
     HostPins {
         name: "linux-x86_64",
@@ -99,8 +96,6 @@ const HOSTS: [HostPins; 3] = [
         cargo_rows: 44,
         historical_cargo_bytes: 36_137_048,
         historical_cargo_sha256: "21c38ae0b341e88245fc0cd7afc0a28ff51183d3459f05a4c41aec254b06cb45",
-        native_cargo_bytes: 48_005_520,
-        native_cargo_sha256: "de46b26c6ef3ba7bb76da12f8b757c08c6d9c1a59c5b1abfb9c513293499cd3e",
     },
     HostPins {
         name: "linux-aarch64",
@@ -115,8 +110,6 @@ const HOSTS: [HostPins; 3] = [
         cargo_rows: 44,
         historical_cargo_bytes: 35_521_536,
         historical_cargo_sha256: "44a4f14309e8d807e9e514f2c3b95be5ec0717887b5e6edadf112b8f7235c371",
-        native_cargo_bytes: 46_166_136,
-        native_cargo_sha256: "a11faf3989f239c89b972aba79bc713755607605e4535d919c3af042d6790f9c",
     },
 ];
 
@@ -134,8 +127,6 @@ struct HostPins {
     cargo_rows: usize,
     historical_cargo_bytes: u64,
     historical_cargo_sha256: &'static str,
-    native_cargo_bytes: u64,
-    native_cargo_sha256: &'static str,
 }
 
 struct ProfileRows {
@@ -174,11 +165,31 @@ struct Inputs {
     profile_sha256: String,
     source_root: PathBuf,
     cargo_path: PathBuf,
+    cargo_identity: FileIdentity,
     target_pin_path: PathBuf,
     target_spec_path: PathBuf,
-    target_epoch: u64,
+    target: TargetDefinition,
     scoped: ScopedInventory,
     target_spec_identity: FileIdentity,
+}
+
+#[derive(Clone, Debug)]
+struct TargetDefinition {
+    name: String,
+    source_date_epoch: u64,
+    pin_bytes: u64,
+    pin_sha256: String,
+    spec_bytes: u64,
+    spec_sha256: String,
+    alias_path: String,
+    alias: String,
+    spec_profile_path: String,
+}
+
+impl TargetDefinition {
+    fn library_root(&self) -> String {
+        format!("lib/rustlib/{}/lib", self.name)
+    }
 }
 
 /// Typed in-process boundary used by the cohesive toolchain producer. The
@@ -328,14 +339,14 @@ fn run_with_parent_rss_limit(
     copy_input(
         &inputs.target_pin_path,
         &output.join("inputs/target-pin.json"),
-        TARGET_PIN_BYTES,
-        TARGET_PIN_SHA256,
+        inputs.target.pin_bytes,
+        &inputs.target.pin_sha256,
     )?;
     copy_input(
         &inputs.target_spec_path,
-        &output.join("inputs/x86_64-aros.json"),
-        TARGET_SPEC_BYTES,
-        TARGET_SPEC_SHA256,
+        &output.join("inputs").join(&inputs.target.alias),
+        inputs.target.spec_bytes,
+        &inputs.target.spec_sha256,
     )?;
     write_json_new(
         &output.join("inputs.json"),
@@ -351,22 +362,22 @@ fn run_with_parent_rss_limit(
             "host_rust_sysroot": utf8(&inputs.source_root)?,
             "native_cargo": {
                 "source_path": utf8(&inputs.cargo_path)?,
-                "bytes": inputs.host.native_cargo_bytes,
-                "sha256": inputs.host.native_cargo_sha256,
-                "commit": "3efb1f477e99b42974b982d939fd100303cdf7db"
+                "bytes": inputs.cargo_identity.bytes,
+                "sha256": inputs.cargo_identity.sha256,
+                "origin": "official Cargo component from the pinned Rust distribution"
             },
             "target_pin": {
                 "source_path": utf8(&inputs.target_pin_path)?,
                 "retained_path": "inputs/target-pin.json",
-                "bytes": TARGET_PIN_BYTES,
-                "sha256": TARGET_PIN_SHA256,
-                "source_date_epoch": inputs.target_epoch
+                "bytes": inputs.target.pin_bytes,
+                "sha256": inputs.target.pin_sha256,
+                "source_date_epoch": inputs.target.source_date_epoch
             },
             "target_spec": {
                 "source_path": utf8(&inputs.target_spec_path)?,
-                "retained_path": "inputs/x86_64-aros.json",
-                "bytes": TARGET_SPEC_BYTES,
-                "sha256": TARGET_SPEC_SHA256
+                "retained_path": format!("inputs/{}", inputs.target.alias),
+                "bytes": inputs.target.spec_bytes,
+                "sha256": inputs.target.spec_sha256
             },
             "component_install_scope": "authenticated rustc/native-host-std/rust-src payload subset; installer administration rows, official Cargo, and composed host linker alias excluded; target spec added explicitly"
         }),
@@ -377,10 +388,10 @@ fn run_with_parent_rss_limit(
     copy_input(
         &inputs.cargo_path,
         &stage.join("bin/cargo"),
-        inputs.host.native_cargo_bytes,
-        inputs.host.native_cargo_sha256,
+        inputs.cargo_identity.bytes,
+        &inputs.cargo_identity.sha256,
     )?;
-    let target_spec_path = stage.join(TARGET_SPEC_PROFILE_PATH);
+    let target_spec_path = stage.join(&inputs.target.spec_profile_path);
     create_private_dir(target_spec_path.parent().expect("target spec parent"))?;
     copy_input(
         &inputs.target_spec_path,
@@ -388,7 +399,7 @@ fn run_with_parent_rss_limit(
         inputs.target_spec_identity.bytes,
         &inputs.target_spec_identity.sha256,
     )?;
-    symlink(TARGET_ALIAS, stage.join(TARGET_ALIAS_PATH))?;
+    symlink(&inputs.target.alias, stage.join(&inputs.target.alias_path))?;
     if let Some(alias) = &inputs.scoped.macos_llvm_runtime_alias {
         create_macos_llvm_runtime_alias(&stage, alias)?;
     }
@@ -397,16 +408,11 @@ fn run_with_parent_rss_limit(
     }
 
     let mut final_files = inputs.scoped.files.clone();
-    final_files.push(FileIdentity {
-        path: "bin/cargo".to_owned(),
-        bytes: inputs.host.native_cargo_bytes,
-        sha256: inputs.host.native_cargo_sha256.to_owned(),
-        mode: None,
-    });
+    final_files.push(inputs.cargo_identity.clone());
     final_files.push(inputs.target_spec_identity.clone());
     let mut final_links = vec![LinkIdentity {
-        path: TARGET_ALIAS_PATH.to_owned(),
-        target: TARGET_ALIAS.to_owned(),
+        path: inputs.target.alias_path.clone(),
+        target: inputs.target.alias.clone(),
     }];
     if let Some(alias) = &inputs.scoped.macos_llvm_runtime_alias {
         final_links.push(alias.link.clone());
@@ -434,11 +440,11 @@ fn run_with_parent_rss_limit(
         "target_spec_profile_rows_readded_as_explicit_input": inputs.scoped.target_spec_rows,
         "materialized_files": &final_files,
         "materialized_symlinks": &final_links,
-        "cargo_override": {
+        "cargo_component": {
             "path": "bin/cargo",
-            "bytes": inputs.host.native_cargo_bytes,
-            "sha256": inputs.host.native_cargo_sha256,
-            "commit": "3efb1f477e99b42974b982d939fd100303cdf7db"
+            "bytes": inputs.cargo_identity.bytes,
+            "sha256": inputs.cargo_identity.sha256,
+            "origin": "official Cargo component from the pinned Rust distribution"
         },
         "scope": "Rust producer component subset only; not the composed SDK profile"
     });
@@ -455,7 +461,7 @@ fn run_with_parent_rss_limit(
             max_link_resolution_steps: 256,
         },
     )?;
-    if stage.join("lib/rustlib/x86_64-aros/lib").exists() {
+    if stage.join(inputs.target.library_root()).exists() {
         return Err(Refusal::new(
             "bare-target stage unexpectedly contains pre-existing target libraries",
         ));
@@ -512,7 +518,7 @@ fn run_with_parent_rss_limit(
     environment.insert("TZ".to_owned(), "UTC".to_owned());
     environment.insert(
         "SOURCE_DATE_EPOCH".to_owned(),
-        inputs.target_epoch.to_string(),
+        inputs.target.source_date_epoch.to_string(),
     );
     environment.insert("RUSTC_WRAPPER".to_owned(), String::new());
     environment.insert("RUSTC_WORKSPACE_WRAPPER".to_owned(), String::new());
@@ -572,7 +578,7 @@ fn run_with_parent_rss_limit(
     )?;
     require_output_contains(
         &cargo_version.stdout,
-        "commit-hash: 3efb1f477e99b42974b982d939fd100303cdf7db",
+        "commit-hash: 495c385d0875c4ba51eb72ea0448a2d4c018b8d4",
         "pinned native Cargo commit",
     )?;
     require_output_contains(
@@ -625,14 +631,13 @@ fn run_with_parent_rss_limit(
         &stage.join("bin/cargo"),
         &[
             OsString::from("-Zjson-target-spec"),
-            OsString::from("-Zami-rust-reproducible-cross"),
             OsString::from("-Zbuild-std=core,alloc"),
             OsString::from("-Zbuild-std-features=compiler-builtins-mem"),
             OsString::from("build"),
             OsString::from("--manifest-path"),
             manifest.clone().into_os_string(),
             OsString::from("--target"),
-            OsString::from(TARGET),
+            OsString::from(&inputs.target.name),
             OsString::from("--release"),
             OsString::from("--locked"),
             OsString::from("--offline"),
@@ -645,6 +650,7 @@ fn run_with_parent_rss_limit(
         &work.join("fixture"),
         &environment,
     )?;
+    let build_stdout = build.stdout.clone();
     retain_command_outcome(
         build,
         &mut expected_requests,
@@ -669,7 +675,7 @@ fn run_with_parent_rss_limit(
             max_link_resolution_steps: 256,
         },
     )?;
-    if stage.join("lib/rustlib/x86_64-aros/lib").exists() {
+    if stage.join(inputs.target.library_root()).exists() {
         return Err(Refusal::new(
             "source-library build modified the private Rust component stage",
         ));
@@ -699,7 +705,8 @@ fn run_with_parent_rss_limit(
     let libraries = collect_libraries(
         &work,
         &output,
-        &work.join("target/x86_64-aros/release/deps"),
+        &inputs.target,
+        &build_stdout,
         &output.join("libraries"),
     )?;
     let elapsed = started.elapsed().as_secs();
@@ -718,10 +725,10 @@ fn run_with_parent_rss_limit(
     let report = json!({
         "schema": "ami-rust-bare-target-library-producer-v1",
         "status": "PRODUCED_BARE_TARGET_LIBRARIES_NOT_L1_OR_RC_QUALIFICATION",
-        "scope": "source-built x86_64-aros core, alloc, and compiler_builtins rlibs from pinned rustc/rust-std/rust-src components",
+        "scope": format!("source-built {} core, alloc, and compiler_builtins rlibs from pinned rustc/rust-std/rust-src components", inputs.target.name),
         "host": host.name,
         "rustc_commit": RUST_COMMIT,
-        "target": TARGET,
+        "target": inputs.target.name,
         "input_profile_sha256": inputs.profile_sha256,
         "input_component_counts": {
             "rustc_payload": inputs.scoped.rustc_payload_rows,
@@ -746,10 +753,10 @@ fn run_with_parent_rss_limit(
         },
         "scoped_component_inventory_sha256": component_inventory_sha256,
         "component_inventory_path": "component-inventory.json",
-        "native_cargo_override": {
-            "bytes": host.native_cargo_bytes,
-            "sha256": host.native_cargo_sha256,
-            "replaces_official_cargo_component": true,
+        "cargo_component": {
+            "bytes": inputs.cargo_identity.bytes,
+            "sha256": inputs.cargo_identity.sha256,
+            "replaces_official_cargo_component": false,
             "historical_official_cargo": {
                 "path": inputs.scoped.historical_cargo.path,
                 "bytes": inputs.scoped.historical_cargo.bytes,
@@ -757,8 +764,8 @@ fn run_with_parent_rss_limit(
             }
         },
         "rust_source_library_lock": {"path": LIBRARY_LOCK_PATH, "bytes": LIBRARY_LOCK_BYTES, "sha256": LIBRARY_LOCK_SHA256},
-        "target_pin": {"sha256": TARGET_PIN_SHA256, "epoch": inputs.target_epoch},
-        "target_spec": {"bytes": TARGET_SPEC_BYTES, "sha256": TARGET_SPEC_SHA256, "alias": {"path": TARGET_ALIAS_PATH, "target": TARGET_ALIAS}},
+        "target_pin": {"sha256": inputs.target.pin_sha256, "epoch": inputs.target.source_date_epoch},
+        "target_spec": {"bytes": inputs.target.spec_bytes, "sha256": inputs.target.spec_sha256, "alias": {"path": inputs.target.alias_path, "target": inputs.target.alias}},
         "macos_rust_objcopy_llvm_runtime_alias": inputs.scoped.macos_llvm_runtime_alias.as_ref().map(|alias| json!({
             "link": &alias.link,
             "authenticated_source_file": &alias.source_file,
@@ -770,10 +777,10 @@ fn run_with_parent_rss_limit(
             "purpose": "resolve the pinned Linux rust-objcopy libLLVM.so.23.1-rust-1.100.0-nightly dependency from the authenticated root Rust component file"
         })),
         "recipe": {
-            "target": TARGET,
-            "build_flags": ["-Zjson-target-spec", "-Zami-rust-reproducible-cross", "-Zbuild-std=core,alloc", "-Zbuild-std-features=compiler-builtins-mem", "build", "--target=x86_64-aros", "--release", "--locked", "--offline", "--lib", "-j2", "-vv", "--message-format=json-render-diagnostics"],
+            "target": inputs.target.name,
+            "build_flags": ["-Zjson-target-spec", "-Zbuild-std=core,alloc", "-Zbuild-std-features=compiler-builtins-mem", "build", format!("--target={}", inputs.target.name), "--release", "--locked", "--offline", "--lib", "-j2", "-vv", "--message-format=json-render-diagnostics"],
             "rustflags": flags,
-            "source_date_epoch": inputs.target_epoch,
+            "source_date_epoch": inputs.target.source_date_epoch,
             "network": "offline",
             "stale_target_libraries_loaded": false
         },
@@ -855,6 +862,9 @@ fn preflight(
     target_pin_path: PathBuf,
     target_spec_path: PathBuf,
 ) -> Result<Inputs> {
+    let target_spec_bytes = read_bounded_regular(&target_spec_path, 16 * 1024)?;
+    let target_pin_bytes = read_bounded_regular(&target_pin_path, 16 * 1024)?;
+    let target = parse_target_definition(&target_pin_bytes, &target_spec_bytes)?;
     let profile_bytes = read_bounded_regular(
         &profile_path,
         JsonProfile::PackageMetadataStateSelection.max_bytes(),
@@ -867,30 +877,27 @@ fn preflight(
     verify_source_files(&source_root, &scoped.files)?;
     verify_profile_target_spec_row(&source_root, scoped.target_spec_rows)?;
 
-    verify_file_identity(
-        &cargo_path,
-        host.native_cargo_bytes,
-        host.native_cargo_sha256,
-        "native Cargo",
-    )?;
-    verify_file_identity(
-        &target_spec_path,
-        TARGET_SPEC_BYTES,
-        TARGET_SPEC_SHA256,
-        "target spec",
-    )?;
-    let target_pin_bytes = read_bounded_regular(&target_pin_path, 16 * 1024)?;
-    if target_pin_bytes.len() as u64 != TARGET_PIN_BYTES {
+    let cargo_metadata = fs::symlink_metadata(&cargo_path)?;
+    if !cargo_metadata.file_type().is_file()
+        || cargo_metadata.len() == 0
+        || cargo_metadata.len() > 128 * 1024 * 1024
+    {
         return Err(Refusal::new(
-            "target pin differs from its pinned byte length",
+            "native Cargo is not a bounded regular executable",
         ));
     }
-    require_digest(
-        &sha256_bytes(&target_pin_bytes),
-        TARGET_PIN_SHA256,
-        "target pin",
+    let cargo_identity = FileIdentity {
+        path: "bin/cargo".to_owned(),
+        bytes: cargo_metadata.len(),
+        sha256: sha256_file(&cargo_path)?,
+        mode: None,
+    };
+    verify_file_identity(
+        &target_spec_path,
+        target.spec_bytes,
+        &target.spec_sha256,
+        "target spec",
     )?;
-    let target_epoch = validate_target_pin(&target_pin_bytes)?;
     let lock = source_root.join(LIBRARY_LOCK_PATH);
     verify_file_identity(
         &lock,
@@ -899,9 +906,9 @@ fn preflight(
         "Rust source library lock",
     )?;
     let target_spec_identity = FileIdentity {
-        path: TARGET_SPEC_PROFILE_PATH.to_owned(),
-        bytes: TARGET_SPEC_BYTES,
-        sha256: TARGET_SPEC_SHA256.to_owned(),
+        path: target.spec_profile_path.clone(),
+        bytes: target.spec_bytes,
+        sha256: target.spec_sha256.clone(),
         mode: None,
     };
     Ok(Inputs {
@@ -911,9 +918,10 @@ fn preflight(
         profile_sha256,
         source_root,
         cargo_path,
+        cargo_identity,
         target_pin_path,
         target_spec_path,
-        target_epoch,
+        target,
         scoped,
         target_spec_identity,
     })
@@ -947,8 +955,8 @@ fn select_component_inventory(profile: &ProfileRows, host: HostPins) -> Result<S
     let linux_llvm_runtime_alias =
         select_linux_llvm_runtime_alias(host, &profile.files, &profile.symlinks)?;
     let target_link = LinkIdentity {
-        path: TARGET_ALIAS_PATH.to_owned(),
-        target: TARGET_ALIAS.to_owned(),
+        path: SOURCE_PROFILE_TARGET_ALIAS_PATH.to_owned(),
+        target: SOURCE_PROFILE_TARGET_ALIAS.to_owned(),
     };
     let linker_link = LinkIdentity {
         path: format!("lib/rustlib/{}/bin/aros-link", host.triple),
@@ -984,16 +992,21 @@ fn select_component_inventory(profile: &ProfileRows, host: HostPins) -> Result<S
         if !seen.insert(row.path.as_str()) {
             return Err(Refusal::new("Rust profile contains duplicate file paths"));
         }
-        if row.path == TARGET_SPEC_PROFILE_PATH {
+        if row.path == SOURCE_PROFILE_TARGET_SPEC_PATH {
             target_spec_rows += 1;
-            if row.bytes != TARGET_SPEC_BYTES || row.sha256 != TARGET_SPEC_SHA256 {
+            if row.bytes != SOURCE_PROFILE_TARGET_SPEC_BYTES
+                || row.sha256 != SOURCE_PROFILE_TARGET_SPEC_SHA256
+            {
                 return Err(Refusal::new(
                     "profile target spec row differs from the explicit target spec pin",
                 ));
             }
             continue;
         }
-        if row.path.starts_with("lib/rustlib/x86_64-aros/") {
+        if row
+            .path
+            .starts_with(&format!("lib/rustlib/{SOURCE_PROFILE_TARGET}/"))
+        {
             return Err(Refusal::new(
                 "Rust profile unexpectedly contains prebuilt x86_64-aros files",
             ));
@@ -1307,9 +1320,9 @@ fn verify_source_files(root: &Path, files: &[FileIdentity]) -> Result<()> {
 fn verify_profile_target_spec_row(root: &Path, rows: usize) -> Result<()> {
     if rows == 1 {
         verify_file_identity(
-            &root.join(TARGET_SPEC_PROFILE_PATH),
-            TARGET_SPEC_BYTES,
-            TARGET_SPEC_SHA256,
+            &root.join(SOURCE_PROFILE_TARGET_SPEC_PATH),
+            SOURCE_PROFILE_TARGET_SPEC_BYTES,
+            SOURCE_PROFILE_TARGET_SPEC_SHA256,
             "pinned profile target-spec row",
         )?;
     }
@@ -1333,45 +1346,87 @@ fn verify_stable_inputs(inputs: &Inputs) -> Result<()> {
     )?;
     verify_file_identity(
         &inputs.cargo_path,
-        inputs.host.native_cargo_bytes,
-        inputs.host.native_cargo_sha256,
+        inputs.cargo_identity.bytes,
+        &inputs.cargo_identity.sha256,
         "native Cargo",
     )?;
     verify_file_identity(
         &inputs.target_spec_path,
-        TARGET_SPEC_BYTES,
-        TARGET_SPEC_SHA256,
+        inputs.target.spec_bytes,
+        &inputs.target.spec_sha256,
         "target spec",
     )?;
     verify_file_identity(
         &inputs.target_pin_path,
-        TARGET_PIN_BYTES,
-        TARGET_PIN_SHA256,
+        inputs.target.pin_bytes,
+        &inputs.target.pin_sha256,
         "target pin",
     )?;
     let target_pin = read_bounded_regular(&inputs.target_pin_path, 16 * 1024)?;
-    if validate_target_pin(&target_pin)? != inputs.target_epoch {
+    let target_spec = read_bounded_regular(&inputs.target_spec_path, 16 * 1024)?;
+    let target = parse_target_definition(&target_pin, &target_spec)?;
+    if target.name != inputs.target.name
+        || target.source_date_epoch != inputs.target.source_date_epoch
+    {
         return Err(Refusal::new("target pin epoch changed during producer run"));
     }
     Ok(())
 }
 
-fn validate_target_pin(raw: &[u8]) -> Result<u64> {
-    let value: Value = parse_json(raw, JsonProfile::PackageMetadataStateSelection)?;
-    if value.get("schema").and_then(Value::as_str) != Some("aros-native-build-target-v1")
-        || value.get("target").and_then(Value::as_str) != Some(TARGET)
-        || value.get("spec_sha256").and_then(Value::as_str) != Some(TARGET_SPEC_SHA256)
-        || value.get("status").and_then(Value::as_str)
-            != Some("DEVELOPMENT_CANDIDATE_NOT_RELEASE_QUALIFICATION")
-    {
-        return Err(Refusal::new(
-            "target pin does not identify the fixed development candidate",
-        ));
-    }
-    value
+fn parse_target_definition(pin_raw: &[u8], spec_raw: &[u8]) -> Result<TargetDefinition> {
+    let value: Value = parse_json(pin_raw, JsonProfile::PackageMetadataStateSelection)?;
+    let target = value
+        .get("target")
+        .and_then(Value::as_str)
+        .ok_or_else(|| Refusal::new("target pin target is malformed"))?;
+    let (pin_bytes, pin_sha256, spec_bytes, spec_sha256) = match target {
+        "x86_64-unknown-aros-abi1" => (
+            253,
+            "5840e8bc7cb7b810a6948d8f9042a992a18ec000351d21e697538489c146367f",
+            972,
+            "0e9cde740c93949d4cab27690cb9d93dc9fb89dc96388ff5be0eb7296ba38807",
+        ),
+        "x86_64-unknown-aros-abi11" => (
+            254,
+            "382d0ad643fb659fe14a5074cc709be15f6a53524baf406fbf6563c68914dfe7",
+            980,
+            "5616c1e062232b43154237fe40826795cc48e148f903f0a1a8087d224d8a49c9",
+        ),
+        _ => {
+            return Err(Refusal::new(
+                "target pin is not an admitted AROS release target",
+            ));
+        }
+    };
+    let source_date_epoch = value
         .get("source_date_epoch")
         .and_then(Value::as_u64)
-        .ok_or_else(|| Refusal::new("target pin source-date epoch is malformed"))
+        .ok_or_else(|| Refusal::new("target pin source-date epoch is malformed"))?;
+    if value.get("schema").and_then(Value::as_str) != Some("aros-native-build-target-v1")
+        || value.get("spec_sha256").and_then(Value::as_str) != Some(spec_sha256)
+        || value.get("status").and_then(Value::as_str) != Some("RELEASE_CANDIDATE_NOT_PUBLISHED")
+        || source_date_epoch != 1_791_936_000
+        || pin_raw.len() as u64 != pin_bytes
+        || sha256_bytes(pin_raw) != pin_sha256
+        || spec_raw.len() as u64 != spec_bytes
+        || sha256_bytes(spec_raw) != spec_sha256
+    {
+        return Err(Refusal::new(
+            "target pin or specification differs from the admitted release candidate",
+        ));
+    }
+    let alias = format!("{target}.json");
+    Ok(TargetDefinition {
+        name: target.to_owned(),
+        source_date_epoch,
+        pin_bytes,
+        pin_sha256: pin_sha256.to_owned(),
+        spec_bytes,
+        spec_sha256: spec_sha256.to_owned(),
+        alias_path: format!("lib/rustlib/{target}/target.json"),
+        alias: alias.clone(),
+        spec_profile_path: format!("lib/rustlib/{target}/{alias}"),
+    })
 }
 
 fn install_rust_components(
@@ -1700,62 +1755,120 @@ fn require_output_contains(output: &str, expected: &str, label: &str) -> Result<
 fn collect_libraries(
     work: &Path,
     output_root: &Path,
-    deps: &Path,
+    target: &TargetDefinition,
+    cargo_stdout: &str,
     output: &Path,
 ) -> Result<Vec<Value>> {
     let crates = ["core", "alloc", "compiler_builtins"];
-    let mut results = Vec::new();
-    for crate_name in crates {
+    let target_release = fs::canonicalize(work.join("target").join(&target.name).join("release"))?;
+    let mut artifacts: BTreeMap<&str, Vec<PathBuf>> =
+        crates.iter().map(|name| (*name, Vec::new())).collect();
+
+    for line in cargo_stdout.lines() {
+        if !line.starts_with('{') || !line.contains("\"reason\"") {
+            continue;
+        }
+        let message =
+            parse_json_value(line.as_bytes(), JsonProfile::PackageMetadataStateSelection)?;
+        if message.get("reason").and_then(Value::as_str) != Some("compiler-artifact") {
+            continue;
+        }
+        let Some(crate_name) = message
+            .get("target")
+            .and_then(|value| value.get("name"))
+            .and_then(Value::as_str)
+        else {
+            continue;
+        };
+        let Some(matches) = artifacts.get_mut(crate_name) else {
+            continue;
+        };
+        let Some(filenames) = message.get("filenames").and_then(Value::as_array) else {
+            return Err(Refusal::new(format!(
+                "Cargo artifact for {crate_name} omitted filenames"
+            )));
+        };
         let prefix = format!("lib{crate_name}-");
-        let mut matches = Vec::new();
-        for entry in fs::read_dir(deps)? {
-            let entry = entry?;
-            let name = entry.file_name();
-            let Some(name) = name.to_str() else { continue };
-            if name.starts_with(&prefix) && name.ends_with(".rlib") {
-                matches.push(entry.path());
+        for filename in filenames {
+            let path = filename.as_str().ok_or_else(|| {
+                Refusal::new(format!(
+                    "Cargo artifact filename for {crate_name} is not a string"
+                ))
+            })?;
+            let candidate = PathBuf::from(path);
+            let Some(name) = candidate.file_name().and_then(OsStr::to_str) else {
+                continue;
+            };
+            if name.starts_with(&prefix) && (name.ends_with(".rlib") || name.ends_with(".rmeta")) {
+                matches.push(candidate);
             }
         }
-        if matches.len() != 1 {
+    }
+
+    let mut results = Vec::new();
+    for crate_name in crates {
+        let matches = artifacts
+            .remove(crate_name)
+            .ok_or_else(|| Refusal::new("internal Cargo artifact selection is incomplete"))?;
+        if matches.len() != 2
+            || !matches
+                .iter()
+                .any(|path| path.extension() == Some(OsStr::new("rlib")))
+            || !matches
+                .iter()
+                .any(|path| path.extension() == Some(OsStr::new("rmeta")))
+        {
             return Err(Refusal::new(format!(
-                "expected one new {crate_name} rlib, found {}",
+                "expected one Cargo-reported {crate_name} rlib/rmeta pair, found {} files",
                 matches.len()
             )));
         }
-        let source = &matches[0];
-        let metadata = fs::symlink_metadata(source)?;
-        if !metadata.file_type().is_file() {
-            return Err(Refusal::new(format!(
-                "new {crate_name} rlib is not a regular file"
-            )));
+        for source in matches {
+            let metadata = fs::symlink_metadata(&source)?;
+            if !metadata.file_type().is_file() {
+                return Err(Refusal::new(format!(
+                    "new {crate_name} target artifact is not a regular file"
+                )));
+            }
+            let canonical_source = fs::canonicalize(&source)?;
+            if !canonical_source.starts_with(&target_release) {
+                return Err(Refusal::new(format!(
+                    "Cargo-reported {crate_name} target artifact is outside the controlled target output"
+                )));
+            }
+            let current = managed_workspace_bytes(work, output_root)?;
+            if metadata.len() == 0 || metadata.len() > WORKSPACE_BYTES.saturating_sub(current) {
+                return Err(Refusal::new(format!(
+                    "retaining the new {crate_name} target artifact would exceed the workspace bound"
+                )));
+            }
+            let filename = source
+                .file_name()
+                .and_then(OsStr::to_str)
+                .ok_or_else(|| Refusal::new("new target artifact filename is not UTF-8"))?
+                .to_owned();
+            let kind = source
+                .extension()
+                .and_then(OsStr::to_str)
+                .ok_or_else(|| Refusal::new("new target artifact extension is not UTF-8"))?;
+            let destination = output.join(&filename);
+            fs::copy(&source, &destination)?;
+            let bytes = fs::metadata(&destination)?.len();
+            let sha256 = sha256_file(&destination)?;
+            if bytes == 0 || sha256 != sha256_file(&source)? {
+                return Err(Refusal::new(format!(
+                    "new {crate_name} {kind} changed while being retained"
+                )));
+            }
+            results.push(json!({
+                "crate": crate_name,
+                "kind": kind,
+                "path": filename,
+                "source_filename": source.file_name().and_then(OsStr::to_str),
+                "bytes": bytes,
+                "sha256": sha256
+            }));
         }
-        let current = managed_workspace_bytes(work, output_root)?;
-        if metadata.len() == 0 || metadata.len() > WORKSPACE_BYTES.saturating_sub(current) {
-            return Err(Refusal::new(format!(
-                "retaining the new {crate_name} rlib would exceed the workspace bound"
-            )));
-        }
-        let filename = source
-            .file_name()
-            .and_then(OsStr::to_str)
-            .ok_or_else(|| Refusal::new("new rlib filename is not UTF-8"))?
-            .to_owned();
-        let destination = output.join(&filename);
-        fs::copy(source, &destination)?;
-        let bytes = fs::metadata(&destination)?.len();
-        let sha256 = sha256_file(&destination)?;
-        if bytes == 0 || sha256 != sha256_file(source)? {
-            return Err(Refusal::new(format!(
-                "new {crate_name} rlib changed while being retained"
-            )));
-        }
-        results.push(json!({
-            "crate": crate_name,
-            "path": filename,
-            "source_filename": source.file_name().and_then(OsStr::to_str),
-            "bytes": bytes,
-            "sha256": sha256
-        }));
     }
     Ok(results)
 }
@@ -1945,10 +2058,11 @@ mod tests {
         LINUX_LLVM_ALIAS_TARGET, LINUX_LLVM_SOURCE_PATH, LINUX_LLVM_SOURCE_PATH_NAME,
         LINUX_X86_64_LLVM_SOURCE_BYTES, LINUX_X86_64_LLVM_SOURCE_SHA256, MACOS_LLVM_ALIAS_PATH,
         MACOS_LLVM_ALIAS_TARGET, MACOS_LLVM_SOURCE_BYTES, MACOS_LLVM_SOURCE_PATH,
-        MACOS_LLVM_SOURCE_SHA256, ProfileRows, TARGET_ALIAS, TARGET_ALIAS_PATH, TARGET_SPEC_BYTES,
-        TARGET_SPEC_PROFILE_PATH, TARGET_SPEC_SHA256, collect_libraries,
-        create_linux_llvm_runtime_alias, is_installer_admin_path, is_official_cargo_path,
-        pinned_program_digests, require_digest, select_component_inventory,
+        MACOS_LLVM_SOURCE_SHA256, ProfileRows, SOURCE_PROFILE_TARGET_ALIAS,
+        SOURCE_PROFILE_TARGET_ALIAS_PATH, SOURCE_PROFILE_TARGET_SPEC_BYTES,
+        SOURCE_PROFILE_TARGET_SPEC_PATH, SOURCE_PROFILE_TARGET_SPEC_SHA256, TargetDefinition,
+        collect_libraries, create_linux_llvm_runtime_alias, is_installer_admin_path,
+        is_official_cargo_path, pinned_program_digests, require_digest, select_component_inventory,
         select_linux_llvm_runtime_alias, select_macos_llvm_runtime_alias,
         validate_bound_command_record, validate_caller_bound_inner_commands,
         validate_linux_llvm_runtime_alias, validate_macos_llvm_runtime_alias,
@@ -1958,7 +2072,7 @@ mod tests {
         inventory::{FileIdentity, LinkIdentity},
         qualification_command::{self, CommandRequest},
     };
-    use serde_json::Value;
+    use serde_json::{Value, json};
     use std::{
         collections::{BTreeMap, BTreeSet},
         fs,
@@ -1994,8 +2108,6 @@ mod tests {
             cargo_rows: 3,
             historical_cargo_bytes: 1,
             historical_cargo_sha256: "1111111111111111111111111111111111111111111111111111111111111111",
-            native_cargo_bytes: 1,
-            native_cargo_sha256: "2222222222222222222222222222222222222222222222222222222222222222",
         }
     }
 
@@ -2035,8 +2147,8 @@ mod tests {
             ],
             symlinks: vec![
                 LinkIdentity {
-                    path: TARGET_ALIAS_PATH.to_owned(),
-                    target: TARGET_ALIAS.to_owned(),
+                    path: SOURCE_PROFILE_TARGET_ALIAS_PATH.to_owned(),
+                    target: SOURCE_PROFILE_TARGET_ALIAS.to_owned(),
                 },
                 LinkIdentity {
                     path: "lib/rustlib/aarch64-apple-darwin/bin/aros-link".to_owned(),
@@ -2047,25 +2159,77 @@ mod tests {
     }
 
     #[test]
-    fn retained_rlibs_keep_cargo_generated_filenames() {
+    fn retained_target_artifact_pairs_keep_cargo_generated_filenames() {
         let fixture = Fixture::new();
         let work = fixture.0.join("work");
         let output_root = fixture.0.join("output");
-        let deps = work.join("deps");
+        let target_name = "x86_64-unknown-aros-abi1";
+        let deps = work
+            .join("target")
+            .join(target_name)
+            .join("release/build/library/out");
         let libraries = output_root.join("libraries");
         fs::create_dir_all(&deps).expect("create deps fixture");
         fs::create_dir_all(&libraries).expect("create library output");
-        let names = [
-            "libcore-0123456789abcdef.rlib",
-            "liballoc-1123456789abcdef.rlib",
-            "libcompiler_builtins-2123456789abcdef.rlib",
+        let pairs = [
+            (
+                "core",
+                [
+                    "libcore-0123456789abcdef.rlib",
+                    "libcore-0123456789abcdef.rmeta",
+                ],
+            ),
+            (
+                "alloc",
+                [
+                    "liballoc-1123456789abcdef.rlib",
+                    "liballoc-1123456789abcdef.rmeta",
+                ],
+            ),
+            (
+                "compiler_builtins",
+                [
+                    "libcompiler_builtins-2123456789abcdef.rlib",
+                    "libcompiler_builtins-2123456789abcdef.rmeta",
+                ],
+            ),
         ];
-        for name in names {
-            fs::write(deps.join(name), b"rlib fixture").expect("write rlib fixture");
+        for (_, names) in pairs {
+            for name in names {
+                fs::write(deps.join(name), b"target artifact fixture")
+                    .expect("write target artifact fixture");
+            }
         }
-        let rows = collect_libraries(&work, &output_root, &deps, &libraries)
-            .expect("retain exactly the three matching rlibs");
-        assert_eq!(rows.len(), 3);
+        let stdout = pairs
+            .iter()
+            .map(|(crate_name, names)| {
+                serde_json::to_string(&json!({
+                    "reason": "compiler-artifact",
+                    "target": {"name": crate_name},
+                    "filenames": names.map(|name| deps.join(name))
+                }))
+                .expect("serialize Cargo artifact fixture")
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let target = TargetDefinition {
+            name: target_name.to_owned(),
+            source_date_epoch: 1_791_936_000,
+            pin_bytes: 0,
+            pin_sha256: String::new(),
+            spec_bytes: 0,
+            spec_sha256: String::new(),
+            alias_path: String::new(),
+            alias: String::new(),
+            spec_profile_path: String::new(),
+        };
+        let rows = collect_libraries(&work, &output_root, &target, &stdout, &libraries)
+            .expect("retain exactly three rlib/rmeta pairs");
+        let names = pairs
+            .into_iter()
+            .flat_map(|(_, names)| names)
+            .collect::<Vec<_>>();
+        assert_eq!(rows.len(), 6);
         for (row, name) in rows.iter().zip(names) {
             assert_eq!(row["path"].as_str(), Some(name));
             assert_eq!(row["source_filename"].as_str(), Some(name));
@@ -2360,9 +2524,9 @@ mod tests {
         host.target_spec_rows = 1;
         let mut profile = profile(host);
         profile.files.push(FileIdentity {
-            path: TARGET_SPEC_PROFILE_PATH.to_owned(),
-            bytes: TARGET_SPEC_BYTES,
-            sha256: TARGET_SPEC_SHA256.to_owned(),
+            path: SOURCE_PROFILE_TARGET_SPEC_PATH.to_owned(),
+            bytes: SOURCE_PROFILE_TARGET_SPEC_BYTES,
+            sha256: SOURCE_PROFILE_TARGET_SPEC_SHA256.to_owned(),
             mode: None,
         });
         let selected =
@@ -2372,7 +2536,7 @@ mod tests {
             !selected
                 .files
                 .iter()
-                .any(|row| row.path == TARGET_SPEC_PROFILE_PATH)
+                .any(|row| row.path == SOURCE_PROFILE_TARGET_SPEC_PATH)
         );
     }
 

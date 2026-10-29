@@ -36,15 +36,17 @@ const RUST_CARGO_ROW: &str = "bin/cargo";
 const CARGO_PATH: &str = "bin/cargo";
 const COLLECTOR_SOURCE_PATH: &str = "bin/aros-collect";
 const COLLECTOR_DESTINATION_PATH: &str = "bin/collect-aros";
-const TARGET_SPEC_PATH: &str = "lib/rustlib/x86_64-aros/x86_64-aros.json";
-const TARGET_ALIAS_PATH: &str = "lib/rustlib/x86_64-aros/target.json";
-const TARGET_ALIAS: &str = "x86_64-aros.json";
+const SOURCE_TARGET_ALIAS_PATH: &str = "lib/rustlib/x86_64-aros/target.json";
+const SOURCE_TARGET_ALIAS: &str = "x86_64-aros.json";
+#[cfg(test)]
+const ABI1_TARGET_ALIAS_PATH: &str = "lib/rustlib/x86_64-unknown-aros-abi1/target.json";
+#[cfg(test)]
+const ABI1_TARGET_ALIAS: &str = "x86_64-unknown-aros-abi1.json";
 const MACOS_AARCH64_RUST_HOST_TRIPLE: &str = "aarch64-apple-darwin";
 const RUST_HOST_LINKER_ALIAS_SUFFIX: &str = "/bin/aros-link";
 const RUST_HOST_LINKER_ALIAS_TARGET: &str = "../../../../bin/aros-link";
 const RUST_HOST_LLVM_RUNTIME_ALIAS_SUFFIX: &str = "/lib/libLLVM.dylib";
 const RUST_HOST_LLVM_RUNTIME_ALIAS_TARGET: &str = "../../../libLLVM.dylib";
-const TARGET_LIBRARIES_PREFIX: &str = "lib/rustlib/x86_64-aros/lib";
 const LLVM_PREFIX: &str = "libexec/aros/llvm";
 const CSDK_PREFIX: &str = "lib/aros/c-sdk";
 const LLVM_ROOT_TOOLS: [&str; 5] = ["llvm-objdump", "llvm-nm", "llvm-ar", "llvm-strip", "ld.lld"];
@@ -69,6 +71,21 @@ pub struct NativePrefixFile<'a> {
     pub identity: &'a FileIdentity,
 }
 
+/// One authenticated target specification and its three source-built runtime libraries.
+#[derive(Clone, Copy)]
+pub struct NativePrefixTarget<'a> {
+    pub name: &'a str,
+    pub libraries: NativePrefixProfile<'a>,
+    pub specification: NativePrefixFile<'a>,
+}
+
+/// An authenticated component profile copied below one fixed output prefix.
+#[derive(Clone, Copy)]
+pub struct NativePrefixDestinationProfile<'a> {
+    pub prefix: &'a str,
+    pub profile: NativePrefixProfile<'a>,
+}
+
 /// Inputs for the one supported fixed native-build prefix layout.
 ///
 /// The host key and Rust host triple are data supplied by the caller's already
@@ -82,9 +99,9 @@ pub struct NativePrefixSpec<'a> {
     pub cargo: NativePrefixProfile<'a>,
     pub llvm: NativePrefixProfile<'a>,
     pub csdk: NativePrefixProfile<'a>,
+    pub additional_csdks: Vec<NativePrefixDestinationProfile<'a>>,
     pub collector: NativePrefixProfile<'a>,
-    pub target_libraries: NativePrefixProfile<'a>,
-    pub target_spec: NativePrefixFile<'a>,
+    pub targets: Vec<NativePrefixTarget<'a>>,
     pub aros_link: NativePrefixFile<'a>,
     pub limits: ComponentInstallLimits,
 }
@@ -159,8 +176,9 @@ struct SourceRoot {
 
 struct OpenInputs {
     roots: Vec<Directory>,
-    profiles: [SourceRoot; 6],
-    target_spec: SourceRoot,
+    profiles: [SourceRoot; 5],
+    targets: Vec<(SourceRoot, SourceRoot)>,
+    additional_csdks: Vec<SourceRoot>,
     aros_link: SourceRoot,
 }
 
@@ -199,7 +217,7 @@ struct PrefixPlan {
 }
 
 fn is_generated_rust_alias_path(path: &str, rust_host_triple: &str) -> bool {
-    path == TARGET_ALIAS_PATH
+    path == SOURCE_TARGET_ALIAS_PATH
         || path == format!("lib/rustlib/{rust_host_triple}{RUST_HOST_LINKER_ALIAS_SUFFIX}")
         || (rust_host_triple == MACOS_AARCH64_RUST_HOST_TRIPLE
             && path
@@ -213,13 +231,13 @@ fn validate_generated_rust_aliases(
     let target_alias_count = rust
         .symlinks
         .iter()
-        .filter(|link| link.path == TARGET_ALIAS_PATH)
+        .filter(|link| link.path == SOURCE_TARGET_ALIAS_PATH)
         .count();
     if target_alias_count != 1
         || !rust
             .symlinks
             .iter()
-            .any(|link| link.path == TARGET_ALIAS_PATH && link.target == TARGET_ALIAS)
+            .any(|link| link.path == SOURCE_TARGET_ALIAS_PATH && link.target == SOURCE_TARGET_ALIAS)
     {
         return Err(Refusal::new(
             "Rust profile lacks the required relative target.json alias",
@@ -323,10 +341,19 @@ fn assemble_prefix_view_inner(
         spec.llvm.root,
         spec.csdk.root,
         spec.collector.root,
-        spec.target_libraries.root,
-        spec.target_spec.root,
         spec.aros_link.root,
-    ] {
+    ]
+    .into_iter()
+    .chain(
+        spec.targets
+            .iter()
+            .flat_map(|target| [target.libraries.root, target.specification.root]),
+    )
+    .chain(
+        spec.additional_csdks
+            .iter()
+            .map(|component| component.profile.root),
+    ) {
         require_disjoint(
             source,
             spec.destination,
@@ -511,6 +538,18 @@ fn validate_host_identity(host_key: &str, rust_host_triple: &str) -> Result<()> 
     Ok(())
 }
 
+fn validate_target_name(target: &str) -> Result<()> {
+    if !matches!(
+        target,
+        "x86_64-unknown-aros-abi1" | "x86_64-unknown-aros-abi11"
+    ) {
+        return Err(Refusal::new(
+            "native prefix target is not an admitted AROS release target",
+        ));
+    }
+    Ok(())
+}
+
 fn open_inputs(spec: &NativePrefixSpec<'_>) -> Result<OpenInputs> {
     let paths = [
         spec.rust.root,
@@ -518,10 +557,20 @@ fn open_inputs(spec: &NativePrefixSpec<'_>) -> Result<OpenInputs> {
         spec.llvm.root,
         spec.csdk.root,
         spec.collector.root,
-        spec.target_libraries.root,
-        spec.target_spec.root,
         spec.aros_link.root,
-    ];
+    ]
+    .into_iter()
+    .chain(
+        spec.targets
+            .iter()
+            .flat_map(|target| [target.libraries.root, target.specification.root]),
+    )
+    .chain(
+        spec.additional_csdks
+            .iter()
+            .map(|component| component.profile.root),
+    )
+    .collect::<Vec<_>>();
     let mut roots = Vec::new();
     roots
         .try_reserve_exact(paths.len())
@@ -529,6 +578,17 @@ fn open_inputs(spec: &NativePrefixSpec<'_>) -> Result<OpenInputs> {
     for path in paths {
         roots.push(Directory::open(path)?);
     }
+    let targets = (0..spec.targets.len())
+        .map(|index| {
+            let root = 6 + index * 2;
+            (SourceRoot { root }, SourceRoot { root: root + 1 })
+        })
+        .collect();
+    let additional_csdks = (0..spec.additional_csdks.len())
+        .map(|index| SourceRoot {
+            root: 6 + spec.targets.len() * 2 + index,
+        })
+        .collect();
     Ok(OpenInputs {
         roots,
         profiles: [
@@ -537,10 +597,10 @@ fn open_inputs(spec: &NativePrefixSpec<'_>) -> Result<OpenInputs> {
             SourceRoot { root: 2 },
             SourceRoot { root: 3 },
             SourceRoot { root: 4 },
-            SourceRoot { root: 5 },
         ],
-        target_spec: SourceRoot { root: 6 },
-        aros_link: SourceRoot { root: 7 },
+        targets,
+        additional_csdks,
+        aros_link: SourceRoot { root: 5 },
     })
 }
 
@@ -639,14 +699,7 @@ fn preflight(
     cancellation_check: &mut impl FnMut() -> Result<()>,
     public_view: Option<&PublicViewPolicy>,
 ) -> Result<PrefixPlan> {
-    let profiles = [
-        spec.rust,
-        spec.cargo,
-        spec.llvm,
-        spec.csdk,
-        spec.collector,
-        spec.target_libraries,
-    ];
+    let profiles = [spec.rust, spec.cargo, spec.llvm, spec.csdk, spec.collector];
     for profile in &profiles {
         cancellation_check()?;
         validate_profile_rows(*profile, spec.limits)?;
@@ -677,13 +730,59 @@ fn preflight(
             }
         }
     }
-    validate_external_file(spec.target_spec.identity, spec.limits)?;
-    verify_source_file(
-        &inputs.roots[inputs.target_spec.root],
-        spec.target_spec.identity,
-        spec.limits,
-        cancellation_check,
-    )?;
+    if spec.targets.is_empty() {
+        return Err(Refusal::new("native prefix requires at least one target"));
+    }
+    let mut target_names = BTreeSet::new();
+    for (index, target) in spec.targets.iter().enumerate() {
+        validate_target_name(target.name)?;
+        if !target_names.insert(target.name) {
+            return Err(Refusal::new("native prefix repeats a target"));
+        }
+        validate_profile_rows(target.libraries, spec.limits)?;
+        if !target.libraries.symlinks.is_empty() || target.libraries.files.len() != 6 {
+            return Err(Refusal::new(
+                "target-library profile must contain the three selected rlib/rmeta pairs",
+            ));
+        }
+        validate_target_library_names(target.libraries.files)?;
+        let (libraries_root, specification_root) = &inputs.targets[index];
+        for file in target.libraries.files {
+            verify_source_file(
+                &inputs.roots[libraries_root.root],
+                file,
+                spec.limits,
+                cancellation_check,
+            )?;
+        }
+        validate_external_file(target.specification.identity, spec.limits)?;
+        if target.specification.identity.bytes == 0 {
+            return Err(Refusal::new("target specification input is empty"));
+        }
+        verify_source_file(
+            &inputs.roots[specification_root.root],
+            target.specification.identity,
+            spec.limits,
+            cancellation_check,
+        )?;
+    }
+    for (index, component) in spec.additional_csdks.iter().enumerate() {
+        if component.prefix != "lib/aros/c-sdk-abi11" {
+            return Err(Refusal::new(
+                "additional C SDK has an unsupported output prefix",
+            ));
+        }
+        validate_profile_rows(component.profile, spec.limits)?;
+        if !component.profile.symlinks.is_empty() {
+            return Err(Refusal::new(
+                "additional C SDK profile must contain regular files only",
+            ));
+        }
+        let root = &inputs.roots[inputs.additional_csdks[index].root];
+        for file in component.profile.files {
+            verify_source_file(root, file, spec.limits, cancellation_check)?;
+        }
+    }
     validate_external_file(spec.aros_link.identity, spec.limits)?;
     verify_source_file(
         &inputs.roots[inputs.aros_link.root],
@@ -748,15 +847,6 @@ fn preflight(
             "collector profile must contain regular-file rows only",
         ));
     }
-    if !spec.target_libraries.symlinks.is_empty() || spec.target_libraries.files.len() != 3 {
-        return Err(Refusal::new(
-            "target-library profile must contain the three selected rlibs",
-        ));
-    }
-    validate_target_library_names(spec.target_libraries.files)?;
-    if spec.target_spec.identity.bytes == 0 {
-        return Err(Refusal::new("target specification input is empty"));
-    }
     if spec.aros_link.identity.bytes == 0 {
         return Err(Refusal::new("source-built aros-link input is empty"));
     }
@@ -794,7 +884,16 @@ fn preflight(
                         + spec.llvm.files.len()
                         + spec.csdk.files.len()
                         + spec.collector.files.len()
-                        + spec.target_libraries.files.len()
+                        + spec
+                            .targets
+                            .iter()
+                            .map(|target| target.libraries.files.len() + 1)
+                            .sum::<usize>()
+                        + spec
+                            .additional_csdks
+                            .iter()
+                            .map(|component| component.profile.files.len())
+                            .sum::<usize>()
                         + 2,
                 )
                 .ok_or_else(|| Refusal::new("native prefix output row count overflow"))?,
@@ -854,6 +953,22 @@ fn preflight(
     add_profile_files(1, spec.cargo, "", &[], Some(CARGO_PATH))?;
     add_profile_files(2, spec.llvm, LLVM_PREFIX, &[], None)?;
     add_profile_files(3, spec.csdk, CSDK_PREFIX, &[], None)?;
+    for (index, component) in spec.additional_csdks.iter().enumerate() {
+        let root = inputs.additional_csdks[index].root;
+        for row in component.profile.files {
+            files.push(MappedFile {
+                source_root: root,
+                source_path: row.path.clone(),
+                source_mode: row.mode,
+                output: FileIdentity {
+                    path: join_inventory_prefix(component.prefix, &row.path)?,
+                    bytes: row.bytes,
+                    sha256: row.sha256.clone(),
+                    mode: row.mode,
+                },
+            });
+        }
+    }
     for row in spec
         .collector
         .files
@@ -872,30 +987,43 @@ fn preflight(
             },
         });
     }
-    for row in spec.target_libraries.files {
+    for (index, target) in spec.targets.iter().enumerate() {
+        let (libraries_root, specification_root) = &inputs.targets[index];
+        let prefix = format!("lib/rustlib/{}/lib", target.name);
+        for row in target.libraries.files {
+            files.push(MappedFile {
+                source_root: libraries_root.root,
+                source_path: row.path.clone(),
+                source_mode: row.mode,
+                output: FileIdentity {
+                    path: format!("{prefix}/{}", row.path),
+                    bytes: row.bytes,
+                    sha256: row.sha256.clone(),
+                    mode: row.mode,
+                },
+            });
+        }
+        let spec_name = format!("{}.json", target.name);
         files.push(MappedFile {
-            source_root: 5,
-            source_path: row.path.clone(),
-            source_mode: row.mode,
+            source_root: specification_root.root,
+            source_path: target.specification.identity.path.clone(),
+            source_mode: target.specification.identity.mode,
             output: FileIdentity {
-                path: format!("{TARGET_LIBRARIES_PREFIX}/{}", row.path),
-                bytes: row.bytes,
-                sha256: row.sha256.clone(),
-                mode: row.mode,
+                path: format!("lib/rustlib/{}/{spec_name}", target.name),
+                bytes: target.specification.identity.bytes,
+                sha256: target.specification.identity.sha256.clone(),
+                mode: target.specification.identity.mode,
+            },
+        });
+        symlinks.push(MappedLink {
+            source_root: None,
+            source_path: String::new(),
+            output: LinkIdentity {
+                path: format!("lib/rustlib/{}/target.json", target.name),
+                target: spec_name,
             },
         });
     }
-    files.push(MappedFile {
-        source_root: inputs.target_spec.root,
-        source_path: spec.target_spec.identity.path.clone(),
-        source_mode: spec.target_spec.identity.mode,
-        output: FileIdentity {
-            path: TARGET_SPEC_PATH.to_owned(),
-            bytes: spec.target_spec.identity.bytes,
-            sha256: spec.target_spec.identity.sha256.clone(),
-            mode: spec.target_spec.identity.mode,
-        },
-    });
     files.push(MappedFile {
         source_root: inputs.aros_link.root,
         source_path: spec.aros_link.identity.path.clone(),
@@ -914,6 +1042,9 @@ fn preflight(
         (3, spec.csdk, CSDK_PREFIX),
     ] {
         for row in profile.symlinks {
+            if slot == 0 && row.path == SOURCE_TARGET_ALIAS_PATH {
+                continue;
+            }
             let generated =
                 slot == 0 && is_generated_rust_alias_path(&row.path, spec.rust_host_triple);
             symlinks.push(MappedLink {
@@ -1082,36 +1213,47 @@ fn require_profile_file(profile: NativePrefixProfile<'_>, path: &str) -> Result<
 }
 
 fn validate_target_library_names(files: &[FileIdentity]) -> Result<()> {
-    let mut crates = BTreeSet::new();
+    let mut artifacts = BTreeSet::new();
     for row in files {
-        if row.path.contains('/') || !row.path.ends_with(".rlib") {
+        if row.path.contains('/') {
             return Err(Refusal::new(
-                "target library path must be one hash-named rlib",
+                "target library path must be one hash-named rlib or rmeta",
             ));
         }
+        let (stem, kind) = if let Some(stem) = row.path.strip_suffix(".rlib") {
+            (stem, "rlib")
+        } else if let Some(stem) = row.path.strip_suffix(".rmeta") {
+            (stem, "rmeta")
+        } else {
+            return Err(Refusal::new(
+                "target library path must be one hash-named rlib or rmeta",
+            ));
+        };
         let crate_name = ["libcore-", "liballoc-", "libcompiler_builtins-"]
             .into_iter()
-            .find(|prefix| row.path.starts_with(prefix))
+            .find(|prefix| stem.starts_with(prefix))
             .ok_or_else(|| Refusal::new("target library profile has an unexpected crate"))?;
-        let hash = row
-            .path
+        let hash = stem
             .strip_prefix(crate_name)
-            .and_then(|value| value.strip_suffix(".rlib"))
             .ok_or_else(|| Refusal::new("target library filename is invalid"))?;
         if hash.is_empty()
             || !hash
                 .bytes()
                 .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
-            || !crates.insert(crate_name)
+            || !artifacts.insert((crate_name, kind))
         {
             return Err(Refusal::new(
                 "target library hash name is invalid or duplicated",
             ));
         }
     }
-    if crates.len() != 3 {
+    let expected = ["libcore-", "liballoc-", "libcompiler_builtins-"]
+        .into_iter()
+        .flat_map(|crate_name| ["rlib", "rmeta"].map(|kind| (crate_name, kind)))
+        .collect();
+    if artifacts != expected {
         return Err(Refusal::new(
-            "target library profile must contain core, alloc, and compiler_builtins",
+            "target library profile must contain rlib/rmeta pairs for core, alloc, and compiler_builtins",
         ));
     }
     Ok(())
@@ -1668,8 +1810,14 @@ mod tests {
                 &root.join("target-libraries-source"),
                 &[
                     ("libcore-1234567890abcdef.rlib", b"core"),
+                    ("libcore-1234567890abcdef.rmeta", b"core metadata"),
                     ("liballoc-2234567890abcdef.rlib", b"alloc"),
+                    ("liballoc-2234567890abcdef.rmeta", b"alloc metadata"),
                     ("libcompiler_builtins-3234567890abcdef.rlib", b"builtins"),
+                    (
+                        "libcompiler_builtins-3234567890abcdef.rmeta",
+                        b"builtins metadata",
+                    ),
                 ],
                 &[],
             );
@@ -1703,12 +1851,16 @@ mod tests {
                 cargo: self.cargo.borrowed(),
                 llvm: self.llvm.borrowed(),
                 csdk: self.csdk.borrowed(),
+                additional_csdks: Vec::new(),
                 collector: self.collector.borrowed(),
-                target_libraries: self.target_libraries.borrowed(),
-                target_spec: NativePrefixFile {
-                    root: &self.target_spec_root,
-                    identity: &self.target_spec,
-                },
+                targets: vec![NativePrefixTarget {
+                    name: "x86_64-unknown-aros-abi1",
+                    libraries: self.target_libraries.borrowed(),
+                    specification: NativePrefixFile {
+                        root: &self.target_spec_root,
+                        identity: &self.target_spec,
+                    },
+                }],
                 aros_link: NativePrefixFile {
                     root: &self.linker_root,
                     identity: &self.aros_link,
@@ -2033,8 +2185,8 @@ mod tests {
         assert!(!destination.join("bin/aros").exists());
         assert!(!destination.join("LICENSE").exists());
         assert_eq!(
-            fs::read_link(destination.join(TARGET_ALIAS_PATH)).unwrap(),
-            Path::new(TARGET_ALIAS)
+            fs::read_link(destination.join(ABI1_TARGET_ALIAS_PATH)).unwrap(),
+            Path::new(ABI1_TARGET_ALIAS)
         );
         assert_eq!(
             fs::read_link(destination.join("bin/llvm-ar")).unwrap(),
@@ -2055,7 +2207,7 @@ mod tests {
     #[test]
     fn generates_required_rust_aliases_when_pristine_component_omits_them() {
         let fixture = Fixture::new();
-        let target_alias = fixture.rust.root.join(TARGET_ALIAS_PATH);
+        let target_alias = fixture.rust.root.join(SOURCE_TARGET_ALIAS_PATH);
         fs::remove_file(&target_alias).unwrap();
         fs::remove_dir(target_alias.parent().unwrap()).unwrap();
         let linker_alias = fixture.rust.root.join(format!(
@@ -2070,18 +2222,15 @@ mod tests {
 
         let linker_path =
             format!("lib/rustlib/x86_64-unknown-linux-gnu{RUST_HOST_LINKER_ALIAS_SUFFIX}");
-        assert!(
-            receipt
-                .symlinks
-                .iter()
-                .any(|link| { link.path == TARGET_ALIAS_PATH && link.target == TARGET_ALIAS })
-        );
+        assert!(receipt.symlinks.iter().any(|link| {
+            link.path == ABI1_TARGET_ALIAS_PATH && link.target == ABI1_TARGET_ALIAS
+        }));
         assert!(receipt.symlinks.iter().any(|link| {
             link.path == linker_path && link.target == RUST_HOST_LINKER_ALIAS_TARGET
         }));
         assert_eq!(
-            fs::read_link(destination.join(TARGET_ALIAS_PATH)).unwrap(),
-            Path::new(TARGET_ALIAS)
+            fs::read_link(destination.join(ABI1_TARGET_ALIAS_PATH)).unwrap(),
+            Path::new(ABI1_TARGET_ALIAS)
         );
         assert_eq!(
             fs::read_link(destination.join(linker_path)).unwrap(),
@@ -2217,7 +2366,7 @@ mod tests {
     fn refuses_wrong_generated_rust_alias_targets_before_opening_input_links() {
         for (target_path, wrong_target, expected_message, remove_parent) in [
             (
-                TARGET_ALIAS_PATH,
+                SOURCE_TARGET_ALIAS_PATH,
                 "wrong-target.json",
                 "Rust profile lacks the required relative target.json alias",
                 true,

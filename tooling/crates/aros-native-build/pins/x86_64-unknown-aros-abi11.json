@@ -1,0 +1,7 @@
+{
+  "schema": "aros-native-build-target-v1",
+  "target": "x86_64-unknown-aros-abi11",
+  "source_date_epoch": 1791936000,
+  "spec_sha256": "5616c1e062232b43154237fe40826795cc48e148f903f0a1a8087d224d8a49c9",
+  "status": "RELEASE_CANDIDATE_NOT_PUBLISHED"
+}

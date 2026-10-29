@@ -30,7 +30,15 @@ pub struct NativeRecipePaths {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NativeBuildRecipe {
     pub paths: NativeRecipePaths,
+    pub abi: ArosAbi,
     pub testing: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ArosAbi {
+    Abi1,
+    Abi11,
 }
 
 /// C translation units in the frozen producer sequence.
@@ -39,6 +47,7 @@ pub enum CSourceUnit {
     Entry,
     Sdk,
     Layout,
+    EhFrameStart,
     BindDiagnostics,
 }
 
@@ -48,6 +57,7 @@ impl CSourceUnit {
             Self::Entry => "native/entry.c",
             Self::Sdk => "native/sdk.c",
             Self::Layout => "native/layout.c",
+            Self::EhFrameStart => "native/eh-frame-start.c",
             Self::BindDiagnostics => "tests/measurement/ami_test_bind_diagnostics.c",
         }
     }
@@ -57,6 +67,7 @@ impl CSourceUnit {
             Self::Entry => "entry.o",
             Self::Sdk => "sdk.o",
             Self::Layout => "layout.o",
+            Self::EhFrameStart => "eh-frame-start.o",
             Self::BindDiagnostics => "bind.o",
         }
     }
@@ -104,6 +115,9 @@ impl NativeBuildRecipe {
         if self.testing {
             arguments.push(OsString::from("-DAMI_SDK_TESTING=1"));
         }
+        if self.abi == ArosAbi::Abi11 {
+            arguments.push(OsString::from("-DAMI_RUST_ABI11=1"));
+        }
         arguments.push(OsString::from("-c"));
         arguments.push(
             self.paths
@@ -127,14 +141,20 @@ impl NativeBuildRecipe {
         validate_explicit_path(&self.paths.sdk_root)?;
         validate_explicit_path(native_objects)?;
 
-        Ok(CommandRecipe {
-            program: self.paths.toolchain_root.join("bin/llvm-objcopy"),
-            arguments: vec![
+        let mut arguments = Vec::new();
+        if self.abi == ArosAbi::Abi1 {
+            arguments.extend([
                 OsString::from("--redefine-sym"),
                 OsString::from("__startup_entry=ami_sdk_startup_entry"),
-                self.paths.sdk_root.join("lib/startup.o").into_os_string(),
-                native_objects.join("startup.o").into_os_string(),
-            ],
+            ]);
+        }
+        arguments.extend([
+            self.paths.sdk_root.join("lib/startup.o").into_os_string(),
+            native_objects.join("startup.o").into_os_string(),
+        ]);
+        Ok(CommandRecipe {
+            program: self.paths.toolchain_root.join("bin/llvm-objcopy"),
+            arguments,
         })
     }
 
@@ -162,19 +182,24 @@ impl NativeBuildRecipe {
             map.as_os_str().to_os_string(),
             OsString::from("-o"),
             output.as_os_str().to_os_string(),
-            native_objects.join("entry.o").into_os_string(),
+        ];
+        if self.abi == ArosAbi::Abi1 {
+            arguments.push(native_objects.join("entry.o").into_os_string());
+        }
+        arguments.extend([
             native_objects.join("startup.o").into_os_string(),
             native_objects.join("sdk.o").into_os_string(),
             native_objects.join("layout.o").into_os_string(),
-        ];
+            native_objects.join("eh-frame-start.o").into_os_string(),
+        ]);
         if self.testing {
             arguments.push(native_objects.join("bind.o").into_os_string());
         }
         arguments.extend(link_inputs.iter().cloned());
         arguments.push(prefixed_path("-L", &self.paths.sdk_root.join("lib"), ""));
         arguments.push(OsString::from("--start-group"));
-        arguments.extend(
-            [
+        let libraries: &[&str] = match self.abi {
+            ArosAbi::Abi1 => &[
                 "-lmui",
                 "-lamiga",
                 "-larossupport",
@@ -188,10 +213,42 @@ impl NativeBuildRecipe {
                 "-lutility",
                 "-laros",
                 "-ldebug",
-            ]
-            .into_iter()
-            .map(OsString::from),
-        );
+            ],
+            ArosAbi::Abi11 => &[
+                "-lmui",
+                "-larossupport",
+                "-lamiga",
+                "-lm",
+                "-lstdlib",
+                "-lcrtprog",
+                "-lcrt",
+                "-lcodesets",
+                "-lkeymap",
+                "-lexpansion",
+                "-lcommodities",
+                "-ldiskfont",
+                "-lasl",
+                "-lmuimaster",
+                "-ldatatypes",
+                "-lcybergraphics",
+                "-lworkbench",
+                "-licon",
+                "-lintuition",
+                "-lgadtools",
+                "-llayers",
+                "-laros",
+                "-lpartition",
+                "-liffparse",
+                "-lgraphics",
+                "-llocale",
+                "-ldos",
+                "-lutility",
+                "-lexec",
+                "-lautoinit",
+                "-llibinit",
+            ],
+        };
+        arguments.extend(libraries.iter().copied().map(OsString::from));
         arguments.push(OsString::from("--end-group"));
         arguments.push(
             self.paths
@@ -275,6 +332,7 @@ mod tests {
                 sdk_root: PathBuf::from("/sdk root"),
                 collector: PathBuf::from("/collector tools/bin/collect-aros"),
             },
+            abi: ArosAbi::Abi1,
             testing,
         }
     }
@@ -404,6 +462,7 @@ mod tests {
                 "/Cargo native output/objects/startup.o",
                 "/Cargo native output/objects/sdk.o",
                 "/Cargo native output/objects/layout.o",
+                "/Cargo native output/objects/eh-frame-start.o",
                 "/Cargo Rust output/lib application.a",
                 "-L/sdk root/lib",
                 "--start-group",
@@ -430,10 +489,10 @@ mod tests {
             .collector_spec_for_cargo(objects, &inputs, output, map)
             .unwrap();
         assert_eq!(
-            testing_collector.arguments[11],
+            testing_collector.arguments[12],
             OsStr::new("/Cargo native output/objects/bind.o")
         );
-        assert_eq!(testing_collector.arguments[12], inputs[0]);
+        assert_eq!(testing_collector.arguments[13], inputs[0]);
 
         let input = Path::new("/Cargo native output/AMIRUST.unstripped");
         let stripped = Path::new("/Cargo native output/AMIRUST.stripped");
@@ -466,7 +525,7 @@ mod tests {
             )
             .unwrap();
         assert_eq!(
-            command.arguments[11].as_os_str().as_bytes(),
+            command.arguments[12].as_os_str().as_bytes(),
             opaque.as_bytes()
         );
     }

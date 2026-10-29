@@ -11,8 +11,8 @@ use ami_rust_core::{
     inventory::{FileIdentity, LinkIdentity},
     json::{JsonProfile, parse_json_value},
     native_prefix::{
-        NativePrefixFile, NativePrefixProfile, NativePrefixReceipt, NativePrefixSpec,
-        assemble_portable_native_prefix,
+        NativePrefixDestinationProfile, NativePrefixFile, NativePrefixProfile, NativePrefixReceipt,
+        NativePrefixSpec, NativePrefixTarget, assemble_portable_native_prefix,
     },
     ownership::require_disjoint,
     signals::SigtermGuard,
@@ -27,9 +27,9 @@ use std::{
 
 const REQUEST_SCHEMA: &str = "ami-rust-native-prefix-compose-request-v1";
 const EXPECTED_CORE_NATIVE_PREFIX_SHA256: &str =
-    "0569057fdd46c97124faec2f042ca951ee9f322f7d113e14a12def291f45c922";
+    "f1bbab4e77a636e91fcb6d91a7cf3796ac7f4cfbf6cc8bf378afcbd7fc6b25a9";
 const EXPECTED_INPUTS_RS_SHA256: &str =
-    "7700fda679f3c89e5ef18197c826340078d338f135931b2707c5cc5ad650cdd3";
+    "143829afaedcb1bbb1fa29891f243dcf790adeae568a2ad30e61f68be325547e";
 const EXPECTED_PUBLIC_VIEW_RS_SHA256: &str =
     "55be582de0171e3a867e6e829d5245ace2788db9481c014f4bf7beae821223bc";
 const EXPECTED_PUBLIC_VIEW_POLICY_SHA256: &str =
@@ -39,20 +39,21 @@ const EXPECTED_PORTABLE_VIEW_RS_SHA256: &str =
 const EXPECTED_PORTABLE_VIEW_POLICY_SHA256: &str =
     "c25c46e0fee32071992665be75bd381ad32166e4c097df308f6766ecefcd1004";
 const EXPECTED_NATIVE_BUILD_BUILD_RS_SHA256: &str =
-    "fafbd23214067940c412ab6cdfc53b800539b22629f2e0d45e3fe8260c126f54";
+    "4626940b6376e927aef44e9191e40fdedaf8df36d791f5ba43b4bb7d8454d884";
 const EXPECTED_NATIVE_BUILD_LINK_RS_SHA256: &str =
-    "88a6765ef9347d2882fba476b852e40a85f71d6f7c1c0730ce351441af7f1dd0";
-const EXPECTED_TARGET_LIBRARIES_SHA256: &str =
-    "82863a6f13db226e62160e4af57bdeab3f3be7dafa1323fe080f7927d286db43";
-const EXPECTED_LINUX_X64_TARGET_LIBRARIES_SHA256: &str =
-    "3324ce18ccab1b293d488cd38e98be05e8c14ca3f97c3d8f8ef5d0e93bfb1c1f";
-const EXPECTED_LINUX_ARM64_TARGET_LIBRARIES_SHA256: &str =
-    "0e0f996e0983eabf1b2782f67400a4a8172ead94305be17285738e2a32efa07f";
-const EXPECTED_TARGET_PIN_SHA256: &str =
-    "33fdd3d97053370eb3db9e05ea75721dafcfc7f4b5f8c218acaab1911984c341";
-const EXPECTED_TARGET_SPEC_SHA256: &str =
-    "de7a0024aa94269641e3e6d480ce8cd334962bf7e02592b0652e19e56b5fba71";
-const TARGET_SPEC_PATH: &str = "x86_64-aros.json";
+    "af9ef38cc5095086a2efe66ed92aef8ee01ba684e562cbe1c425e8ddfbbb7c03";
+const ABI1_TARGET_LIBRARIES_SHA256: &str =
+    "30d8a0d113920973f4b6cf22654df4309b8932103aaf830181d0930e3b35f4c1";
+const ABI11_TARGET_LIBRARIES_SHA256: &str =
+    "8b9b9db76e4c1781b11bed3507a27349731a21c6a53ab541747570334d2e1114";
+const ABI1_TARGET_SPEC_SHA256: &str =
+    "0e9cde740c93949d4cab27690cb9d93dc9fb89dc96388ff5be0eb7296ba38807";
+const ABI11_TARGET_SPEC_SHA256: &str =
+    "5616c1e062232b43154237fe40826795cc48e148f903f0a1a8087d224d8a49c9";
+const ABI1_TARGET_PIN_SHA256: &str =
+    "5840e8bc7cb7b810a6948d8f9042a992a18ec000351d21e697538489c146367f";
+const ABI11_TARGET_PIN_SHA256: &str =
+    "382d0ad643fb659fe14a5074cc709be15f6a53524baf406fbf6563c68914dfe7";
 const MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
 const MAX_SOURCE_PIN_BYTES: usize = 2 * 1024 * 1024;
 const MAX_LINKER_BYTES: u64 = 128 * 1024 * 1024;
@@ -86,13 +87,20 @@ const LINUX_X64_LLVM: &str =
 const LINUX_X64_CSDK: &str = include_str!("../../aros-native-build/pins/linux-x86_64/csdk.json");
 const LINUX_X64_COLLECTOR: &str =
     include_str!("../../aros-native-build/pins/linux-x86_64/collector.json");
-const TARGET_PIN: &str = include_str!("../../aros-native-build/pins/target.json");
-const TARGET_LIBRARIES: &str = include_str!("../../aros-native-build/pins/target-libraries.json");
-const LINUX_X64_TARGET_LIBRARIES: &str =
-    include_str!("../../aros-native-build/pins/linux-x86_64/target-libraries.json");
-const LINUX_ARM64_TARGET_LIBRARIES: &str =
-    include_str!("../../aros-native-build/pins/linux-aarch64/target-libraries.json");
-const TARGET_SPEC: &[u8] = include_bytes!("../../../../targets/x86_64-aros.json");
+const ABI1_TARGET_PIN: &str =
+    include_str!("../../aros-native-build/pins/x86_64-unknown-aros-abi1.json");
+const ABI11_TARGET_PIN: &str =
+    include_str!("../../aros-native-build/pins/x86_64-unknown-aros-abi11.json");
+const ABI1_TARGET_LIBRARIES: &str =
+    include_str!("../../aros-native-build/pins/x86_64-unknown-aros-abi1-libraries.json");
+const ABI11_TARGET_LIBRARIES: &str =
+    include_str!("../../aros-native-build/pins/x86_64-unknown-aros-abi11-libraries.json");
+const ABI1_TARGET_SPEC: &[u8] = include_bytes!("../../../../targets/x86_64-unknown-aros-abi1.json");
+const ABI11_TARGET_SPEC: &[u8] =
+    include_bytes!("../../../../targets/x86_64-unknown-aros-abi11.json");
+const ABI11_CSDK_PROFILE: &[u8] = include_bytes!("../../../../release/abi11-csdk/profile.json");
+const ABI11_CSDK_PROFILE_SHA256: &str =
+    "032a73355932bad9221bfec55631d4f77eff0ca298ae379341bf7ec42a334850";
 const INPUTS_RS: &[u8] = include_bytes!("../../aros-native-build/src/inputs.rs");
 const CORE_NATIVE_PREFIX: &[u8] = include_bytes!("../../core/src/native_prefix.rs");
 const PUBLIC_VIEW_RS: &[u8] = include_bytes!("../../aros-native-build/src/public_view.rs");
@@ -131,6 +139,17 @@ pub(super) struct LinkerIdentity {
     pub(super) sha256: String,
     pub(super) build_request_sha256: String,
     pub(super) build_record_sha256: String,
+}
+
+pub(super) struct TargetProfileInput<'a> {
+    pub(super) name: &'a str,
+    pub(super) libraries_root: PathBuf,
+    pub(super) profile: &'a str,
+}
+
+pub(super) struct AdditionalCsdkInput<'a> {
+    pub(super) root: PathBuf,
+    pub(super) profile: &'a str,
 }
 
 pub(super) struct CandidateComposition {
@@ -272,8 +291,14 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
             "host_key":receipt.host_key,
             "rust_host_triple":host.triple,
             "source_inputs_rs_sha256":EXPECTED_INPUTS_RS_SHA256,
-            "target_library_profile_sha256":EXPECTED_TARGET_LIBRARIES_SHA256,
-            "target_spec_sha256":EXPECTED_TARGET_SPEC_SHA256,
+            "target_library_profile_sha256":{
+                "x86_64-unknown-aros-abi1":ABI1_TARGET_LIBRARIES_SHA256,
+                "x86_64-unknown-aros-abi11":ABI11_TARGET_LIBRARIES_SHA256,
+            },
+            "target_spec_sha256":{
+                "x86_64-unknown-aros-abi1":ABI1_TARGET_SPEC_SHA256,
+                "x86_64-unknown-aros-abi11":ABI11_TARGET_SPEC_SHA256,
+            },
             "linker_artifact":{"path":linker_identity.path,"bytes":linker_identity.bytes,"sha256":linker_identity.sha256},
             "linker_build_request_sha256":linker_build_request_sha256,
             "linker_build_record_sha256":linker_build_record_sha256,
@@ -315,14 +340,16 @@ pub(super) fn compose_candidate(
     roots: [PathBuf; 6],
     linker: LinkerIdentity,
 ) -> Result<CandidateComposition> {
+    let [rust, cargo, llvm, csdk, collector, libraries] = roots;
     compose_candidate_with_target_profile(
         host_key,
         rust_host_triple,
         source_root,
         destination,
-        roots,
+        [rust, cargo, llvm, csdk, collector],
         linker,
-        TARGET_LIBRARIES,
+        libraries,
+        ABI1_TARGET_LIBRARIES,
     )
 }
 
@@ -331,9 +358,38 @@ pub(super) fn compose_candidate_with_target_profile(
     rust_host_triple: &str,
     source_root: &Path,
     destination: &Path,
-    roots: [PathBuf; 6],
+    roots: [PathBuf; 5],
     linker: LinkerIdentity,
+    libraries_root: PathBuf,
     target_profile_raw: &str,
+) -> Result<CandidateComposition> {
+    compose_candidate_with_target_profiles(
+        host_key,
+        rust_host_triple,
+        source_root,
+        destination,
+        roots,
+        linker,
+        None,
+        &[TargetProfileInput {
+            name: "x86_64-unknown-aros-abi1",
+            libraries_root,
+            profile: target_profile_raw,
+        }],
+        None,
+    )
+}
+
+pub(super) fn compose_candidate_with_target_profiles(
+    host_key: &str,
+    rust_host_triple: &str,
+    source_root: &Path,
+    destination: &Path,
+    roots: [PathBuf; 5],
+    linker: LinkerIdentity,
+    cargo_profile_raw: Option<&str>,
+    target_profiles: &[TargetProfileInput<'_>],
+    additional_csdk: Option<AdditionalCsdkInput<'_>>,
 ) -> Result<CandidateComposition> {
     let host = verify_candidate_source(host_key, rust_host_triple, source_root)?;
     let source_root = existing_directory(&source_root.to_string_lossy())?;
@@ -342,6 +398,14 @@ pub(super) fn compose_candidate_with_target_profile(
         .into_iter()
         .map(|root| existing_directory(&root.to_string_lossy()))
         .collect::<Result<Vec<_>>>()?;
+    let target_roots = target_profiles
+        .iter()
+        .map(|target| existing_directory(&target.libraries_root.to_string_lossy()))
+        .collect::<Result<Vec<_>>>()?;
+    let additional_csdk_root = additional_csdk
+        .as_ref()
+        .map(|input| existing_directory(&input.root.to_string_lossy()))
+        .transpose()?;
     let linker_root = existing_directory(&linker.root.to_string_lossy())?;
     if linker.bytes == 0
         || linker.bytes > MAX_LINKER_BYTES
@@ -376,26 +440,31 @@ pub(super) fn compose_candidate_with_target_profile(
         destination,
         "native prefix output overlaps candidate source",
     )?;
-    for left in 0..roots.len() {
+    let all_roots = roots
+        .iter()
+        .chain(target_roots.iter())
+        .chain(additional_csdk_root.iter())
+        .collect::<Vec<_>>();
+    for left in 0..all_roots.len() {
         require_disjoint(
             &source_root,
-            &roots[left],
+            all_roots[left],
             "native prefix component overlaps candidate source",
         )?;
         require_disjoint(
-            &roots[left],
+            all_roots[left],
             destination,
             "native prefix output overlaps a component root",
         )?;
         require_disjoint(
             &linker_root,
-            &roots[left],
+            all_roots[left],
             "source-built linker overlaps a component root",
         )?;
-        for right in left + 1..roots.len() {
+        for right in left + 1..all_roots.len() {
             require_disjoint(
-                &roots[left],
-                &roots[right],
+                all_roots[left],
+                all_roots[right],
                 "native prefix component roots overlap",
             )?;
         }
@@ -412,39 +481,98 @@ pub(super) fn compose_candidate_with_target_profile(
     )?;
 
     let rust = profile(host.rust, "Rust")?;
-    let cargo = profile(host.cargo, "Cargo")?;
+    let cargo = profile(cargo_profile_raw.unwrap_or(host.cargo), "Cargo")?;
     let llvm = profile(host.llvm, "LLVM")?;
     let csdk = profile(host.csdk, "C SDK")?;
     let collector = profile(host.collector, "collector")?;
-    let target_libraries = profile(target_profile_raw, "target libraries")?;
-    let target_library_pin: Value = serde_json::from_str(target_profile_raw).map_err(|error| {
-        Refusal::new(format!("embedded target-library pin is invalid: {error}"))
-    })?;
-    if text(&target_library_pin, "schema")? != "aros-target-library-candidate-v1"
-        || text(&target_library_pin, "target")? != "x86_64-aros"
-        || target_libraries.files.len() != 3
-    {
-        return Err(Refusal::new(
-            "target-library candidate must contain exactly the three reviewed x86_64-aros libraries",
+    let mut target_inputs = Vec::new();
+    for (index, input) in target_profiles.iter().enumerate() {
+        let libraries = profile(input.profile, "target libraries")?;
+        let library_pin: Value = serde_json::from_str(input.profile).map_err(|error| {
+            Refusal::new(format!("embedded target-library pin is invalid: {error}"))
+        })?;
+        let declared_target = text(&library_pin, "target")?;
+        let transitional_abi1_profile =
+            input.name == "x86_64-unknown-aros-abi1" && declared_target == "x86_64-aros";
+        if text(&library_pin, "schema")? != "aros-target-library-candidate-v1"
+            || (declared_target != input.name && !transitional_abi1_profile)
+            || libraries.files.len() != 6
+        {
+            return Err(Refusal::new(
+                "target-library candidate must contain exactly three reviewed rlib/rmeta pairs for its target",
+            ));
+        }
+        let (pin_raw, spec_raw, spec_sha256) = match input.name {
+            "x86_64-unknown-aros-abi1" => {
+                (ABI1_TARGET_PIN, ABI1_TARGET_SPEC, ABI1_TARGET_SPEC_SHA256)
+            }
+            "x86_64-unknown-aros-abi11" => (
+                ABI11_TARGET_PIN,
+                ABI11_TARGET_SPEC,
+                ABI11_TARGET_SPEC_SHA256,
+            ),
+            _ => {
+                return Err(Refusal::new(
+                    "target-library candidate names an unsupported release target",
+                ));
+            }
+        };
+        let target_pin: Value = serde_json::from_str(pin_raw)
+            .map_err(|error| Refusal::new(format!("embedded target pin is invalid: {error}")))?;
+        if text(&target_pin, "schema")? != "aros-native-build-target-v1"
+            || text(&target_pin, "target")? != input.name
+            || text(&target_pin, "status")? != "RELEASE_CANDIDATE_NOT_PUBLISHED"
+            || text(&target_pin, "spec_sha256")? != spec_sha256
+            || sha256_bytes(spec_raw) != spec_sha256
+        {
+            return Err(Refusal::new(
+                "target specification does not match the pinned release candidate",
+            ));
+        }
+        target_inputs.push((
+            input.name,
+            &target_roots[index],
+            libraries,
+            FileIdentity {
+                path: format!("{}.json", input.name),
+                bytes: spec_raw.len() as u64,
+                sha256: spec_sha256.to_owned(),
+                mode: None,
+            },
         ));
     }
-    let target_pin: Value = serde_json::from_str(TARGET_PIN)
-        .map_err(|error| Refusal::new(format!("embedded target pin is invalid: {error}")))?;
-    if text(&target_pin, "schema")? != "aros-native-build-target-v1"
-        || text(&target_pin, "target")? != "x86_64-aros"
-        || text(&target_pin, "status")? != "DEVELOPMENT_CANDIDATE_NOT_RELEASE_QUALIFICATION"
-        || text(&target_pin, "spec_sha256")? != EXPECTED_TARGET_SPEC_SHA256
-        || sha256_bytes(TARGET_SPEC) != EXPECTED_TARGET_SPEC_SHA256
-    {
-        return Err(Refusal::new(
-            "target specification does not match the pinned development candidate",
-        ));
-    }
-    let target_spec = FileIdentity {
-        path: TARGET_SPEC_PATH.to_owned(),
-        bytes: TARGET_SPEC.len() as u64,
-        sha256: EXPECTED_TARGET_SPEC_SHA256.to_owned(),
-        mode: None,
+    let targets = target_inputs
+        .iter()
+        .map(
+            |(name, root, libraries, specification)| NativePrefixTarget {
+                name,
+                libraries: NativePrefixProfile {
+                    root,
+                    files: &libraries.files,
+                    symlinks: &libraries.symlinks,
+                },
+                specification: NativePrefixFile {
+                    root: &target_spec_root,
+                    identity: specification,
+                },
+            },
+        )
+        .collect();
+    let additional_csdk_profile = additional_csdk
+        .as_ref()
+        .map(|input| profile(input.profile, "ABI11 C SDK"))
+        .transpose()?;
+    let additional_csdks = match (&additional_csdk_root, &additional_csdk_profile) {
+        (Some(root), Some(profile)) => vec![NativePrefixDestinationProfile {
+            prefix: "lib/aros/c-sdk-abi11",
+            profile: NativePrefixProfile {
+                root,
+                files: &profile.files,
+                symlinks: &profile.symlinks,
+            },
+        }],
+        (None, None) => Vec::new(),
+        _ => return Err(Refusal::new("ABI11 C SDK input is incomplete")),
     };
     let guard = SigtermGuard::acquire()?;
     let receipt = assemble_portable_native_prefix(
@@ -472,20 +600,13 @@ pub(super) fn compose_candidate_with_target_profile(
                 files: &csdk.files,
                 symlinks: &csdk.symlinks,
             },
+            additional_csdks,
             collector: NativePrefixProfile {
                 root: &roots[4],
                 files: &collector.files,
                 symlinks: &collector.symlinks,
             },
-            target_libraries: NativePrefixProfile {
-                root: &roots[5],
-                files: &target_libraries.files,
-                symlinks: &target_libraries.symlinks,
-            },
-            target_spec: NativePrefixFile {
-                root: &target_spec_root,
-                identity: &target_spec,
-            },
+            targets,
             aros_link: NativePrefixFile {
                 root: &linker_root,
                 identity: &linker_identity,
@@ -633,29 +754,39 @@ fn verify_source_profile_files(source_root: &Path) -> Result<()> {
             EXPECTED_MAC_RUST_SHA256,
         ),
         (
-            "tooling/crates/aros-native-build/pins/target.json",
-            TARGET_PIN.as_bytes(),
-            EXPECTED_TARGET_PIN_SHA256,
+            "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi1.json",
+            ABI1_TARGET_PIN.as_bytes(),
+            ABI1_TARGET_PIN_SHA256,
         ),
         (
-            "tooling/crates/aros-native-build/pins/target-libraries.json",
-            TARGET_LIBRARIES.as_bytes(),
-            EXPECTED_TARGET_LIBRARIES_SHA256,
+            "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi11.json",
+            ABI11_TARGET_PIN.as_bytes(),
+            ABI11_TARGET_PIN_SHA256,
         ),
         (
-            "tooling/crates/aros-native-build/pins/linux-x86_64/target-libraries.json",
-            LINUX_X64_TARGET_LIBRARIES.as_bytes(),
-            EXPECTED_LINUX_X64_TARGET_LIBRARIES_SHA256,
+            "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi1-libraries.json",
+            ABI1_TARGET_LIBRARIES.as_bytes(),
+            ABI1_TARGET_LIBRARIES_SHA256,
         ),
         (
-            "tooling/crates/aros-native-build/pins/linux-aarch64/target-libraries.json",
-            LINUX_ARM64_TARGET_LIBRARIES.as_bytes(),
-            EXPECTED_LINUX_ARM64_TARGET_LIBRARIES_SHA256,
+            "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi11-libraries.json",
+            ABI11_TARGET_LIBRARIES.as_bytes(),
+            ABI11_TARGET_LIBRARIES_SHA256,
         ),
         (
-            "targets/x86_64-aros.json",
-            TARGET_SPEC,
-            EXPECTED_TARGET_SPEC_SHA256,
+            "targets/x86_64-unknown-aros-abi1.json",
+            ABI1_TARGET_SPEC,
+            ABI1_TARGET_SPEC_SHA256,
+        ),
+        (
+            "targets/x86_64-unknown-aros-abi11.json",
+            ABI11_TARGET_SPEC,
+            ABI11_TARGET_SPEC_SHA256,
+        ),
+        (
+            "release/abi11-csdk/profile.json",
+            ABI11_CSDK_PROFILE,
+            ABI11_CSDK_PROFILE_SHA256,
         ),
     ] {
         let path = source_root.join(relative);
@@ -673,12 +804,11 @@ fn require_candidate_profile_sources() -> Result<()> {
     if sha256_bytes(INPUTS_RS) != EXPECTED_INPUTS_RS_SHA256
         || sha256_bytes(PUBLIC_VIEW_RS) != EXPECTED_PUBLIC_VIEW_RS_SHA256
         || sha256_bytes(PUBLIC_VIEW_POLICY) != EXPECTED_PUBLIC_VIEW_POLICY_SHA256
-        || sha256_bytes(TARGET_LIBRARIES.as_bytes()) != EXPECTED_TARGET_LIBRARIES_SHA256
-        || sha256_bytes(LINUX_X64_TARGET_LIBRARIES.as_bytes())
-            != EXPECTED_LINUX_X64_TARGET_LIBRARIES_SHA256
-        || sha256_bytes(LINUX_ARM64_TARGET_LIBRARIES.as_bytes())
-            != EXPECTED_LINUX_ARM64_TARGET_LIBRARIES_SHA256
-        || sha256_bytes(TARGET_PIN.as_bytes()) != EXPECTED_TARGET_PIN_SHA256
+        || sha256_bytes(ABI1_TARGET_LIBRARIES.as_bytes()) != ABI1_TARGET_LIBRARIES_SHA256
+        || sha256_bytes(ABI11_TARGET_LIBRARIES.as_bytes()) != ABI11_TARGET_LIBRARIES_SHA256
+        || sha256_bytes(ABI1_TARGET_PIN.as_bytes()) != ABI1_TARGET_PIN_SHA256
+        || sha256_bytes(ABI11_TARGET_PIN.as_bytes()) != ABI11_TARGET_PIN_SHA256
+        || sha256_bytes(ABI11_CSDK_PROFILE) != ABI11_CSDK_PROFILE_SHA256
     {
         return Err(Refusal::new(
             "compiled native-build source is not the reviewed combined candidate profile",
@@ -686,10 +816,6 @@ fn require_candidate_profile_sources() -> Result<()> {
     }
     for (raw, expected) in [
         (MAC_RUST, EXPECTED_MAC_RUST_SHA256),
-        (
-            MAC_CARGO,
-            "db628732266dd8927ef64c9ecdf4ca87e3fac3b0dea68765f2d8702ff837afb1",
-        ),
         (
             MAC_LLVM,
             "28237af9576e852451fcdf0470a904edb34a70232feb41d0c56be246313baadf",
@@ -707,10 +833,6 @@ fn require_candidate_profile_sources() -> Result<()> {
             "7a88373f28d19d6d61494587240681999adfb2bec964b4c3d74fae9718f097e8",
         ),
         (
-            LINUX_X64_CARGO,
-            "5525b66ce482af4c68429654f0e7fc41fa63098c7aca5794af96b8aca7dbf062",
-        ),
-        (
             LINUX_X64_LLVM,
             "a68f0d3d6b6d9e9678dca0af25b083d6b00f67fd4f806adcb6a2e16af1a19a6d",
         ),
@@ -725,10 +847,6 @@ fn require_candidate_profile_sources() -> Result<()> {
         (
             ARM_RUST,
             "862be6c4c1d29c59fc774e2d38f046672fcd0aa0978a869be9af2752fb4f76ee",
-        ),
-        (
-            ARM_CARGO,
-            "cda53b294ab30c94930b54f8ac9c5472c17d7fb480beeb14472a92fdf0535103",
         ),
         (
             ARM_LLVM,
@@ -749,8 +867,11 @@ fn require_candidate_profile_sources() -> Result<()> {
             ));
         }
     }
-    if sha256_bytes(TARGET_PIN.as_bytes()) != EXPECTED_TARGET_PIN_SHA256
-        || sha256_bytes(TARGET_SPEC) != EXPECTED_TARGET_SPEC_SHA256
+    if sha256_bytes(ABI1_TARGET_PIN.as_bytes()) != ABI1_TARGET_PIN_SHA256
+        || sha256_bytes(ABI11_TARGET_PIN.as_bytes()) != ABI11_TARGET_PIN_SHA256
+        || sha256_bytes(ABI1_TARGET_SPEC) != ABI1_TARGET_SPEC_SHA256
+        || sha256_bytes(ABI11_TARGET_SPEC) != ABI11_TARGET_SPEC_SHA256
+        || sha256_bytes(ABI11_CSDK_PROFILE) != ABI11_CSDK_PROFILE_SHA256
     {
         return Err(Refusal::new(
             "embedded target profile differs from its reviewed candidate pin",
@@ -877,22 +998,24 @@ mod tests {
                     MAC_RUST.as_bytes(),
                 ),
                 (
-                    "tooling/crates/aros-native-build/pins/target.json",
-                    TARGET_PIN.as_bytes(),
+                    "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi1.json",
+                    ABI1_TARGET_PIN.as_bytes(),
                 ),
                 (
-                    "tooling/crates/aros-native-build/pins/target-libraries.json",
-                    TARGET_LIBRARIES.as_bytes(),
+                    "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi11.json",
+                    ABI11_TARGET_PIN.as_bytes(),
                 ),
                 (
-                    "tooling/crates/aros-native-build/pins/linux-x86_64/target-libraries.json",
-                    LINUX_X64_TARGET_LIBRARIES.as_bytes(),
+                    "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi1-libraries.json",
+                    ABI1_TARGET_LIBRARIES.as_bytes(),
                 ),
                 (
-                    "tooling/crates/aros-native-build/pins/linux-aarch64/target-libraries.json",
-                    LINUX_ARM64_TARGET_LIBRARIES.as_bytes(),
+                    "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi11-libraries.json",
+                    ABI11_TARGET_LIBRARIES.as_bytes(),
                 ),
-                ("targets/x86_64-aros.json", TARGET_SPEC),
+                ("targets/x86_64-unknown-aros-abi1.json", ABI1_TARGET_SPEC),
+                ("targets/x86_64-unknown-aros-abi11.json", ABI11_TARGET_SPEC),
+                ("release/abi11-csdk/profile.json", ABI11_CSDK_PROFILE),
             ] {
                 let path = root.join(relative);
                 fs::create_dir_all(path.parent().expect("fixture parent"))
@@ -936,9 +1059,8 @@ mod tests {
             "tooling/crates/aros-native-build/pins/portable-view-v2.json",
             "tooling/crates/aros-native-build/src/build.rs",
             "tooling/crates/aros-native-build/src/link.rs",
-            "tooling/crates/aros-native-build/pins/target-libraries.json",
-            "tooling/crates/aros-native-build/pins/linux-x86_64/target-libraries.json",
-            "tooling/crates/aros-native-build/pins/linux-aarch64/target-libraries.json",
+            "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi1-libraries.json",
+            "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi11-libraries.json",
         ] {
             let fixture = SourceCopy::new();
             verify_source_profile_files(&fixture.0).expect("unaltered copy passes");

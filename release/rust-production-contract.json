@@ -2,19 +2,16 @@
   "hosts": [
     {
       "artifact_suffix": "macos-aarch64",
-      "debian_arch": null,
       "key": "macos-aarch64",
       "rust_triple": "aarch64-apple-darwin"
     },
     {
       "artifact_suffix": "linux-x86_64",
-      "debian_arch": "amd64",
       "key": "linux-x86_64",
       "rust_triple": "x86_64-unknown-linux-gnu"
     },
     {
       "artifact_suffix": "linux-aarch64",
-      "debian_arch": "arm64",
       "key": "linux-aarch64",
       "rust_triple": "aarch64-unknown-linux-gnu"
     }
@@ -103,22 +100,6 @@
     {
       "archive": {
         "format": "tar.xz",
-        "root": "cargo"
-      },
-      "bytes": 15954892,
-      "hosts": [
-        "macos-aarch64"
-      ],
-      "license_ref": "paired-cargo",
-      "role": "paired-cargo-macos-aarch64",
-      "sha256": "ea3075cb68824d4377d1b20d4429339a578cf3431ab38668e20e6bfcacccd445",
-      "source": {
-        "url": "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-cargo-0.1.0-macos-aarch64.tar.xz"
-      }
-    },
-    {
-      "archive": {
-        "format": "tar.xz",
         "root": "toolchain"
       },
       "bytes": 26451000,
@@ -194,22 +175,6 @@
       "sha256": "f909437ddd1790402eab07d178d3d6ca3a901bd0928f686157ea4dfd559974d8",
       "source": {
         "url": "https://static.rust-lang.org/dist/2026-09-18/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz"
-      }
-    },
-    {
-      "archive": {
-        "format": "tar.xz",
-        "root": "cargo"
-      },
-      "bytes": 17795116,
-      "hosts": [
-        "linux-x86_64"
-      ],
-      "license_ref": "paired-cargo",
-      "role": "paired-cargo-linux-x86_64",
-      "sha256": "624cd1361740d9bf6ee9459f7d0100623cecdd6352562e4383e76ec64f6688ca",
-      "source": {
-        "url": "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-cargo-0.1.0-linux-x86_64.tar.xz"
       }
     },
     {
@@ -295,22 +260,6 @@
     {
       "archive": {
         "format": "tar.xz",
-        "root": "cargo"
-      },
-      "bytes": 17392656,
-      "hosts": [
-        "linux-aarch64"
-      ],
-      "license_ref": "paired-cargo",
-      "role": "paired-cargo-linux-aarch64",
-      "sha256": "bbf2de4b2b1e10e0ce50e69209e940cabbad886b2578f66f24a407e02b9554db",
-      "source": {
-        "url": "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-cargo-0.1.0-linux-aarch64.tar.xz"
-      }
-    },
-    {
-      "archive": {
-        "format": "tar.xz",
         "root": "toolchain"
       },
       "bytes": 35097912,
@@ -341,7 +290,7 @@
       }
     },
     {
-      "bytes": 955,
+      "bytes": 972,
       "hosts": [
         "macos-aarch64",
         "linux-x86_64",
@@ -349,17 +298,17 @@
       ],
       "license_ref": "project",
       "required_for": [
-        "target-libraries",
-        "sysroot"
+        "abi1-target-libraries",
+        "abi1-sysroot"
       ],
-      "role": "target-specification",
-      "sha256": "de7a0024aa94269641e3e6d480ce8cd334962bf7e02592b0652e19e56b5fba71",
+      "role": "target-specification-abi1",
+      "sha256": "0e9cde740c93949d4cab27690cb9d93dc9fb89dc96388ff5be0eb7296ba38807",
       "source": {
-        "path": "targets/x86_64-aros.json"
+        "path": "targets/x86_64-unknown-aros-abi1.json"
       }
     },
     {
-      "bytes": 816,
+      "bytes": 253,
       "hosts": [
         "macos-aarch64",
         "linux-x86_64",
@@ -367,12 +316,47 @@
       ],
       "license_ref": "project",
       "required_for": [
-        "target-libraries"
+        "abi1-target-libraries"
       ],
-      "role": "target-library-contract",
-      "sha256": "82863a6f13db226e62160e4af57bdeab3f3be7dafa1323fe080f7927d286db43",
+      "role": "target-definition-abi1",
+      "sha256": "5840e8bc7cb7b810a6948d8f9042a992a18ec000351d21e697538489c146367f",
       "source": {
-        "path": "release/rust-production-target-libraries.json"
+        "path": "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi1.json"
+      }
+    },
+    {
+      "bytes": 980,
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "license_ref": "project",
+      "required_for": [
+        "abi11-target-libraries",
+        "abi11-sysroot"
+      ],
+      "role": "target-specification-abi11",
+      "sha256": "5616c1e062232b43154237fe40826795cc48e148f903f0a1a8087d224d8a49c9",
+      "source": {
+        "path": "targets/x86_64-unknown-aros-abi11.json"
+      }
+    },
+    {
+      "bytes": 254,
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "license_ref": "project",
+      "required_for": [
+        "abi11-target-libraries"
+      ],
+      "role": "target-definition-abi11",
+      "sha256": "382d0ad643fb659fe14a5074cc709be15f6a53524baf406fbf6563c68914dfe7",
+      "source": {
+        "path": "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi11.json"
       }
     },
     {
@@ -391,8 +375,6 @@
       "required_for": [
         "sysroot",
         "direct",
-        "debian",
-        "homebrew",
         "rustup"
       ],
       "role": "portable-csdk-archive",
@@ -416,6 +398,47 @@
       "sha256": "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337",
       "source": {
         "path": "release/portable-csdk/profile.json"
+      }
+    },
+    {
+      "archive": {
+        "format": "tar.xz",
+        "member_inventory": "release/abi11-csdk/profile.json",
+        "root": "Developer"
+      },
+      "bytes": 210516,
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "license_ref": "aros-sdk",
+      "required_for": [
+        "abi11-sysroot",
+        "direct",
+        "rustup"
+      ],
+      "role": "abi11-portable-csdk-archive",
+      "sha256": "be0f3c93210a72d2e6513188f26a6831720322494ef56e9e5cf8fa7c2c218181",
+      "source": {
+        "path": "release/inputs/abi11-csdk.tar.xz"
+      }
+    },
+    {
+      "bytes": 35985,
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "license_ref": "aros-sdk",
+      "required_for": [
+        "abi11-portable-csdk-admission"
+      ],
+      "role": "abi11-portable-csdk-member-inventory",
+      "sha256": "032a73355932bad9221bfec55631d4f77eff0ca298ae379341bf7ec42a334850",
+      "source": {
+        "path": "release/abi11-csdk/profile.json"
       }
     },
     {
@@ -553,92 +576,6 @@
       "source": {
         "path": "release/inputs/native-build-dependencies.json"
       }
-    },
-    {
-      "bytes": 1606,
-      "hosts": [
-        "macos-aarch64",
-        "linux-x86_64",
-        "linux-aarch64"
-      ],
-      "license_ref": "paired-cargo",
-      "required_for": [
-        "cargo-provenance"
-      ],
-      "role": "cargo-source-contract",
-      "sha256": "9c8ac1d58262c73116c74172c93c345196bd8ffa3995bebba3d1f8ea00bc59ce",
-      "source": {
-        "path": "host/cargo-repro/three-host-v3/source.json"
-      }
-    },
-    {
-      "bytes": 13300,
-      "hosts": [
-        "macos-aarch64",
-        "linux-x86_64",
-        "linux-aarch64"
-      ],
-      "license_ref": "paired-cargo",
-      "required_for": [
-        "cargo-provenance"
-      ],
-      "role": "cargo-reproducibility-patch",
-      "sha256": "2c3ab831d216cc4395decc4bcc307a1d9bac6b6936cd01d7c496c44e55d9826b",
-      "source": {
-        "path": "host/cargo-repro/three-host-v3/cargo-metadata.patch"
-      }
-    },
-    {
-      "bytes": 2260,
-      "hosts": [
-        "macos-aarch64",
-        "linux-x86_64",
-        "linux-aarch64"
-      ],
-      "license_ref": "paired-cargo",
-      "required_for": [
-        "cargo-provenance"
-      ],
-      "role": "cargo-openssl-overlay",
-      "sha256": "676f1c208fe63f57014120f7461383a9f1da351565a5ea8b9dfe8a2dd109e944",
-      "source": {
-        "path": "host/cargo-repro/three-host-v3/openssl-overlay.json"
-      }
-    },
-    {
-      "bytes": 2536,
-      "hosts": [
-        "macos-aarch64",
-        "linux-x86_64",
-        "linux-aarch64"
-      ],
-      "license_ref": "paired-cargo",
-      "required_for": [
-        "cargo-provenance"
-      ],
-      "role": "cargo-openssl-path-patch",
-      "sha256": "0bc0e316c16658c7be01baa8d14070efebbe0b115a26224b2ae75ac12667069e",
-      "source": {
-        "path": "host/cargo-repro/three-host-v3/openssl-paths.patch"
-      }
-    },
-    {
-      "archive": {
-        "format": "tar.xz",
-        "root": "ami-rust-0.2.0-sources"
-      },
-      "bytes": 206607676,
-      "hosts": [
-        "macos-aarch64",
-        "linux-x86_64",
-        "linux-aarch64"
-      ],
-      "license_ref": "paired-cargo",
-      "role": "published-source-closure",
-      "sha256": "5f3333fa0344ef9919b5ae0659c3f0997cbfd5b8ad0cb00c0426d1e1df3fee8c",
-      "source": {
-        "url": "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-0.1.0-sources.tar.xz"
-      }
     }
   ],
   "licenses": [
@@ -662,13 +599,6 @@
       "id": "rust-distribution",
       "path": "release/bundle-assets/licence-review.json",
       "sha256": "def62789e89d8d93a3870acd0769e70501108e8d0f4fd60629189ac0dbe8d23c"
-    },
-    {
-      "bytes": 13026,
-      "declaration": "Cargo and registry notices; source and patch identities are separately pinned",
-      "id": "paired-cargo",
-      "path": "release/bundle-assets/THIRD_PARTY_NOTICES.md",
-      "sha256": "57b1462ab5258ba342fa75a52af52677513b6e4696f988948484cc03e511a86e"
     },
     {
       "bytes": 11954128,
@@ -696,8 +626,6 @@
     {
       "consumers": [
         "direct",
-        "debian",
-        "homebrew",
         "rustup"
       ],
       "hosts": [
@@ -720,8 +648,8 @@
         "linux-aarch64"
       ],
       "kind": "directory-tree",
-      "path": "stage/{host}/sdk/lib/rustlib/x86_64-aros",
-      "role": "aros-target-sysroot"
+      "path": "stage/{host}/sdk/lib/rustlib/x86_64-unknown-aros-abi1",
+      "role": "aros-abi1-target-sysroot"
     },
     {
       "consumers": [
@@ -734,8 +662,36 @@
         "linux-aarch64"
       ],
       "kind": "directory-tree",
-      "path": "stage/{host}/sdk/aros-sysroot",
-      "role": "portable-csdk-sysroot"
+      "path": "stage/{host}/sdk/lib/rustlib/x86_64-unknown-aros-abi11",
+      "role": "aros-abi11-target-sysroot"
+    },
+    {
+      "consumers": [
+        "cargo",
+        "rustc-component"
+      ],
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "kind": "directory-tree",
+      "path": "stage/{host}/sdk/lib/aros/c-sdk",
+      "role": "abi1-csdk-sysroot"
+    },
+    {
+      "consumers": [
+        "cargo",
+        "rustc-component"
+      ],
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "kind": "directory-tree",
+      "path": "stage/{host}/sdk/lib/aros/c-sdk-abi11",
+      "role": "abi11-csdk-sysroot"
     },
     {
       "consumers": [
@@ -754,9 +710,7 @@
     {
       "consumers": [
         "rustup",
-        "direct",
-        "debian",
-        "homebrew"
+        "direct"
       ],
       "hosts": [
         "macos-aarch64",
@@ -770,9 +724,7 @@
     {
       "consumers": [
         "rustup",
-        "direct",
-        "debian",
-        "homebrew"
+        "direct"
       ],
       "hosts": [
         "macos-aarch64",
@@ -786,9 +738,7 @@
     {
       "consumers": [
         "rustup",
-        "direct",
-        "debian",
-        "homebrew"
+        "direct"
       ],
       "hosts": [
         "macos-aarch64",
@@ -829,50 +779,6 @@
       "kind": "tar.xz",
       "path": "artifacts/ami-rust-{version}-{host}.tar.xz",
       "role": "direct-archive"
-    },
-    {
-      "consumers": [
-        "debian"
-      ],
-      "hosts": [
-        "linux-x86_64",
-        "linux-aarch64"
-      ],
-      "kind": "json",
-      "path": "packaging/debian/ami-rust-{version}-{debian_arch}.json",
-      "role": "debian-package-input"
-    },
-    {
-      "consumers": [
-        "apt"
-      ],
-      "hosts": [
-        "linux-x86_64",
-        "linux-aarch64"
-      ],
-      "kind": "deb",
-      "path": "artifacts/ami-rust_{version}_{debian_arch}.deb",
-      "role": "debian-package"
-    },
-    {
-      "consumers": [
-        "homebrew"
-      ],
-      "hosts": [
-        "macos-aarch64"
-      ],
-      "kind": "json",
-      "path": "packaging/homebrew/ami-rust-{version}-macos-aarch64.json",
-      "role": "homebrew-formula-input"
-    },
-    {
-      "consumers": [
-        "homebrew-tap"
-      ],
-      "hosts": [],
-      "kind": "ruby",
-      "path": "artifacts/ami-rust.rb",
-      "role": "homebrew-formula"
     },
     {
       "consumers": [
@@ -960,20 +866,28 @@
     "single_inventory": "all delivery channels consume release-inventory; channel-specific reconstruction is prohibited",
     "versioning": "new SDK versions use distinct rustup channels; same-channel mutation prohibited"
   },
-  "schema": "ami-rust-production-contract-v1",
-  "status": "RP1_FROZEN_INPUT_AND_OUTPUT_CONTRACT_NOT_PRODUCED",
-  "target": {
-    "abi": "AROS ABI-v1",
-    "baseline": "unchanged qualified x86-64 QEMU baseline",
-    "spec_role": "target-specification",
-    "triple": "x86_64-aros"
-  },
+  "schema": "ami-rust-production-contract-v2",
+  "status": "M7_RELEASE_CANDIDATE_CONTRACT_NOT_PUBLISHED",
+  "targets": [
+    {
+      "abi": "AROS ABI-v1",
+      "baseline": "pinned x86-64 ABI-v1 QEMU baseline",
+      "spec_role": "target-specification-abi1",
+      "triple": "x86_64-unknown-aros-abi1"
+    },
+    {
+      "abi": "AROS ABI-v11",
+      "baseline": "pinned x86-64 ABI-v11 QEMU baseline",
+      "spec_role": "target-specification-abi11",
+      "triple": "x86_64-unknown-aros-abi11"
+    }
+  ],
   "toolchain": {
-    "cargo_commit": "3efb1f477e99b42974b982d939fd100303cdf7db",
-    "cargo_delivery": "reuse authenticated prebuilt 0.2.0 host components; patch/source inputs remain provenance and licence material",
-    "cargo_patch_required": true,
+    "cargo_commit": "495c385d0875c4ba51eb72ea0448a2d4c018b8d4",
+    "cargo_delivery": "official Cargo component from the pinned Rust distribution",
+    "cargo_patch_required": false,
     "cargo_source_build_in_active_producer": false,
-    "cargo_version": "1.99.0 (3efb1f477 2026-07-17)",
+    "cargo_version": "1.100.0-nightly (495c385d0 2026-09-16)",
     "rust_channel": "nightly-2026-09-18",
     "rust_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
     "rust_llvm": "23.1.1",

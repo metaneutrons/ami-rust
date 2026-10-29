@@ -189,8 +189,8 @@ pub fn package_rustup_components(
     result
 }
 
-/// Materialize the Direct archive, the host's Debian package when applicable,
-/// and the common notice archive from the same verified SDK inventory.
+/// Materialize the direct archive and common notice archive from the same
+/// verified SDK inventory.
 ///
 /// This is a byte producer only. Signing, repository publication and package
 /// manager metadata remain the caller's responsibility.
@@ -199,12 +199,10 @@ pub fn package_native_formats(
     mut check: impl FnMut() -> Result<()>,
 ) -> Result<NativePackageReceipt> {
     validate_version(request.version)?;
-    let debian_arch = match request.host_key {
-        "macos-aarch64" => None,
-        "linux-x86_64" => Some("amd64"),
-        "linux-aarch64" => Some("arm64"),
+    match request.host_key {
+        "macos-aarch64" | "linux-x86_64" | "linux-aarch64" => {}
         _ => return Err(Refusal::new("unsupported native package host")),
-    };
+    }
     if request.epoch == 0 || request.files.is_empty() || request.files.len() > MAX_ENTRIES {
         return Err(Refusal::new(
             "native package request is empty or outside its bounds",
@@ -293,40 +291,6 @@ pub fn package_native_formats(
             notices_name,
         )?);
 
-        if let Some(architecture) = debian_arch {
-            let work = stage.join(".deb-work");
-            fs::create_dir(&work)?;
-            let data = work.join("data.tar.xz");
-            let control = work.join("control.tar.xz");
-            let marker = work.join("debian-binary");
-            write_inventory_archive(
-                &prefix,
-                &data,
-                &format!("usr/libexec/ami-rust/{}", request.version),
-                request.files,
-                request.epoch,
-                Some(("usr/libexec/ami-rust/current", request.version)),
-                &mut check,
-            )?;
-            write_debian_control(
-                &control,
-                request.version,
-                architecture,
-                request.epoch,
-                request.files,
-            )?;
-            fs::write(&marker, b"2.0\n")?;
-            let deb_name = format!("ami-rust_{}_{}.deb", request.version, architecture);
-            let deb_path = stage.join(&deb_name);
-            write_ar(
-                &deb_path,
-                request.epoch,
-                [marker.as_path(), control.as_path(), data.as_path()],
-            )?;
-            fs::remove_dir_all(work)?;
-            artifacts.push(package_identity("debian-package", &deb_path, deb_name)?);
-        }
-
         verify_complete(
             &prefix,
             request.files,
@@ -407,86 +371,12 @@ fn write_inventory_archive(
     finish_archive(builder, "package")
 }
 
-fn write_debian_control(
-    destination: &Path,
-    version: &str,
-    architecture: &str,
-    epoch: u64,
-    files: &[FileIdentity],
-) -> Result<()> {
-    let installed_kib = files
-        .iter()
-        .try_fold(0_u64, |total, row| {
-            total
-                .checked_add(row.bytes)
-                .ok_or_else(|| Refusal::new("installed byte total overflow"))
-        })?
-        .div_ceil(1024);
-    let control = format!(
-        "Package: ami-rust\nVersion: {version}-1\nArchitecture: {architecture}\nMaintainer: Fabian Schmieder <436979+metaneutrons@users.noreply.github.com>\nDepends: libc6, libgcc-s1, libstdc++6, zlib1g\nInstalled-Size: {installed_kib}\nSection: devel\nPriority: optional\nDescription: Rust cross-development toolchain for x86-64 AROS\n"
-    );
-    let output = OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .open(destination)?;
-    let xz = XzWriter::new(output, XzOptions::with_preset(6)).map_err(|error| {
-        Refusal::new(format!(
-            "could not create Debian control XZ stream: {error}"
-        ))
-    })?;
-    let mut builder = Builder::new(xz);
-    append_bytes(&mut builder, "control", control.as_bytes(), 0o644, epoch)?;
-    finish_archive(builder, "Debian control")
-}
-
 fn finish_archive(mut builder: Builder<XzWriter<File>>, label: &str) -> Result<()> {
     builder.finish()?;
     let xz = builder.into_inner()?;
     let mut output = xz
         .finish()
         .map_err(|error| Refusal::new(format!("could not finish {label} XZ stream: {error}")))?;
-    output.flush()?;
-    output.sync_all()?;
-    Ok(())
-}
-
-fn write_ar<'a>(
-    destination: &Path,
-    epoch: u64,
-    members: impl IntoIterator<Item = &'a Path>,
-) -> Result<()> {
-    let mut output = OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .open(destination)?;
-    output.write_all(b"!<arch>\n")?;
-    for path in members {
-        let name = path
-            .file_name()
-            .and_then(|value| value.to_str())
-            .ok_or_else(|| Refusal::new("Debian AR member name must be UTF-8"))?;
-        if name.len() > 15 {
-            return Err(Refusal::new("Debian AR member name is too long"));
-        }
-        let bytes = fs::symlink_metadata(path)?.len();
-        let header = format!(
-            "{:<16}{:<12}{:<6}{:<6}{:<8o}{:<10}`\n",
-            format!("{name}/"),
-            epoch,
-            0,
-            0,
-            0o100644,
-            bytes
-        );
-        if header.len() != 60 {
-            return Err(Refusal::new("Debian AR header is not canonical"));
-        }
-        output.write_all(header.as_bytes())?;
-        std::io::copy(&mut File::open(path)?, &mut output)?;
-        if bytes % 2 != 0 {
-            output.write_all(b"\n")?;
-        }
-    }
     output.flush()?;
     output.sync_all()?;
     Ok(())

@@ -15,5 +15,10 @@ by [the portable C-SDK specification](../portable-csdk/spec.json).
 `vendor.tar.xz` is the locked Cargo vendor input pinned by
 [ci-sdk-inputs.json](../ci-sdk-inputs.json).
 
+`abi11-csdk.tar.xz` is the minimal unmodified ABI11 selection from the official
+`ABIv11_2026.09` SDK. Its upstream identity, selection scope, deterministic
+archive recipe and complete member profile are documented in
+[release/abi11-csdk](../abi11-csdk/README.md).
+
 These are repository inputs for building and qualifying ami-rust. An SDK release
 requires its own completed release gates and authenticated distribution.
