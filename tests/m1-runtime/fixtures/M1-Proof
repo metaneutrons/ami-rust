@@ -1,0 +1,5 @@
+FailAt 21
+SYS:M1RUNTIME
+Echo "ami-rust M1 process returned $RC"
+Wait 15 SECS
+EndCLI
