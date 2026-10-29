@@ -186,8 +186,9 @@ Dependencies: M1 through M6
   identities and complete the applicable licence and corresponding-source
   review for shipped bytes.
 - M7-A4: Verify authenticated direct and rustup installation of the candidate,
-  update README and user documentation, and prepare signed GitHub Release
-  assets without publishing them.
+  update `README.md` and every affected user, installation, compatibility,
+  maintenance, and release document against that exact candidate, and prepare
+  signed GitHub Release assets without publishing them.
 - M7-A5: Publication remains a separate maintainer decision after every prior
   criterion is accepted. Crates remain Git-delivered and unpublished on
   crates.io for 0.1.

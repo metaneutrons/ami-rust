@@ -1,9 +1,12 @@
 # SDK compatibility boundary
 
-Target: PC x86-64 AROS ABI-v1 native ELF, the qualified QEMU boot profile.
-No other ABI/CPU combination or physical machine is included in this scope.
-The complete target JSON and host component file/symlink inventories are in the
-authenticated SDK contract. Selection fails on any changed or missing input.
+Targets: PC x86-64 AROS ABI1 and ABI11 native ELF under the qualified QEMU boot
+profile. No other ABI/CPU combination or physical machine is included in this
+scope. M1 qualifies the shared runtime subset on both ABIs; it does not by
+itself qualify a complete release candidate. The complete target JSON and host
+component file/symlink inventories are in the authenticated SDK contract.
+Selection fails on any changed or missing input. The exact dual-ABI baseline
+and results are recorded in [the M1 qualification](m1-qualification.md).
 
 | Input | Selected identity |
 | --- | --- |
@@ -14,14 +17,14 @@ authenticated SDK contract. Selection fails on any changed or missing input.
 | Cargo | 1.99.0, source 3efb1f477e99b42974b982d939fd100303cdf7db plus recorded producer patches; per-host binary digest in the authenticated inventory |
 | Native C toolchain | Pinned host-specific LLVM cross-tools for pc-x86_64; exact profiles in tooling/crates/aros-native-build/pins and authenticated SDK inventories |
 | Native collector | Pinned host-native collector included in each SDK; exact bytes/profile in the authenticated host inventory |
-| AROS C SDK | source-derived portable x86-64 ABI-v1 Developer tree, complete distinct component inventory; release/portable-csdk/spec.json pins the unchanged original and derived input |
-| Boot image | SHA-256 9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1, 143360000 bytes |
+| AROS C SDK | ABI1: source-derived portable Developer tree pinned by `release/portable-csdk/spec.json`; ABI11: complete `SDK-202609-any-x86_64.zip`, SHA-256 `8a4e5f09f027844501c1421bd3948c4e55ceb005a16b0bd3575276f40c8977e6` |
+| Boot images | ABI1 SHA-256 `9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1`; ABI11 SHA-256 `2228f09c73f8c7650372543e9a97f93020a1fab7ebbf4865b194c5aa9cc8ccd7` |
 | QEMU | 11.1.2; pc-i440fx-11.1, qemu64-v1, TCG single, one CPU, 512 MiB RAM, no network, immutable ISO, full 512 MiB FAT test medium |
 
 The qualification profile uses a 128 KiB startup stack and requires measured
-stack use of at most 96 KiB. These are stack conditions for this PC x86-64
-ABI-v1 QEMU profile, not an application heap or whole-memory cap. Each release
-must bind its qualification records to the exact source and candidate bytes.
+stack use of at most 96 KiB. These are stack conditions for the PC x86-64 QEMU
+profile, not an application heap or whole-memory cap. Each release must bind
+its qualification records to the exact source and candidate bytes.
 
 The SDK contains paired rustc/Cargo, host libraries, AROS core/alloc, C SDK,
 linker and native cross-tools. A normal application build does not download or
@@ -31,7 +34,7 @@ binutils and libc development files (`build-essential`) on Ubuntu.
 
 Direct archives and Rustup components use a per-host signed file inventory.
 The [source checkout guide](quickstart-toolchain.md) describes the public
-boundary before the first release. The boot/ABI baseline above remains
+boundary before the first release. The boot/ABI baselines above remain
 unchanged; physical hardware, AROS-hosted Rust/Cargo/rustup and other CPU/ABI
 targets require separate qualification.
 
