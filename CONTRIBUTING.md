@@ -8,6 +8,10 @@ The public interface is rustup plus Cargo. Changes must not introduce an
 `ami-rust` CLI, a Cargo wrapper, or a Python execution path. Preserve the AROS
 x86-64 ABI-v1 baseline and keep AROS-NX and aros-tools outside this repository.
 
+Substantial initiatives keep their normative requirements in `docs/plans/`.
+The linked epic and milestone issues record execution state and evidence rather
+than duplicating acceptance criteria.
+
 Run the Rust maintainer workspace through the same pinned bootstrap used by CI:
 
 ```bash
