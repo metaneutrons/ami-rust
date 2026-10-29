@@ -118,25 +118,25 @@
       "role": "native-vendor-manifest",
       "path": "release/native-cargo-vendor-inputs.json",
       "bytes": 14950,
-      "sha256": "7a1a501c1766c52769171efe58354a0736983a88ad017e118519384cfda23418"
+      "sha256": "37f3d12b1a6d8d4f889c55114d07bfb1b1dc6dc3d80a33607d208e23fcb17e1d"
     },
     {
       "role": "root-Cargo-lock",
       "path": "Cargo.lock",
-      "bytes": 11325,
-      "sha256": "8cb678cb35902b837c5806a398f2de73c0f39024624b642a313916119b600280"
+      "bytes": 10978,
+      "sha256": "02f61cc56fb56caf1b03c2e900f14e829e938fd2e365c747203a7b664152fffd"
     },
     {
       "role": "tooling-Cargo-lock",
       "path": "tooling/Cargo.lock",
-      "bytes": 7135,
-      "sha256": "8a34bfca70bdef21e2a977b4cbb3cf78e0b00d31b17af6fa780a9abeb195ba6e"
+      "bytes": 7241,
+      "sha256": "d129ef969b4a8b926e9c7e8403472dfa56337da2ff841b7098b2f47793c79efe"
     },
     {
       "role": "native-tooling-manifest",
       "path": "release/native-tooling-inputs.json",
-      "bytes": 29558,
-      "sha256": "bc0907093a43533022c1db826dc56f5485a4f8698e751cb10bcc45d4022deab8"
+      "bytes": 29966,
+      "sha256": "edc5b086cabbba49b285c7d5794ae4d17e19f8d026ad15819ea7d918713fe503"
     },
     {
       "role": "legacy-vendor-archive",
