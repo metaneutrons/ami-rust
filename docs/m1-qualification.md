@@ -49,8 +49,8 @@ The final shell result was `ami-rust M1 process returned 0` for both ABIs.
 
 | Target | Final application SHA-256 | Qualification ISO SHA-256 | Result |
 | --- | --- | --- | --- |
-| `x86_64-unknown-aros-abi1` | `6665cf8cba9de28b34b040fe7e6dc8219ddc1ac5bfca5df9b478bcb7ad3d941c` | `fc310dd6cf9fa51e2e8476e6f47adbf7a45cf2e03f6b79c7227dd76b110d7c8b` | PASS, return code 0 |
-| `x86_64-unknown-aros-abi11` | `17b42eadd7635a434ce4d8d10c8694ced1a233fbe9a3e50a5d6a391fc623656d` | `e88448c01370042d57b40c1be1d9d9605f024f28ffbe53696b21f9eabd903c3f` | PASS, return code 0 |
+| `x86_64-unknown-aros-abi1` | `684a2973df0d45f1f3b58eaaef45b01976b5f293ec12381983a919822734d5bc` | `01cadb7e9b41626bde58d7eab9d5d53441610d9b18308f841bcbec0f98a97eda` | PASS, return code 0 |
+| `x86_64-unknown-aros-abi11` | `b8ed1b2adf4895845e6be26c3be157b8b21ea750eb4f1dfa82d3c6bda92718bd` | `c2fdb1d3a91cb0c4268f7763bb7a504a9834894eaea9fd4fb52c81cef74a79da` | PASS, return code 0 |
 
 ## ABI evidence and required bridge changes
 
