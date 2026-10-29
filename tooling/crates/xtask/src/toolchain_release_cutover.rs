@@ -70,6 +70,7 @@ struct ReleaseRequest {
     qualification_run_id: u64,
     qualification_run_attempt: u64,
     host_outputs: BTreeMap<String, PathBuf>,
+    source_capsule_output: PathBuf,
     catalog_root: Option<PathBuf>,
     catalog_commit: Option<String>,
     output: PathBuf,
@@ -353,6 +354,7 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
     let source = existing_directory(request.source_root, "source root")?;
     let source_head = git_identity(&source, "HEAD")?;
     let source_tree = git_identity(&source, "HEAD^{tree}")?;
+    let source_epoch = git_commit_epoch(&source, "HEAD")?;
     if source_head != request.source_commit || source_tree != request.source_tree {
         return Err(Refusal::new(
             "release request source identity differs from its checkout",
@@ -372,6 +374,13 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
             "host production plans do not share one contract identity",
         ));
     }
+    let source_capsule = verified_source_capsule(
+        &request.source_capsule_output,
+        &request.version,
+        &request.source_commit,
+        &request.source_tree,
+        source_epoch,
+    )?;
 
     let output = fresh_directory_path(request.output)?;
     let stage = sibling_stage(&output)?;
@@ -389,6 +398,12 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
         let mut rustup_hosts = Vec::new();
         let mut producer_rows = Vec::new();
         let mut raw_assets = Vec::new();
+        raw_assets.push(copy_verified(
+            &source_capsule.path,
+            &candidate.join(&source_capsule.identity.name),
+            source_capsule.identity.bytes,
+            &source_capsule.identity.sha256,
+        )?);
         let mut channel_assets = BTreeMap::<String, FileIdentity>::new();
         let mut invariant_target_payload: Option<Vec<ProducerSdkFile>> = None;
         let mut host_target_rlibs = Vec::new();
@@ -1039,6 +1054,98 @@ fn require_native_artifact_name(
     Ok(())
 }
 
+struct VerifiedSourceCapsule {
+    path: PathBuf,
+    identity: FileIdentity,
+}
+
+fn verified_source_capsule(
+    root: &Path,
+    version: &str,
+    source_commit: &str,
+    source_tree: &str,
+    epoch: u64,
+) -> Result<VerifiedSourceCapsule> {
+    let root = existing_directory(root.to_path_buf(), "source capsule output")?;
+    let result = read_object(&root.join("result.json"))?;
+    if result.get("schema").and_then(Value::as_str)
+        != Some("ami-rust-toolchain-capsule-result-v1")
+        || result.get("status").and_then(Value::as_str)
+            != Some("COMPLETED_LOCAL_UNSIGNED_CANDIDATE_ONLY")
+        || result.get("version").and_then(Value::as_str) != Some(version)
+    {
+        return Err(Refusal::new(
+            "source capsule result has an unsupported identity",
+        ));
+    }
+    let source = result
+        .get("source")
+        .and_then(Value::as_object)
+        .ok_or_else(|| Refusal::new("source capsule result lacks a source identity"))?;
+    if source.get("commit").and_then(Value::as_str) != Some(source_commit)
+        || source.get("tree").and_then(Value::as_str) != Some(source_tree)
+        || source.get("epoch").and_then(Value::as_u64) != Some(epoch)
+    {
+        return Err(Refusal::new(
+            "source capsule was not produced from the selected release source",
+        ));
+    }
+    let expected_source = format!("ami-rust-{version}-sources.tar.xz");
+    let expected_vendor = format!("ami-rust-{version}-vendor.tar.xz");
+    let artifacts = result
+        .get("artifacts")
+        .and_then(Value::as_array)
+        .ok_or_else(|| Refusal::new("source capsule result lacks artifacts"))?;
+    if artifacts.len() != 2 {
+        return Err(Refusal::new(
+            "source capsule result must contain exactly source and vendor archives",
+        ));
+    }
+    let mut names = BTreeSet::new();
+    let mut selected = None;
+    for artifact in artifacts {
+        let name = artifact
+            .get("name")
+            .and_then(Value::as_str)
+            .ok_or_else(|| Refusal::new("source capsule artifact lacks a name"))?;
+        let bytes = artifact
+            .get("bytes")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| Refusal::new("source capsule artifact lacks a byte count"))?;
+        let sha256 = artifact
+            .get("sha256")
+            .and_then(Value::as_str)
+            .ok_or_else(|| Refusal::new("source capsule artifact lacks a digest"))?;
+        if bytes == 0
+            || !is_sha256_digest(sha256)
+            || !names.insert(name.to_owned())
+            || (name != expected_source && name != expected_vendor)
+        {
+            return Err(Refusal::new(
+                "source capsule artifact set or identity is invalid",
+            ));
+        }
+        let path = root.join(name);
+        verify_file(&path, bytes, sha256)?;
+        if name == expected_source {
+            selected = Some(VerifiedSourceCapsule {
+                path,
+                identity: FileIdentity {
+                    name: name.to_owned(),
+                    bytes,
+                    sha256: sha256.to_owned(),
+                },
+            });
+        }
+    }
+    if names != BTreeSet::from([expected_source, expected_vendor]) {
+        return Err(Refusal::new(
+            "source capsule result omits a required archive",
+        ));
+    }
+    selected.ok_or_else(|| Refusal::new("source capsule archive is absent"))
+}
+
 fn render_release_sbom(
     version: &str,
     source_commit: &str,
@@ -1416,6 +1523,29 @@ fn git_identity(root: &Path, revision: &str) -> Result<String> {
     Ok(value.to_owned())
 }
 
+fn git_commit_epoch(root: &Path, revision: &str) -> Result<u64> {
+    let output = Command::new("git")
+        .args(["-C"])
+        .arg(root)
+        .args(["show", "-s", "--format=%ct", revision])
+        .output()?;
+    if !output.status.success() {
+        return Err(Refusal::new(
+            "could not resolve selected Git commit timestamp",
+        ));
+    }
+    let value = String::from_utf8(output.stdout)
+        .map_err(|_| Refusal::new("Git commit timestamp is not UTF-8"))?;
+    let epoch = value
+        .trim()
+        .parse::<u64>()
+        .map_err(|_| Refusal::new("Git commit timestamp is invalid"))?;
+    if epoch == 0 {
+        return Err(Refusal::new("Git commit timestamp must be positive"));
+    }
+    Ok(epoch)
+}
+
 fn require_git_id(value: &str, label: &str) -> Result<()> {
     if value.len() != 40
         || !value
@@ -1433,4 +1563,51 @@ fn usage() -> Refusal {
     Refusal::new(
         "usage: ami-rust-xtask toolchain-release-cutover {check --source-root DIR --contract FILE --version VERSION --output FILE|assemble --request FILE|prepare-qualification --assembly-root DIR --host HOST --output DIR|bind-catalog --assembly-root DIR --catalog-root DIR --catalog-commit COMMIT|finalize --assembly-root DIR|recover-public --assembly-root DIR --download DIR|verify-readback --assembly-root DIR --download DIR}",
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+
+    #[test]
+    fn source_capsule_must_match_the_selected_source_and_bytes() {
+        let root = std::env::temp_dir().join(format!(
+            "ami-rust-source-capsule-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir(&root).unwrap();
+        let version = "0.1.0";
+        let commit = "0123456789abcdef0123456789abcdef01234567";
+        let tree = "89abcdef0123456789abcdef0123456789abcdef";
+        let epoch = 1_793_095_486;
+        let source_name = format!("ami-rust-{version}-sources.tar.xz");
+        let vendor_name = format!("ami-rust-{version}-vendor.tar.xz");
+        let source_bytes = b"source capsule";
+        let vendor_bytes = b"vendor capsule";
+        fs::write(root.join(&source_name), source_bytes).unwrap();
+        fs::write(root.join(&vendor_name), vendor_bytes).unwrap();
+        let result = json!({
+            "schema":"ami-rust-toolchain-capsule-result-v1",
+            "status":"COMPLETED_LOCAL_UNSIGNED_CANDIDATE_ONLY",
+            "version":version,
+            "source":{"commit":commit,"tree":tree,"epoch":epoch},
+            "artifacts":[
+                {"name":source_name,"bytes":source_bytes.len(),"sha256":sha256_bytes(source_bytes)},
+                {"name":vendor_name,"bytes":vendor_bytes.len(),"sha256":sha256_bytes(vendor_bytes)}
+            ]
+        });
+        fs::write(root.join("result.json"), serde_json::to_vec(&result).unwrap()).unwrap();
+
+        let selected =
+            verified_source_capsule(&root, version, commit, tree, epoch).expect("valid capsule");
+        assert_eq!(selected.identity.name, source_name);
+
+        fs::write(root.join(&source_name), b"corrupted capsule").unwrap();
+        assert!(verified_source_capsule(&root, version, commit, tree, epoch).is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
 }

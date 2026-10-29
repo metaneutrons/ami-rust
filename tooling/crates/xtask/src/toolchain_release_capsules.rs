@@ -1402,8 +1402,8 @@ fn validate_version(version: &str) -> Result<()> {
         .map(|part| part.parse::<u64>())
         .collect::<std::result::Result<_, _>>()
         .map_err(|_| Refusal::new("version component is too large"))?;
-    if (parsed[0], parsed[1], parsed[2]) <= (0, 1, 0) {
-        return Err(Refusal::new("version must be later than stable 0.1.0"));
+    if (parsed[0], parsed[1], parsed[2]) < (0, 1, 0) {
+        return Err(Refusal::new("version must be at least stable 0.1.0"));
     }
     Ok(())
 }
@@ -1492,7 +1492,7 @@ fn usage() -> Refusal {
 
 #[cfg(test)]
 mod tests {
-    use super::{Deadline, produce_request, resolve_git};
+    use super::{Deadline, produce_request, resolve_git, validate_version};
     use lzma_rust2::XzReader;
     use serde_json::{Value, json};
     use std::{
@@ -1510,6 +1510,12 @@ mod tests {
 
     static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
     static TEST_SERIAL: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn initial_release_is_a_valid_capsule_version() {
+        assert!(validate_version("0.1.0").is_ok());
+        assert!(validate_version("0.0.0").is_err());
+    }
 
     struct TempTree(PathBuf);
 

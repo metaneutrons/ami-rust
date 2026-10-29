@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Prepare the catalog, publish a new draft, or recover an existing draft
+        description: Prepare the catalog or signed candidate, publish a new draft, or recover an existing draft
         type: choice
-        options: [prepare-catalog, publish, recover]
+        options: [prepare-catalog, prepare-signed, publish, recover]
         default: prepare-catalog
       qualification_run_id:
         description: Successful exact-candidate workflow run ID
@@ -214,7 +214,7 @@ jobs:
 
       - id: release-state
         name: Select a new, draft or already-public release state
-        if: inputs.mode != 'prepare-catalog'
+        if: inputs.mode == 'publish' || inputs.mode == 'recover'
         env:
           GH_TOKEN: ${{ github.token }}
           MODE: ${{ inputs.mode }}
@@ -263,7 +263,7 @@ jobs:
             --download "$RUNNER_TEMP/rp3-existing-public"
 
       - name: Sign every exact release subject
-        if: inputs.mode != 'prepare-catalog' && steps.release-state.outputs.public != 'true'
+        if: inputs.mode == 'prepare-signed' || ((inputs.mode == 'publish' || inputs.mode == 'recover') && steps.release-state.outputs.public != 'true')
         shell: bash
         env:
           TMPDIR: ${{ runner.temp }}
@@ -285,13 +285,13 @@ jobs:
 
       - id: attest
         name: Attest the complete signed release set
-        if: inputs.mode != 'prepare-catalog' && steps.release-state.outputs.public != 'true'
+        if: (inputs.mode == 'publish' || inputs.mode == 'recover') && steps.release-state.outputs.public != 'true'
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-checksums: ${{ runner.temp }}/rp3-assembly/attestation-subjects.sha256
 
       - name: Create or recover the unpublished draft and upload exact bytes
-        if: inputs.mode != 'prepare-catalog' && steps.release-state.outputs.public != 'true'
+        if: (inputs.mode == 'publish' || inputs.mode == 'recover') && steps.release-state.outputs.public != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           MODE: ${{ inputs.mode }}
@@ -314,7 +314,7 @@ jobs:
           fi
 
       - name: Download and verify every staged draft byte
-        if: inputs.mode != 'prepare-catalog'
+        if: inputs.mode == 'publish' || inputs.mode == 'recover'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
@@ -328,7 +328,7 @@ jobs:
             --assembly-root "$RUNNER_TEMP/rp3-assembly" --download "$RUNNER_TEMP/rp3-public-readback"
 
       - name: Expose the verified candidate as a prerelease
-        if: inputs.mode != 'prepare-catalog'
+        if: inputs.mode == 'publish' || inputs.mode == 'recover'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
@@ -340,7 +340,7 @@ jobs:
           fi
 
       - name: Read back every byte and signature anonymously
-        if: inputs.mode != 'prepare-catalog'
+        if: inputs.mode == 'publish' || inputs.mode == 'recover'
         env:
           VERSION: ${{ inputs.version }}
         shell: bash
@@ -367,7 +367,7 @@ jobs:
           done
 
       - name: Expose a stable non-latest candidate after complete anonymous readback
-        if: inputs.mode != 'prepare-catalog'
+        if: inputs.mode == 'publish' || inputs.mode == 'recover'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
@@ -378,3 +378,13 @@ jobs:
             "$RUNNER_TEMP/rp3-tools/gh" release edit "v$VERSION" --repo "$GITHUB_REPOSITORY" \
               --prerelease=false --latest=false
           fi
+
+      - name: Retain the signed exact candidate without creating a release
+        if: inputs.mode == 'prepare-signed'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: m7-signed-candidate-${{ inputs.version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/rp3-assembly/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

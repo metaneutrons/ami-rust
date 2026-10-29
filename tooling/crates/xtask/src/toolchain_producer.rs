@@ -145,7 +145,12 @@ fn produce(request: ProducerRequest) -> Result<()> {
 
     let cargo_payload = component_payload(&upstream_cargo.outer, "cargo")?;
     let cargo_binary = cargo_payload.join("bin/cargo");
-    let cargo_profile = materialize_cargo_component(&cargo_binary, &work.join("cargo-component"))?;
+    let cargo_profile = materialize_cargo_component(
+        &cargo_binary,
+        &work.join("cargo-component"),
+        &repository,
+        &plan,
+    )?;
 
     let mut bare_targets = Vec::new();
     for target in ["x86_64-unknown-aros-abi1", "x86_64-unknown-aros-abi11"] {
@@ -742,7 +747,12 @@ fn materialize_rust_installer_state(
     write_new(&rustlib.join("uninstall.sh"), &uninstall, 0o755)
 }
 
-fn materialize_cargo_component(binary: &Path, destination: &Path) -> Result<String> {
+fn materialize_cargo_component(
+    binary: &Path,
+    destination: &Path,
+    repository: &Path,
+    plan: &ProductionPlan,
+) -> Result<String> {
     let metadata = fs::symlink_metadata(binary)?;
     if !metadata.file_type().is_file() || metadata.len() == 0 {
         return Err(Refusal::new(
@@ -755,15 +765,46 @@ fn materialize_cargo_component(binary: &Path, destination: &Path) -> Result<Stri
         destination.join("bin/cargo"),
         fs::Permissions::from_mode(0o755),
     )?;
+    let mut files = vec![json!({
+        "path": "bin/cargo",
+        "bytes": metadata.len(),
+        "sha256": sha256_file(binary)?,
+        "mode": 493,
+    })];
+    let notice_root = destination.join("share/doc/ami-rust");
+    fs::create_dir_all(&notice_root)?;
+    for (role, name) in [
+        ("project-license-apache", "LICENSE-APACHE"),
+        ("project-license-mit", "LICENSE-MIT"),
+        ("project-license-summary", "LICENSE.md"),
+        ("project-third-party-notices", "THIRD_PARTY_NOTICES.md"),
+        ("aros-apl-license", "APL-1.1.txt"),
+        ("csdk-source-availability", "SOURCE-AVAILABILITY.md"),
+        ("csdk-portability-changes", "CSDK-CHANGES.md"),
+        ("abi11-csdk-notes", "ABI11-CSDK.md"),
+        ("sdk-api", "SDK-API.md"),
+        ("license-review", "licence-review.json"),
+    ] {
+        let (input, source) = local(plan, role, repository)?;
+        let target = notice_root.join(name);
+        fs::copy(&source, &target)?;
+        fs::set_permissions(&target, fs::Permissions::from_mode(0o644))?;
+        files.push(json!({
+            "path": format!("share/doc/ami-rust/{name}"),
+            "bytes": input.bytes,
+            "sha256": input.sha256,
+            "mode": 420,
+        }));
+    }
+    files.sort_by(|left, right| {
+        left.get("path")
+            .and_then(Value::as_str)
+            .cmp(&right.get("path").and_then(Value::as_str))
+    });
     let profile = json!({
         "schema": "ami-rust-official-cargo-component-v1",
-        "origin": "official Cargo component from the pinned Rust distribution",
-        "files": [{
-            "path": "bin/cargo",
-            "bytes": metadata.len(),
-            "sha256": sha256_file(binary)?,
-            "mode": 493,
-        }],
+        "origin": "official Cargo component from the pinned Rust distribution plus contract-pinned ami-rust and AROS notices",
+        "files": files,
         "symlinks": [],
     });
     serde_json::to_string(&profile)
