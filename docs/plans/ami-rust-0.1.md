@@ -1,7 +1,7 @@
 # Initiative plan: ami-rust 0.1 with ABI1, ABI11, and safe MUI
 
-Epic: pending tracking setup
-Decision state: accepted by the maintainer on 2026-10-29; tracking links pending
+Epic: https://github.com/metaneutrons/ami-rust/issues/6
+Decision state: accepted by the maintainer on 2026-10-29; proposed in PR #5
 
 ## Outcome and boundaries
 
@@ -85,7 +85,7 @@ integration coverage; exact-candidate qualification is reserved for M7.
 
 ### M1: Qualify the x86-64 ABI11 baseline
 
-Execution: pending tracking setup
+Execution: https://github.com/metaneutrons/ami-rust/issues/7
 Dependencies: pinned ABI1 and ABI11 inputs stated by this plan
 
 - M1-A1: Pin a bootable ABI11 image, complete SDK, native toolchain, and target
@@ -99,7 +99,7 @@ Dependencies: pinned ABI1 and ABI11 inputs stated by this plan
 
 ### M2: Generate the canonical MUI API model with xtask
 
-Execution: pending tracking setup
+Execution: https://github.com/metaneutrons/ami-rust/issues/8
 Dependencies: pinned header inputs; M1 may proceed independently
 
 - M2-A1: Inventory every public class, superclass relation, attribute, access
@@ -114,7 +114,7 @@ Dependencies: pinned header inputs; M1 may proceed independently
 
 ### M3: Complete raw MUI and BOOPSI bindings
 
-Execution: pending tracking setup
+Execution: https://github.com/metaneutrons/ami-rust/issues/9
 Dependencies: M1 and M2
 
 - M3-A1: Generate the complete public raw MUI class, attribute, method, value,
@@ -129,7 +129,7 @@ Dependencies: M1 and M2
 
 ### M4: Implement the safe generic MUI object model
 
-Execution: pending tracking setup
+Execution: https://github.com/metaneutrons/ami-rust/issues/10
 Dependencies: M3
 
 - M4-A1: Implement task-affine `Mui`, scope, typed object, class, attribute,
@@ -144,7 +144,7 @@ Dependencies: M3
 
 ### M5: Generate all public standard MUI classes
 
-Execution: pending tracking setup
+Execution: https://github.com/metaneutrons/ami-rust/issues/11
 Dependencies: M4
 
 - M5-A1: Generate a class marker, superclass relation, builder, valid
@@ -161,7 +161,7 @@ Dependencies: M4
 
 ### M6: Implement notifications, hooks, event loop, and custom classes
 
-Execution: pending tracking setup
+Execution: https://github.com/metaneutrons/ami-rust/issues/12
 Dependencies: M5
 
 - M6-A1: Provide typed notifications and a safe Application event loop.
@@ -174,7 +174,7 @@ Dependencies: M5
 
 ### M7: Qualify and prepare the ami-rust 0.1 release candidate
 
-Execution: pending tracking setup
+Execution: https://github.com/metaneutrons/ami-rust/issues/13
 Dependencies: M1 through M6
 
 - M7-A1: Build the exact candidate on macOS ARM64, Linux x86-64, and Linux
