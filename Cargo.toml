@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/aros", "crates/aros-sys", "crates/aros-mui-sys", "crates/aros-mui", "examples/minimal", "examples/sha256sum", "tests/qualification", "tests/dependencies", "tests/m1-runtime"]
+members = ["crates/aros", "crates/aros-sys", "crates/aros-mui-sys", "crates/aros-mui", "examples/minimal", "examples/sha256sum", "tests/qualification", "tests/dependencies"]
 [workspace.package]
 version = "0.1.0"
 edition = "2024"

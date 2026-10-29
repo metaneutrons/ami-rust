@@ -15,15 +15,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ami-rust-m1-runtime"
-version = "0.1.0"
-dependencies = [
- "aros",
- "aros-mui",
- "aros-native-build",
-]
-
-[[package]]
 name = "ami-rust-minimal"
 version = "0.1.0"
 dependencies = [
