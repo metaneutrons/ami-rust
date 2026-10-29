@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/ami-rust-hero.svg" alt="ami-rust — Rust for AROS" width="100%">
+  <img src="assets/ami-rust-hero.svg" alt="ami-rust — Rust for AROS x86-64 ABI-v1 and ABI-v11" width="100%">
 </p>
 
 <p align="center">

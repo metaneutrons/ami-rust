@@ -19,7 +19,7 @@ and results are recorded in [the M1 qualification](m1-qualification.md).
 | Native collector | Pinned host-native collector included in each SDK; exact bytes/profile in the authenticated host inventory |
 | AROS C SDK | ABI1: source-derived portable Developer tree pinned by `release/portable-csdk/spec.json`; ABI11: complete `SDK-202609-any-x86_64.zip`, SHA-256 `8a4e5f09f027844501c1421bd3948c4e55ceb005a16b0bd3575276f40c8977e6` |
 | Boot images | ABI1 SHA-256 `9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1`; ABI11 SHA-256 `2228f09c73f8c7650372543e9a97f93020a1fab7ebbf4865b194c5aa9cc8ccd7` |
-| QEMU | 11.1.2; pc-i440fx-11.1, qemu64-v1, TCG single, one CPU, 512 MiB RAM, no network, immutable ISO, full 512 MiB FAT test medium |
+| QEMU | 11.1.3, binary SHA-256 `0dba441e49c3cda068f3b33916ad9d2146d173d9bb65a6a62ce2e61d3211baaf`; pc-i440fx-11.1, qemu64-v1, TCG single, one CPU, 512 MiB RAM, no network, immutable ISO, full 512 MiB FAT test medium |
 
 The qualification profile uses a 128 KiB startup stack and requires measured
 stack use of at most 96 KiB. These are stack conditions for the PC x86-64 QEMU

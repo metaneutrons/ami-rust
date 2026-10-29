@@ -15,6 +15,12 @@ model. Foreign pointers and incomplete or unproven native contracts remain
 behind explicit unsafe raw operations. Raw tags, native pointers and vector
 calls remain in aros-mui-sys.
 
+M6 adds typed notifications, scope-retained non-reentrant hooks, the Application
+event loop, format-free synchronous requesters and a regular custom-class
+workflow with fallible Rust instance data. Safe callback and custom-class
+handles cannot outlive their scope. Arbitrary foreign dispatch messages remain
+an explicit raw boundary.
+
 The generated docs/mui-safe-api.md file at the repository root records every
 operation's ABI availability and safe, typed-unsafe, raw, or unavailable
 classification.

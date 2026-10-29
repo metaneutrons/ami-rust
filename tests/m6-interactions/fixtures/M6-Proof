@@ -1,0 +1,5 @@
+FailAt 21
+SYS:M6INTERACTIONS
+Echo "ami-rust M6 process returned $RC"
+Wait 60 SECS
+EndCLI
