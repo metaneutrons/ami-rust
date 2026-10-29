@@ -27,7 +27,7 @@ use std::{
 
 const REQUEST_SCHEMA: &str = "ami-rust-native-prefix-compose-request-v1";
 const EXPECTED_CORE_NATIVE_PREFIX_SHA256: &str =
-    "f1bbab4e77a636e91fcb6d91a7cf3796ac7f4cfbf6cc8bf378afcbd7fc6b25a9";
+    "08cc524a7642bdbc845297d61f731fe76e3496bba91f7899c4fe3f611dd9c54b";
 const EXPECTED_INPUTS_RS_SHA256: &str =
     "143829afaedcb1bbb1fa29891f243dcf790adeae568a2ad30e61f68be325547e";
 const EXPECTED_PUBLIC_VIEW_RS_SHA256: &str =
