@@ -1,4 +1,4 @@
-//! RP1's single production input and output contract.
+//! M7's dual-ABI production input and output contract.
 //!
 //! This reader performs no acquisition and writes no output. It validates the
 //! complete declarative contract, checks every repository-owned input, and
@@ -20,18 +20,16 @@ use std::{
 };
 use tar::Archive;
 
-const SCHEMA: &str = "ami-rust-production-contract-v1";
-const STATUS: &str = "RP1_FROZEN_INPUT_AND_OUTPUT_CONTRACT_NOT_PRODUCED";
-const HOSTS: [(&str, &str, Option<&str>); 3] = [
-    ("linux-aarch64", "aarch64-unknown-linux-gnu", Some("arm64")),
-    ("linux-x86_64", "x86_64-unknown-linux-gnu", Some("amd64")),
-    ("macos-aarch64", "aarch64-apple-darwin", None),
+const SCHEMA: &str = "ami-rust-production-contract-v2";
+const STATUS: &str = "M7_RELEASE_CANDIDATE_CONTRACT_NOT_PUBLISHED";
+const HOSTS: [(&str, &str); 3] = [
+    ("linux-aarch64", "aarch64-unknown-linux-gnu"),
+    ("linux-x86_64", "x86_64-unknown-linux-gnu"),
+    ("macos-aarch64", "aarch64-apple-darwin"),
 ];
 const REQUIRED_INPUTS: &[&str] = &[
-    "cargo-openssl-overlay",
-    "cargo-openssl-path-patch",
-    "cargo-reproducibility-patch",
-    "cargo-source-contract",
+    "abi11-portable-csdk-archive",
+    "abi11-portable-csdk-member-inventory",
     "csdk-corresponding-source",
     "csdk-source-inventory",
     "next-genmodule-patch-series",
@@ -40,25 +38,24 @@ const REQUIRED_INPUTS: &[&str] = &[
     "portable-csdk-patch-series",
     "producer-vendor-archive",
     "producer-vendor-inventory",
-    "published-source-closure",
     "rust-channel-manifest",
     "rust-src",
-    "target-library-contract",
-    "target-specification",
+    "target-definition-abi1",
+    "target-definition-abi11",
+    "target-specification-abi1",
+    "target-specification-abi11",
     "target-vendor-archive",
 ];
 const REQUIRED_OUTPUTS: &[&str] = &[
-    "aros-target-sysroot",
+    "abi1-csdk-sysroot",
+    "abi11-csdk-sysroot",
+    "aros-abi1-target-sysroot",
+    "aros-abi11-target-sysroot",
     "artifact-signature",
     "build-provenance",
-    "debian-package",
-    "debian-package-input",
     "direct-archive",
-    "homebrew-formula",
-    "homebrew-formula-input",
     "host-file-inventory",
     "host-sdk-tree",
-    "portable-csdk-sysroot",
     "release-checksums",
     "release-inventory",
     "release-notices",
@@ -72,7 +69,6 @@ const REQUIRED_OUTPUTS: &[&str] = &[
 ];
 const REQUIRED_LICENSES: &[&str] = &[
     "aros-sdk",
-    "paired-cargo",
     "producer-vendor",
     "project",
     "project-mit",
@@ -87,7 +83,7 @@ struct ProductionContract {
     status: String,
     release_epoch: u64,
     product: Product,
-    target: Target,
+    targets: Vec<Target>,
     toolchain: Toolchain,
     hosts: Vec<Host>,
     inputs: Vec<Input>,
@@ -133,7 +129,6 @@ struct Host {
     key: String,
     rust_triple: String,
     artifact_suffix: String,
-    debian_arch: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -230,7 +225,6 @@ pub struct ProductionContractSummary {
 pub struct ProductionHost {
     pub key: String,
     pub rust_triple: String,
-    pub debian_arch: Option<String>,
 }
 
 /// One authenticated producer input selected from the frozen RP1 contract.
@@ -260,7 +254,7 @@ pub struct ProductionPlan {
     pub manifest_sha256: String,
     pub release_epoch: u64,
     pub host: ProductionHost,
-    pub target_triple: String,
+    pub target_triples: Vec<String>,
     pub inputs: Vec<ProductionInput>,
     pub outputs: Vec<ProductionOutput>,
 }
@@ -287,14 +281,14 @@ pub fn verify_production_contract(
     hosts.sort();
     Ok(ProductionContractSummary {
         schema: SCHEMA,
-        status: "VERIFIED_RP1_PRODUCTION_CONTRACT",
+        status: "VERIFIED_M7_RELEASE_CANDIDATE_CONTRACT",
         manifest_sha256,
         release_epoch: contract.release_epoch,
         hosts,
         inputs: contract.inputs.len(),
         outputs: contract.outputs.len(),
         portable_csdk_members,
-        decision: "contract verification only; production, signing and publication remain disabled",
+        decision: "candidate contract verification only; production, signing and publication remain separate",
     })
 }
 
@@ -321,11 +315,10 @@ pub fn production_plan(
         .hosts
         .iter()
         .find(|host| host.key == host_key)
-        .ok_or_else(|| Refusal::new("production host is not declared by the RP1 contract"))?;
+        .ok_or_else(|| Refusal::new("production host is not declared by the M7 contract"))?;
     let selected = ProductionHost {
         key: host.key.clone(),
         rust_triple: host.rust_triple.clone(),
-        debian_arch: host.debian_arch.clone(),
     };
     let inputs = contract
         .inputs
@@ -348,13 +341,7 @@ pub fn production_plan(
             output.hosts.is_empty() || output.hosts.iter().any(|host| host == host_key)
         })
         .map(|output| {
-            let path = resolve_output_path(
-                &output.path,
-                version,
-                host_key,
-                &host.artifact_suffix,
-                host.debian_arch.as_deref(),
-            )?;
+            let path = resolve_output_path(&output.path, version, host_key, &host.artifact_suffix)?;
             Ok(ProductionOutput {
                 role: output.role.clone(),
                 kind: output.kind.clone(),
@@ -367,7 +354,11 @@ pub fn production_plan(
         manifest_sha256,
         release_epoch: contract.release_epoch,
         host: selected,
-        target_triple: contract.target.triple,
+        target_triples: contract
+            .targets
+            .iter()
+            .map(|target| target.triple.clone())
+            .collect(),
         inputs,
         outputs,
     })
@@ -399,18 +390,11 @@ fn resolve_output_path(
     version: &str,
     host: &str,
     artifact: &str,
-    debian_arch: Option<&str>,
 ) -> Result<String> {
-    let mut path = template
+    let path = template
         .replace("{version}", version)
         .replace("{host}", host)
         .replace("{artifact}", artifact);
-    if path.contains("{debian_arch}") {
-        let architecture = debian_arch.ok_or_else(|| {
-            Refusal::new("host-independent output unexpectedly requires a Debian architecture")
-        })?;
-        path = path.replace("{debian_arch}", architecture);
-    }
     if path.contains('{') || path.contains('}') {
         return Err(Refusal::new(
             "production output retained an unresolved template",
@@ -423,7 +407,7 @@ fn resolve_output_path(
 fn verify_contract(repository_root: &Path, contract: &ProductionContract) -> Result<usize> {
     if contract.schema != SCHEMA || contract.status != STATUS || contract.release_epoch == 0 {
         return Err(Refusal::new(
-            "production contract identity is not the frozen RP1 schema",
+            "production contract identity is not the M7 candidate schema",
         ));
     }
     if contract.product.name != "ami-rust"
@@ -434,15 +418,7 @@ fn verify_contract(repository_root: &Path, contract: &ProductionContract) -> Res
             "production contract product boundary is invalid",
         ));
     }
-    if contract.target.triple != "x86_64-aros"
-        || contract.target.abi != "AROS ABI-v1"
-        || contract.target.baseline.is_empty()
-        || contract.target.spec_role != "target-specification"
-    {
-        return Err(Refusal::new(
-            "production contract target boundary is invalid",
-        ));
-    }
+    verify_targets(&contract.targets)?;
     verify_toolchain(&contract.toolchain)?;
     let known_hosts = verify_hosts(&contract.hosts)?;
     let license_ids = verify_licenses(repository_root, &contract.licenses)?;
@@ -455,37 +431,43 @@ fn verify_contract(repository_root: &Path, contract: &ProductionContract) -> Res
     verify_outputs(&contract.outputs, &known_hosts)?;
     verify_rules(&contract.rules)?;
 
-    let portable = contract
-        .inputs
-        .iter()
-        .find(|input| input.role == "portable-csdk-archive")
-        .ok_or_else(|| Refusal::new("production contract omits portable C-SDK archive"))?;
-    let archive = portable
-        .archive
-        .as_ref()
-        .ok_or_else(|| Refusal::new("portable C-SDK archive contract is absent"))?;
-    if archive.format != "tar.xz" {
-        return Err(Refusal::new("portable C-SDK archive format is not tar.xz"));
+    let mut members = 0_usize;
+    for role in ["portable-csdk-archive", "abi11-portable-csdk-archive"] {
+        let input = contract
+            .inputs
+            .iter()
+            .find(|input| input.role == role)
+            .ok_or_else(|| Refusal::new(format!("production contract omits {role}")))?;
+        let archive = input
+            .archive
+            .as_ref()
+            .ok_or_else(|| Refusal::new(format!("{role} contract is absent")))?;
+        if archive.format != "tar.xz" {
+            return Err(Refusal::new(format!("{role} format is not tar.xz")));
+        }
+        let archive_path = input
+            .source
+            .path
+            .as_ref()
+            .ok_or_else(|| Refusal::new(format!("{role} must be a repository input")))?;
+        let inventory_path = archive
+            .member_inventory
+            .as_ref()
+            .ok_or_else(|| Refusal::new(format!("{role} member inventory is absent")))?;
+        if !paths.contains(inventory_path) {
+            return Err(Refusal::new(format!(
+                "{role} member inventory is not a declared input"
+            )));
+        }
+        members = members
+            .checked_add(verify_member_inventory(
+                &repository_root.join(archive_path),
+                &repository_root.join(inventory_path),
+                &archive.root,
+            )?)
+            .ok_or_else(|| Refusal::new("C-SDK member count overflow"))?;
     }
-    let archive_path = portable
-        .source
-        .path
-        .as_ref()
-        .ok_or_else(|| Refusal::new("portable C-SDK must be a repository input"))?;
-    let inventory_path = archive
-        .member_inventory
-        .as_ref()
-        .ok_or_else(|| Refusal::new("portable C-SDK member inventory is absent"))?;
-    if !paths.contains(inventory_path) {
-        return Err(Refusal::new(
-            "portable C-SDK member inventory is not a declared input",
-        ));
-    }
-    verify_member_inventory(
-        &repository_root.join(archive_path),
-        &repository_root.join(inventory_path),
-        &archive.root,
-    )
+    Ok(members)
 }
 
 fn verify_toolchain(toolchain: &Toolchain) -> Result<()> {
@@ -494,10 +476,10 @@ fn verify_toolchain(toolchain: &Toolchain) -> Result<()> {
         || toolchain.rust_llvm != "23.1.1"
         || toolchain.cargo_version.is_empty()
         || !git_identity(&toolchain.cargo_commit)
-        || !toolchain.cargo_patch_required
+        || toolchain.cargo_patch_required
         || toolchain.cargo_source_build_in_active_producer
         || toolchain.rustc_source_build_in_active_producer
-        || !toolchain.cargo_delivery.contains("authenticated prebuilt")
+        || toolchain.cargo_delivery != "official Cargo component from the pinned Rust distribution"
     {
         return Err(Refusal::new(
             "production toolchain selection is incomplete or inconsistent",
@@ -506,24 +488,50 @@ fn verify_toolchain(toolchain: &Toolchain) -> Result<()> {
     Ok(())
 }
 
+fn verify_targets(targets: &[Target]) -> Result<()> {
+    let actual = targets
+        .iter()
+        .map(|target| {
+            if target.baseline.is_empty() {
+                return Err(Refusal::new("production contract target baseline is empty"));
+            }
+            Ok((
+                target.triple.as_str(),
+                target.abi.as_str(),
+                target.spec_role.as_str(),
+            ))
+        })
+        .collect::<Result<BTreeSet<_>>>()?;
+    let expected = BTreeSet::from([
+        (
+            "x86_64-unknown-aros-abi1",
+            "AROS ABI-v1",
+            "target-specification-abi1",
+        ),
+        (
+            "x86_64-unknown-aros-abi11",
+            "AROS ABI-v11",
+            "target-specification-abi11",
+        ),
+    ]);
+    if actual != expected || targets.len() != expected.len() {
+        return Err(Refusal::new(
+            "production contract target matrix differs from M7",
+        ));
+    }
+    Ok(())
+}
+
 fn verify_hosts(hosts: &[Host]) -> Result<BTreeSet<String>> {
     let expected = HOSTS
         .iter()
-        .map(|(key, triple, arch)| {
-            (
-                (*key).to_owned(),
-                ((*triple).to_owned(), arch.map(str::to_owned)),
-            )
-        })
+        .map(|(key, triple)| ((*key).to_owned(), (*triple).to_owned()))
         .collect::<BTreeMap<_, _>>();
     let mut actual = BTreeMap::new();
     for host in hosts {
         if host.artifact_suffix != host.key
             || actual
-                .insert(
-                    host.key.clone(),
-                    (host.rust_triple.clone(), host.debian_arch.clone()),
-                )
+                .insert(host.key.clone(), host.rust_triple.clone())
                 .is_some()
         {
             return Err(Refusal::new(
@@ -533,7 +541,7 @@ fn verify_hosts(hosts: &[Host]) -> Result<BTreeSet<String>> {
     }
     if actual != expected {
         return Err(Refusal::new(
-            "production contract host matrix differs from RP1",
+            "production contract host matrix differs from M7",
         ));
     }
     Ok(actual.into_keys().collect())
@@ -650,7 +658,6 @@ fn verify_inputs(
             "rustc",
             "host-rust-std",
             "upstream-cargo",
-            "paired-cargo",
             "native-link-tools",
             "collector",
         ] {
@@ -803,7 +810,7 @@ fn safe_relative(value: &str, templates: bool, label: &str) -> Result<()> {
             let end = after
                 .find('}')
                 .ok_or_else(|| Refusal::new(format!("{label} has an incomplete template")))?;
-            if !["artifact", "debian_arch", "host", "version"].contains(&&after[..end]) {
+            if !["artifact", "host", "version"].contains(&&after[..end]) {
                 return Err(Refusal::new(format!("{label} has an unknown template")));
             }
             rest = &after[end + 1..];
@@ -848,6 +855,7 @@ fn verify_member_inventory(
     let input = File::open(archive_path)?;
     let decoder = XzReader::new_mem_limit(input, true, 64 * 1024);
     let mut archive = Archive::new(decoder);
+    let mut directories = BTreeSet::new();
     for entry in archive
         .entries()
         .map_err(|error| Refusal::new(format!("could not read portable C-SDK archive: {error}")))?
@@ -855,16 +863,34 @@ fn verify_member_inventory(
         let mut entry = entry.map_err(|error| {
             Refusal::new(format!("could not read portable C-SDK member: {error}"))
         })?;
+        let raw = entry.path_bytes();
+        let path = std::str::from_utf8(raw.as_ref())
+            .map_err(|_| Refusal::new("portable C-SDK member path is not UTF-8"))?;
+        let path = path.strip_suffix('/').unwrap_or(path);
+        let prefix = format!("{root}/");
+        if entry.header().entry_type().is_dir() {
+            if entry.header().size()? != 0
+                || (path != root && !path.starts_with(&prefix))
+                || !directories.insert(path.to_owned())
+            {
+                return Err(Refusal::new(
+                    "portable C-SDK archive has an invalid directory member",
+                ));
+            }
+            if path != root {
+                let relative = path.strip_prefix(&prefix).ok_or_else(|| {
+                    Refusal::new("portable C-SDK directory escapes its declared root")
+                })?;
+                safe_relative(relative, false, "portable C-SDK archive directory")?;
+            }
+            continue;
+        }
         if !entry.header().entry_type().is_file() {
             return Err(Refusal::new(
                 "portable C-SDK archive has an undeclared non-file member",
             ));
         }
-        let raw = entry.path_bytes();
-        let path = std::str::from_utf8(raw.as_ref())
-            .map_err(|_| Refusal::new("portable C-SDK member path is not UTF-8"))?;
         safe_relative(path, false, "portable C-SDK archive member")?;
-        let prefix = format!("{root}/");
         let relative = path
             .strip_prefix(&prefix)
             .ok_or_else(|| Refusal::new("portable C-SDK member escapes its declared root"))?;
@@ -931,25 +957,25 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the complete RP1 repository input closure"]
-    fn accepts_the_real_rp1_contract() {
+    #[ignore = "requires the complete M7 repository input closure"]
+    fn accepts_the_real_m7_contract() {
         let summary = verify_production_contract(
             &repository_root(),
             Path::new("release/rust-production-contract.json"),
         )
-        .expect("real RP1 contract must pass");
+        .expect("real M7 contract must pass");
         assert_eq!(
             summary.manifest_sha256,
-            "69fd8e053552bf76c78f794f6f25d17179ba2d4855343662965b41301326396c"
+            "bd4a2c12dfd751c05240acea2a315c6a3615f614f7786cc9082130e48ce51f57"
         );
-        assert_eq!(summary.inputs, 36);
-        assert_eq!(summary.outputs, 21);
-        assert_eq!(summary.portable_csdk_members, 2835);
+        assert_eq!(summary.inputs, 32);
+        assert_eq!(summary.outputs, 19);
+        assert_eq!(summary.portable_csdk_members, 3049);
         assert_eq!(summary.hosts.len(), 3);
     }
 
     #[test]
-    #[ignore = "requires the complete RP1 repository input closure"]
+    #[ignore = "requires the complete M7 repository input closure"]
     fn refuses_one_altered_repository_digest() {
         let root = repository_root();
         let mut contract: ProductionContract = read_json(
@@ -960,7 +986,7 @@ mod tests {
         contract
             .inputs
             .iter_mut()
-            .find(|input| input.role == "target-specification")
+            .find(|input| input.role == "target-specification-abi1")
             .unwrap()
             .sha256 = "0".repeat(64);
         assert!(verify_contract(&root, &contract).is_err());

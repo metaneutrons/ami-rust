@@ -15,7 +15,6 @@ use ami_rust_core::{
     digest::{sha256_bytes, sha256_file},
     directory::Directory,
     files::read_regular_bounded,
-    inventory::FileIdentity,
     json::{JsonProfile, parse_json_value},
     production_contract::{ProductionInput, ProductionPlan, production_plan},
     toolchain_package::{
@@ -132,11 +131,6 @@ fn produce(request: ProducerRequest) -> Result<()> {
         &extracted_root,
         "upstream-cargo",
     )?;
-    let cargo = extract_input(
-        remote(&plan, &acquired_inputs, &format!("paired-cargo-{host_key}"))?,
-        &extracted_root,
-        "paired-cargo",
-    )?;
     let source_rust = work.join("source-rust");
     merge_component_payload(&rustc.outer.join("rustc"), &source_rust)?;
     merge_component_payload(
@@ -149,27 +143,29 @@ fn produce(request: ProducerRequest) -> Result<()> {
     merge_component_payload(&upstream_cargo.outer.join("cargo"), &source_rust)?;
     materialize_rust_installer_state(&source_rust, &upstream_cargo.outer, &plan.host.rust_triple)?;
 
-    let cargo_payload = component_payload(&cargo.outer, "cargo")?;
+    let cargo_payload = component_payload(&upstream_cargo.outer, "cargo")?;
     let cargo_binary = cargo_payload.join("bin/cargo");
-    materialize_cargo_component(
-        &repository,
-        host_key,
-        &cargo_binary,
-        &work.join("cargo-component"),
-    )?;
+    let cargo_profile = materialize_cargo_component(&cargo_binary, &work.join("cargo-component"))?;
 
-    let bare_output = work.join("bare-output");
-    bare_target_producer::produce(bare_target_producer::BareTargetRequest {
-        host: host_key.to_owned(),
-        rust_profile: repository.join(bare_target_producer::profile_relative_path(host_key)?),
-        host_rust: source_rust.clone(),
-        native_cargo: work.join("cargo-component/bin/cargo"),
-        target_pin: repository.join("tooling/crates/aros-native-build/pins/target.json"),
-        target_spec: repository.join("targets/x86_64-aros.json"),
-        work: work.join("bare-work"),
-        output: bare_output.clone(),
-    })?;
-    check_deadline(started)?;
+    let mut bare_targets = Vec::new();
+    for target in ["x86_64-unknown-aros-abi1", "x86_64-unknown-aros-abi11"] {
+        let bare_output = work.join(format!("bare-output-{target}"));
+        bare_target_producer::produce(bare_target_producer::BareTargetRequest {
+            host: host_key.to_owned(),
+            rust_profile: repository.join(bare_target_producer::profile_relative_path(host_key)?),
+            host_rust: source_rust.clone(),
+            native_cargo: work.join("cargo-component/bin/cargo"),
+            target_pin: repository.join(format!(
+                "tooling/crates/aros-native-build/pins/{target}.json"
+            )),
+            target_spec: repository.join(format!("targets/{target}.json")),
+            work: work.join(format!("bare-work-{target}")),
+            output: bare_output.clone(),
+        })?;
+        check_deadline(started)?;
+        let profile = source_built_target_profile(&bare_output, target, host_key)?;
+        bare_targets.push((target, bare_output, profile));
+    }
 
     // The bare-target producer retains its established 512-MiB parent-process
     // reservation. Extract larger inputs only after that bounded phase so an
@@ -193,6 +189,18 @@ fn produce(request: ProducerRequest) -> Result<()> {
         &extracted_root,
         "portable-csdk",
     )?;
+    let abi11_csdk = extract_input(
+        local(&plan, "abi11-portable-csdk-archive", &repository)?,
+        &extracted_root,
+        "abi11-portable-csdk",
+    )?;
+    let abi11_profile_raw = read_regular_bounded(
+        &repository.join("release/abi11-csdk/profile.json"),
+        JsonProfile::PackageMetadataStateSelection.max_bytes(),
+    )?;
+    let abi11_profile = std::str::from_utf8(&abi11_profile_raw)
+        .map_err(|_| Refusal::new("ABI11 C SDK profile is not UTF-8"))?
+        .to_owned();
     let producer_vendor = extract_input(
         local(&plan, "producer-vendor-archive", &repository)?,
         &extracted_root,
@@ -200,9 +208,6 @@ fn produce(request: ProducerRequest) -> Result<()> {
     )?;
 
     let linker = build_linker(&repository, &work, &plan, &producer_vendor.outer, started)?;
-    let (_, target_profile_path) = local(&plan, "target-library-contract", &repository)?;
-    let target_profile = source_built_target_profile(&bare_output, &target_profile_path, host_key)?;
-
     let output_parent = fs::canonicalize(
         output
             .parent()
@@ -223,11 +228,22 @@ fn produce(request: ProducerRequest) -> Result<()> {
         let sdk = sdk_parent.join("sdk");
         let llvm_root = component_payload(&llvm.outer, "toolchain")?;
         let csdk_root = component_payload(&csdk.outer, "Developer")?;
+        let abi11_csdk_root = component_payload(&abi11_csdk.outer, "Developer")?;
         let collector_root = component_payload(
             &collector.outer,
             &format!("aros-tools-v0.3.19-{}", plan.host.rust_triple),
         )?;
-        let composition = native_prefix_compose::compose_candidate_with_target_profile(
+        let target_profiles = bare_targets
+            .iter()
+            .map(
+                |(name, output, profile)| native_prefix_compose::TargetProfileInput {
+                    name,
+                    libraries_root: output.join("libraries"),
+                    profile,
+                },
+            )
+            .collect::<Vec<_>>();
+        let composition = native_prefix_compose::compose_candidate_with_target_profiles(
             host_key,
             &plan.host.rust_triple,
             &repository,
@@ -238,7 +254,6 @@ fn produce(request: ProducerRequest) -> Result<()> {
                 llvm_root,
                 csdk_root,
                 collector_root,
-                bare_output.join("libraries"),
             ],
             native_prefix_compose::LinkerIdentity {
                 root: linker.root,
@@ -247,7 +262,12 @@ fn produce(request: ProducerRequest) -> Result<()> {
                 build_request_sha256: linker.request_sha256,
                 build_record_sha256: linker.record_sha256,
             },
-            &target_profile,
+            Some(&cargo_profile),
+            &target_profiles,
+            Some(native_prefix_compose::AdditionalCsdkInput {
+                root: abi11_csdk_root,
+                profile: &abi11_profile,
+            }),
         )?;
         if !composition.receipt.symlinks.is_empty() {
             return Err(Refusal::new(
@@ -296,26 +316,7 @@ fn produce(request: ProducerRequest) -> Result<()> {
             )?;
         }
         fs::remove_dir(native_temp)?;
-        let mut release_artifacts = native.artifacts;
-        if host_key == "linux-x86_64" {
-            let (source_input, source_path) =
-                remote(&plan, &acquired_inputs, "published-source-closure")?;
-            let source_name = format!("ami-rust-{}-sources.tar.xz", request.version);
-            let destination = artifacts_parent.join(&source_name);
-            fs::copy(&source_path, &destination)?;
-            verify_identity(
-                &destination,
-                source_input.bytes,
-                &source_input.sha256,
-                "published-source-closure",
-            )?;
-            release_artifacts.push(ami_rust_core::toolchain_package::PackagedArtifact {
-                role: "release-sources".to_owned(),
-                path: source_name,
-                bytes: source_input.bytes,
-                sha256: source_input.sha256.clone(),
-            });
-        }
+        let release_artifacts = native.artifacts;
 
         let declared = plan
             .outputs
@@ -333,8 +334,10 @@ fn produce(request: ProducerRequest) -> Result<()> {
                     "consumers": row.consumers,
                     "materialized": artifact.is_some()
                         || row.role == "host-sdk-tree"
-                        || row.role == "aros-target-sysroot"
-                        || row.role == "portable-csdk-sysroot"
+                        || row.role == "aros-abi1-target-sysroot"
+                        || row.role == "aros-abi11-target-sysroot"
+                        || row.role == "abi1-csdk-sysroot"
+                        || row.role == "abi11-csdk-sysroot"
                         || row.role == "host-file-inventory",
                     "identity": artifact,
                 })
@@ -350,7 +353,7 @@ fn produce(request: ProducerRequest) -> Result<()> {
             "status": "RP2_OFFLINE_UNSIGNED_TOOLCHAIN_PRODUCED",
             "version": request.version,
             "host": plan.host,
-            "target": plan.target_triple,
+            "targets": &plan.target_triples,
             "production_contract_sha256": plan.manifest_sha256,
             "release_epoch": plan.release_epoch,
             "sdk": {
@@ -374,7 +377,7 @@ fn produce(request: ProducerRequest) -> Result<()> {
             "status": "RP2_OFFLINE_UNSIGNED_TOOLCHAIN_PRODUCED",
             "version": request.version,
             "host": plan.host.key,
-            "target": plan.target_triple,
+            "targets": &plan.target_triples,
             "inventory": {
                 "path": inventory_path.path,
                 "bytes": fs::symlink_metadata(&path)?.len(),
@@ -405,49 +408,18 @@ fn produce(request: ProducerRequest) -> Result<()> {
     }
 }
 
-fn source_built_target_profile(
-    bare_output: &Path,
-    reviewed_contract_path: &Path,
-    host_key: &str,
-) -> Result<String> {
-    let reviewed_raw = read_regular_bounded(
-        reviewed_contract_path,
-        JsonProfile::PackageMetadataStateSelection.max_bytes(),
-    )?;
-    let reviewed = parse_json_value(&reviewed_raw, JsonProfile::PackageMetadataStateSelection)?;
-    if reviewed.get("schema").and_then(Value::as_str) != Some("aros-target-library-candidate-v1")
-        || reviewed.get("target").and_then(Value::as_str) != Some("x86_64-aros")
-        || reviewed.get("rustc_commit").and_then(Value::as_str)
-            != Some("330d317121e16b5db8e5adc63595910528ff2ee7")
-    {
-        return Err(Refusal::new(
-            "reviewed target-library contract has the wrong target or Rust compiler identity",
-        ));
+fn source_built_target_profile(bare_output: &Path, target: &str, host_key: &str) -> Result<String> {
+    if !matches!(
+        target,
+        "x86_64-unknown-aros-abi1" | "x86_64-unknown-aros-abi11"
+    ) {
+        return Err(Refusal::new("source-built target is not admitted"));
     }
-    let reviewed_files = reviewed
-        .get("files")
-        .and_then(Value::as_array)
-        .ok_or_else(|| Refusal::new("reviewed target-library contract lacks files"))?;
-    let reviewed_crates = reviewed_files
-        .iter()
-        .map(|row| {
-            let path = row
-                .get("path")
-                .and_then(Value::as_str)
-                .ok_or_else(|| Refusal::new("reviewed target-library path is missing"))?;
-            target_library_crate(path)
-        })
-        .collect::<Result<std::collections::BTreeSet<_>>>()?;
     let expected = std::collections::BTreeSet::from([
         "alloc".to_owned(),
         "compiler_builtins".to_owned(),
         "core".to_owned(),
     ]);
-    if reviewed_crates != expected || reviewed_files.len() != expected.len() {
-        return Err(Refusal::new(
-            "reviewed target-library contract does not name the exact three required crates",
-        ));
-    }
 
     let report_raw = read_regular_bounded(
         &bare_output.join("producer.json"),
@@ -459,9 +431,9 @@ fn source_built_target_profile(
         || report.get("status").and_then(Value::as_str)
             != Some("PRODUCED_BARE_TARGET_LIBRARIES_NOT_L1_OR_RC_QUALIFICATION")
         || report.get("host").and_then(Value::as_str) != Some(host_key)
-        || report.get("target").and_then(Value::as_str) != Some("x86_64-aros")
+        || report.get("target").and_then(Value::as_str) != Some(target)
         || report.get("rustc_commit").and_then(Value::as_str)
-            != reviewed.get("rustc_commit").and_then(Value::as_str)
+            != Some("330d317121e16b5db8e5adc63595910528ff2ee7")
     {
         return Err(Refusal::new(
             "source-built target-library receipt has the wrong host, target, or compiler identity",
@@ -471,9 +443,9 @@ fn source_built_target_profile(
         .get("libraries")
         .and_then(Value::as_array)
         .ok_or_else(|| Refusal::new("source-built target-library receipt lacks libraries"))?;
-    if libraries.len() != expected.len() {
+    if libraries.len() != expected.len() * 2 {
         return Err(Refusal::new(
-            "source-built target-library receipt must contain exactly three libraries",
+            "source-built target-library receipt must contain exactly three rlib/rmeta pairs",
         ));
     }
     let library_root = bare_output.join("libraries");
@@ -488,9 +460,11 @@ fn source_built_target_profile(
             .get("path")
             .and_then(Value::as_str)
             .ok_or_else(|| Refusal::new("source-built target-library path is missing"))?;
-        if target_library_crate(path)? != crate_name
+        let (filename_crate, kind) = target_library_artifact(path)?;
+        if filename_crate != crate_name
             || !expected.contains(crate_name)
-            || !seen.insert(crate_name.to_owned())
+            || row.get("kind").and_then(Value::as_str) != Some(kind)
+            || !seen.insert((crate_name.to_owned(), kind.to_owned()))
         {
             return Err(Refusal::new(
                 "source-built target-library identities are missing, duplicated, or malformed",
@@ -512,7 +486,13 @@ fn source_built_target_profile(
             "sha256": sha256,
         }));
     }
-    if seen != expected {
+    let expected_artifacts = expected
+        .iter()
+        .flat_map(|crate_name| {
+            ["rlib", "rmeta"].map(|kind| (crate_name.to_owned(), kind.to_owned()))
+        })
+        .collect();
+    if seen != expected_artifacts {
         return Err(Refusal::new(
             "source-built target-library receipt does not cover the required crates",
         ));
@@ -524,7 +504,7 @@ fn source_built_target_profile(
     });
     serde_json::to_string(&json!({
         "schema": "aros-target-library-candidate-v1",
-        "target": "x86_64-aros",
+        "target": target,
         "rustc_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
         "origin": "Exact source-built output selected by the authenticated bare-target producer receipt",
         "files": files,
@@ -533,13 +513,21 @@ fn source_built_target_profile(
     .map_err(|error| Refusal::new(format!("could not serialize target-library profile: {error}")))
 }
 
-fn target_library_crate(path: &str) -> Result<String> {
-    if path.contains('/') || path.contains('\\') || !path.ends_with(".rlib") {
+fn target_library_artifact(path: &str) -> Result<(String, &'static str)> {
+    if path.contains('/') || path.contains('\\') {
         return Err(Refusal::new("target-library path is not one regular leaf"));
     }
+    let (path, kind) = if let Some(path) = path.strip_suffix(".rlib") {
+        (path, "rlib")
+    } else if let Some(path) = path.strip_suffix(".rmeta") {
+        (path, "rmeta")
+    } else {
+        return Err(Refusal::new(
+            "target-library path is neither an rlib nor an rmeta leaf",
+        ));
+    };
     let stem = path
         .strip_prefix("lib")
-        .and_then(|value| value.strip_suffix(".rlib"))
         .ok_or_else(|| Refusal::new("target-library filename is malformed"))?;
     let (crate_name, disambiguator) = stem
         .rsplit_once('-')
@@ -554,7 +542,7 @@ fn target_library_crate(path: &str) -> Result<String> {
             "target-library filename has an unapproved crate or disambiguator",
         ));
     }
-    Ok(crate_name.to_owned())
+    Ok((crate_name.to_owned(), kind))
 }
 
 fn authenticate_acquired_inputs(
@@ -754,61 +742,32 @@ fn materialize_rust_installer_state(
     write_new(&rustlib.join("uninstall.sh"), &uninstall, 0o755)
 }
 
-fn materialize_cargo_component(
-    repository: &Path,
-    host: &str,
-    binary: &Path,
-    destination: &Path,
-) -> Result<()> {
-    let profile_path = repository.join(format!(
-        "tooling/crates/aros-native-build/pins/{host}/cargo.json"
-    ));
-    let raw = read_regular_bounded(
-        &profile_path,
-        JsonProfile::PackageMetadataStateSelection.max_bytes(),
-    )?;
-    let profile = parse_json_value(&raw, JsonProfile::PackageMetadataStateSelection)?;
-    let files: Vec<FileIdentity> = serde_json::from_value(
-        profile
-            .get("files")
-            .cloned()
-            .ok_or_else(|| Refusal::new("Cargo profile lacks files"))?,
-    )
-    .map_err(|error| Refusal::new(format!("Cargo profile files are invalid: {error}")))?;
-    let cargo_row = files
-        .iter()
-        .find(|row| row.path == "bin/cargo")
-        .ok_or_else(|| Refusal::new("Cargo profile lacks bin/cargo"))?;
-    verify_identity(
-        binary,
-        cargo_row.bytes,
-        &cargo_row.sha256,
-        "paired Cargo binary",
-    )?;
+fn materialize_cargo_component(binary: &Path, destination: &Path) -> Result<String> {
+    let metadata = fs::symlink_metadata(binary)?;
+    if !metadata.file_type().is_file() || metadata.len() == 0 {
+        return Err(Refusal::new(
+            "official Cargo component lacks a regular executable",
+        ));
+    }
     fs::create_dir(destination.join("bin"))?;
     fs::copy(binary, destination.join("bin/cargo"))?;
     fs::set_permissions(
         destination.join("bin/cargo"),
         fs::Permissions::from_mode(0o755),
     )?;
-    let record = profile
-        .pointer("/producer_identity_spec/record")
-        .ok_or_else(|| Refusal::new("Cargo profile lacks producer companion record"))?;
-    let mut companion = serde_json::to_vec_pretty(record)
-        .map_err(|error| Refusal::new(format!("could not encode Cargo companion: {error}")))?;
-    companion.push(b'\n');
-    let producer_row = files
-        .iter()
-        .find(|row| row.path == "producer.json")
-        .ok_or_else(|| Refusal::new("Cargo profile lacks producer.json"))?;
-    if companion.len() as u64 != producer_row.bytes
-        || sha256_bytes(&companion) != producer_row.sha256
-    {
-        return Err(Refusal::new(
-            "derived Cargo producer companion differs from its profile",
-        ));
-    }
-    write_new(&destination.join("producer.json"), &companion, 0o644)
+    let profile = json!({
+        "schema": "ami-rust-official-cargo-component-v1",
+        "origin": "official Cargo component from the pinned Rust distribution",
+        "files": [{
+            "path": "bin/cargo",
+            "bytes": metadata.len(),
+            "sha256": sha256_file(binary)?,
+            "mode": 493,
+        }],
+        "symlinks": [],
+    });
+    serde_json::to_string(&profile)
+        .map_err(|error| Refusal::new(format!("could not encode Cargo profile: {error}")))
 }
 
 struct LinkerBuild {
@@ -828,8 +787,12 @@ fn build_linker(
 ) -> Result<LinkerBuild> {
     let vendor = component_payload(vendor_outer, "vendor")?;
     let cargo_home = work.join("linker-cargo-home");
+    let home = work.join("linker-home");
+    let temporary = work.join("linker-tmp");
     let target = work.join("linker-target");
     create_private_dir(&cargo_home)?;
+    create_private_dir(&home)?;
+    create_private_dir(&temporary)?;
     create_private_dir(&target)?;
     let vendor_text = serde_json::to_string(
         vendor
@@ -857,7 +820,7 @@ fn build_linker(
     let request_path = work.join("linker/build-request.json");
     write_json_new(&request_path, &request)?;
     let request_sha256 = sha256_file(&request_path)?;
-    let rust = work.join("bare-work/toolchain");
+    let rust = work.join("source-rust");
     let cargo = rust.join("bin/cargo");
     let mut command = Command::new(&cargo);
     command
@@ -888,8 +851,8 @@ fn build_linker(
                 rust.join("bin").display()
             ),
         )
-        .env("HOME", work.join("bare-work/home"))
-        .env("TMPDIR", work.join("bare-work/tmp"))
+        .env("HOME", &home)
+        .env("TMPDIR", &temporary)
         .env("CARGO_HOME", &cargo_home)
         .env("CARGO_BUILD_JOBS", "2")
         .env("CARGO_INCREMENTAL", "0")
@@ -910,7 +873,12 @@ fn build_linker(
         )
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    let result = command.output()?;
+    let result = command.output().map_err(|error| {
+        Refusal::new(format!(
+            "could not start source-built aros-link child with {}: {error}",
+            cargo.display()
+        ))
+    })?;
     write_new(&work.join("linker/stdout.log"), &result.stdout, 0o600)?;
     write_new(&work.join("linker/stderr.log"), &result.stderr, 0o600)?;
     let record = json!({

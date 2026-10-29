@@ -10,6 +10,7 @@ use crate::portable_view::{
     normalize_portable_mode,
 };
 use crate::public_view::{PUBLIC_VIEW_JSON, PublicViewPolicy};
+use crate::recipe::ArosAbi;
 use crate::{Refusal, Result};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
@@ -21,18 +22,27 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const TARGET: &str = "x86_64-aros";
+const ABI1_TARGET: &str = "x86_64-unknown-aros-abi1";
+const ABI11_TARGET: &str = "x86_64-unknown-aros-abi11";
 const RUST_CARGO_PATH: &str = "bin/cargo";
 const SOURCE_LINKER_PATH: &str = "bin/aros-link";
 const SOURCE_LINKER_LIMIT: u64 = 128 * 1024 * 1024;
 const LLVM_ROOT: &str = "libexec/aros/llvm";
 const CSDK_ROOT: &str = "lib/aros/c-sdk";
+const ABI11_CSDK_ROOT: &str = "lib/aros/c-sdk-abi11";
 const ROOT_LLVM_ALIASES: [&str; 5] = ["llvm-objdump", "llvm-nm", "llvm-ar", "llvm-strip", "ld.lld"];
 const COMPOSED_CARGO_PATH: &str = "bin/cargo";
 const COLLECTOR_INVENTORY_PATH: &str = "bin/aros-collect";
 const COMPOSED_COLLECTOR_PATH: &str = crate::portable_view::COLLECTOR_DESTINATION_PATH;
-const TARGET_SPEC_PATH: &str = "lib/rustlib/x86_64-aros/x86_64-aros.json";
-const TARGET_LIBRARY_ROOT: &str = "lib/rustlib/x86_64-aros/lib";
+const LEGACY_TARGET_ALIAS_PATH: &str = "lib/rustlib/x86_64-aros/target.json";
+const ABI1_TARGET_SPEC_PATH: &str =
+    "lib/rustlib/x86_64-unknown-aros-abi1/x86_64-unknown-aros-abi1.json";
+const ABI11_TARGET_SPEC_PATH: &str =
+    "lib/rustlib/x86_64-unknown-aros-abi11/x86_64-unknown-aros-abi11.json";
+const ABI1_TARGET_ALIAS_PATH: &str = "lib/rustlib/x86_64-unknown-aros-abi1/target.json";
+const ABI11_TARGET_ALIAS_PATH: &str = "lib/rustlib/x86_64-unknown-aros-abi11/target.json";
+const ABI1_TARGET_LIBRARY_ROOT: &str = "lib/rustlib/x86_64-unknown-aros-abi1/lib";
+const ABI11_TARGET_LIBRARY_ROOT: &str = "lib/rustlib/x86_64-unknown-aros-abi11/lib";
 
 /// A verified toolchain prefix used by the native build crate.
 ///
@@ -45,9 +55,7 @@ pub struct Toolchain {
     rustc: PathBuf,
     cargo: PathBuf,
     toolchain_root: PathBuf,
-    sdk_root: PathBuf,
     collector: PathBuf,
-    target_spec: PathBuf,
     linker_identity: PortableFile,
     host: &'static str,
     source_date_epoch: u64,
@@ -73,9 +81,7 @@ impl Toolchain {
             rustc: root.join("bin/rustc"),
             cargo: root.join(COMPOSED_CARGO_PATH),
             toolchain_root: root.join("libexec/aros/llvm"),
-            sdk_root: root.join("lib/aros/c-sdk"),
             collector: root.join(COMPOSED_COLLECTOR_PATH),
-            target_spec: root.join(TARGET_SPEC_PATH),
             linker_identity,
             root,
             host,
@@ -163,9 +169,12 @@ impl Toolchain {
         &self.toolchain_root
     }
 
-    /// Return the exact C SDK root.
-    pub fn sdk_root(&self) -> &Path {
-        &self.sdk_root
+    /// Return the exact C SDK root selected for one admitted AROS ABI.
+    pub fn sdk_root(&self, abi: ArosAbi) -> PathBuf {
+        self.root.join(match abi {
+            ArosAbi::Abi1 => CSDK_ROOT,
+            ArosAbi::Abi11 => ABI11_CSDK_ROOT,
+        })
     }
 
     /// Return the pinned AROS collector path.
@@ -173,9 +182,12 @@ impl Toolchain {
         &self.collector
     }
 
-    /// Return the pinned `x86_64-aros` target specification path.
-    pub fn target_spec(&self) -> &Path {
-        &self.target_spec
+    /// Return the pinned target specification path selected for one AROS ABI.
+    pub fn target_spec(&self, abi: ArosAbi) -> PathBuf {
+        self.root.join(match abi {
+            ArosAbi::Abi1 => ABI1_TARGET_SPEC_PATH,
+            ArosAbi::Abi11 => ABI11_TARGET_SPEC_PATH,
+        })
     }
 
     /// Return the pinned source-date epoch for reproducible native outputs.
@@ -251,8 +263,17 @@ struct EmbeddedPins {
     collector: &'static str,
     llvm: &'static str,
     csdk: &'static str,
-    target: &'static str,
-    target_libraries: &'static str,
+    abi11_csdk: &'static str,
+    abi1_target: &'static str,
+    abi11_target: &'static str,
+    abi1_target_libraries: &'static str,
+    abi11_target_libraries: &'static str,
+}
+
+struct TargetInputs {
+    name: String,
+    libraries: Inventory,
+    spec_sha256: String,
 }
 
 struct Pins {
@@ -261,8 +282,8 @@ struct Pins {
     collector: Inventory,
     llvm: Inventory,
     csdk: Inventory,
-    target_libraries: Inventory,
-    target_spec_sha256: String,
+    abi11_csdk: Inventory,
+    targets: [TargetInputs; 2],
     source_date_epoch: u64,
     identity: String,
     public_view: PublicViewPolicy,
@@ -285,26 +306,20 @@ impl Pins {
             &public_view,
         )?;
         let csdk = parse_inventory("C SDK", embedded.csdk)?;
-        let target: TargetPin = parse_pin("target", embedded.target)?;
-        let target_libraries: TargetLibrariesPin =
-            parse_pin("target libraries", embedded.target_libraries)?;
-
-        if target.schema != "aros-native-build-target-v1" || target.target != TARGET {
+        let abi11_csdk = parse_inventory("ABI11 C SDK", embedded.abi11_csdk)?;
+        let (abi1, abi1_epoch) = parse_target_inputs(
+            ABI1_TARGET,
+            embedded.abi1_target,
+            embedded.abi1_target_libraries,
+        )?;
+        let (abi11, abi11_epoch) = parse_target_inputs(
+            ABI11_TARGET,
+            embedded.abi11_target,
+            embedded.abi11_target_libraries,
+        )?;
+        if abi1_epoch != abi11_epoch {
             return Err(Refusal::new(
-                "embedded native-build target pin has an unsupported schema or target",
-            ));
-        }
-        if target.status != "DEVELOPMENT_CANDIDATE_NOT_RELEASE_QUALIFICATION" {
-            return Err(Refusal::new(
-                "embedded native-build target pin has an unexpected qualification status",
-            ));
-        }
-        validate_sha256(&target.spec_sha256, "target specification pin")?;
-        if target_libraries.schema != "aros-target-library-candidate-v1"
-            || target_libraries.target != TARGET
-        {
-            return Err(Refusal::new(
-                "embedded target-library pin has an unsupported schema or target",
+                "embedded ABI target pins use different source-date epochs",
             ));
         }
 
@@ -315,16 +330,50 @@ impl Pins {
             collector,
             llvm,
             csdk,
-            target_libraries: Inventory {
-                files: target_libraries.files,
-                symlinks: target_libraries.symlinks,
-            },
-            target_spec_sha256: target.spec_sha256,
-            source_date_epoch: target.source_date_epoch,
+            abi11_csdk,
+            targets: [abi1, abi11],
+            source_date_epoch: abi1_epoch,
             identity,
             public_view,
         })
     }
+}
+
+fn parse_target_inputs(
+    expected_target: &str,
+    target_raw: &str,
+    libraries_raw: &str,
+) -> Result<(TargetInputs, u64)> {
+    let target: TargetPin = parse_pin("target", target_raw)?;
+    let libraries: TargetLibrariesPin = parse_pin("target libraries", libraries_raw)?;
+    if target.schema != "aros-native-build-target-v1" || target.target != expected_target {
+        return Err(Refusal::new(
+            "embedded native-build target pin has an unsupported schema or target",
+        ));
+    }
+    if target.status != "RELEASE_CANDIDATE_NOT_PUBLISHED" {
+        return Err(Refusal::new(
+            "embedded native-build target pin has an unexpected qualification status",
+        ));
+    }
+    validate_sha256(&target.spec_sha256, "target specification pin")?;
+    if libraries.schema != "aros-target-library-candidate-v1" || libraries.target != expected_target
+    {
+        return Err(Refusal::new(
+            "embedded target-library pin has an unsupported schema or target",
+        ));
+    }
+    Ok((
+        TargetInputs {
+            name: target.target,
+            libraries: Inventory {
+                files: libraries.files,
+                symlinks: libraries.symlinks,
+            },
+            spec_sha256: target.spec_sha256,
+        },
+        target.source_date_epoch,
+    ))
 }
 
 fn embedded_pins_for_host(host: &str) -> Result<EmbeddedPins> {
@@ -335,8 +384,13 @@ fn embedded_pins_for_host(host: &str) -> Result<EmbeddedPins> {
             collector: include_str!("../pins/macos-aarch64/collector.json"),
             llvm: include_str!("../pins/macos-aarch64/toolchain.json"),
             csdk: include_str!("../pins/macos-aarch64/csdk.json"),
-            target: include_str!("../pins/target.json"),
-            target_libraries: include_str!("../pins/target-libraries.json"),
+            abi11_csdk: include_str!("../../../../release/abi11-csdk/profile.json"),
+            abi1_target: include_str!("../pins/x86_64-unknown-aros-abi1.json"),
+            abi11_target: include_str!("../pins/x86_64-unknown-aros-abi11.json"),
+            abi1_target_libraries: include_str!("../pins/x86_64-unknown-aros-abi1-libraries.json"),
+            abi11_target_libraries: include_str!(
+                "../pins/x86_64-unknown-aros-abi11-libraries.json"
+            ),
         }),
         "linux-x86_64" => Ok(EmbeddedPins {
             rust: include_str!("../pins/linux-x86_64/rust.json"),
@@ -344,8 +398,13 @@ fn embedded_pins_for_host(host: &str) -> Result<EmbeddedPins> {
             collector: include_str!("../pins/linux-x86_64/collector.json"),
             llvm: include_str!("../pins/linux-x86_64/toolchain.json"),
             csdk: include_str!("../pins/linux-x86_64/csdk.json"),
-            target: include_str!("../pins/target.json"),
-            target_libraries: include_str!("../pins/linux-x86_64/target-libraries.json"),
+            abi11_csdk: include_str!("../../../../release/abi11-csdk/profile.json"),
+            abi1_target: include_str!("../pins/x86_64-unknown-aros-abi1.json"),
+            abi11_target: include_str!("../pins/x86_64-unknown-aros-abi11.json"),
+            abi1_target_libraries: include_str!("../pins/x86_64-unknown-aros-abi1-libraries.json"),
+            abi11_target_libraries: include_str!(
+                "../pins/x86_64-unknown-aros-abi11-libraries.json"
+            ),
         }),
         "linux-aarch64" => Ok(EmbeddedPins {
             rust: include_str!("../pins/linux-aarch64/rust.json"),
@@ -353,8 +412,13 @@ fn embedded_pins_for_host(host: &str) -> Result<EmbeddedPins> {
             collector: include_str!("../pins/linux-aarch64/collector.json"),
             llvm: include_str!("../pins/linux-aarch64/toolchain.json"),
             csdk: include_str!("../pins/linux-aarch64/csdk.json"),
-            target: include_str!("../pins/target.json"),
-            target_libraries: include_str!("../pins/linux-aarch64/target-libraries.json"),
+            abi11_csdk: include_str!("../../../../release/abi11-csdk/profile.json"),
+            abi1_target: include_str!("../pins/x86_64-unknown-aros-abi1.json"),
+            abi11_target: include_str!("../pins/x86_64-unknown-aros-abi11.json"),
+            abi1_target_libraries: include_str!("../pins/x86_64-unknown-aros-abi1-libraries.json"),
+            abi11_target_libraries: include_str!(
+                "../pins/x86_64-unknown-aros-abi11-libraries.json"
+            ),
         }),
         _ => Err(Refusal::new(
             "no native-build input pins are embedded for this host",
@@ -412,8 +476,11 @@ fn input_identity_with_views(
         ("collector", pins.collector),
         ("llvm", pins.llvm),
         ("csdk", pins.csdk),
-        ("target", pins.target),
-        ("target-libraries", pins.target_libraries),
+        ("abi11-csdk", pins.abi11_csdk),
+        ("abi1-target", pins.abi1_target),
+        ("abi11-target", pins.abi11_target),
+        ("abi1-target-libraries", pins.abi1_target_libraries),
+        ("abi11-target-libraries", pins.abi11_target_libraries),
         ("public-view", public_view),
         ("portable-view", portable_view),
     ];
@@ -426,7 +493,10 @@ fn input_identity_with_views(
         digest.update(bytes.as_bytes());
     }
     let final_digest = digest.finalize();
-    format!("{host}:{TARGET}:sha256:{}", hex_digest(&final_digest))
+    format!(
+        "{host}:{ABI1_TARGET}+{ABI11_TARGET}:sha256:{}",
+        hex_digest(&final_digest)
+    )
 }
 
 fn verify_prefix(
@@ -457,10 +527,12 @@ fn verify_prefix(
     }
 
     let portable = compose_portable_inventory(pins, &linker_identity)?;
-    const EXACT_TREES: [(&str, &str); 3] = [
+    const EXACT_TREES: [(&str, &str); 5] = [
         (LLVM_ROOT, "LLVM toolchain"),
-        (CSDK_ROOT, "C SDK"),
-        (TARGET_LIBRARY_ROOT, "AROS target libraries"),
+        (CSDK_ROOT, "ABI1 C SDK"),
+        (ABI11_CSDK_ROOT, "ABI11 C SDK"),
+        (ABI1_TARGET_LIBRARY_ROOT, "ABI1 target libraries"),
+        (ABI11_TARGET_LIBRARY_ROOT, "ABI11 target libraries"),
     ];
     verify_inventory_members(
         root,
@@ -490,8 +562,11 @@ fn compose_portable_inventory(
     expected_entries(&pins.cargo, "Cargo")?;
     expected_entries(&pins.collector, "collector")?;
     expected_entries(&pins.llvm, "LLVM toolchain")?;
-    expected_entries(&pins.csdk, "C SDK")?;
-    expected_entries(&pins.target_libraries, "AROS target libraries")?;
+    expected_entries(&pins.csdk, "ABI1 C SDK")?;
+    expected_entries(&pins.abi11_csdk, "ABI11 C SDK")?;
+    for target in &pins.targets {
+        expected_entries(&target.libraries, "AROS target libraries")?;
+    }
 
     let mut files = Vec::new();
     let mut links = Vec::new();
@@ -501,7 +576,17 @@ fn compose_portable_inventory(
             files.push(portable_file(file, file.path.clone()));
         }
     }
-    append_links(&mut links, &pins.rust.symlinks, "");
+    append_links(
+        &mut links,
+        &pins
+            .rust
+            .symlinks
+            .iter()
+            .filter(|link| link.path != LEGACY_TARGET_ALIAS_PATH)
+            .cloned()
+            .collect::<Vec<_>>(),
+        "",
+    );
 
     let cargo = unique_file_pin(&pins.cargo, COMPOSED_CARGO_PATH, "Cargo")?;
     files.push(portable_file(cargo, COMPOSED_CARGO_PATH.to_owned()));
@@ -516,18 +601,28 @@ fn compose_portable_inventory(
     append_links(&mut links, &pins.llvm.symlinks, LLVM_ROOT);
     append_files(&mut files, &pins.csdk.files, CSDK_ROOT);
     append_links(&mut links, &pins.csdk.symlinks, CSDK_ROOT);
-    append_files(
-        &mut files,
-        &pins.target_libraries.files,
-        TARGET_LIBRARY_ROOT,
-    );
-    append_links(
-        &mut links,
-        &pins.target_libraries.symlinks,
-        TARGET_LIBRARY_ROOT,
-    );
+    append_files(&mut files, &pins.abi11_csdk.files, ABI11_CSDK_ROOT);
+    append_links(&mut links, &pins.abi11_csdk.symlinks, ABI11_CSDK_ROOT);
+    for (target, prefix) in pins
+        .targets
+        .iter()
+        .zip([ABI1_TARGET_LIBRARY_ROOT, ABI11_TARGET_LIBRARY_ROOT])
+    {
+        append_files(&mut files, &target.libraries.files, prefix);
+        append_links(&mut links, &target.libraries.symlinks, prefix);
+    }
 
-    files.push(target_spec_identity(pins)?);
+    files.extend(target_spec_identities(pins)?);
+    links.extend([
+        PortableLink {
+            path: ABI1_TARGET_ALIAS_PATH.to_owned(),
+            target: format!("{ABI1_TARGET}.json"),
+        },
+        PortableLink {
+            path: ABI11_TARGET_ALIAS_PATH.to_owned(),
+            target: format!("{ABI11_TARGET}.json"),
+        },
+    ]);
     files.push(linker_identity.clone());
     for name in ROOT_LLVM_ALIASES {
         links.push(PortableLink {
@@ -568,20 +663,37 @@ fn append_links(output: &mut Vec<PortableLink>, links: &[SymlinkPin], prefix: &s
     }
 }
 
-fn target_spec_identity(pins: &Pins) -> Result<PortableFile> {
-    let bytes = include_bytes!("../tests/fixtures/x86_64-aros.json");
-    let actual_sha256 = hex_digest(&Sha256::digest(bytes));
-    if actual_sha256 != pins.target_spec_sha256 {
-        return Err(Refusal::new(
-            "embedded target specification fixture does not match its fixed SHA-256 pin",
-        ));
-    }
-    Ok(PortableFile {
-        path: TARGET_SPEC_PATH.to_owned(),
-        bytes: bytes.len() as u64,
-        sha256: pins.target_spec_sha256.clone(),
-        mode: None,
-    })
+fn target_spec_identities(pins: &Pins) -> Result<Vec<PortableFile>> {
+    let definitions: [(&str, &str, &[u8]); 2] = [
+        (
+            ABI1_TARGET,
+            ABI1_TARGET_SPEC_PATH,
+            include_bytes!("../../../../targets/x86_64-unknown-aros-abi1.json"),
+        ),
+        (
+            ABI11_TARGET,
+            ABI11_TARGET_SPEC_PATH,
+            include_bytes!("../../../../targets/x86_64-unknown-aros-abi11.json"),
+        ),
+    ];
+    definitions
+        .into_iter()
+        .zip(&pins.targets)
+        .map(|((name, path, bytes), pin)| {
+            let actual_sha256 = hex_digest(&Sha256::digest(bytes));
+            if pin.name != name || actual_sha256 != pin.spec_sha256 {
+                return Err(Refusal::new(
+                    "embedded target specification does not match its fixed target pin",
+                ));
+            }
+            Ok(PortableFile {
+                path: path.to_owned(),
+                bytes: bytes.len() as u64,
+                sha256: pin.spec_sha256.clone(),
+                mode: None,
+            })
+        })
+        .collect()
 }
 
 fn inventory_under_prefix(
@@ -1415,9 +1527,9 @@ fn hex_digest(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        FilePin, Inventory, Pins, SymlinkPin, TARGET_SPEC_PATH, Toolchain, embedded_pins_for_host,
-        expected_entries, host_for_target, input_identity, parse_relative_path, verify_exact_tree,
-        verify_file_with_mode,
+        ABI1_TARGET_SPEC_PATH, FilePin, Inventory, Pins, SymlinkPin, Toolchain,
+        embedded_pins_for_host, expected_entries, host_for_target, input_identity,
+        parse_relative_path, verify_exact_tree, verify_file_with_mode,
     };
     use crate::portable_view::{
         PORTABLE_VIEW_JSON, PortableFile, PortableInventory, PortableLink, ResolvedLink,
@@ -1464,7 +1576,7 @@ mod tests {
     }
 
     #[test]
-    fn macos_runtime_and_linux_aarch64_profiles_are_exact_candidates() {
+    fn all_host_profiles_select_official_cargo_and_both_abis() {
         let arm = embedded_pins_for_host("linux-aarch64").unwrap();
         let expected = [
             (
@@ -1474,7 +1586,7 @@ mod tests {
             ),
             (
                 "cargo",
-                "cda53b294ab30c94930b54f8ac9c5472c17d7fb480beeb14472a92fdf0535103",
+                "f588f2aa96bf359a4a609d1d691ae9fa5f765022c0950e76acc9011d06701b5b",
                 arm.cargo,
             ),
             (
@@ -1494,13 +1606,13 @@ mod tests {
             ),
             (
                 "target",
-                "33fdd3d97053370eb3db9e05ea75721dafcfc7f4b5f8c218acaab1911984c341",
-                arm.target,
+                "5840e8bc7cb7b810a6948d8f9042a992a18ec000351d21e697538489c146367f",
+                arm.abi1_target,
             ),
             (
                 "target libraries",
-                "0e0f996e0983eabf1b2782f67400a4a8172ead94305be17285738e2a32efa07f",
-                arm.target_libraries,
+                "30d8a0d113920973f4b6cf22654df4309b8932103aaf830181d0930e3b35f4c1",
+                arm.abi1_target_libraries,
             ),
         ];
         for (name, expected_sha256, bytes) in expected {
@@ -1514,30 +1626,28 @@ mod tests {
         let pins = Pins::for_host("linux-aarch64").unwrap();
         assert_eq!(pins.rust.files.len(), 3871);
         assert_eq!(pins.rust.symlinks.len(), 2);
-        assert_eq!(pins.cargo.files.len(), 2);
-        assert_eq!(pins.cargo.files[1].path, "producer.json");
+        assert_eq!(pins.cargo.files.len(), 1);
         assert_eq!(pins.cargo.files[0].path, "bin/cargo");
-        assert_eq!(pins.cargo.files[0].bytes, 46166136);
+        assert_eq!(pins.cargo.files[0].bytes, 35521536);
         assert_eq!(
             pins.cargo.files[0].sha256,
-            "a11faf3989f239c89b972aba79bc713755607605e4535d919c3af042d6790f9c"
+            "44a4f14309e8d807e9e514f2c3b95be5ec0717887b5e6edadf112b8f7235c371"
         );
         assert_eq!(pins.collector.files.len(), 10);
         assert_eq!(pins.llvm.files.len(), 2743);
         assert_eq!(pins.llvm.symlinks.len(), 134);
         assert_eq!(pins.csdk.files.len(), 2835);
-        assert!(
-            pins.identity
-                .starts_with("linux-aarch64:x86_64-aros:sha256:")
-        );
+        assert!(pins.identity.starts_with(
+            "linux-aarch64:x86_64-unknown-aros-abi1+x86_64-unknown-aros-abi11:sha256:"
+        ));
 
         let mac = Pins::for_host("macos-aarch64").unwrap();
         assert_eq!(mac.rust.symlinks.len(), 3);
 
         let linux_x86 = embedded_pins_for_host("linux-x86_64").unwrap();
         assert_eq!(
-            digest_text(linux_x86.target_libraries),
-            "3324ce18ccab1b293d488cd38e98be05e8c14ca3f97c3d8f8ef5d0e93bfb1c1f"
+            digest_text(linux_x86.abi1_target_libraries),
+            "30d8a0d113920973f4b6cf22654df4309b8932103aaf830181d0930e3b35f4c1"
         );
         assert_eq!(
             mac.rust
@@ -1553,7 +1663,7 @@ mod tests {
                 "macos-aarch64",
                 [
                     "02eecb396c56bd134cb4dc732d30898b03ab9a84ad1143f5d09c0a6b25fc466e",
-                    "db628732266dd8927ef64c9ecdf4ca87e3fac3b0dea68765f2d8702ff837afb1",
+                    "7430a2e83d3f10b71beb899bed2d0f0013cc7b078e9831866660e00ac10ffc2c",
                     "34e7e069a72ac84d980f15c797b4250f324eee19088f55d135c9e4eafa0d88de",
                     "28237af9576e852451fcdf0470a904edb34a70232feb41d0c56be246313baadf",
                     "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337",
@@ -1563,7 +1673,7 @@ mod tests {
                 "linux-x86_64",
                 [
                     "7a88373f28d19d6d61494587240681999adfb2bec964b4c3d74fae9718f097e8",
-                    "5525b66ce482af4c68429654f0e7fc41fa63098c7aca5794af96b8aca7dbf062",
+                    "14a92260987110a97c6e8413e4af2520d23186ea7d116736f399d624496195b6",
                     "0e97967a63d6ec868edcf26e2b2c08a9c36a292416aa0f7ae016564369551caa",
                     "a68f0d3d6b6d9e9678dca0af25b083d6b00f67fd4f806adcb6a2e16af1a19a6d",
                     "e876263d5a322a3f7b4cb4ba203666352ec09d9f35f185b51a4d1f3fed06f337",
@@ -1618,20 +1728,29 @@ mod tests {
             identity,
             "csdk missing from identity"
         );
+        let mut abi11_csdk = pins;
+        abi11_csdk.abi11_csdk = changed_text(pins.abi11_csdk);
+        assert_ne!(
+            input_identity("linux-aarch64", &abi11_csdk),
+            identity,
+            "ABI11 C SDK missing from identity"
+        );
         let mut target = pins;
-        target.target = changed_text(pins.target);
+        target.abi1_target = changed_text(pins.abi1_target);
         assert_ne!(
             input_identity("linux-aarch64", &target),
             identity,
-            "target missing from identity"
+            "ABI1 target missing from identity"
         );
+        let mut target = pins;
+        target.abi11_target = changed_text(pins.abi11_target);
+        assert_ne!(input_identity("linux-aarch64", &target), identity);
         let mut libraries = pins;
-        libraries.target_libraries = changed_text(pins.target_libraries);
-        assert_ne!(
-            input_identity("linux-aarch64", &libraries),
-            identity,
-            "target libraries missing from identity"
-        );
+        libraries.abi1_target_libraries = changed_text(pins.abi1_target_libraries);
+        assert_ne!(input_identity("linux-aarch64", &libraries), identity);
+        let mut libraries = pins;
+        libraries.abi11_target_libraries = changed_text(pins.abi11_target_libraries);
+        assert_ne!(input_identity("linux-aarch64", &libraries), identity);
         assert_ne!(input_identity("linux-x86_64", &pins), identity);
     }
 
@@ -1731,15 +1850,15 @@ mod tests {
     fn pinned_target_spec_member_accepts_exact_bytes_and_rejects_corruption() {
         let pins = Pins::for_host("linux-aarch64").unwrap();
         let temp = TempDirectory::new();
-        let target_spec = include_bytes!("../tests/fixtures/x86_64-aros.json");
-        let path = temp.0.join(TARGET_SPEC_PATH);
+        let target_spec = include_bytes!("../../../../targets/x86_64-unknown-aros-abi1.json");
+        let path = temp.0.join(ABI1_TARGET_SPEC_PATH);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, target_spec).unwrap();
         verify_file_with_mode(
             &temp.0,
-            TARGET_SPEC_PATH,
+            ABI1_TARGET_SPEC_PATH,
             None,
-            &pins.target_spec_sha256,
+            &pins.targets[0].spec_sha256,
             "AROS target specification",
             None,
         )
@@ -1751,9 +1870,9 @@ mod tests {
         assert!(
             verify_file_with_mode(
                 &temp.0,
-                TARGET_SPEC_PATH,
+                ABI1_TARGET_SPEC_PATH,
                 None,
-                &pins.target_spec_sha256,
+                &pins.targets[0].spec_sha256,
                 "AROS target specification",
                 None,
             )
@@ -1812,11 +1931,7 @@ mod tests {
 
     #[test]
     fn portable_regular_copy_graph_matches_all_three_embedded_hosts() {
-        let cases = [
-            ("macos-aarch64", 20, 9473),
-            ("linux-x86_64", 136, 9590),
-            ("linux-aarch64", 136, 9589),
-        ];
+        let hosts = ["macos-aarch64", "linux-x86_64", "linux-aarch64"];
         let linker_identity = PortableFile {
             path: "bin/aros-link".to_owned(),
             bytes: 15,
@@ -1824,11 +1939,26 @@ mod tests {
             mode: Some(0o775),
         };
 
-        for (host, link_count, file_count) in cases {
+        for host in hosts {
             let pins = Pins::for_host(host).unwrap();
             let portable = super::compose_portable_inventory(&pins, &linker_identity).unwrap();
-            assert_eq!(portable.materialized_links.len(), link_count, "{host}");
-            assert_eq!(portable.files.len(), file_count, "{host}");
+            assert!(portable.files.len() > 9_000, "{host}");
+            for path in [
+                super::ABI1_TARGET_ALIAS_PATH,
+                super::ABI11_TARGET_ALIAS_PATH,
+            ] {
+                assert!(
+                    portable.files.iter().any(|file| file.path == path),
+                    "{host}: {path}"
+                );
+            }
+            assert!(
+                portable
+                    .files
+                    .iter()
+                    .all(|file| file.path != super::LEGACY_TARGET_ALIAS_PATH),
+                "{host}"
+            );
             assert_eq!(
                 portable
                     .omitted_files
@@ -1868,15 +1998,23 @@ mod tests {
             assert_eq!(cargo_copy.bytes, cargo.bytes, "{host}");
             assert_eq!(cargo_copy.sha256, cargo.sha256, "{host}");
 
-            let target = portable
-                .files
-                .iter()
-                .find(|file| file.path == TARGET_SPEC_PATH)
-                .unwrap();
-            assert_eq!(
-                target.sha256,
-                "de7a0024aa94269641e3e6d480ce8cd334962bf7e02592b0652e19e56b5fba71"
-            );
+            for (path, sha256) in [
+                (
+                    super::ABI1_TARGET_SPEC_PATH,
+                    "0e9cde740c93949d4cab27690cb9d93dc9fb89dc96388ff5be0eb7296ba38807",
+                ),
+                (
+                    super::ABI11_TARGET_SPEC_PATH,
+                    "5616c1e062232b43154237fe40826795cc48e148f903f0a1a8087d224d8a49c9",
+                ),
+            ] {
+                let target = portable
+                    .files
+                    .iter()
+                    .find(|file| file.path == path)
+                    .unwrap();
+                assert_eq!(target.sha256, sha256);
+            }
 
             let root_linker = portable
                 .files
@@ -2003,9 +2141,7 @@ mod tests {
             rustc: root.join("bin/rustc"),
             cargo: root.join("bin/cargo"),
             toolchain_root: root.join("libexec/aros/llvm"),
-            sdk_root: root.join("lib/aros/c-sdk"),
             collector: root.join(super::COMPOSED_COLLECTOR_PATH),
-            target_spec: root.join(TARGET_SPEC_PATH),
             linker_identity,
             host: "linux-x86_64",
             source_date_epoch: 0,

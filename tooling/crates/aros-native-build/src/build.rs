@@ -1,7 +1,7 @@
 use crate::{
     Refusal, Result,
     inputs::Toolchain,
-    recipe::{CSourceUnit, CommandRecipe, NativeBuildRecipe, NativeRecipePaths},
+    recipe::{ArosAbi, CSourceUnit, CommandRecipe, NativeBuildRecipe, NativeRecipePaths},
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -14,7 +14,7 @@ use std::{
     process::Command,
 };
 
-const SCHEMA: &str = "aros-cargo-native-objects-v1";
+const SCHEMA: &str = "aros-cargo-native-objects-v2";
 const RECORD: &str = "native.json";
 const OWNER: &str = ".ami-native-owner";
 const SOURCES: &[(&str, &[u8])] = &[
@@ -22,6 +22,10 @@ const SOURCES: &[(&str, &[u8])] = &[
     ("native/sdk.c", include_bytes!("../native/sdk.c")),
     ("native/sdk.h", include_bytes!("../native/sdk.h")),
     ("native/layout.c", include_bytes!("../native/layout.c")),
+    (
+        "native/eh-frame-start.c",
+        include_bytes!("../native/eh-frame-start.c"),
+    ),
     (
         "native/compatibility-gates.h",
         include_bytes!("../native/compatibility-gates.h"),
@@ -70,6 +74,7 @@ pub(crate) struct FileIdentity {
 #[serde(deny_unknown_fields)]
 pub(crate) struct NativeObjects {
     schema: String,
+    pub abi: ArosAbi,
     pub toolchain_root: PathBuf,
     pub toolchain_identity: String,
     pub testing: bool,
@@ -94,9 +99,15 @@ fn native_host_triple(host: &str) -> Result<&'static str> {
 /// calls Cargo, resolves dependencies, downloads inputs or changes rustup state.
 pub fn prepare(options: BuildOptions) -> Result<()> {
     verify_rust_target_path(env::var_os("RUST_TARGET_PATH").as_deref())?;
-    if env::var("TARGET").ok().as_deref() != Some("x86_64-aros") {
-        return Err(Refusal::new("native bridge requires TARGET=x86_64-aros"));
-    }
+    let abi = match env::var("TARGET").ok().as_deref() {
+        Some("x86_64-unknown-aros-abi1") => ArosAbi::Abi1,
+        Some("x86_64-unknown-aros-abi11") => ArosAbi::Abi11,
+        _ => {
+            return Err(Refusal::new(
+                "native bridge requires a supported AROS target",
+            ));
+        }
+    };
     let host = native_host_triple(crate::inputs::current_host()?)?;
     if env::var("HOST").ok().as_deref() != Some(host) {
         return Err(Refusal::new(
@@ -139,7 +150,7 @@ pub fn prepare(options: BuildOptions) -> Result<()> {
     }
     // The selected compiler's own sysroot and target definition are checked
     // independently of Cargo's package resolution.
-    if !tc.rustc().is_file() || !tc.target_spec().is_file() {
+    if !tc.rustc().is_file() || !tc.target_spec(abi).is_file() {
         return Err(Refusal::new(
             "selected compiler or target specification is missing",
         ));
@@ -161,13 +172,22 @@ pub fn prepare(options: BuildOptions) -> Result<()> {
         paths: NativeRecipePaths {
             source_root,
             toolchain_root: tc.toolchain_root().to_owned(),
-            sdk_root: tc.sdk_root().to_owned(),
+            sdk_root: tc.sdk_root(abi),
             collector: tc.collector().to_owned(),
         },
+        abi,
         testing: options.testing,
     };
     run_recipe(&recipe.startup_spec_into(&objects)?, tc.source_date_epoch())?;
-    for unit in [CSourceUnit::Entry, CSourceUnit::Sdk, CSourceUnit::Layout] {
+    let mut units = vec![
+        CSourceUnit::Sdk,
+        CSourceUnit::Layout,
+        CSourceUnit::EhFrameStart,
+    ];
+    if abi == ArosAbi::Abi1 {
+        units.insert(0, CSourceUnit::Entry);
+    }
+    for unit in units {
         run_recipe(
             &recipe.c_compile_spec_into(unit, &objects)?,
             tc.source_date_epoch(),
@@ -180,7 +200,7 @@ pub fn prepare(options: BuildOptions) -> Result<()> {
         )?;
     }
     let mut identities = Vec::new();
-    for name in object_names(options.testing) {
+    for name in object_names(abi, options.testing) {
         let (bytes, sha256) = file_identity(&objects.join(name))?;
         identities.push(FileIdentity {
             path: name.to_owned(),
@@ -190,6 +210,7 @@ pub fn prepare(options: BuildOptions) -> Result<()> {
     }
     let record = NativeObjects {
         schema: SCHEMA.to_owned(),
+        abi,
         toolchain_root: tc.root().to_owned(),
         toolchain_identity: tc.identity().to_owned(),
         testing: options.testing,
@@ -357,8 +378,11 @@ fn cargo_path(path: &Path) -> Result<&str> {
     Ok(value)
 }
 
-fn object_names(testing: bool) -> Vec<&'static str> {
-    let mut names = vec!["startup.o", "entry.o", "sdk.o", "layout.o"];
+fn object_names(abi: ArosAbi, testing: bool) -> Vec<&'static str> {
+    let mut names = vec!["startup.o", "sdk.o", "layout.o", "eh-frame-start.o"];
+    if abi == ArosAbi::Abi1 {
+        names.insert(1, "entry.o");
+    }
     if testing {
         names.push("bind.o");
     }
@@ -398,6 +422,7 @@ fn prepare_directory(path: &Path) -> Result<()> {
         "entry.o",
         "sdk.o",
         "layout.o",
+        "eh-frame-start.o",
         "bind.o",
         "source",
     ];
@@ -422,6 +447,7 @@ fn prepare_directory(path: &Path) -> Result<()> {
         "entry.o",
         "sdk.o",
         "layout.o",
+        "eh-frame-start.o",
         "bind.o",
     ] {
         match fs::remove_file(path.join(name)) {
@@ -579,7 +605,7 @@ pub(crate) fn verify_native_objects(dir: &Path, record: &NativeObjects) -> Resul
             "selected target linker bytes changed after native preparation",
         ));
     }
-    let names = object_names(record.testing);
+    let names = object_names(record.abi, record.testing);
     if record.objects.len() != names.len() {
         return Err(Refusal::new("incomplete native object record"));
     }
@@ -806,7 +832,7 @@ mod tests {
     fn fixture(root: &Path) -> NativeObjects {
         prepare_directory(root).unwrap();
         stage_sources(&root.join("source")).unwrap();
-        let objects = object_names(false)
+        let objects = object_names(ArosAbi::Abi1, false)
             .into_iter()
             .map(|name| {
                 fs::write(root.join(name), name.as_bytes()).unwrap();
@@ -824,6 +850,7 @@ mod tests {
         let (bytes, sha256) = file_identity(&toolchain.join("bin/aros-link")).unwrap();
         NativeObjects {
             schema: SCHEMA.to_owned(),
+            abi: ArosAbi::Abi1,
             toolchain_root: toolchain,
             toolchain_identity: "fixture".to_owned(),
             testing: false,

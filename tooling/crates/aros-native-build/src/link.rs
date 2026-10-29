@@ -78,9 +78,10 @@ pub fn link(arguments: &[OsString]) -> Result<()> {
         paths: NativeRecipePaths {
             source_root: parsed.native_objects.join("source"),
             toolchain_root: toolchain.toolchain_root().to_path_buf(),
-            sdk_root: toolchain.sdk_root().to_path_buf(),
+            sdk_root: toolchain.sdk_root(objects.abi),
             collector: toolchain.collector().to_path_buf(),
         },
+        abi: objects.abi,
         testing: objects.testing,
     };
 
