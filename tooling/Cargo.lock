@@ -38,6 +38,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "aros-api-gen"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "aros-elf"
 version = "0.2.0"
 dependencies = [
