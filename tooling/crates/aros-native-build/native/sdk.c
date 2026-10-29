@@ -54,9 +54,14 @@ static uint64_t next_token(unsigned kind,size_t slot) {
 }
 static int refuse(SdkError *e,int kind,int64_t native) {if(e){e->kind=kind;e->native=native;}++stats.refusals;return -1;}
 static int clear_error(SdkError *e) {if(e){e->kind=0;e->native=0;}return 0;}
+#ifdef AMI_RUST_ABI11
+__attribute__((noinline))
+#endif
+static struct Task *current_task(void) {return FindTask(NULL);}
+static int owner_is_current(void) {return owner && current_task()==owner;}
 static int own(uint64_t key,SdkError *e) {
  clear_error(e);
- if (!active || closing || !owner || key!=context_key || FindTask(NULL)!=owner) return refuse(e,4,0);
+ if (!active || closing || key!=context_key || !owner_is_current()) return refuse(e,4,0);
  return 0;
 }
 static int index_of(uint64_t token,unsigned kind,size_t cap) {
@@ -84,13 +89,13 @@ int sdk_begin(int argc,char **argv) {
  int invalid=argument_gate(argc,argv);if(invalid)return invalid;
  if(initialized || active || closing || !SysBase || !DOSBase)return 20;
  if(!compatible_exec(&SysBase->LibNode) || !compatible_dos(&DOSBase->dl_lib))return 20;
- initialized=1;owner=FindTask(NULL);if(!owner)return 20;
+ initialized=1;owner=current_task();if(!owner)return 20;
  mandatory_dos=test_hit(13)?NULL:OpenLibrary((CONST_STRPTR)"dos.library",0);if(!mandatory_dos){owner=NULL;return 20;}
  argument_count=argc;arguments=argv;context_key=next_token(0x41,0);
  if(!context_key){CloseLibrary(mandatory_dos);mandatory_dos=NULL;owner=NULL;return 20;}
  claimed=0;active=1;return 0;
 }
-uint64_t sdk_context(void) {return active && !closing && owner==FindTask(NULL)?context_key:0;}
+uint64_t sdk_context(void) {return active && !closing && owner_is_current()?context_key:0;}
 uint64_t sdk_claim_context(void) {uint64_t key=sdk_context();if(!key||claimed)return 0;claimed=1;return key;}
 size_t sdk_arg_count(uint64_t key) {return own(key,NULL)==0?(size_t)argument_count:0;}
 const uint8_t *sdk_arg(uint64_t key,size_t i,size_t *length) {
@@ -99,7 +104,7 @@ const uint8_t *sdk_arg(uint64_t key,size_t i,size_t *length) {
 }
 void *sdk_alloc(size_t size,size_t align) {
  AmiSdkAllocationLayout layout;size_t next_charge;
- if(!active || closing || owner!=FindTask(NULL) || ami_sdk_diagnostic_depth ||
+ if(!active || closing || !owner_is_current() || ami_sdk_diagnostic_depth ||
     !ami_sdk_allocation_layout(size,align,sizeof(struct Block),&layout) ||
     !ami_sdk_allocation_add_charge(stats.backing_charge,layout.charge,&next_charge)){++stats.refusals;return NULL;}
  if(test_hit(9)){++stats.refusals;return NULL;}
@@ -115,7 +120,7 @@ void *sdk_alloc(size_t size,size_t align) {
  return b->user;
 }
 void sdk_dealloc(void *p,size_t size,size_t align) {
- if(!active || closing || owner!=FindTask(NULL)){++stats.refusals;return;}
+ if(!active || closing || !owner_is_current()){++stats.refusals;return;}
  struct Block *b=blocks;while(b && b->user!=p)b=b->next;
  if(!b || b->size!=size || b->align!=align){++stats.refusals;return;}
  if(b->prev)b->prev->next=b->next;else blocks=b->next;
@@ -300,8 +305,8 @@ static int test_report_ledgers(void) {
  sdk_diagnostic((const uint8_t *)"[m1-ledger] messages",20,stats.messages);
  sdk_diagnostic((const uint8_t *)"[m1-native] live",16,backend_live());
  sdk_diagnostic((const uint8_t *)"[m1-native] errors",18,backend_errors);
- sdk_diagnostic((const uint8_t *)"[m1-native] signal-mask-delta",29,(uint64_t)(FindTask(NULL)->tc_SigAlloc^initial_signal_mask));
- return backend_live()||backend_errors||FindTask(NULL)->tc_SigAlloc!=initial_signal_mask?20:0;
+ sdk_diagnostic((const uint8_t *)"[m1-native] signal-mask-delta",29,(uint64_t)(current_task()->tc_SigAlloc^initial_signal_mask));
+ return backend_live()||backend_errors||current_task()->tc_SigAlloc!=initial_signal_mask?20:0;
 }
 #endif
 static int cleanup_remaining(void) {
@@ -340,7 +345,7 @@ static int cleanup_remaining(void) {
  return cleanup_error;
 }
 int sdk_end(void) {
- if(!active || closing || owner!=FindTask(NULL))return 20;
+ if(!active || closing || !owner_is_current())return 20;
  return cleanup_remaining();
 }
 _Noreturn void sdk_fatal(uint64_t reason) {
@@ -350,7 +355,7 @@ _Noreturn void sdk_fatal(uint64_t reason) {
      re-enter the formatter or a registered Rust callback. */
   static const uint8_t text[]="ami-rust fatal during cleanup\n";
   for(size_t i=0;i<sizeof(text)-1;i++)RawPutChar(text[i]);
-  if(cleanup_resume_ready && owner==FindTask(NULL))longjmp(cleanup_resume,1);
+  if(cleanup_resume_ready && owner_is_current())longjmp(cleanup_resume,1);
   _Exit(20);
  }
  if(!fatal_started){fatal_started=1;sdk_diagnostic((const uint8_t *)"ami-rust fatal",14,reason);}
@@ -360,7 +365,7 @@ _Noreturn void sdk_fatal(uint64_t reason) {
   /* The original formatter frame is abandoned by this nonreturning path. */
   ami_sdk_diagnostic_depth=0;
  }
- if(active && owner==FindTask(NULL)){int result=cleanup_remaining();(void)result;}
+ if(active && owner_is_current()){int result=cleanup_remaining();(void)result;}
  /* Pinned _Exit skips user exit hooks and goes to native startup teardown. */
  _Exit(20);
 }
@@ -368,7 +373,7 @@ extern int rust_sdk_main(void);
 int main(int argc,char **argv) {
 #ifdef AMI_SDK_TESTING
  if(!(argc>1 && !strcmp(argv[1],"missing-window")))ami_test_bind_diagnostics(&ami_sdk_diagnostic_depth);
- initial_signal_mask=FindTask(NULL)->tc_SigAlloc;
+ initial_signal_mask=current_task()->tc_SigAlloc;
  if(argc>1 && (!strcmp(argv[1],"startup-fail")||!strcmp(argv[1],"fault13")))sdk_test_fault(13,1);
  if(argc>1 && !strcmp(argv[1],"startup-slot"))sdk_test_fault(9,1);
  if(argc>1 && !strcmp(argv[1],"diag-direct"))diagnostic_probe=1;
