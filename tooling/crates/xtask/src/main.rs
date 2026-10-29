@@ -43,6 +43,11 @@ use std::{
 };
 
 fn main() {
+    if bare_target_producer::rustc_wrapper_active() {
+        std::process::exit(bare_target_producer::run_rustc_wrapper(
+            std::env::args_os().skip(1),
+        ));
+    }
     let qualification_command = std::env::args_os().nth(1).as_deref()
         == Some(std::ffi::OsStr::new("qualification-command"));
     if let Err(error) = run() {

@@ -31,7 +31,7 @@ use std::{
 const CHECK_SCHEMA: &str = "ami-rust-rp3-cutover-check-v1";
 const REQUEST_SCHEMA: &str = "ami-rust-rp3-release-request-v1";
 const INVENTORY_SCHEMA: &str = "ami-rust-rp3-publication-inventory-v1";
-const HANDOFF_SCHEMA: &str = "ami-rust-rp3-channel-handoff-v1";
+const HANDOFF_SCHEMA: &str = "ami-rust-m7-distribution-handoff-v1";
 const FINAL_SCHEMA: &str = "ami-rust-rp3-final-readback-v1";
 const PRODUCER_SCHEMA: &str = "ami-rust-toolchain-producer-result-v1";
 const PRODUCER_STATUS: &str = "RP2_OFFLINE_UNSIGNED_TOOLCHAIN_PRODUCED";
@@ -46,9 +46,10 @@ const WORKFLOWS: [(&str, &str); 3] = [
 ];
 const QUALIFICATION_OBSERVATION_BOUNDARY: (&str, &str) = (
     "toolchain-qualify.yml",
-    "PASS_EXACT_CARGO_BUILD_ON_THREE_HOSTS",
+    "PASS_EXACT_DUAL_ABI_CARGO_BUILD_ON_THREE_HOSTS",
 );
 const HOSTS: [&str; 3] = ["macos-aarch64", "linux-x86_64", "linux-aarch64"];
+const TARGETS: [&str; 2] = ["x86_64-unknown-aros-abi1", "x86_64-unknown-aros-abi11"];
 const COMPONENTS: [(&str, &str); 3] = [
     ("rustup-rustc-component", "rustc"),
     ("rustup-cargo-component", "cargo"),
@@ -80,7 +81,7 @@ struct ProducerInventory {
     status: String,
     version: String,
     host: ProducerHost,
-    target: String,
+    targets: Vec<String>,
     production_contract_sha256: String,
     release_epoch: u64,
     sdk: ProducerSdk,
@@ -391,6 +392,7 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
         let mut channel_assets = BTreeMap::<String, FileIdentity>::new();
         let mut invariant_target_payload: Option<Vec<ProducerSdkFile>> = None;
         let mut host_target_rlibs = Vec::new();
+        let mut target_metadata_rows = Vec::new();
         for host in HOSTS {
             let root = existing_directory(request.host_outputs[host].clone(), "producer output")?;
             let inventory_name = format!("ami-rust-{}-{host}.inventory.json", request.version);
@@ -405,7 +407,7 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
                 || inventory.status != PRODUCER_STATUS
                 || inventory.version != request.version
                 || inventory.host.key != host
-                || inventory.target != "x86_64-aros"
+                || inventory.targets != TARGETS
                 || inventory.production_contract_sha256 != contract_sha
                 || inventory.release_epoch != epoch
                 || inventory.publication_authorized
@@ -418,7 +420,11 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
                 .sdk
                 .files
                 .iter()
-                .filter(|row| row.path.starts_with("lib/rustlib/x86_64-aros/"))
+                .filter(|row| {
+                    TARGETS
+                        .iter()
+                        .any(|target| row.path.starts_with(&format!("lib/rustlib/{target}/")))
+                })
                 .cloned()
                 .collect::<Vec<_>>();
             host_target_payload.sort();
@@ -432,11 +438,10 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
                 )));
             }
             let mut host_rlibs = Vec::new();
+            let mut host_metadata = Vec::new();
             let mut host_invariant_payload = Vec::new();
             for row in host_target_payload {
-                if row.path.starts_with("lib/rustlib/x86_64-aros/lib/lib")
-                    && row.path.ends_with(".rlib")
-                {
+                if row.path.ends_with(".rlib") {
                     if row.mode.is_some_and(|mode| mode != 0o644) {
                         return Err(Refusal::new(format!(
                             "producer target library has an unexpected mode: {host}"
@@ -447,10 +452,28 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
                         bytes: row.bytes,
                         sha256: row.sha256,
                     });
+                } else if row.path.ends_with(".rmeta") {
+                    if row.mode.is_some_and(|mode| mode != 0o644) {
+                        return Err(Refusal::new(format!(
+                            "producer target metadata has an unexpected mode: {host}"
+                        )));
+                    }
+                    host_metadata.push(row);
                 } else {
                     host_invariant_payload.push(row);
                 }
             }
+            host_metadata.sort();
+            if host_rlibs.len() != 6 || host_metadata.len() != 6 {
+                return Err(Refusal::new(format!(
+                    "producer target payload lacks the dual-ABI rlib/rmeta set: {host}"
+                )));
+            }
+            target_metadata_rows.push(json!({
+                "host": host,
+                "artifacts": host_metadata,
+                "compiler_outputs_mutated": false,
+            }));
             host_invariant_payload.sort();
             if let Some(expected) = &invariant_target_payload {
                 if expected != &host_invariant_payload {
@@ -508,19 +531,7 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
             if components.len() != COMPONENTS.len() {
                 return Err(Refusal::new("producer inventory omits a Rustup component"));
             }
-            let required_native = match host {
-                "macos-aarch64" => BTreeSet::from(["direct-archive", "release-notices"]),
-                "linux-x86_64" => BTreeSet::from([
-                    "direct-archive",
-                    "debian-package",
-                    "release-notices",
-                    "release-sources",
-                ]),
-                "linux-aarch64" => {
-                    BTreeSet::from(["direct-archive", "debian-package", "release-notices"])
-                }
-                _ => unreachable!(),
-            };
+            let required_native = BTreeSet::from(["direct-archive", "release-notices"]);
             if inventory
                 .artifacts
                 .iter()
@@ -608,58 +619,6 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
         )?;
         raw_assets.extend([manifest_identity, checksum_identity]);
 
-        let mac_direct_name = format!("ami-rust-{}-macos-aarch64.tar.xz", request.version);
-        let mac_direct = channel_assets
-            .get(&mac_direct_name)
-            .ok_or_else(|| Refusal::new("macOS Direct archive is absent"))?;
-        let homebrew_input = json!({
-            "schema":"ami-rust-rp3-homebrew-input-v1",
-            "version":request.version,
-            "release_tag":release_tag,
-            "archive":identity_json(mac_direct),
-            "install_prefix":"libexec/ami-rust",
-            "rebuild_sdk":false,
-        });
-        let homebrew_input_identity = write_json_candidate(
-            &candidate,
-            &format!("ami-rust-{}-macos-aarch64.json", request.version),
-            &homebrew_input,
-        )?;
-        raw_assets.push(homebrew_input_identity.clone());
-        let formula = render_homebrew_formula(&request.version, &release_tag, mac_direct);
-        let formula_identity = write_candidate_file(&candidate, "ami-rust.rb", formula.as_bytes())?;
-        raw_assets.push(formula_identity.clone());
-
-        let mut debian_inputs = Vec::new();
-        for (host, architecture) in [("linux-x86_64", "amd64"), ("linux-aarch64", "arm64")] {
-            let deb_name = format!("ami-rust_{}_{}.deb", request.version, architecture);
-            let deb = channel_assets
-                .get(&deb_name)
-                .ok_or_else(|| Refusal::new("Debian package is absent"))?;
-            let direct_name = format!("ami-rust-{}-{host}.tar.xz", request.version);
-            let direct = channel_assets
-                .get(&direct_name)
-                .ok_or_else(|| Refusal::new("Linux Direct archive is absent"))?;
-            let input = json!({
-                "schema":"ami-rust-rp3-debian-input-v1",
-                "version":request.version,
-                "host":host,
-                "architecture":architecture,
-                "package":identity_json(deb),
-                "source_archive":identity_json(direct),
-                "install_prefix":format!("usr/libexec/ami-rust/{}",request.version),
-                "tracking_entry":"usr/libexec/ami-rust/current",
-                "rebuild_sdk":false,
-            });
-            let identity = write_json_candidate(
-                &candidate,
-                &format!("ami-rust-{}-{architecture}.json", request.version),
-                &input,
-            )?;
-            debian_inputs.push(identity.clone());
-            raw_assets.push(identity);
-        }
-
         raw_assets.sort_by(|left, right| left.name.cmp(&right.name));
         require_unique_names(&raw_assets)?;
         let sbom =
@@ -705,17 +664,9 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
                 )
             })
             .collect::<Vec<_>>();
-        let debian_packages = ["amd64", "arm64"]
-            .iter()
-            .map(|arch| {
-                identity_json(
-                    &channel_assets[&format!("ami-rust_{}_{}.deb", request.version, arch)],
-                )
-            })
-            .collect::<Vec<_>>();
         let handoff = json!({
             "schema": HANDOFF_SCHEMA,
-            "status": "EXACT_RELEASE_ASSET_IDENTITIES_FOR_PACKAGE_CHANNELS",
+            "status": "EXACT_RELEASE_ASSET_IDENTITIES_FOR_DIRECT_AND_RUSTUP",
             "version": request.version,
             "release_tag": release_tag,
             "qualification": {"run_id":request.qualification_run_id,"run_attempt":request.qualification_run_attempt},
@@ -728,20 +679,8 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
                 "checksum":rendered.checksum_name,
                 "component_count":9,
             },
-            "apt": {
-                "repository":"metaneutrons/apt-archive",
-                "packages": debian_packages,
-                "inputs":debian_inputs.iter().map(identity_json).collect::<Vec<_>>(),
-                "rebuild_sdk":false
-            },
-            "homebrew": {
-                "repository":"metaneutrons/homebrew-tap",
-                "formula":identity_json(&formula_identity),
-                "input":identity_json(&homebrew_input_identity),
-                "archive":identity_json(mac_direct),
-                "rebuild_sdk":false
-            },
-            "claim": "APT and Homebrew receive these exact signed GitHub Release identities after public readback; package layout may change, SDK payload bytes may not."
+            "deferred_channels": ["apt", "homebrew", "aur", "crates.io"],
+            "claim": "The 0.1 candidate prepares only authenticated direct archives and rustup distribution metadata. No asset is published by assembly."
         });
         let handoff_identity = write_json_candidate(&candidate, "channel-handoff.json", &handoff)?;
         raw_assets.push(handoff_identity);
@@ -752,7 +691,7 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
             "status": if request.catalog_commit.is_some() {"READY_FOR_PROTECTED_SIGNING"} else {"CATALOG_READY_FOR_REVIEW"},
             "version": request.version,
             "release_tag": format!("v{}", request.version),
-            "target": "x86_64-aros",
+            "targets": TARGETS,
             "source": {"commit":request.source_commit,"tree":request.source_tree,"epoch":epoch},
             "production_contract_sha256": contract_sha,
             "qualification": {"run_id":request.qualification_run_id,"run_attempt":request.qualification_run_attempt},
@@ -763,6 +702,7 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
                 "invariant_file_count": invariant_target_payload.as_ref().expect("three hosts checked").len(),
                 "invariant_files": invariant_target_payload.expect("three hosts checked"),
                 "target_libraries": target_library_comparison,
+                "host_metadata": target_metadata_rows,
                 "host_metadata_mutated": false
             },
             "assets": raw_assets.iter().map(identity_json).collect::<Vec<_>>(),
@@ -1087,15 +1027,7 @@ fn require_native_artifact_name(
 ) -> Result<()> {
     let expected = match artifact.role.as_str() {
         "direct-archive" => format!("ami-rust-{version}-{host}.tar.xz"),
-        "debian-package" => match host {
-            "linux-x86_64" => format!("ami-rust_{version}_amd64.deb"),
-            "linux-aarch64" => format!("ami-rust_{version}_arm64.deb"),
-            _ => return Err(Refusal::new("macOS producer declared a Debian package")),
-        },
         "release-notices" => format!("ami-rust-{version}-notices.tar.xz"),
-        "release-sources" if host == "linux-x86_64" => {
-            format!("ami-rust-{version}-sources.tar.xz")
-        }
         _ => return Err(Refusal::new("unsupported native producer artifact role")),
     };
     if artifact.path != expected {
@@ -1105,49 +1037,6 @@ fn require_native_artifact_name(
         )));
     }
     Ok(())
-}
-
-fn render_homebrew_formula(version: &str, release_tag: &str, archive: &FileIdentity) -> String {
-    format!(
-        r##"class AmiRust < Formula
-  desc "Rust cross-development toolchain for x86-64 AROS"
-  homepage "https://github.com/metaneutrons/ami-rust"
-  url "https://github.com/metaneutrons/ami-rust/releases/download/{release_tag}/{name}"
-  version "{version}"
-  sha256 "{sha256}"
-  license :cannot_represent
-
-  depends_on arch: :arm64
-  depends_on :macos
-
-  preserve_rpath
-
-  def install
-    # Homebrew stages the archive's single libexec root as the working directory.
-    libexec.install "ami-rust"
-    File.symlink version.to_s, libexec/"ami-rust"/"current"
-  end
-
-  def caveats
-    <<~EOS
-      To opt in to the tracking rustup alias, run:
-        rustup toolchain link aros "#{{opt_prefix}}/libexec/ami-rust/current"
-
-      To opt in to this version specifically, run:
-        rustup toolchain link aros-#{{version}} "#{{prefix}}/libexec/ami-rust/#{{version}}"
-    EOS
-  end
-
-  test do
-    sdk = libexec/"ami-rust/#{{version}}"
-    assert_predicate sdk/"bin/rustc", :executable?
-    assert_predicate sdk/"bin/cargo", :executable?
-  end
-end
-"##,
-        name = archive.name,
-        sha256 = archive.sha256,
-    )
 }
 
 fn render_release_sbom(
