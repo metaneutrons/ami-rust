@@ -1,4 +1,4 @@
-//! Cross-host comparison for the three source-built AROS target libraries.
+//! Cross-host comparison for the source-built AROS target libraries.
 //!
 //! The accepted R1 rule preserves every compiler output byte. Native archive
 //! records and symbol indices must be identical. Only `lib.rmeta`, Cargo's
@@ -38,6 +38,7 @@ pub(super) struct HostTargetRlibs {
 
 struct LoadedRlib {
     identity: TargetRlib,
+    target: String,
     crate_name: String,
     disambiguator: String,
     raw: Vec<u8>,
@@ -73,7 +74,7 @@ pub(super) fn compare(hosts: Vec<HostTargetRlibs>) -> Result<Value> {
         let extracted = read_direct_archive(&host)?;
         let mut libraries = BTreeMap::new();
         for identity in host.libraries {
-            let (crate_name, disambiguator) = library_filename(&identity.path)?;
+            let (target, crate_name, disambiguator) = library_filename(&identity.path)?;
             if identity.bytes == 0
                 || identity.bytes > MAX_RLIB_BYTES as u64
                 || !is_sha256_digest(&identity.sha256)
@@ -91,9 +92,10 @@ pub(super) fn compare(hosts: Vec<HostTargetRlibs>) -> Result<Value> {
             })?;
             if libraries
                 .insert(
-                    crate_name.clone(),
+                    format!("{target}/{crate_name}"),
                     LoadedRlib {
                         identity,
+                        target,
                         crate_name,
                         disambiguator,
                         raw,
@@ -107,11 +109,16 @@ pub(super) fn compare(hosts: Vec<HostTargetRlibs>) -> Result<Value> {
                 )));
             }
         }
-        if libraries.keys().map(String::as_str).collect::<Vec<_>>()
-            != ["alloc", "compiler_builtins", "core"]
-        {
+        let expected = ["x86_64-unknown-aros-abi1", "x86_64-unknown-aros-abi11"]
+            .into_iter()
+            .flat_map(|target| {
+                ["alloc", "compiler_builtins", "core"]
+                    .map(|crate_name| format!("{target}/{crate_name}"))
+            })
+            .collect::<Vec<_>>();
+        if libraries.keys().cloned().collect::<Vec<_>>() != expected {
             return Err(Refusal::new(format!(
-                "{} target libraries do not contain the exact three required crates",
+                "{} target libraries do not contain the exact dual-ABI crate set",
                 host.host
             )));
         }
@@ -121,19 +128,26 @@ pub(super) fn compare(hosts: Vec<HostTargetRlibs>) -> Result<Value> {
     let baseline = &loaded[0];
     let mut comparisons = Vec::new();
     for candidate in &loaded[1..] {
-        for crate_name in ["alloc", "compiler_builtins", "core"] {
+        for key in ["x86_64-unknown-aros-abi1", "x86_64-unknown-aros-abi11"]
+            .into_iter()
+            .flat_map(|target| {
+                ["alloc", "compiler_builtins", "core"]
+                    .map(move |crate_name| format!("{target}/{crate_name}"))
+            })
+        {
             comparisons.push(compare_rlib(
                 &baseline.0,
-                &baseline.1[crate_name],
+                &baseline.1[&key],
                 &candidate.0,
-                &candidate.1[crate_name],
+                &candidate.1[&key],
             )?);
         }
     }
     Ok(json!({
         "rule": "R1-A2_SEPARATE_HOST_METADATA_QUALIFICATION",
         "hosts": loaded.iter().map(|(host, _)| host).collect::<Vec<_>>(),
-        "libraries_per_host": 3,
+        "targets": ["x86_64-unknown-aros-abi1", "x86_64-unknown-aros-abi11"],
+        "libraries_per_host": 6,
         "pairwise_comparisons": comparisons,
         "native_object_and_symbol_index_records_equal": true,
         "allowed_host_metadata": [
@@ -251,11 +265,12 @@ fn compare_rlib(
     candidate_host: &str,
     candidate: &LoadedRlib,
 ) -> Result<Value> {
-    if baseline.crate_name != candidate.crate_name {
+    if baseline.target != candidate.target || baseline.crate_name != candidate.crate_name {
         return Err(Refusal::new("target-library crate identities differ"));
     }
     if baseline.raw == candidate.raw {
         return Ok(json!({
+            "target": baseline.target,
             "crate": baseline.crate_name,
             "baseline_host": baseline_host,
             "candidate_host": candidate_host,
@@ -345,6 +360,7 @@ fn compare_rlib(
         )));
     }
     Ok(json!({
+        "target": baseline.target,
         "crate": baseline.crate_name,
         "baseline_host": baseline_host,
         "candidate_host": candidate_host,
@@ -682,10 +698,21 @@ fn valid_codegen_suffix(suffix: &str, crate_name: &str) -> bool {
             .all(|byte| byte.is_ascii_digit())
 }
 
-fn library_filename(path: &str) -> Result<(String, String)> {
-    let leaf = path
-        .strip_prefix("lib/rustlib/x86_64-aros/lib/lib")
-        .and_then(|value| value.strip_suffix(".rlib"))
+fn library_filename(path: &str) -> Result<(String, String, String)> {
+    let relative = path
+        .strip_prefix("lib/rustlib/")
+        .ok_or_else(|| Refusal::new("target-library path has an unexpected layout"))?;
+    let (target, leaf) = relative
+        .split_once("/lib/lib")
+        .ok_or_else(|| Refusal::new("target-library path has an unexpected layout"))?;
+    if !matches!(
+        target,
+        "x86_64-unknown-aros-abi1" | "x86_64-unknown-aros-abi11"
+    ) {
+        return Err(Refusal::new("target-library path has an unexpected target"));
+    }
+    let leaf = leaf
+        .strip_suffix(".rlib")
         .ok_or_else(|| Refusal::new("target-library path has an unexpected layout"))?;
     if leaf.contains('/') || leaf.contains('\\') {
         return Err(Refusal::new("target-library path is not one library leaf"));
@@ -701,7 +728,11 @@ fn library_filename(path: &str) -> Result<(String, String)> {
     {
         return Err(Refusal::new("target-library filename is malformed"));
     }
-    Ok((crate_name.to_owned(), disambiguator.to_owned()))
+    Ok((
+        target.to_owned(),
+        crate_name.to_owned(),
+        disambiguator.to_owned(),
+    ))
 }
 
 fn identity_json(identity: &TargetRlib) -> Value {

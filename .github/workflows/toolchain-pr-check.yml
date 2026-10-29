@@ -10,6 +10,7 @@ on:
       - tooling/crates/core/src/toolchain_package.rs
       - tooling/crates/core/src/toolchain_release_rustup.rs
       - tooling/crates/xtask/src/main.rs
+      - tooling/crates/xtask/src/bare_target_producer.rs
       - tooling/crates/xtask/src/consumer_observe.rs
       - tooling/crates/xtask/src/consumer_report.rs
       - tooling/crates/xtask/src/consumer_runtime.rs

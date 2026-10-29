@@ -158,7 +158,7 @@ jobs:
           pattern: rp3-toolchain-*-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/rp3-downloads
 
-      - name: Assemble the release and package-channel identities
+      - name: Assemble the direct and rustup candidate identities
         env:
           VERSION: ${{ inputs.version }}
           RUST_VERSION: ${{ inputs.rust_version }}
@@ -270,9 +270,7 @@ jobs:
           test -x "$sysroot/bin/aros-link"
           umask 077
           mkdir -m 700 "$RUNNER_TEMP/rp4-vendor" "$RUNNER_TEMP/rp4-result" \
-            "$RUNNER_TEMP/rp4-observer-inputs" "$RUNNER_TEMP/rp4-observed" \
-            "$RUNNER_TEMP/rp4-observed/home" "$RUNNER_TEMP/rp4-observed/tmp" \
-            "$RUNNER_TEMP/rp4-observed/target"
+            "$RUNNER_TEMP/rp4-observer-inputs" "$RUNNER_TEMP/rp4-observed"
           tar -xJf release/inputs/native-cargo-vendor.tar.xz -C "$RUNNER_TEMP/rp4-vendor"
           vendor="$RUNNER_TEMP/rp4-vendor/vendor"
           bootstrap="$RUNNER_TEMP/rp4-maintainer/bootstrap/toolchain"
@@ -321,7 +319,11 @@ jobs:
           jobs = 2
           incremental = false
 
-          [target.x86_64-aros]
+          [target.x86_64-unknown-aros-abi1]
+          linker = "$sysroot/bin/aros-link"
+          rustflags = ["-Zunstable-options", "--remap-path-prefix=$RUNNER_TEMP=/build", "--remap-path-prefix=$GITHUB_WORKSPACE=/ami-rust-source", "--remap-path-prefix=$vendor=/cargo-registry"]
+
+          [target.x86_64-unknown-aros-abi11]
           linker = "$sysroot/bin/aros-link"
           rustflags = ["-Zunstable-options", "--remap-path-prefix=$RUNNER_TEMP=/build", "--remap-path-prefix=$GITHUB_WORKSPACE=/ami-rust-source", "--remap-path-prefix=$vendor=/cargo-registry"]
 
@@ -346,53 +348,73 @@ jobs:
             --arg lld "$toolchain_root/bin/ld.lld" \
             --arg strip "$toolchain_root/bin/llvm-strip" \
             '[$linker,$collector,$lld,$strip]')"
-          spec="$RUNNER_TEMP/rp4-observer-inputs/spec.json"
-          jq -n --arg cargo "$sysroot/bin/cargo" --arg config "$config" \
-            --arg source "$GITHUB_WORKSPACE" --arg managed "$RUNNER_TEMP/rp4-observed" \
-            --arg home "$RUNNER_TEMP/rp4-observed/home" \
-            --arg tmp "$RUNNER_TEMP/rp4-observed/tmp" \
-            --arg target "$RUNNER_TEMP/rp4-observed/target" \
-            --arg components "$components" --arg config_sha "$(sha256 "$config")" \
-            --arg components_sha "$(sha256 "$components")" \
-            --arg lock "$GITHUB_WORKSPACE/Cargo.lock" --arg lock_sha "$(sha256 Cargo.lock)" \
-            --arg contract "$GITHUB_WORKSPACE/release/rust-production-contract.json" \
-            --arg contract_sha "$(sha256 release/rust-production-contract.json)" \
-            --arg vendor_archive "$GITHUB_WORKSPACE/release/inputs/native-cargo-vendor.tar.xz" \
-            --arg vendor_sha "$(sha256 release/inputs/native-cargo-vendor.tar.xz)" \
-            --argjson environment "$environment" --argjson executables "$executables" \
-            '{schema:"ami-rust-consumer-observation-spec-v1",phase:"build",environment:$environment,command:[$cargo,"--config",$config,"build","--manifest-path",($source+"/Cargo.toml"),"--package","ami-rust-sha256sum","--bin","ami-rust-sha256sum","--target","x86_64-aros","--release","--locked","--offline","--target-dir",$target],expected_exit:0,cwd:$source,home:$home,tmp:$tmp,read_trees:[{role:"source",path:$source}],write_trees:[{role:"work",path:$managed}],read_files:[],read_directories:[],executables:$executables,libraries:[],deny_exec:[],deny_library:[],component_record:$components,derived:{role:"consumer-build-parent",path:$target},bindings:[{path:$config,sha256:$config_sha},{path:$components,sha256:$components_sha},{path:$lock,sha256:$lock_sha},{path:$contract,sha256:$contract_sha},{path:$vendor_archive,sha256:$vendor_sha}]}' \
-            > "$spec"
           observer="$RUNNER_TEMP/rp4-maintainer/target/release/ami-rust-xtask"
-          "$observer" native-consumer-observe --spec "$spec" --adapter "$adapter" \
-            --output "$RUNNER_TEMP/rp4-result/build-observation"
-          observation="$RUNNER_TEMP/rp4-result/build-observation/observation.json"
-          jq -e \
-            '.status == "PASS_EXPECTED_CONSUMER_RESULT_AND_ADAPTER_EVIDENCE" and
-             .phase == "build" and .expected_exit == 0 and
-             .adapter_evidence.child_exit_code == 0 and
-             .adapter_evidence.network_outbound_allowed == false' \
-            "$observation" >/dev/null
+          applications='[]'
+          build_observations='[]'
+          for target_name in x86_64-unknown-aros-abi1 x86_64-unknown-aros-abi11; do
+            managed="$RUNNER_TEMP/rp4-observed/$target_name"
+            target_dir="$managed/target"
+            home="$managed/home"
+            tmp="$managed/tmp"
+            mkdir -m 700 "$managed" "$target_dir" "$home" "$tmp"
+            spec="$RUNNER_TEMP/rp4-observer-inputs/spec-$target_name.json"
+            jq -n --arg cargo "$sysroot/bin/cargo" --arg config "$config" \
+              --arg source "$GITHUB_WORKSPACE" --arg managed "$managed" \
+              --arg home "$home" --arg tmp "$tmp" --arg target_dir "$target_dir" \
+              --arg target_name "$target_name" \
+              --arg components "$components" --arg config_sha "$(sha256 "$config")" \
+              --arg components_sha "$(sha256 "$components")" \
+              --arg lock "$GITHUB_WORKSPACE/Cargo.lock" --arg lock_sha "$(sha256 Cargo.lock)" \
+              --arg contract "$GITHUB_WORKSPACE/release/rust-production-contract.json" \
+              --arg contract_sha "$(sha256 release/rust-production-contract.json)" \
+              --arg vendor_archive "$GITHUB_WORKSPACE/release/inputs/native-cargo-vendor.tar.xz" \
+              --arg vendor_sha "$(sha256 release/inputs/native-cargo-vendor.tar.xz)" \
+              --argjson environment "$environment" --argjson executables "$executables" \
+              '{schema:"ami-rust-consumer-observation-spec-v1",phase:"build",environment:$environment,command:[$cargo,"--config",$config,"build","--manifest-path",($source+"/Cargo.toml"),"--package","ami-rust-sha256sum","--bin","ami-rust-sha256sum","--target",$target_name,"--release","--locked","--offline","--target-dir",$target_dir],expected_exit:0,cwd:$source,home:$home,tmp:$tmp,read_trees:[{role:"source",path:$source}],write_trees:[{role:"work",path:$managed}],read_files:[],read_directories:[],executables:$executables,libraries:[],deny_exec:[],deny_library:[],component_record:$components,derived:{role:"consumer-build-parent",path:$target_dir},bindings:[{path:$config,sha256:$config_sha},{path:$components,sha256:$components_sha},{path:$lock,sha256:$lock_sha},{path:$contract,sha256:$contract_sha},{path:$vendor_archive,sha256:$vendor_sha}]}' \
+              > "$spec"
+            observation_root="$RUNNER_TEMP/rp4-result/build-observation-$target_name"
+            "$observer" native-consumer-observe --spec "$spec" --adapter "$adapter" \
+              --output "$observation_root"
+            observation="$observation_root/observation.json"
+            jq -e \
+              '.status == "PASS_EXPECTED_CONSUMER_RESULT_AND_ADAPTER_EVIDENCE" and
+               .phase == "build" and .expected_exit == 0 and
+               .adapter_evidence.child_exit_code == 0 and
+               .adapter_evidence.network_outbound_allowed == false' \
+              "$observation" >/dev/null
 
-          elf="$RUNNER_TEMP/rp4-observed/target/x86_64-aros/release/ami-rust-sha256sum"
-          test -s "$elf"
-          command cp "$elf" "$RUNNER_TEMP/rp4-result/ami-rust-sha256sum"
+            elf="$target_dir/$target_name/release/ami-rust-sha256sum"
+            test -s "$elf"
+            command cp "$elf" "$RUNNER_TEMP/rp4-result/ami-rust-sha256sum-$target_name"
+            elf_sha="$(sha256 "$elf")"
+            elf_bytes="$(wc -c < "$elf" | tr -d '[:space:]')"
+            applications="$(jq -c \
+              --arg target "$target_name" --arg sha256 "$elf_sha" \
+              --argjson bytes "$elf_bytes" \
+              '. + [{package:"ami-rust-sha256sum",$target,$bytes,$sha256}]' \
+              <<<"$applications")"
+            build_observations="$(jq -c \
+              --arg target "$target_name" \
+              --arg observer_sha256 "$(sha256 "$observer")" \
+              --arg adapter_sha256 "$(sha256 "$adapter")" \
+              --arg observation_sha256 "$(sha256 "$observation")" \
+              '. + [{$target,status:"PASS_EXACT_CARGO_BUILD",$observer_sha256,$adapter_sha256,$observation_sha256,network_outbound:false}]' \
+              <<<"$build_observations")"
+          done
+
           rustup run "$toolchain" rustc -Vv > "$RUNNER_TEMP/rp4-result/rustc.txt"
           rustup run "$toolchain" cargo -Vv > "$RUNNER_TEMP/rp4-result/cargo.txt"
           rustup --version > "$RUNNER_TEMP/rp4-result/rustup.txt"
-          elf_sha="$(shasum -a 256 "$elf" | awk '{print $1}')"
-          elf_bytes="$(wc -c < "$elf" | tr -d '[:space:]')"
           catalog_sha="$(shasum -a 256 "$RUNNER_TEMP/rp4-local-rustup/dist/channel-rust-$VERSION.toml" | awk '{print $1}')"
           jq -n --arg host "$HOST_KEY" --arg triple "$HOST_TRIPLE" \
             --arg source_commit "$GITHUB_SHA" --arg version "$VERSION" \
-            --arg elf_sha256 "$elf_sha" --argjson elf_bytes "$elf_bytes" \
             --arg catalog_sha256 "$catalog_sha" \
-            --arg observer_sha256 "$(sha256 "$observer")" \
-            --arg adapter_sha256 "$(sha256 "$adapter")" \
-            --arg observation_sha256 "$(sha256 "$observation")" \
+            --argjson applications "$applications" \
+            --argjson build_observations "$build_observations" \
             --rawfile rustc "$RUNNER_TEMP/rp4-result/rustc.txt" \
             --rawfile cargo "$RUNNER_TEMP/rp4-result/cargo.txt" \
             --rawfile rustup "$RUNNER_TEMP/rp4-result/rustup.txt" \
-            '{schema:"ami-rust-rc5-host-qualification-v1",status:"PASS",$host,$triple,$source_commit,$version,installation:{client:"unmodified rustup",catalog_sha256:$catalog_sha256},application:{package:"ami-rust-sha256sum",target:"x86_64-aros",bytes:$elf_bytes,sha256:$elf_sha256},build_observation:{status:"PASS_EXACT_CARGO_BUILD",observer_sha256:$observer_sha256,adapter_sha256:$adapter_sha256,observation_sha256:$observation_sha256,network_outbound:false},versions:{rustc:$rustc,cargo:$cargo,rustup:$rustup},publication_authorized:false}' \
+            '{schema:"ami-rust-m7-host-qualification-v1",status:"PASS",$host,$triple,$source_commit,$version,installation:{client:"unmodified rustup",catalog_sha256:$catalog_sha256},$applications,$build_observations,versions:{rustc:$rustc,cargo:$cargo,rustup:$rustup},publication_authorized:false}' \
             > "$RUNNER_TEMP/rp4-result/host-qualification.json"
 
       - name: Retain host qualification evidence
@@ -422,7 +444,7 @@ jobs:
           name: rp3-candidate-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/rp4-assembly
 
-      - name: Require one application identity and the complete target-payload join
+      - name: Require both application identities and the complete target-payload join
         env:
           VERSION: ${{ inputs.version }}
         shell: bash
@@ -431,25 +453,41 @@ jobs:
           mapfile -t records < <(find "$RUNNER_TEMP/rp4-qualified" -name host-qualification.json -type f | sort)
           test "${#records[@]}" = 3
           jq -s -e '
+            ["x86_64-unknown-aros-abi1","x86_64-unknown-aros-abi11"] as $targets |
+            . as $records |
+            ([$records[] | .applications[]] | group_by(.target)) as $applications |
             select(
-              (map(.host) | sort) == ["linux-aarch64","linux-x86_64","macos-aarch64"] and
-              all(.[];
-                .schema == "ami-rust-rc5-host-qualification-v1" and
+              ($records | map(.host) | sort) == ["linux-aarch64","linux-x86_64","macos-aarch64"] and
+              all($records[];
+                .schema == "ami-rust-m7-host-qualification-v1" and
                 .status == "PASS" and .installation.client == "unmodified rustup" and
-                .build_observation.status == "PASS_EXACT_CARGO_BUILD" and
-                .build_observation.network_outbound == false and
-                (.build_observation.observer_sha256 | test("^[0-9a-f]{64}$")) and
-                (.build_observation.adapter_sha256 | test("^[0-9a-f]{64}$")) and
-                (.build_observation.observation_sha256 | test("^[0-9a-f]{64}$"))
+                (.applications | map(.target)) == $targets and
+                (.build_observations | map(.target)) == $targets and
+                all(.applications[];
+                  .package == "ami-rust-sha256sum" and .bytes > 0 and
+                  (.sha256 | test("^[0-9a-f]{64}$"))) and
+                all(.build_observations[];
+                  .status == "PASS_EXACT_CARGO_BUILD" and
+                  .network_outbound == false and
+                  (.observer_sha256 | test("^[0-9a-f]{64}$")) and
+                  (.adapter_sha256 | test("^[0-9a-f]{64}$")) and
+                  (.observation_sha256 | test("^[0-9a-f]{64}$")))
               ) and
-              ([.[].application.sha256] | unique | length) == 1 and
-              ([.[].application.bytes] | unique | length) == 1
+              ($applications | map(.[0].target)) == $targets and
+              all($applications[];
+                length == 3 and
+                ([.[].sha256] | unique | length) == 1 and
+                ([.[].bytes] | unique | length) == 1)
             )
           ' "${records[@]}" > "$RUNNER_TEMP/rp4-hosts.json"
           target_payload="$(jq -cer '
+            ["x86_64-unknown-aros-abi1","x86_64-unknown-aros-abi11"] as $targets |
+            . as $inventory |
             .three_host_target_payload as $payload |
+            select($inventory.targets == $targets) |
             select($payload.invariant_file_count > 0) |
-            select($payload.target_libraries.libraries_per_host == 3) |
+            select($payload.target_libraries.targets == $targets) |
+            select($payload.target_libraries.libraries_per_host == 6) |
             select($payload.target_libraries.native_object_and_symbol_index_records_equal == true) |
             select($payload.target_libraries.compiler_outputs_mutated == false) |
             select($payload.host_metadata_mutated == false) |
@@ -461,17 +499,20 @@ jobs:
               host_metadata_mutated: $payload.host_metadata_mutated
             }
           ' "$RUNNER_TEMP/rp4-assembly/candidate/publication-inventory.json")"
-          app_sha="$(jq -r '.[0].application.sha256' "$RUNNER_TEMP/rp4-hosts.json")"
-          app_bytes="$(jq -r '.[0].application.bytes' "$RUNNER_TEMP/rp4-hosts.json")"
+          applications="$(jq -c '.[0].applications' "$RUNNER_TEMP/rp4-hosts.json")"
           mkdir -m 700 "$RUNNER_TEMP/rp4-admission"
           jq -n --arg version "$VERSION" --arg source_commit "$GITHUB_SHA" \
-            --arg app_sha256 "$app_sha" --argjson app_bytes "$app_bytes" \
+            --argjson applications "$applications" \
             --argjson target_payload "$target_payload" \
             --slurpfile hosts "$RUNNER_TEMP/rp4-hosts.json" \
-            '{schema:"ami-rust-rc5-three-host-admission-v1",status:"PASS",$version,$source_commit,hosts:$hosts[0],application:{target:"x86_64-aros",bytes:$app_bytes,sha256:$app_sha256},build_observation:{status:"PASS_EXACT_CARGO_BUILD_ON_THREE_HOSTS"},$target_payload,publication_authorized:false}' \
+            '{schema:"ami-rust-m7-three-host-admission-v1",status:"PASS",$version,$source_commit,hosts:$hosts[0],$applications,build_observation:{status:"PASS_EXACT_DUAL_ABI_CARGO_BUILD_ON_THREE_HOSTS"},$target_payload,publication_authorized:false}' \
             > "$RUNNER_TEMP/rp4-admission/three-host-admission.json"
-          command cp "${records[1]%/*}/ami-rust-sha256sum" "$RUNNER_TEMP/rp4-admission/ami-rust-sha256sum"
-          test "$(shasum -a 256 "$RUNNER_TEMP/rp4-admission/ami-rust-sha256sum" | awk '{print $1}')" = "$app_sha"
+          for target_name in x86_64-unknown-aros-abi1 x86_64-unknown-aros-abi11; do
+            app_sha="$(jq -er --arg target "$target_name" '.[] | select(.target == $target) | .sha256' <<<"$applications")"
+            app="ami-rust-sha256sum-$target_name"
+            command cp "${records[1]%/*}/$app" "$RUNNER_TEMP/rp4-admission/$app"
+            test "$(shasum -a 256 "$RUNNER_TEMP/rp4-admission/$app" | awk '{print $1}')" = "$app_sha"
+          done
 
       - name: Retain the admitted application and three-host evidence
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

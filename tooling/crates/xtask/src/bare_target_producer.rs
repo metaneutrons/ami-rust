@@ -21,11 +21,13 @@ use ami_rust_core::{
 use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
+    env,
     ffi::{OsStr, OsString},
     fs::{self, OpenOptions},
     io::Write,
     os::unix::{fs::PermissionsExt, fs::symlink},
     path::{Path, PathBuf},
+    process::Command,
     time::Instant,
 };
 
@@ -68,6 +70,9 @@ const LOG_BYTES: u64 = 16 * 1024 * 1024;
 const CAMPAIGN_SECONDS: u64 = 5_400;
 const FINALIZATION_RESERVE_SECONDS: u64 = 300;
 const CAMPAIGN_WORK_SECONDS: u64 = CAMPAIGN_SECONDS - FINALIZATION_RESERVE_SECONDS;
+const RUSTC_WRAPPER_MODE: &str = "AMI_RUST_BARE_TARGET_RUSTC_WRAPPER";
+const RUSTC_WRAPPER_TARGET: &str = "AMI_RUST_BARE_TARGET_RUSTC_TARGET";
+const RUSTC_WRAPPER_METADATA: &str = "AMI_RUST_BARE_TARGET_RUSTC_METADATA";
 const HOSTS: [HostPins; 3] = [
     HostPins {
         name: "macos-aarch64",
@@ -240,6 +245,125 @@ pub(super) fn profile_relative_path(host: &str) -> Result<&'static Path> {
         )),
         _ => Err(Refusal::new("bare-target host has no admitted profile")),
     }
+}
+
+pub(super) fn rustc_wrapper_active() -> bool {
+    env::var_os(RUSTC_WRAPPER_MODE).as_deref() == Some(OsStr::new("1"))
+}
+
+pub(super) fn run_rustc_wrapper(mut arguments: impl Iterator<Item = OsString>) -> i32 {
+    let result = (|| -> Result<i32> {
+        let rustc = arguments
+            .next()
+            .ok_or_else(|| Refusal::new("Rust compiler wrapper lacks the compiler path"))?;
+        if env::var_os("RUSTC").as_deref() != Some(rustc.as_os_str()) {
+            return Err(Refusal::new(
+                "Rust compiler wrapper received an unexpected compiler path",
+            ));
+        }
+        let target = env::var(RUSTC_WRAPPER_TARGET)
+            .map_err(|_| Refusal::new("Rust compiler wrapper target is absent"))?;
+        if !matches!(
+            target.as_str(),
+            "x86_64-unknown-aros-abi1" | "x86_64-unknown-aros-abi11"
+        ) {
+            return Err(Refusal::new("Rust compiler wrapper target is unsupported"));
+        }
+        let metadata = env::var(RUSTC_WRAPPER_METADATA)
+            .map_err(|_| Refusal::new("Rust compiler wrapper metadata is absent"))?;
+        if !is_sha256_digest(&metadata) {
+            return Err(Refusal::new(
+                "Rust compiler wrapper metadata is not a SHA-256 digest",
+            ));
+        }
+        let rewritten = rewrite_rustc_metadata(arguments.collect(), &target, &metadata)?;
+        let status = Command::new(rustc).args(rewritten).status()?;
+        Ok(status.code().unwrap_or(1))
+    })();
+    match result {
+        Ok(code) => code,
+        Err(error) => {
+            eprintln!("ami-rust Rust compiler wrapper refused: {error}");
+            2
+        }
+    }
+}
+
+fn rewrite_rustc_metadata(
+    mut arguments: Vec<OsString>,
+    target: &str,
+    metadata: &str,
+) -> Result<Vec<OsString>> {
+    let argument_value = |name: &str| -> Result<Option<&str>> {
+        let mut found = None;
+        let mut index = 0;
+        while index < arguments.len() {
+            let value = arguments[index]
+                .to_str()
+                .ok_or_else(|| Refusal::new("Rust compiler argument is not UTF-8"))?;
+            let candidate = if value == name {
+                index += 1;
+                Some(
+                    arguments
+                        .get(index)
+                        .and_then(|value| value.to_str())
+                        .ok_or_else(|| Refusal::new("Rust compiler option lacks a value"))?,
+                )
+            } else {
+                value.strip_prefix(&format!("{name}="))
+            };
+            if let Some(candidate) = candidate
+                && found.replace(candidate).is_some()
+            {
+                return Err(Refusal::new("Rust compiler option occurs more than once"));
+            }
+            index += 1;
+        }
+        Ok(found)
+    };
+    if argument_value("--target")? != Some(target) {
+        return Ok(arguments);
+    }
+    let Some(crate_name) = argument_value("--crate-name")? else {
+        return Ok(arguments);
+    };
+    if !matches!(crate_name, "core" | "alloc" | "compiler_builtins") {
+        return Ok(arguments);
+    }
+
+    let replacement = format!("metadata={metadata}");
+    let mut replaced = 0;
+    let mut index = 0;
+    while index < arguments.len() {
+        if arguments[index] == "-C" {
+            let value = arguments
+                .get_mut(index + 1)
+                .ok_or_else(|| Refusal::new("Rust compiler -C option lacks a value"))?;
+            if value
+                .to_str()
+                .is_some_and(|value| value.starts_with("metadata="))
+            {
+                *value = replacement.clone().into();
+                replaced += 1;
+            }
+            index += 2;
+            continue;
+        }
+        if arguments[index]
+            .to_str()
+            .is_some_and(|value| value.starts_with("-Cmetadata="))
+        {
+            arguments[index] = format!("-C{replacement}").into();
+            replaced += 1;
+        }
+        index += 1;
+    }
+    if replaced != 1 {
+        return Err(Refusal::new(
+            "target Rust library must have exactly one Cargo metadata argument",
+        ));
+    }
+    Ok(arguments)
 }
 
 pub(super) fn run(arguments: impl Iterator<Item = OsString>) -> Result<()> {
@@ -500,6 +624,15 @@ fn run_with_parent_rss_limit(
     let mut expected_requests =
         Vec::with_capacity(bare_target_record_validation::INNER_COMMAND_LABELS.len());
     let mut parent_peak_rss_bytes = 0_u64;
+    let helper = fs::canonicalize(env::current_exe()?)?;
+    let helper_sha256 = sha256_file(&helper)?;
+    let rustc_metadata = sha256_bytes(
+        format!(
+            "ami-rust-bare-target-v1\0{}\0{}\0{}\0{}",
+            RUST_COMMIT, inputs.target.pin_sha256, inputs.target.spec_sha256, LIBRARY_LOCK_SHA256,
+        )
+        .as_bytes(),
+    );
     let mut environment = BTreeMap::new();
     environment.insert(
         "PATH".to_owned(),
@@ -520,8 +653,11 @@ fn run_with_parent_rss_limit(
         "SOURCE_DATE_EPOCH".to_owned(),
         inputs.target.source_date_epoch.to_string(),
     );
-    environment.insert("RUSTC_WRAPPER".to_owned(), String::new());
+    environment.insert("RUSTC_WRAPPER".to_owned(), utf8(&helper)?);
     environment.insert("RUSTC_WORKSPACE_WRAPPER".to_owned(), String::new());
+    environment.insert(RUSTC_WRAPPER_MODE.to_owned(), "1".to_owned());
+    environment.insert(RUSTC_WRAPPER_TARGET.to_owned(), inputs.target.name.clone());
+    environment.insert(RUSTC_WRAPPER_METADATA.to_owned(), rustc_metadata.clone());
 
     let command_context = CommandContext {
         work: &work,
@@ -684,7 +820,6 @@ fn run_with_parent_rss_limit(
     // The same process sampled its RUSAGE_SELF high-water in every final
     // command record. The outer trusted supervisor remains responsible for
     // observing the complete producer invocation, including finalization.
-    let helper_sha256 = sha256_file(&std::env::current_exe()?)?;
     let program_sha256_by_label = pinned_program_digests(&work, host)?;
     let binding_context = InnerCommandBindingContext {
         host,
@@ -780,6 +915,13 @@ fn run_with_parent_rss_limit(
             "target": inputs.target.name,
             "build_flags": ["-Zjson-target-spec", "-Zbuild-std=core,alloc", "-Zbuild-std-features=compiler-builtins-mem", "build", format!("--target={}", inputs.target.name), "--release", "--locked", "--offline", "--lib", "-j2", "-vv", "--message-format=json-render-diagnostics"],
             "rustflags": flags,
+            "rustc_metadata": {
+                "value": rustc_metadata,
+                "derivation": "sha256(ami-rust-bare-target-v1, rustc commit, target pin, target specification, Rust library lock)",
+                "scope": "Cargo metadata argument for source-built core, alloc, and compiler_builtins only",
+                "wrapper_sha256": helper_sha256,
+                "compiler_outputs_mutated_after_rustc": false
+            },
             "source_date_epoch": inputs.target.source_date_epoch,
             "network": "offline",
             "stale_target_libraries_loaded": false
@@ -2062,10 +2204,11 @@ mod tests {
         SOURCE_PROFILE_TARGET_ALIAS_PATH, SOURCE_PROFILE_TARGET_SPEC_BYTES,
         SOURCE_PROFILE_TARGET_SPEC_PATH, SOURCE_PROFILE_TARGET_SPEC_SHA256, TargetDefinition,
         collect_libraries, create_linux_llvm_runtime_alias, is_installer_admin_path,
-        is_official_cargo_path, pinned_program_digests, require_digest, select_component_inventory,
-        select_linux_llvm_runtime_alias, select_macos_llvm_runtime_alias,
-        validate_bound_command_record, validate_caller_bound_inner_commands,
-        validate_linux_llvm_runtime_alias, validate_macos_llvm_runtime_alias,
+        is_official_cargo_path, pinned_program_digests, require_digest, rewrite_rustc_metadata,
+        select_component_inventory, select_linux_llvm_runtime_alias,
+        select_macos_llvm_runtime_alias, validate_bound_command_record,
+        validate_caller_bound_inner_commands, validate_linux_llvm_runtime_alias,
+        validate_macos_llvm_runtime_alias,
     };
     use ami_rust_core::{
         bare_target_record_validation::{self, InnerCommandSummary},
@@ -2075,6 +2218,7 @@ mod tests {
     use serde_json::{Value, json};
     use std::{
         collections::{BTreeMap, BTreeSet},
+        ffi::OsString,
         fs,
         os::unix::fs::PermissionsExt,
         path::PathBuf,
@@ -2156,6 +2300,46 @@ mod tests {
                 },
             ],
         }
+    }
+
+    #[test]
+    fn rustc_wrapper_replaces_only_one_target_library_metadata_argument() {
+        let target = "x86_64-unknown-aros-abi1";
+        let metadata = "a".repeat(64);
+        let arguments = [
+            "--crate-name",
+            "alloc",
+            "--target=x86_64-unknown-aros-abi1",
+            "-C",
+            "metadata=host-bound",
+            "-C",
+            "extra-filename=-0123456789abcdef",
+        ]
+        .map(OsString::from)
+        .to_vec();
+        let rewritten = rewrite_rustc_metadata(arguments, target, &metadata)
+            .expect("one target-library metadata argument is replaced");
+        assert_eq!(rewritten[4], OsString::from(format!("metadata={metadata}")));
+        assert_eq!(rewritten[6], "extra-filename=-0123456789abcdef");
+
+        let host_arguments = [
+            "--crate-name",
+            "build_script_build",
+            "-C",
+            "metadata=host-bound",
+        ]
+        .map(OsString::from)
+        .to_vec();
+        assert_eq!(
+            rewrite_rustc_metadata(host_arguments.clone(), target, &metadata)
+                .expect("host build passes through"),
+            host_arguments
+        );
+
+        let missing_metadata = ["--crate-name", "core", "--target", target]
+            .map(OsString::from)
+            .to_vec();
+        assert!(rewrite_rustc_metadata(missing_metadata, target, &metadata).is_err());
     }
 
     #[test]
