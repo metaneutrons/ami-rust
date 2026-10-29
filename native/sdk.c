@@ -5,6 +5,7 @@
 #include <exec/ports.h>
 #include <exec/tasks.h>
 #include <dos/dosextens.h>
+#include <intuition/classes.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <stdlib.h>
@@ -45,6 +46,20 @@ static int argument_count;
 static char **arguments;
 static uint64_t sequence,context_key;
 static SdkStats stats;
+
+uintptr_t sdk_do_method_a(void *object,void *message) {
+ if(!object || !message)return 0;
+ return (uintptr_t)CALLHOOKPKT((struct Hook *)OCLASS((Object *)object),object,message);
+}
+uintptr_t sdk_do_super_method_a(void *class_pointer,void *object,void *message) {
+ Class *class=(Class *)class_pointer;
+ if(!class || !class->cl_Super || !object || !message)return 0;
+ return (uintptr_t)CALLHOOKPKT((struct Hook *)class->cl_Super,object,message);
+}
+uintptr_t sdk_coerce_method_a(void *class_pointer,void *object,void *message) {
+ if(!class_pointer || !object || !message)return 0;
+ return (uintptr_t)CALLHOOKPKT((struct Hook *)class_pointer,object,message);
+}
 /* Default production observer: independent debugger can observe depth directly. */
 volatile uint64_t ami_sdk_diagnostic_depth;
 static uint64_t next_token(unsigned kind,size_t slot) {
@@ -227,6 +242,11 @@ int sdk_signal_wait(uint64_t key,uint64_t token,SdkError *e) {
  if(own(key,e))return -1;int i=index_of(token,KIND_SIGNAL,4);
  if(i<0 || signals[i].token!=token || (signals[i].port_owned || signals[i].bit<0))return refuse(e,5,0);
  Wait(1UL<<signals[i].bit);return 0;
+}
+int sdk_signal_wait_mask(uint64_t key,uint32_t mask,uint32_t *received,SdkError *e) {
+ if(own(key,e))return -1;
+ if(!mask || !received)return refuse(e,2,0);
+ *received=Wait(mask);return 0;
 }
 uint64_t sdk_port_new(uint64_t key,SdkError *e) {
  if(own(key,e))return 0;size_t i=0,s=0;while(i<2 && ports[i].token)++i;while(s<4 && signals[s].token)++s;

@@ -73,6 +73,7 @@ pub enum Operation {
     MessageReply = 20,
     Callback = 21,
     Stderr = 22,
+    SignalWaitMask = 23,
 }
 
 /// Allocation-free error record.
@@ -813,6 +814,28 @@ where
         Err(Error::native(Operation::Callback, native_error))
     } else {
         Err(Error::state(Operation::Callback))
+    }
+}
+
+/// Waits for one or more signals from an externally owned native subsystem.
+///
+/// This is the bounded counterpart to Exec `Wait` used by event loops whose
+/// signal mask is supplied by a live library object rather than an SDK-owned
+/// [`Signal`]. A zero mask is rejected.
+pub fn wait_signals(context: &Context, mask: u32) -> Result<u32, Error> {
+    if mask == 0 {
+        return Err(Error::input(Operation::SignalWaitMask));
+    }
+    let mut received = 0u32;
+    let mut native_error = fresh_sys_error();
+    let result =
+        unsafe { sys::sdk_signal_wait_mask(context.key(), mask, &mut received, &mut native_error) };
+    if result == 0 {
+        Ok(received)
+    } else if result == -1 {
+        Err(Error::native(Operation::SignalWaitMask, native_error))
+    } else {
+        Err(Error::state(Operation::SignalWaitMask))
     }
 }
 

@@ -74,8 +74,8 @@ pub struct Hook {
     pub data: *mut c_void,
 }
 
-/// Read-only AROS BOOPSI class layout required by the three `*MethodA`
-/// dispatch adapters.
+/// Read-only AROS BOOPSI class layout used by custom-class instance access and
+/// host-only dispatch controls. Native dispatch itself stays in the C bridge.
 #[repr(C)]
 #[derive(Debug)]
 pub struct IClass {
@@ -93,7 +93,18 @@ pub struct IClass {
     pub memory_pool: *mut c_void,
 }
 
+#[cfg(not(target_os = "aros"))]
 type Dispatcher = unsafe extern "C" fn(*mut IClass, *mut Object, Msg) -> usize;
+
+#[cfg(target_os = "aros")]
+unsafe extern "C" {
+    #[link_name = "sdk_do_method_a"]
+    fn native_do_method_a(object: *mut Object, message: Msg) -> usize;
+    #[link_name = "sdk_do_super_method_a"]
+    fn native_do_super_method_a(class: *mut IClass, object: *mut Object, message: Msg) -> usize;
+    #[link_name = "sdk_coerce_method_a"]
+    fn native_coerce_method_a(class: *mut IClass, object: *mut Object, message: Msg) -> usize;
+}
 
 /// Layout values for the BOOPSI records read by the raw dispatch adapters.
 #[doc(hidden)]
@@ -124,6 +135,7 @@ pub const BOOPSI_LAYOUT_VALUES: [usize; 24] = [
     core::mem::offset_of!(IClass, memory_pool),
 ];
 
+#[cfg(not(target_os = "aros"))]
 unsafe fn dispatch(class: *mut IClass, object: *mut Object, message: Msg) -> usize {
     if class.is_null() || object.is_null() {
         return 0;
@@ -146,19 +158,29 @@ unsafe fn dispatch(class: *mut IClass, object: *mut Object, message: Msg) -> usi
 ///
 /// # Safety
 ///
-/// `object` must point to a live BOOPSI object whose native private prefix is
-/// present immediately before it, and `message` must match its method ID.
+/// `object` must point to a live BOOPSI object and `message` must match its
+/// method ID. Native AROS builds apply `OCLASS` and `CALLHOOKPKT` in C so Rust
+/// does not reproduce compiler-selected object-header alignment.
 pub unsafe fn do_method_a(object: *mut Object, message: Msg) -> usize {
-    if object.is_null() {
-        return 0;
+    #[cfg(target_os = "aros")]
+    {
+        // SAFETY: the native bridge applies the canonical AROS OCLASS and
+        // CALLHOOKPKT macros to the caller-validated object and message.
+        return unsafe { native_do_method_a(object, message) };
     }
-    // AROS guarantees that `o_Class` stays immediately before the public
-    // object pointer even if the private prefix grows or gains stricter
-    // alignment. Reading that final pointer avoids depending on the private
-    // prefix size.
-    let class = unsafe { object.cast::<*mut IClass>().sub(1).read() };
-    // SAFETY: forwarded from the public raw adapter contract.
-    unsafe { dispatch(class, object, message) }
+    #[cfg(not(target_os = "aros"))]
+    {
+        if object.is_null() {
+            return 0;
+        }
+        // AROS guarantees that `o_Class` stays immediately before the public
+        // object pointer even if the private prefix grows or gains stricter
+        // alignment. Reading that final pointer avoids depending on the private
+        // prefix size.
+        let class = unsafe { object.cast::<*mut IClass>().sub(1).read() };
+        // SAFETY: forwarded from the public raw adapter contract.
+        unsafe { dispatch(class, object, message) }
+    }
 }
 
 /// Raw AROS `DoSuperMethodA` adapter without a Rust variadic ABI.
@@ -167,13 +189,22 @@ pub unsafe fn do_method_a(object: *mut Object, message: Msg) -> usize {
 ///
 /// `class`, `object` and `message` must form a valid BOOPSI dispatcher call.
 pub unsafe fn do_super_method_a(class: *mut IClass, object: *mut Object, message: Msg) -> usize {
-    if class.is_null() || object.is_null() {
-        return 0;
+    #[cfg(target_os = "aros")]
+    {
+        // SAFETY: the native bridge uses the AROS class definition and
+        // CALLHOOKPKT macro for the caller-validated values.
+        return unsafe { native_do_super_method_a(class, object, message) };
     }
-    // SAFETY: the caller guarantees a live class layout.
-    let super_class = unsafe { (*class).super_class };
-    // SAFETY: forwarded from the public raw adapter contract.
-    unsafe { dispatch(super_class, object, message) }
+    #[cfg(not(target_os = "aros"))]
+    {
+        if class.is_null() || object.is_null() {
+            return 0;
+        }
+        // SAFETY: the caller guarantees a live class layout.
+        let super_class = unsafe { (*class).super_class };
+        // SAFETY: forwarded from the public raw adapter contract.
+        unsafe { dispatch(super_class, object, message) }
+    }
 }
 
 /// Raw AROS `CoerceMethodA` adapter without a Rust variadic ABI.
@@ -182,8 +213,17 @@ pub unsafe fn do_super_method_a(class: *mut IClass, object: *mut Object, message
 ///
 /// `class`, `object` and `message` must form a valid BOOPSI dispatcher call.
 pub unsafe fn coerce_method_a(class: *mut IClass, object: *mut Object, message: Msg) -> usize {
-    // SAFETY: forwarded from the public raw adapter contract.
-    unsafe { dispatch(class, object, message) }
+    #[cfg(target_os = "aros")]
+    {
+        // SAFETY: the native bridge applies CALLHOOKPKT to the exact class,
+        // object and message validated by the caller.
+        return unsafe { native_coerce_method_a(class, object, message) };
+    }
+    #[cfg(not(target_os = "aros"))]
+    {
+        // SAFETY: forwarded from the public raw adapter contract.
+        unsafe { dispatch(class, object, message) }
+    }
 }
 
 #[cfg(all(target_os = "aros", not(target_arch = "x86_64")))]
@@ -477,6 +517,12 @@ unsafe extern "C" {
     pub fn sdk_signal_drop(context: u64, signal: u64, error: *mut SdkError) -> c_int;
     pub fn sdk_signal_post(context: u64, signal: u64, error: *mut SdkError) -> c_int;
     pub fn sdk_signal_wait(context: u64, signal: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_signal_wait_mask(
+        context: u64,
+        mask: u32,
+        received: *mut u32,
+        error: *mut SdkError,
+    ) -> c_int;
 
     pub fn sdk_port_new(context: u64, error: *mut SdkError) -> u64;
     pub fn sdk_port_drop(context: u64, port: u64, error: *mut SdkError) -> c_int;
