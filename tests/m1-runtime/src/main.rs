@@ -5,7 +5,7 @@ extern crate alloc;
 
 use alloc::vec;
 use aros::{AppStatus, BytePath, Context, File, FileMode, Library};
-use aros_mui::{Mui, TagItem};
+use aros_mui::{Mui, classes::Window};
 
 fn application(context: &Context) -> AppStatus {
     context.diagnostic(b"ami-rust M1 begin", 1);
@@ -59,14 +59,10 @@ fn application(context: &Context) -> AppStatus {
     let Ok(mui) = Mui::open(context) else {
         return AppStatus::Error;
     };
-    let class = c"Window.mui";
-    let mut tags = [TagItem::done()];
-    // SAFETY: the class identifier is static and this deliberately minimal
-    // lifecycle supplies a terminated tag list for synchronous construction.
-    let Ok(window) = (unsafe { mui.new_object_raw(class, &mut tags) }) else {
+    let created = mui.scope(|scope| scope.builder::<Window>().build().map(|_| ()));
+    if created.is_err() {
         return AppStatus::Error;
-    };
-    drop(window);
+    }
     if mui.close().is_err() {
         return AppStatus::Error;
     }
