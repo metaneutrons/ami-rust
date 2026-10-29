@@ -25,7 +25,12 @@ static inline int ami_sdk_allocation_layout(size_t size,size_t alignment,
  size_t effective=alignment<AMI_SDK_MIN_ALLOCATION_ALIGNMENT?
                    AMI_SDK_MIN_ALLOCATION_ALIGNMENT:alignment;
  size_t payload=size?size:1;
+#ifdef PTRDIFF_MAX
  size_t max_total=(size_t)PTRDIFF_MAX;
+#else
+ /* Older AROS SDK headers expose size_t but not the C99 PTRDIFF_MAX macro. */
+ size_t max_total=SIZE_MAX>>1;
+#endif
  size_t alignment_padding=effective-1;
  if(header_size>max_total || alignment_padding>max_total-header_size)return 0;
  size_t overhead=header_size+alignment_padding;
