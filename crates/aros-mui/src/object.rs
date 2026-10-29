@@ -1,7 +1,7 @@
 use crate::{
     BuildAttribute, Class, DecodeValueKind, GetAttribute, ParentOf, RawBuildAttribute,
     RawGetAttribute, RawMethod, RawSetAttribute, SetAttribute, StringArray, ValueKind,
-    class::Attachment, method::Method,
+    callback::RetainedHook, class::Attachment, custom::RetainedCustomClass, method::Method,
 };
 use alloc::{boxed::Box, vec::Vec};
 use aros::{BytePath, Context, Library};
@@ -28,6 +28,9 @@ pub enum Error {
     NativeOperation,
     ObjectCreation,
     NullValue,
+    InvalidFormat,
+    InvalidCustomMethod,
+    CustomClassCreation,
     AlreadyOwned,
     OwnershipCycle,
     ParentOccupied,
@@ -44,6 +47,7 @@ impl From<aros::Error> for Error {
 
 /// Open MUI and Intuition libraries bound to one AROS application task.
 pub struct Mui<'ctx> {
+    context: &'ctx Context,
     mui_library: Library<'ctx>,
     intuition_library: Library<'ctx>,
     mui_base: NonNull<aros_sys::Library>,
@@ -69,6 +73,7 @@ impl<'ctx> Mui<'ctx> {
             .ok_or(Error::LibraryBaseUnavailable)?;
 
         Ok(Self {
+            context,
             mui_library,
             intuition_library,
             mui_base,
@@ -81,10 +86,13 @@ impl<'ctx> Mui<'ctx> {
     /// the closure returns, including on an ordinary `Result::Err` path.
     pub fn scope<R>(&self, run: impl for<'scope> FnOnce(&'scope Scope) -> R) -> R {
         let scope = Scope {
+            context: NonNull::from(self.context),
             mui_base: self.mui_base,
             intuition_base: self.intuition_base,
             entries: RefCell::new(Vec::new()),
             string_arrays: RefCell::new(Vec::new()),
+            hooks: RefCell::new(Vec::new()),
+            custom_classes: RefCell::new(Vec::new()),
             _task_affine: PhantomData,
         };
         run(&scope)
@@ -136,14 +144,27 @@ struct Entry {
 
 /// Native object arena owned by one `Mui::scope` invocation.
 pub struct Scope {
+    context: NonNull<Context>,
     mui_base: NonNull<aros_sys::Library>,
     intuition_base: NonNull<aros_sys::Library>,
     entries: RefCell<Vec<Entry>>,
     string_arrays: RefCell<Vec<Box<[*const core::ffi::c_char]>>>,
+    pub(crate) hooks: RefCell<Vec<RetainedHook>>,
+    pub(crate) custom_classes: RefCell<Vec<RetainedCustomClass>>,
     _task_affine: PhantomData<*mut ()>,
 }
 
 impl Scope {
+    pub(crate) fn context(&self) -> &Context {
+        // SAFETY: Mui owns this Context borrow for longer than every scope it
+        // creates, and neither type is Send or Sync.
+        unsafe { self.context.as_ref() }
+    }
+
+    pub(crate) fn mui_base(&self) -> NonNull<aros_sys::Library> {
+        self.mui_base
+    }
+
     pub fn builder<C: Class>(&self) -> Builder<'_, C> {
         Builder {
             scope: self,
@@ -195,6 +216,42 @@ impl Scope {
             unsafe { mui_new_object_a(self.mui_base.as_ptr(), C::ID.as_ptr(), tags.as_mut_ptr()) };
         let raw = NonNull::new(raw).ok_or(Error::ObjectCreation)?;
 
+        let mut entries = self.entries.try_borrow_mut().map_err(|_| Error::Busy)?;
+        let index = entries.len();
+        entries.push(Entry {
+            raw,
+            ownership: Ownership::Root,
+        });
+        Ok(Object {
+            scope: self,
+            index,
+            raw,
+            _class: PhantomData,
+        })
+    }
+
+    pub(crate) fn create_from_class<C: Class>(
+        &self,
+        class: NonNull<aros_sys::IClass>,
+        mut tags: Vec<TagItem>,
+    ) -> Result<Object<'_, C>, Error> {
+        tags.try_reserve(1).map_err(|_| Error::Allocation)?;
+        tags.push(TagItem::done());
+        {
+            let mut entries = self.entries.try_borrow_mut().map_err(|_| Error::Busy)?;
+            entries.try_reserve(1).map_err(|_| Error::Allocation)?;
+        }
+        // SAFETY: the retained custom class and terminated typed tag list are
+        // live for the complete synchronous construction call.
+        let raw = unsafe {
+            aros_sys::intuition::new_object_a(
+                self.intuition_base.as_ptr(),
+                class.as_ptr(),
+                core::ptr::null_mut(),
+                tags.as_mut_ptr(),
+            )
+        };
+        let raw = NonNull::new(raw.cast::<aros_mui_sys::Object>()).ok_or(Error::ObjectCreation)?;
         let mut entries = self.entries.try_borrow_mut().map_err(|_| Error::Busy)?;
         let index = entries.len();
         entries.push(Entry {
