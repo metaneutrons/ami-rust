@@ -26,9 +26,10 @@ There is no project-specific CLI, Cargo wrapper, or Python dependency.
 macOS / Linux host
         │
         ├── rustup selects the versioned ami-rust toolchain
-        └── cargo build --target x86_64-aros
+        └── cargo build --target x86_64-unknown-aros-abi1
+            cargo build --target x86_64-unknown-aros-abi11
                           │
-                          └── native AROS executable
+                          └── native ABI1 or ABI11 AROS executable
 ```
 
 The initial targets are deliberately narrow: **PC x86-64 AROS ABI-v1 and
@@ -58,7 +59,8 @@ toolchain through rustup or the documented direct route. A project then builds
 without an ami-rust command:
 
 ```sh
-cargo +aros build --target x86_64-aros --release --locked --offline
+cargo +aros build --target x86_64-unknown-aros-abi1 --release --locked --offline
+cargo +aros build --target x86_64-unknown-aros-abi11 --release --locked --offline
 ```
 
 The libraries are normal Cargo dependencies. They remain Git-delivered until

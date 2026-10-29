@@ -18,8 +18,11 @@ The release sequence is:
 1. manually open and merge the reviewed release proposal;
 2. qualify the exact candidate on all supported hosts and on AROS;
 3. review the generated rustup catalog as source;
-4. sign, attest, and publish a draft prerelease;
-5. verify the public bytes and promote the unchanged release.
+4. sign the exact candidate and retain it as a private workflow artifact,
+   without creating a tag or GitHub Release;
+5. after a separate maintainer command, attest and publish the unchanged bytes
+   as a draft prerelease;
+6. verify the public bytes and promote the unchanged release.
 
 APT, Homebrew, AUR, and crates.io are not 0.1.0 publication channels. Packaging
 corrections after publication require a new semantic version; old release bytes

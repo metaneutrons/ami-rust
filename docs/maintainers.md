@@ -19,7 +19,7 @@ bootstrapped Cargo as shown in [CONTRIBUTING.md](../CONTRIBUTING.md).
 | `native-cargo-qualification.yml` | Internal cross-host application qualification | manual |
 | `toolchain-qualify.yml` | Exact three-host release candidate | manual |
 | `release-please-toolchain.yml` | Initial or subsequent release proposal | manual for mutation |
-| `toolchain-release.yml` | Catalog review, signing, publication, and recovery | manual |
+| `toolchain-release.yml` | Catalog review, non-publishing signed-candidate preparation, publication, and recovery | manual |
 
 The release workflows require protected `main`, exact upstream workflow-run
 identities, and protected environments. A successful development check does not
@@ -36,7 +36,8 @@ Before publication:
 1. verify that README commands match the exact candidate;
 2. run the supported-host qualification and native AROS runtime matrix;
 3. review the generated two-file rustup catalog delta;
-4. sign and attest the exact qualified payloads;
-5. read every public asset back before promotion.
+4. prepare and verify signed exact payloads without creating a release;
+5. after explicit publication approval, attest and stage those bytes;
+6. read every public asset back before promotion.
 
 APT, Homebrew, AUR, and crates.io are outside the initial release.

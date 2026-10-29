@@ -2,10 +2,11 @@
 
 ## Initial release
 
-Version 0.1.0 targets PC x86-64 AROS ABI-v1. The supported cross-development
-hosts are macOS Apple Silicon, Linux x86-64, and Linux ARM64. All three hosts
-produce the same AROS target ABI and are qualified against the same pinned SDK
-inputs.
+Version 0.1.0 targets PC x86-64 AROS ABI-v1 and ABI-v11 through the canonical
+`x86_64-unknown-aros-abi1` and `x86_64-unknown-aros-abi11` targets. The
+supported cross-development hosts are macOS Apple Silicon, Linux x86-64, and
+Linux ARM64. All three hosts produce both AROS targets from the same pinned
+input contract.
 
 ## Next targets
 
