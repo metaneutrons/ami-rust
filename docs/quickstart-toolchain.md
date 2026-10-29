@@ -29,13 +29,30 @@ fresh work directory. This is a development check, not an SDK installation.
 ## User workflow after 0.1.0
 
 The release documentation will provide the exact authenticated rustup catalog
-URL and checksums. Installation will not replace the user's default toolchain.
-Once the versioned toolchain is installed and linked as `aros`, an application
-uses ordinary Cargo:
+commit, release URL, checksums, Sigstore bundles, and verification commands.
+The catalog is a normal rustup distribution server rooted at the immutable
+reviewed Git commit; its component URLs select the signed GitHub Release
+assets. Installation and update therefore use unmodified rustup without
+replacing the user's default toolchain.
+
+Once the versioned toolchain is installed, an application uses ordinary Cargo
+with either canonical target:
 
 ```sh
-cargo +aros build --target x86_64-aros --release --locked --offline
+case "$(uname -s):$(uname -m)" in
+  Darwin:arm64|Darwin:aarch64) toolchain=0.1.0-aarch64-apple-darwin ;;
+  Linux:x86_64) toolchain=0.1.0-x86_64-unknown-linux-gnu ;;
+  Linux:aarch64|Linux:arm64) toolchain=0.1.0-aarch64-unknown-linux-gnu ;;
+  *) echo "unsupported development host" >&2; exit 2 ;;
+esac
+cargo +"$toolchain" build --target x86_64-unknown-aros-abi1 --release --locked --offline
+cargo +"$toolchain" build --target x86_64-unknown-aros-abi11 --release --locked --offline
 ```
+
+The direct archive contains the same SDK tree and is registered with
+`rustup toolchain link` after its checksum and Sigstore bundle have been
+verified. The final guide will add every catalog and release identity from the
+exact 0.1.0 candidate; moving branch URLs are not an installation interface.
 
 Project crates will initially use immutable Git revisions from this repository
 and commit `Cargo.lock`. They are intentionally not on crates.io yet. The final
@@ -44,7 +61,7 @@ and commit `Cargo.lock`. They are intentionally not on crates.io yet. The final
 ## Boundaries
 
 - The compiler runs on the macOS or Linux development host.
-- The produced executable runs on AROS x86-64 ABI-v1.
+- The produced executable runs on AROS x86-64 ABI-v1 or ABI-v11.
 - The initial libraries provide `no_std` and `alloc`, not full `std`.
 - There is no `ami-rust` CLI or Cargo plugin.
 - Native AROS-hosted Rust and additional target architectures are separate

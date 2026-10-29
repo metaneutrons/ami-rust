@@ -966,9 +966,9 @@ mod tests {
         .expect("real M7 contract must pass");
         assert_eq!(
             summary.manifest_sha256,
-            "bd4a2c12dfd751c05240acea2a315c6a3615f614f7786cc9082130e48ce51f57"
+            "d0ed3dff9f8c7c5efbf93cf5958b347b2dfc16904b4e5e845a272ed3085bfc35"
         );
-        assert_eq!(summary.inputs, 32);
+        assert_eq!(summary.inputs, 42);
         assert_eq!(summary.outputs, 19);
         assert_eq!(summary.portable_csdk_members, 3049);
         assert_eq!(summary.hosts.len(), 3);

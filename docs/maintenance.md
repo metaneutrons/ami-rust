@@ -9,12 +9,12 @@ reporting under Security for confidential reports. No separate public security
 mailbox or guaranteed response time is implied. Public source availability
 does not authorise SDK release assets.
 
-The supported target remains the measured PC x86-64 ABI-v1 QEMU profile in the
-pinned baseline inputs. Cross-development hosts are macOS 26 Apple Silicon,
-Ubuntu 24.04 x86-64 and Ubuntu 24.04 ARM64 with their pinned Rust and native
-tool prerequisites, not arbitrary latest versions.
-Physical hardware, other AROS ABIs/CPUs, `std`, native Rust compiler execution
-under AROS, and arbitrary third-party crates remain unqualified.
+The supported targets remain the measured PC x86-64 ABI-v1 and ABI-v11 QEMU
+profiles in the pinned baseline inputs. Cross-development hosts are macOS 26
+Apple Silicon, Ubuntu 24.04 x86-64 and Ubuntu 24.04 ARM64 with their pinned Rust
+and native tool prerequisites, not arbitrary latest versions. Physical
+hardware, other AROS ABIs/CPUs, `std`, native Rust compiler execution under
+AROS, and arbitrary third-party crates remain unqualified.
 
 Keep Cargo and rustup as the Rust tooling. The distribution adapter has no
 resolver, background updater, privileged service or change to global rustup

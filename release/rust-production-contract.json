@@ -576,6 +576,196 @@
       "source": {
         "path": "release/inputs/native-build-dependencies.json"
       }
+    },
+    {
+      "bytes": 11358,
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "license_ref": "project",
+      "required_for": [
+        "direct",
+        "rustup",
+        "notices"
+      ],
+      "role": "project-license-apache",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "source": {
+        "path": "LICENSE-APACHE"
+      }
+    },
+    {
+      "bytes": 1073,
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "license_ref": "project-mit",
+      "required_for": [
+        "direct",
+        "rustup",
+        "notices"
+      ],
+      "role": "project-license-mit",
+      "sha256": "d305a4cc8ade83fde897ea29a83fb4fb3e7ac5e3858f85845613dd7af1036abf",
+      "source": {
+        "path": "LICENSE-MIT"
+      }
+    },
+    {
+      "bytes": 1431,
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "license_ref": "project",
+      "required_for": [
+        "direct",
+        "rustup",
+        "notices"
+      ],
+      "role": "project-license-summary",
+      "sha256": "32094882708de7d1b2076e87e1be5e69c787251e2bfda93696de86ea18551109",
+      "source": {
+        "path": "LICENSE.md"
+      }
+    },
+    {
+      "bytes": 13026,
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "license_ref": "aros-sdk",
+      "required_for": [
+        "direct",
+        "rustup",
+        "notices"
+      ],
+      "role": "project-third-party-notices",
+      "sha256": "57b1462ab5258ba342fa75a52af52677513b6e4696f988948484cc03e511a86e",
+      "source": {
+        "path": "release/bundle-assets/THIRD_PARTY_NOTICES.md"
+      }
+    },
+    {
+      "bytes": 24679,
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "license_ref": "aros-sdk",
+      "required_for": [
+        "direct",
+        "rustup",
+        "notices"
+      ],
+      "role": "aros-apl-license",
+      "sha256": "825705f4b1240cf5b88f44ac745dc9d9ebaa71ac087e53bbd69a1c3064ceb9c8",
+      "source": {
+        "path": "release/portable-csdk/APL-1.1.txt"
+      }
+    },
+    {
+      "bytes": 2633,
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "license_ref": "aros-sdk",
+      "required_for": [
+        "direct",
+        "rustup",
+        "notices"
+      ],
+      "role": "csdk-source-availability",
+      "sha256": "c7476c743551edfab589ee7adb9e1c5465fbbbbe8659adc0ad892ef1354f7df2",
+      "source": {
+        "path": "release/portable-csdk/SOURCE-AVAILABILITY.md"
+      }
+    },
+    {
+      "bytes": 2317,
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "license_ref": "aros-sdk",
+      "required_for": [
+        "direct",
+        "rustup",
+        "notices"
+      ],
+      "role": "csdk-portability-changes",
+      "sha256": "e97411d19aafcf6a0d316d33b36aaa22f24d9e6924cd2e2c1ab3622e5d0b29b2",
+      "source": {
+        "path": "release/portable-csdk/CHANGES.md"
+      }
+    },
+    {
+      "bytes": 1239,
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "license_ref": "aros-sdk",
+      "required_for": [
+        "direct",
+        "rustup",
+        "notices"
+      ],
+      "role": "abi11-csdk-notes",
+      "sha256": "bbb799e23364348ead6ab206af99024f217d5a229abcb5165efb3257679a91b5",
+      "source": {
+        "path": "release/abi11-csdk/README.md"
+      }
+    },
+    {
+      "bytes": 13724,
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "license_ref": "aros-sdk",
+      "required_for": [
+        "direct",
+        "rustup",
+        "notices"
+      ],
+      "role": "sdk-api",
+      "sha256": "cb1c4b1f1763cc9e0712fd614f69c12452dfeab974f3b842e353678c2005d491",
+      "source": {
+        "path": "release/bundle-assets/SDK-API.md"
+      }
+    },
+    {
+      "bytes": 78712,
+      "hosts": [
+        "macos-aarch64",
+        "linux-x86_64",
+        "linux-aarch64"
+      ],
+      "license_ref": "rust-distribution",
+      "required_for": [
+        "direct",
+        "rustup",
+        "notices"
+      ],
+      "role": "license-review",
+      "sha256": "def62789e89d8d93a3870acd0769e70501108e8d0f4fd60629189ac0dbe8d23c",
+      "source": {
+        "path": "release/bundle-assets/licence-review.json"
+      }
     }
   ],
   "licenses": [

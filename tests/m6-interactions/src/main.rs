@@ -1,7 +1,7 @@
 #![no_main]
 #![no_std]
 
-use aros::{AppStatus, Context};
+use aros::{AppStatus, BytePath, Context, File, FileMode};
 use aros_mui::{
     CustomClassSpec, Error, LoopControl, LoopExit, Mui, ReturnId, Trigger,
     attributes::{
@@ -24,6 +24,45 @@ enum ProofMethod {
 #[derive(Default)]
 struct ProofData {
     calls: usize,
+}
+
+fn file_io(context: &Context) -> bool {
+    let Ok(path) = BytePath::new(b"RAM:ami-rust-m7.txt") else {
+        return false;
+    };
+    let payload = b"ami-rust M7 dual ABI\n";
+    let Ok(mut file) = File::open(context, &path, FileMode::CreateTruncate) else {
+        return false;
+    };
+    if file.write_all(payload).is_err() || file.close().is_err() {
+        return false;
+    }
+    let Ok(mut file) = File::open(context, &path, FileMode::ReadExisting) else {
+        return false;
+    };
+    let mut readback = [0u8; 21];
+    file.read_exact(&mut readback).is_ok() && readback == *payload && file.close().is_ok()
+}
+
+fn file_failure_cleanup(context: &Context) -> bool {
+    let before = context.statistics();
+    let failed = (|| -> Result<(), aros::Error> {
+        let path = BytePath::new(b"RAM:ami-rust-m7-failure.txt")?;
+        let mut file = File::open(context, &path, FileMode::CreateTruncate)?;
+        file.write_all(b"drop this owned handle on error\n")?;
+        let _ = BytePath::new(b"invalid\0path")?;
+        Ok(())
+    })();
+    let after = context.statistics();
+
+    failed.is_err()
+        && after.blocks == before.blocks
+        && after.backing_charge == before.backing_charge
+        && after.files == before.files
+        && after.libraries == before.libraries
+        && after.ports == before.ports
+        && after.signals == before.signals
+        && after.messages == before.messages
 }
 
 impl CustomClassSpec for ProofClass {
@@ -126,11 +165,38 @@ fn safe_interactions(context: &Context, mui: &Mui<'_>) -> Result<(), Error> {
     })
 }
 
+fn mui_failure_cleanup(mui: &Mui<'_>) -> Result<(), Error> {
+    let failed = mui.scope(|scope| -> Result<(), Error> {
+        let root = scope.builder::<Group>().build()?;
+        let window = scope.builder::<Window>().build()?;
+        window.adopt(root)?;
+        Err(Error::NativeOperation)
+    });
+    if failed == Err(Error::NativeOperation) {
+        Ok(())
+    } else {
+        Err(Error::NativeOperation)
+    }
+}
+
 fn application(context: &Context) -> AppStatus {
     context.diagnostic(b"ami-rust M6 begin", 1);
+    if !file_io(context) {
+        return AppStatus::Error;
+    }
+    context.diagnostic(b"ami-rust M7 file I/O pass", 0);
+    if !file_failure_cleanup(context) {
+        return AppStatus::Fatal;
+    }
+    context.diagnostic(b"ami-rust M7 file failure cleanup pass", 0);
+
     let Ok(mui) = Mui::open(context) else {
         return AppStatus::Error;
     };
+    if mui_failure_cleanup(&mui).is_err() {
+        return AppStatus::Fatal;
+    }
+    context.diagnostic(b"ami-rust M7 MUI failure cleanup pass", 0);
     if safe_interactions(context, &mui).is_err() {
         return AppStatus::Fatal;
     }

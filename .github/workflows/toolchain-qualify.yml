@@ -140,7 +140,7 @@ jobs:
     name: Bind the exact three-host candidate
     needs: produce
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - name: Check out the exact protected source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -151,6 +151,23 @@ jobs:
       - name: Build the pinned maintainer task
         shell: bash
         run: bash tools/build-maintainer-task.sh "$RUNNER_TEMP/rp3-assembly-task" x86_64-unknown-linux-gnu
+
+      - name: Produce the exact corresponding-source capsule
+        env:
+          VERSION: ${{ inputs.version }}
+          NATIVE_REF_PROTECTED: 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/rp3-assembly-task/target/release/ami-rust-xtask" \
+            toolchain-capsule-acquire \
+            --source-root "$GITHUB_WORKSPACE" \
+            --version "$VERSION" \
+            --output "$RUNNER_TEMP/rp3-capsule-inputs" \
+            --curl "$(command -v curl)"
+          "$RUNNER_TEMP/rp3-assembly-task/target/release/ami-rust-xtask" \
+            toolchain-release-capsules \
+            --request "$RUNNER_TEMP/rp3-capsule-inputs/capsule-request.json"
 
       - name: Download the three exact host artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -181,8 +198,9 @@ jobs:
             --arg mac "$RUNNER_TEMP/rp3-hosts/macos-aarch64" \
             --arg x64 "$RUNNER_TEMP/rp3-hosts/linux-x86_64" \
             --arg arm "$RUNNER_TEMP/rp3-hosts/linux-aarch64" \
+            --arg source_capsule_output "$RUNNER_TEMP/rp3-capsule-inputs/capsules" \
             --arg output "$RUNNER_TEMP/rp3-assembly" \
-            '{schema:"ami-rust-rp3-release-request-v1",$source_root,$contract,$version,$rust_version,$cargo_version,$source_commit,$source_tree,$qualification_run_id,$qualification_run_attempt,host_outputs:{"macos-aarch64":$mac,"linux-x86_64":$x64,"linux-aarch64":$arm},catalog_root:null,catalog_commit:null,$output}' \
+            '{schema:"ami-rust-rp3-release-request-v1",$source_root,$contract,$version,$rust_version,$cargo_version,$source_commit,$source_tree,$qualification_run_id,$qualification_run_attempt,host_outputs:{"macos-aarch64":$mac,"linux-x86_64":$x64,"linux-aarch64":$arm},$source_capsule_output,catalog_root:null,catalog_commit:null,$output}' \
             > "$RUNNER_TEMP/rp3-release-request.json"
           "$RUNNER_TEMP/rp3-assembly-task/target/release/ami-rust-xtask" \
             toolchain-release-cutover assemble --request "$RUNNER_TEMP/rp3-release-request.json"

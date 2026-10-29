@@ -343,8 +343,27 @@ fn source_identity(git: &Path, source: &Path, started: Instant) -> Result<Value>
 }
 
 fn verify_git_blob(git: &Path, source: &Path, relative: &str, expected: &[u8], started: Instant) -> Result<()> {
-    let output = git_output(git, source, &["show", &format!("HEAD:{relative}")], started)?;
-    if output != expected { return Err(Refusal::new("repository material differs from its pinned Git bytes")); }
+    let committed = text(&git_output(
+        git,
+        source,
+        &["rev-parse", &format!("HEAD:{relative}")],
+        started,
+    )?)?;
+    let checked_out = text(&git_output(
+        git,
+        source,
+        &["hash-object", "--no-filters", "--", relative],
+        started,
+    )?)?;
+    if !git_id(&committed)
+        || committed != checked_out
+        || ami_rust_core::digest::sha256_bytes(expected)
+            != ami_rust_core::digest::sha256_file(&source.join(relative))?
+    {
+        return Err(Refusal::new(
+            "repository material differs from its pinned Git bytes",
+        ));
+    }
     Ok(())
 }
 
@@ -428,7 +447,42 @@ fn local_file(root: &Path, relative: &str) -> Result<PathBuf> { repository_path(
 fn repository_path(value: &str) -> Result<()> { if !value.is_ascii() || value.is_empty() || value.contains('\\') || value.contains(':') || value.starts_with('/') || value.split('/').any(|part| part.is_empty() || part == "." || part == ".." || part.ends_with('.') || part.ends_with(' ')) { return Err(Refusal::new("repository material path must be a safe relative Git path")); } Ok(()) }
 fn checked_component(value: &str, label: &str) -> Result<String> { if value.is_empty() || !value.is_ascii() || value == "." || value == ".." || value.ends_with('.') || value.ends_with(' ') || value.bytes().any(|byte| !(byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-' | b'+'))) { return Err(Refusal::new(format!("{label} is not a safe portable filename component"))); } Ok(value.to_owned()) }
 fn validate_identity(bytes: u64, sha256: &str, _role: &str) -> Result<()> { if bytes == 0 || bytes > MAX_FILE_BYTES || !is_sha256_digest(sha256) { return Err(Refusal::new("material size or SHA-256 is invalid")); } Ok(()) }
-fn validate_version(value: &str) -> Result<()> { let mut parts = value.split('.'); let parsed = [parts.next(), parts.next(), parts.next()]; if parts.next().is_some() || parsed.iter().any(|part| part.is_none_or(|part| part.is_empty() || !part.bytes().all(|byte| byte.is_ascii_digit()) || (part.len() > 1 && part.starts_with('0')) || part.parse::<u64>().is_err())) { return Err(Refusal::new("version must be a canonical stable x.y.z string later than 0.1.0")); } let version = [parsed[0].expect("validated component").parse::<u64>().expect("validated component"), parsed[1].expect("validated component").parse::<u64>().expect("validated component"), parsed[2].expect("validated component").parse::<u64>().expect("validated component")]; if version <= [0, 1, 0] { return Err(Refusal::new("version must be later than 0.1.0")); } Ok(()) }
+fn validate_version(value: &str) -> Result<()> {
+    let mut parts = value.split('.');
+    let parsed = [parts.next(), parts.next(), parts.next()];
+    if parts.next().is_some()
+        || parsed.iter().any(|part| {
+            part.is_none_or(|part| {
+                part.is_empty()
+                    || !part.bytes().all(|byte| byte.is_ascii_digit())
+                    || (part.len() > 1 && part.starts_with('0'))
+                    || part.parse::<u64>().is_err()
+            })
+        })
+    {
+        return Err(Refusal::new(
+            "version must be a canonical stable x.y.z string at least 0.1.0",
+        ));
+    }
+    let version = [
+        parsed[0]
+            .expect("validated component")
+            .parse::<u64>()
+            .expect("validated component"),
+        parsed[1]
+            .expect("validated component")
+            .parse::<u64>()
+            .expect("validated component"),
+        parsed[2]
+            .expect("validated component")
+            .parse::<u64>()
+            .expect("validated component"),
+    ];
+    if version < [0, 1, 0] {
+        return Err(Refusal::new("version must be at least 0.1.0"));
+    }
+    Ok(())
+}
 fn git_id(value: &str) -> bool { (value.len() == 40 || value.len() == 64) && value.bytes().all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f')) }
 fn text(raw: &[u8]) -> Result<String> { let text = std::str::from_utf8(raw).map_err(|_| Refusal::new("Git output is not UTF-8"))?.trim(); Ok(text.to_owned()) }
 fn read_regular(path: &Path, limit: usize) -> Result<Vec<u8>> { let metadata = fs::symlink_metadata(path)?; if !metadata.file_type().is_file() || metadata.len() > limit as u64 { return Err(Refusal::new("regular input exceeds its bound")); } let mut raw = Vec::with_capacity(metadata.len() as usize); File::open(path)?.read_to_end(&mut raw)?; if raw.len() > limit { return Err(Refusal::new("regular input exceeds its bound")); } Ok(raw) }
@@ -441,3 +495,14 @@ fn retain_failure(stage: &Path, error: &Refusal) -> Result<()> { write_new(&stag
 fn remaining(started: Instant) -> Result<Duration> { DEADLINE.checked_sub(started.elapsed()).ok_or_else(|| Refusal::new("capsule input acquisition exceeded its 1200-second deadline")) }
 fn check_deadline(started: Instant) -> Result<()> { if started.elapsed() >= DEADLINE { Err(Refusal::new("capsule input acquisition exceeded its 1200-second deadline")) } else { Ok(()) } }
 fn usage() -> Refusal { Refusal::new("usage: ami-rust-xtask toolchain-capsule-acquire --source-root DIR --version X.Y.Z --output DIR --curl FILE") }
+
+#[cfg(test)]
+mod tests {
+    use super::validate_version;
+
+    #[test]
+    fn initial_release_is_a_valid_acquisition_version() {
+        assert!(validate_version("0.1.0").is_ok());
+        assert!(validate_version("0.0.0").is_err());
+    }
+}
