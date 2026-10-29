@@ -1964,19 +1964,12 @@ mod tests {
         fs,
         os::unix::fs::PermissionsExt,
         path::PathBuf,
-        sync::atomic::{AtomicU64, Ordering},
     };
-
-    static NEXT: AtomicU64 = AtomicU64::new(0);
 
     struct Fixture(PathBuf);
     impl Fixture {
         fn new() -> Self {
-            let root = std::env::temp_dir().join(format!(
-                "ami-rust-bare-target-producer-test-{}-{}",
-                std::process::id(),
-                NEXT.fetch_add(1, Ordering::Relaxed)
-            ));
+            let root = crate::test_support::temporary_root("bare-target-producer-test");
             fs::create_dir(&root).expect("create test fixture");
             Self(root)
         }

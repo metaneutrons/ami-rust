@@ -834,20 +834,13 @@ fn usage() -> Refusal {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{fs, time::SystemTime};
+    use std::fs;
 
     struct SourceCopy(PathBuf);
 
     impl SourceCopy {
         fn new() -> Self {
-            let nonce = SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .expect("clock after epoch")
-                .as_nanos();
-            let root = std::env::temp_dir().join(format!(
-                "ami-rust-prefix-source-{}-{nonce}",
-                std::process::id()
-            ));
+            let root = crate::test_support::temporary_root("prefix-source");
             fs::create_dir(&root).expect("fresh source fixture");
             for (relative, bytes) in [
                 (

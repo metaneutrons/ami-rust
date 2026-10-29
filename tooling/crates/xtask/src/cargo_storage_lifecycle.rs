@@ -498,11 +498,7 @@ mod tests {
 
     #[test]
     fn analysis_log_requires_plain_directory_and_object_records() {
-        let root = std::env::temp_dir().join(format!(
-            "ami-rust-analysis-log-counter-{}-{}",
-            std::process::id(),
-            unix_millis()
-        ));
+        let root = crate::test_support::temporary_root("analysis-log-counter");
         create_private_directory(&root).unwrap();
         let real = root.join("real");
         create_private_directory(&real).unwrap();
@@ -552,11 +548,7 @@ mod tests {
 
     #[test]
     fn analysis_log_retention_preserves_bytes_and_rejects_tampering() {
-        let root = std::env::temp_dir().join(format!(
-            "ami-rust-analysis-log-retention-{}-{}",
-            std::process::id(),
-            unix_millis()
-        ));
+        let root = crate::test_support::temporary_root("analysis-log-retention");
         create_private_directory(&root).unwrap();
         let source = root.join("source");
         let output = root.join("output");

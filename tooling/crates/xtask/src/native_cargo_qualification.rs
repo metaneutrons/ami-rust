@@ -44,11 +44,11 @@ const VENDOR_SHA256: &str = "dea3c4d945f31406cdfe824581592a9253f1afcffe8423e8a1b
 const VENDOR_SOURCE_LOCKS: [(&str, &str); 2] = [
     (
         "Cargo.lock",
-        "8cb678cb35902b837c5806a398f2de73c0f39024624b642a313916119b600280",
+        "02f61cc56fb56caf1b03c2e900f14e829e938fd2e365c747203a7b664152fffd",
     ),
     (
         "tooling/Cargo.lock",
-        "8a34bfca70bdef21e2a977b4cbb3cf78e0b00d31b17af6fa780a9abeb195ba6e",
+        "d129ef969b4a8b926e9c7e8403472dfa56337da2ff841b7098b2f47793c79efe",
     ),
 ];
 const HOST_BOOTSTRAP_COMMIT: &str = "48a229ceaefd4985c50990b14116b6d856af0985";
@@ -1959,7 +1959,6 @@ fn usage() -> Refusal {
 mod tests {
     use super::*;
     use std::process::Command;
-    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn request_value() -> Value {
         json!({
@@ -1987,14 +1986,7 @@ mod tests {
     }
 
     fn temporary_root(label: &str) -> PathBuf {
-        let nonce = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("clock after epoch")
-            .as_nanos();
-        std::env::temp_dir().join(format!(
-            "ami-rust-native-cargo-{label}-{}-{nonce}",
-            std::process::id()
-        ))
+        crate::test_support::temporary_root(&format!("native-cargo-{label}"))
     }
 
     #[test]
