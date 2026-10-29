@@ -1,0 +1,6 @@
+FailAt 21
+SYS:M4SAFE
+Echo "ami-rust M4 process returned $RC"
+Wait 60 SECS
+EndCLI
+

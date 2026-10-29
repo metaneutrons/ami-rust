@@ -51,13 +51,23 @@ separate unsafe raw ABI boundary.
 
 ## MUI base set
 
-`aros-mui` opens `muimaster.library` explicitly at API version 19. `Mui` owns
-that reference; every `Object` borrows its `Mui` owner and is disposed before
-the library can close. The unsafe `Mui::new_object_raw` accepts a `CStr` class
-identifier and a mutable, `TAG_DONE`-terminated `TagItem` slice. It remains
-unsafe because class-specific tag values may contain native pointers. The
-initial safe surface covers error access, explicit close and RAII disposal;
-typed safe builders are future library-specific work.
+`aros-mui` opens `muimaster.library` at API version 19 and
+`intuition.library` at version 36. `Mui::scope` creates a non-escaping,
+task-affine arena. Typed `Object<'scope, C>` handles may be copied, but their
+native storage remains owned by that scope. The ownership ledger disposes only
+roots; `Application`, `Window`, and `Group` recursively dispose children after
+typed `adopt` operations. Repeated ownership transfer, ownership cycles,
+cross-scope references, and a second root object for one window are rejected
+before a native call.
+
+The shared M4 core supplies sealed classes, builders, inheritance and parent
+relations, plus typed build/get/set attributes and typed methods. Its initial
+class set is `Application`, `Window`, `Group`, `Text`, `Area`, and `Notify`.
+Safe value kinds cover strings, booleans, fixed and pointer-sized integers,
+closed enums, and typed object references. Foreign pointers require explicit
+construction through unsafe `ForeignPtr`; raw tags, pointers, class IDs, and
+vector calls remain confined to `aros-mui-sys`. M5 will generate the remaining
+standard class wrappers from the canonical MUI model.
 
 `aros-mui-sys` exposes the complete reviewed non-variadic muimaster vector set
 and the generated public raw class, identifier, value, and message surface.
