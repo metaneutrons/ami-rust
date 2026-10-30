@@ -30,9 +30,8 @@ export default defineConfig({
         { label: 'Libraries', items: [
           { label: 'Crates and consumer guide', link: '/consumer-guide/' },
           { label: 'API overview', link: '/api/' },
-          { label: 'aros API', link: '/api/aros/' },
-          { label: 'aros-mui API', link: '/api/aros-mui/' },
-          { label: 'Generated MUI API', link: '/mui-safe-api/' },
+          { label: 'aros programming model', link: '/api/aros/' },
+          { label: 'aros-mui programming model', link: '/api/aros-mui/' },
         ] },
         { label: 'Reference', items: [
           { label: 'Platform roadmap', link: '/platform-roadmap/' },
