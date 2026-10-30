@@ -6,7 +6,21 @@ export const collections = {
   docs: defineCollection({
     loader: glob({
       base: new URL('../../docs', import.meta.url).pathname,
-      pattern: '**/*.{md,mdx}',
+      pattern: [
+        'index.mdx',
+        'api.md',
+        'compatibility.md',
+        'consumer-guide.md',
+        'maintainers.md',
+        'maintenance.md',
+        'mui-hello.mdx',
+        'mui-safe-api.md',
+        'platform-roadmap.md',
+        'quickstart-toolchain.md',
+        'release-versioning.md',
+        'rust-api.md',
+        'sha256sum.md',
+      ],
     }),
     schema: docsSchema(),
   }),

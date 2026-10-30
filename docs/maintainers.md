@@ -56,5 +56,5 @@ The reviewed catalog commit is
 `bb5cc2e428b89685eeec2ae249701cc23fd135d7`; signed assets were prepared in
 [run 40994382906](https://github.com/metaneutrons/ami-rust/actions/runs/40994382906).
 The complete identities and acceptance mapping are in the
-[M7 qualification record](https://ami-rust.metaneutrons.cc/m7-qualification/). These steps do not authorise
+maintainer records. These steps do not authorise
 the `publish` workflow mode.

@@ -19,12 +19,27 @@ const OM_DISPOSE: u32 = 0x0102;
 /// other message is forwarded unchanged to the standard superclass. Foreign
 /// messages with custom layouts remain available only through the raw API.
 pub trait CustomClassSpec: 'static {
+    /// Standard MUI superclass for this custom class.
     type Super: Class;
+    /// Per-instance state, initialized with [`Default::default`].
     type Data: Default + 'static;
+    /// Copyable identifier for a supported custom method.
     type Method: Copy + 'static;
 
+    /// Decodes a native method ID owned by this specification.
+    ///
+    /// Return `Some` only for custom methods handled by [`Self::dispatch`].
     fn decode_method(method_id: u32) -> Option<Self::Method>;
+
+    /// Returns the native user-method ID for a typed custom method.
+    ///
+    /// IDs below `aros_sys::TAG_USER` are rejected by [`CustomObject::call`].
     fn method_id(method: Self::Method) -> u32;
+
+    /// Handles one custom method without trailing native arguments.
+    ///
+    /// The state is unique to one native object and is mutably borrowed only
+    /// for this call. Reentrant dispatch to the same object returns zero.
     fn dispatch(data: &mut Self::Data, method: Self::Method) -> usize;
 }
 
@@ -45,6 +60,7 @@ impl<S: CustomClassSpec> Clone for CustomClass<'_, S> {
 }
 
 impl<'scope, S: CustomClassSpec> CustomClass<'scope, S> {
+    /// Starts building an instance using typed superclass construction tags.
     pub fn builder(self) -> CustomBuilder<'scope, S> {
         CustomBuilder {
             class: self,
@@ -60,6 +76,9 @@ pub struct CustomBuilder<'scope, S: CustomClassSpec> {
 }
 
 impl<'scope, S: CustomClassSpec> CustomBuilder<'scope, S> {
+    /// Adds a typed construction attribute supported by the superclass.
+    ///
+    /// Scope-bound values must come from the class registration's scope.
     pub fn with<A>(mut self, value: <A::Value as ValueKind>::Input<'scope>) -> Result<Self, Error>
     where
         A: BuildAttribute<S::Super>,
@@ -85,6 +104,10 @@ impl<'scope, S: CustomClassSpec> CustomBuilder<'scope, S> {
         Ok(self)
     }
 
+    /// Creates a native instance and returns its typed custom-class handle.
+    ///
+    /// The scope retains the instance and registration until teardown. The
+    /// returned handle is a copyable view and does not own native storage.
     pub fn build(self) -> Result<CustomObject<'scope, S>, Error> {
         let class = unsafe { self.class.raw.as_ref().class };
         let class = NonNull::new(class).ok_or(Error::CustomClassCreation)?;
@@ -101,6 +124,10 @@ impl<'scope, S: CustomClassSpec> CustomBuilder<'scope, S> {
 }
 
 /// Live instance of one registered custom class.
+///
+/// Its native storage and class registration are owned by the same scope.
+/// This copyable handle provides custom method dispatch plus access to the
+/// ordinary typed superclass interface.
 pub struct CustomObject<'scope, S: CustomClassSpec> {
     object: Object<'scope, S::Super>,
     class: NonNull<aros_sys::IClass>,
@@ -118,11 +145,16 @@ impl<S: CustomClassSpec> Clone for CustomObject<'_, S> {
 impl<'scope, S: CustomClassSpec> CustomObject<'scope, S> {
     /// Returns the ordinary typed superclass view used for attributes,
     /// notifications, ownership transfer, and standard methods.
+    ///
+    /// This is only a type view of the same native object.
     pub fn object(self) -> Object<'scope, S::Super> {
         self.object
     }
 
     /// Dispatches one declared argument-free custom method.
+    ///
+    /// Its return value is the native pointer-sized method result. Use the
+    /// superclass object view for generated standard methods and attributes.
     pub fn call(self, method: S::Method) -> Result<usize, Error> {
         let method_id = S::method_id(method);
         if method_id < aros_sys::TAG_USER {
@@ -162,6 +194,10 @@ struct Instance<S: CustomClassSpec> {
 impl Scope {
     /// Registers one custom class whose native lifetime is bounded by this
     /// complete object scope.
+    ///
+    /// The generated dispatcher stores a fresh `S::Data` value in each native
+    /// instance. The registration remains live until all objects from this
+    /// scope have been disposed.
     pub fn custom_class<'scope, S>(&'scope self) -> Result<CustomClass<'scope, S>, Error>
     where
         S: CustomClassSpec,

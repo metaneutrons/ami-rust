@@ -20,22 +20,39 @@ const OM_ADDMEMBER: u32 = 0x0109;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Error {
+    /// An underlying AROS library or runtime operation failed.
     Aros(aros::Error),
+    /// A required Rust-side allocation could not be made.
     Allocation,
+    /// MUI reported that an attribute has no readable value.
     AttributeUnavailable,
+    /// An internal scope borrow was already active, usually during reentrant use.
     Busy,
+    /// A required native library base could not be obtained.
     LibraryBaseUnavailable,
+    /// A native MUI operation returned failure.
     NativeOperation,
+    /// MUI could not create the requested object.
     ObjectCreation,
+    /// A native value that must be non-null was null.
     NullValue,
+    /// A requester format string used a conversion requiring variadic data.
     InvalidFormat,
+    /// A custom method identifier was outside the supported user-method range.
     InvalidCustomMethod,
+    /// MUI could not create the custom class registration.
     CustomClassCreation,
+    /// The child already has a native owner in this scope.
     AlreadyOwned,
+    /// Attaching the child would create a native ownership cycle.
     OwnershipCycle,
+    /// The parent already has an attached window root.
     ParentOccupied,
+    /// A native enum value was not represented by the generated Rust enum.
     UnknownEnumValue,
+    /// A native integer value did not fit its Rust representation.
     ValueOutOfRange,
+    /// An object, hook, or scope-bound value belongs to a different scope.
     WrongScope,
 }
 
@@ -46,6 +63,9 @@ impl From<aros::Error> for Error {
 }
 
 /// Open MUI and Intuition libraries bound to one AROS application task.
+///
+/// This handle is task affine. Use [`scope`](Self::scope) to create objects;
+/// it keeps the libraries and their bases alive while native values exist.
 pub struct Mui<'ctx> {
     context: &'ctx Context,
     mui_library: Library<'ctx>,
@@ -56,6 +76,9 @@ pub struct Mui<'ctx> {
 }
 
 impl<'ctx> Mui<'ctx> {
+    /// Opens `muimaster.library` and `intuition.library` on `context`.
+    ///
+    /// Keep this value alive for every scope and object created from it.
     pub fn open(context: &'ctx Context) -> Result<Self, Error> {
         let mui_name = BytePath::new(MUI_LIBRARY_NAME)?;
         let mui_library = Library::open(context, &mui_name, aros_mui_sys::MUI_API_VERSION)?;
@@ -84,6 +107,11 @@ impl<'ctx> Mui<'ctx> {
 
     /// Runs one non-escaping object scope and disposes every native root when
     /// the closure returns, including on an ordinary `Result::Err` path.
+    ///
+    /// The closure receives a fresh [`Scope`]. Objects, callbacks, custom
+    /// classes, and string arrays created from it are valid only for this
+    /// invocation. Native children attached with [`Object::adopt`] are
+    /// disposed by their parent; remaining roots are disposed by the scope.
     pub fn scope<R>(&self, run: impl for<'scope> FnOnce(&'scope Scope) -> R) -> R {
         let scope = Scope {
             context: NonNull::from(self.context),
@@ -98,16 +126,22 @@ impl<'ctx> Mui<'ctx> {
         run(&scope)
     }
 
+    /// Returns the current MUI error value for this task.
     pub fn last_error(&self) -> i32 {
         // SAFETY: this value owns the live muimaster library reference.
         unsafe { aros_mui_sys::mui_error(self.mui_base.as_ptr()) }
     }
 
+    /// Sets the current MUI error value and returns the value reported by MUI.
     pub fn set_error(&self, error: i32) -> i32 {
         // SAFETY: this value owns the live muimaster library reference.
         unsafe { aros_mui_sys::mui_set_error(self.mui_base.as_ptr(), error) }
     }
 
+    /// Closes both native libraries, consuming this handle.
+    ///
+    /// All scopes borrowed from this value must have ended before it can be
+    /// consumed.
     pub fn close(self) -> Result<(), Error> {
         let Self {
             mui_library,
@@ -142,7 +176,12 @@ struct Entry {
     ownership: Ownership,
 }
 
-/// Native object arena owned by one `Mui::scope` invocation.
+/// Native object arena owned by one [`Mui::scope`] invocation.
+///
+/// A scope is task affine. It retains native roots, scope-bound strings,
+/// callbacks, and custom class registrations. Handles and registrations
+/// borrowed from it cannot outlive it. During teardown, native roots are
+/// disposed before retained callbacks and custom classes are released.
 pub struct Scope {
     context: NonNull<Context>,
     mui_base: NonNull<aros_sys::Library>,
@@ -165,6 +204,10 @@ impl Scope {
         self.mui_base
     }
 
+    /// Starts a typed builder for native class `C`.
+    ///
+    /// Add construction attributes with [`Builder::with`], then call
+    /// [`Builder::build`] to create a scope-owned root object.
     pub fn builder<C: Class>(&self) -> Builder<'_, C> {
         Builder {
             scope: self,
@@ -173,7 +216,10 @@ impl Scope {
         }
     }
 
-    /// Retains a NULL-terminated native string array for this complete scope.
+    /// Creates a NULL-terminated native string array retained for this scope.
+    ///
+    /// The C strings must remain borrowed for the scope lifetime. The returned
+    /// handle can only be used with objects from this same scope.
     pub fn string_array<'scope>(
         &'scope self,
         strings: &[&'scope core::ffi::CStr],
@@ -525,7 +571,12 @@ impl Drop for Scope {
     }
 }
 
-/// Copyable typed handle whose native storage is owned by its `Scope`.
+/// Copyable typed handle to native storage owned by its [`Scope`].
+///
+/// Copying this handle copies only the Rust reference; it does not duplicate
+/// or dispose the native object. The handle is task affine and remains valid
+/// until its scope ends, whether the object is a root or has been adopted by a
+/// parent.
 pub struct Object<'scope, C: Class> {
     scope: &'scope Scope,
     index: usize,
@@ -542,6 +593,10 @@ impl<C: Class> Clone for Object<'_, C> {
 }
 
 impl<'scope, C: Class> Object<'scope, C> {
+    /// Views this object through a supported native superclass type.
+    ///
+    /// This changes only the compile-time class view. It does not alter native
+    /// ownership or the object's lifetime.
     pub fn upcast<Target: Class>(self) -> Object<'scope, Target>
     where
         C: crate::IsA<Target>,
@@ -554,6 +609,12 @@ impl<'scope, C: Class> Object<'scope, C> {
         }
     }
 
+    /// Transfers native child ownership to this class-checked parent.
+    ///
+    /// Both handles must belong to the same scope. The child starts as a root;
+    /// after a successful adoption, the native parent owns its disposal. A
+    /// child already attached elsewhere, an ownership cycle, or an occupied
+    /// window root is rejected.
     pub fn adopt<Child: Class>(self, child: Object<'scope, Child>) -> Result<(), Error>
     where
         C: ParentOf<Child>,
@@ -561,6 +622,11 @@ impl<'scope, C: Class> Object<'scope, C> {
         self.scope.attach(self, child, C::ATTACHMENT)
     }
 
+    /// Sets a generated, typed attribute supported for this object's class.
+    ///
+    /// The descriptor's value type determines the Rust input. Scope-bound
+    /// inputs, such as object handles and string arrays, must come from this
+    /// same scope.
     pub fn set<A>(self, value: <A::Value as ValueKind>::Input<'scope>) -> Result<(), Error>
     where
         A: SetAttribute<C>,
@@ -568,6 +634,10 @@ impl<'scope, C: Class> Object<'scope, C> {
         self.scope.set::<C, A>(self, value)
     }
 
+    /// Reads a generated, typed attribute supported for this object's class.
+    ///
+    /// The output is decoded into its Rust value type. An unsupported or
+    /// unavailable native value is returned as an [`Error`].
     pub fn get<A>(self) -> Result<<A::Value as ValueKind>::Output<'scope>, Error>
     where
         A: GetAttribute<C>,
@@ -576,6 +646,10 @@ impl<'scope, C: Class> Object<'scope, C> {
         self.scope.get::<C, A>(self)
     }
 
+    /// Calls a safe generated method for this object's class.
+    ///
+    /// The method descriptor controls argument encoding and output typing.
+    /// Borrowed arguments must remain valid for the current object scope.
     pub fn call<M: Method<C>>(self, arguments: M::Arguments<'scope>) -> M::Output {
         // SAFETY: Method is sealed; its implementation receives the same live
         // typed object and scope used to validate all arguments.
@@ -630,7 +704,10 @@ impl<'scope, C: Class> Object<'scope, C> {
     }
 }
 
-/// Allocation-aware typed tag builder shared by every generated class.
+/// Typed construction-tag builder for one generated native class.
+///
+/// Builders do not own native objects. Dropping a builder discards its tags;
+/// [`build`](Self::build) creates a root object registered with its scope.
 pub struct Builder<'scope, C: Class> {
     scope: &'scope Scope,
     tags: Vec<TagItem>,
@@ -638,6 +715,10 @@ pub struct Builder<'scope, C: Class> {
 }
 
 impl<'scope, C: Class> Builder<'scope, C> {
+    /// Adds a typed construction attribute supported by class `C`.
+    ///
+    /// Values are encoded according to the generated attribute descriptor.
+    /// Any scope-bound input must belong to this builder's scope.
     pub fn with<A>(mut self, value: <A::Value as ValueKind>::Input<'scope>) -> Result<Self, Error>
     where
         A: BuildAttribute<C>,
@@ -648,6 +729,10 @@ impl<'scope, C: Class> Builder<'scope, C> {
         Ok(self)
     }
 
+    /// Creates a native root object from the accumulated attributes.
+    ///
+    /// The returned handle remains valid until its scope ends. It may then be
+    /// attached to an allowed parent with [`Object::adopt`].
     pub fn build(self) -> Result<Object<'scope, C>, Error> {
         self.scope.create::<C>(self.tags)
     }
@@ -657,7 +742,8 @@ impl<'scope, C: Class> Builder<'scope, C> {
     /// # Safety
     ///
     /// `value` must satisfy the native type and retention contract reported by
-    /// `A::C_TYPE` for the complete scope lifetime.
+    /// `A::C_TYPE` for the complete scope lifetime. Prefer [`Self::with`] when
+    /// the attribute has a safe typed descriptor.
     pub unsafe fn with_raw<A: RawBuildAttribute<C>>(mut self, value: usize) -> Result<Self, Error> {
         self.tags.try_reserve(1).map_err(|_| Error::Allocation)?;
         self.tags.push(TagItem::new(A::ID, value));

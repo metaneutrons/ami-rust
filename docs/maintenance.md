@@ -31,7 +31,6 @@ and license differences, repeat affected positive/error/memory/reproducibility
 tests, and obtain independent acceptance. A new version number or a passing
 compiler invocation alone does not extend the support matrix.
 
-The exact 0.1.0 candidate is identified and accepted in the
-[M7 qualification record](https://ami-rust.metaneutrons.cc/m7-qualification/). Its source, catalog, runtime,
-licence and signature identities are the baseline for any 0.1.x maintenance
-change. A replacement archive under the same version is not permitted.
+Each released source, catalog, runtime, licence, and signature identity is the
+baseline for a maintenance change. A replacement archive under the same version
+is not permitted.
