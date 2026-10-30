@@ -58,8 +58,23 @@ documented direct route. A project then builds without an ami-rust command. The
 toolchain name includes its version and development host triple; for example on
 Apple Silicon:
 
+```toml
+# .cargo/config.toml
+[target.x86_64-unknown-aros-abi1]
+linker = "aros-link"
+rustflags = ["-Zunstable-options"]
+
+[target.x86_64-unknown-aros-abi11]
+linker = "aros-link"
+rustflags = ["-Zunstable-options"]
+```
+
+After the locked dependencies have been fetched once, both targets build
+offline with ordinary Cargo:
+
 ```sh
 toolchain=0.1.0-aarch64-apple-darwin
+cargo +"$toolchain" fetch --locked
 cargo +"$toolchain" build --target x86_64-unknown-aros-abi1 --release --locked --offline
 cargo +"$toolchain" build --target x86_64-unknown-aros-abi11 --release --locked --offline
 ```
