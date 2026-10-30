@@ -1,0 +1,15 @@
+{
+  "schema": "aros-target-library-candidate-v1",
+  "target": "x86_64-unknown-aros-abi1",
+  "rustc_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
+  "origin": "source-built from the pinned Rust distribution on linux-aarch64",
+  "files": [
+    {"path": "libcore-2cbb80be7a935e6b.rlib", "bytes": 504614, "sha256": "76cfc56f98100f7173ee98725836fd03ad76254bd74dfe705218ae9c39f67d7a"},
+    {"path": "libcore-2cbb80be7a935e6b.rmeta", "bytes": 67729379, "sha256": "8e4e0cf800f661cfec41e3fd8d21581658345c04fc91b1f3cd9e0404940f5550"},
+    {"path": "liballoc-e4f7479e156cccc7.rlib", "bytes": 103054, "sha256": "c137f3b17ef3ac20efbafef9400c40001cfd2a33ac34406ca9a142a811fa785f"},
+    {"path": "liballoc-e4f7479e156cccc7.rmeta", "bytes": 8397802, "sha256": "3ad257c8b11b59f2aeb0923ce3b6f12b283d44c615222f320dd5feb9b95b3158"},
+    {"path": "libcompiler_builtins-e5a1b839654ae3be.rlib", "bytes": 311364, "sha256": "a6ada1c9bb36f28d5ef7959aaad43f3a13910eba6ea5e8d66fed0259a5138c94"},
+    {"path": "libcompiler_builtins-e5a1b839654ae3be.rmeta", "bytes": 2134886, "sha256": "5c84fc955aa9120512c67c2df5ec3e5c7ef1efb52e521b20f829415700d730ce"}
+  ],
+  "symlinks": []
+}

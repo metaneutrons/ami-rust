@@ -2,38 +2,14 @@
   "schema": "aros-target-library-candidate-v1",
   "target": "x86_64-unknown-aros-abi1",
   "rustc_commit": "330d317121e16b5db8e5adc63595910528ff2ee7",
-  "origin": "source-built from the pinned Rust distribution",
+  "origin": "source-built from the pinned Rust distribution on macos-aarch64",
   "files": [
-    {
-      "path": "libcore-2cbb80be7a935e6b.rlib",
-      "bytes": 504614,
-      "sha256": "db2f4fbc8c0b91e5945e61203a3483ab9e6d383b72b3f0ffaf6c4b03e2301585"
-    },
-    {
-      "path": "libcore-2cbb80be7a935e6b.rmeta",
-      "bytes": 67729379,
-      "sha256": "75c93394122cae90bf069590c6ec359b3c9435afdd34e3a6d54c2af4eeb00dbd"
-    },
-    {
-      "path": "liballoc-7631d64135425a16.rlib",
-      "bytes": 103054,
-      "sha256": "da55e7bb1192dece4b3bd99a87044edbc1a782d6db63b7876faa38d034dd9aca"
-    },
-    {
-      "path": "liballoc-7631d64135425a16.rmeta",
-      "bytes": 8397802,
-      "sha256": "a184d6d831bf7380ddb58be5185e0f5d03e60301e95f46a68c616e4d5795b5f6"
-    },
-    {
-      "path": "libcompiler_builtins-fd10c2468072dedd.rlib",
-      "bytes": 311364,
-      "sha256": "83a54b1a58441f70f40ac6d99ecdc205b2a52e899d7619808c31c7646b55f9d7"
-    },
-    {
-      "path": "libcompiler_builtins-fd10c2468072dedd.rmeta",
-      "bytes": 2134886,
-      "sha256": "5c830c2deb482dfb3159756d238567c8187b6353f345e35be3774d11fdf4a3f8"
-    }
+    {"path": "libcore-2cbb80be7a935e6b.rlib", "bytes": 504614, "sha256": "76cfc56f98100f7173ee98725836fd03ad76254bd74dfe705218ae9c39f67d7a"},
+    {"path": "libcore-2cbb80be7a935e6b.rmeta", "bytes": 67729379, "sha256": "8e4e0cf800f661cfec41e3fd8d21581658345c04fc91b1f3cd9e0404940f5550"},
+    {"path": "liballoc-7631d64135425a16.rlib", "bytes": 103054, "sha256": "48591aa91e7b35ecb6c8b977aa501c7bce341b2cb11f8f645023b3d42393b0aa"},
+    {"path": "liballoc-7631d64135425a16.rmeta", "bytes": 8397802, "sha256": "e8dbb688c4a560bc7ec41054fa993173e1970da0eeda85956385a74f867b60af"},
+    {"path": "libcompiler_builtins-fd10c2468072dedd.rlib", "bytes": 311364, "sha256": "5e2541aede28e87c07ae6ec4e172a2422ede9df3ac66f303baf3910117831e1c"},
+    {"path": "libcompiler_builtins-fd10c2468072dedd.rmeta", "bytes": 2134886, "sha256": "5dc5bcfccfde913b01fe7f695f61b775440cb22935f180f6fc633ca7ea904050"}
   ],
   "symlinks": []
 }

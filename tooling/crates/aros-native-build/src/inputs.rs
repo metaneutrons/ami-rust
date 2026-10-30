@@ -401,9 +401,11 @@ fn embedded_pins_for_host(host: &str) -> Result<EmbeddedPins> {
             abi11_csdk: include_str!("../../../../release/abi11-csdk/profile.json"),
             abi1_target: include_str!("../pins/x86_64-unknown-aros-abi1.json"),
             abi11_target: include_str!("../pins/x86_64-unknown-aros-abi11.json"),
-            abi1_target_libraries: include_str!("../pins/x86_64-unknown-aros-abi1-libraries.json"),
+            abi1_target_libraries: include_str!(
+                "../pins/linux-x86_64/x86_64-unknown-aros-abi1-libraries.json"
+            ),
             abi11_target_libraries: include_str!(
-                "../pins/x86_64-unknown-aros-abi11-libraries.json"
+                "../pins/linux-x86_64/x86_64-unknown-aros-abi11-libraries.json"
             ),
         }),
         "linux-aarch64" => Ok(EmbeddedPins {
@@ -415,9 +417,11 @@ fn embedded_pins_for_host(host: &str) -> Result<EmbeddedPins> {
             abi11_csdk: include_str!("../../../../release/abi11-csdk/profile.json"),
             abi1_target: include_str!("../pins/x86_64-unknown-aros-abi1.json"),
             abi11_target: include_str!("../pins/x86_64-unknown-aros-abi11.json"),
-            abi1_target_libraries: include_str!("../pins/x86_64-unknown-aros-abi1-libraries.json"),
+            abi1_target_libraries: include_str!(
+                "../pins/linux-aarch64/x86_64-unknown-aros-abi1-libraries.json"
+            ),
             abi11_target_libraries: include_str!(
-                "../pins/x86_64-unknown-aros-abi11-libraries.json"
+                "../pins/linux-aarch64/x86_64-unknown-aros-abi11-libraries.json"
             ),
         }),
         _ => Err(Refusal::new(
@@ -1611,7 +1615,7 @@ mod tests {
             ),
             (
                 "target libraries",
-                "30d8a0d113920973f4b6cf22654df4309b8932103aaf830181d0930e3b35f4c1",
+                "d08f304dc4cb87577cb76043eb7d38259a6b791ebe14f27f9a3c5e66a045645b",
                 arm.abi1_target_libraries,
             ),
         ];
@@ -1647,7 +1651,7 @@ mod tests {
         let linux_x86 = embedded_pins_for_host("linux-x86_64").unwrap();
         assert_eq!(
             digest_text(linux_x86.abi1_target_libraries),
-            "30d8a0d113920973f4b6cf22654df4309b8932103aaf830181d0930e3b35f4c1"
+            "21dcb704b18c6df0a68f71521048bdd492126615a7403f960e79e09025251046"
         );
         assert_eq!(
             mac.rust
