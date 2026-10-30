@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/metaneutrons/ami-rust/actions/workflows/ci.yml"><img src="https://github.com/metaneutrons/ami-rust/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
-  <img src="https://img.shields.io/badge/version-0.1.0%20candidate-ff825e?style=flat-square" alt="Version 0.1.0 candidate">
+  <a href="https://github.com/metaneutrons/ami-rust/releases/tag/v0.1.0"><img src="https://img.shields.io/badge/version-0.1.0-ff825e?style=flat-square" alt="Version 0.1.0"></a>
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-7c8cf8?style=flat-square" alt="License: MIT OR Apache-2.0"></a>
   <a href="docs/compatibility.md"><img src="https://img.shields.io/badge/target-AROS%20x86--64%20ABI--v1%20%2B%20ABI--v11-398f4f?style=flat-square" alt="Target: AROS x86-64 ABI-v1 and ABI-v11"></a>
   <a href="docs/api.md"><img src="https://img.shields.io/badge/Rust-no__std%20%2B%20alloc-91b8d6?style=flat-square" alt="Rust: no_std plus alloc"></a>
@@ -38,11 +38,10 @@ and native AROS-hosted rustc/Cargo/rustup are future work.
 
 ## Status
 
-The exact 0.1.0 candidate has passed the protected three-host, dual-target and
-native AROS qualification. Its reviewed rustup catalog and signed assets are
-prepared. **0.1.0 has not been published.** There is currently no supported
-public installation URL, release tag, package-manager channel, or crates.io
-publication. Publication still requires a separate maintainer command.
+ami-rust 0.1.0 is the initial qualified release. The exact candidate passed the
+protected three-host, dual-target and native AROS qualification. Authenticated
+GitHub Release archives and the immutable rustup catalog are the supported
+installation routes. APT, Homebrew, AUR and crates.io are not 0.1.0 channels.
 
 Qualified development hosts:
 
@@ -54,10 +53,10 @@ Qualified development hosts:
 
 ## Standard user workflow
 
-After publication, users install the authenticated GitHub Release toolchain
-through rustup or the documented direct route. A project then builds without
-an ami-rust command. The toolchain name includes its version and development
-host triple; for example on Apple Silicon:
+Users install the authenticated GitHub Release toolchain through rustup or the
+documented direct route. A project then builds without an ami-rust command. The
+toolchain name includes its version and development host triple; for example on
+Apple Silicon:
 
 ```sh
 toolchain=0.1.0-aarch64-apple-darwin
@@ -117,7 +116,7 @@ signing, AROS execution, and publication remain protected workflow stages.
 
 - [Compatibility boundary](docs/compatibility.md)
 - [API and lifetime contracts](docs/api.md)
-- [Source checkout guide](docs/quickstart-toolchain.md)
+- [Installation and source checkout](docs/quickstart-toolchain.md)
 - [Release and version model](docs/release-versioning.md)
 - [0.1.0 qualification record](docs/m7-qualification.md)
 - [Maintainer workflow](docs/maintainers.md)
