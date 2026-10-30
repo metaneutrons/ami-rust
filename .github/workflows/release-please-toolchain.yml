@@ -114,6 +114,7 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          # The protected publisher creates the tag/draft at catalog commit c.
+          # The protected publisher tags the reviewed release source. The
+          # separately reviewed catalog remains bound inside the signed assets.
           # Release Please selects version/tag naming through this normal PR.
           skip-github-release: true
