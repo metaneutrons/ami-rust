@@ -1,0 +1,88 @@
+manifest-version = "2"
+date = "2026-10-27"
+
+[profiles]
+minimal = ["rustc", "cargo", "rust-std"]
+default = ["rustc", "cargo", "rust-std"]
+complete = ["rustc", "cargo", "rust-std"]
+
+[pkg.rust]
+version = "1.100.0-nightly (330d31712 2026-09-17)"
+
+[pkg.rust.target.aarch64-apple-darwin]
+available = true
+components = [
+  { pkg = "rustc", target = "aarch64-apple-darwin" },
+  { pkg = "cargo", target = "aarch64-apple-darwin" },
+  { pkg = "rust-std", target = "aarch64-apple-darwin" },
+]
+
+[pkg.rust.target.x86_64-unknown-linux-gnu]
+available = true
+components = [
+  { pkg = "rustc", target = "x86_64-unknown-linux-gnu" },
+  { pkg = "cargo", target = "x86_64-unknown-linux-gnu" },
+  { pkg = "rust-std", target = "x86_64-unknown-linux-gnu" },
+]
+
+[pkg.rust.target.aarch64-unknown-linux-gnu]
+available = true
+components = [
+  { pkg = "rustc", target = "aarch64-unknown-linux-gnu" },
+  { pkg = "cargo", target = "aarch64-unknown-linux-gnu" },
+  { pkg = "rust-std", target = "aarch64-unknown-linux-gnu" },
+]
+
+[pkg.rustc]
+version = "1.100.0-nightly (330d31712 2026-09-17)"
+
+[pkg.rustc.target.aarch64-apple-darwin]
+available = true
+xz_url = "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-rustc-0.1.0-macos-aarch64.tar.xz"
+xz_hash = "7dbf04047703c5bdf555c1f28fd7e1165031e4395d0340f6c4f19cda8b0a0dbe"
+
+[pkg.rustc.target.x86_64-unknown-linux-gnu]
+available = true
+xz_url = "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-rustc-0.1.0-linux-x86_64.tar.xz"
+xz_hash = "dc586234313bc5d72eac02cb6c27364940ae534830058e9dfbb9a3c3cba43b97"
+
+[pkg.rustc.target.aarch64-unknown-linux-gnu]
+available = true
+xz_url = "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-rustc-0.1.0-linux-aarch64.tar.xz"
+xz_hash = "b9b0fb770dfb1541d1731227292055cd36a0d8b2e7363726c04c58c0de063121"
+
+[pkg.cargo]
+version = "1.100.0-nightly (495c385d0 2026-09-16)"
+
+[pkg.cargo.target.aarch64-apple-darwin]
+available = true
+xz_url = "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-cargo-0.1.0-macos-aarch64.tar.xz"
+xz_hash = "eadee03646109fac62ac4dce40c7a82a269e14c0c727c160ee8497cf320c7986"
+
+[pkg.cargo.target.x86_64-unknown-linux-gnu]
+available = true
+xz_url = "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-cargo-0.1.0-linux-x86_64.tar.xz"
+xz_hash = "d99aa4ef5bc818a7caef65495e991d8aa142488419b9e4103b881e2b982f2d0e"
+
+[pkg.cargo.target.aarch64-unknown-linux-gnu]
+available = true
+xz_url = "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-cargo-0.1.0-linux-aarch64.tar.xz"
+xz_hash = "5ef62d648486fc437b5692bbec8534303985265a9f541d213f8c419508da677f"
+
+[pkg.rust-std]
+version = "1.100.0-nightly (330d31712 2026-09-17)"
+
+[pkg.rust-std.target.aarch64-apple-darwin]
+available = true
+xz_url = "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-rust-std-0.1.0-macos-aarch64.tar.xz"
+xz_hash = "aac567bafb920f45219a96e6fb6270db450ff7a1ad5bc5bf99d5fadc1141b221"
+
+[pkg.rust-std.target.x86_64-unknown-linux-gnu]
+available = true
+xz_url = "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-rust-std-0.1.0-linux-x86_64.tar.xz"
+xz_hash = "21515242d5dbb4f6481c99979c41d3ab732415625775c1e06a2bb411fb0862e7"
+
+[pkg.rust-std.target.aarch64-unknown-linux-gnu]
+available = true
+xz_url = "https://github.com/metaneutrons/ami-rust/releases/download/v0.1.0/ami-rust-rust-std-0.1.0-linux-aarch64.tar.xz"
+xz_hash = "2d46da188243544916bb75f5ac8826330f992723a0d0aada062112a8113832d7"
