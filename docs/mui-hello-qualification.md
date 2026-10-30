@@ -38,6 +38,10 @@ window was visible, QMP captured the framebuffer; QMP then stopped the guest.
 The application deliberately remains in its event loop, so this check asserts
 visible native startup and rendering, not an automatic process exit.
 
+The repository image is a direct 320×130 crop at `(x=360, y=320)` from the
+ABI11 framebuffer. It removes unused desktop area; no generated or substituted
+content is present.
+
 ## Results
 
 | Target | Executable SHA-256 | Derived ISO SHA-256 | Visible native result |
@@ -47,9 +51,9 @@ visible native startup and rendering, not an automatic process exit.
 
 The ABI11 raw framebuffer capture has SHA-256
 `977469df527ece23f6bc86c7f8c88cbc51a910836128907a34ad920b186dcecf`.
-The repository version is the 1024×768 WebP
+The repository version is the 320×130 WebP crop
 [`assets/mui-hello-abi11.webp`](../assets/mui-hello-abi11.webp), SHA-256
-`fdc60c822149c8da673661c5b062a85ac2d9d22485a78540025b28053122f0ca`.
+`4a38df85ab7fe9593920d16082c00355257ae69ea6d0d4c9c03bbf4f8667d885`.
 
 This evidence qualifies the example's documented MUI path on the two named
 targets. It does not extend the SDK compatibility boundary beyond the existing
