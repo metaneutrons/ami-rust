@@ -230,13 +230,24 @@ jobs:
               echo 'release already exists; select recover for the exact existing release' >&2
               exit 1
             fi
+            if "$gh" api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" >/dev/null 2>&1; then
+              echo 'tag already exists without a recoverable release' >&2
+              exit 1
+            fi
             echo 'public=false' >> "$GITHUB_OUTPUT"
             echo 'draft=false' >> "$GITHUB_OUTPUT"
           else
             "$gh" release view "$tag" --repo "$GITHUB_REPOSITORY" \
               --json isDraft,targetCommitish > "$RUNNER_TEMP/rp3-existing-release.json"
-            jq -e --arg commit "$CATALOG_COMMIT" '.targetCommitish == $commit' \
-              "$RUNNER_TEMP/rp3-existing-release.json" >/dev/null
+            release_commit=$(jq -er '.targetCommitish | select(test("^[0-9a-f]{40}$"))' \
+              "$RUNNER_TEMP/rp3-existing-release.json")
+            git cat-file -e "$release_commit^{commit}"
+            git merge-base --is-ancestor "$CATALOG_COMMIT" "$release_commit"
+            git merge-base --is-ancestor "$release_commit" "$GITHUB_SHA"
+            "$gh" api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" > "$RUNNER_TEMP/rp3-existing-tag.json"
+            jq -e --arg commit "$release_commit" \
+              '.object.type == "commit" and .object.sha == $commit' \
+              "$RUNNER_TEMP/rp3-existing-tag.json" >/dev/null
             draft=$(jq -r .isDraft "$RUNNER_TEMP/rp3-existing-release.json")
             echo "draft=$draft" >> "$GITHUB_OUTPUT"
             if test "$draft" = true; then
@@ -296,15 +307,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           MODE: ${{ inputs.mode }}
           VERSION: ${{ inputs.version }}
-          CATALOG_COMMIT: ${{ inputs.catalog_commit }}
         shell: bash
         run: |
           set -euo pipefail
           tag="v$VERSION"
           gh="$RUNNER_TEMP/rp3-tools/gh"
           if test "$MODE" = publish; then
-            "$gh" release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$CATALOG_COMMIT" --draft --prerelease --title "$tag" \
-              --notes "Exact ami-rust $VERSION toolchain candidate. Latest promotion follows separate release acceptance."
+            "$gh" release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --prerelease --title "$tag" \
+              --notes "Qualified ami-rust $VERSION toolchain release for AROS x86-64 ABI-v1 and ABI-v11."
+            "$gh" release view "$tag" --repo "$GITHUB_REPOSITORY" \
+              --json targetCommitish --jq .targetCommitish | grep -Fx "$GITHUB_SHA"
+            "$gh" api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" \
+              --jq '.object.type + ":" + .object.sha' | grep -Fx "commit:$GITHUB_SHA"
           fi
           is_draft=$("$gh" release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)
           if test "$MODE" = recover && test "$is_draft" = true; then
@@ -366,7 +380,7 @@ jobs:
               "$RUNNER_TEMP/rp3-anonymous-readback/$subject" >/dev/null
           done
 
-      - name: Expose a stable non-latest candidate after complete anonymous readback
+      - name: Promote the stable release to latest after complete anonymous readback
         if: inputs.mode == 'publish' || inputs.mode == 'recover'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -374,10 +388,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if test "$("$RUNNER_TEMP/rp3-tools/gh" release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)" = true; then
-            "$RUNNER_TEMP/rp3-tools/gh" release edit "v$VERSION" --repo "$GITHUB_REPOSITORY" \
-              --prerelease=false --latest=false
-          fi
+          "$RUNNER_TEMP/rp3-tools/gh" release edit "v$VERSION" --repo "$GITHUB_REPOSITORY" \
+            --prerelease=false --latest
 
       - name: Retain the signed exact candidate without creating a release
         if: inputs.mode == 'prepare-signed'
