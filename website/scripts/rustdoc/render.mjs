@@ -424,7 +424,7 @@ export function createPageWriter(options) {
   /* ---------- module and landing pages ---------- */
 
   const hierarchyList = (nodes, depth = 0) => nodes
-    .map((node) => `${'    '.repeat(depth)}- ${linkTo(node.entry)}${node.attributes.length ? ` — ${node.attributes.length} attributes` : ''}${node.children.length ? `\n${hierarchyList(node.children, depth + 1)}` : ''}`)
+    .map((node) => `${'    '.repeat(depth)}- ${linkTo(node.entry)}${node.attributes.length ? ` — ${node.attributes.length} attribute${node.attributes.length === 1 ? '' : 's'}` : ''}${node.children.length ? `\n${hierarchyList(node.children, depth + 1)}` : ''}`)
     .join('\n');
 
   const classesIndex = (entry) => {

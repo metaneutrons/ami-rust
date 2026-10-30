@@ -48,8 +48,9 @@ export function createRenderer() {
       const qualified = value.qualified_path;
       const self = type(qualified.self_type);
       const traitPath = qualified.trait?.path;
-      if (!traitPath) return `${self}::${qualified.name}`;
-      return `<${self} as ${pathWithArguments(qualified.trait)}>::${qualified.name}`;
+      const name = `${qualified.name}${genericArguments(qualified.args)}`;
+      if (!traitPath) return `${self}::${name}`;
+      return `<${self} as ${pathWithArguments(qualified.trait)}>::${name}`;
     }
     if (value.pat) return type(value.pat.type);
     return '_';
