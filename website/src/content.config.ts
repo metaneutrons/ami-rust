@@ -16,6 +16,7 @@ export const collections = {
         'mui-hello.mdx',
         'platform-roadmap.md',
         'quickstart-toolchain.md',
+        'reference/generated/**/*.md',
         'sha256sum.md',
       ],
     }),

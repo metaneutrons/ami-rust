@@ -11,7 +11,7 @@ belongs to the application task and cannot be sent to another task.
 
 For dependency configuration and target selection, see the
 [consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/). The
-[generated Rust API reference](https://ami-rust.metaneutrons.cc/rust-api/)
+[Rust API reference](https://ami-rust.metaneutrons.cc/reference/generated/)
 contains the complete item-level documentation.
 
 ## `aros`: application runtime and core services
