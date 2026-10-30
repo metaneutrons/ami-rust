@@ -9,7 +9,9 @@ impl Object<'_, Application> {
     ///
     /// `message` must contain no `%` conversion. Format-driven requester
     /// argument arrays remain an explicit raw boundary because their native
-    /// element widths depend on the conversion sequence.
+    /// element widths depend on the conversion sequence. The optional Window
+    /// must belong to the Application's scope. All strings are borrowed only
+    /// for this call; MUI retains none of them after it returns.
     pub fn request(
         self,
         window: Option<Object<'_, Window>>,

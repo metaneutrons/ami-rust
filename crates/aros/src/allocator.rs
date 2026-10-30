@@ -1,7 +1,26 @@
-//! Exec-backed global allocator; installed explicitly by the application.
+//! Exec-backed global allocator used by the application's registered task.
 use core::alloc::{GlobalAlloc, Layout};
 use core::ptr;
 
+/// Global allocator backed by the native SDK's public Exec allocation API.
+///
+/// Install this allocator with `crate::entry!(application, alloc)`; the
+/// `alloc` feature must be enabled. Allocations are supported only while the
+/// native SDK runtime is active and on its registered owner task. The native
+/// bridge checks size arithmetic, requested alignment, ownership, and its
+/// current accounting before accepting a block. It supports alignments up to
+/// 4096 bytes; native memory exhaustion and checked refusal remain possible.
+///
+/// Allocation refusal returns null through [`GlobalAlloc::alloc`]. Fallible
+/// collection APIs can report that refusal themselves; an infallible Rust
+/// allocation that cannot proceed reaches Rust's allocation-error path, which
+/// the `entry!` panic handler routes to the native fatal path. The allocator
+/// does not impose an application-wide heap quota.
+///
+/// Reallocation allocates a replacement, copies the valid prefix, and releases
+/// the old block only after the replacement succeeds. If allocation fails,
+/// the old block remains valid and unchanged. Zeroed allocation clears the
+/// requested bytes before returning them.
 pub struct ExecAllocator;
 // SAFETY: the native owner-task registry preserves original backing pointers,
 // checks size/alignment/overflow, and never returns an accepted misaligned block.

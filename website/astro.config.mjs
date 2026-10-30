@@ -26,6 +26,7 @@ export default defineConfig({
         { label: 'Libraries', items: [
           { label: 'Crates and consumer guide', link: '/consumer-guide/' },
           { label: 'API reference', link: '/api/' },
+          { label: 'Rust API reference', link: '/rust-api/' },
           { label: 'MUI hello', link: '/mui-hello/' },
           { label: 'SHA-256 example', link: '/sha256sum/' },
           { label: 'Generated MUI API', link: '/mui-safe-api/' },
@@ -47,6 +48,10 @@ export default defineConfig({
         ] },
         { label: 'Planning', items: [
           { label: '0.1 initiative plan', link: '/plans/ami-rust-0.1/' },
+        ] },
+        { label: 'Generated Rustdoc', items: [
+          { label: 'aros', link: '/rustdoc/aros/' },
+          { label: 'aros-mui', link: '/rustdoc/aros_mui/' },
         ] },
       ],
     }),

@@ -3,8 +3,14 @@ use alloc::{ffi::CString, vec::Vec};
 use core::{ffi::CStr, marker::PhantomData, ptr::NonNull};
 
 /// Closed or validated numeric value used by a generated MUI enum.
+///
+/// The generated enum wrappers implement this conversion so typed attributes
+/// can encode native constants and reject unknown values when decoding them.
 pub trait MuiEnum: Copy + 'static {
+    /// Encodes this variant as its native pointer-sized integer value.
     fn into_raw(self) -> isize;
+
+    /// Decodes a native value, returning `None` when it is not a known variant.
     fn from_raw(raw: isize) -> Option<Self>;
 }
 
@@ -46,16 +52,25 @@ impl<'scope, T> ForeignPtr<'scope, T> {
 }
 
 /// Value representation selected by a generated attribute.
+///
+/// The associated input and output types describe the safe Rust side of the
+/// attribute. Scope-bound representations use the lifetime to prevent a
+/// borrowed object, string array, or foreign pointer from outliving its native
+/// storage.
 pub trait ValueKind: 'static {
+    /// Rust value accepted when building, setting, or triggering the attribute.
     type Input<'scope>;
+    /// Rust value returned when reading the attribute.
     type Output<'scope>;
 
+    /// Encodes a Rust input as the native tag word used for this value kind.
     #[doc(hidden)]
     fn encode<'scope>(scope: &'scope Scope, value: Self::Input<'scope>) -> Result<usize, Error>;
 }
 
 #[doc(hidden)]
 pub trait DecodeValueKind: ValueKind {
+    /// Decodes a native attribute word into this value kind's Rust output.
     fn decode<'scope>(scope: &'scope Scope, raw: usize) -> Result<Self::Output<'scope>, Error>;
 }
 
@@ -63,28 +78,40 @@ pub trait DecodeValueKind: ValueKind {
 pub mod value {
     use core::marker::PhantomData;
 
+    /// Boolean attribute represented by MUI's zero/nonzero convention.
     #[derive(Clone, Copy, Debug)]
     pub struct Boolean;
+    /// Unsigned 32-bit native integer attribute.
     #[derive(Clone, Copy, Debug)]
     pub struct Unsigned;
+    /// Signed 32-bit native integer attribute.
     #[derive(Clone, Copy, Debug)]
     pub struct Signed;
+    /// Signed 16-bit native integer attribute.
     #[derive(Clone, Copy, Debug)]
     pub struct Short;
+    /// Unsigned 8-bit native integer attribute.
     #[derive(Clone, Copy, Debug)]
     pub struct Byte;
+    /// Pointer-sized unsigned integer attribute.
     #[derive(Clone, Copy, Debug)]
     pub struct PointerSizedUnsigned;
+    /// Pointer-sized signed integer attribute.
     #[derive(Clone, Copy, Debug)]
     pub struct PointerSizedSigned;
+    /// NUL-terminated C string attribute, borrowed on input and copied on read.
     #[derive(Clone, Copy, Debug)]
     pub struct String;
+    /// Scope-owned NULL-terminated array of C string pointers.
     #[derive(Clone, Copy, Debug)]
     pub struct StringArray;
+    /// Generated enum attribute backed by `E: MuiEnum`.
     #[derive(Clone, Copy, Debug)]
     pub struct Enumeration<E>(pub(crate) PhantomData<E>);
+    /// Typed native object-pointer attribute for class `C`.
     #[derive(Clone, Copy, Debug)]
     pub struct Object<C>(pub(crate) PhantomData<C>);
+    /// Foreign pointer attribute whose validity is guaranteed by `ForeignPtr`.
     #[derive(Clone, Copy, Debug)]
     pub struct Foreign<T>(pub(crate) PhantomData<T>);
 }

@@ -93,7 +93,8 @@ The focused `aros-elf` and `aros-native-build` crates are maintainer and build
 support, not application API crates.
 
 See the [consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/), the
-[API reference](https://ami-rust.metaneutrons.cc/api/), the
+[Rust API reference](https://ami-rust.metaneutrons.cc/rust-api/), the
+[API and lifetime inventory](https://ami-rust.metaneutrons.cc/api/), the
 [MUI hello-world example](https://ami-rust.metaneutrons.cc/mui-hello/), and the
 [SHA-256 example](https://ami-rust.metaneutrons.cc/sha256sum/).
 

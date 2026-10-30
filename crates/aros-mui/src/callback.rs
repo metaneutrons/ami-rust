@@ -11,6 +11,7 @@ use core::{
 /// Value delivered by a typed MUI notification callback.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct HookCall {
+    /// Native trigger value, widened to a signed pointer-sized integer.
     pub value: isize,
 }
 
@@ -18,7 +19,9 @@ pub struct HookCall {
 ///
 /// Handles cannot outlive their scope. The callback is non-reentrant: a nested
 /// native invocation is refused with a zero result rather than creating a
-/// second mutable reference to the closure.
+/// second mutable reference to the closure. MUI invokes it on the owning
+/// application task; its storage is released after that scope's native roots
+/// have been disposed.
 pub struct Hook<'scope> {
     raw: NonNull<RawHook>,
     scope: *const Scope,
@@ -151,6 +154,12 @@ where
 
 impl Scope {
     /// Retains a non-reentrant callback until the complete object scope ends.
+    ///
+    /// Use the returned handle with [`Notification::call`](crate::Notification::call).
+    /// The callback receives the notification's native trigger value and
+    /// returns the pointer-sized result expected by `MUIM_CallHook`. A nested
+    /// invocation of this same hook returns zero without calling the closure.
+    /// The hook must be used only with objects from this scope.
     pub fn hook<'scope, F>(&'scope self, callback: F) -> Result<Hook<'scope>, Error>
     where
         F: FnMut(HookCall) -> isize + 'scope,

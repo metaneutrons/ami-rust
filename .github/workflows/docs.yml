@@ -6,7 +6,18 @@ on:
       - 'website/**'
       - 'docs/**'
       - 'assets/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/aros/**'
+      - 'crates/aros-sys/**'
+      - 'crates/aros-mui/**'
+      - 'crates/aros-mui-sys/**'
       - 'README.md'
+      - 'tools/build-public-rustdoc.sh'
+      - 'tools/build-maintainer-task.sh'
+      - 'tools/bootstrap-host-rust.sh'
+      - 'release/native-cargo-vendor-inputs.json'
+      - 'release/maintainer-rust-bootstrap-inputs.json'
       - '.github/workflows/docs.yml'
   push:
     branches: [main]
@@ -14,7 +25,18 @@ on:
       - 'website/**'
       - 'docs/**'
       - 'assets/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/aros/**'
+      - 'crates/aros-sys/**'
+      - 'crates/aros-mui/**'
+      - 'crates/aros-mui-sys/**'
       - 'README.md'
+      - 'tools/build-public-rustdoc.sh'
+      - 'tools/build-maintainer-task.sh'
+      - 'tools/bootstrap-host-rust.sh'
+      - 'release/native-cargo-vendor-inputs.json'
+      - 'release/maintainer-rust-bootstrap-inputs.json'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -50,8 +72,18 @@ jobs:
       - name: Install locked dependencies
         run: pnpm --dir website install --frozen-lockfile
 
+      - name: Generate public Rust API reference
+        run: bash tools/build-public-rustdoc.sh "$RUNNER_TEMP/ami-rust-public-rustdoc" x86_64-unknown-linux-gnu
+
       - name: Build site
         run: pnpm --dir website run build
+
+      - name: Add public Rust API reference to site
+        run: |
+          mkdir -p website/dist/rustdoc
+          cp -a "$RUNNER_TEMP/ami-rust-public-rustdoc/public-rustdoc/doc/." website/dist/rustdoc/
+          test -f website/dist/rustdoc/aros/index.html
+          test -f website/dist/rustdoc/aros_mui/index.html
 
   deploy:
     name: Deploy GitHub Pages
@@ -86,8 +118,18 @@ jobs:
       - name: Install locked dependencies
         run: pnpm --dir website install --frozen-lockfile
 
+      - name: Generate public Rust API reference
+        run: bash tools/build-public-rustdoc.sh "$RUNNER_TEMP/ami-rust-public-rustdoc" x86_64-unknown-linux-gnu
+
       - name: Build site
         run: pnpm --dir website run build
+
+      - name: Add public Rust API reference to site
+        run: |
+          mkdir -p website/dist/rustdoc
+          cp -a "$RUNNER_TEMP/ami-rust-public-rustdoc/public-rustdoc/doc/." website/dist/rustdoc/
+          test -f website/dist/rustdoc/aros/index.html
+          test -f website/dist/rustdoc/aros_mui/index.html
 
       - name: Configure Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5

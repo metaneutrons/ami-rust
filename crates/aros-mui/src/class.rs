@@ -7,6 +7,10 @@ pub(crate) mod sealed {
 }
 
 /// A sealed marker for one native MUI class.
+///
+/// Generated class markers bind constructors, attributes, and methods to the
+/// native class hierarchy. The sealed implementation set prevents a user
+/// type from claiming an arbitrary native class identifier.
 pub trait Class: sealed::Class + 'static {
     /// NUL-terminated native class identifier.
     const ID: &'static CStr;
@@ -15,6 +19,10 @@ pub trait Class: sealed::Class + 'static {
 }
 
 /// Compile-time MUI superclass relation.
+///
+/// `IsA<Target>` permits an [`Object`](crate::Object) to be viewed through a
+/// superclass API with [`Object::upcast`](crate::Object::upcast). It does not
+/// create or transfer a native object.
 pub trait IsA<Target: Class>: Class {}
 
 impl<C: Class> IsA<C> for C {}
@@ -61,6 +69,10 @@ pub trait ParentSupport<Child: Class>: sealed::ParentRole {
 }
 
 /// A sealed, type-checked native parent/child ownership relation.
+///
+/// This capability is used by [`Object::adopt`](crate::Object::adopt). It
+/// exists only for native relationships implemented by this facade, so the
+/// operation can select the corresponding MUI ownership mechanism safely.
 pub trait ParentOf<Child: Class>: Class + sealed::ParentOf<Child> {
     #[doc(hidden)]
     const ATTACHMENT: Attachment;
