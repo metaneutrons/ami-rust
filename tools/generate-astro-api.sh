@@ -18,10 +18,12 @@ case "/$requested_work/" in *'/../'*|*'/./'*) fail 'work root must be normalized
 for tool in awk bash env git jq node shasum tar tr wc; do command -v "$tool" >/dev/null || fail "missing required tool: $tool"; done
 
 source_root=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
+revision=$(git -C "$source_root" rev-parse HEAD)
+[[ "$revision" =~ ^[0-9a-f]{40}$ ]] || fail 'cannot determine the source revision'
 work_parent=$(cd -P -- "$(dirname -- "$requested_work")" && pwd -P)
 work="$work_parent/${requested_work##*/}"
 output=$requested_output
-expected_output="$source_root/docs/reference/generated"
+expected_output="$source_root/docs/reference"
 
 [[ "$output" == "$expected_output" ]] || fail "output directory must be $expected_output"
 [[ ! -e "$work" && ! -L "$work" ]] || fail 'work root must be fresh and absent'
@@ -75,17 +77,20 @@ generate_profile() {
     LC_ALL=C TZ=UTC SOURCE_DATE_EPOCH=1791936000 \
     "$cargo" doc --manifest-path "$work/source/Cargo.toml" --locked --offline --no-deps -p aros -p aros-mui
 
-  local aros_json="$target_dir/doc/aros.json"
-  local aros_mui_json="$target_dir/doc/aros_mui.json"
-  [[ -s "$aros_json" && -s "$aros_mui_json" ]] || fail "$profile rustdoc JSON output is incomplete"
-  node "$source_root/website/scripts/generate-rust-api.mjs" \
-    "$output" "$profile" "$aros_json" "$aros_mui_json"
+  [[ -s "$target_dir/doc/aros.json" && -s "$target_dir/doc/aros_mui.json" ]] || \
+    fail "$profile rustdoc JSON output is incomplete"
 }
 
 generate_profile abi1
 generate_profile abi11
 
-[[ -s "$output/index.md" && -s "$output/abi1/aros/index.md" && \
-   -s "$output/abi1/aros_mui/index.md" && -s "$output/abi11/aros/index.md" && \
-   -s "$output/abi11/aros_mui/index.md" ]] || \
+# Both ABI profiles are merged into one reference; the generator also fails
+# when the ABI restrictions stated in the crate docs disagree with the builds.
+node "$source_root/website/scripts/generate-rust-api.mjs" \
+  "$output" "$revision" \
+  "$work/api-target-abi1/doc/aros.json" "$work/api-target-abi1/doc/aros_mui.json" \
+  "$work/api-target-abi11/doc/aros.json" "$work/api-target-abi11/doc/aros_mui.json"
+
+[[ -s "$output/index.md" && -s "$output/sidebar.json" && -s "$output/abi-differences.md" && \
+   -s "$output/aros/index.md" && -s "$output/aros_mui/index.md" ]] || \
   fail 'Astro API reference is incomplete'
