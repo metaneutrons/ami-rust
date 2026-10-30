@@ -48,13 +48,6 @@ export function createPageWriter(options) {
   const memberDocs = (crate, item) => processDocs(item.docs, itemResolver(registry, crate, item), { shift: 3 });
   const linkTo = (entry, label = entry.name) => `[\`${label}\`](${entry.route})`;
 
-  const sourceLine = (item) => {
-    const span = item.span;
-    if (!span?.filename) return '';
-    const lines = span.begin[0] === span.end[0] ? `L${span.begin[0]}` : `L${span.begin[0]}-L${span.end[0]}`;
-    return `[${span.filename}:${span.begin[0]}](${repository}/blob/${revision}/${span.filename}#${lines})`;
-  };
-
   const breadcrumb = (entry) => {
     const trail = [`[Rust API](/reference/)`];
     for (let length = 1; length < entry.publicPath.length; length += 1) {
@@ -485,9 +478,7 @@ export function createPageWriter(options) {
       ? ':::note\nThis type is `#[non_exhaustive]`; new variants or fields can appear in a compatible release.\n:::\n\n' : '';
     const signature = renderer.itemSignature(rec.item, entry.name);
     const body = docsOf(rec, 1);
-    const source = sourceLine(rec.item);
     let page = `${abiNote(abisOf(entry))}${attributes}${code(signature)}\n\n${body ? `${body}\n` : ''}`;
-    if (source) page += `\n<p class="source-link">Source: ${source}</p>\n`;
     const traits = traitImplementationsSection(entry);
     page += traits.aside;
     page += fieldsSection(entry);

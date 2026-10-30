@@ -20,7 +20,7 @@ Check the library versions with the shell's `Version` command (`Version exec.lib
 
 ## Start a program
 
-1. **Copy the executable to AROS.** Any way of placing a file on an AROS volume works: a shared folder, a network share, a disk image, or a re-mastered boot ISO. The release qualification re-mastered a copy of the boot ISO with the executable and an `S:User-Startup` entry, keeping the original El Torito boot record (`xorriso -boot_image any keep`) and leaving the source image unmodified.
+1. **Copy the executable to AROS.** Use a shared folder, a network share, or a disk image to place it on an AROS volume. The example below assumes you saved it as `SYS:Work/hello-aros`.
 2. **Open a Shell** on the AROS system.
 3. **Set the stack size**, which the program inherits from the launching shell:
 
@@ -72,7 +72,7 @@ The release was qualified in QEMU with the following profile. The table lists th
 | Firmware | Pinned SeaBIOS and standard VGA ROMs |
 | Shell stack | 128 KiB |
 
-Real hardware, other CPUs and other emulators are outside the qualified boundary; see [compatibility](/compatibility/). The exact images, hashes and observations are recorded in the repository's qualification documents for the [baseline run](https://github.com/metaneutrons/ami-rust/blob/main/docs/m1-qualification.md), the [mui-hello run](https://github.com/metaneutrons/ami-rust/blob/main/docs/mui-hello-qualification.md) and the [release candidate](https://github.com/metaneutrons/ami-rust/blob/main/docs/m7-qualification.md).
+Real hardware, other CPUs and other emulators are outside the qualified boundary; see [compatibility](/compatibility/). Use the boot and disk configuration documented by your AROS distribution, then copy and launch the executable as described above. The SDK does not include an AROS system image.
 
 ## If nothing happens
 

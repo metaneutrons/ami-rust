@@ -25,6 +25,7 @@ version=0.1.0
 catalog_commit=bb5cc2e428b89685eeec2ae249701cc23fd135d7
 export RUSTUP_DIST_SERVER="https://raw.githubusercontent.com/metaneutrons/ami-rust/$catalog_commit/distribution/rustup/$version"
 rustup toolchain install "$version" --profile minimal --no-self-update
+toolchain="$version"
 ```
 
 `RUSTUP_DIST_SERVER` only matters for the install. Afterwards rustup selects the toolchain by name, `+0.1.0`, on every supported host.
@@ -66,6 +67,7 @@ printf '%s  %s\n' "$expected" "$archive" | shasum -a 256 --check
 mkdir "ami-rust-$version"
 tar -xJf "$archive" -C "ami-rust-$version"
 rustup toolchain link "ami-rust-$version-$host" "$PWD/ami-rust-$version/libexec/ami-rust/$version"
+toolchain="ami-rust-$version-$host"
 ```
 
 The inventory lists the exact digest of every archive. Moving branch URLs are not an installation interface.
@@ -73,10 +75,12 @@ The inventory lists the exact digest of every archive. Moving branch URLs are no
 ## Verify the installation
 
 ```sh
-rustup toolchain list      # shows 0.1.0-<host> (rustup route)
-cargo +0.1.0 --version     # a nightly-based Cargo
-rustc +0.1.0 -vV           # release 1.100.0-nightly, LLVM 23.1.1
+rustup toolchain list
+cargo +"$toolchain" --version
+rustc +"$toolchain" -vV     # release 1.100.0-nightly, LLVM 23.1.1
 ```
+
+Keep using the same shell: each installation route sets `toolchain` to its registered name. In a new shell, set `toolchain=0.1.0` for the rustup route, or use the `ami-rust-0.1.0-<host>` name shown by `rustup toolchain list` for the archive route.
 
 The compiler is a nightly-based build because the AROS targets are custom target specifications, which stable Rust does not accept. That is also why the Cargo configuration below passes `-Zunstable-options`.
 
@@ -101,13 +105,13 @@ rustflags = ["-Zunstable-options"]
 Pick the target that matches the AROS you will run on. The [targets and ABIs](/targets-and-abis/) page explains the choice. Your application source is the same for both.
 
 ```sh
-toolchain=0.1.0
+cargo +"$toolchain" generate-lockfile
 cargo +"$toolchain" fetch --locked
 cargo +"$toolchain" build --target x86_64-unknown-aros-abi11 --release --locked --offline
 cargo +"$toolchain" build --target x86_64-unknown-aros-abi1  --release --locked --offline
 ```
 
-The first resolution writes `Cargo.lock`; commit it. After a successful `cargo fetch` the build runs offline. The executable is `target/<target>/release/<package-name>`.
+For a new project, `generate-lockfile` resolves dependencies and writes `Cargo.lock`; commit it. If the project already has a lockfile, skip that command to preserve its pinned dependencies. After a successful `cargo fetch` the build runs offline. The executable is `target/<target>/release/<package-name>`.
 
 To get started, copy the minimal program from the [consumer guide](/consumer-guide/#a-minimal-program) or the [MUI hello example](/mui-hello/). Then see [Run on AROS](/run-on-aros/) for getting the result onto a system and starting it.
 
