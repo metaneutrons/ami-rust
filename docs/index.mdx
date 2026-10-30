@@ -17,7 +17,7 @@ import hero from '../assets/ami-rust-hero.svg';
 
 <div className="status-grid">
   <div><strong>0.1.0</strong>initial qualified release</div>
-  <div><strong>ABI-v1 + ABI-v11</strong>one target per ABI</div>
+  <div><strong>ABI-v1 + ABI-v11</strong>one Cargo target per ABI</div>
   <div><strong>macOS + Linux</strong>three qualified host combinations</div>
 </div>
 
@@ -27,8 +27,11 @@ There is no project-specific CLI, Cargo wrapper or Python runtime dependency. Th
 
 ## Read in this order
 
-1. [Install and build](/quickstart-toolchain/) configures Cargo for ABI-v1 or ABI-v11.
-2. [Crates and consumer guide](/consumer-guide/) explains the supported safe and raw layers.
-3. [MUI hello](/mui-hello/) is a minimal native GUI application.
-4. [API reference](/api/) specifies lifetime, ownership and failure boundaries.
-5. [SHA-256 example](/sha256sum/) demonstrates file I/O and standard output.
+1. [Install and build](/quickstart-toolchain/) installs the toolchain and configures Cargo.
+2. [Crates and consumer guide](/consumer-guide/) shows which crates to use, with a complete text program and a complete MUI program.
+3. [Run on AROS](/run-on-aros/) gets the result onto a system and starts it.
+4. [Targets and ABIs](/targets-and-abis/) explains ABI-v1 and ABI-v11 and which one to build for.
+5. [Programming model](/api/) explains ownership, lifetimes and failure, and the [API reference](/reference/) lists every item.
+6. [MUI hello](/mui-hello/) and the [SHA-256 example](/sha256sum/) are small programs to build and read.
+
+If something does not build or start, see [Troubleshooting](/troubleshooting/).

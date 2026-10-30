@@ -27,6 +27,11 @@ on:
       - 'release/maintainer-rust-bootstrap-inputs.json'
       - 'tools/bootstrap-host-rust.sh'
       - 'tools/generate-astro-api.sh'
+      - 'tools/check-doc-examples.mjs'
+      - 'tooling/crates/xtask/src/mui_safe_codegen.rs'
+      - 'bindings/mui/**'
+      - 'version.txt'
+      - '_typos.toml'
       - '.github/workflows/docs.yml'
   push:
     branches: [main]
@@ -55,6 +60,11 @@ on:
       - 'release/maintainer-rust-bootstrap-inputs.json'
       - 'tools/bootstrap-host-rust.sh'
       - 'tools/generate-astro-api.sh'
+      - 'tools/check-doc-examples.mjs'
+      - 'tooling/crates/xtask/src/mui_safe_codegen.rs'
+      - 'bindings/mui/**'
+      - 'version.txt'
+      - '_typos.toml'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -74,6 +84,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Tags are needed to verify the pinned release revision in the docs.
+          fetch-depth: 0
+
+      - name: Check spelling
+        uses: crate-ci/typos@7f9d0819ca1c008ade73f4b41fa9d258d48f605b # v1.51.1
+        with:
+          files: docs website/scripts website/src website/astro.config.mjs tools crates/aros/src crates/aros-mui/src
 
       - name: Set up pnpm
         uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
@@ -94,11 +111,25 @@ jobs:
         run: >-
           bash tools/generate-astro-api.sh
           "$RUNNER_TEMP/ami-rust-astro-api-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          "$GITHUB_WORKSPACE/docs/reference/generated"
+          "$GITHUB_WORKSPACE/docs/reference"
           x86_64-unknown-linux-gnu
 
       - name: Build site
         run: pnpm --dir website run build
+
+      - name: Check links, headings, metadata and content rules
+        run: pnpm --dir website run check
+
+      - name: Check accessibility
+        run: pnpm --dir website run a11y
+
+      - name: Upload site for review
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: documentation-site
+          path: website/dist
+          retention-days: 7
 
       - name: Upload Pages artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

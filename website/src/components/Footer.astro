@@ -1,0 +1,16 @@
+---
+import Default from '@astrojs/starlight/components/Footer.astro';
+
+const release = __DOCS_RELEASE__;
+const revision = __DOCS_REVISION__;
+const repository = 'https://github.com/metaneutrons/ami-rust';
+const short = revision.slice(0, 7);
+---
+
+<Default {...Astro.props}><slot /></Default>
+<p class="build-stamp">
+  Documentation for ami-rust {release}, built from
+  <a href={`${repository}/commit/${revision}`}><code>{short}</code></a>.
+  The released source is tag <a href={`${repository}/releases/tag/v${release}`}><code>v{release}</code></a>;
+  see <a href="/releases/">Releases and versions</a>.
+</p>

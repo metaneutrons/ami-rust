@@ -1807,6 +1807,8 @@ impl<C> GetAttribute<C> for DoubleBuffer where C: Class + IsA<crate::classes::Ar
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_DragHandle_Vertical (\] Object *; ISG) from classes/panel.h:57.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct DragHandleVertical;
 
@@ -4148,6 +4150,8 @@ impl<C> SetAttribute<C> for PaletteNames where C: Class + IsA<crate::classes::Pa
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_PanelGroup_AllowMultiple (untyped; ---) from classes/panelgroup.h:20.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelGroupAllowMultiple;
 
@@ -4158,6 +4162,8 @@ impl<C> RawAttribute<C> for PanelGroupAllowMultiple where C: Class + IsA<crate::
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_PanelGroup_CollapseAll (untyped; ---) from classes/panelgroup.h:18.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelGroupCollapseAll;
 
@@ -4168,6 +4174,8 @@ impl<C> RawAttribute<C> for PanelGroupCollapseAll where C: Class + IsA<crate::cl
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_PanelGroup_DragReordering (untyped; ---) from classes/panelgroup.h:22.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelGroupDragReordering;
 
@@ -4178,6 +4186,8 @@ impl<C> RawAttribute<C> for PanelGroupDragReordering where C: Class + IsA<crate:
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_PanelGroup_ExpandAll (untyped; ---) from classes/panelgroup.h:19.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelGroupExpandAll;
 
@@ -4188,6 +4198,8 @@ impl<C> RawAttribute<C> for PanelGroupExpandAll where C: Class + IsA<crate::clas
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_PanelGroup_ExpandedPanel (untyped; ---) from classes/panelgroup.h:21.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelGroupExpandedPanel;
 
@@ -4198,6 +4210,8 @@ impl<C> RawAttribute<C> for PanelGroupExpandedPanel where C: Class + IsA<crate::
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_PanelTitle_ClickHook (untyped; ---) from classes/panel.h:84.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitleClickHook;
 
@@ -4208,6 +4222,8 @@ impl<C> RawAttribute<C> for PanelTitleClickHook where C: Class + IsA<crate::clas
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_PanelTitle_Collapsed (untyped; ---) from classes/panel.h:82.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitleCollapsed;
 
@@ -4218,6 +4234,8 @@ impl<C> RawAttribute<C> for PanelTitleCollapsed where C: Class + IsA<crate::clas
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_PanelTitle_Collapsible (untyped; ---) from classes/panel.h:81.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitleCollapsible;
 
@@ -4228,6 +4246,8 @@ impl<C> RawAttribute<C> for PanelTitleCollapsible where C: Class + IsA<crate::cl
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_PanelTitle_DrawStateIndicator (untyped; ---) from classes/panel.h:85.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitleDrawStateIndicator;
 
@@ -4238,6 +4258,8 @@ impl<C> RawAttribute<C> for PanelTitleDrawStateIndicator where C: Class + IsA<cr
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_PanelTitle_Position (untyped; ---) from classes/panel.h:78.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitlePosition;
 
@@ -4253,6 +4275,8 @@ impl<C> Attribute<C> for PanelTitlePosition where C: Class + IsA<crate::classes:
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_PanelTitle_ShowSeparator (untyped; ---) from classes/panel.h:83.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitleShowSeparator;
 
@@ -4263,6 +4287,8 @@ impl<C> RawAttribute<C> for PanelTitleShowSeparator where C: Class + IsA<crate::
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_PanelTitle_Text (untyped; ---) from classes/panel.h:77.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitleText;
 
@@ -4273,6 +4299,8 @@ impl<C> RawAttribute<C> for PanelTitleText where C: Class + IsA<crate::classes::
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_PanelTitle_TextPosition (untyped; ---) from classes/panel.h:79.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitleTextPosition;
 
@@ -4288,6 +4316,8 @@ impl<C> Attribute<C> for PanelTitleTextPosition where C: Class + IsA<crate::clas
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_PanelTitle_Vertical (untyped; ---) from classes/panel.h:80.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitleVertical;
 
@@ -4298,6 +4328,8 @@ impl<C> RawAttribute<C> for PanelTitleVertical where C: Class + IsA<crate::class
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_Panel_Collapsed (untyped; ---) from classes/panel.h:28.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelCollapsed;
 
@@ -4308,6 +4340,8 @@ impl<C> RawAttribute<C> for PanelCollapsed where C: Class + IsA<crate::classes::
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_Panel_Collapsible (untyped; ---) from classes/panel.h:27.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelCollapsible;
 
@@ -4318,6 +4352,8 @@ impl<C> RawAttribute<C> for PanelCollapsible where C: Class + IsA<crate::classes
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_Panel_Draggable (untyped; ---) from classes/panel.h:31.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelDraggable;
 
@@ -4328,6 +4364,8 @@ impl<C> RawAttribute<C> for PanelDraggable where C: Class + IsA<crate::classes::
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_Panel_DrawSeparator (untyped; ---) from classes/panel.h:29.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelDrawSeparator;
 
@@ -4338,6 +4376,8 @@ impl<C> RawAttribute<C> for PanelDrawSeparator where C: Class + IsA<crate::class
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_Panel_DrawStateIndicator (untyped; ---) from classes/panel.h:32.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelDrawStateIndicator;
 
@@ -4348,6 +4388,8 @@ impl<C> RawAttribute<C> for PanelDrawStateIndicator where C: Class + IsA<crate::
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_Panel_Padding (untyped; ---) from classes/panel.h:22.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelPadding;
 
@@ -4358,6 +4400,8 @@ impl<C> RawAttribute<C> for PanelPadding where C: Class + IsA<crate::classes::Pa
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_Panel_Title (untyped; ---) from classes/panel.h:23.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitle;
 
@@ -4373,6 +4417,8 @@ impl<C> Attribute<C> for PanelTitle where C: Class + IsA<crate::classes::Panel> 
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_Panel_TitleClickedHook (untyped; ---) from classes/panel.h:30.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitleClickedHook;
 
@@ -4383,6 +4429,8 @@ impl<C> RawAttribute<C> for PanelTitleClickedHook where C: Class + IsA<crate::cl
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_Panel_TitlePosition (untyped; ---) from classes/panel.h:24.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitlePositionForPanel;
 
@@ -4393,6 +4441,8 @@ impl<C> RawAttribute<C> for PanelTitlePositionForPanel where C: Class + IsA<crat
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_Panel_TitleTextPosition (untyped; ---) from classes/panel.h:25.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitleTextPositionForPanel;
 
@@ -4403,6 +4453,8 @@ impl<C> RawAttribute<C> for PanelTitleTextPositionForPanel where C: Class + IsA<
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_Panel_TitleVertical (untyped; ---) from classes/panel.h:26.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitleVerticalForPanel;
 
@@ -5356,6 +5408,8 @@ impl<C> GetAttribute<C> for ScaleHoriz where C: Class + IsA<crate::classes::Scal
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIA_Scrollbar_IncDecSize (ULONG; ISG) from classes/scrollbar.h:17.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct ScrollbarIncDecSize;
 

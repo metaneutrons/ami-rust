@@ -50,7 +50,7 @@ class!(Dataspace, c"Dataspace.mui", NoParent, "MUIC_Dataspace from classes/datas
 class!(Dirlist, c"Dirlist.mui", GroupParent, "MUIC_Dirlist from classes/dirlist.h:11.");
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
-class!(DragHandle, c"DragHandle.mui", NoParent, "MUIC_DragHandle from classes/panel.h:51.");
+class!(DragHandle, c"DragHandle.mui", NoParent, "MUIC_DragHandle from classes/panel.h:51.\n\nAvailable on ABI-v1 targets only.");
 
 class!(Dtpic, c"Dtpic.mui", NoParent, "MUIC_Dtpic from classes/dtpic.h:10.");
 
@@ -97,13 +97,13 @@ class!(Numericbutton, c"Numericbutton.mui", NoParent, "MUIC_Numericbutton from c
 class!(Palette, c"Palette.mui", GroupParent, "MUIC_Palette from classes/palette.h:10.");
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
-class!(Panel, c"Panel.mui", GroupParent, "MUIC_Panel from classes/panel.h:19.");
+class!(Panel, c"Panel.mui", GroupParent, "MUIC_Panel from classes/panel.h:19.\n\nAvailable on ABI-v1 targets only.");
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
-class!(PanelGroup, c"PanelGroup.mui", GroupParent, "MUIC_PanelGroup from classes/panelgroup.h:15.");
+class!(PanelGroup, c"PanelGroup.mui", GroupParent, "MUIC_PanelGroup from classes/panelgroup.h:15.\n\nAvailable on ABI-v1 targets only.");
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
-class!(PanelTitle, c"PanelTitle.mui", NoParent, "MUIC_PanelTitle from classes/panel.h:74.");
+class!(PanelTitle, c"PanelTitle.mui", NoParent, "MUIC_PanelTitle from classes/panel.h:74.\n\nAvailable on ABI-v1 targets only.");
 
 class!(Penadjust, c"Penadjust.mui", GroupParent, "MUIC_Penadjust from classes/penadjust.h:10.");
 

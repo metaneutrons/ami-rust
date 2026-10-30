@@ -1,19 +1,44 @@
 ---
 title: MUI hello
-description: A minimal MUI application built for both supported AROS ABIs.
+description: A minimal native MUI window written with the safe aros-mui crate, built for both AROS ABIs.
 ---
 
 import screenshot from '../assets/mui-hello-abi11.webp';
 
-`examples/mui-hello` is the focused example for the safe `aros-mui` surface. It creates and owns a MUI application and window, reacts to the close gadget and finishes when MUI returns its close request.
+`examples/mui-hello` is the smallest complete program for the safe [`aros-mui`](/api/aros-mui/) crate. It opens one window titled `mui-hello`, with a framed heading, a line of detail text and a close gadget. When you close the window, MUI returns its `QUIT` ID and the program ends.
+
+<img className="screenshot" src={screenshot.src} alt="The mui-hello window on AROS: a title bar reading mui-hello, a framed heading, a line of detail text and a close gadget" />
+
+*The example running on an ABI-v11 AROS guest in QEMU. The same source builds and runs on ABI-v1.*
+
+## Build it
+
+The example is in the repository's `main` branch. It is not part of the `v0.1.0` source tag; see [releases and versions](/releases/). Clone the repository, [install the toolchain](/quickstart-toolchain/), then build from the repository root:
 
 ```sh
-cargo +0.1.0 build --manifest-path examples/mui-hello/Cargo.toml \
+git clone https://github.com/metaneutrons/ami-rust.git
+cd ami-rust
+
+toolchain=0.1.0
+cargo +"$toolchain" fetch --locked --manifest-path examples/mui-hello/Cargo.toml
+cargo +"$toolchain" build --manifest-path examples/mui-hello/Cargo.toml \
   --target x86_64-unknown-aros-abi11 --release --locked --offline
 ```
 
-<img className="screenshot" src={screenshot.src} alt="mui-hello running on AROS x86-64 ABI-v11" />
+Use `--target x86_64-unknown-aros-abi1` for an upstream ABI-v1 system. The program is the same; only the target changes. The executable is `examples/mui-hello/target/<target>/release/mui-hello`.
 
-The captured application is a native ABI-v11 QEMU run. The same source is
-supported for ABI-v1. This example demonstrates a small, safe subset; it does
-not claim that every MUI class has a safe wrapper yet.
+If the build stops with a message about `RUSTC_WRAPPER`, see [troubleshooting](/troubleshooting/).
+
+## Run it
+
+[Run on AROS](/run-on-aros/) explains how to get the executable onto a system and start it. A MUI program needs a graphical AROS session. The shell prompt returns when you close the window.
+
+## What it demonstrates
+
+- Opening MUI inside the entry function and closing it explicitly with `Mui::close`.
+- Creating objects inside `Mui::scope`. The scope owns every native object and disposes it on return.
+- Composing the window with typed builders and `adopt`: a `Text` inside a `Group` inside a `Window` inside an `Application`.
+- A notification that turns the window's close request into `ReturnId::QUIT` for the application loop.
+- Running the loop with `Object<Application>::run`.
+
+The complete source is on the [consumer guide](/consumer-guide/#a-graphical-program), which also shows the `Cargo.toml` and `build.rs`. This example shows a small, safe subset of MUI. It does not claim that every MUI class has a safe wrapper; the [class index](/reference/aros_mui/classes/) shows the attributes and methods each class accepts.

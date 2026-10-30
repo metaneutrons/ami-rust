@@ -1,51 +1,36 @@
 ---
 title: Crates and consumer guide
+description: Which ami-rust crates to depend on, how to add them to a project, and complete minimal programs.
 ---
 
-# Crates and consumer guide
+ami-rust is a standard Cargo cross-toolchain for PC x86-64 AROS, with a small set of crates you add to your project as ordinary dependencies. This page tells you which crates to use, how to depend on them, and shows two complete programs.
 
-ami-rust is a standard Cargo cross-toolchain for the two qualified PC x86-64
-AROS targets:
+The Cargo **target** selects the AROS ABI, and your source is the same for both. See [targets and ABIs](/targets-and-abis/).
 
-| Target | Select when the guest runs | Native library-base convention |
-| --- | --- | --- |
-| `x86_64-unknown-aros-abi1` | AROS ABI-v1 | final ordinary call argument |
-| `x86_64-unknown-aros-abi11` | AROS ABI-v11 | `r12` |
-
-The target name is the ABI selector. Do not try to select ABI-v1 or ABI-v11
-through a Cargo feature, `cfg` override, or a custom linker invocation. A
-program and every dependency must use one target for one build.
+| Target | Select when the system runs |
+| --- | --- |
+| `x86_64-unknown-aros-abi1` | Upstream AROS, ABI-v1 |
+| `x86_64-unknown-aros-abi11` | Deadwood's AROS, ABI-v11 |
 
 ## Select a crate
 
 | Crate | Use it for | Safe boundary |
 | --- | --- | --- |
-| `aros` | Application entry, task-local context, Exec-backed allocation, files, streams, libraries, signals, local ports and messages | Default application crate |
-| `aros-sys` | A raw AROS declaration or vector call not yet available through `aros` | Unsafe; caller owns every pointer, library base and lifetime |
-| `aros-mui` | Typed MUI objects, ownership scopes, attributes, notifications, callbacks, requesters, and the application loop | Preferred MUI crate |
-| `aros-mui-sys` | A raw MUI vector, class, tag, or message not safely modelled by `aros-mui` | Unsafe; caller owns the complete native contract |
-| `aros-native-build` | The `build.rs` integration that compiles the selected native bridge and verifies its inputs | Build dependency only; applications do not call it |
+| `aros` | Application entry, task-local context, Exec-backed allocation, files, streams, libraries, signals, local ports and messages | The default application crate |
+| `aros-mui` | Typed MUI objects, ownership scopes, attributes, notifications, callbacks, requesters and the application loop | The preferred MUI crate |
+| `aros-sys` | A raw AROS declaration or library vector call that `aros` does not cover yet | Unsafe: you own every pointer, library base and lifetime |
+| `aros-mui-sys` | A raw MUI vector, class, tag or message that `aros-mui` does not model safely | Unsafe: you own the complete native contract |
+| `aros-native-build` | A build dependency. Your `build.rs` calls `aros_native_build::prepare`; your application code never uses it. | Not an application API |
 
-All five packages are Git-delivered for 0.1.0 and intentionally absent from
-crates.io. The following immutable revision is the 0.1.0 source release:
+`aros-elf` and the tools in the repository are internal; see [architecture](/architecture/).
 
-```toml
-rev = "8456843ca869a738dde6dc7b7a062a2fdc3b6597"
-```
+Start with `aros`, add `aros-mui` for a graphical interface, and reach for a `-sys` crate only when you can document the raw pointer, tag, vector and lifetime contract that prevents a safe wrapper. For the concepts behind the safe crates, read the [programming model](/api/).
 
-## Start a graphical application
+## Depend on the crates
 
-Create the package, then add the following files. This is the standalone form
-of the [MUI hello example](https://ami-rust.metaneutrons.cc/mui-hello/).
-
-`Cargo.toml`:
+The crates are delivered through Git and are intentionally not on crates.io. Pin the 0.1.0 source release by revision:
 
 ```toml
-[package]
-name = "my-aros-window"
-version = "0.1.0"
-edition = "2024"
-
 [dependencies]
 aros = { git = "https://github.com/metaneutrons/ami-rust", rev = "8456843ca869a738dde6dc7b7a062a2fdc3b6597", features = ["alloc"] }
 aros-mui = { git = "https://github.com/metaneutrons/ami-rust", rev = "8456843ca869a738dde6dc7b7a062a2fdc3b6597" }
@@ -54,7 +39,26 @@ aros-mui = { git = "https://github.com/metaneutrons/ami-rust", rev = "8456843ca8
 aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", rev = "8456843ca869a738dde6dc7b7a062a2fdc3b6597" }
 ```
 
-`build.rs`:
+That revision is the commit tagged [`v0.1.0`](https://github.com/metaneutrons/ami-rust/releases/tag/v0.1.0). Commit your `Cargo.lock`. See [releases and versions](/releases/) for how this documentation relates to the tagged source.
+
+## A minimal program
+
+A text-mode program that prints one line. `Cargo.toml` needs only `aros` and the build dependency:
+
+```toml
+[package]
+name = "hello-aros"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+aros = { git = "https://github.com/metaneutrons/ami-rust", rev = "8456843ca869a738dde6dc7b7a062a2fdc3b6597", features = ["alloc"] }
+
+[build-dependencies]
+aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", rev = "8456843ca869a738dde6dc7b7a062a2fdc3b6597" }
+```
+
+`build.rs` compiles the native bridge that the SDK needs, inside Cargo's own output directory:
 
 ```rust
 fn main() {
@@ -63,6 +67,32 @@ fn main() {
 ```
 
 `src/main.rs`:
+
+```rust
+#![no_main]
+#![no_std]
+
+use aros::{AppStatus, Context, Stdout};
+
+fn application(context: &Context) -> AppStatus {
+    let written = Stdout::new(context)
+        .and_then(|mut out| out.write_all(b"Hello from Rust on AROS\n"));
+    match written {
+        Ok(()) => AppStatus::Success,
+        Err(_) => AppStatus::Error,
+    }
+}
+
+aros::entry!(application);
+```
+
+`entry!` defines the native entry symbol and a panic handler, so use it exactly once in the final application crate. Use `entry!(application, alloc)` when your program needs the global allocator.
+
+Add the [Cargo configuration](/quickstart-toolchain/#configure-cargo), build with `cargo +0.1.0 build --target x86_64-unknown-aros-abi11 --release`, and [run it on AROS](/run-on-aros/).
+
+## A graphical program
+
+The same project can open a MUI window. Add `aros-mui` to `[dependencies]` as shown above, then replace `src/main.rs`. This is the standalone form of the [MUI hello example](/mui-hello/):
 
 ```rust
 #![no_main]
@@ -121,60 +151,12 @@ fn application(context: &Context) -> AppStatus {
 aros::entry!(application, alloc);
 ```
 
-The application owns native MUI objects only inside `Mui::scope`. Children are
-attached with `adopt`; the scope disposes native roots when it returns. Do not
-move an object, hook, callback, or custom class handle outside that scope. Use
-`aros-mui-sys` only after documenting the raw pointer, tag, vector, and
-lifetime contract that prevents a safe wrapper.
+The application owns native MUI objects only inside `Mui::scope`. Children are attached with `adopt`, and the scope disposes the native roots when it returns. Do not move an object, hook, callback or custom-class handle out of that scope: the types prevent it.
 
-## Configure Cargo and build
+## Build
 
-Place this in the consumer project's `.cargo/config.toml`:
-
-```toml
-[target.x86_64-unknown-aros-abi1]
-linker = "aros-link"
-rustflags = ["-Zunstable-options"]
-
-[target.x86_64-unknown-aros-abi11]
-linker = "aros-link"
-rustflags = ["-Zunstable-options"]
-```
-
-Use the versioned toolchain installed from the authenticated 0.1.0 distribution.
-The initial resolution writes the lockfile; commit it. Subsequent builds are
-locked and may run offline after a successful fetch:
-
-```sh
-toolchain=0.1.0
-cargo +"$toolchain" build --target x86_64-unknown-aros-abi1 --release
-git add Cargo.lock
-cargo +"$toolchain" fetch --locked
-cargo +"$toolchain" build --target x86_64-unknown-aros-abi1 --release --locked --offline
-cargo +"$toolchain" build --target x86_64-unknown-aros-abi11 --release --locked --offline
-```
-
-Do not put the entire ami-rust `bin` directory ahead of rustup proxies and do
-not set `RUST_TARGET_PATH`. The installed toolchain supplies the paired target
-specification, libraries, C SDK, `aros-link`, and native collector. It remains
-a cross-toolchain: rustc and Cargo run on macOS or Linux, while the executable
-runs on the selected AROS guest.
+The Cargo configuration, the toolchain and the `--locked --offline` workflow are on the [install and build](/quickstart-toolchain/) page. Every dependency, including these crates, must be built for the same target as your program.
 
 ## Scope and compatibility
 
-The 0.1.0 release supports `no_std` plus `alloc`, not full `std`. Its native
-evidence covers the qualified QEMU profiles for ABI-v1 and ABI-v11. It does not
-establish support for a different CPU, physical hardware, arbitrary crates,
-threads, networking, or an AROS-hosted Rust compiler. See the
-[compatibility boundary](https://ami-rust.metaneutrons.cc/compatibility/) and [API inventory](https://ami-rust.metaneutrons.cc/api/) for
-the exact limits.
-
-## `mui-hello` qualification
-
-`mui-hello` is built and run natively for both targets as part of this change.
-The ABI-v11 capture below is an authentic QEMU framebuffer image, stored as
-WebP.
-
-![mui-hello running on the ABI-v11 AROS guest](../assets/mui-hello-abi11.webp)
-
-The example is maintained as a focused consumer of the safe MUI surface.
+0.1.0 supports `no_std` plus `alloc`, not full `std`. Its native evidence covers the qualified QEMU profiles for ABI-v1 and ABI-v11. It does not establish support for a different CPU, physical hardware, arbitrary crates, threads, networking or an AROS-hosted Rust compiler. See the [compatibility boundary](/compatibility/) and the [API reference](/reference/) for the exact limits.

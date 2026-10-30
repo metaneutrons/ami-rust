@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ami-rust.metaneutrons.cc/sitemap-index.xml

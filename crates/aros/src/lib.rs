@@ -1,4 +1,6 @@
 #![no_std]
+#![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
 //! Safe application APIs for the qualified AROS x86-64 ABI-v1 and ABI-v11
 //! profiles.
 //!

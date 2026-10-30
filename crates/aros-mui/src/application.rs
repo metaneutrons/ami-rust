@@ -33,6 +33,27 @@ impl Object<'_, Application> {
     /// The loop ends when MUI returns `QUIT` or when `handler` returns
     /// [`LoopControl::Exit`]. The Application and its scope remain live for the
     /// duration of the call.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// # use aros_mui::{
+    /// #     LoopControl, LoopExit, Mui,
+    /// #     attributes::ApplicationBase,
+    /// #     classes::Application,
+    /// # };
+    /// let mui = Mui::open(context)?;
+    /// let exit = mui.scope(|scope| {
+    ///     let app = scope.builder::<Application>().with::<ApplicationBase>(c"EXAMPLE")?.build()?;
+    ///     // The handler sees every return ID except QUIT, which ends the loop itself.
+    ///     app.run(|id| if id == 42 { LoopControl::Exit } else { LoopControl::Continue })
+    /// })?;
+    /// match exit {
+    ///     LoopExit::Quit => { /* MUI reported QUIT */ }
+    ///     LoopExit::Handler(id) => { assert_eq!(id, 42) }
+    /// }
+    /// mui.close()?;
+    /// ```
     pub fn run(self, mut handler: impl FnMut(u32) -> LoopControl) -> Result<LoopExit, Error> {
         loop {
             let mut signals = 0u32;

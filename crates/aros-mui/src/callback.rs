@@ -22,6 +22,32 @@ pub struct HookCall {
 /// second mutable reference to the closure. MUI invokes it on the owning
 /// application task; its storage is released after that scope's native roots
 /// have been disposed.
+///
+/// # Examples
+///
+/// ```ignore
+/// # use aros_mui::{
+/// #     Mui, Trigger,
+/// #     attributes::{TextContents, WindowOpen},
+/// #     classes::{Application, Text, Window},
+/// # };
+/// # use core::cell::Cell;
+/// let clicks = Cell::new(0u32);
+/// let mui = Mui::open(context)?;
+/// mui.scope(|scope| {
+///     // The closure may borrow local state: the hook cannot outlive this scope.
+///     let hook = scope.hook(|_call| {
+///         clicks.set(clicks.get() + 1);
+///         0
+///     })?;
+///     let app = scope.builder::<Application>().build()?;
+///     let window = scope.builder::<Window>().build()?;
+///     app.adopt(window)?;
+///     window.notify::<WindowOpen>(Trigger::EveryTime)?.call(app, &hook)?;
+///     Ok::<(), aros_mui::Error>(())
+/// })?;
+/// mui.close()?;
+/// ```
 pub struct Hook<'scope> {
     raw: NonNull<RawHook>,
     scope: *const Scope,

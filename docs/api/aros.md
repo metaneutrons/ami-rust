@@ -1,14 +1,14 @@
 ---
-title: aros API
-description: The safe, task-affine foundation for AROS applications.
+title: The aros crate
+description: "Entry, context, files, streams, libraries, signals, ports and messages: the safe foundation for AROS applications."
 ---
-
-# `aros` API
 
 `aros` is the `no_std` application crate for the qualified x86-64 AROS ABI-v1
 and ABI-v11 targets. Every safe OS handle borrows the active `Context`, remains
 on its creating task, and is released when dropped or when the runtime cleans
-up after the entry function returns.
+up after the entry function returns. The rules shared by every handle are in
+the [programming model](/api/); every item is listed in the
+[reference](/reference/aros/).
 
 ```rust
 use aros::{AppStatus, Context};
@@ -84,5 +84,73 @@ closes its underlying handle.
 `aros::call(context, &mut callback, input)` invokes a `FnMut(u64) -> u64`
 synchronously. Its callback frame cannot be retained by native code.
 `Library::raw_base` is deliberately unsafe and lifetime-bound. Prefer a focused
-safe crate such as [`aros-mui`](https://ami-rust.metaneutrons.cc/api/aros-mui/)
+safe crate such as [`aros-mui`](/api/aros-mui/)
 for higher-level library APIs.
+
+## Worked examples
+
+The examples below are complete functions. Each takes the `Context` your entry function receives and returns an `aros::Error` on failure, so `?` works throughout. Every one of them is compiled for both targets by the repository's example check.
+
+### Copy a file to standard output
+
+```rust
+use aros::{BytePath, Context, Error, File, FileMode, Stdout};
+
+fn copy_to_stdout(context: &Context, path: &[u8]) -> Result<(), Error> {
+    let path = BytePath::new(path)?;
+    let mut file = File::open(context, &path, FileMode::ReadExisting)?;
+    let mut out = Stdout::new(context)?;
+    let mut buffer = [0u8; 4096];
+    loop {
+        let read = file.read(&mut buffer)?;
+        if read == 0 {
+            break; // end of file
+        }
+        out.write_all(&buffer[..read])?;
+    }
+    file.close()
+}
+```
+
+`File::read` may return fewer bytes than the buffer holds, so the loop continues until it returns zero. `write_all` retries short writes. The explicit `close` reports a native close error; dropping the file would have closed it silently.
+
+### Classify a failure
+
+```rust
+use aros::{BytePath, Context, Error, ErrorKind, File, FileMode};
+
+fn exists(context: &Context, path: &[u8]) -> Result<bool, Error> {
+    let path = BytePath::new(path)?;
+    match File::open(context, &path, FileMode::ReadExisting) {
+        Ok(file) => {
+            file.close()?;
+            Ok(true)
+        }
+        // DOS could not open it; `error.native` holds the DOS error code.
+        Err(error) if error.kind == ErrorKind::Native => Ok(false),
+        Err(other) => Err(other),
+    }
+}
+```
+
+### Send a message between private ports
+
+```rust
+use aros::{Context, Error, Message, Port};
+
+fn ping(context: &Context) -> Result<(), Error> {
+    let port = Port::new(context)?;
+    let reply = Port::new(context)?;
+    let mut message = Message::new(context, b"ping")?;
+
+    port.send(&mut message, &reply)?;
+    assert!(port.receive(&mut message)?);
+
+    let mut payload = [0u8; 4];
+    let length = message.copy_to(&mut payload)?;
+    assert_eq!(&payload[..length], b"ping");
+    message.reply()
+}
+```
+
+Ports are private to your application and at most two exist at once. `receive` checks that the message you pass is at the head of the queue; it does not search past another message.

@@ -1,96 +1,58 @@
 ---
-title: API, lifetimes, and failures
+title: Programming model
+description: The ownership, lifetime and failure rules shared by the aros and aros-mui crates.
 ---
 
-# API, lifetimes, and failures
+`aros` and `aros-mui` are `no_std` libraries built around one idea: **an AROS resource belongs to the task that created it, and Rust's types make that visible.** This page explains the rules that apply to every handle. The per-crate guides ([`aros`](/api/aros/), [`aros-mui`](/api/aros-mui/)) cover each type, and the [API reference](/reference/) lists every item.
 
-`ami-rust` has two public, safe-facing crates: `aros` for AROS applications
-and `aros-mui` for MUI applications. Both target x86-64 AROS ABI-v1 and ABI-v11.
-They are `no_std` APIs and are intentionally task-affine: a native AROS handle
-belongs to the application task and cannot be sent to another task.
+## The `Context` is a witness
 
-For dependency configuration and target selection, see the
-[consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/). The
-[Rust API reference](https://ami-rust.metaneutrons.cc/reference/generated/)
-contains the complete item-level documentation.
-
-## `aros`: application runtime and core services
-
-An application uses one `entry!` macro invocation and a function with the
-following shape:
+The native runtime starts your program, claims one owner task and calls your entry function with a `&Context`. The `Context` carries no resource. It proves that you are on the application task, inside the live entry frame. Every safe handle is created from it and borrows it:
 
 ```rust
 fn application(context: &aros::Context) -> aros::AppStatus {
-    let _ = context;
+    // File::open, Stdout::new, Port::new, Mui::open ... all take `context`.
     aros::AppStatus::Success
 }
-
-aros::entry!(application);
 ```
 
-`entry!(application, alloc)` additionally installs `ExecAllocator`. Native
-allocation can still fail. Use fallible collection APIs where an allocation
-failure is recoverable; Rust's infallible allocation path terminates through
-the native fatal path rather than unwinding through C.
+Because handles borrow the `Context`, none of them can outlive the entry function. Because the `Context` is neither `Send` nor `Sync`, none of them can move to another task. The compiler enforces both rules, so there are no run-time checks to remember.
 
-`Context` is supplied by the runtime and is valid only for the entry function.
-It provides borrowed argument bytes, bounded diagnostics, and a resource
-statistics snapshot. Handles created from it borrow the same context:
+## Ownership and cleanup
 
-| Surface | Public API and contract |
+- A handle owns its native resource and releases it when dropped.
+- Types that can fail on release also offer an explicit `close(self)`. Use it when you need to observe the error; `Drop` closes on a best-effort basis and cannot report one. `close` consumes the handle even when it fails, so there is nothing to retry.
+- When your entry function returns, the runtime releases every tracked resource, **including handles whose Rust owners were forgotten** with `mem::forget` or leaked.
+- `Context::statistics()` gives a snapshot of the native resource counters, which is a cheap way to assert in a test that a code path released everything.
+
+For MUI the unit of ownership is the **scope**. `Mui::scope` runs a closure with a fresh `Scope` that owns every native object, string array, hook and custom-class registration created through it. Objects are copyable *views* into that storage. Copying one never duplicates or disposes anything. Parents dispose their adopted children, and the scope disposes whatever remains.
+
+## Bounded resources
+
+The SDK keeps small fixed registries instead of growing without limit: 16 open files, 4 optional libraries, 2 private ports, 4 signal slots, and 8 messages of at most 256 bytes. A path is at most 127 bytes and a single file or stream transfer at most 64 KiB. Exceeding a bound returns `ErrorKind::Limit` rather than failing later. These are API limits, not a memory quota; Exec allocation can still fail. The [`aros` guide](/api/aros/#errors-and-bounds) has the table.
+
+## Errors
+
+Every fallible operation returns `Result<_, aros::Error>` (or `aros_mui::Error` for MUI). The `aros::Error` is a small `Copy` record with no allocation:
+
+| Field | Meaning |
 | --- | --- |
-| Files | `BytePath` rejects embedded NUL bytes. `File` has explicit read, truncate/create, and read/write modes. Reads and writes use caller-owned buffers and may complete partially. |
-| Standard output | `Stdout` and `Stderr` borrow DOS process handles; they never close those handles. `Stderr` uses the process error handle and falls back to standard output if necessary. |
-| Libraries | `Library::open` returns an owned reference that is released by `close` or `Drop`. Minimum library versions are explicit. |
-| Signals | `Signal` allocates one task-local signal bit and releases it when dropped. A signal can be posted and waited from its creating task. |
-| Ports and messages | `Port` and `Message` are local, task-bound values. A message has an explicit reply route; `receive` checks a supplied message rather than draining arbitrary queue entries. |
-| Callback | `call` invokes a callback synchronously. The callback frame is never retained by the native side. |
+| `kind` | The class of failure: native failure, invalid input, a documented limit, wrong task owner, invalid state, end of file or zero progress. |
+| `operation` | Which SDK operation failed. |
+| `native` | The native code, such as the DOS error, or zero for checks made locally. |
 
-Errors are allocation-free `aros::Error` values. Their `ErrorKind` separates
-invalid input, native operation failure, a documented API limit, wrong owner,
-invalid state, end of file, and zero progress. A failed operation does not imply
-that a resource was closed or consumed unless its individual method documents
-that transfer.
+A failed operation does not imply that a resource was closed or consumed. Each method documents whether it takes ownership on failure (`close` always does). Short reads and writes are normal: `File::read` and `File::write` may transfer less than requested, and `read_exact` and `write_all` loop until done or until an error.
 
-## `aros-mui`: typed MUI ownership
+`aros_mui::Error` wraps `aros::Error` unchanged as `Error::Aros`, and adds the ownership and scope violations that MUI objects can hit. Those are detected before any native call is made.
 
-Open MUI against the active context, then create a scope. A scope owns native
-roots, retained strings, hooks, and custom-class registrations. Typed object
-handles are copyable views into that scope; copying one never duplicates or
-disposes a native object.
+## Panics and allocation failure
 
-```rust
-let mui = aros_mui::Mui::open(context)?;
-mui.scope(|scope| {
-    let text = scope.builder::<aros_mui::classes::Text>().build()?;
-    let _ = text;
-    Ok::<(), aros_mui::Error>(())
-})?;
-```
+A panic does not unwind into AROS. The runtime installs a heap-free panic handler that enters the native fatal path, and the program ends with `AppStatus::Fatal` (return code 20). Rust's infallible allocation APIs terminate through that same path when the allocator refuses; they do not return an `aros::Error`. Where an allocation failure is recoverable, prefer fallible collection APIs.
 
-Builders accept generated construction attributes. `Object::set`, `get`, and
-`call` use generated, class-checked descriptors; `adopt` records native child
-ownership only between compatible classes in the same scope. Cross-scope
-objects, ownership cycles, duplicate attachment, and a second window root are
-rejected before a native call.
+## The raw boundary
 
-Notifications connect typed readable attributes to an application return ID, a
-typed no-notify set, or a scope-retained hook. Hooks and custom classes are
-valid for the scope only. Raw MUI messages, foreign pointers, and contracts
-whose native retention cannot be proven remain explicit unsafe operations.
+Everything that the type system cannot prove stays behind an explicit `unsafe` item with a documented contract: `Library::raw_base`, `Object::call_raw`, `Object::set_raw` and `get_raw`, `ForeignPtr`, and the whole `aros-sys` and `aros-mui-sys` crates. Ordinary applications should not need them. When you do, document the pointer, lifetime and retention contract you are relying on.
 
-The ordinary API is `aros-mui`; `aros-mui-sys` is intentionally not a consumer
-reference surface. It contains the raw ABI declarations used to implement and
-audit the safe layer.
+## ABI and target
 
-## ABI scope
-
-The target triple selects the ABI:
-
-- `x86_64-unknown-aros-abi1`
-- `x86_64-unknown-aros-abi11`
-
-Application source does not select an ABI with a Cargo feature. The public API
-does not promise compatibility with other AROS architectures, full `std`, or a
-native AROS-hosted Rust compiler. Those boundaries are described in the
-[compatibility profile](https://ami-rust.metaneutrons.cc/compatibility/).
+The AROS ABI is chosen by the Cargo target. The programming model above is the same on both; see [targets and ABIs](/targets-and-abis/) and the generated list of the [few items](/reference/abi-differences/) that exist on only one.

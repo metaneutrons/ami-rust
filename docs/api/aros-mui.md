@@ -1,22 +1,30 @@
 ---
-title: aros-mui API
-description: Typed, scope-owned MUI objects for AROS applications.
+title: The aros-mui crate
+description: "Typed, scope-owned MUI objects: builders, attributes, notifications, hooks, custom classes and the application loop."
 ---
-
-# `aros-mui` API
 
 `aros-mui` is the safe-facing MUI layer. It opens `muimaster.library` and
 `intuition.library` for an active `aros::Context`, then confines all native
 objects to a non-escaping `Mui::scope` closure. It supports the x86-64 AROS
-ABI-v1 and ABI-v11 targets.
+ABI-v1 and ABI-v11 targets; a [few classes](/reference/abi-differences/) exist on only one. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_mui/).
 
 ```rust
-let mui = aros_mui::Mui::open(context)?;
-mui.scope(|scope| {
-    let text = scope.builder::<aros_mui::classes::Text>().build()?;
-    let _ = text;
-    Ok::<(), aros_mui::Error>(())
-})?;
+use aros::Context;
+use aros_mui::{Error, Mui, attributes::TextContents, classes::Text};
+
+fn show_label(context: &Context) -> Result<(), Error> {
+    let mui = Mui::open(context)?;
+    let result = mui.scope(|scope| {
+        let label = scope
+            .builder::<Text>()
+            .with::<TextContents>(c"Hello")?
+            .build()?;
+        let _ = label; // every object is disposed when the scope returns
+        Ok::<(), Error>(())
+    });
+    mui.close()?;
+    result
+}
 ```
 
 ## Ownership model
@@ -50,7 +58,12 @@ the object's class and access direction.
 | `values` | Checked MUI enum and value types. |
 
 The generated class, attribute, method, and value types are part of the crate's
-public API. Their source documentation is the canonical item-level record.
+public API. The reference derives their relations from the type system:
+the [class hierarchy](/reference/aros_mui/classes/) with each class's own and
+inherited attributes, the [attribute index](/reference/aros_mui/attributes/) with
+value type and access mode (construct, set, get), the
+[method index](/reference/aros_mui/methods/) and the
+[value types](/reference/aros_mui/values/).
 
 ## Notifications and event loop
 
@@ -81,4 +94,21 @@ ownership, and native retention rules. Ordinary applications should use
 builders, generated attributes, notifications, hooks, and custom classes.
 
 For a full application, start with
-[MUI hello](https://ami-rust.metaneutrons.cc/mui-hello/).
+[MUI hello](/mui-hello/).
+
+## Worked examples
+
+Each of these is a complete, compile-checked example on the item's reference page:
+
+| To do this | See |
+| --- | --- |
+| Open MUI and create a scope | [`Mui`](/reference/aros_mui/mui/) |
+| Build a window from a group and a label | [`Object::adopt`](/reference/aros_mui/object/#adopt) |
+| Write and read attributes | [`Object::set`](/reference/aros_mui/object/#set) |
+| Close the application when the window closes | [`Object::notify`](/reference/aros_mui/object/#notify) |
+| Run the event loop and handle return IDs | [`Object::run`](/reference/aros_mui/object/#run) |
+| Call back into Rust on a change | [`Hook`](/reference/aros_mui/hook/) |
+| Define a custom class | [`CustomClassSpec`](/reference/aros_mui/customclassspec/) |
+| Handle a failure by kind | [`Error`](/reference/aros_mui/error/) |
+
+For a whole application, see [MUI hello](/mui-hello/).

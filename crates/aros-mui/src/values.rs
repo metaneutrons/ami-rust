@@ -6,9 +6,15 @@
 
 use crate::MuiEnum;
 
+/// Typed values of the `MUIA_Cycle_Active` attribute.
+///
+/// Each variant stands for one native `MUIV_Cycle_Active_*` constant. Use it with the
+/// [`CycleActive`](crate::attributes::CycleActive) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CycleActiveValue {
+    /// Native `MUIV_Cycle_Active_Next`.
     Next,
+    /// Native `MUIV_Cycle_Active_Prev`.
     Prev,
 }
 
@@ -29,10 +35,17 @@ impl MuiEnum for CycleActiveValue {
     }
 }
 
+/// Typed values of the `MUIA_Dirlist_SortDirs` attribute.
+///
+/// Each variant stands for one native `MUIV_Dirlist_SortDirs_*` constant. Use it with the
+/// [`DirlistSortDirs`](crate::attributes::DirlistSortDirs) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DirlistSortDirsValue {
+    /// Native `MUIV_Dirlist_SortDirs_First`.
     First,
+    /// Native `MUIV_Dirlist_SortDirs_Last`.
     Last,
+    /// Native `MUIV_Dirlist_SortDirs_Mix`.
     Mix,
 }
 
@@ -55,10 +68,17 @@ impl MuiEnum for DirlistSortDirsValue {
     }
 }
 
+/// Typed values of the `MUIA_Dirlist_SortType` attribute.
+///
+/// Each variant stands for one native `MUIV_Dirlist_SortType_*` constant. Use it with the
+/// [`DirlistSortType`](crate::attributes::DirlistSortType) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DirlistSortTypeValue {
+    /// Native `MUIV_Dirlist_SortType_Date`.
     Date,
+    /// Native `MUIV_Dirlist_SortType_Name`.
     Name,
+    /// Native `MUIV_Dirlist_SortType_Size`.
     Size,
 }
 
@@ -81,10 +101,17 @@ impl MuiEnum for DirlistSortTypeValue {
     }
 }
 
+/// Typed values of the `MUIA_Dirlist_Status` attribute.
+///
+/// Each variant stands for one native `MUIV_Dirlist_Status_*` constant. Use it with the
+/// [`DirlistStatus`](crate::attributes::DirlistStatus) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DirlistStatusValue {
+    /// Native `MUIV_Dirlist_Status_Invalid`.
     Invalid,
+    /// Native `MUIV_Dirlist_Status_Reading`.
     Reading,
+    /// Native `MUIV_Dirlist_Status_Valid`.
     Valid,
 }
 
@@ -107,16 +134,29 @@ impl MuiEnum for DirlistStatusValue {
     }
 }
 
+/// Typed values of the `MUIA_Font` attribute.
+///
+/// Each variant stands for one native `MUIV_Font_*` constant. Use it with the
+/// [`Font`](crate::attributes::Font) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FontValue {
+    /// Native `MUIV_Font_Big`.
     Big,
+    /// Native `MUIV_Font_Button`.
     Button,
+    /// Native `MUIV_Font_Fixed`.
     Fixed,
+    /// Native `MUIV_Font_Inherit`.
     Inherit,
+    /// Native `MUIV_Font_Knob`.
     Knob,
+    /// Native `MUIV_Font_List`.
     List,
+    /// Native `MUIV_Font_Normal`.
     Normal,
+    /// Native `MUIV_Font_Tiny`.
     Tiny,
+    /// Native `MUIV_Font_Title`.
     Title,
 }
 
@@ -151,23 +191,43 @@ impl MuiEnum for FontValue {
     }
 }
 
+/// Typed values of the `MUIA_Frame` attribute.
+///
+/// Each variant stands for one native `MUIV_Frame_*` constant. Use it with the
+/// [`Frame`](crate::attributes::Frame) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FrameValue {
+    /// Native `MUIV_Frame_Button`.
     Button,
+    /// Native `MUIV_Frame_Drag`.
     Drag,
+    /// Native `MUIV_Frame_Gauge`.
     Gauge,
+    /// Native `MUIV_Frame_Group`.
     Group,
+    /// Native `MUIV_Frame_ImageButton`.
     ImageButton,
+    /// Native `MUIV_Frame_InputList`.
     InputList,
+    /// Native `MUIV_Frame_Knob`.
     Knob,
+    /// Native `MUIV_Frame_None`.
     None,
+    /// Native `MUIV_Frame_PopUp`.
     PopUp,
+    /// Native `MUIV_Frame_Prop`.
     Prop,
+    /// Native `MUIV_Frame_ReadList`.
     ReadList,
+    /// Native `MUIV_Frame_Register`.
     Register,
+    /// Native `MUIV_Frame_Slider`.
     Slider,
+    /// Native `MUIV_Frame_String`.
     String,
+    /// Native `MUIV_Frame_Text`.
     Text,
+    /// Native `MUIV_Frame_Virtual`.
     Virtual,
 }
 
@@ -216,12 +276,21 @@ impl MuiEnum for FrameValue {
     }
 }
 
+/// Typed values of the `MUIA_Group_ActivePage` attribute.
+///
+/// Each variant stands for one native `MUIV_Group_ActivePage_*` constant. Use it with the
+/// [`GroupActivePage`](crate::attributes::GroupActivePage) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum GroupActivePageValue {
+    /// Native `MUIV_Group_ActivePage_Advance`.
     Advance,
+    /// Native `MUIV_Group_ActivePage_First`.
     First,
+    /// Native `MUIV_Group_ActivePage_Last`.
     Last,
+    /// Native `MUIV_Group_ActivePage_Next`.
     Next,
+    /// Native `MUIV_Group_ActivePage_Prev`.
     Prev,
 }
 
@@ -248,11 +317,19 @@ impl MuiEnum for GroupActivePageValue {
     }
 }
 
+/// Typed values of the `MUIA_Imageadjust_Type` attribute.
+///
+/// Each variant stands for one native `MUIV_Imageadjust_Type_*` constant. Use it with the
+/// [`ImageadjustType`](crate::attributes::ImageadjustType) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ImageadjustTypeValue {
+    /// Native `MUIV_Imageadjust_Type_All`.
     All,
+    /// Native `MUIV_Imageadjust_Type_Background`.
     Background,
+    /// Native `MUIV_Imageadjust_Type_Image`.
     Image,
+    /// Native `MUIV_Imageadjust_Type_Pen`.
     Pen,
 }
 
@@ -277,11 +354,19 @@ impl MuiEnum for ImageadjustTypeValue {
     }
 }
 
+/// Typed values of the `MUIA_InputMode` attribute.
+///
+/// Each variant stands for one native `MUIV_InputMode_*` constant. Use it with the
+/// [`InputMode`](crate::attributes::InputMode) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum InputModeValue {
+    /// Native `MUIV_InputMode_Immediate`.
     Immediate,
+    /// Native `MUIV_InputMode_None`.
     None,
+    /// Native `MUIV_InputMode_RelVerify`.
     RelVerify,
+    /// Native `MUIV_InputMode_Toggle`.
     Toggle,
 }
 
@@ -306,14 +391,25 @@ impl MuiEnum for InputModeValue {
     }
 }
 
+/// Typed values of the `MUIA_List_Active` attribute.
+///
+/// Each variant stands for one native `MUIV_List_Active_*` constant. Use it with the
+/// [`ListActive`](crate::attributes::ListActive) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ListActiveValue {
+    /// Native `MUIV_List_Active_Bottom`.
     Bottom,
+    /// Native `MUIV_List_Active_Down`.
     Down,
+    /// Native `MUIV_List_Active_Off`.
     Off,
+    /// Native `MUIV_List_Active_PageDown`.
     PageDown,
+    /// Native `MUIV_List_Active_PageUp`.
     PageUp,
+    /// Native `MUIV_List_Active_Top`.
     Top,
+    /// Native `MUIV_List_Active_Up`.
     Up,
 }
 
@@ -344,9 +440,15 @@ impl MuiEnum for ListActiveValue {
     }
 }
 
+/// Typed values of the `MUIA_Listview_DragType` attribute.
+///
+/// Each variant stands for one native `MUIV_Listview_DragType_*` constant. Use it with the
+/// [`ListviewDragType`](crate::attributes::ListviewDragType) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ListviewDragTypeValue {
+    /// Native `MUIV_Listview_DragType_Immediate`.
     Immediate,
+    /// Native `MUIV_Listview_DragType_None`.
     None,
 }
 
@@ -367,11 +469,19 @@ impl MuiEnum for ListviewDragTypeValue {
     }
 }
 
+/// Typed values of the `MUIA_Listview_MultiSelect` attribute.
+///
+/// Each variant stands for one native `MUIV_Listview_MultiSelect_*` constant. Use it with the
+/// [`ListviewMultiSelect`](crate::attributes::ListviewMultiSelect) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ListviewMultiSelectValue {
+    /// Native `MUIV_Listview_MultiSelect_Always`.
     Always,
+    /// Native `MUIV_Listview_MultiSelect_Default`.
     Default,
+    /// Native `MUIV_Listview_MultiSelect_None`.
     None,
+    /// Native `MUIV_Listview_MultiSelect_Shifted`.
     Shifted,
 }
 
@@ -396,11 +506,19 @@ impl MuiEnum for ListviewMultiSelectValue {
     }
 }
 
+/// Typed values of the `MUIA_Listview_ScrollerPos` attribute.
+///
+/// Each variant stands for one native `MUIV_Listview_ScrollerPos_*` constant. Use it with the
+/// [`ListviewScrollerPos`](crate::attributes::ListviewScrollerPos) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ListviewScrollerPosValue {
+    /// Native `MUIV_Listview_ScrollerPos_Default`.
     Default,
+    /// Native `MUIV_Listview_ScrollerPos_Left`.
     Left,
+    /// Native `MUIV_Listview_ScrollerPos_None`.
     None,
+    /// Native `MUIV_Listview_ScrollerPos_Right`.
     Right,
 }
 
@@ -425,10 +543,20 @@ impl MuiEnum for ListviewScrollerPosValue {
     }
 }
 
+/// Typed values of the `MUIA_PanelTitle_Position` attribute.
+///
+/// Each variant stands for one native `MUIV_PanelTitle_Position_*` constant. Use it with the
+/// `PanelTitlePosition` attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PanelTitlePositionValue {
+    /// Native `MUIV_PanelTitle_Position_Left`.
+    ///
+    /// Available on ABI-v1 targets only.
     #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
     Left,
+    /// Native `MUIV_PanelTitle_Position_Top`.
+    ///
+    /// Available on ABI-v1 targets only.
     #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
     Top,
 }
@@ -454,12 +582,25 @@ impl MuiEnum for PanelTitlePositionValue {
     }
 }
 
+/// Typed values of the `MUIA_PanelTitle_TextPosition` attribute.
+///
+/// Each variant stands for one native `MUIV_PanelTitle_TextPosition_*` constant. Use it with the
+/// `PanelTitleTextPosition` attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PanelTitleTextPositionValue {
+    /// Native `MUIV_PanelTitle_TextPosition_Centered`.
+    ///
+    /// Available on ABI-v1 targets only.
     #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
     Centered,
+    /// Native `MUIV_PanelTitle_TextPosition_Left`.
+    ///
+    /// Available on ABI-v1 targets only.
     #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
     Left,
+    /// Native `MUIV_PanelTitle_TextPosition_Right`.
+    ///
+    /// Available on ABI-v1 targets only.
     #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
     Right,
 }
@@ -489,12 +630,25 @@ impl MuiEnum for PanelTitleTextPositionValue {
     }
 }
 
+/// Typed values of the `MUIA_Panel_Title` attribute.
+///
+/// Each variant stands for one native `MUIV_Panel_Title_*` constant. Use it with the
+/// `PanelTitle` attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PanelTitleValue {
+    /// Native `MUIV_Panel_Title_Left`.
+    ///
+    /// Available on ABI-v1 targets only.
     #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
     Left,
+    /// Native `MUIV_Panel_Title_None`.
+    ///
+    /// Available on ABI-v1 targets only.
     #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
     None,
+    /// Native `MUIV_Panel_Title_Text_Left`.
+    ///
+    /// Available on ABI-v1 targets only.
     #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
     TextLeft,
 }
@@ -524,10 +678,17 @@ impl MuiEnum for PanelTitleValue {
     }
 }
 
+/// Typed values of the `MUIA_Pixmap_Compression` attribute.
+///
+/// Each variant stands for one native `MUIV_Pixmap_Compression_*` constant. Use it with the
+/// [`PixmapCompression`](crate::attributes::PixmapCompression) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PixmapCompressionValue {
+    /// Native `MUIV_Pixmap_Compression_BZip2`.
     BZip2,
+    /// Native `MUIV_Pixmap_Compression_None`.
     None,
+    /// Native `MUIV_Pixmap_Compression_RLE`.
     RLE,
 }
 
@@ -550,10 +711,17 @@ impl MuiEnum for PixmapCompressionValue {
     }
 }
 
+/// Typed values of the `MUIA_Pixmap_Format` attribute.
+///
+/// Each variant stands for one native `MUIV_Pixmap_Format_*` constant. Use it with the
+/// [`PixmapFormat`](crate::attributes::PixmapFormat) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PixmapFormatValue {
+    /// Native `MUIV_Pixmap_Format_ARGB32`.
     ARGB32,
+    /// Native `MUIV_Pixmap_Format_CLUT8`.
     CLUT8,
+    /// Native `MUIV_Pixmap_Format_RGB24`.
     RGB24,
 }
 
@@ -576,11 +744,19 @@ impl MuiEnum for PixmapFormatValue {
     }
 }
 
+/// Typed values of the `MUIA_Prop_UseWinBorder` attribute.
+///
+/// Each variant stands for one native `MUIV_Prop_UseWinBorder_*` constant. Use it with the
+/// [`PropUseWinBorder`](crate::attributes::PropUseWinBorder) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PropUseWinBorderValue {
+    /// Native `MUIV_Prop_UseWinBorder_Bottom`.
     Bottom,
+    /// Native `MUIV_Prop_UseWinBorder_Left`.
     Left,
+    /// Native `MUIV_Prop_UseWinBorder_None`.
     None,
+    /// Native `MUIV_Prop_UseWinBorder_Right`.
     Right,
 }
 
@@ -605,11 +781,19 @@ impl MuiEnum for PropUseWinBorderValue {
     }
 }
 
+/// Typed values of the `MUIA_Scrollbar_Type` attribute.
+///
+/// Each variant stands for one native `MUIV_Scrollbar_Type_*` constant. Use it with the
+/// [`ScrollbarType`](crate::attributes::ScrollbarType) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ScrollbarTypeValue {
+    /// Native `MUIV_Scrollbar_Type_Bottom`.
     Bottom,
+    /// Native `MUIV_Scrollbar_Type_Default`.
     Default,
+    /// Native `MUIV_Scrollbar_Type_Sym`.
     Sym,
+    /// Native `MUIV_Scrollbar_Type_Top`.
     Top,
 }
 
@@ -634,10 +818,17 @@ impl MuiEnum for ScrollbarTypeValue {
     }
 }
 
+/// Typed values of the `MUIA_String_Format` attribute.
+///
+/// Each variant stands for one native `MUIV_String_Format_*` constant. Use it with the
+/// [`StringFormat`](crate::attributes::StringFormat) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StringFormatValue {
+    /// Native `MUIV_String_Format_Center`.
     Center,
+    /// Native `MUIV_String_Format_Left`.
     Left,
+    /// Native `MUIV_String_Format_Right`.
     Right,
 }
 
@@ -660,16 +851,29 @@ impl MuiEnum for StringFormatValue {
     }
 }
 
+/// Typed values of the `MUIA_Window` attribute.
+///
+/// Each variant stands for one native `MUIV_Window_*` constant. Use it with the
+/// [`Window`](crate::attributes::Window) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WindowValue {
+    /// Native `MUIV_Window_ActiveObject_Next`.
     ActiveObjectNext,
+    /// Native `MUIV_Window_ActiveObject_None`.
     ActiveObjectNone,
+    /// Native `MUIV_Window_ActiveObject_Prev`.
     ActiveObjectPrev,
+    /// Native `MUIV_Window_AltHeight_Scaled`.
     AltHeightScaled,
+    /// Native `MUIV_Window_Button_Iconify`.
     ButtonIconify,
+    /// Native `MUIV_Window_Button_MUI`.
     ButtonMUI,
+    /// Native `MUIV_Window_Button_Popup`.
     ButtonPopup,
+    /// Native `MUIV_Window_Button_Snapshot`.
     ButtonSnapshot,
+    /// Native `MUIV_Window_Height_Default`.
     HeightDefault,
 }
 
@@ -704,10 +908,17 @@ impl MuiEnum for WindowValue {
     }
 }
 
+/// Typed values of the `MUIA_Window_ActiveObject` attribute.
+///
+/// Each variant stands for one native `MUIV_Window_ActiveObject_*` constant. Use it with the
+/// [`WindowActiveObject`](crate::attributes::WindowActiveObject) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WindowActiveObjectValue {
+    /// Native `MUIV_Window_ActiveObject_Next`.
     Next,
+    /// Native `MUIV_Window_ActiveObject_None`.
     None,
+    /// Native `MUIV_Window_ActiveObject_Prev`.
     Prev,
 }
 
@@ -730,10 +941,17 @@ impl MuiEnum for WindowActiveObjectValue {
     }
 }
 
+/// Typed values of the `MUIA_Window_AltLeftEdge` attribute.
+///
+/// Each variant stands for one native `MUIV_Window_AltLeftEdge_*` constant. Use it with the
+/// [`WindowAltLeftEdge`](crate::attributes::WindowAltLeftEdge) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WindowAltLeftEdgeValue {
+    /// Native `MUIV_Window_AltLeftEdge_Centered`.
     Centered,
+    /// Native `MUIV_Window_AltLeftEdge_Moused`.
     Moused,
+    /// Native `MUIV_Window_AltLeftEdge_NoChange`.
     NoChange,
 }
 
@@ -756,10 +974,17 @@ impl MuiEnum for WindowAltLeftEdgeValue {
     }
 }
 
+/// Typed values of the `MUIA_Window_AltTopEdge` attribute.
+///
+/// Each variant stands for one native `MUIV_Window_AltTopEdge_*` constant. Use it with the
+/// [`WindowAltTopEdge`](crate::attributes::WindowAltTopEdge) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WindowAltTopEdgeValue {
+    /// Native `MUIV_Window_AltTopEdge_Centered`.
     Centered,
+    /// Native `MUIV_Window_AltTopEdge_Moused`.
     Moused,
+    /// Native `MUIV_Window_AltTopEdge_NoChange`.
     NoChange,
 }
 
@@ -782,9 +1007,15 @@ impl MuiEnum for WindowAltTopEdgeValue {
     }
 }
 
+/// Typed values of the `MUIA_Window_Height` attribute.
+///
+/// Each variant stands for one native `MUIV_Window_Height_*` constant. Use it with the
+/// [`WindowHeight`](crate::attributes::WindowHeight) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WindowHeightValue {
+    /// Native `MUIV_Window_Height_Default`.
     Default,
+    /// Native `MUIV_Window_Height_Scaled`.
     Scaled,
 }
 
@@ -805,9 +1036,15 @@ impl MuiEnum for WindowHeightValue {
     }
 }
 
+/// Typed values of the `MUIA_Window_LeftEdge` attribute.
+///
+/// Each variant stands for one native `MUIV_Window_LeftEdge_*` constant. Use it with the
+/// [`WindowLeftEdge`](crate::attributes::WindowLeftEdge) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WindowLeftEdgeValue {
+    /// Native `MUIV_Window_LeftEdge_Centered`.
     Centered,
+    /// Native `MUIV_Window_LeftEdge_Moused`.
     Moused,
 }
 
@@ -828,9 +1065,15 @@ impl MuiEnum for WindowLeftEdgeValue {
     }
 }
 
+/// Typed values of the `MUIA_Window_TopEdge` attribute.
+///
+/// Each variant stands for one native `MUIV_Window_TopEdge_*` constant. Use it with the
+/// [`WindowTopEdge`](crate::attributes::WindowTopEdge) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WindowTopEdgeValue {
+    /// Native `MUIV_Window_TopEdge_Centered`.
     Centered,
+    /// Native `MUIV_Window_TopEdge_Moused`.
     Moused,
 }
 
@@ -851,9 +1094,15 @@ impl MuiEnum for WindowTopEdgeValue {
     }
 }
 
+/// Typed values of the `MUIA_Window_Width` attribute.
+///
+/// Each variant stands for one native `MUIV_Window_Width_*` constant. Use it with the
+/// [`WindowWidth`](crate::attributes::WindowWidth) attribute.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WindowWidthValue {
+    /// Native `MUIV_Window_Width_Default`.
     Default,
+    /// Native `MUIV_Window_Width_Scaled`.
     Scaled,
 }
 

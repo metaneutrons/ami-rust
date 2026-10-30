@@ -1,0 +1,12 @@
+# Prose spelling check for the documentation and the public crate sources.
+# Run by .github/workflows/docs.yml.
+
+[files]
+extend-exclude = [
+    "docs/reference/**",   # generated; regenerate instead of editing
+    "website/pnpm-lock.yaml",
+]
+
+[default.extend-words]
+# MUIA_Dropable is the native MUI spelling.
+Dropable = "Dropable"
