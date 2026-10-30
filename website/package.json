@@ -1,0 +1,17 @@
+{
+  "name": "ami-rust-documentation",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@10.26.1",
+  "scripts": {
+    "build": "astro build",
+    "dev": "astro dev"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.42.7",
+    "astro": "7.4.4",
+    "sharp": "0.34.5"
+  },
+  "devDependencies": { "typescript": "5.9.3" }
+}

@@ -1,0 +1,20 @@
+[package]
+name = "mui-hello"
+version = "0.1.0"
+edition = "2024"
+publish = false
+autobins = false
+autolib = false
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+
+[[bin]]
+name = "mui-hello"
+path = "src/main.rs"
+
+[dependencies]
+aros = { version = "=0.1.0", path = "../../crates/aros", features = ["alloc"] }
+aros-mui = { version = "=0.1.0", path = "../../crates/aros-mui" }
+
+[build-dependencies]
+aros-native-build = { version = "=0.2.0", path = "../../tooling/crates/aros-native-build" }

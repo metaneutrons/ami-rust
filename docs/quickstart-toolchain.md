@@ -113,9 +113,11 @@ rustup toolchain link "$direct_toolchain" \
 The release asset inventories contain the exact archive digests. Moving branch
 URLs are not an installation interface.
 
-Project crates initially use immutable Git revision
-`95795520653aca959bb17b3b73cf025261d049a7` from this repository and commit
-`Cargo.lock`. They are intentionally not on crates.io yet.
+Project crates use the immutable 0.1.0 Git revision
+`8456843ca869a738dde6dc7b7a062a2fdc3b6597` from this repository and commit
+`Cargo.lock`. They are intentionally not on crates.io yet. See the complete
+[crates and consumer guide](consumer-guide.md), including the `mui-hello`
+application.
 
 ## Boundaries
 

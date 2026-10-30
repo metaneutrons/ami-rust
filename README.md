@@ -34,7 +34,8 @@ macOS / Linux host
 
 The initial targets are deliberately narrow: **PC x86-64 AROS ABI-v1 and
 ABI-v11** with `no_std` and `alloc`. Full `std`, additional AROS architectures,
-and native AROS-hosted rustc/Cargo/rustup are future work.
+and native AROS-hosted rustc/Cargo/rustup are future work. The target name
+selects the ABI; application source does not select it through a Cargo feature.
 
 ## Status
 
@@ -69,7 +70,7 @@ linker = "aros-link"
 rustflags = ["-Zunstable-options"]
 ```
 
-After the locked dependencies have been fetched once, both targets build
+Resolve and commit a project's `Cargo.lock` once. Thereafter both targets build
 offline with ordinary Cargo:
 
 ```sh
@@ -91,7 +92,8 @@ publication. The public base set is:
 The focused `aros-elf` and `aros-native-build` crates are maintainer and build
 support, not application API crates.
 
-See the [API guide](docs/api.md) and the
+See the [consumer guide](docs/consumer-guide.md), the [API guide](docs/api.md),
+the [MUI hello-world example](examples/mui-hello/README.md), and the
 [SHA-256 example](examples/sha256sum/README.md).
 
 ## Build the maintainer tooling
@@ -131,6 +133,7 @@ signing, AROS execution, and publication remain protected workflow stages.
 
 - [Compatibility boundary](docs/compatibility.md)
 - [API and lifetime contracts](docs/api.md)
+- [Crates and consumer guide](docs/consumer-guide.md)
 - [Installation and source checkout](docs/quickstart-toolchain.md)
 - [Release and version model](docs/release-versioning.md)
 - [0.1.0 qualification record](docs/m7-qualification.md)

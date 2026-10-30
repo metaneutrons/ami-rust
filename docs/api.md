@@ -24,6 +24,11 @@ separate application dependencies. `aros-sys` is the raw ABI package. Optional
 libraries use focused pairs; the initial pair is `aros-mui` and
 `aros-mui-sys`. These source APIs are not yet a stability promise.
 
+For dependency selection, target configuration and a complete consumer package,
+see the [crates and consumer guide](consumer-guide.md). The generated inventory
+below defines what is safe, typed-unsafe, raw, or unavailable; it is not a
+replacement for that user-facing guide.
+
 The raw `aros-sys` library modules expose the first generated base set:
 `exec` covers library, signal and message-port primitives; `dos` covers files,
 locks, directory iteration, error retrieval and path operations; `utility`

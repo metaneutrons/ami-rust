@@ -1,0 +1,29 @@
+---
+title: Install and build
+description: Select ami-rust with rustup and build with ordinary Cargo.
+---
+
+The authenticated GitHub Release and its immutable rustup catalog are the supported 0.1.0 distribution routes. APT, Homebrew, AUR and crates.io are intentionally not release channels for this line.
+
+Use the documented toolchain version and configure the linker once per project:
+
+```toml title=".cargo/config.toml"
+[target.x86_64-unknown-aros-abi1]
+linker = "aros-link"
+rustflags = ["-Zunstable-options"]
+
+[target.x86_64-unknown-aros-abi11]
+linker = "aros-link"
+rustflags = ["-Zunstable-options"]
+```
+
+Then build using normal Cargo. The target determines the ABI; source code does not select it through a Cargo feature.
+
+```sh
+toolchain=0.1.0
+cargo +"$toolchain" fetch --locked
+cargo +"$toolchain" build --target x86_64-unknown-aros-abi1 --release --locked --offline
+cargo +"$toolchain" build --target x86_64-unknown-aros-abi11 --release --locked --offline
+```
+
+The complete installation, integrity and removal instructions remain in the repository's [consumer guide](https://github.com/metaneutrons/ami-rust/blob/main/docs/consumer-guide.md).

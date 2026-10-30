@@ -1,0 +1,10 @@
+---
+title: Maintainers
+description: Build and release boundaries for ami-rust contributors.
+---
+
+The production path is Rust-only. The maintained build components live in the repository's tooling workspace and are built through `tools/build-maintainer-task.sh`. Do not introduce an ami-rust command-line wrapper, a Cargo wrapper or a Python production path.
+
+The AROS baseline, `AROS-NX` and `aros-tools` are separate projects. Changes to them require their own scope, review and qualification; they are not a side effect of work in this repository.
+
+See [AGENTS.md](https://github.com/metaneutrons/ami-rust/blob/main/AGENTS.md) and the repository's [maintainer documentation](https://github.com/metaneutrons/ami-rust/tree/main/docs) for the binding project rules.

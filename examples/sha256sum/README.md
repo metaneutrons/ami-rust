@@ -25,5 +25,6 @@ pinned ABI-v1 image. The final Git-consumer executable has separate current nati
 ## Cargo integration
 
 This package uses ordinary Cargo with the pinned `aros-native-build` helper and
-the `x86_64-aros` target libraries. It is both an example and a native runtime
+the `x86_64-unknown-aros-abi1` or `x86_64-unknown-aros-abi11` target libraries.
+It is both an example and a native runtime
 qualification fixture. Building it locally does not publish or release an SDK.

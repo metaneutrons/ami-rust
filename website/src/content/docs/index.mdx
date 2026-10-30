@@ -1,0 +1,34 @@
+---
+title: Rust for AROS
+description: Build native AROS x86-64 applications with standard Rust tools.
+template: splash
+---
+
+import hero from '../../../../assets/ami-rust-hero.svg';
+
+<div className="hero">
+  <img src={hero.src} alt="ami-rust — Rust for AROS x86-64 ABI-v1 and ABI-v11" />
+  <p>Cross-compile on macOS or Linux. Run native applications on AROS x86-64 ABI-v1 or ABI-v11.</p>
+  <div className="hero-actions">
+    <a href="/install/">Install the toolchain</a>
+    <a className="secondary" href="/mui-hello/">See a MUI example</a>
+  </div>
+</div>
+
+<div className="status-grid">
+  <div><strong>0.1.0</strong>initial qualified release</div>
+  <div><strong>ABI-v1 + ABI-v11</strong>one target per ABI</div>
+  <div><strong>macOS + Linux</strong>three qualified host combinations</div>
+</div>
+
+ami-rust packages a pinned Rust compiler, Cargo, AROS target libraries, a relocatable C SDK and native link tools. It deliberately stays close to upstream Rust: `rustup` selects the toolchain, standard Cargo builds applications, and AROS support arrives through ordinary crates.
+
+There is no project-specific CLI, Cargo wrapper or Python runtime dependency. The initial release covers `no_std` plus `alloc`; full `std`, additional AROS architectures and a native AROS-hosted compiler are future work.
+
+## Read in this order
+
+1. [Install and build](/install/) configures Cargo for ABI-v1 or ABI-v11.
+2. [Crates and APIs](/crates/) explains the supported safe and raw layers.
+3. [MUI hello](/mui-hello/) is a minimal native GUI application.
+
+The repository remains the canonical record for detailed qualification evidence and source-level maintainer procedures.
