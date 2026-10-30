@@ -2,8 +2,6 @@
 title: Platform roadmap
 ---
 
-# Platform roadmap
-
 ## Initial release
 
 Version 0.1.0 targets PC x86-64 AROS ABI-v1 and ABI-v11 through the canonical

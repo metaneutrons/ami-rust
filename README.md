@@ -93,8 +93,8 @@ The focused `aros-elf` and `aros-native-build` crates are maintainer and build
 support, not application API crates.
 
 See the [consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/), the
-[API overview](https://ami-rust.metaneutrons.cc/api/), the
-[API and lifetime inventory](https://ami-rust.metaneutrons.cc/api/), the
+[programming model](https://ami-rust.metaneutrons.cc/api/), the
+[API reference](https://ami-rust.metaneutrons.cc/reference/), the
 [MUI hello-world example](https://ami-rust.metaneutrons.cc/mui-hello/), and the
 [SHA-256 example](https://ami-rust.metaneutrons.cc/sha256sum/).
 
@@ -133,11 +133,19 @@ signing, AROS execution, and publication remain protected workflow stages.
 
 ## Documentation
 
-- [Compatibility boundary](https://ami-rust.metaneutrons.cc/compatibility/)
-- [API and lifetime contracts](https://ami-rust.metaneutrons.cc/api/)
+The documentation site is <https://ami-rust.metaneutrons.cc/>.
+
+- [Install and build](https://ami-rust.metaneutrons.cc/quickstart-toolchain/)
+- [Run on AROS](https://ami-rust.metaneutrons.cc/run-on-aros/)
+- [Targets and ABIs](https://ami-rust.metaneutrons.cc/targets-and-abis/)
 - [Crates and consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/)
-- [Installation and source checkout](https://ami-rust.metaneutrons.cc/quickstart-toolchain/)
+- [Programming model](https://ami-rust.metaneutrons.cc/api/)
+- [Rust API reference](https://ami-rust.metaneutrons.cc/reference/)
+- [Compatibility boundary](https://ami-rust.metaneutrons.cc/compatibility/)
+- [Troubleshooting](https://ami-rust.metaneutrons.cc/troubleshooting/)
 - [Platform roadmap](https://ami-rust.metaneutrons.cc/platform-roadmap/)
+
+To work on the documentation itself, see [CONTRIBUTING.md](CONTRIBUTING.md#documentation).
 
 ## Licence and provenance
 
