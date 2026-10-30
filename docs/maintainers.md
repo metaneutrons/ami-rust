@@ -41,3 +41,16 @@ Before publication:
 6. read every public asset back before promotion.
 
 APT, Homebrew, AUR, and crates.io are outside the initial release.
+
+## Prepared 0.1.0 candidate
+
+The exact source candidate at
+`95795520653aca959bb17b3b73cf025261d049a7` passed the three-host,
+dual-target and native ABI1/ABI11 qualification in workflow run
+[`40986442000`](https://github.com/metaneutrons/ami-rust/actions/runs/40986442000).
+The reviewed catalog commit is
+`bb5cc2e428b89685eeec2ae249701cc23fd135d7`; signed assets were prepared in
+[run 40994382906](https://github.com/metaneutrons/ami-rust/actions/runs/40994382906).
+The complete identities and acceptance mapping are in the
+[M7 qualification record](m7-qualification.md). These steps do not authorise
+the `publish` workflow mode.
