@@ -1,3 +1,7 @@
+---
+title: M6 MUI interaction qualification
+---
+
 # M6 MUI interaction qualification
 
 Status: PASS on 2026-10-29. This record applies M6-A1 through M6-A4 in

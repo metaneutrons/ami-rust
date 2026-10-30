@@ -92,9 +92,10 @@ publication. The public base set is:
 The focused `aros-elf` and `aros-native-build` crates are maintainer and build
 support, not application API crates.
 
-See the [consumer guide](docs/consumer-guide.md), the [API guide](docs/api.md),
-the [MUI hello-world example](examples/mui-hello/README.md), and the
-[SHA-256 example](examples/sha256sum/README.md).
+See the [consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/), the
+[API reference](https://ami-rust.metaneutrons.cc/api/), the
+[MUI hello-world example](https://ami-rust.metaneutrons.cc/mui-hello/), and the
+[SHA-256 example](https://ami-rust.metaneutrons.cc/sha256sum/).
 
 ## Build the maintainer tooling
 
@@ -131,14 +132,14 @@ signing, AROS execution, and publication remain protected workflow stages.
 
 ## Documentation
 
-- [Compatibility boundary](docs/compatibility.md)
-- [API and lifetime contracts](docs/api.md)
-- [Crates and consumer guide](docs/consumer-guide.md)
-- [Installation and source checkout](docs/quickstart-toolchain.md)
-- [Release and version model](docs/release-versioning.md)
-- [0.1.0 qualification record](docs/m7-qualification.md)
-- [Maintainer workflow](docs/maintainers.md)
-- [Platform roadmap](docs/platform-roadmap.md)
+- [Compatibility boundary](https://ami-rust.metaneutrons.cc/compatibility/)
+- [API and lifetime contracts](https://ami-rust.metaneutrons.cc/api/)
+- [Crates and consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/)
+- [Installation and source checkout](https://ami-rust.metaneutrons.cc/quickstart-toolchain/)
+- [Release and version model](https://ami-rust.metaneutrons.cc/release-versioning/)
+- [0.1.0 qualification record](https://ami-rust.metaneutrons.cc/m7-qualification/)
+- [Maintainer workflow](https://ami-rust.metaneutrons.cc/maintainers/)
+- [Platform roadmap](https://ami-rust.metaneutrons.cc/platform-roadmap/)
 - [Contributing](CONTRIBUTING.md) and [security policy](SECURITY.md)
 
 ## Licence and provenance

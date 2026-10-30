@@ -1,3 +1,7 @@
+---
+title: API, lifetime and failure inventory
+---
+
 # API, lifetime and failure inventory
 
 The facade's global allocator uses public Exec allocation for valid Rust layouts,

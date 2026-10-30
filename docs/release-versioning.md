@@ -1,3 +1,7 @@
+---
+title: Release and version model
+---
+
 # Release and version model
 
 ami-rust uses one semantic version for the public SDK distribution. The new

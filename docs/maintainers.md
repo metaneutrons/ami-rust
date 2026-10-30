@@ -1,3 +1,7 @@
+---
+title: Maintainer workflow
+---
+
 # Maintainer workflow
 
 ami-rust separates ordinary source checks from expensive candidate and release

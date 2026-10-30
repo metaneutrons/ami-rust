@@ -1,3 +1,7 @@
+---
+title: Maintenance and security ownership
+---
+
 # Maintenance and security ownership
 
 Fabian Schmieder owns ami-rust SDK maintenance, dependency/security intake and
