@@ -14,11 +14,12 @@ and results are recorded in [the M1 qualification](m1-qualification.md).
 | Production Linux host profiles | Ubuntu 24.04, x86-64 or ARM64, glibc; distinct host SDK inventories |
 | Consumer tools | Upstream rustup and normal Cargo; no Python interpreter, CPython bootstrap or public ami-rust CLI |
 | Rust | nightly-2026-09-18; commit 330d317121e16b5db8e5adc63595910528ff2ee7; LLVM 23.1.1; paired rust-src |
-| Cargo | 1.99.0, source 3efb1f477e99b42974b982d939fd100303cdf7db plus recorded producer patches; per-host binary digest in the authenticated inventory |
+| Cargo | 1.100.0-nightly, commit 495c385d0875c4ba51eb72ea0448a2d4c018b8d4, source 3efb1f477e99b42974b982d939fd100303cdf7db plus recorded producer patches; per-host binary digest in the authenticated inventory |
 | Native C toolchain | Pinned host-specific LLVM cross-tools for pc-x86_64; exact profiles in tooling/crates/aros-native-build/pins and authenticated SDK inventories |
 | Native collector | Pinned host-native collector included in each SDK; exact bytes/profile in the authenticated host inventory |
 | AROS C SDK | ABI1: source-derived portable Developer tree pinned by `release/portable-csdk/spec.json`; ABI11: complete `SDK-202609-any-x86_64.zip`, SHA-256 `8a4e5f09f027844501c1421bd3948c4e55ceb005a16b0bd3575276f40c8977e6` |
-| Boot images | ABI1 SHA-256 `9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1`; ABI11 SHA-256 `2228f09c73f8c7650372543e9a97f93020a1fab7ebbf4865b194c5aa9cc8ccd7` |
+| Boot inputs | ABI1 SHA-256 `9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1`; ABI11 SHA-256 `2228f09c73f8c7650372543e9a97f93020a1fab7ebbf4865b194c5aa9cc8ccd7` |
+| M7 runtime baselines | ABI1 SHA-256 `d981ef90144d0489c7520674def22f564cc4a79637d2ce7f42be1319d6a228a4`; ABI11 SHA-256 `99c332be5a358799122c87d3e624d2d6e9576a721d28514a01c8b3f289d3dda4` |
 | QEMU | 11.1.3, binary SHA-256 `0dba441e49c3cda068f3b33916ad9d2146d173d9bb65a6a62ce2e61d3211baaf`; pc-i440fx-11.1, qemu64-v1, TCG single, one CPU, 512 MiB RAM, no network, immutable ISO, full 512 MiB FAT test medium |
 
 The qualification profile uses a 128 KiB startup stack and requires measured
@@ -34,7 +35,9 @@ binutils and libc development files (`build-essential`) on Ubuntu.
 
 Direct archives and Rustup components use a per-host signed file inventory.
 The [source checkout guide](quickstart-toolchain.md) describes the public
-boundary before the first release. The boot/ABI baselines above remain
+boundary before the first release. The exact candidate identities and results
+are recorded in [the M7 qualification](m7-qualification.md). The boot/ABI
+baselines above remain
 unchanged; physical hardware, AROS-hosted Rust/Cargo/rustup and other CPU/ABI
 targets require separate qualification.
 

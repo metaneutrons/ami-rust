@@ -27,3 +27,7 @@ The release sequence is:
 APT, Homebrew, AUR, and crates.io are not 0.1.0 publication channels. Packaging
 corrections after publication require a new semantic version; old release bytes
 and tags remain immutable.
+
+The prepared 0.1.0 candidate, reviewed catalog and unpublished signature set
+are bound in the [M7 qualification record](m7-qualification.md). Preparing that
+set does not create a tag or grant publication authority.
