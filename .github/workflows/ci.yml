@@ -51,7 +51,7 @@ jobs:
             exit 1
           }
 
-          docs='(^docs/|^assets/([^/]+\.(svg|png|jpg|jpeg|gif|webp)|README\.md)$|^\.github/ISSUE_TEMPLATE/|^\.github/pull_request_template\.md$|\.md$)'
+          docs='(^docs/|^website/|^assets/([^/]+\.(svg|png|jpg|jpeg|gif|webp)|README\.md)$|^\.github/ISSUE_TEMPLATE/|^\.github/pull_request_template\.md$|\.md$)'
           classify_paths() {
             local code=false file
             while IFS= read -r file; do
@@ -62,7 +62,7 @@ jobs:
 
           # Keep the allowlist fail-closed. These probes cover documentation,
           # source, workflow, lockfile, near-miss and mixed path sets.
-          test "$(printf '%s\n' README.md docs/guide.md assets/mark.svg | classify_paths)" = false
+          test "$(printf '%s\n' README.md docs/guide.md website/src/content.config.ts assets/mark.svg | classify_paths)" = false
           test "$(printf '%s\n' tooling/src/lib.rs | classify_paths)" = true
           test "$(printf '%s\n' .github/workflows/ci.yml | classify_paths)" = true
           test "$(printf '%s\n' tooling/Cargo.lock | classify_paths)" = true

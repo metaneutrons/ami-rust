@@ -49,8 +49,8 @@ the object's class and access direction.
 | `methods` | Generated method descriptors. |
 | `values` | Checked MUI enum and value types. |
 
-The full generated class, attribute, method, and value inventory is available
-in the [MUI API inventory](https://ami-rust.metaneutrons.cc/mui-safe-api/).
+The generated class, attribute, method, and value types are part of the crate's
+public API. Their source documentation is the canonical item-level record.
 
 ## Notifications and event loop
 

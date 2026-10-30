@@ -93,7 +93,7 @@ The focused `aros-elf` and `aros-native-build` crates are maintainer and build
 support, not application API crates.
 
 See the [consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/), the
-[Rust API reference](https://ami-rust.metaneutrons.cc/rust-api/), the
+[API overview](https://ami-rust.metaneutrons.cc/api/), the
 [API and lifetime inventory](https://ami-rust.metaneutrons.cc/api/), the
 [MUI hello-world example](https://ami-rust.metaneutrons.cc/mui-hello/), and the
 [SHA-256 example](https://ami-rust.metaneutrons.cc/sha256sum/).
@@ -137,11 +137,7 @@ signing, AROS execution, and publication remain protected workflow stages.
 - [API and lifetime contracts](https://ami-rust.metaneutrons.cc/api/)
 - [Crates and consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/)
 - [Installation and source checkout](https://ami-rust.metaneutrons.cc/quickstart-toolchain/)
-- [Release and version model](https://ami-rust.metaneutrons.cc/release-versioning/)
-- [Maintainer workflow](https://ami-rust.metaneutrons.cc/maintainers/)
 - [Platform roadmap](https://ami-rust.metaneutrons.cc/platform-roadmap/)
-- [Maintainer workflow](https://ami-rust.metaneutrons.cc/maintainers/) and
-  [maintenance and security](https://ami-rust.metaneutrons.cc/maintenance/)
 
 ## Licence and provenance
 
