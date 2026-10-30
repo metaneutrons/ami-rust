@@ -23,12 +23,15 @@ export default defineConfig({
           { label: 'Install and build', link: '/quickstart-toolchain/' },
           { label: 'Compatibility', link: '/compatibility/' },
         ] },
+        { label: 'Examples', items: [
+          { label: 'MUI hello', link: '/mui-hello/' },
+          { label: 'SHA-256', link: '/sha256sum/' },
+        ] },
         { label: 'Libraries', items: [
           { label: 'Crates and consumer guide', link: '/consumer-guide/' },
-          { label: 'API reference', link: '/api/' },
-          { label: 'Rust API reference', link: '/rust-api/' },
-          { label: 'MUI hello', link: '/mui-hello/' },
-          { label: 'SHA-256 example', link: '/sha256sum/' },
+          { label: 'API overview', link: '/api/' },
+          { label: 'aros API', link: '/api/aros/' },
+          { label: 'aros-mui API', link: '/api/aros-mui/' },
           { label: 'Generated MUI API', link: '/mui-safe-api/' },
         ] },
         { label: 'Reference', items: [
@@ -36,10 +39,6 @@ export default defineConfig({
           { label: 'Release model', link: '/release-versioning/' },
           { label: 'Maintainers', link: '/maintainers/' },
           { label: 'Maintenance and security', link: '/maintenance/' },
-        ] },
-        { label: 'Generated Rustdoc', items: [
-          { label: 'aros', link: '/rustdoc/aros/' },
-          { label: 'aros-mui', link: '/rustdoc/aros_mui/' },
         ] },
       ],
     }),

@@ -9,6 +9,8 @@ export const collections = {
       pattern: [
         'index.mdx',
         'api.md',
+        'api/aros.md',
+        'api/aros-mui.md',
         'compatibility.md',
         'consumer-guide.md',
         'maintainers.md',
