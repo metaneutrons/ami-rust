@@ -33,11 +33,8 @@ export default defineConfig({
           { label: 'aros programming model', link: '/api/aros/' },
           { label: 'aros-mui programming model', link: '/api/aros-mui/' },
         ] },
-        { label: 'Reference', items: [
+        { label: 'Project', items: [
           { label: 'Platform roadmap', link: '/platform-roadmap/' },
-          { label: 'Release model', link: '/release-versioning/' },
-          { label: 'Maintainers', link: '/maintainers/' },
-          { label: 'Maintenance and security', link: '/maintenance/' },
         ] },
       ],
     }),
