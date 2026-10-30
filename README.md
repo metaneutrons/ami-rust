@@ -55,8 +55,8 @@ Qualified development hosts:
 
 Users install the authenticated GitHub Release toolchain through rustup or the
 documented direct route. A project then builds without an ami-rust command. The
-toolchain name includes its version and development host triple; for example on
-Apple Silicon:
+versioned rustup name is the same on every supported development host; rustup
+selects the matching host components automatically:
 
 ```toml
 # .cargo/config.toml
@@ -73,7 +73,7 @@ After the locked dependencies have been fetched once, both targets build
 offline with ordinary Cargo:
 
 ```sh
-toolchain=0.1.0-aarch64-apple-darwin
+toolchain=0.1.0
 cargo +"$toolchain" fetch --locked
 cargo +"$toolchain" build --target x86_64-unknown-aros-abi1 --release --locked --offline
 cargo +"$toolchain" build --target x86_64-unknown-aros-abi11 --release --locked --offline

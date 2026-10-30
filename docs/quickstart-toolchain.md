@@ -37,14 +37,8 @@ unmodified rustup client:
 ```sh
 version=0.1.0
 catalog_commit=bb5cc2e428b89685eeec2ae249701cc23fd135d7
-case "$(uname -s):$(uname -m)" in
-  Darwin:arm64|Darwin:aarch64) host=aarch64-apple-darwin; platform=macos-aarch64 ;;
-  Linux:x86_64) host=x86_64-unknown-linux-gnu; platform=linux-x86_64 ;;
-  Linux:aarch64|Linux:arm64) host=aarch64-unknown-linux-gnu; platform=linux-aarch64 ;;
-  *) echo "unsupported development host" >&2; exit 2 ;;
-esac
 export RUSTUP_DIST_SERVER="https://raw.githubusercontent.com/metaneutrons/ami-rust/$catalog_commit/distribution/rustup/$version"
-rustup toolchain install "$version-$host" --profile minimal --no-self-update
+rustup toolchain install "$version" --profile minimal --no-self-update
 ```
 
 Once the versioned toolchain is installed, an application uses ordinary Cargo
@@ -65,12 +59,7 @@ rustflags = ["-Zunstable-options"]
 Fetch the locked dependencies once, then build offline:
 
 ```sh
-case "$(uname -s):$(uname -m)" in
-  Darwin:arm64|Darwin:aarch64) toolchain=0.1.0-aarch64-apple-darwin ;;
-  Linux:x86_64) toolchain=0.1.0-x86_64-unknown-linux-gnu ;;
-  Linux:aarch64|Linux:arm64) toolchain=0.1.0-aarch64-unknown-linux-gnu ;;
-  *) echo "unsupported development host" >&2; exit 2 ;;
-esac
+toolchain=0.1.0
 cargo +"$toolchain" fetch --locked
 cargo +"$toolchain" build --target x86_64-unknown-aros-abi1 --release --locked --offline
 cargo +"$toolchain" build --target x86_64-unknown-aros-abi11 --release --locked --offline
@@ -78,8 +67,8 @@ cargo +"$toolchain" build --target x86_64-unknown-aros-abi11 --release --locked 
 
 ## Install the direct archive
 
-The direct archive contains the same SDK tree. Select the host as above, then
-download the archive, its bundle, and the signed publication inventory:
+The direct archive contains the same SDK tree. Select the matching host archive,
+then download it, its bundle, and the signed publication inventory:
 
 ```sh
 version=0.1.0
