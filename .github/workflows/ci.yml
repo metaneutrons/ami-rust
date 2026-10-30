@@ -13,8 +13,71 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-24.04
+    outputs:
+      code: ${{ steps.classify.outputs.code }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Classify changed paths and check the diff
+        id: classify
+        env:
+          PULL_REQUEST_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          case "$GITHUB_EVENT_NAME" in
+            pull_request) base="$PULL_REQUEST_BASE" ;;
+            push) base="$PUSH_BEFORE" ;;
+            *) echo 'code=true' >> "$GITHUB_OUTPUT"; exit 0 ;;
+          esac
+
+          # An initial push has no comparable base. Unknown input must retain
+          # the complete Rust matrix rather than being treated as documentation.
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+            echo 'code=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git cat-file -e "${base}^{commit}" || {
+            echo "::error::base commit ${base} is not in the clone"
+            exit 1
+          }
+
+          docs='(^docs/|^assets/([^/]+\.(svg|png|jpg|jpeg|gif|webp)|README\.md)$|^\.github/ISSUE_TEMPLATE/|^\.github/pull_request_template\.md$|\.md$)'
+          classify_paths() {
+            local code=false file
+            while IFS= read -r file; do
+              [[ -n "$file" && ! "$file" =~ $docs ]] && code=true
+            done
+            printf '%s\n' "$code"
+          }
+
+          # Keep the allowlist fail-closed. These probes cover documentation,
+          # source, workflow, lockfile, near-miss and mixed path sets.
+          test "$(printf '%s\n' README.md docs/guide.md assets/mark.svg | classify_paths)" = false
+          test "$(printf '%s\n' tooling/src/lib.rs | classify_paths)" = true
+          test "$(printf '%s\n' .github/workflows/ci.yml | classify_paths)" = true
+          test "$(printf '%s\n' tooling/Cargo.lock | classify_paths)" = true
+          test "$(printf '%s\n' notes.markdown | classify_paths)" = true
+          test "$(printf '%s\n' README.md tooling/src/lib.rs | classify_paths)" = true
+
+          git diff --check "$base" HEAD
+          code="$(git diff --name-only "$base" HEAD | classify_paths)"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "Changed paths require full Rust CI: $code"
+
   rust:
     name: Rust workspace (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -82,10 +145,16 @@ jobs:
   ci-success:
     name: CI Success
     if: always()
-    needs: rust
+    needs: [changes, rust]
     runs-on: ubuntu-24.04
     steps:
-      - name: Require the Rust workspace on both supported development hosts
+      - name: Require successful classification and all selected Rust jobs
         env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
           RUST_RESULT: ${{ needs.rust.result }}
-        run: test "$RUST_RESULT" = success
+        run: |
+          test "$CHANGES_RESULT" = success
+          case "$RUST_RESULT" in
+            success|skipped) ;;
+            *) exit 1 ;;
+          esac
