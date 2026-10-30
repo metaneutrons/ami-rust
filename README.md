@@ -138,7 +138,6 @@ signing, AROS execution, and publication remain protected workflow stages.
 - [Crates and consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/)
 - [Installation and source checkout](https://ami-rust.metaneutrons.cc/quickstart-toolchain/)
 - [Release and version model](https://ami-rust.metaneutrons.cc/release-versioning/)
-- [0.1.0 qualification record](https://ami-rust.metaneutrons.cc/m7-qualification/)
 - [Maintainer workflow](https://ami-rust.metaneutrons.cc/maintainers/)
 - [Platform roadmap](https://ami-rust.metaneutrons.cc/platform-roadmap/)
 - [Maintainer workflow](https://ami-rust.metaneutrons.cc/maintainers/) and

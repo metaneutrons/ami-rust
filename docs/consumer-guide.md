@@ -177,5 +177,4 @@ WebP.
 
 ![mui-hello running on the ABI-v11 AROS guest](../assets/mui-hello-abi11.webp)
 
-The [qualification record](https://ami-rust.metaneutrons.cc/mui-hello-qualification/) names the exact source,
-toolchain, targets, guest baselines, commands, and file hashes.
+The example is maintained as a focused consumer of the safe MUI surface.

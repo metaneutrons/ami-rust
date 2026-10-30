@@ -33,21 +33,9 @@ export default defineConfig({
         ] },
         { label: 'Reference', items: [
           { label: 'Platform roadmap', link: '/platform-roadmap/' },
-          { label: '0.1.0 qualification', link: '/m7-qualification/' },
           { label: 'Release model', link: '/release-versioning/' },
           { label: 'Maintainers', link: '/maintainers/' },
           { label: 'Maintenance and security', link: '/maintenance/' },
-        ] },
-        { label: 'MUI qualification', items: [
-          { label: 'M2 API model', link: '/m2-mui-api-model/' },
-          { label: 'M3 raw MUI and BOOPSI', link: '/m3-qualification/' },
-          { label: 'M4 object model', link: '/m4-qualification/' },
-          { label: 'M5 generated API', link: '/m5-qualification/' },
-          { label: 'M6 interaction', link: '/m6-qualification/' },
-          { label: 'MUI hello evidence', link: '/mui-hello-qualification/' },
-        ] },
-        { label: 'Planning', items: [
-          { label: '0.1 initiative plan', link: '/plans/ami-rust-0.1/' },
         ] },
         { label: 'Generated Rustdoc', items: [
           { label: 'aros', link: '/rustdoc/aros/' },
