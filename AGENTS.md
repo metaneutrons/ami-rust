@@ -5,7 +5,7 @@ Keep the public workflow close to upstream Rust:
 
 - users select the toolchain with rustup and build with Cargo;
 - do not add an `ami-rust` CLI, a Cargo wrapper, or a Python runtime path;
-- keep the initial target at AROS x86-64 ABI-v1;
+- keep the initial targets at AROS x86-64 ABI-v1 and ABI-v11;
 - treat additional targets and native AROS-hosted Rust as separate work;
 - do not modify AROS-NX or aros-tools from this repository;
 - preserve pinned third-party inputs, notices, source archives, and narrow

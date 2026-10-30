@@ -1,12 +1,13 @@
 # SDK compatibility boundary
 
-Targets: PC x86-64 AROS ABI1 and ABI11 native ELF under the qualified QEMU boot
-profile. No other ABI/CPU combination or physical machine is included in this
-scope. M1 qualifies the shared runtime subset on both ABIs; it does not by
-itself qualify a complete release candidate. The complete target JSON and host
+Current 0.1.0 scope: PC x86-64 AROS ABI-v1 and ABI-v11 native ELF under the
+qualified QEMU boot profiles. The corresponding public Cargo targets are
+`x86_64-unknown-aros-abi1` and `x86_64-unknown-aros-abi11`. No other ABI/CPU
+combination or physical machine is included in this scope. The M1 record
+qualifies the shared runtime subset; the 0.1.0 release decision is recorded in
+[the M7 qualification](m7-qualification.md). The complete target JSON and host
 component file/symlink inventories are in the authenticated SDK contract.
-Selection fails on any changed or missing input. The exact dual-ABI baseline
-and results are recorded in [the M1 qualification](m1-qualification.md).
+Selection fails on any changed or missing input.
 
 | Input | Selected identity |
 | --- | --- |

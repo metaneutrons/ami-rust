@@ -1,7 +1,7 @@
 # aros-native-build
 
 Internal build helper for ordinary Cargo application builds targeting the pinned
-x86-64 AROS ABI-v1 baseline. It remains unpublished (`publish = false`). The
+x86-64 AROS ABI-v1 and ABI-v11 baselines. It remains unpublished (`publish = false`). The
 initial ami-rust release distributes it as part of the pinned toolchain rather
 than through crates.io.
 
@@ -32,7 +32,8 @@ source-built linker; legacy symbolic-link slots are refused. The selected toolch
 
 A bare-target prefix requires source-produced target libraries whose metadata
 matches the selected compiler and target specification; the alias alone is
-insufficient. The pinned matching libraries and ABI baseline remain unchanged.
+insufficient. The pinned matching libraries and selected ABI baseline remain
+unchanged.
 
 The public component view excludes debugger, editor and LLVM convenience files
 that are not required for the supported Cargo application path. The versioned

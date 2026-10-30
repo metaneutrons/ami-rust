@@ -25,6 +25,10 @@ The generated docs/mui-safe-api.md file at the repository root records every
 operation's ABI availability and safe, typed-unsafe, raw, or unavailable
 classification.
 
+Use `aros-mui` with the `aros` application crate and the
+`aros-native-build` build dependency. The full consumer manifest and the
+`mui-hello` application are in [the consumer guide](../../docs/consumer-guide.md).
+
 ```rust
 let result = mui.scope(|scope| {
     let text = scope

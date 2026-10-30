@@ -1,7 +1,8 @@
 # aros-sys
 
-Raw, allocation-free Rust declarations and calls for x86-64 AROS. The existing
-native bridge remains the qualified ABI-v1 application boundary. Additional
+Raw, allocation-free Rust declarations and calls for x86-64 AROS. The native
+bridge supports the qualified `x86_64-unknown-aros-abi1` and
+`x86_64-unknown-aros-abi11` targets. Additional
 raw modules expose an initial non-variadic library surface:
 
 - `exec`: libraries, signals, message ports and messages;

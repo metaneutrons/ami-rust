@@ -17,7 +17,7 @@ authority. This is not a release qualification or publication.
 | ABI11 C SDK | `SDK-202609-any-x86_64.zip`, SHA-256 `8a4e5f09f027844501c1421bd3948c4e55ceb005a16b0bd3575276f40c8977e6` |
 | C compiler | Clang 11.0.0, binary SHA-256 `8f46414db967c5d407757f3c55ea8ee0f923c1739cc69b004d80e451ea4ea514` |
 | Rust | `nightly-2026-09-18`, rustc commit `330d317121e16b5db8e5adc63595910528ff2ee7`, LLVM 23.1.1 |
-| ABI1 target | `targets/x86_64-aros.json`, SHA-256 `de7a0024aa94269641e3e6d480ce8cd334962bf7e02592b0652e19e56b5fba71` |
+| ABI1 target | Historical qualification alias `targets/x86_64-aros.json`, SHA-256 `de7a0024aa94269641e3e6d480ce8cd334962bf7e02592b0652e19e56b5fba71`; superseded for consumers by `x86_64-unknown-aros-abi1` |
 | ABI11 target | `targets/x86_64-unknown-aros-abi11.json`, SHA-256 `5616c1e062232b43154237fe40826795cc48e148f903f0a1a8087d224d8a49c9` |
 | QEMU | 11.1.2, binary SHA-256 `a1b97665fb9f341a65acf9b0e7dc4c7235972aae61182545ed1aacf5ffca87fa` |
 | Firmware | `bios-256k.bin` SHA-256 `ae6f6aa973aaccc143f57aa960fb035fd9de4daee4ad0cd713322f8c259e7650`; `vgabios-stdvga.bin` SHA-256 `e8fc9e55790dbe3cb31f019a3deb57206ba6c54f5e581adb2ab2677a9d391472` |

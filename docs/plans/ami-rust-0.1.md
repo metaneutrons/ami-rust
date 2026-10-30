@@ -3,6 +3,11 @@
 Epic: https://github.com/metaneutrons/ami-rust/issues/6
 Decision state: accepted by the maintainer on 2026-10-29; proposed in PR #5
 
+**Completion update.** The implementation milestones are complete for 0.1.0;
+the release and dual-ABI result are recorded in [the M7 qualification](../m7-qualification.md).
+Statements below that describe ABI11 as unqualified are historical planning
+context, not the current compatibility status.
+
 ## Outcome and boundaries
 
 ami-rust 0.1 shall provide a Rust-only cross-development SDK for PC x86-64
@@ -14,11 +19,12 @@ AROS with canonical `x86_64-unknown-aros-abi1` and
 - `aros-mui`: safe, typed MUI/Zune application API;
 - `aros-mui-sys`: complete raw public MUI/Zune ABI surface.
 
-The measured baseline at plan acceptance is narrower. `aros-sys` contains an
+The measured baseline at plan acceptance was narrower. `aros-sys` contains an
 initial generated Exec, DOS, Utility, and Intuition subset. `aros` has a
 qualified ABI1 core. `aros-mui-sys` exposes four library calls, and `aros-mui`
 only owns the library and raw-created objects. The ABI11 target and library-call
-backends compile, but ABI11 has no native qualification record.
+backends compiled, but ABI11 had no native qualification record. That gap was
+closed before 0.1.0; use the M7 record for current release status.
 
 Version 0.1 includes the complete public standard MUI class surface, typed
 construction, attributes, methods, inheritance, notifications, the application
