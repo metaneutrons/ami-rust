@@ -1,0 +1,19 @@
+---
+title: MUI hello
+description: A minimal MUI application built for both supported AROS ABIs.
+---
+
+import screenshot from '../../../../assets/mui-hello-abi11.webp';
+
+`examples/mui-hello` is the focused example for the safe `aros-mui` surface. It creates and owns a MUI application and window, reacts to the close gadget and finishes when MUI returns its close request.
+
+```sh
+cargo +0.1.0 build --manifest-path examples/mui-hello/Cargo.toml \
+  --target x86_64-unknown-aros-abi11 --release --locked --offline
+```
+
+<img className="screenshot" src={screenshot.src} alt="mui-hello running on AROS x86-64 ABI-v11" />
+
+The captured application above is a native ABI-v11 QEMU run. The same source was also qualified on ABI-v1. This example demonstrates a small, safe subset; it does not claim that every MUI class has a safe wrapper yet.
+
+Read the [example README](https://github.com/metaneutrons/ami-rust/tree/main/examples/mui-hello) and the [native qualification record](https://github.com/metaneutrons/ami-rust/blob/main/docs/mui-hello-qualification.md) before extending it.
