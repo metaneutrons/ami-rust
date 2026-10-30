@@ -8,7 +8,7 @@ Epic: https://github.com/metaneutrons/ami-rust/issues/6
 Decision state: accepted by the maintainer on 2026-10-29; proposed in PR #5
 
 **Completion update.** The implementation milestones are complete for 0.1.0;
-the release and dual-ABI result are recorded in [the M7 qualification](../m7-qualification.md).
+the release and dual-ABI result are recorded in [the M7 qualification](https://ami-rust.metaneutrons.cc/m7-qualification/).
 Statements below that describe ABI11 as unqualified are historical planning
 context, not the current compatibility status.
 

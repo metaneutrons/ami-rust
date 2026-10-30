@@ -36,7 +36,7 @@ rev = "8456843ca869a738dde6dc7b7a062a2fdc3b6597"
 ## Start a graphical application
 
 Create the package, then add the following files. This is the standalone form
-of [`examples/mui-hello`](../examples/mui-hello/README.md).
+of the [MUI hello example](https://ami-rust.metaneutrons.cc/mui-hello/).
 
 `Cargo.toml`:
 
@@ -166,7 +166,7 @@ The 0.1.0 release supports `no_std` plus `alloc`, not full `std`. Its native
 evidence covers the qualified QEMU profiles for ABI-v1 and ABI-v11. It does not
 establish support for a different CPU, physical hardware, arbitrary crates,
 threads, networking, or an AROS-hosted Rust compiler. See the
-[compatibility boundary](compatibility.md) and [API inventory](api.md) for
+[compatibility boundary](https://ami-rust.metaneutrons.cc/compatibility/) and [API inventory](https://ami-rust.metaneutrons.cc/api/) for
 the exact limits.
 
 ## `mui-hello` qualification
@@ -177,5 +177,5 @@ WebP.
 
 ![mui-hello running on the ABI-v11 AROS guest](../assets/mui-hello-abi11.webp)
 
-The [qualification record](mui-hello-qualification.md) names the exact source,
+The [qualification record](https://ami-rust.metaneutrons.cc/mui-hello-qualification/) names the exact source,
 toolchain, targets, guest baselines, commands, and file hashes.

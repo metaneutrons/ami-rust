@@ -140,7 +140,8 @@ signing, AROS execution, and publication remain protected workflow stages.
 - [0.1.0 qualification record](https://ami-rust.metaneutrons.cc/m7-qualification/)
 - [Maintainer workflow](https://ami-rust.metaneutrons.cc/maintainers/)
 - [Platform roadmap](https://ami-rust.metaneutrons.cc/platform-roadmap/)
-- [Contributing](CONTRIBUTING.md) and [security policy](SECURITY.md)
+- [Maintainer workflow](https://ami-rust.metaneutrons.cc/maintainers/) and
+  [maintenance and security](https://ami-rust.metaneutrons.cc/maintenance/)
 
 ## Licence and provenance
 
