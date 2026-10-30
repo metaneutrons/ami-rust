@@ -474,7 +474,8 @@ jobs:
           jq -s -e '
             ["x86_64-unknown-aros-abi1","x86_64-unknown-aros-abi11"] as $targets |
             . as $records |
-            ([$records[] | .applications[]] | group_by(.target)) as $applications |
+            ([$records[] | .host as $host | .applications[] | . + {host:$host}]
+              | sort_by(.target,.host) | group_by(.target)) as $applications |
             select(
               ($records | map(.host) | sort) == ["linux-aarch64","linux-x86_64","macos-aarch64"] and
               all($records[];
@@ -495,8 +496,7 @@ jobs:
               ($applications | map(.[0].target)) == $targets and
               all($applications[];
                 length == 3 and
-                ([.[].sha256] | unique | length) == 1 and
-                ([.[].bytes] | unique | length) == 1)
+                ([.[].host] | sort) == ["linux-aarch64","linux-x86_64","macos-aarch64"])
             )
           ' "${records[@]}" > "$RUNNER_TEMP/rp4-hosts.json"
           target_payload="$(jq -cer '
@@ -518,19 +518,23 @@ jobs:
               host_metadata_mutated: $payload.host_metadata_mutated
             }
           ' "$RUNNER_TEMP/rp4-assembly/candidate/publication-inventory.json")"
-          applications="$(jq -c '.[0].applications' "$RUNNER_TEMP/rp4-hosts.json")"
+          applications="$(jq -c '[.[] | .host as $host | .applications[] | . + {host:$host}] | sort_by(.target,.host)' "$RUNNER_TEMP/rp4-hosts.json")"
           mkdir -m 700 "$RUNNER_TEMP/rp4-admission"
           jq -n --arg version "$VERSION" --arg source_commit "$GITHUB_SHA" \
             --argjson applications "$applications" \
             --argjson target_payload "$target_payload" \
             --slurpfile hosts "$RUNNER_TEMP/rp4-hosts.json" \
-            '{schema:"ami-rust-m7-three-host-admission-v1",status:"PASS",$version,$source_commit,hosts:$hosts[0],$applications,build_observation:{status:"PASS_EXACT_DUAL_ABI_CARGO_BUILD_ON_THREE_HOSTS"},$target_payload,publication_authorized:false}' \
+            '{schema:"ami-rust-m7-three-host-admission-v1",status:"PASS",$version,$source_commit,hosts:$hosts[0],$applications,application_identity_policy:"PER_HOST_EXACT_IDENTITY",build_observation:{status:"PASS_EXACT_DUAL_ABI_CARGO_BUILD_ON_THREE_HOSTS"},$target_payload,publication_authorized:false}' \
             > "$RUNNER_TEMP/rp4-admission/three-host-admission.json"
-          for target_name in x86_64-unknown-aros-abi1 x86_64-unknown-aros-abi11; do
-            app_sha="$(jq -er --arg target "$target_name" '.[] | select(.target == $target) | .sha256' <<<"$applications")"
-            app="ami-rust-sha256sum-$target_name"
-            command cp "${records[1]%/*}/$app" "$RUNNER_TEMP/rp4-admission/$app"
-            test "$(shasum -a 256 "$RUNNER_TEMP/rp4-admission/$app" | awk '{print $1}')" = "$app_sha"
+          for record in "${records[@]}"; do
+            host="$(jq -er '.host' "$record")"
+            for target_name in x86_64-unknown-aros-abi1 x86_64-unknown-aros-abi11; do
+              app_sha="$(jq -er --arg target "$target_name" '.applications[] | select(.target == $target) | .sha256' "$record")"
+              app="ami-rust-sha256sum-$target_name"
+              retained="$app-$host"
+              command cp "${record%/*}/$app" "$RUNNER_TEMP/rp4-admission/$retained"
+              test "$(shasum -a 256 "$RUNNER_TEMP/rp4-admission/$retained" | awk '{print $1}')" = "$app_sha"
+            done
           done
 
       - name: Retain the admitted application and three-host evidence
