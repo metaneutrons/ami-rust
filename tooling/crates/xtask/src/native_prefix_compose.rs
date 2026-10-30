@@ -29,7 +29,7 @@ const REQUEST_SCHEMA: &str = "ami-rust-native-prefix-compose-request-v1";
 const EXPECTED_CORE_NATIVE_PREFIX_SHA256: &str =
     "08cc524a7642bdbc845297d61f731fe76e3496bba91f7899c4fe3f611dd9c54b";
 const EXPECTED_INPUTS_RS_SHA256: &str =
-    "143829afaedcb1bbb1fa29891f243dcf790adeae568a2ad30e61f68be325547e";
+    "e4a580298ddd77f86eb7ce161165e84e333fe1ba3ab1782aeaed94d89d8f669a";
 const EXPECTED_PUBLIC_VIEW_RS_SHA256: &str =
     "55be582de0171e3a867e6e829d5245ace2788db9481c014f4bf7beae821223bc";
 const EXPECTED_PUBLIC_VIEW_POLICY_SHA256: &str =
@@ -43,9 +43,17 @@ const EXPECTED_NATIVE_BUILD_BUILD_RS_SHA256: &str =
 const EXPECTED_NATIVE_BUILD_LINK_RS_SHA256: &str =
     "af9ef38cc5095086a2efe66ed92aef8ee01ba684e562cbe1c425e8ddfbbb7c03";
 const ABI1_TARGET_LIBRARIES_SHA256: &str =
-    "30d8a0d113920973f4b6cf22654df4309b8932103aaf830181d0930e3b35f4c1";
+    "19070437e2231d971aa1edd4221daa069f0b66ed780e70eeb71ffc14cf015c91";
 const ABI11_TARGET_LIBRARIES_SHA256: &str =
-    "8b9b9db76e4c1781b11bed3507a27349731a21c6a53ab541747570334d2e1114";
+    "ec6556d33c6adfc2c094ca37dad61f66bd0881ead331d5c884033d4b41ed4f67";
+const LINUX_X64_ABI1_TARGET_LIBRARIES_SHA256: &str =
+    "21dcb704b18c6df0a68f71521048bdd492126615a7403f960e79e09025251046";
+const LINUX_X64_ABI11_TARGET_LIBRARIES_SHA256: &str =
+    "e808e2541664799d2f4f299d9c988605ba1f6d6fd23c6f3410f910592951af30";
+const ARM_ABI1_TARGET_LIBRARIES_SHA256: &str =
+    "d08f304dc4cb87577cb76043eb7d38259a6b791ebe14f27f9a3c5e66a045645b";
+const ARM_ABI11_TARGET_LIBRARIES_SHA256: &str =
+    "a595e1357ad7bb3b3a9f23adc79de10d75382404f8b76f7964d1999d2041151a";
 const ABI1_TARGET_SPEC_SHA256: &str =
     "0e9cde740c93949d4cab27690cb9d93dc9fb89dc96388ff5be0eb7296ba38807";
 const ABI11_TARGET_SPEC_SHA256: &str =
@@ -95,6 +103,18 @@ const ABI1_TARGET_LIBRARIES: &str =
     include_str!("../../aros-native-build/pins/x86_64-unknown-aros-abi1-libraries.json");
 const ABI11_TARGET_LIBRARIES: &str =
     include_str!("../../aros-native-build/pins/x86_64-unknown-aros-abi11-libraries.json");
+const LINUX_X64_ABI1_TARGET_LIBRARIES: &str = include_str!(
+    "../../aros-native-build/pins/linux-x86_64/x86_64-unknown-aros-abi1-libraries.json"
+);
+const LINUX_X64_ABI11_TARGET_LIBRARIES: &str = include_str!(
+    "../../aros-native-build/pins/linux-x86_64/x86_64-unknown-aros-abi11-libraries.json"
+);
+const ARM_ABI1_TARGET_LIBRARIES: &str = include_str!(
+    "../../aros-native-build/pins/linux-aarch64/x86_64-unknown-aros-abi1-libraries.json"
+);
+const ARM_ABI11_TARGET_LIBRARIES: &str = include_str!(
+    "../../aros-native-build/pins/linux-aarch64/x86_64-unknown-aros-abi11-libraries.json"
+);
 const ABI1_TARGET_SPEC: &[u8] = include_bytes!("../../../../targets/x86_64-unknown-aros-abi1.json");
 const ABI11_TARGET_SPEC: &[u8] =
     include_bytes!("../../../../targets/x86_64-unknown-aros-abi11.json");
@@ -131,6 +151,9 @@ pub(super) struct HostProfiles {
     pub(super) llvm: &'static str,
     pub(super) csdk: &'static str,
     pub(super) collector: &'static str,
+    pub(super) abi1_target_libraries: &'static str,
+    pub(super) abi1_target_libraries_sha256: &'static str,
+    pub(super) abi11_target_libraries_sha256: &'static str,
 }
 
 pub(super) struct LinkerIdentity {
@@ -292,8 +315,8 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
             "rust_host_triple":host.triple,
             "source_inputs_rs_sha256":EXPECTED_INPUTS_RS_SHA256,
             "target_library_profile_sha256":{
-                "x86_64-unknown-aros-abi1":ABI1_TARGET_LIBRARIES_SHA256,
-                "x86_64-unknown-aros-abi11":ABI11_TARGET_LIBRARIES_SHA256,
+                "x86_64-unknown-aros-abi1":host.abi1_target_libraries_sha256,
+                "x86_64-unknown-aros-abi11":host.abi11_target_libraries_sha256,
             },
             "target_spec_sha256":{
                 "x86_64-unknown-aros-abi1":ABI1_TARGET_SPEC_SHA256,
@@ -341,6 +364,7 @@ pub(super) fn compose_candidate(
     linker: LinkerIdentity,
 ) -> Result<CandidateComposition> {
     let [rust, cargo, llvm, csdk, collector, libraries] = roots;
+    let host = host_profiles(host_key, rust_host_triple)?;
     compose_candidate_with_target_profile(
         host_key,
         rust_host_triple,
@@ -349,7 +373,7 @@ pub(super) fn compose_candidate(
         [rust, cargo, llvm, csdk, collector],
         linker,
         libraries,
-        ABI1_TARGET_LIBRARIES,
+        host.abi1_target_libraries,
     )
 }
 
@@ -669,6 +693,9 @@ fn host_profiles(key: &str, triple: &str) -> Result<HostProfiles> {
             llvm: MAC_LLVM,
             csdk: MAC_CSDK,
             collector: MAC_COLLECTOR,
+            abi1_target_libraries: ABI1_TARGET_LIBRARIES,
+            abi1_target_libraries_sha256: ABI1_TARGET_LIBRARIES_SHA256,
+            abi11_target_libraries_sha256: ABI11_TARGET_LIBRARIES_SHA256,
         },
         "linux-x86_64" => HostProfiles {
             key: "linux-x86_64",
@@ -680,6 +707,9 @@ fn host_profiles(key: &str, triple: &str) -> Result<HostProfiles> {
             llvm: LINUX_X64_LLVM,
             csdk: LINUX_X64_CSDK,
             collector: LINUX_X64_COLLECTOR,
+            abi1_target_libraries: LINUX_X64_ABI1_TARGET_LIBRARIES,
+            abi1_target_libraries_sha256: LINUX_X64_ABI1_TARGET_LIBRARIES_SHA256,
+            abi11_target_libraries_sha256: LINUX_X64_ABI11_TARGET_LIBRARIES_SHA256,
         },
         "linux-aarch64" => HostProfiles {
             key: "linux-aarch64",
@@ -691,6 +721,9 @@ fn host_profiles(key: &str, triple: &str) -> Result<HostProfiles> {
             llvm: ARM_LLVM,
             csdk: ARM_CSDK,
             collector: ARM_COLLECTOR,
+            abi1_target_libraries: ARM_ABI1_TARGET_LIBRARIES,
+            abi1_target_libraries_sha256: ARM_ABI1_TARGET_LIBRARIES_SHA256,
+            abi11_target_libraries_sha256: ARM_ABI11_TARGET_LIBRARIES_SHA256,
         },
         _ => {
             return Err(Refusal::new(
@@ -774,6 +807,26 @@ fn verify_source_profile_files(source_root: &Path) -> Result<()> {
             ABI11_TARGET_LIBRARIES_SHA256,
         ),
         (
+            "tooling/crates/aros-native-build/pins/linux-x86_64/x86_64-unknown-aros-abi1-libraries.json",
+            LINUX_X64_ABI1_TARGET_LIBRARIES.as_bytes(),
+            LINUX_X64_ABI1_TARGET_LIBRARIES_SHA256,
+        ),
+        (
+            "tooling/crates/aros-native-build/pins/linux-x86_64/x86_64-unknown-aros-abi11-libraries.json",
+            LINUX_X64_ABI11_TARGET_LIBRARIES.as_bytes(),
+            LINUX_X64_ABI11_TARGET_LIBRARIES_SHA256,
+        ),
+        (
+            "tooling/crates/aros-native-build/pins/linux-aarch64/x86_64-unknown-aros-abi1-libraries.json",
+            ARM_ABI1_TARGET_LIBRARIES.as_bytes(),
+            ARM_ABI1_TARGET_LIBRARIES_SHA256,
+        ),
+        (
+            "tooling/crates/aros-native-build/pins/linux-aarch64/x86_64-unknown-aros-abi11-libraries.json",
+            ARM_ABI11_TARGET_LIBRARIES.as_bytes(),
+            ARM_ABI11_TARGET_LIBRARIES_SHA256,
+        ),
+        (
             "targets/x86_64-unknown-aros-abi1.json",
             ABI1_TARGET_SPEC,
             ABI1_TARGET_SPEC_SHA256,
@@ -806,6 +859,12 @@ fn require_candidate_profile_sources() -> Result<()> {
         || sha256_bytes(PUBLIC_VIEW_POLICY) != EXPECTED_PUBLIC_VIEW_POLICY_SHA256
         || sha256_bytes(ABI1_TARGET_LIBRARIES.as_bytes()) != ABI1_TARGET_LIBRARIES_SHA256
         || sha256_bytes(ABI11_TARGET_LIBRARIES.as_bytes()) != ABI11_TARGET_LIBRARIES_SHA256
+        || sha256_bytes(LINUX_X64_ABI1_TARGET_LIBRARIES.as_bytes())
+            != LINUX_X64_ABI1_TARGET_LIBRARIES_SHA256
+        || sha256_bytes(LINUX_X64_ABI11_TARGET_LIBRARIES.as_bytes())
+            != LINUX_X64_ABI11_TARGET_LIBRARIES_SHA256
+        || sha256_bytes(ARM_ABI1_TARGET_LIBRARIES.as_bytes()) != ARM_ABI1_TARGET_LIBRARIES_SHA256
+        || sha256_bytes(ARM_ABI11_TARGET_LIBRARIES.as_bytes()) != ARM_ABI11_TARGET_LIBRARIES_SHA256
         || sha256_bytes(ABI1_TARGET_PIN.as_bytes()) != ABI1_TARGET_PIN_SHA256
         || sha256_bytes(ABI11_TARGET_PIN.as_bytes()) != ABI11_TARGET_PIN_SHA256
         || sha256_bytes(ABI11_CSDK_PROFILE) != ABI11_CSDK_PROFILE_SHA256
@@ -1013,6 +1072,22 @@ mod tests {
                     "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi11-libraries.json",
                     ABI11_TARGET_LIBRARIES.as_bytes(),
                 ),
+                (
+                    "tooling/crates/aros-native-build/pins/linux-x86_64/x86_64-unknown-aros-abi1-libraries.json",
+                    LINUX_X64_ABI1_TARGET_LIBRARIES.as_bytes(),
+                ),
+                (
+                    "tooling/crates/aros-native-build/pins/linux-x86_64/x86_64-unknown-aros-abi11-libraries.json",
+                    LINUX_X64_ABI11_TARGET_LIBRARIES.as_bytes(),
+                ),
+                (
+                    "tooling/crates/aros-native-build/pins/linux-aarch64/x86_64-unknown-aros-abi1-libraries.json",
+                    ARM_ABI1_TARGET_LIBRARIES.as_bytes(),
+                ),
+                (
+                    "tooling/crates/aros-native-build/pins/linux-aarch64/x86_64-unknown-aros-abi11-libraries.json",
+                    ARM_ABI11_TARGET_LIBRARIES.as_bytes(),
+                ),
                 ("targets/x86_64-unknown-aros-abi1.json", ABI1_TARGET_SPEC),
                 ("targets/x86_64-unknown-aros-abi11.json", ABI11_TARGET_SPEC),
                 ("release/abi11-csdk/profile.json", ABI11_CSDK_PROFILE),
@@ -1061,6 +1136,10 @@ mod tests {
             "tooling/crates/aros-native-build/src/link.rs",
             "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi1-libraries.json",
             "tooling/crates/aros-native-build/pins/x86_64-unknown-aros-abi11-libraries.json",
+            "tooling/crates/aros-native-build/pins/linux-x86_64/x86_64-unknown-aros-abi1-libraries.json",
+            "tooling/crates/aros-native-build/pins/linux-x86_64/x86_64-unknown-aros-abi11-libraries.json",
+            "tooling/crates/aros-native-build/pins/linux-aarch64/x86_64-unknown-aros-abi1-libraries.json",
+            "tooling/crates/aros-native-build/pins/linux-aarch64/x86_64-unknown-aros-abi11-libraries.json",
         ] {
             let fixture = SourceCopy::new();
             verify_source_profile_files(&fixture.0).expect("unaltered copy passes");
