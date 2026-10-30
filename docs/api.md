@@ -15,7 +15,7 @@ remain unchanged.
 The qualified source SDK targets the pinned native x86-64 ABI1 and ABI11
 images. Target std, foreign-task APIs, asynchronous callbacks, native
 AROS-hosted Rust tools, hardware and other CPU/ABI combinations remain outside
-scope. The [compatibility profile](compatibility.md) records the host and target
+scope. The [compatibility profile](https://ami-rust.metaneutrons.cc/compatibility/) records the host and target
 identities. Qualification is limited to the exact artifact bytes and host
 profile it identifies; it does not establish acceptance for another artifact
 or release.
@@ -29,7 +29,7 @@ libraries use focused pairs; the initial pair is `aros-mui` and
 `aros-mui-sys`. These source APIs are not yet a stability promise.
 
 For dependency selection, target configuration and a complete consumer package,
-see the [crates and consumer guide](consumer-guide.md). The generated inventory
+see the [crates and consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/). The generated inventory
 below defines what is safe, typed-unsafe, raw, or unavailable; it is not a
 replacement for that user-facing guide.
 
@@ -81,8 +81,8 @@ Foreign pointers, incomplete native messages, and unproven retained-resource
 contracts require an explicit unsafe raw operation; they are listed rather than
 silently omitted. Raw tags, native pointers, class IDs, and vector calls remain
 confined to aros-mui-sys. The complete generated safe/typed-unsafe/raw and
-ABI-availability inventory is in [the MUI API reference](mui-safe-api.md), with
-qualification evidence in [the M5 record](m5-qualification.md).
+ABI-availability inventory is in [the MUI API reference](https://ami-rust.metaneutrons.cc/mui-safe-api/), with
+qualification evidence in [the M5 record](https://ami-rust.metaneutrons.cc/m5-qualification/).
 
 M6 adds the interaction layer without widening the raw boundary. A typed
 `Object::notify` connects a generated readable attribute and checked `Trigger`
@@ -98,7 +98,7 @@ ownership ledger. `Scope::custom_class` supports regular MUI custom classes
 with fallible Rust instance data and declared argument-free methods. Unknown
 messages are forwarded to the native superclass; foreign custom message
 layouts remain an unsafe expert operation. The full execution evidence is in
-[the M6 record](m6-qualification.md).
+[the M6 record](https://ami-rust.metaneutrons.cc/m6-qualification/).
 
 BOOPSI method dispatch uses a small C adapter built from AROS `OCLASS` and
 `CALLHOOKPKT`. Rust does not reproduce that compiler-sensitive call shape.
@@ -110,7 +110,7 @@ library base as the final ordinary C argument; ABI11 places it in `r12` and
 otherwise follows the SysV argument registers. No variadic MUI interface is
 exposed. Additional architectures require their own qualified vector backend.
 The exact M3 candidates completed C-layout comparison and native application
-execution on ABI1 and ABI11; see [the M3 evidence](m3-qualification.md).
+execution on ABI1 and ABI11; see [the M3 evidence](https://ami-rust.metaneutrons.cc/m3-qualification/).
 
 Global allocator refusal is distinct from a fallible API error. A Rust
 fallible allocation operation such as `Vec::try_reserve` reports refusal in

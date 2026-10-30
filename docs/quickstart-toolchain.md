@@ -120,7 +120,7 @@ URLs are not an installation interface.
 Project crates use the immutable 0.1.0 Git revision
 `8456843ca869a738dde6dc7b7a062a2fdc3b6597` from this repository and commit
 `Cargo.lock`. They are intentionally not on crates.io yet. See the complete
-[crates and consumer guide](consumer-guide.md), including the `mui-hello`
+[crates and consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/), including the `mui-hello`
 application.
 
 ## Boundaries

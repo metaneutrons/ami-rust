@@ -12,7 +12,7 @@ qualification.
 `tools/build-maintainer-task.sh` authenticates the pinned host Rust components,
 verifies both lockfiles and the offline vendor archive, and builds
 `ami-rust-xtask` in a fresh directory. Run the tooling workspace tests with that
-bootstrapped Cargo as shown in [CONTRIBUTING.md](../CONTRIBUTING.md).
+bootstrapped Cargo under the repository's contribution policy.
 
 ## GitHub workflows
 
@@ -56,5 +56,5 @@ The reviewed catalog commit is
 `bb5cc2e428b89685eeec2ae249701cc23fd135d7`; signed assets were prepared in
 [run 40994382906](https://github.com/metaneutrons/ami-rust/actions/runs/40994382906).
 The complete identities and acceptance mapping are in the
-[M7 qualification record](m7-qualification.md). These steps do not authorise
+[M7 qualification record](https://ami-rust.metaneutrons.cc/m7-qualification/). These steps do not authorise
 the `publish` workflow mode.

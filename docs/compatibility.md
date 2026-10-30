@@ -9,7 +9,7 @@ qualified QEMU boot profiles. The corresponding public Cargo targets are
 `x86_64-unknown-aros-abi1` and `x86_64-unknown-aros-abi11`. No other ABI/CPU
 combination or physical machine is included in this scope. The M1 record
 qualifies the shared runtime subset; the 0.1.0 release decision is recorded in
-[the M7 qualification](m7-qualification.md). The complete target JSON and host
+[the M7 qualification](https://ami-rust.metaneutrons.cc/m7-qualification/). The complete target JSON and host
 component file/symlink inventories are in the authenticated SDK contract.
 Selection fails on any changed or missing input.
 
@@ -39,9 +39,9 @@ procedural macros still require Xcode/Command Line Tools on macOS or GCC,
 binutils and libc development files (`build-essential`) on Ubuntu.
 
 Direct archives and Rustup components use a per-host signed file inventory.
-The [source checkout guide](quickstart-toolchain.md) describes the public
+The [source checkout guide](https://ami-rust.metaneutrons.cc/quickstart-toolchain/) describes the public
 boundary before the first release. The exact candidate identities and results
-are recorded in [the M7 qualification](m7-qualification.md). The boot/ABI
+are recorded in [the M7 qualification](https://ami-rust.metaneutrons.cc/m7-qualification/). The boot/ABI
 baselines above remain
 unchanged; physical hardware, AROS-hosted Rust/Cargo/rustup and other CPU/ABI
 targets require separate qualification.
