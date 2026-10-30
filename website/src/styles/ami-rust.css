@@ -41,3 +41,7 @@ body {
 .status-grid > div { padding: 1rem; border: 1px solid var(--sl-color-gray-4); border-radius: .65rem; background: rgba(21, 26, 43, .8); }
 .status-grid strong { display: block; color: #69c9f1; }
 .screenshot { border: 1px solid var(--sl-color-gray-4); border-radius: .65rem; max-width: 320px; }
+
+/* Repository Markdown retains its H1 for GitHub readers; Starlight renders
+   the matching frontmatter title as the page heading. */
+.sl-markdown-content > h1:first-child { display: none; }

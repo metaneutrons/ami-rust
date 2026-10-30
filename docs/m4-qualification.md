@@ -1,3 +1,7 @@
+---
+title: M4 safe MUI object-model qualification
+---
+
 # M4 safe MUI object-model qualification
 
 Status: PASS on 2026-10-29. This record applies M4-A1 through M4-A4 in

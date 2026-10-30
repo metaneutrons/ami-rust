@@ -1,3 +1,7 @@
+---
+title: Crates and consumer guide
+---
+
 # Crates and consumer guide
 
 ami-rust is a standard Cargo cross-toolchain for the two qualified PC x86-64

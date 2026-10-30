@@ -1,3 +1,7 @@
+---
+title: "M7 qualification: ami-rust 0.1.0"
+---
+
 # M7 qualification: ami-rust 0.1.0
 
 Status: PASS for release-candidate preparation. Publication remains a separate

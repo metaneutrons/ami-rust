@@ -1,3 +1,7 @@
+---
+title: ami-rust 0.1 initiative plan
+---
+
 # Initiative plan: ami-rust 0.1 with ABI1, ABI11, and safe MUI
 
 Epic: https://github.com/metaneutrons/ami-rust/issues/6

@@ -1,3 +1,7 @@
+---
+title: M2 MUI API model evidence
+---
+
 # M2 MUI API model evidence
 
 This record applies the M2 criteria in `docs/plans/ami-rust-0.1.md` to the

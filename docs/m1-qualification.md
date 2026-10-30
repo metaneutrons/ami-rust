@@ -1,3 +1,7 @@
+---
+title: M1 x86-64 dual-ABI qualification
+---
+
 # M1 x86-64 dual-ABI qualification
 
 Status: PASS on 2026-10-29. This record qualifies the runtime baseline used by

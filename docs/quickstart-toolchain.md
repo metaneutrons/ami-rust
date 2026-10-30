@@ -1,3 +1,7 @@
+---
+title: Toolchain installation and source checkout
+---
+
 # Toolchain installation and source checkout
 
 ami-rust 0.1.0 is distributed as authenticated GitHub Release archives and

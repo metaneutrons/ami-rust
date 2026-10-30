@@ -1,3 +1,7 @@
+---
+title: M5 generated MUI API qualification
+---
+
 # M5 generated MUI API qualification
 
 Status: PASS on 2026-10-29. This record applies M5-A1 through M5-A4 in

@@ -1,3 +1,7 @@
+---
+title: SDK compatibility boundary
+---
+
 # SDK compatibility boundary
 
 Current 0.1.0 scope: PC x86-64 AROS ABI-v1 and ABI-v11 native ELF under the

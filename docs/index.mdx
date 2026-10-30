@@ -4,13 +4,13 @@ description: Build native AROS x86-64 applications with standard Rust tools.
 template: splash
 ---
 
-import hero from '../../../../assets/ami-rust-hero.svg';
+import hero from '../assets/ami-rust-hero.svg';
 
 <div className="hero">
   <img src={hero.src} alt="ami-rust — Rust for AROS x86-64 ABI-v1 and ABI-v11" />
   <p>Cross-compile on macOS or Linux. Run native applications on AROS x86-64 ABI-v1 or ABI-v11.</p>
   <div className="hero-actions">
-    <a href="/install/">Install the toolchain</a>
+    <a href="/quickstart-toolchain/">Install the toolchain</a>
     <a className="secondary" href="/mui-hello/">See a MUI example</a>
   </div>
 </div>
@@ -27,8 +27,8 @@ There is no project-specific CLI, Cargo wrapper or Python runtime dependency. Th
 
 ## Read in this order
 
-1. [Install and build](/install/) configures Cargo for ABI-v1 or ABI-v11.
-2. [Crates and APIs](/crates/) explains the supported safe and raw layers.
+1. [Install and build](/quickstart-toolchain/) configures Cargo for ABI-v1 or ABI-v11.
+2. [Crates and consumer guide](/consumer-guide/) explains the supported safe and raw layers.
 3. [MUI hello](/mui-hello/) is a minimal native GUI application.
-
-The repository remains the canonical record for detailed qualification evidence and source-level maintainer procedures.
+4. [API reference](/api/) specifies lifetime, ownership and failure boundaries.
+5. [SHA-256 example](/sha256sum/) demonstrates file I/O and standard output.

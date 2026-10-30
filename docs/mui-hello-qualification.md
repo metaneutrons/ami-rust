@@ -1,3 +1,7 @@
+---
+title: mui-hello native qualification
+---
+
 # `mui-hello` native qualification
 
 This is a focused documentation-example check, not a new SDK release gate. It
