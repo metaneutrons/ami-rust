@@ -35,15 +35,17 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.26.1
+
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: website/pnpm-lock.yaml
-
-      - name: Enable pnpm
-        run: npm install --global pnpm@10.26.1
 
       - name: Install locked dependencies
         run: pnpm --dir website install --frozen-lockfile
@@ -69,15 +71,17 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.26.1
+
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: website/pnpm-lock.yaml
-
-      - name: Enable pnpm
-        run: npm install --global pnpm@10.26.1
 
       - name: Install locked dependencies
         run: pnpm --dir website install --frozen-lockfile
