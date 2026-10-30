@@ -48,7 +48,21 @@ rustup toolchain install "$version-$host" --profile minimal --no-self-update
 ```
 
 Once the versioned toolchain is installed, an application uses ordinary Cargo
-with either canonical target:
+with either canonical target. Add the linker and nightly custom-target flag to
+the project's Cargo configuration:
+
+```toml
+# .cargo/config.toml
+[target.x86_64-unknown-aros-abi1]
+linker = "aros-link"
+rustflags = ["-Zunstable-options"]
+
+[target.x86_64-unknown-aros-abi11]
+linker = "aros-link"
+rustflags = ["-Zunstable-options"]
+```
+
+Fetch the locked dependencies once, then build offline:
 
 ```sh
 case "$(uname -s):$(uname -m)" in
@@ -57,6 +71,7 @@ case "$(uname -s):$(uname -m)" in
   Linux:aarch64|Linux:arm64) toolchain=0.1.0-aarch64-unknown-linux-gnu ;;
   *) echo "unsupported development host" >&2; exit 2 ;;
 esac
+cargo +"$toolchain" fetch --locked
 cargo +"$toolchain" build --target x86_64-unknown-aros-abi1 --release --locked --offline
 cargo +"$toolchain" build --target x86_64-unknown-aros-abi11 --release --locked --offline
 ```
