@@ -1,8 +1,8 @@
 # Toolchain installation and source checkout
 
-The exact ami-rust 0.1.0 candidate is qualified and signed, but not published.
-Until the separate publication decision is made, there is no supported public
-rustup URL or direct binary installation.
+ami-rust 0.1.0 is distributed as authenticated GitHub Release archives and
+through an immutable rustup catalog. Both routes install the same qualified SDK
+without replacing the user's default toolchain.
 
 ## Maintainer bootstrap
 
@@ -27,13 +27,12 @@ The bootstrap validates the compiler, Cargo, vendor archive, lockfiles, and
 source revision before it produces the task. Its receipt is written below the
 fresh work directory. This is a development check, not an SDK installation.
 
-## User workflow after publication
+## Install with rustup
 
 The rustup catalog is rooted at the immutable reviewed Git commit
 `bb5cc2e428b89685eeec2ae249701cc23fd135d7`; its component URLs select the
-signed GitHub Release assets. Installation and later version selection use
-unmodified rustup without replacing the user's default toolchain. The command
-becomes usable only after the referenced `v0.1.0` assets have been published:
+signed GitHub Release assets. Installation and later version selection use an
+unmodified rustup client:
 
 ```sh
 version=0.1.0
@@ -62,20 +61,49 @@ cargo +"$toolchain" build --target x86_64-unknown-aros-abi1 --release --locked -
 cargo +"$toolchain" build --target x86_64-unknown-aros-abi11 --release --locked --offline
 ```
 
-The direct archive contains the same SDK tree. Verify both its recorded
-SHA-256 digest and Sigstore bundle before extraction, then register the prefix:
+## Install the direct archive
+
+The direct archive contains the same SDK tree. Select the host as above, then
+download the archive, its bundle, and the signed publication inventory:
 
 ```sh
+version=0.1.0
+case "$(uname -s):$(uname -m)" in
+  Darwin:arm64|Darwin:aarch64) host=aarch64-apple-darwin; platform=macos-aarch64 ;;
+  Linux:x86_64) host=x86_64-unknown-linux-gnu; platform=linux-x86_64 ;;
+  Linux:aarch64|Linux:arm64) host=aarch64-unknown-linux-gnu; platform=linux-aarch64 ;;
+  *) echo "unsupported development host" >&2; exit 2 ;;
+esac
+base="https://github.com/metaneutrons/ami-rust/releases/download/v$version"
+archive="ami-rust-$version-$platform.tar.xz"
+curl --proto '=https' --proto-redir '=https' --tlsv1.2 --fail --location --remote-name "$base/$archive"
+curl --proto '=https' --proto-redir '=https' --tlsv1.2 --fail --location --remote-name "$base/$archive.sigstore.json"
+curl --proto '=https' --proto-redir '=https' --tlsv1.2 --fail --location --remote-name "$base/publication-inventory.json"
+curl --proto '=https' --proto-redir '=https' --tlsv1.2 --fail --location --remote-name "$base/publication-inventory.json.sigstore.json"
+```
+
+Verify the signed inventory and archive, then extract and register the prefix:
+
+```sh
+identity="https://github.com/metaneutrons/ami-rust/.github/workflows/toolchain-release.yml@refs/heads/main"
+issuer="https://token.actions.githubusercontent.com"
 cosign verify-blob --offline \
-  --bundle "ami-rust-0.1.0-$platform.tar.xz.sigstore.json" \
-  --certificate-identity "https://github.com/metaneutrons/ami-rust/.github/workflows/toolchain-release.yml@refs/heads/main" \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  "ami-rust-0.1.0-$platform.tar.xz"
-mkdir ami-rust-0.1.0
-tar -xJf "ami-rust-0.1.0-$platform.tar.xz" -C ami-rust-0.1.0
-direct_toolchain="ami-rust-0.1.0-$host"
+  --bundle publication-inventory.json.sigstore.json \
+  --certificate-identity "$identity" \
+  --certificate-oidc-issuer "$issuer" \
+  publication-inventory.json
+cosign verify-blob --offline \
+  --bundle "$archive.sigstore.json" \
+  --certificate-identity "$identity" \
+  --certificate-oidc-issuer "$issuer" \
+  "$archive"
+expected="$(jq -er --arg name "$archive" '.assets[] | select(.name == $name).sha256' publication-inventory.json)"
+printf '%s  %s\n' "$expected" "$archive" | shasum -a 256 --check
+mkdir "ami-rust-$version"
+tar -xJf "$archive" -C "ami-rust-$version"
+direct_toolchain="ami-rust-$version-$host"
 rustup toolchain link "$direct_toolchain" \
-  "$PWD/ami-rust-0.1.0/libexec/ami-rust/0.1.0"
+  "$PWD/ami-rust-$version/libexec/ami-rust/$version"
 ```
 
 The release asset inventories contain the exact archive digests. Moving branch
