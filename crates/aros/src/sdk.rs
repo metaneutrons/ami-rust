@@ -126,6 +126,21 @@ pub enum Operation {
 /// operation. `native` preserves the numeric error supplied by the native
 /// bridge; errors detected locally before a native call use zero. This record
 /// is `Copy` and contains no dynamically allocated message.
+///
+/// # Examples
+///
+/// ```ignore
+/// # use aros::{BytePath, ErrorKind, File, FileMode};
+/// let path = BytePath::new(b"RAM:missing.txt")?;
+/// match File::open(context, &path, FileMode::ReadExisting) {
+///     Ok(file) => file.close()?,
+///     Err(error) if error.kind == ErrorKind::Native => {
+///         // `native` carries the DOS error code; `operation` names the failing call.
+///         context.diagnostic(b"open failed", error.native as u64);
+///     }
+///     Err(other) => return Err(other),
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Error {
     /// Stable class of the failure.
@@ -208,6 +223,16 @@ fn require_token(token: u64, operation: Operation) -> Result<(), Error> {
 /// bytes and longer input, but does not check whether a path exists or
 /// normalize its spelling. The path is copied into this value, so it does not
 /// borrow the input slice.
+///
+/// # Examples
+///
+/// ```ignore
+/// # use aros::{BytePath, ErrorKind};
+/// let path = BytePath::new(b"RAM:notes.txt")?;
+/// assert_eq!(path.len(), 13);
+/// // An embedded NUL byte is rejected before any native call.
+/// assert_eq!(BytePath::new(b"bad\0path").unwrap_err().kind, ErrorKind::Input);
+/// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct BytePath {
     bytes: [u8; 128],
@@ -270,6 +295,23 @@ pub enum FileMode {
 /// Explicit [`close`](Self::close) reports native close errors; `Drop` closes
 /// the handle on a best-effort basis. At most 16 SDK file handles may be open
 /// at once. Every individual transfer is bounded to 64 KiB.
+///
+/// # Examples
+///
+/// ```ignore
+/// # use aros::{BytePath, File, FileMode};
+/// let path = BytePath::new(b"RAM:greeting.txt")?;
+///
+/// let mut file = File::open(context, &path, FileMode::CreateTruncate)?;
+/// file.write_all(b"hello\n")?;
+/// file.close()?; // close reports native errors; Drop closes silently
+///
+/// let mut file = File::open(context, &path, FileMode::ReadExisting)?;
+/// let mut buffer = [0u8; 6];
+/// file.read_exact(&mut buffer)?;
+/// file.close()?;
+/// assert_eq!(&buffer, b"hello\n");
+/// ```
 pub struct File<'ctx> {
     context: &'ctx Context,
     token: u64,
@@ -472,6 +514,14 @@ impl Drop for File<'_> {
 /// This wrapper borrows the context's process output; it does not own or close
 /// that handle. It is task-affine, and each native transfer is limited to 64
 /// KiB. Use [`write_all`](Self::write_all) when short writes must be retried.
+///
+/// # Examples
+///
+/// ```ignore
+/// # use aros::Stdout;
+/// let mut out = Stdout::new(context)?;
+/// out.write_all(b"hello from AROS\n")?;
+/// ```
 pub struct Stdout<'ctx> {
     context: &'ctx Context,
     token: u64,
@@ -564,6 +614,14 @@ impl<'ctx> Stdout<'ctx> {
 /// closes either process-owned handle. Each transfer is limited to 64 KiB.
 /// The DOS handler may allocate while writing, even when the Rust caller uses
 /// allocation-free formatting.
+///
+/// # Examples
+///
+/// ```ignore
+/// # use aros::Stderr;
+/// let mut err = Stderr::new(context)?;
+/// err.write_all(b"warning: input file is empty\n")?;
+/// ```
 pub struct Stderr<'ctx> {
     context: &'ctx Context,
     token: u64,
@@ -661,6 +719,16 @@ impl<'ctx> Stderr<'ctx> {
 /// the SDK permits at most four optional library handles at once. `Drop`
 /// closes the library on a best-effort basis; use [`close`](Self::close) to
 /// observe a bridge refusal while explicitly releasing it.
+///
+/// # Examples
+///
+/// ```ignore
+/// # use aros::{BytePath, Library};
+/// let name = BytePath::new(b"utility.library")?;
+/// let library = Library::open(context, &name, 36)?;
+/// // Dropping would release the library too; close() lets you observe a failure.
+/// library.close()?;
+/// ```
 pub struct Library<'ctx> {
     context: &'ctx Context,
     token: u64,
@@ -767,6 +835,16 @@ impl Drop for Library<'_> {
 /// The handle is task-affine and borrows its creating [`Context`]. At most
 /// four signal slots are available to the SDK, including the slots reserved
 /// by private message ports. Dropping the handle clears and releases its bit.
+///
+/// # Examples
+///
+/// ```ignore
+/// # use aros::Signal;
+/// let signal = Signal::new(context)?;
+/// signal.post()?;
+/// // The bit was posted first, so this wait finds it already set.
+/// signal.wait()?;
+/// ```
 pub struct Signal<'ctx> {
     context: &'ctx Context,
     token: u64,
@@ -854,6 +932,23 @@ impl Drop for Signal<'_> {
 /// own at most two private ports at once; they are local application resources,
 /// not handles to arbitrary or foreign ports. Dropping a port asks the native
 /// registry to detach queued messages and retire their local queue state.
+///
+/// # Examples
+///
+/// ```ignore
+/// # use aros::{Message, Port};
+/// let port = Port::new(context)?;
+/// let reply = Port::new(context)?;
+/// let mut message = Message::new(context, b"ping")?;
+///
+/// port.send(&mut message, &reply)?;
+/// assert!(port.receive(&mut message)?);
+///
+/// let mut payload = [0u8; 4];
+/// let length = message.copy_to(&mut payload)?;
+/// assert_eq!(&payload[..length], b"ping");
+/// message.reply()?;
+/// ```
 pub struct Port<'ctx> {
     context: &'ctx Context,
     token: u64,
@@ -1098,6 +1193,22 @@ impl Drop for Message<'_> {
 ///
 /// Returns [`ErrorKind::State`] when the bridge rejects a nested or invalid
 /// callback state, or an ownership/native error if the context is not accepted.
+///
+/// # Examples
+///
+/// ```ignore
+/// # use aros::call;
+/// let mut seen = 0u64;
+/// let doubled = call(
+///     context,
+///     &mut |input| {
+///         seen = input;
+///         input * 2
+///     },
+///     21,
+/// )?;
+/// assert_eq!((seen, doubled), (21, 42));
+/// ```
 pub fn call<F>(context: &Context, callback: &mut F, input: u64) -> Result<u64, Error>
 where
     F: FnMut(u64) -> u64,

@@ -78,6 +78,30 @@ impl<'scope, C: Class> Object<'scope, C> {
     /// The attribute must be readable on this source class. A value trigger
     /// is encoded with the attribute's generated value type and any borrowed
     /// input must remain valid for the scope.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// # use aros_mui::{
+    /// #     Mui, ReturnId, Trigger,
+    /// #     attributes::{ApplicationBase, WindowCloseGadget, WindowCloseRequest, WindowOpen},
+    /// #     classes::{Application, Window},
+    /// # };
+    /// let mui = Mui::open(context)?;
+    /// mui.scope(|scope| {
+    ///     let window = scope.builder::<Window>().with::<WindowCloseGadget>(true)?.build()?;
+    ///     let app = scope.builder::<Application>().with::<ApplicationBase>(c"EXAMPLE")?.build()?;
+    ///     app.adopt(window)?;
+    ///
+    ///     // When the close gadget is pressed, make the application loop return QUIT.
+    ///     window
+    ///         .notify::<WindowCloseRequest>(Trigger::Value(true))?
+    ///         .return_id(app, ReturnId::QUIT)?;
+    ///     window.set::<WindowOpen>(true)?;
+    ///     Ok::<(), aros_mui::Error>(())
+    /// })?;
+    /// mui.close()?;
+    /// ```
     pub fn notify<A>(
         self,
         trigger: Trigger<'scope, A::Value>,

@@ -881,6 +881,8 @@ impl<C> RawMethod<C> for NumericValueToScaleExt where C: Class + IsA<crate::clas
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIM_PanelGroup_CollapsePanel from classes/panelgroup.h:25; typed unsafe message dispatch.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelGroupCollapsePanel;
 
@@ -891,6 +893,8 @@ impl<C> RawMethod<C> for PanelGroupCollapsePanel where C: Class + IsA<crate::cla
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIM_PanelGroup_ExpandPanel from classes/panelgroup.h:26; typed unsafe message dispatch.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelGroupExpandPanel;
 
@@ -901,6 +905,8 @@ impl<C> RawMethod<C> for PanelGroupExpandPanel where C: Class + IsA<crate::class
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIM_PanelGroup_GetPanelState from classes/panelgroup.h:28; typed unsafe message dispatch.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelGroupGetPanelState;
 
@@ -911,11 +917,15 @@ impl<C> RawMethod<C> for PanelGroupGetPanelState where C: Class + IsA<crate::cla
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIM_PanelGroup_ScanPanels from classes/panelgroup.h:29; raw-only dispatch.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelGroupScanPanels;
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIM_PanelGroup_TogglePanel from classes/panelgroup.h:27; typed unsafe message dispatch.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelGroupTogglePanel;
 
@@ -926,6 +936,8 @@ impl<C> RawMethod<C> for PanelGroupTogglePanel where C: Class + IsA<crate::class
 
 #[cfg(any(not(target_os = "aros"), target_abi = "", target_abi = "abi1"))]
 /// MUIM_PanelTitle_Toggle from classes/panel.h:97; typed unsafe message dispatch.
+///
+/// Available on ABI-v1 targets only.
 #[derive(Clone, Copy, Debug)]
 pub struct PanelTitleToggle;
 

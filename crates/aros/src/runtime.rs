@@ -48,6 +48,17 @@ impl Context {
     /// context is live. They are not required to be UTF-8. The runtime accepts
     /// at most 32 arguments and at most 4096 encoded argument bytes in total,
     /// including each argument's terminating NUL.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// # use aros::Stdout;
+    /// let mut out = Stdout::new(context)?;
+    /// for argument in context.args() {
+    ///     out.write_all(argument)?; // bytes, not necessarily UTF-8
+    ///     out.write_all(b"\n")?;
+    /// }
+    /// ```
     pub fn args(&self) -> Args<'_> {
         Args {
             context: self,
@@ -73,6 +84,19 @@ impl Context {
     /// libraries, ports, signals, messages, and native refusals. The returned
     /// [`aros_sys::SdkStats`] is a raw ABI record from `aros-sys`; obtaining it
     /// does not allocate.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// # use aros::Signal;
+    /// let before = context.statistics();
+    /// {
+    ///     let _signal = Signal::new(context)?;
+    ///     assert_eq!(context.statistics().signals, before.signals + 1);
+    /// }
+    /// // Dropping the handle returned its slot.
+    /// assert_eq!(context.statistics().signals, before.signals);
+    /// ```
     pub fn statistics(&self) -> aros_sys::SdkStats {
         // SAFETY: Context is not Send/Sync and native application remains active.
         unsafe { aros_sys::sdk_stats() }

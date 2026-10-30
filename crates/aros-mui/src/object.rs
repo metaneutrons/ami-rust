@@ -18,6 +18,30 @@ const INTUITION_LIBRARY_NAME: &[u8] = b"intuition.library";
 const INTUITION_MINIMUM_VERSION: u16 = 36;
 const OM_ADDMEMBER: u32 = 0x0109;
 
+/// Failure of a safe MUI operation.
+///
+/// Every fallible `aros-mui` call returns `Result<_, Error>`. Variants are
+/// allocation-free and `Copy`. Failures of the underlying AROS runtime arrive
+/// unchanged as [`Error::Aros`], so the `aros::ErrorKind` that caused them is
+/// still available; ownership and scope violations are detected before any
+/// native call is made.
+///
+/// # Examples
+///
+/// ```ignore
+/// # use aros_mui::{Error, Mui, classes::Window};
+/// let mui = Mui::open(context)?;
+/// let outcome = mui.scope(|scope| {
+///     scope.builder::<Window>().build()?;
+///     Ok::<(), Error>(())
+/// });
+/// match outcome {
+///     Ok(()) => {}
+///     Err(Error::ObjectCreation) => { /* MUI refused to create the window */ }
+///     Err(other) => return Err(other),
+/// }
+/// mui.close()?;
+/// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Error {
     /// An underlying AROS library or runtime operation failed.
@@ -66,6 +90,23 @@ impl From<aros::Error> for Error {
 ///
 /// This handle is task affine. Use [`scope`](Self::scope) to create objects;
 /// it keeps the libraries and their bases alive while native values exist.
+///
+/// # Examples
+///
+/// ```ignore
+/// # use aros_mui::{Mui, attributes::TextContents, classes::Text};
+/// let mui = Mui::open(context)?;
+/// let result = mui.scope(|scope| {
+///     let label = scope
+///         .builder::<Text>()
+///         .with::<TextContents>(c"Hello")?
+///         .build()?;
+///     let _ = label; // every object is disposed when the scope returns
+///     Ok::<(), aros_mui::Error>(())
+/// });
+/// mui.close()?; // close the libraries before reporting the scope's result
+/// result?;
+/// ```
 pub struct Mui<'ctx> {
     context: &'ctx Context,
     mui_library: Library<'ctx>,
@@ -615,6 +656,26 @@ impl<'scope, C: Class> Object<'scope, C> {
     /// after a successful adoption, the native parent owns its disposal. A
     /// child already attached elsewhere, an ownership cycle, or an occupied
     /// window root is rejected.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// # use aros_mui::{
+    /// #     Mui,
+    /// #     attributes::{GroupHoriz, TextContents, WindowTitle},
+    /// #     classes::{Group, Text, Window},
+    /// # };
+    /// let mui = Mui::open(context)?;
+    /// mui.scope(|scope| {
+    ///     let label = scope.builder::<Text>().with::<TextContents>(c"Name")?.build()?;
+    ///     let row = scope.builder::<Group>().with::<GroupHoriz>(true)?.build()?;
+    ///     row.adopt(label)?; // the group now owns the label
+    ///     let window = scope.builder::<Window>().with::<WindowTitle>(c"Form")?.build()?;
+    ///     window.adopt(row)?; // the window owns the group, and through it the label
+    ///     Ok::<(), aros_mui::Error>(())
+    /// })?;
+    /// mui.close()?;
+    /// ```
     pub fn adopt<Child: Class>(self, child: Object<'scope, Child>) -> Result<(), Error>
     where
         C: ParentOf<Child>,
@@ -627,6 +688,24 @@ impl<'scope, C: Class> Object<'scope, C> {
     /// The descriptor's value type determines the Rust input. Scope-bound
     /// inputs, such as object handles and string arrays, must come from this
     /// same scope.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// # use aros_mui::{Mui, attributes::{TextContents, WindowOpen}, classes::{Text, Window}};
+    /// let mui = Mui::open(context)?;
+    /// mui.scope(|scope| {
+    ///     let label = scope.builder::<Text>().with::<TextContents>(c"Before")?.build()?;
+    ///     label.set::<TextContents>(c"After")?;
+    ///
+    ///     let window = scope.builder::<Window>().build()?;
+    ///     window.set::<WindowOpen>(false)?;
+    ///     let open: bool = window.get::<WindowOpen>()?;
+    ///     assert!(!open);
+    ///     Ok::<(), aros_mui::Error>(())
+    /// })?;
+    /// mui.close()?;
+    /// ```
     pub fn set<A>(self, value: <A::Value as ValueKind>::Input<'scope>) -> Result<(), Error>
     where
         A: SetAttribute<C>,

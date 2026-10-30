@@ -140,6 +140,15 @@ impl Availability {
         }
     }
 
+    /// Sentence for items that exist on only one ABI profile.
+    fn doc_sentence(self) -> Option<&'static str> {
+        match self {
+            Self::Abi1 => Some("Available on ABI-v1 targets only."),
+            Self::Abi11 => Some("Available on ABI-v11 targets only."),
+            Self::Both => None,
+        }
+    }
+
     fn label(self) -> &'static str {
         match self {
             Self::Abi1 => "ABI1",
@@ -182,6 +191,9 @@ struct EnumVariant {
 #[derive(Clone)]
 struct EnumSpec {
     rust: String,
+    attribute_raw: String,
+    attribute_rust: String,
+    attribute_everywhere: bool,
     variants: Vec<EnumVariant>,
 }
 
@@ -581,6 +593,9 @@ fn build_enums(
                 attribute.raw.clone(),
                 EnumSpec {
                     rust: format!("{}Value", attribute.rust),
+                    attribute_raw: attribute.raw.clone(),
+                    attribute_rust: attribute.rust.clone(),
+                    attribute_everywhere: attribute.availability == Availability::Both,
                     variants,
                 },
             );
@@ -620,8 +635,14 @@ fn generate_classes(
             item.id,
             parent_role(item, ancestors),
             format!(
-                "{} from {}:{}.",
-                item.raw, item.source.path, item.source.line
+                "{} from {}:{}.{}",
+                item.raw,
+                item.source.path,
+                item.source.line,
+                item.availability
+                    .doc_sentence()
+                    .map(|sentence| format!("\n\n{sentence}"))
+                    .unwrap_or_default()
             )
         ));
     }
@@ -713,12 +734,13 @@ fn generate_attributes(
             .replace(']', "\\]");
         push_cfg(&mut output, item.availability);
         output.push_str(&format!(
-            "/// {} ({}; {}) from {}:{}.\n#[derive(Clone, Copy, Debug)]\npub struct {};\n\n",
+            "/// {} ({}; {}) from {}:{}.\n{}#[derive(Clone, Copy, Debug)]\npub struct {};\n\n",
             item.raw,
             c_type_doc,
             access.marker,
             item.source.path,
             item.source.line,
+            availability_doc_lines(item.availability),
             item.rust
         ));
         generate_raw_attribute_impls(&mut output, item, &base, access);
@@ -853,7 +875,7 @@ fn generate_methods(
         let has_message = messages.contains_key(&message);
         push_cfg(&mut output, item.availability);
         output.push_str(&format!(
-            "/// {} from {}:{}; {}.\n#[derive(Clone, Copy, Debug)]\npub struct {};\n\n",
+            "/// {} from {}:{}; {}.\n{}#[derive(Clone, Copy, Debug)]\npub struct {};\n\n",
             item.raw,
             item.source.path,
             item.source.line,
@@ -862,6 +884,7 @@ fn generate_methods(
             } else {
                 "raw-only dispatch"
             },
+            availability_doc_lines(item.availability),
             marker
         ));
         if has_message {
@@ -908,11 +931,21 @@ fn generate_values(
     );
     let mut safe_values = BTreeMap::new();
     for spec in enums.values() {
+        let value_prefix = format!("MUIV{}_", &spec.attribute_raw[4..]);
+        let attribute_reference = if spec.attribute_everywhere {
+            format!("[`{0}`](crate::attributes::{0})", spec.attribute_rust)
+        } else {
+            format!("`{}`", spec.attribute_rust)
+        };
         output.push_str(&format!(
-            "#[derive(Clone, Copy, Debug, Eq, PartialEq)]\npub enum {} {{\n",
-            spec.rust
+            "/// Typed values of the `{}` attribute.\n///\n/// Each variant stands for one native `{}*` constant. Use it with the\n/// {} attribute.\n#[derive(Clone, Copy, Debug, Eq, PartialEq)]\npub enum {} {{\n",
+            spec.attribute_raw, value_prefix, attribute_reference, spec.rust
         ));
         for variant in &spec.variants {
+            output.push_str(&format!("    /// Native `{}`.\n", variant.raw));
+            if let Some(sentence) = variant.availability.doc_sentence() {
+                output.push_str(&format!("    ///\n    /// {sentence}\n"));
+            }
             push_cfg_indented(&mut output, variant.availability, 4);
             output.push_str(&format!("    {},\n", variant.rust));
             safe_values.insert(variant.raw.clone(), spec.rust.clone());
@@ -1220,6 +1253,15 @@ fn integer(item: &ModelSymbol) -> Option<&str> {
 
 fn access_marker(access: Option<&Access>) -> Option<&str> {
     access.map(|item| item.marker.as_str())
+}
+
+/// Rustdoc lines (including the trailing newline) naming the one ABI profile
+/// that declares an item; empty for items present on both.
+fn availability_doc_lines(availability: Availability) -> String {
+    availability
+        .doc_sentence()
+        .map(|sentence| format!("///\n/// {sentence}\n"))
+        .unwrap_or_default()
 }
 
 fn push_cfg(output: &mut String, availability: Availability) {

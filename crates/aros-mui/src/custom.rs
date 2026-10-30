@@ -18,6 +18,58 @@ const OM_DISPOSE: u32 = 0x0102;
 /// The custom methods described here have no native trailing arguments. Every
 /// other message is forwarded unchanged to the standard superclass. Foreign
 /// messages with custom layouts remain available only through the raw API.
+///
+/// # Examples
+///
+/// ```ignore
+/// # use aros_mui::{CustomClassSpec, Mui, attributes::TextContents, classes::Text};
+/// struct Counter;
+///
+/// #[derive(Clone, Copy)]
+/// enum CounterMethod {
+///     Bump,
+/// }
+///
+/// #[derive(Default)]
+/// struct CounterData {
+///     count: usize,
+/// }
+///
+/// impl CustomClassSpec for Counter {
+///     type Super = Text;
+///     type Data = CounterData;
+///     type Method = CounterMethod;
+///
+///     fn decode_method(method_id: u32) -> Option<CounterMethod> {
+///         (method_id == 0x8000_0001).then_some(CounterMethod::Bump)
+///     }
+///
+///     fn method_id(method: CounterMethod) -> u32 {
+///         match method {
+///             CounterMethod::Bump => 0x8000_0001,
+///         }
+///     }
+///
+///     fn dispatch(data: &mut CounterData, method: CounterMethod) -> usize {
+///         match method {
+///             CounterMethod::Bump => {
+///                 data.count += 1;
+///                 data.count
+///             }
+///         }
+///     }
+/// }
+///
+/// let mui = Mui::open(context)?;
+/// mui.scope(|scope| {
+///     let class = scope.custom_class::<Counter>()?;
+///     let text = class.builder().with::<TextContents>(c"counter")?.build()?;
+///     assert_eq!(text.call(CounterMethod::Bump)?, 1);
+///     assert_eq!(text.call(CounterMethod::Bump)?, 2);
+///     Ok::<(), aros_mui::Error>(())
+/// })?;
+/// mui.close()?;
+/// ```
 pub trait CustomClassSpec: 'static {
     /// Standard MUI superclass for this custom class.
     type Super: Class;
