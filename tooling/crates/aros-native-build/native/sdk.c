@@ -658,7 +658,10 @@ int main(int argc,char **argv) {
  sdk_diagnostic((const uint8_t *)"[m1-counter] charge-overflow",sizeof("[m1-counter] charge-overflow")-1,charge_overflow_ok);
  sdk_diagnostic((const uint8_t *)"[m1-counter] task-owner",23,owner_ok);
  if(!argument_ok || !charge_overflow_ok || !owner_ok || !compatibility_ok || !allocation_checkers_ok){int closed=sdk_end();(void)closed;return 20;}
+#ifndef AMI_RUST_ABI11
+ /* The stack instrument belongs to the ABI-v1 entry, which checks the 128 KiB stack. */
  if(argc>1 && !strcmp(argv[1],"calibrate") && ami_stack_calibrate()){int failed_cleanup=sdk_end();(void)failed_cleanup;return 20;}
+#endif
  if(argc>1 && !strcmp(argv[1],"cleanup-secondary")){sdk_test_fault(5,1);secondary_on_diagnostic=1;}
 #endif
  result=rust_sdk_main();int closed=sdk_end();
