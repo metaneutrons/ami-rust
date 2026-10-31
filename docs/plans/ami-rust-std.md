@@ -5,8 +5,7 @@ title: ami-rust std initiative plan
 # Initiative plan: Rust `std` for AROS
 
 Epic: https://github.com/metaneutrons/ami-rust/issues/65
-Decision state: proposed; acceptance by the maintainer is recorded under
-"Decision changes"
+Decision state: accepted by the maintainer on 2026-10-31; proposed in PR #76
 
 ## Outcome and boundaries
 
@@ -278,7 +277,7 @@ milestone; the three-host matrix runs at STD-M8.
 
 ## Decision changes
 
-- 2026-10-31: Proposed. Open questions for the maintainer: acceptance of the
-  scope and order, whether STD-M5 (networking) and STD-M6 (processes) are in
-  the first `std` release, and the target release for the first accepted
-  candidate.
+- 2026-10-31: The maintainer accepted the plan and started STD-M1 as a
+  timeboxed spike in parallel with milestone M1 of the 0.2 plan. The first
+  `std` release, and whether STD-M5 and STD-M6 are part of it, remain open and
+  are decided at STD-M8.
