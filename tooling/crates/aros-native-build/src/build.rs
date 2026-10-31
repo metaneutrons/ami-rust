@@ -97,7 +97,70 @@ fn native_host_triple(host: &str) -> Result<&'static str> {
 ///
 /// This function runs from the application's additive build script. It never
 /// calls Cargo, resolves dependencies, downloads inputs or changes rustup state.
+///
+/// A refusal is also explained on standard error, with the usual remedy, so the
+/// cause is readable in Cargo's build-script output.
 pub fn prepare(options: BuildOptions) -> Result<()> {
+    let result = prepare_checked(options);
+    if let Err(refusal) = &result {
+        eprintln!("aros-native-build: {refusal}");
+        if let Some(help) = remedy(&refusal.to_string()) {
+            eprintln!("aros-native-build: {help}");
+        }
+        eprintln!("aros-native-build: see https://ami-rust.metaneutrons.cc/troubleshooting/");
+    }
+    result
+}
+
+/// Compiler wrappers that only cache the output of the compiler Cargo selected.
+///
+/// `RUSTC` still names the pinned compiler when such a wrapper is configured, and
+/// the compiler, Cargo and linker checks below still apply to it. Any other
+/// wrapper could substitute the compiler and stays refused. A program is
+/// recognised by the name of its executable.
+const CACHING_WRAPPERS: &[&str] = &["sccache"];
+
+fn is_caching_wrapper(program: &std::ffi::OsStr) -> bool {
+    // `Path::file_name` ignores a trailing separator, but a directory is not a program.
+    if program.as_bytes().ends_with(b"/") {
+        return false;
+    }
+    Path::new(program)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| CACHING_WRAPPERS.contains(&name))
+}
+
+/// How to fix the refusals that users most often meet, keyed by the refusal text.
+fn remedy(message: &str) -> Option<&'static str> {
+    if message.starts_with("RUSTC_WRAPPER ") || message.starts_with("RUSTC_WORKSPACE_WRAPPER ") {
+        Some(
+            "a compiler wrapper is active and could replace the pinned compiler. Only the caching \
+             wrapper sccache is accepted. Unset RUSTC_WRAPPER and RUSTC_WORKSPACE_WRAPPER in your \
+             environment. If the wrapper comes from a Cargo configuration file, run this build with \
+             CARGO_BUILD_RUSTC_WRAPPER= or set rustc-wrapper = \"\" under [build] in the project's \
+             .cargo/config.toml.",
+        )
+    } else if message.starts_with("RUST_TARGET_PATH ") {
+        Some("unset RUST_TARGET_PATH: the toolchain supplies its own target specification.")
+    } else if message.starts_with("Cargo must explicitly select this toolchain's aros-link") {
+        Some(
+            "add the AROS target sections to .cargo/config.toml: linker = \"aros-link\" and \
+             rustflags = [\"-Zunstable-options\"] for x86_64-unknown-aros-abi1 and \
+             x86_64-unknown-aros-abi11.",
+        )
+    } else if message.starts_with("native bridge requires a supported AROS target") {
+        Some("build with --target x86_64-unknown-aros-abi1 or --target x86_64-unknown-aros-abi11.")
+    } else if message.starts_with("AROS target flags must not override") {
+        Some(
+            "remove --sysroot, --target, -C linker and -C linker-flavor from RUSTFLAGS and from the rustflags in your Cargo configuration.",
+        )
+    } else {
+        None
+    }
+}
+
+fn prepare_checked(options: BuildOptions) -> Result<()> {
     verify_rust_target_path(env::var_os("RUST_TARGET_PATH").as_deref())?;
     let abi = match env::var("TARGET").ok().as_deref() {
         Some("x86_64-unknown-aros-abi1") => ArosAbi::Abi1,
@@ -116,7 +179,7 @@ pub fn prepare(options: BuildOptions) -> Result<()> {
     }
     verify_target_rustflags(env::var_os("CARGO_ENCODED_RUSTFLAGS").as_deref())?;
     for name in ["RUSTC_WRAPPER", "RUSTC_WORKSPACE_WRAPPER"] {
-        if env::var_os(name).is_some_and(|value| !value.is_empty()) {
+        if env::var_os(name).is_some_and(|value| !value.is_empty() && !is_caching_wrapper(&value)) {
             return Err(Refusal::new(format!(
                 "{name} conflicts with the pinned compiler selection"
             )));
@@ -710,6 +773,47 @@ fn file_identity(path: &Path) -> Result<(u64, String)> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn common_refusals_have_a_remedy_and_unknown_ones_do_not() {
+        for message in [
+            "RUSTC_WRAPPER conflicts with the pinned compiler selection",
+            "RUSTC_WORKSPACE_WRAPPER conflicts with the pinned compiler selection",
+            "RUST_TARGET_PATH must be unset or empty for the selected toolchain",
+            "Cargo must explicitly select this toolchain's aros-link",
+            "native bridge requires a supported AROS target",
+            "AROS target flags must not override the selected sysroot or target",
+        ] {
+            assert!(super::remedy(message).is_some(), "{message}");
+        }
+        assert!(super::remedy("missing Cargo OUT_DIR").is_none());
+        let help =
+            super::remedy("RUSTC_WRAPPER conflicts with the pinned compiler selection").unwrap();
+        assert!(help.contains("CARGO_BUILD_RUSTC_WRAPPER=") && help.contains("sccache"));
+    }
+
+    #[test]
+    fn only_the_sccache_executable_is_a_caching_wrapper() {
+        use std::ffi::OsStr;
+        for accepted in ["sccache", "/opt/homebrew/bin/sccache", "./tools/sccache"] {
+            assert!(
+                super::is_caching_wrapper(OsStr::new(accepted)),
+                "{accepted}"
+            );
+        }
+        for refused in [
+            "clippy-driver",
+            "/usr/bin/env",
+            "sccache-fork",
+            "my-sccache",
+            // A directory named sccache does not make its contents the cache.
+            "/opt/sccache/rustc-wrapper",
+            "/tmp/sccache/",
+            "",
+        ] {
+            assert!(!super::is_caching_wrapper(OsStr::new(refused)), "{refused}");
+        }
+    }
+
     #[test]
     fn collector_invocation_selects_alias_without_changing_executable_or_link_arguments() {
         let recipe = crate::recipe::CommandRecipe {

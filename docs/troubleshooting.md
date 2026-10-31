@@ -13,7 +13,12 @@ Find your symptom by its message. Build problems come first, then problems on th
 AROS native bridge: Refusal { message: "RUSTC_WRAPPER conflicts with the pinned compiler selection", exit_code: 2 }
 ```
 
-**Cause.** A compiler wrapper such as `sccache` is active. It is often set once in `~/.cargo/config.toml` (`[build] rustc-wrapper = "…"`), so it can surprise you in a project that never mentions it. The build refuses it because a wrapper can replace the pinned compiler.
+**Cause.** A compiler wrapper is active. The build refuses wrappers because one can replace the pinned compiler. A wrapper is often set once in `~/.cargo/config.toml` (`[build] rustc-wrapper = "…"`), so it can surprise you in a project that never mentions it. `RUSTC_WORKSPACE_WRAPPER` is treated the same way.
+
+- **The caching wrapper `sccache`** is accepted by revisions after 0.1.0: it only caches the output of the compiler Cargo selected, and the checks on the compiler, Cargo and linker still apply. The 0.1.0 tag refuses it too, so with that revision either disable it as below or move your `rev` to a later revision.
+- **Any other wrapper** is refused by every revision. Disable it as below.
+
+Revisions after 0.1.0 also print this explanation, with the fix, next to the refusal. The 0.1.0 tag shows only the message above.
 
 **Fix.** Disable the wrapper for this build, in whichever way suits you:
 

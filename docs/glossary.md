@@ -3,7 +3,7 @@ title: Glossary
 description: Definitions of the AROS, MUI and ami-rust terms used in this documentation.
 ---
 
-**ABI-v1** — The AROS ABI profile of upstream AROS, qualified through the AROS-NX integration fork. Cargo target `x86_64-unknown-aros-abi1`. The library base is passed as the last ordinary argument. See [targets and ABIs](/targets-and-abis/).
+**ABI-v1** — The AROS ABI profile of upstream AROS, the standard and reference profile, qualified through the AROS-NX integration fork. Cargo target `x86_64-unknown-aros-abi1`. The library base is passed as the last ordinary argument. See [targets and ABIs](/targets-and-abis/).
 
 **ABI-v11** — The AROS ABI profile of [Deadwood's AROS](https://github.com/deadwood2/AROS) port, code-named ABIv11. Cargo target `x86_64-unknown-aros-abi11`. The library base is passed in register `r12`.
 
