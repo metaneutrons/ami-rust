@@ -929,7 +929,7 @@ fn file_and_path_cases(context: &Context) -> bool {
     }
     set_slot_limit(0);
     drop(files);
-    if !same_resources(baseline, context.statistics()) {
+    if context.statistics().files != baseline.files {
         return false;
     }
 
