@@ -1,0 +1,420 @@
+diff --git a/library/std/build.rs b/library/std/build.rs
+index 98856b5..240c554 100644
+--- a/library/std/build.rs
++++ b/library/std/build.rs
+@@ -18,6 +18,7 @@ fn main() {
+ 
+     println!("cargo:rustc-check-cfg=cfg(restricted_std)");
+     if target_os == "linux"
++        || target_os == "aros"
+         || target_os == "android"
+         || target_os == "netbsd"
+         || target_os == "dragonfly"
+diff --git a/library/std/src/sys/alloc/aros.rs b/library/std/src/sys/alloc/aros.rs
+new file mode 100644
+index 0000000..f83b37b
+--- /dev/null
++++ b/library/std/src/sys/alloc/aros.rs
+@@ -0,0 +1,78 @@
++use super::{MIN_ALIGN, realloc_fallback};
++use crate::alloc::Layout;
++use crate::ptr;
++
++mod c {
++    use core::ffi::{c_int, c_size_t, c_void};
++
++    unsafe extern "C" {
++        #[rustc_canonical_symbol]
++        pub fn malloc(size: c_size_t) -> *mut c_void;
++
++        pub fn calloc(count: c_size_t, size: c_size_t) -> *mut c_void;
++
++        #[rustc_canonical_symbol]
++        pub fn realloc(ptr: *mut c_void, size: c_size_t) -> *mut c_void;
++
++        #[rustc_canonical_symbol]
++        pub fn free(ptr: *mut c_void);
++
++        pub fn posix_memalign(out: *mut *mut c_void, align: c_size_t, size: c_size_t) -> c_int;
++    }
++}
++
++// The Exec allocator under `malloc` does not refuse huge requests reliably: on
++// ABI1 a request of 2^37 bytes corrupts the TLSF free lists and on ABI11 sizes
++// from 2^38 bytes return a small block. Larger requests are refused here.
++const MAX_REQUEST: usize = 1 << 32;
++
++// The AROS C library allocates from an Exec pool with a 16 byte header, so
++// `malloc` returns blocks aligned to `MIN_ALIGN`. Larger alignments go through
++// `posix_memalign`, whose blocks `free` accepts but `realloc` does not.
++#[inline]
++pub unsafe fn alloc(layout: Layout) -> *mut u8 {
++    if layout.size() > MAX_REQUEST {
++        return ptr::null_mut();
++    }
++    if layout.align() <= MIN_ALIGN && layout.align() <= layout.size() {
++        unsafe { c::malloc(layout.size()) as *mut u8 }
++    } else {
++        let mut out = ptr::null_mut();
++        let align = layout.align().max(size_of::<usize>());
++        let ret = unsafe { c::posix_memalign(&mut out, align, layout.size()) };
++        if ret != 0 { ptr::null_mut() } else { out as *mut u8 }
++    }
++}
++
++#[inline]
++pub unsafe fn alloc_zeroed(layout: Layout) -> *mut u8 {
++    if layout.size() > MAX_REQUEST {
++        return ptr::null_mut();
++    }
++    if layout.align() <= MIN_ALIGN && layout.align() <= layout.size() {
++        unsafe { c::calloc(layout.size(), 1) as *mut u8 }
++    } else {
++        let ptr = unsafe { alloc(layout) };
++        if !ptr.is_null() {
++            unsafe { ptr::write_bytes(ptr, 0, layout.size()) };
++        }
++        ptr
++    }
++}
++
++#[inline]
++pub unsafe fn dealloc(ptr: *mut u8, _layout: Layout) {
++    unsafe { c::free(ptr as *mut core::ffi::c_void) }
++}
++
++#[inline]
++pub unsafe fn realloc(ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
++    if new_size > MAX_REQUEST {
++        return ptr::null_mut();
++    }
++    if layout.align() <= MIN_ALIGN && layout.align() <= new_size {
++        unsafe { c::realloc(ptr as *mut core::ffi::c_void, new_size) as *mut u8 }
++    } else {
++        unsafe { realloc_fallback(ptr, layout, new_size) }
++    }
++}
+diff --git a/library/std/src/sys/alloc/mod.rs b/library/std/src/sys/alloc/mod.rs
+index 66a2c3b..3fc2383 100644
+--- a/library/std/src/sys/alloc/mod.rs
++++ b/library/std/src/sys/alloc/mod.rs
+@@ -72,6 +72,10 @@ cfg_select! {
+         mod windows;
+         use windows as imp;
+     }
++    target_os = "aros" => {
++        mod aros;
++        use aros as imp;
++    }
+     target_os = "hermit" => {
+         mod hermit;
+         use hermit as imp;
+diff --git a/library/std/src/sys/io/error/aros.rs b/library/std/src/sys/io/error/aros.rs
+new file mode 100644
+index 0000000..00469fe
+--- /dev/null
++++ b/library/std/src/sys/io/error/aros.rs
+@@ -0,0 +1,127 @@
++use crate::ffi::{CStr, c_char, c_int};
++use crate::io::ErrorKind;
++use crate::{fmt, io};
++
++unsafe extern "C" {
++    // The C library keeps `errno` behind a link-library accessor. The two
++    // supported ABIs name it differently.
++    #[cfg_attr(target_abi = "abi11", link_name = "___geterrnoptr")]
++    #[cfg_attr(not(target_abi = "abi11"), link_name = "__stdc_geterrnoptr")]
++    fn errno_location() -> *mut c_int;
++
++    fn strerror(errnum: c_int) -> *const c_char;
++}
++
++// errno values of the AROS C library, which follows the NetBSD numbering.
++mod code {
++    pub const EPERM: i32 = 1;
++    pub const ENOENT: i32 = 2;
++    pub const EINTR: i32 = 4;
++    pub const EIO: i32 = 5;
++    pub const E2BIG: i32 = 7;
++    pub const ENOMEM: i32 = 12;
++    pub const EACCES: i32 = 13;
++    pub const EBUSY: i32 = 16;
++    pub const EEXIST: i32 = 17;
++    pub const EXDEV: i32 = 18;
++    pub const ENOTDIR: i32 = 20;
++    pub const EISDIR: i32 = 21;
++    pub const EINVAL: i32 = 22;
++    pub const ENFILE: i32 = 23;
++    pub const EMFILE: i32 = 24;
++    pub const ETXTBSY: i32 = 26;
++    pub const EFBIG: i32 = 27;
++    pub const ENOSPC: i32 = 28;
++    pub const ESPIPE: i32 = 29;
++    pub const EROFS: i32 = 30;
++    pub const EMLINK: i32 = 31;
++    pub const EPIPE: i32 = 32;
++    pub const EAGAIN: i32 = 35;
++    pub const EINPROGRESS: i32 = 36;
++    pub const EADDRINUSE: i32 = 48;
++    pub const EADDRNOTAVAIL: i32 = 49;
++    pub const ENETDOWN: i32 = 50;
++    pub const ENETUNREACH: i32 = 51;
++    pub const ECONNABORTED: i32 = 53;
++    pub const ECONNRESET: i32 = 54;
++    pub const ENOTCONN: i32 = 57;
++    pub const ETIMEDOUT: i32 = 60;
++    pub const ECONNREFUSED: i32 = 61;
++    pub const ELOOP: i32 = 62;
++    pub const ENAMETOOLONG: i32 = 63;
++    pub const EHOSTUNREACH: i32 = 65;
++    pub const ENOTEMPTY: i32 = 66;
++    pub const EDQUOT: i32 = 69;
++    pub const ESTALE: i32 = 70;
++    pub const ENOSYS: i32 = 78;
++    pub const ENOTSUP: i32 = 86;
++    pub const EDEADLK: i32 = 11;
++    pub const EOPNOTSUPP: i32 = 45;
++}
++
++#[inline]
++pub fn errno() -> i32 {
++    unsafe { *errno_location() as i32 }
++}
++
++#[inline]
++pub fn is_interrupted(errno: i32) -> bool {
++    errno == code::EINTR
++}
++
++pub fn decode_error_kind(errno: i32) -> io::ErrorKind {
++    use ErrorKind::*;
++    match errno {
++        code::E2BIG => ArgumentListTooLong,
++        code::EADDRINUSE => AddrInUse,
++        code::EADDRNOTAVAIL => AddrNotAvailable,
++        code::EBUSY => ResourceBusy,
++        code::ECONNABORTED => ConnectionAborted,
++        code::ECONNREFUSED => ConnectionRefused,
++        code::ECONNRESET => ConnectionReset,
++        code::EDEADLK => Deadlock,
++        code::EDQUOT => QuotaExceeded,
++        code::EEXIST => AlreadyExists,
++        code::EFBIG => FileTooLarge,
++        code::EHOSTUNREACH => HostUnreachable,
++        code::EINTR => Interrupted,
++        code::EINVAL => InvalidInput,
++        code::EISDIR => IsADirectory,
++        code::ELOOP => FilesystemLoop,
++        code::ENOENT => NotFound,
++        code::ENOMEM => OutOfMemory,
++        code::ENOSPC => StorageFull,
++        code::EMLINK => TooManyLinks,
++        code::ENAMETOOLONG => InvalidFilename,
++        code::ENETDOWN => NetworkDown,
++        code::ENETUNREACH => NetworkUnreachable,
++        code::ENOTCONN => NotConnected,
++        code::ENOTDIR => NotADirectory,
++        code::ENOTEMPTY => DirectoryNotEmpty,
++        code::EPIPE => BrokenPipe,
++        code::EROFS => ReadOnlyFilesystem,
++        code::ESPIPE => NotSeekable,
++        code::ESTALE => StaleNetworkFileHandle,
++        code::ETIMEDOUT => TimedOut,
++        code::ETXTBSY => ExecutableFileBusy,
++        code::EXDEV => CrossesDevices,
++        code::EINPROGRESS => InProgress,
++        code::EMFILE | code::ENFILE => TooManyOpenFiles,
++        code::EIO => InputOutputError,
++        code::EACCES | code::EPERM => PermissionDenied,
++        code::ENOSYS | code::ENOTSUP | code::EOPNOTSUPP => Unsupported,
++        code::EAGAIN => WouldBlock,
++        _ => Uncategorized,
++    }
++}
++
++// `strerror_r` is not exported by the ABI11 C library, so the shared
++// `strerror` is used. Its buffer is not thread safe, which is acceptable
++// while `std` runs on a single task.
++pub fn format_error(errno: i32, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++    let text = unsafe { strerror(errno as c_int) };
++    if text.is_null() {
++        return f.write_str("unknown error");
++    }
++    write!(f, "{}", unsafe { CStr::from_ptr(text) }.display())
++}
+diff --git a/library/std/src/sys/io/error/mod.rs b/library/std/src/sys/io/error/mod.rs
+index a56030f..d706282 100644
+--- a/library/std/src/sys/io/error/mod.rs
++++ b/library/std/src/sys/io/error/mod.rs
+@@ -1,4 +1,8 @@
+ cfg_select! {
++    target_os = "aros" => {
++        mod aros;
++        pub use aros::*;
++    }
+     target_os = "hermit" => {
+         mod hermit;
+         pub use hermit::*;
+diff --git a/library/std/src/sys/random/aros.rs b/library/std/src/sys/random/aros.rs
+new file mode 100644
+index 0000000..9ad499e
+--- /dev/null
++++ b/library/std/src/sys/random/aros.rs
+@@ -0,0 +1,54 @@
++//! Weak entropy for `HashMap` seeding. The AROS C library has no `getrandom`
++//! or `getentropy`, so the generator mixes the clocks and two addresses. It is
++//! not suitable for cryptography.
++
++use crate::ffi::c_int;
++use crate::sync::atomic::{AtomicU64, Ordering};
++
++// `time_t` is a 32-bit integer in the AROS C library and `long` is 64-bit.
++#[repr(C)]
++struct Timespec {
++    tv_sec: i32,
++    tv_nsec: i64,
++}
++
++// AROS numbers its clocks differently from POSIX systems.
++const CLOCK_MONOTONIC: c_int = 0;
++const CLOCK_REALTIME: c_int = 2;
++
++unsafe extern "C" {
++    fn clock_gettime(clock: c_int, tp: *mut Timespec) -> c_int;
++}
++
++static COUNTER: AtomicU64 = AtomicU64::new(0);
++
++fn clock_bits(clock: c_int) -> u64 {
++    let mut tp = Timespec { tv_sec: 0, tv_nsec: 0 };
++    if unsafe { clock_gettime(clock, &mut tp) } == 0 {
++        ((tp.tv_sec as u32 as u64) << 32) ^ tp.tv_nsec as u64
++    } else {
++        0
++    }
++}
++
++fn splitmix64(state: &mut u64) -> u64 {
++    *state = state.wrapping_add(0x9e37_79b9_7f4a_7c15);
++    let mut z = *state;
++    z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
++    z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
++    z ^ (z >> 31)
++}
++
++pub fn fill_bytes(bytes: &mut [u8]) {
++    let stack = 0u8;
++    let heap = Box::new(0u8);
++    let mut state = clock_bits(CLOCK_MONOTONIC)
++        ^ clock_bits(CLOCK_REALTIME).rotate_left(21)
++        ^ (&raw const stack).addr() as u64
++        ^ ((&raw const *heap).addr() as u64).rotate_left(42)
++        ^ COUNTER.fetch_add(0x2545_f491_4f6c_dd1d, Ordering::Relaxed);
++    for chunk in bytes.chunks_mut(8) {
++        let word = splitmix64(&mut state).to_ne_bytes();
++        chunk.copy_from_slice(&word[..chunk.len()]);
++    }
++}
+diff --git a/library/std/src/sys/random/mod.rs b/library/std/src/sys/random/mod.rs
+index bc3dd50..2e71bbf 100644
+--- a/library/std/src/sys/random/mod.rs
++++ b/library/std/src/sys/random/mod.rs
+@@ -28,6 +28,10 @@ cfg_select! {
+         mod arc4random;
+         pub use arc4random::fill_bytes;
+     }
++    target_os = "aros" => {
++        mod aros;
++        pub use aros::fill_bytes;
++    }
+     target_os = "emscripten" => {
+         mod getentropy;
+         pub use getentropy::fill_bytes;
+diff --git a/library/std/src/sys/sync/condvar/no_threads.rs b/library/std/src/sys/sync/condvar/no_threads.rs
+index 9dbba49..70a0508 100644
+--- a/library/std/src/sys/sync/condvar/no_threads.rs
++++ b/library/std/src/sys/sync/condvar/no_threads.rs
+@@ -2,7 +2,8 @@ use crate::sys::sync::Mutex;
+ use crate::thread::sleep;
+ use crate::time::Duration;
+ 
+-#[cfg(target_has_threads)]
++// AROS runs `std` on one task until thread support lands.
++#[cfg(all(target_has_threads, not(target_os = "aros")))]
+ compile_error!("Using no_threads implementation on a target with threads");
+ 
+ pub struct Condvar {}
+diff --git a/library/std/src/sys/sync/mutex/no_threads.rs b/library/std/src/sys/sync/mutex/no_threads.rs
+index a87c274..2a51145 100644
+--- a/library/std/src/sys/sync/mutex/no_threads.rs
++++ b/library/std/src/sys/sync/mutex/no_threads.rs
+@@ -1,6 +1,7 @@
+ use crate::cell::Cell;
+ 
+-#[cfg(target_has_threads)]
++// AROS runs `std` on one task until thread support lands.
++#[cfg(all(target_has_threads, not(target_os = "aros")))]
+ compile_error!("Using no_threads implementation on a target with threads");
+ 
+ pub struct Mutex {
+diff --git a/library/std/src/sys/sync/once/no_threads.rs b/library/std/src/sys/sync/once/no_threads.rs
+index 31c9aed..1b09636 100644
+--- a/library/std/src/sys/sync/once/no_threads.rs
++++ b/library/std/src/sys/sync/once/no_threads.rs
+@@ -2,7 +2,8 @@ use crate::cell::Cell;
+ use crate::sync as public;
+ use crate::sync::once::OnceExclusiveState;
+ 
+-#[cfg(target_has_threads)]
++// AROS runs `std` on one task until thread support lands.
++#[cfg(all(target_has_threads, not(target_os = "aros")))]
+ compile_error!("Using no_threads implementation on a target with threads");
+ 
+ pub struct Once {
+diff --git a/library/std/src/sys/sync/rwlock/no_threads.rs b/library/std/src/sys/sync/rwlock/no_threads.rs
+index efa2629..27b3587 100644
+--- a/library/std/src/sys/sync/rwlock/no_threads.rs
++++ b/library/std/src/sys/sync/rwlock/no_threads.rs
+@@ -1,6 +1,7 @@
+ use crate::cell::Cell;
+ 
+-#[cfg(target_has_threads)]
++// AROS runs `std` on one task until thread support lands.
++#[cfg(all(target_has_threads, not(target_os = "aros")))]
+ compile_error!("Using no_threads implementation on a target with threads");
+ 
+ pub struct RwLock {
+diff --git a/library/std/src/sys/thread_local/mod.rs b/library/std/src/sys/thread_local/mod.rs
+index 809ef5c..829778c 100644
+--- a/library/std/src/sys/thread_local/mod.rs
++++ b/library/std/src/sys/thread_local/mod.rs
+@@ -40,6 +40,7 @@ cfg_select! {
+         target_os = "zkvm",
+         target_os = "trusty",
+         target_os = "vexos",
++        target_os = "aros",
+     ) => {
+         mod no_threads;
+         pub use no_threads::{EagerStorage, LazyStorage, thread_local_inner};
+@@ -111,6 +112,7 @@ pub(crate) mod guard {
+             target_os = "zkvm",
+             target_os = "trusty",
+             target_os = "vexos",
++            target_os = "aros",
+         ) => {
+             pub(crate) fn enable() {
+                 // FIXME: Right now there is no concept of "thread exit" on
+diff --git a/library/std/src/sys/thread_local/no_threads.rs b/library/std/src/sys/thread_local/no_threads.rs
+index 9f4e771..4ce9610 100644
+--- a/library/std/src/sys/thread_local/no_threads.rs
++++ b/library/std/src/sys/thread_local/no_threads.rs
+@@ -5,7 +5,8 @@ use crate::cell::{Cell, UnsafeCell};
+ use crate::mem::MaybeUninit;
+ use crate::ptr;
+ 
+-#[cfg(target_has_threads)]
++// AROS runs `std` on one task until thread support lands.
++#[cfg(all(target_has_threads, not(target_os = "aros")))]
+ compile_error!("Using no_threads implementation on a target with threads");
+ 
+ #[doc(hidden)]

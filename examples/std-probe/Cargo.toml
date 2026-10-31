@@ -1,0 +1,31 @@
+[package]
+name = "std-probe"
+version = "0.1.0"
+edition = "2024"
+publish = false
+autobins = false
+autolib = false
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+
+[[bin]]
+name = "std-probe"
+path = "src/main.rs"
+
+[dependencies]
+aros = { version = "=0.1.0", path = "../../crates/aros", default-features = false }
+
+[build-dependencies]
+aros-native-build = { version = "=0.2.0", path = "../../tooling/crates/aros-native-build" }
+
+[workspace]
+
+[profile.release]
+opt-level = 2
+panic = "abort"
+lto = false
+codegen-units = 1
+incremental = false
+debug = 0
+strip = "none"
+

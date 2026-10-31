@@ -1,0 +1,87 @@
+{
+  "schema": "ami-rust-std-aros-source-v1",
+  "base": {
+    "rust_channel": "nightly-2026-09-18",
+    "component": "rust-src",
+    "root": "lib/rustlib/src/rust",
+    "inventory_pins": [
+      "tooling/crates/aros-native-build/pins/macos-aarch64/rust.json",
+      "tooling/crates/aros-native-build/pins/linux-x86_64/rust.json",
+      "tooling/crates/aros-native-build/pins/linux-aarch64/rust.json"
+    ],
+    "library_lock_sha256": "75848db58a70444bfb62c649b103d19c5d92fede325eb0c8c0e5442848448669"
+  },
+  "patch": {
+    "repository_path": "host/std-aros/std-aros.patch",
+    "sha256": "70c4875bddb841556f349ce8482552652529ea6fad0e21c15c2f142e9ff5fad5",
+    "strip": 1,
+    "apply_in": "lib/rustlib/src/rust"
+  },
+  "changed_files": [
+    {
+      "path": "library/std/build.rs",
+      "before_sha256": "f5510c905e126f1de772d73c02cacb7a5ed0a485a22fb99f395593b16a9de8b2",
+      "after_sha256": "d0f986ecc2343fc2f839a63c45f7c5fedcf5679ee246e291528f528acfb08ddc"
+    },
+    {
+      "path": "library/std/src/sys/alloc/aros.rs",
+      "before_sha256": null,
+      "after_sha256": "9b5af17179f283d4648df036e1fa21cc4fd53e251fec4e8cde01d4162d6914cb"
+    },
+    {
+      "path": "library/std/src/sys/alloc/mod.rs",
+      "before_sha256": "605fba85756be94fdc13f40823daa82ec29b493c102564fbe36a34a3414314e1",
+      "after_sha256": "d2a513eddefae0dad4e6fb32b2e82eb1e06b36b83d16d0a9a816e63959df3b93"
+    },
+    {
+      "path": "library/std/src/sys/io/error/aros.rs",
+      "before_sha256": null,
+      "after_sha256": "ec21ff6743462e3a65252392d28392da230791b9bbb6aa7e5af9a6b5f7e4553a"
+    },
+    {
+      "path": "library/std/src/sys/io/error/mod.rs",
+      "before_sha256": "51d30b4298f3bdba90b02936a7b4bc9891266fe8248675fe300222e24ae915e6",
+      "after_sha256": "ef9991f7f963587d4df788d6e2dc138a21f7c43506b84fba5b3f6ce1aa211fa1"
+    },
+    {
+      "path": "library/std/src/sys/random/aros.rs",
+      "before_sha256": null,
+      "after_sha256": "39927b8ed6214f315d70ae65eade95b783ecd8020e43365a3ad4711384fb24f8"
+    },
+    {
+      "path": "library/std/src/sys/random/mod.rs",
+      "before_sha256": "fcd278c7ca27edd3846098bb362423da1f013da49933159e66d0f77fd68cc540",
+      "after_sha256": "0f430e974344bd37ce261f99cc44f9f49fb1222e634a676fdabad2115ef62daf"
+    },
+    {
+      "path": "library/std/src/sys/sync/condvar/no_threads.rs",
+      "before_sha256": "6e5dad406c6dd6b3e8e410e30cf5eea3935c3a742543e513027840f497e53f83",
+      "after_sha256": "657fca8233b60fc69541e909387c09f5f1419c015ac1eec7b98b8e73eedf6259"
+    },
+    {
+      "path": "library/std/src/sys/sync/mutex/no_threads.rs",
+      "before_sha256": "e1b941c34ab92fc8141f519f9486a63263fd03e6cb9360291d0f03927d9b50cc",
+      "after_sha256": "6e1aa27bb659f76332ba8b022a2280ec14427ad5033ca348841932d2c2769c61"
+    },
+    {
+      "path": "library/std/src/sys/sync/once/no_threads.rs",
+      "before_sha256": "73925d4e791860db5a9da7452395b6026940aacede23fde8bbd1fb6ee0f275ff",
+      "after_sha256": "58eb1cf0a9b79409c489f1cecbb556864bac31772a7c02ef10eb0b860cd9b1e0"
+    },
+    {
+      "path": "library/std/src/sys/sync/rwlock/no_threads.rs",
+      "before_sha256": "f9234cf403edb45a8cd69fe898eb31e68a5195184eadf6a4c3e2d8e35ba7006c",
+      "after_sha256": "645242fb340487d1c17906dc5a19da1f3ff72a710bd0f8449447e98d125d0db9"
+    },
+    {
+      "path": "library/std/src/sys/thread_local/mod.rs",
+      "before_sha256": "b8e407313093a89008fd0fbdd4805f2da8c7bb7711f0d36c03d858d6f0de5e4a",
+      "after_sha256": "04c1e5c717004380907351cc792db1741258004b2f0d6b13b00bcb8d1c7e5d60"
+    },
+    {
+      "path": "library/std/src/sys/thread_local/no_threads.rs",
+      "before_sha256": "03b7da5fa2ac7128a112d141846c02adf4d58e5ede273458fe224d50633ab923",
+      "after_sha256": "e4d9f6b806b465ba7869336c019d07d4ca4ee91ee67f263a7d26bf4fc630df01"
+    }
+  ]
+}

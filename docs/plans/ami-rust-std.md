@@ -281,3 +281,10 @@ milestone; the three-host matrix runs at STD-M8.
   timeboxed spike in parallel with milestone M1 of the 0.2 plan. The first
   `std` release, and whether STD-M5 and STD-M6 are part of it, remain open and
   are decided at STD-M8.
+- 2026-10-31: The maintainer accepted STD-M1 as a spike (draft PR #78): `std`
+  builds, links and runs a trivial call on both ABIs. The patch set stays
+  unreviewed and the pipeline, Linux hosts and start-up ownership remain open,
+  so STD-M1 is not an accepted implementation. Findings that change this plan:
+  `aros::entry!` cannot be combined with `std`; the ABI-v1 SDK ships a static
+  `libpthread.a` defining the thread functions listed as missing, the ABI-v11
+  SDK has no pthread library; `time_t` is 32-bit in both C libraries.
