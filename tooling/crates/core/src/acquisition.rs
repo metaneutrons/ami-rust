@@ -111,7 +111,10 @@ impl DownloadPin {
                 "pinned download digest must be lowercase SHA-256 hex",
             ));
         }
-        if !matches!(origin, HttpsOrigin::StaticRustLang | HttpsOrigin::Github | HttpsOrigin::RawGithub) {
+        if !matches!(
+            origin,
+            HttpsOrigin::StaticRustLang | HttpsOrigin::Github | HttpsOrigin::RawGithub
+        ) {
             return Err(Refusal::new(
                 "pinned download origin is not a permitted source",
             ));

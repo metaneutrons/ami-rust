@@ -1054,10 +1054,7 @@ mod tests {
     // Synthetic bytes exercise retention and equality checks only; they are
     // deliberately not a substitute for the preceding ELF audit.
     use super::*;
-    use std::{
-        fs,
-        os::unix::fs::symlink,
-    };
+    use std::{fs, os::unix::fs::symlink};
 
     const SOURCE_HEAD: &str = "0123456789abcdef0123456789abcdef01234567";
     struct Fixture {

@@ -33,15 +33,24 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
     let result = (|| {
         let started = Instant::now();
         let private = read_credential(&credential)?;
-        let source = canonical_directory(PathBuf::from(required(&options, "--source-root")?), "source root")?;
+        let source = canonical_directory(
+            PathBuf::from(required(&options, "--source-root")?),
+            "source root",
+        )?;
         let host = required(&options, "--host")?;
         let gh = PathBuf::from(required(&options, "--gh")?);
         let cosign = PathBuf::from(required(&options, "--cosign")?);
         verify_pinned_verifiers(&source, host, &gh, &cosign)?;
         let plan = PathBuf::from(required(&options, "--plan")?);
         let subjects = read_subjects(&plan)?;
-        let payloads = canonical_directory(PathBuf::from(required(&options, "--payloads")?), "payload directory")?;
-        let logs = canonical_directory(PathBuf::from(required(&options, "--logs")?), "signing log directory")?;
+        let payloads = canonical_directory(
+            PathBuf::from(required(&options, "--payloads")?),
+            "payload directory",
+        )?;
+        let logs = canonical_directory(
+            PathBuf::from(required(&options, "--logs")?),
+            "signing log directory",
+        )?;
         sign_subjects(&cosign, &payloads, &logs, &subjects, &private, started)?;
         let status = match subjects.len() {
             31 => "31_SIGNING_COMMANDS_SUCCEEDED",
@@ -54,8 +63,11 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
             "claim": "Signing command exits only; final pinned cryptographic verification remains required."
         }))
     })();
-    let removal = fs::remove_file(&credential)
-        .map_err(|error| Refusal::new(format!("could not remove ephemeral signing credential: {error}")));
+    let removal = fs::remove_file(&credential).map_err(|error| {
+        Refusal::new(format!(
+            "could not remove ephemeral signing credential: {error}"
+        ))
+    });
     let value = match (result, removal) {
         (Err(error), _) => return Err(error),
         (Ok(_), Err(error)) => return Err(error),
@@ -69,7 +81,9 @@ pub(super) fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
     Ok(())
 }
 
-fn parse_options(arguments: &mut impl Iterator<Item = OsString>) -> Result<BTreeMap<OsString, OsString>> {
+fn parse_options(
+    arguments: &mut impl Iterator<Item = OsString>,
+) -> Result<BTreeMap<OsString, OsString>> {
     let mut options = BTreeMap::new();
     while let Some(key) = arguments.next() {
         if ![
@@ -119,8 +133,11 @@ fn required<'a>(options: &'a BTreeMap<OsString, OsString>, name: &str) -> Result
 }
 
 fn read_credential(path: &Path) -> Result<PrivateCredential> {
-    let metadata = fs::symlink_metadata(path)
-        .map_err(|error| Refusal::new(format!("could not inspect ephemeral signing credential: {error}")))?;
+    let metadata = fs::symlink_metadata(path).map_err(|error| {
+        Refusal::new(format!(
+            "could not inspect ephemeral signing credential: {error}"
+        ))
+    })?;
     if !metadata.file_type().is_file()
         || metadata.mode() & 0o7777 != 0o600
         || metadata.uid() != effective_uid()
@@ -139,9 +156,7 @@ fn read_credential(path: &Path) -> Result<PrivateCredential> {
         "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
         "ACTIONS_ID_TOKEN_REQUEST_URL",
     ];
-    if object.len() != expected.len()
-        || expected.iter().any(|key| !object.contains_key(*key))
-    {
+    if object.len() != expected.len() || expected.iter().any(|key| !object.contains_key(*key)) {
         return Err(Refusal::new(
             "ephemeral signing credential has an invalid shape",
         ));
@@ -183,10 +198,13 @@ fn verify_pinned_verifiers(source: &Path, host: &str, gh: &Path, cosign: &Path) 
         let expected_bytes = u64_field(binary_pin, "binary_bytes", "verifier binary pin")?;
         let expected_digest = string_field(binary_pin, "binary_sha256", "verifier binary pin")?;
         if !is_sha256(expected_digest) {
-            return Err(Refusal::new("verifier binary pin has an invalid SHA-256 digest"));
+            return Err(Refusal::new(
+                "verifier binary pin has an invalid SHA-256 digest",
+            ));
         }
-        let metadata = fs::symlink_metadata(binary)
-            .map_err(|error| Refusal::new(format!("could not inspect {name} executable: {error}")))?;
+        let metadata = fs::symlink_metadata(binary).map_err(|error| {
+            Refusal::new(format!("could not inspect {name} executable: {error}"))
+        })?;
         if !metadata.file_type().is_file()
             || metadata.len() != expected_bytes
             || metadata.mode() & 0o111 == 0
@@ -196,10 +214,9 @@ fn verify_pinned_verifiers(source: &Path, host: &str, gh: &Path, cosign: &Path) 
                 "verifier executable differs from trusted source pin: {name}"
             )));
         }
-        let root_pin = roots
-            .get(name)
-            .and_then(Value::as_object)
-            .ok_or_else(|| Refusal::new(format!("{name} trust root is missing from source pins")))?;
+        let root_pin = roots.get(name).and_then(Value::as_object).ok_or_else(|| {
+            Refusal::new(format!("{name} trust root is missing from source pins"))
+        })?;
         let relative = string_field(root_pin, "path", "verifier trust-root pin")?;
         validate_relative_path(relative)?;
         let root_path = source.join(relative);
@@ -231,10 +248,9 @@ fn read_subjects(path: &Path) -> Result<Vec<String>> {
         .get("signature_subjects")
         .and_then(Value::as_array)
         .ok_or_else(|| Refusal::new("signature subject plan must select signature subjects"))?;
-    let rp3 = object.get("schema").and_then(Value::as_str)
-        == Some("ami-rust-rp3-signature-plan-v1");
-    if (!rp3 && !matches!(subjects.len(), 31 | 32))
-        || (rp3 && !(12..=64).contains(&subjects.len()))
+    let rp3 =
+        object.get("schema").and_then(Value::as_str) == Some("ami-rust-rp3-signature-plan-v1");
+    if (!rp3 && !matches!(subjects.len(), 31 | 32)) || (rp3 && !(12..=64).contains(&subjects.len()))
     {
         return Err(Refusal::new(
             "signature plan has an unsupported subject count",
@@ -253,10 +269,8 @@ fn read_subjects(path: &Path) -> Result<Vec<String>> {
         ));
     }
     if rp3 {
-        if object.get("status").and_then(Value::as_str)
-            != Some("READY_FOR_PROTECTED_SIGNATURES")
-            || object.get("subject_count").and_then(Value::as_u64)
-                != Some(names.len() as u64)
+        if object.get("status").and_then(Value::as_str) != Some("READY_FOR_PROTECTED_SIGNATURES")
+            || object.get("subject_count").and_then(Value::as_u64) != Some(names.len() as u64)
         {
             return Err(Refusal::new("RP3 signature plan identity is invalid"));
         }
@@ -267,7 +281,10 @@ fn read_subjects(path: &Path) -> Result<Vec<String>> {
     } else {
         "READY_FOR_32_REAL_SIGNATURES_AND_JOINT_90_SUBJECT_ATTESTATION"
     };
-    if object.get("status").is_some_and(|value| value.as_str() != Some(expected_status)) {
+    if object
+        .get("status")
+        .is_some_and(|value| value.as_str() != Some(expected_status))
+    {
         return Err(Refusal::new(
             "signature subjects do not match the exact assembly profile status",
         ));
@@ -288,8 +305,10 @@ fn sign_subjects(
     credential: &PrivateCredential,
     started: Instant,
 ) -> Result<()> {
-    let home = std::env::var_os("HOME").ok_or_else(|| Refusal::new("HOME is required for signing"))?;
-    let temporary = std::env::var_os("TMPDIR").ok_or_else(|| Refusal::new("TMPDIR is required for signing"))?;
+    let home =
+        std::env::var_os("HOME").ok_or_else(|| Refusal::new("HOME is required for signing"))?;
+    let temporary =
+        std::env::var_os("TMPDIR").ok_or_else(|| Refusal::new("TMPDIR is required for signing"))?;
     for name in subjects {
         check_deadline(started)?;
         let input = payloads.join(name);
@@ -323,19 +342,22 @@ fn sign_subjects(
             .map_err(|error| Refusal::new(format!("could not start pinned Cosign: {error}")))?;
         let command_started = Instant::now();
         loop {
-            if let Some(status) = child
-                .try_wait()
-                .map_err(|error| Refusal::new(format!("could not observe pinned Cosign: {error}")))?
-            {
+            if let Some(status) = child.try_wait().map_err(|error| {
+                Refusal::new(format!("could not observe pinned Cosign: {error}"))
+            })? {
                 if !status.success() {
-                    return Err(Refusal::new(format!("pinned Cosign rejected a signature subject: {name}")));
+                    return Err(Refusal::new(format!(
+                        "pinned Cosign rejected a signature subject: {name}"
+                    )));
                 }
                 break;
             }
             if command_started.elapsed() >= COMMAND_DEADLINE || started.elapsed() >= DEADLINE {
                 let _ = child.kill();
                 let _ = child.wait();
-                return Err(Refusal::new("signing exceeded the existing command deadline"));
+                return Err(Refusal::new(
+                    "signing exceeded the existing command deadline",
+                ));
             }
             thread::sleep(Duration::from_millis(20));
         }
@@ -348,7 +370,12 @@ fn create_new(path: &Path) -> Result<File> {
         .write(true)
         .create_new(true)
         .open(path)
-        .map_err(|error| Refusal::new(format!("could not create signing log {}: {error}", path.display())))
+        .map_err(|error| {
+            Refusal::new(format!(
+                "could not create signing log {}: {error}",
+                path.display()
+            ))
+        })
 }
 
 fn canonical_directory(path: PathBuf, label: &str) -> Result<PathBuf> {
@@ -357,10 +384,15 @@ fn canonical_directory(path: PathBuf, label: &str) -> Result<PathBuf> {
     if metadata.file_type().is_symlink() || !metadata.is_dir() {
         return Err(Refusal::new(format!("{label} must be a real directory")));
     }
-    fs::canonicalize(&path).map_err(|error| Refusal::new(format!("could not canonicalize {label}: {error}")))
+    fs::canonicalize(&path)
+        .map_err(|error| Refusal::new(format!("could not canonicalize {label}: {error}")))
 }
 
-fn string_field<'a>(object: &'a serde_json::Map<String, Value>, name: &str, label: &str) -> Result<&'a str> {
+fn string_field<'a>(
+    object: &'a serde_json::Map<String, Value>,
+    name: &str,
+    label: &str,
+) -> Result<&'a str> {
     object
         .get(name)
         .and_then(Value::as_str)
@@ -375,20 +407,26 @@ fn u64_field(object: &serde_json::Map<String, Value>, name: &str, label: &str) -
 }
 
 fn is_sha256(value: &str) -> bool {
-    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 fn safe_asset_name(value: &str) -> bool {
     let mut bytes = value.bytes();
     matches!(bytes.next(), Some(byte) if byte.is_ascii_alphanumeric())
-        && bytes.all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'+' | b'-'))
+        && bytes
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'+' | b'-'))
 }
 
 fn validate_relative_path(value: &str) -> Result<()> {
     if value.is_empty()
         || value.starts_with('/')
         || value.contains('\\')
-        || value.split('/').any(|part| part.is_empty() || matches!(part, "." | ".."))
+        || value
+            .split('/')
+            .any(|part| part.is_empty() || matches!(part, "." | ".."))
     {
         return Err(Refusal::new("Cosign trust-root pin has an invalid path"));
     }
@@ -397,7 +435,9 @@ fn validate_relative_path(value: &str) -> Result<()> {
 
 fn check_deadline(started: Instant) -> Result<()> {
     if started.elapsed() >= DEADLINE {
-        Err(Refusal::new("signing exceeded the existing command deadline"))
+        Err(Refusal::new(
+            "signing exceeded the existing command deadline",
+        ))
     } else {
         Ok(())
     }
@@ -408,7 +448,10 @@ struct PrivateCredential {
     url: String,
 }
 
-#[allow(unsafe_code, reason = "geteuid reads the caller's effective UID and takes no pointers")]
+#[allow(
+    unsafe_code,
+    reason = "geteuid reads the caller's effective UID and takes no pointers"
+)]
 fn effective_uid() -> u32 {
     // SAFETY: geteuid takes no pointers and only reads the current process UID.
     unsafe { libc::geteuid() }

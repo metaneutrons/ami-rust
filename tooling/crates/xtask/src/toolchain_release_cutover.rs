@@ -1068,8 +1068,7 @@ fn verified_source_capsule(
 ) -> Result<VerifiedSourceCapsule> {
     let root = existing_directory(root.to_path_buf(), "source capsule output")?;
     let result = read_object(&root.join("result.json"))?;
-    if result.get("schema").and_then(Value::as_str)
-        != Some("ami-rust-toolchain-capsule-result-v1")
+    if result.get("schema").and_then(Value::as_str) != Some("ami-rust-toolchain-capsule-result-v1")
         || result.get("status").and_then(Value::as_str)
             != Some("COMPLETED_LOCAL_UNSIGNED_CANDIDATE_ONLY")
         || result.get("version").and_then(Value::as_str) != Some(version)
@@ -1600,7 +1599,11 @@ mod tests {
                 {"name":vendor_name,"bytes":vendor_bytes.len(),"sha256":sha256_bytes(vendor_bytes)}
             ]
         });
-        fs::write(root.join("result.json"), serde_json::to_vec(&result).unwrap()).unwrap();
+        fs::write(
+            root.join("result.json"),
+            serde_json::to_vec(&result).unwrap(),
+        )
+        .unwrap();
 
         let selected =
             verified_source_capsule(&root, version, commit, tree, epoch).expect("valid capsule");

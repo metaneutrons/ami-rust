@@ -329,10 +329,8 @@ mod tests {
 
     #[test]
     fn profiles_match_the_frozen_format_contract() {
-        let contract: Value = serde_json::from_str(include_str!(
-            "../tests/fixtures/contracts-v1.json"
-        ))
-        .unwrap();
+        let contract: Value =
+            serde_json::from_str(include_str!("../tests/fixtures/contracts-v1.json")).unwrap();
         let limits = &contract["proposed_schema_policy"]["metadata_limits"];
         assert_eq!(limits["json_max_container_depth"], JSON_MAX_CONTAINER_DEPTH);
         for (profile, key) in [
