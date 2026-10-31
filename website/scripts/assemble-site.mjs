@@ -3,14 +3,16 @@
 // usage: node scripts/assemble-site.mjs --out DIR --host TRIPLE [--skip-install] [--only next|VERSION]
 //
 // Layout of DIR:
-//   /            the latest release (website/versions.json "latest")
-//   /v<version>/ every release listed in website/versions.json
+//   /            the latest release (the highest release tag with the site)
+//   /v<version>/ every release whose tag contains the site (see versions.mjs)
 //   /next/       the current checkout, the development docs
 //   /versions.json, /version-switcher.js, /robots.txt
 //
 // The development docs are built from the checkout this script runs in. Each
-// release is built from its own git ref, with that ref's own docs, crates and
+// release is built from its release tag, with that tag's own docs, crates and
 // website sources, so a released version documents what that release shipped.
+// The exception is a release that predates the site, built from the legacy ref
+// that website/versions.json names.
 // Only the deployment layer (base path, version metadata and the switcher) comes
 // from this checkout, which is why it is applied after each build.
 
@@ -19,6 +21,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync,
 import os from 'node:os';
 import path from 'node:path';
 import { rebaseSite } from './rebase-site.mjs';
+import { discoverVersions } from './versions.mjs';
 
 const websiteRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repository = realpathSync(path.resolve(websiteRoot, '..'));
@@ -37,9 +40,12 @@ if (output.startsWith(`${repository}${path.sep}`) || repository.startsWith(`${ou
   process.exit(2);
 }
 
-const manifest = JSON.parse(readFileSync(path.join(websiteRoot, 'versions.json'), 'utf8'));
-if (!manifest.versions.some((entry) => entry.version === manifest.latest)) {
-  console.error(`versions.json: latest ${manifest.latest} is not in versions`);
+const discovered = discoverVersions({
+  repository,
+  manifest: JSON.parse(readFileSync(path.join(websiteRoot, 'versions.json'), 'utf8')),
+});
+if (discovered.problems.length) {
+  console.error(`website/versions.json or the release tags are inconsistent:\n  ${discovered.problems.join('\n  ')}`);
   process.exit(2);
 }
 
@@ -52,14 +58,6 @@ const run = (command, commandArgs, options = {}) => {
   return result.stdout;
 };
 const log = (message) => console.log(`[assemble] ${message}`);
-
-const resolveRef = (ref) => {
-  for (const candidate of [ref, `origin/${ref}`, `refs/tags/${ref}`]) {
-    const result = spawnSync('git', ['rev-parse', '--verify', '--quiet', `${candidate}^{commit}`], { cwd: repository, encoding: 'utf8' });
-    if (result.status === 0) return result.stdout.trim();
-  }
-  throw new Error(`git ref ${ref} not found; fetch it (CI checks out with fetch-depth 0)`);
-};
 
 const scratch = mkdtempSync(path.join(os.tmpdir(), 'ami-docs-assemble-'));
 const builds = [];
@@ -101,13 +99,13 @@ try {
       targets: [{ base: '/next', folder: 'next', latest: false }],
     }));
   }
-  for (const entry of manifest.versions.filter((candidate) => !only || only === candidate.version)) {
-    const commit = resolveRef(entry.ref);
+  for (const note of discovered.notes) log(`note: ${note}`);
+  for (const entry of discovered.versions.filter((candidate) => !only || only === candidate.version)) {
     const worktree = path.join(scratch, `wt-${entry.version}`);
-    log(`${entry.version}: ${entry.ref} at ${commit.slice(0, 12)}`);
-    run('git', ['worktree', 'add', '--detach', worktree, commit], { cwd: repository });
+    log(`${entry.version}: ${entry.source === 'tag' ? 'tag' : 'legacy ref'} ${entry.ref} at ${entry.commit.slice(0, 12)}`);
+    run('git', ['worktree', 'add', '--detach', worktree, entry.commit], { cwd: repository });
     try {
-      const isLatest = entry.version === manifest.latest;
+      const isLatest = entry.version === discovered.latest;
       builds.push(...buildCheckout({
         name: entry.version, directory: worktree, channel: 'release', version: entry.version,
         targets: [
@@ -127,8 +125,8 @@ try {
   for (const build of builds.filter((candidate) => candidate.folder)) cpSync(build.dist, path.join(output, build.folder), { recursive: true });
 
   const published = {
-    latest: manifest.latest,
-    versions: manifest.versions.map(({ version }) => ({ version })),
+    latest: discovered.latest,
+    versions: discovered.versions.map(({ version }) => ({ version })),
     next: builds.some((build) => build.name === 'next'),
   };
   writeFileSync(path.join(output, 'versions.json'), `${JSON.stringify(published, null, 2)}\n`);

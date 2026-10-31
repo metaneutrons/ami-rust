@@ -24,7 +24,9 @@ The documentation is versioned. Use the version selector in the page header, or 
 
 Switching version keeps you on the same page when that page exists in the other version. A banner appears on every page that is not for the latest release.
 
-Each release is built from its own git ref, with that ref's own guides, examples and API reference. Corrections to the documentation of a published release are made on a release branch, `release/0.1` for the 0.1 series, and are published without changing the release tag. The footer of every page shows the commit it was built from.
+The documentation of a release is built from that release's tag. The tag is immutable and contains the guides, examples and API reference that the release shipped, so a published version's documentation does not change afterwards. A correction goes into the next release, and shows up in the development docs straight away. The footer of every page shows the commit it was built from.
+
+The 0.1.0 documentation is the one exception. The documentation site was added after the 0.1.0 release, so the `v0.1.0` tag has no site sources. The 0.1 documentation is built from the `release/0.1` branch instead, and corrections to it are made there. Every release from the first one that contains the site is built from its tag.
 
 The **public declarations** of `aros` and `aros-mui` in the 0.1 documentation are the same as at the `v0.1.0` tag: no public item has been added, removed or changed since. A project that pins the tagged revision therefore compiles against the API the 0.1 documentation describes. Two things in it are newer than the tag: Rustdoc comments and guides, and the [MUI hello](/mui-hello/) example, which is not part of the `v0.1.0` tag (the SHA-256 example is). To read the source exactly as released, check out the tag:
 

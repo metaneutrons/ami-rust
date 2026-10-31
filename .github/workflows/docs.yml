@@ -68,6 +68,12 @@ on:
       - 'CHANGELOG.md'
       - '_typos.toml'
       - '.github/workflows/docs.yml'
+  # A release's documentation is built from its tag, which the protected release
+  # workflow creates. Publish once that workflow has finished. This runs on the
+  # default branch, which is where the github-pages environment deploys from.
+  workflow_run:
+    workflows: ['Protected toolchain release']
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -80,6 +86,8 @@ concurrency:
 jobs:
   check:
     name: Check documentation site
+    # After a release workflow, only a successful one publishes documentation.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     steps:
       - name: Check out source
@@ -108,6 +116,9 @@ jobs:
 
       - name: Install locked dependencies
         run: pnpm --dir website install --frozen-lockfile
+
+      - name: Test version discovery
+        run: pnpm --dir website run test
 
       - name: Generate Rust API reference
         run: >-
