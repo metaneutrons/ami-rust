@@ -35,7 +35,7 @@ fn main() {
 
 ### What `prepare` refuses
 
-A refusal ends the build with a message of the form `AROS native bridge: Refusal { message: "…" }`. Each one has a cause and a remedy; the [troubleshooting](/troubleshooting/) page shows how to fix the common ones.
+A refusal ends the build with a message of the form `AROS native bridge: Refusal { message: "…" }`. Revisions after 0.1.0 also print the cause and the usual fix on standard error just before it. Each refusal has a cause and a remedy; the [troubleshooting](/troubleshooting/) page shows how to fix the common ones.
 
 | Message | Cause |
 | --- | --- |
@@ -44,7 +44,7 @@ A refusal ends the build with a message of the form `AROS native bridge: Refusal
 | `RUST_TARGET_PATH must be unset or empty for the selected toolchain` | `RUST_TARGET_PATH` is set. The toolchain supplies its own target specification. |
 | `AROS target flags must not override the selected sysroot or target` | `--sysroot` or `--target` appears in your rustflags. |
 | `AROS target flags must not override Cargo's selected target linker` | `-C linker=…` or `-C linker-flavor=…` appears in your rustflags. |
-| `RUSTC_WRAPPER conflicts with the pinned compiler selection` | A compiler wrapper such as `sccache` is configured, through the environment or through `build.rustc-wrapper` in a Cargo configuration file. `RUSTC_WORKSPACE_WRAPPER` is refused the same way. |
+| `RUSTC_WRAPPER conflicts with the pinned compiler selection` | A compiler wrapper such as `sccache` is configured, through the environment or through `build.rustc-wrapper` in a Cargo configuration file. `RUSTC_WORKSPACE_WRAPPER`, which `cargo clippy` sets, is refused the same way. |
 | `Cargo must explicitly select this toolchain's aros-link` | The target's `linker` setting is missing or points elsewhere. |
 | `build must use the toolchain's paired Cargo` | The Cargo that launched the build is not the one shipped with the selected toolchain. |
 | `selected compiler or target specification is missing` | The toolchain installation is incomplete. |

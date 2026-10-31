@@ -97,7 +97,51 @@ fn native_host_triple(host: &str) -> Result<&'static str> {
 ///
 /// This function runs from the application's additive build script. It never
 /// calls Cargo, resolves dependencies, downloads inputs or changes rustup state.
+///
+/// A refusal is also explained on standard error, with the usual remedy, so the
+/// cause is readable in Cargo's build-script output.
 pub fn prepare(options: BuildOptions) -> Result<()> {
+    let result = prepare_checked(options);
+    if let Err(refusal) = &result {
+        eprintln!("aros-native-build: {refusal}");
+        if let Some(help) = remedy(&refusal.to_string()) {
+            eprintln!("aros-native-build: {help}");
+        }
+        eprintln!("aros-native-build: see https://ami-rust.metaneutrons.cc/troubleshooting/");
+    }
+    result
+}
+
+/// How to fix the refusals that users most often meet, keyed by the refusal text.
+fn remedy(message: &str) -> Option<&'static str> {
+    if message.starts_with("RUSTC_WRAPPER ") || message.starts_with("RUSTC_WORKSPACE_WRAPPER ") {
+        Some(
+            "a compiler wrapper (for example sccache, or the clippy driver) is active and could replace \
+             the pinned compiler. Unset RUSTC_WRAPPER and RUSTC_WORKSPACE_WRAPPER in your environment. If \
+             the wrapper comes from a Cargo configuration file, run this build with \
+             CARGO_BUILD_RUSTC_WRAPPER= or set rustc-wrapper = \"\" under [build] in the project's \
+             .cargo/config.toml.",
+        )
+    } else if message.starts_with("RUST_TARGET_PATH ") {
+        Some("unset RUST_TARGET_PATH: the toolchain supplies its own target specification.")
+    } else if message.starts_with("Cargo must explicitly select this toolchain's aros-link") {
+        Some(
+            "add the AROS target sections to .cargo/config.toml: linker = \"aros-link\" and \
+             rustflags = [\"-Zunstable-options\"] for x86_64-unknown-aros-abi1 and \
+             x86_64-unknown-aros-abi11.",
+        )
+    } else if message.starts_with("native bridge requires a supported AROS target") {
+        Some("build with --target x86_64-unknown-aros-abi1 or --target x86_64-unknown-aros-abi11.")
+    } else if message.starts_with("AROS target flags must not override") {
+        Some(
+            "remove --sysroot, --target, -C linker and -C linker-flavor from RUSTFLAGS and from the rustflags in your Cargo configuration.",
+        )
+    } else {
+        None
+    }
+}
+
+fn prepare_checked(options: BuildOptions) -> Result<()> {
     verify_rust_target_path(env::var_os("RUST_TARGET_PATH").as_deref())?;
     let abi = match env::var("TARGET").ok().as_deref() {
         Some("x86_64-unknown-aros-abi1") => ArosAbi::Abi1,
@@ -710,6 +754,24 @@ fn file_identity(path: &Path) -> Result<(u64, String)> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn common_refusals_have_a_remedy_and_unknown_ones_do_not() {
+        for message in [
+            "RUSTC_WRAPPER conflicts with the pinned compiler selection",
+            "RUSTC_WORKSPACE_WRAPPER conflicts with the pinned compiler selection",
+            "RUST_TARGET_PATH must be unset or empty for the selected toolchain",
+            "Cargo must explicitly select this toolchain's aros-link",
+            "native bridge requires a supported AROS target",
+            "AROS target flags must not override the selected sysroot or target",
+        ] {
+            assert!(super::remedy(message).is_some(), "{message}");
+        }
+        assert!(super::remedy("missing Cargo OUT_DIR").is_none());
+        let help =
+            super::remedy("RUSTC_WRAPPER conflicts with the pinned compiler selection").unwrap();
+        assert!(help.contains("CARGO_BUILD_RUSTC_WRAPPER=") && help.contains("sccache"));
+    }
+
     #[test]
     fn collector_invocation_selects_alias_without_changing_executable_or_link_arguments() {
         let recipe = crate::recipe::CommandRecipe {
