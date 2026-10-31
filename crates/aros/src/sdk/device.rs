@@ -7,6 +7,8 @@
 
 use core::{marker::PhantomData, mem};
 
+#[cfg(doc)]
+use super::ErrorKind;
 use super::{BytePath, Error, Operation, fresh_sys_error};
 use crate::Context;
 use aros_sys::{self as sys, SdkError};
