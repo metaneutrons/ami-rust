@@ -27,7 +27,8 @@ ami-rust has four layers. Applications use the top one; the lower layers exist s
 | --- | --- |
 | [`aros`](/api/aros/) | Entry point, `Context`, allocator, files, streams, libraries, signals, ports, messages. The safe core. |
 | [`aros-mui`](/api/aros-mui/) | Typed, scope-owned MUI objects. Built on `aros` and `aros-mui-sys`. |
-| `aros-sys` | Raw, allocation-free declarations and calls for the exec, dos, utility and intuition libraries, plus the bridge's C interface. |
+| [`aros-timer`](/api/aros-timer/) | Time and timers on `timer.device`. Built on `aros` and the raw timer calls in `aros-sys`. Unreleased. |
+| `aros-sys` | Raw, allocation-free declarations and calls for the exec, dos, utility, intuition and timer libraries, plus the bridge's C interface. |
 | `aros-mui-sys` | Raw MUI: every public class ID, attribute, method, value, enum value and `MUIP_*` message in the pinned headers, and the reviewed muimaster vector calls. |
 
 Every safe type is built on the raw crates, and none of them exposes a raw pointer except through an `unsafe` item. The raw crates choose their library-call backend from the Cargo target, which is how the two [ABIs](/targets-and-abis/) are kept out of the safe API.
