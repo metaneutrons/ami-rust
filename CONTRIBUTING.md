@@ -65,6 +65,7 @@ documents are deliberately not published.
   source. For generated MUI items that means `tooling/crates/xtask/src/
   mui_safe_codegen.rs`; then run `cargo xtask generate mui` and commit the
   result. `aros` and `aros-mui` deny `missing_docs` and broken intra-doc links.
+- **Formatting.** `cargo fmt --all --check` is clean for the root workspace and, with `--manifest-path tooling/Cargo.toml`, for the tooling workspace. The generated MUI sources are excluded with `#[rustfmt::skip]` on their `mod` declarations, because `check mui` compares them byte for byte.
 - **ABI.** Items declared for only one ABI must say so in their docs
   (`Available on ABI-v1 targets only.`). The reference generator fails when
   that sentence disagrees with the two compiled builds.
