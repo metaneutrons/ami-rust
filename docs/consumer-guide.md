@@ -28,18 +28,18 @@ Start with `aros`, add `aros-mui` for a graphical interface, and reach for a `-s
 
 ## Depend on the crates
 
-The crates are delivered through Git and are intentionally not on crates.io. Pin the 0.1.0 source release by revision:
+The crates are delivered through Git and are intentionally not on crates.io. Pin a release by its tag:
 
 ```toml
 [dependencies]
-aros = { git = "https://github.com/metaneutrons/ami-rust", rev = "8456843ca869a738dde6dc7b7a062a2fdc3b6597", features = ["alloc"] }
-aros-mui = { git = "https://github.com/metaneutrons/ami-rust", rev = "8456843ca869a738dde6dc7b7a062a2fdc3b6597" }
+aros = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0", features = ["alloc"] }
+aros-mui = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
 
 [build-dependencies]
-aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", rev = "8456843ca869a738dde6dc7b7a062a2fdc3b6597" }
+aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
 ```
 
-That revision is the commit tagged [`v0.1.0`](https://github.com/metaneutrons/ami-rust/releases/tag/v0.1.0). Commit your `Cargo.lock`. See [releases and versions](/releases/) for how this documentation relates to the tagged source.
+Release tags are immutable, and `Cargo.lock` records the exact commit that the tag pointed to when you resolved, so commit it. Use the tag of the release you installed the toolchain for. See [releases and versions](/releases/) for how this documentation relates to each release.
 
 ## A minimal program
 
@@ -52,10 +52,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-aros = { git = "https://github.com/metaneutrons/ami-rust", rev = "8456843ca869a738dde6dc7b7a062a2fdc3b6597", features = ["alloc"] }
+aros = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0", features = ["alloc"] }
 
 [build-dependencies]
-aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", rev = "8456843ca869a738dde6dc7b7a062a2fdc3b6597" }
+aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
 ```
 
 `build.rs` compiles the native bridge that the SDK needs, inside Cargo's own output directory:

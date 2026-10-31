@@ -7,12 +7,12 @@
 //              root-relative link must carry it, so links written in Markdown
 //              that were not rebased are reported
 // --dist-only  check only the built files, not the repository sources (content
-//              rules, pinned revision, theme contrast); for builds of another
+//              rules, release references, theme contrast); for builds of another
 //              git ref
 //
 // Errors fail the run; warnings are printed. The checks cover link and anchor
 // integrity, the heading outline, page metadata, content rules for the
-// hand-written pages, the pinned release revision, theme contrast and the
+// hand-written pages, release references, theme contrast and the
 // presence of the files a published site needs.
 
 import { execFileSync } from 'node:child_process';
@@ -176,24 +176,48 @@ if (existsSync(referenceRoot)) {
   }
 }
 
-/* ---------- pinned revision ---------- */
+/* ---------- release references ---------- */
+
+// A release's documentation lives in that release's tag, and a commit cannot
+// contain its own hash, so the docs name releases by tag (tag = "v0.2.0"), not
+// by commit. Tags are immutable and Cargo.lock records the exact commit.
+//  - tag = "vX.Y.Z" must be a release tag, or the release in preparation (version.txt)
+//  - rev = "<hash>" must be the commit of a release tag
+//  - version literals that differ from version.txt only warn: while a release is
+//    prepared, version.txt moves first and the docs follow in the release steps
 
 const version = readFileSync(path.join(repository, 'version.txt'), 'utf8').trim();
-const pins = new Map();
-for (const file of handWritten) {
-  for (const match of readFileSync(file, 'utf8').matchAll(/\brev\s*=\s*"([0-9a-f]{40})"/g)) {
-    pins.set(match[1], [...(pins.get(match[1]) || []), path.relative(repository, file)]);
+const gitOutput = (gitArgs) => {
+  try {
+    return execFileSync('git', gitArgs, { cwd: repository, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  } catch {
+    return null;
   }
+};
+const releaseTags = new Map();
+const tagList = gitOutput(['tag', '--list', 'v*']);
+for (const tag of (tagList ?? '').split('\n').filter((candidate) => /^v\d+\.\d+\.\d+$/.test(candidate))) {
+  releaseTags.set(tag, gitOutput(['rev-parse', `${tag}^{commit}`]));
 }
-if (pins.size > 1) fail('release', `documentation pins ${pins.size} different revisions: ${[...pins.keys()].map((sha) => sha.slice(0, 12)).join(', ')}`);
-try {
-  const tagged = execFileSync('git', ['rev-parse', '--verify', `v${version}^{commit}`], { cwd: repository, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-  for (const [sha, files] of pins) {
-    if (sha !== tagged) fail('release', `${files[0]} pins ${sha.slice(0, 12)} but tag v${version} is ${tagged.slice(0, 12)}`);
+if (!releaseTags.size) {
+  if (process.env.CI) fail('release', 'no release tags are available to verify release references (fetch tags in CI)');
+  else warn('release', 'no release tags found locally; release references not verified');
+}
+const taggedCommits = new Set(releaseTags.values());
+const LITERALS = [/cargo \+(\d+\.\d+\.\d+)/g, /toolchain=(\d+\.\d+\.\d+)/g, /\bversion=(\d+\.\d+\.\d+)/g, /channel = "(\d+\.\d+\.\d+)"/g, /releases\/tag\/v(\d+\.\d+\.\d+)/g];
+for (const file of handWritten) {
+  const text = readFileSync(file, 'utf8');
+  const relative = path.relative(repository, file);
+  for (const match of text.matchAll(/\brev\s*=\s*"([0-9a-f]{40})"/g)) {
+    if (releaseTags.size && !taggedCommits.has(match[1])) fail('release', `${relative}: rev = "${match[1].slice(0, 12)}" is not the commit of a release tag; pin a release with tag = "vX.Y.Z"`);
   }
-} catch {
-  if (process.env.CI) fail('release', `tag v${version} is not available to verify the pinned revision (fetch tags in CI)`);
-  else warn('release', `tag v${version} not found locally; pinned revision not verified`);
+  for (const match of text.matchAll(/\btag\s*=\s*"(v\d+\.\d+\.\d+)"/g)) {
+    if (releaseTags.size && !releaseTags.has(match[1]) && match[1] !== `v${version}`) fail('release', `${relative}: tag = "${match[1]}" is neither a release tag nor the release in preparation (v${version})`);
+    if (match[1] !== `v${version}`) warn('release', `${relative}: pins ${match[1]} but version.txt is ${version}`);
+  }
+  const stale = new Set();
+  for (const pattern of LITERALS) for (const match of text.matchAll(pattern)) if (match[1] !== version) stale.add(match[1]);
+  if (stale.size) warn('release', `${relative}: names version ${[...stale].join(', ')} but version.txt is ${version}`);
 }
 
 /* ---------- theme contrast ---------- */

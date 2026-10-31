@@ -9,6 +9,7 @@
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import { discoverVersions } from './versions.mjs';
 
 const websiteRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const site = path.resolve(process.argv[2] ?? '');
@@ -28,13 +29,17 @@ const read = (file) => readFileSync(path.join(site, file), 'utf8');
 
 let manifest;
 try { manifest = JSON.parse(read('versions.json')); } catch { fail('versions.json is missing or not JSON'); }
-const sources = JSON.parse(readFileSync(path.join(websiteRoot, 'versions.json'), 'utf8'));
+const discovered = discoverVersions({
+  repository: path.resolve(websiteRoot, '..'),
+  manifest: JSON.parse(readFileSync(path.join(websiteRoot, 'versions.json'), 'utf8')),
+});
+for (const problem of discovered.problems) fail(problem);
 if (manifest) {
   if (!manifest.versions?.some((entry) => entry.version === manifest.latest)) fail(`versions.json: latest ${manifest.latest} is not listed`);
   const listed = (manifest.versions ?? []).map((entry) => entry.version).sort().join(',');
-  const wanted = sources.versions.map((entry) => entry.version).sort().join(',');
-  if (listed !== wanted) fail(`versions.json lists ${listed}; website/versions.json lists ${wanted}`);
-  if (manifest.latest !== sources.latest) fail(`versions.json latest ${manifest.latest} differs from website/versions.json ${sources.latest}`);
+  const wanted = discovered.versions.map((entry) => entry.version).sort().join(',');
+  if (listed !== wanted) fail(`versions.json lists ${listed}; the release tags and legacy entries give ${wanted}`);
+  if (manifest.latest !== discovered.latest) fail(`versions.json latest ${manifest.latest} differs from the newest release ${discovered.latest}`);
 }
 if (!existsSync(path.join(site, 'index.html'))) fail('the site root has no index.html (latest release)');
 for (const entry of manifest?.versions ?? []) {

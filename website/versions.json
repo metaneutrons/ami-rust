@@ -1,6 +1,9 @@
 {
-  "latest": "0.1.0",
-  "versions": [
-    { "version": "0.1.0", "ref": "release/0.1" }
+  "legacy": [
+    {
+      "version": "0.1.0",
+      "ref": "release/0.1",
+      "reason": "The documentation site was added after the 0.1.0 release, so the v0.1.0 tag has no site sources."
+    }
   ]
 }
