@@ -40,4 +40,4 @@ git checkout v0.1.0
 
 ## Changes
 
-See the [changelog](https://github.com/metaneutrons/ami-rust/blob/main/CHANGELOG.md) and the [GitHub releases](https://github.com/metaneutrons/ami-rust/releases). The [platform roadmap](/platform-roadmap/) describes what comes next.
+See the [changelog](/changelog/) and the [GitHub releases](https://github.com/metaneutrons/ami-rust/releases). The [platform roadmap](/platform-roadmap/) describes what comes next.

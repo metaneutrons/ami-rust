@@ -126,7 +126,7 @@ for (const [href, sources] of brokenAnchors) fail('links', `missing anchor ${hre
 const docs = path.join(repository, 'docs');
 const handWritten = [...walk(docs, (file) => /\.(md|mdx)$/.test(file))]
   .filter((file) => !file.includes(`${path.sep}reference${path.sep}`))
-  .filter((file) => !/(m\d-|mui-hello-qualification|mui-safe-api|evidence|plans)/.test(path.relative(docs, file)));
+  .filter((file) => !/(m\d-|mui-hello-qualification|mui-safe-api|evidence|plans|^changelog\.md$)/.test(path.relative(docs, file)));
 
 // Wording that must not appear in public pages.
 const forbidden = [

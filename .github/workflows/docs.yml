@@ -31,6 +31,7 @@ on:
       - 'tooling/crates/xtask/src/mui_safe_codegen.rs'
       - 'bindings/mui/**'
       - 'version.txt'
+      - 'CHANGELOG.md'
       - '_typos.toml'
       - '.github/workflows/docs.yml'
   push:
@@ -64,6 +65,7 @@ on:
       - 'tooling/crates/xtask/src/mui_safe_codegen.rs'
       - 'bindings/mui/**'
       - 'version.txt'
+      - 'CHANGELOG.md'
       - '_typos.toml'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
@@ -122,6 +124,9 @@ jobs:
 
       - name: Check accessibility
         run: pnpm --dir website run a11y
+
+      - name: Check mobile layout
+        run: pnpm --dir website run mobile
 
       - name: Upload site for review
         if: github.event_name == 'pull_request'

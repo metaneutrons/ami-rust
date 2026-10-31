@@ -10,10 +10,16 @@ description: The ownership, lifetime and failure rules shared by the aros and ar
 The native runtime starts your program, claims one owner task and calls your entry function with a `&Context`. The `Context` carries no resource. It proves that you are on the application task, inside the live entry frame. Every safe handle is created from it and borrows it:
 
 ```rust
+#![no_main]
+#![no_std]
+
 fn application(context: &aros::Context) -> aros::AppStatus {
     // File::open, Stdout::new, Port::new, Mui::open ... all take `context`.
+    let _ = context;
     aros::AppStatus::Success
 }
+
+aros::entry!(application);
 ```
 
 Because handles borrow the `Context`, none of them can outlive the entry function. Because the `Context` is neither `Send` nor `Sync`, none of them can move to another task. The compiler enforces both rules, so there are no run-time checks to remember.

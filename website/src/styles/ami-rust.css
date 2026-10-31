@@ -80,7 +80,3 @@
   font-size: var(--sl-text-xs);
   color: var(--sl-color-gray-3);
 }
-
-/* Wide tables scroll inside the content column instead of widening the page. */
-.sl-markdown-content table { display: block; max-width: 100%; overflow-x: auto; }
-.sl-markdown-content table code { overflow-wrap: anywhere; }

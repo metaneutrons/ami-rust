@@ -3,4 +3,5 @@ node_modules/
 dist/
 .astro/
 /docs/reference/
+/docs/changelog.md
 .DS_Store
