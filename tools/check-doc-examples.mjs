@@ -9,10 +9,12 @@
 // honest: every block is wrapped into a function body, collected into a
 // scratch crate and built with an installed ami-rust toolchain.
 //
-// Rust blocks in the guides (docs/consumer-guide.md and docs/api/*.md) are
-// checked too: a block with `#![no_main]` is built as a complete program, and
-// a block that starts with `use aros` and defines functions is built as a
-// module. Other blocks are reported as unchecked fragments.
+// Rust blocks in the guides are checked too. A block that invokes `entry!` is
+// built as a complete program (`#![no_main]` and `#![no_std]` are added when
+// the block omits them), and a block that starts with `use aros` and defines
+// functions is built as a module. The `build.rs` snippet in the consumer guide
+// is the build script of every crate built here. Any other Rust block is an
+// unchecked fragment and fails the run: rewrite it as one of the forms above.
 //
 // Example convention for source-comment examples: the block is the body of a function that has a
 // `context: &aros::Context` in scope and returns `Result<(), aros::Error>`
@@ -61,20 +63,22 @@ const unhide = (line) => line.replace(/^(\s*)#(?: (.*))?$/, (_, indent, rest) =>
   .replace(/^(\s*)##/, '$1#');
 
 const functions = [];
-const skipped = [];
+const sourcePrograms = [];
 for (const { directory, error } of crates) {
   for (const file of sourceFiles(path.join(repository, directory))) {
     for (const block of blocksOf(file)) {
       const label = `${path.relative(repository, file)}:${block.start}`;
       const body = block.lines.map(unhide).join('\n');
-      if (body.includes('entry!') || body.includes('#![')) { skipped.push(label); continue; }
+      if (body.includes('entry!')) { sourcePrograms.push({ label, code: body }); continue; }
       functions.push({ label, error, body });
     }
   }
 }
 
-const guides = ['docs/consumer-guide.md', 'docs/api/aros.md', 'docs/api/aros-mui.md'];
-const programs = [];
+const guides = ['docs/consumer-guide.md', 'docs/api.md', 'docs/api/aros.md', 'docs/api/aros-mui.md'];
+const withAttributes = (code) => (code.includes('#![no_main]') ? code : `#![no_main]\n#![no_std]\n${code}`);
+const programs = sourcePrograms.map(({ label, code }) => ({ label, code: withAttributes(code) }));
+let buildScript = null;
 const modules = [];
 const fragments = [];
 for (const guide of guides) {
@@ -83,12 +87,14 @@ for (const guide of guides) {
     const code = match[1];
     const line = text.slice(0, match.index).split('\n').length + 1;
     const label = `${guide}:${line}`;
-    if (code.includes('#![no_main]')) programs.push({ label, code });
+    if (code.includes('aros_native_build::prepare') && /fn main\(\)/.test(code)) buildScript = { label, code };
+    else if (code.includes('entry!')) programs.push({ label, code: withAttributes(code) });
     else if (/^use aros/m.test(code) && /\bfn \w+/.test(code) && !code.includes('entry!')) modules.push({ label, code });
     else fragments.push(label);
   }
 }
 
+if (!buildScript) { console.error('no build.rs snippet found in the guides'); process.exit(1); }
 rmSync(work, { recursive: true, force: true });
 mkdirSync(path.join(work, 'src'), { recursive: true });
 writeFileSync(path.join(work, 'Cargo.toml'), `[package]
@@ -106,7 +112,7 @@ aros-native-build = { path = "${repository}/tooling/crates/aros-native-build" }
 
 [workspace]
 `);
-writeFileSync(path.join(work, 'build.rs'), 'fn main() { aros_native_build::prepare(Default::default()).expect("AROS native bridge"); }\n');
+writeFileSync(path.join(work, 'build.rs'), `${buildScript.code}\n`);
 writeFileSync(path.join(work, '.cargo-config-note'), 'Built with the target linker configured by the repository .cargo/config.toml equivalent below.\n');
 mkdirSync(path.join(work, '.cargo'), { recursive: true });
 writeFileSync(path.join(work, '.cargo/config.toml'), `[target.x86_64-unknown-aros-abi1]
@@ -140,10 +146,10 @@ programs.forEach((program, number) => {
   crateDirs.push(directory);
 });
 
-console.log(`checking ${functions.length} source examples, ${modules.length} guide examples and ${programs.length} guide programs`
-  + ` (${skipped.length} source whole-program blocks and ${fragments.length} guide fragments not compiled) with toolchain ${toolchain}`);
-for (const label of fragments) console.log(`unchecked fragment: ${label}`);
+console.log(`checking ${functions.length} source examples, ${modules.length} guide examples and ${programs.length} complete programs`
+  + ` (build script from ${buildScript.label}) with toolchain ${toolchain}`);
 let failed = false;
+for (const label of fragments) { failed = true; console.error(`unchecked Rust fragment: ${label}`); }
 for (const target of ['x86_64-unknown-aros-abi1', 'x86_64-unknown-aros-abi11']) {
   for (const directory of crateDirs) {
     const result = spawnSync('cargo', [`+${toolchain}`, 'build', '--release', '--target', target, '--manifest-path', path.join(directory, 'Cargo.toml')], {

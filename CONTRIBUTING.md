@@ -81,4 +81,5 @@ documents are deliberately not published.
   pnpm --dir website run build
   pnpm --dir website run check
   pnpm --dir website run a11y
+  pnpm --dir website run mobile   # needs Chrome; set CHROME_BIN if it is not on the usual path
   ```

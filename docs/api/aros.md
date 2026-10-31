@@ -11,6 +11,9 @@ the [programming model](/api/); every item is listed in the
 [reference](/reference/aros/).
 
 ```rust
+#![no_main]
+#![no_std]
+
 use aros::{AppStatus, Context};
 
 fn application(context: &Context) -> AppStatus {

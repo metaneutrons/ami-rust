@@ -4,6 +4,7 @@
 [files]
 extend-exclude = [
     "docs/reference/**",   # generated; regenerate instead of editing
+    "docs/changelog.md",   # copied from CHANGELOG.md, which release-please writes
     "website/pnpm-lock.yaml",
 ]
 

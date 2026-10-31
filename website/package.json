@@ -5,10 +5,11 @@
   "type": "module",
   "packageManager": "pnpm@10.26.1",
   "scripts": {
-    "build": "astro build",
-    "dev": "astro dev",
+    "build": "node scripts/sync-changelog.mjs && astro build",
+    "dev": "node scripts/sync-changelog.mjs && astro dev",
     "check": "node scripts/check-site.mjs",
-    "a11y": "node scripts/a11y-check.mjs"
+    "a11y": "node scripts/a11y-check.mjs",
+    "mobile": "node scripts/mobile-check.mjs"
   },
   "dependencies": {
     "@astrojs/starlight": "0.42.7",

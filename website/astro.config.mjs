@@ -64,6 +64,7 @@ export default defineConfig({
             { label: 'The aros crate', link: '/api/aros/' },
             { label: 'The aros-mui crate', link: '/api/aros-mui/' },
             { label: 'Build system', link: '/build-system/' },
+            { label: 'Editor setup', link: '/editor-setup/' },
             { label: 'Troubleshooting', link: '/troubleshooting/' },
           ],
         },
@@ -80,6 +81,7 @@ export default defineConfig({
           items: [
             { label: 'Architecture', link: '/architecture/' },
             { label: 'Releases and versions', link: '/releases/' },
+            { label: 'Changelog', link: '/changelog/' },
             { label: 'Platform roadmap', link: '/platform-roadmap/' },
             { label: 'Glossary', link: '/glossary/' },
           ],
