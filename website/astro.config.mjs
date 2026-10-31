@@ -25,11 +25,6 @@ const referenceSidebar = existsSync(generatedSidebar)
 export default defineConfig({
   root: root.pathname,
   site: 'https://ami-rust.metaneutrons.cc',
-  redirects: {
-    '/reference/generated/': '/reference/',
-    '/reference/generated/abi1/': '/reference/',
-    '/reference/generated/abi11/': '/reference/',
-  },
   vite: {
     define: {
       __DOCS_RELEASE__: JSON.stringify(release),
