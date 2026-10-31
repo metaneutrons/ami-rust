@@ -40,6 +40,8 @@ static BYTE test_allocsignal(LONG bit) {BYTE b=test_hit(7)?-1:AllocSignal(bit);i
 static void test_freesignal(LONG bit){if(backend_release(4,(uintptr_t)bit,0))FreeSignal(bit);}
 static struct MsgPort *test_createmsgport(void) {struct MsgPort *p=test_hit(8)?NULL:CreateMsgPort();if(p)backend_acquire(5,(uintptr_t)p,0);return p;}
 static void test_deletemsgport(struct MsgPort *p){if(backend_release(5,(uintptr_t)p,0))DeleteMsgPort(p);}
+static BYTE test_opendevice(CONST_STRPTR name,IPTR unit,struct IORequest *io,ULONG flags) {BYTE r=test_hit(16)?(BYTE)-1:OpenDevice(name,unit,io,flags);if(!r)backend_acquire(6,(uintptr_t)io,0);return r;}
+static void test_closedevice(struct IORequest *io){if(backend_release(6,(uintptr_t)io,0))CloseDevice(io);}
 #undef FreeMem
 #undef CloseLibrary
 #undef FreeSignal
@@ -52,6 +54,8 @@ static void test_deletemsgport(struct MsgPort *p){if(backend_release(5,(uintptr_
 #undef OpenLibrary
 #undef AllocSignal
 #undef CreateMsgPort
+#undef OpenDevice
+#undef CloseDevice
 #define FreeMem test_freemem
 #define CloseLibrary test_closelibrary
 #define FreeSignal test_freesignal
@@ -64,6 +68,8 @@ static void test_deletemsgport(struct MsgPort *p){if(backend_release(5,(uintptr_
 #define OpenLibrary test_openlibrary
 #define AllocSignal test_allocsignal
 #define CreateMsgPort test_createmsgport
+#define OpenDevice test_opendevice
+#define CloseDevice test_closedevice
 #else
 #define test_hit(site) 0
 #endif

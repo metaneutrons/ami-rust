@@ -118,6 +118,34 @@ pub enum Operation {
     Stderr = 22,
     /// Waiting on an externally supplied signal mask.
     SignalWaitMask = 23,
+    /// Opening an Exec device.
+    DeviceOpen = 24,
+    /// Closing an Exec device.
+    DeviceClose = 25,
+    /// Creating a device I/O request.
+    RequestNew = 26,
+    /// Releasing a device I/O request.
+    RequestDrop = 27,
+    /// Setting up a device I/O request's command fields.
+    RequestPrepare = 28,
+    /// Copying bytes into a device I/O request's data.
+    RequestWrite = 29,
+    /// Copying bytes out of a device I/O request's data.
+    RequestRead = 30,
+    /// Reading or setting a timer request's time value.
+    RequestTime = 31,
+    /// Reading the result of a completed device I/O request.
+    RequestResult = 32,
+    /// Performing a synchronous device I/O request.
+    RequestDo = 33,
+    /// Sending an asynchronous device I/O request.
+    RequestSend = 34,
+    /// Checking an asynchronous device I/O request.
+    RequestCheck = 35,
+    /// Waiting for an asynchronous device I/O request.
+    RequestWait = 36,
+    /// Aborting an asynchronous device I/O request.
+    RequestAbort = 37,
 }
 
 /// Allocation-free error returned by a safe SDK operation.
@@ -931,9 +959,9 @@ impl Drop for Signal<'_> {
 
 /// Private message port owned by the creating application task.
 ///
-/// The handle is task-affine and borrows its creating [`Context`]. The SDK can
-/// own at most two private ports at once; they are local application resources,
-/// not handles to arbitrary or foreign ports. Dropping a port asks the native
+/// The handle is task-affine and borrows its creating [`Context`]. Private
+/// ports are local application resources, not handles to arbitrary or foreign
+/// ports; each one uses a signal bit. Dropping a port asks the native
 /// registry to detach queued messages and retire their local queue state.
 ///
 /// # Examples
@@ -1277,3 +1305,6 @@ unsafe extern "C" fn callback_trampoline(user_data: *mut c_void, input: u64) -> 
     let frame = unsafe { &mut *user_data.cast::<CallbackFrame<'_>>() };
     (frame.callback)(input)
 }
+
+mod device;
+pub use device::*;

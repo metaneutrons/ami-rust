@@ -98,6 +98,27 @@ synchronously. Its callback frame cannot be retained by native code.
 safe crate such as [`aros-mui`](/api/aros-mui/)
 for higher-level library APIs.
 
+## Devices and I/O requests
+
+| Item | Use |
+| --- | --- |
+| `Device::open(context, name, unit, flags)` | Opens an Exec device and owns the reply port its requests share. |
+| `Device::signal_mask()` | The signal mask of that reply port, for `wait_signals`. |
+| `Request::new(device, kind, data_capacity)` | Creates an idle request owning its `IORequest` and a bounded data area. |
+| `Request::prepare`, `write_data`, `set_time` | Set up an idle request (command, flags, length, offset, data, time value). |
+| `Request::do_io()` | Runs the request synchronously (`DoIO`). |
+| `Request::send()`, `check()`, `wait()`, `abort()` | Run it asynchronously (`SendIO`, `CheckIO`, `WaitIO`, `AbortIO`). |
+| `Request::outcome()`, `read_data`, `time` | Read the device error, transferred byte count, data and time value of an idle request. |
+
+A request is idle or pending. Dropping or closing a pending request aborts it
+and waits for the device to return it, so no message stays queued, and
+forgotten requests and devices are aborted and closed when the program
+finishes. A `Request` borrows its `Device`, so a device cannot be closed under
+a request. The `IORequest` layout, including the difference of `timerequest`
+between the two ABIs, never leaves the native bridge. Two request shapes exist:
+standard (`IOStdReq`, with up to 64 KiB of data) and timer (`timerequest`). A
+device error is reported in the `IoOutcome`, not as an `Err`.
+
 ## Worked examples
 
 The examples below are complete functions. Each takes the `Context` your entry function receives and returns an `aros::Error` on failure, so `?` works throughout. Every one of them is compiled for both targets by the repository's example check.
