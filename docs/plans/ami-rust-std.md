@@ -4,7 +4,7 @@ title: ami-rust std initiative plan
 
 # Initiative plan: Rust `std` for AROS
 
-Epic: pending (created from this plan; the URL is added after creation)
+Epic: https://github.com/metaneutrons/ami-rust/issues/65
 Decision state: proposed; acceptance by the maintainer is recorded under
 "Decision changes"
 
@@ -108,7 +108,7 @@ For ESP32-P4, `std` already exists upstream through ESP-IDF
 
 ### STD-M1: `std` compiles and links on both ABIs
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/66
 Dependencies: none
 
 - STD-M1-A1: A reviewed, digest-pinned patch set adds an AROS selection to the
@@ -125,7 +125,7 @@ Dependencies: none
 
 ### STD-M2: Runtime start-up, stdio, args, env and panic
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/67
 Dependencies: STD-M1
 
 - STD-M2-A1: Resolve the start-up ownership decision. A `fn main` program and
@@ -140,7 +140,7 @@ Dependencies: STD-M1
 
 ### STD-M3: Time, random and file system
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/68
 Dependencies: STD-M2
 
 - STD-M3-A1: `Instant`, `SystemTime` (with the AROS epoch converted and
@@ -155,7 +155,7 @@ Dependencies: STD-M2
 
 ### STD-M4: Threads and synchronisation
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/69
 Dependencies: STD-M3
 
 - STD-M4-A1: Verify in both pinned baselines that the C library is
@@ -171,7 +171,7 @@ Dependencies: STD-M3
 
 ### STD-M5: Networking
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/70
 Dependencies: STD-M2 (STD-M4 for blocking calls across threads)
 
 - STD-M5-A1: `TcpStream`, `TcpListener` and `UdpSocket` over
@@ -183,7 +183,7 @@ Dependencies: STD-M2 (STD-M4 for blocking calls across threads)
 
 ### STD-M6: Processes
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/71
 Dependencies: STD-M2
 
 - STD-M6-A1: `process::Command` on `SystemTagList` and `CreateNewProc` with
@@ -195,7 +195,7 @@ Dependencies: STD-M2
 
 ### STD-M7: Toolchain pipeline and documentation
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/72
 Dependencies: STD-M1 and the features accepted so far
 
 - STD-M7-A1: The authenticated, pinned target-library build adds `std` and
@@ -212,7 +212,7 @@ Dependencies: STD-M1 and the features accepted so far
 
 ### STD-M8: Qualify and prepare the `std` release candidate
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/73
 Dependencies: STD-M1 through STD-M4 and STD-M7; STD-M5 and STD-M6 as accepted
 
 - STD-M8-A1: Build the exact candidate on macOS ARM64, Linux x86-64 and Linux
@@ -229,7 +229,7 @@ Dependencies: STD-M1 through STD-M4 and STD-M7; STD-M5 and STD-M6 as accepted
 
 ### STD-M9: AArch64 (gated)
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/74
 Dependencies: STD-M8 and the gate
 
 - STD-M9-A1: Gate: evidence that an AROS AArch64 runtime boots on a pinned
@@ -243,7 +243,7 @@ Dependencies: STD-M8 and the gate
 
 ### STD-M10: ESP32-P4 (gated)
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/75
 Dependencies: STD-M8 and the gate
 
 - STD-M10-A1: Gate: evidence that the AROS port for ESP32-P4 provides a
