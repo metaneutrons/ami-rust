@@ -112,13 +112,32 @@ pub fn prepare(options: BuildOptions) -> Result<()> {
     result
 }
 
+/// Compiler wrappers that only cache the output of the compiler Cargo selected.
+///
+/// `RUSTC` still names the pinned compiler when such a wrapper is configured, and
+/// the compiler, Cargo and linker checks below still apply to it. Any other
+/// wrapper could substitute the compiler and stays refused. A program is
+/// recognised by the name of its executable.
+const CACHING_WRAPPERS: &[&str] = &["sccache"];
+
+fn is_caching_wrapper(program: &std::ffi::OsStr) -> bool {
+    // `Path::file_name` ignores a trailing separator, but a directory is not a program.
+    if program.as_bytes().ends_with(b"/") {
+        return false;
+    }
+    Path::new(program)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| CACHING_WRAPPERS.contains(&name))
+}
+
 /// How to fix the refusals that users most often meet, keyed by the refusal text.
 fn remedy(message: &str) -> Option<&'static str> {
     if message.starts_with("RUSTC_WRAPPER ") || message.starts_with("RUSTC_WORKSPACE_WRAPPER ") {
         Some(
-            "a compiler wrapper (for example sccache, or the clippy driver) is active and could replace \
-             the pinned compiler. Unset RUSTC_WRAPPER and RUSTC_WORKSPACE_WRAPPER in your environment. If \
-             the wrapper comes from a Cargo configuration file, run this build with \
+            "a compiler wrapper is active and could replace the pinned compiler. Only the caching \
+             wrapper sccache is accepted. Unset RUSTC_WRAPPER and RUSTC_WORKSPACE_WRAPPER in your \
+             environment. If the wrapper comes from a Cargo configuration file, run this build with \
              CARGO_BUILD_RUSTC_WRAPPER= or set rustc-wrapper = \"\" under [build] in the project's \
              .cargo/config.toml.",
         )
@@ -160,7 +179,7 @@ fn prepare_checked(options: BuildOptions) -> Result<()> {
     }
     verify_target_rustflags(env::var_os("CARGO_ENCODED_RUSTFLAGS").as_deref())?;
     for name in ["RUSTC_WRAPPER", "RUSTC_WORKSPACE_WRAPPER"] {
-        if env::var_os(name).is_some_and(|value| !value.is_empty()) {
+        if env::var_os(name).is_some_and(|value| !value.is_empty() && !is_caching_wrapper(&value)) {
             return Err(Refusal::new(format!(
                 "{name} conflicts with the pinned compiler selection"
             )));
@@ -770,6 +789,29 @@ mod tests {
         let help =
             super::remedy("RUSTC_WRAPPER conflicts with the pinned compiler selection").unwrap();
         assert!(help.contains("CARGO_BUILD_RUSTC_WRAPPER=") && help.contains("sccache"));
+    }
+
+    #[test]
+    fn only_the_sccache_executable_is_a_caching_wrapper() {
+        use std::ffi::OsStr;
+        for accepted in ["sccache", "/opt/homebrew/bin/sccache", "./tools/sccache"] {
+            assert!(
+                super::is_caching_wrapper(OsStr::new(accepted)),
+                "{accepted}"
+            );
+        }
+        for refused in [
+            "clippy-driver",
+            "/usr/bin/env",
+            "sccache-fork",
+            "my-sccache",
+            // A directory named sccache does not make its contents the cache.
+            "/opt/sccache/rustc-wrapper",
+            "/tmp/sccache/",
+            "",
+        ] {
+            assert!(!super::is_caching_wrapper(OsStr::new(refused)), "{refused}");
+        }
     }
 
     #[test]
