@@ -4,6 +4,8 @@
 #include <exec/memory.h>
 #include <exec/ports.h>
 #include <exec/tasks.h>
+#include <exec/io.h>
+#include <devices/timer.h>
 #include <dos/dosextens.h>
 #include <intuition/classes.h>
 #include <proto/exec.h>
@@ -23,19 +25,38 @@
 #define KIND_SIGNAL 3UL
 #define KIND_PORT 4UL
 #define KIND_MESSAGE 5UL
+#define KIND_DEVICE 6UL
+#define KIND_REQUEST 7UL
+#define IO_KIND_STANDARD 0
+#define IO_KIND_TIMER 1
+#define IO_IDLE 0
+#define IO_PENDING 1
+#define IO_MAX_DATA 65536
 #define OUTPUT_TOKEN UINT64_C(0xff00000000000001)
 #define ERROR_OUTPUT_TOKEN UINT64_C(0xff00000000000002)
 struct Block { struct Block *next,*prev;void *user;size_t size,align,total,charge; };
+/* Every registry record starts with its token so lookups can validate it. */
 struct FileSlot { uint64_t token;BPTR handle; };
 struct LibSlot { uint64_t token;struct Library *handle; };
 struct SignalSlot { uint64_t token;int bit,port_owned; };
 struct PortSlot { uint64_t token;struct MsgPort *handle;int signal_slot; };
 struct MessageSlot { uint64_t token;struct Message native;uint8_t payload[256];size_t size;uint64_t queued_port,reply_port;int queued,state; };
-static struct FileSlot files[16];
-static struct LibSlot libraries[4];
-static struct SignalSlot signals[4];
-static struct PortSlot ports[2];
-static struct MessageSlot messages[8];
+/* Records are allocated one by one and never move, so a queued native
+   message keeps its address while the table that indexes it grows. */
+struct Registry { void **items;size_t capacity,count; };
+/* A device owns its reply port; every request of the device replies there.
+   Requests own their IORequest and data copy, so no Rust pointer is ever
+   reachable by the device and the layout of timerequest stays in this file. */
+struct DeviceSlot { uint64_t token;struct IORequest *open;size_t size,requests;uint64_t port; };
+struct IoSlot { uint64_t token,device;struct IORequest *request;size_t size;uint8_t *buffer;size_t capacity;int kind,state; };
+#define SLOT_BITS 20U
+#define SLOT_LIMIT ((UINT64_C(1)<<SLOT_BITS)-1)
+#define SEQUENCE_LIMIT ((UINT64_C(1)<<36)-1)
+#define SIGNAL_SLOTS 32
+static struct Registry files,libraries,ports,messages,devices,requests;
+static struct SignalSlot signals[SIGNAL_SLOTS];
+static APTR registry_pool;
+static uint64_t slot_limit=SLOT_LIMIT;
 static struct Block *blocks;
 static struct Task *owner;
 static struct Library *mandatory_dos;
@@ -64,8 +85,8 @@ uintptr_t sdk_coerce_method_a(void *class_pointer,void *object,void *message) {
 volatile uint64_t ami_sdk_diagnostic_depth;
 static uint64_t next_token(unsigned kind,size_t slot) {
  if (test_hit(9)) return 0;
- if (sequence >= UINT64_C(0x0000ffffffffffff)) return 0;
- return ((uint64_t)kind<<56)|((++sequence)<<8)|(slot+1);
+ if (sequence >= SEQUENCE_LIMIT) return 0;
+ return ((uint64_t)kind<<56)|((++sequence)<<SLOT_BITS)|(slot+1);
 }
 static int refuse(SdkError *e,int kind,int64_t native) {if(e){e->kind=kind;e->native=native;}++stats.refusals;return -1;}
 static int clear_error(SdkError *e) {if(e){e->kind=0;e->native=0;}return 0;}
@@ -80,9 +101,49 @@ static int own(uint64_t key,SdkError *e) {
  return 0;
 }
 static int index_of(uint64_t token,unsigned kind,size_t cap) {
- size_t slot=(size_t)(token&255U);
+ size_t slot=(size_t)(token&SLOT_LIMIT);
  if (!token || (token>>56)!=kind || !slot || slot>cap) return -1;
  return (int)(slot-1);
+}
+static void *registry_alloc(size_t size) {
+ if(!registry_pool || test_hit(15))return NULL;
+ void *record=AllocPooled(registry_pool,size);
+ if(record)memset(record,0,size);
+ return record;
+}
+static void registry_free(void *record,size_t size) {if(record)FreePooled(registry_pool,record,size);}
+static void *record_find(const struct Registry *registry,uint64_t token,unsigned kind) {
+ int i=index_of(token,kind,registry->capacity);
+ if(i<0 || !registry->items[i] || *(uint64_t *)registry->items[i]!=token)return NULL;
+ return registry->items[i];
+}
+/* Reserves a zeroed record carrying a fresh token. Table growth, record
+   allocation and token exhaustion all refuse without changing the registry. */
+static void *record_new(struct Registry *registry,unsigned kind,size_t size,SdkError *e) {
+ if(registry->count>=slot_limit){refuse(e,3,(int64_t)slot_limit);return NULL;}
+ size_t i=0;
+ while(i<registry->capacity && registry->items[i])++i;
+ if(i==registry->capacity){
+  size_t grown=registry->capacity?registry->capacity*2:8;
+  if(grown>SLOT_LIMIT)grown=(size_t)SLOT_LIMIT;
+  void **items=(void **)registry_alloc(grown*sizeof(void *));
+  if(!items){refuse(e,1,ERROR_NO_FREE_STORE);return NULL;}
+  for(size_t k=0;k<registry->capacity;k++)items[k]=registry->items[k];
+  registry_free(registry->items,registry->capacity*sizeof(void *));
+  registry->items=items;registry->capacity=grown;
+ }
+ uint64_t token=next_token(kind,i);if(!token){refuse(e,3,0);return NULL;}
+ void *record=registry_alloc(size);if(!record){refuse(e,1,ERROR_NO_FREE_STORE);return NULL;}
+ *(uint64_t *)record=token;registry->items[i]=record;++registry->count;return record;
+}
+#ifdef AMI_SDK_TESTING
+/* Qualification control: a small token space makes Limit exhaustion testable
+   without exhausting memory. Zero restores the production value. */
+void sdk_test_slot_limit(uint64_t limit) {slot_limit=limit && limit<SLOT_LIMIT?limit:SLOT_LIMIT;}
+#endif
+static void record_release(struct Registry *registry,void *record,size_t size) {
+ size_t slot=(size_t)(*(uint64_t *)record&SLOT_LIMIT);
+ registry->items[slot-1]=NULL;--registry->count;registry_free(record,size);
 }
 static int byte_name(const uint8_t *p) {
  if (!p) return 0;
@@ -108,6 +169,8 @@ int sdk_begin(int argc,char **argv) {
  mandatory_dos=test_hit(13)?NULL:OpenLibrary((CONST_STRPTR)"dos.library",0);if(!mandatory_dos){owner=NULL;return 20;}
  argument_count=argc;arguments=argv;context_key=next_token(0x41,0);
  if(!context_key){CloseLibrary(mandatory_dos);mandatory_dos=NULL;owner=NULL;return 20;}
+ registry_pool=CreatePool(MEMF_ANY,8192,2048);
+ if(!registry_pool){CloseLibrary(mandatory_dos);mandatory_dos=NULL;owner=NULL;context_key=0;return 20;}
  claimed=0;active=1;return 0;
 }
 uint64_t sdk_context(void) {return active && !closing && owner_is_current()?context_key:0;}
@@ -166,35 +229,32 @@ void sdk_diagnostic(const uint8_t *label,size_t length,uint64_t code) {
 SdkStats sdk_stats(void) {return stats;}
 uint64_t sdk_library_open(uint64_t key,const uint8_t *name,uint16_t version,SdkError *e) {
  if(own(key,e))return 0;if(!byte_name(name)){refuse(e,2,0);return 0;}
- size_t i=0;while(i<4 && libraries[i].token)++i;if(i==4){refuse(e,3,4);return 0;}
- uint64_t token=next_token(KIND_LIBRARY,i);if(!token){refuse(e,3,0);return 0;}
- libraries[i]=(struct LibSlot){token,NULL};
- struct Library *l=OpenLibrary((CONST_STRPTR)name,version);if(!l){libraries[i]=(struct LibSlot){0};refuse(e,1,0);return 0;}
- libraries[i]=(struct LibSlot){token,l};++stats.libraries;return token;
+ struct LibSlot *slot=(struct LibSlot *)record_new(&libraries,KIND_LIBRARY,sizeof(*slot),e);if(!slot)return 0;
+ struct Library *l=OpenLibrary((CONST_STRPTR)name,version);
+ if(!l){record_release(&libraries,slot,sizeof(*slot));refuse(e,1,0);return 0;}
+ slot->handle=l;++stats.libraries;return slot->token;
 }
 void *sdk_library_base(uint64_t key,uint64_t token) {
- if(own(key,NULL))return NULL;int i=index_of(token,KIND_LIBRARY,4);
- if(i<0 || libraries[i].token!=token || !libraries[i].handle){refuse(NULL,5,0);return NULL;}
- return libraries[i].handle;
+ if(own(key,NULL))return NULL;struct LibSlot *slot=(struct LibSlot *)record_find(&libraries,token,KIND_LIBRARY);
+ if(!slot || !slot->handle){refuse(NULL,5,0);return NULL;}
+ return slot->handle;
 }
 int sdk_library_close(uint64_t key,uint64_t token,SdkError *e) {
- if(own(key,e))return -1;int i=index_of(token,KIND_LIBRARY,4);
- if(i<0 || libraries[i].token!=token)return refuse(e,5,0);
- struct Library *l=libraries[i].handle;if(!l)return refuse(e,5,0);libraries[i]=(struct LibSlot){0};--stats.libraries;CloseLibrary(l);return 0;
+ if(own(key,e))return -1;struct LibSlot *slot=(struct LibSlot *)record_find(&libraries,token,KIND_LIBRARY);
+ if(!slot || !slot->handle)return refuse(e,5,0);
+ struct Library *l=slot->handle;record_release(&libraries,slot,sizeof(*slot));--stats.libraries;CloseLibrary(l);return 0;
 }
 uint64_t sdk_file_open(uint64_t key,const uint8_t *path,int32_t mode,SdkError *e) {
  if(own(key,e))return 0;if(!byte_name(path) || mode<0 || mode>2){refuse(e,2,0);return 0;}
- size_t i=0;while(i<16 && files[i].token)++i;if(i==16){refuse(e,3,16);return 0;}
- uint64_t token=next_token(KIND_FILE,i);if(!token){refuse(e,3,0);return 0;}
- files[i]=(struct FileSlot){token,BNULL};
+ struct FileSlot *slot=(struct FileSlot *)record_new(&files,KIND_FILE,sizeof(*slot),e);if(!slot)return 0;
  BPTR f=Open((CONST_STRPTR)path,mode==0?MODE_OLDFILE:mode==1?MODE_NEWFILE:MODE_READWRITE);
- if(!f){SIPTR error=IoErr();files[i]=(struct FileSlot){0};refuse(e,1,error);return 0;}
- files[i]=(struct FileSlot){token,f};++stats.files;return token;
+ if(!f){SIPTR error=IoErr();record_release(&files,slot,sizeof(*slot));refuse(e,1,error);return 0;}
+ slot->handle=f;++stats.files;return slot->token;
 }
 int sdk_file_close(uint64_t key,uint64_t token,SdkError *e) {
- if(own(key,e))return -1;int i=index_of(token,KIND_FILE,16);
- if(i<0 || files[i].token!=token)return refuse(e,5,0);
- BPTR f=files[i].handle;if(!f)return refuse(e,5,0);files[i]=(struct FileSlot){0};--stats.files;
+ if(own(key,e))return -1;struct FileSlot *slot=(struct FileSlot *)record_find(&files,token,KIND_FILE);
+ if(!slot || !slot->handle)return refuse(e,5,0);
+ BPTR f=slot->handle;record_release(&files,slot,sizeof(*slot));--stats.files;
  BOOL ok=Close(f);if(!ok){SIPTR error=IoErr();return refuse(e,1,error);}return 0;
 }
 uint64_t sdk_stdout(uint64_t key) {return own(key,NULL)==0?OUTPUT_TOKEN:0;}
@@ -214,89 +274,100 @@ int64_t sdk_file_io(uint64_t key,uint64_t token,uint8_t *buffer,size_t n,int32_t
   f=process->pr_CES?process->pr_CES:process->pr_COS;
   if(!f)return refuse(e,1,0);
  }
- else{int i=index_of(token,KIND_FILE,16);if(i<0 || files[i].token!=token)return refuse(e,5,0);f=files[i].handle;}
+ else{struct FileSlot *slot=(struct FileSlot *)record_find(&files,token,KIND_FILE);if(!slot)return refuse(e,5,0);f=slot->handle;}
  LONG result=writing?Write(f,buffer,(LONG)n):Read(f,buffer,(LONG)n);
  if(result<0){SIPTR error=IoErr();return refuse(e,1,error);}return (int64_t)result;
 }
 #ifdef AMI_SDK_TESTING
 #include "test-stderr-controls.h"
 #endif
+static struct SignalSlot *signal_find(uint64_t token) {
+ int i=index_of(token,KIND_SIGNAL,SIGNAL_SLOTS);
+ return i>=0 && signals[i].token==token && !signals[i].port_owned && signals[i].bit>=0?&signals[i]:NULL;
+}
 uint64_t sdk_signal_new(uint64_t key,SdkError *e) {
- if(own(key,e))return 0;size_t i=0;while(i<4 && signals[i].token)++i;
- if(i==4){refuse(e,3,4);return 0;}uint64_t token=next_token(KIND_SIGNAL,i);if(!token){refuse(e,3,0);return 0;}
+ if(own(key,e))return 0;size_t i=0;while(i<SIGNAL_SLOTS && signals[i].token)++i;
+ /* Exec offers at most 32 signal bits per task; the slot table cannot outgrow them. */
+ if(i==SIGNAL_SLOTS){refuse(e,3,SIGNAL_SLOTS);return 0;}uint64_t token=next_token(KIND_SIGNAL,i);if(!token){refuse(e,3,0);return 0;}
  signals[i]=(struct SignalSlot){token,-1,0};
  BYTE bit=AllocSignal(-1);if(bit<0){signals[i]=(struct SignalSlot){0};refuse(e,1,0);return 0;}
  signals[i]=(struct SignalSlot){token,bit,0};++stats.signals;return token;
 }
 int sdk_signal_drop(uint64_t key,uint64_t token,SdkError *e) {
- if(own(key,e))return -1;int i=index_of(token,KIND_SIGNAL,4);
- if(i<0 || signals[i].token!=token || (signals[i].port_owned || signals[i].bit<0))return refuse(e,5,0);
- int bit=signals[i].bit;signals[i]=(struct SignalSlot){0};--stats.signals;SetSignal(0,1UL<<bit);FreeSignal(bit);return 0;
+ if(own(key,e))return -1;struct SignalSlot *slot=signal_find(token);
+ if(!slot)return refuse(e,5,0);
+ int bit=slot->bit;*slot=(struct SignalSlot){0};--stats.signals;SetSignal(0,1UL<<bit);FreeSignal(bit);return 0;
 }
 int sdk_signal_post(uint64_t key,uint64_t token,SdkError *e) {
- if(own(key,e))return -1;int i=index_of(token,KIND_SIGNAL,4);
- if(i<0 || signals[i].token!=token || (signals[i].port_owned || signals[i].bit<0))return refuse(e,5,0);
- Signal(owner,1UL<<signals[i].bit);return 0;
+ if(own(key,e))return -1;struct SignalSlot *slot=signal_find(token);
+ if(!slot)return refuse(e,5,0);
+ Signal(owner,1UL<<slot->bit);return 0;
 }
 int sdk_signal_wait(uint64_t key,uint64_t token,SdkError *e) {
- if(own(key,e))return -1;int i=index_of(token,KIND_SIGNAL,4);
- if(i<0 || signals[i].token!=token || (signals[i].port_owned || signals[i].bit<0))return refuse(e,5,0);
- Wait(1UL<<signals[i].bit);return 0;
+ if(own(key,e))return -1;struct SignalSlot *slot=signal_find(token);
+ if(!slot)return refuse(e,5,0);
+ Wait(1UL<<slot->bit);return 0;
 }
 int sdk_signal_wait_mask(uint64_t key,uint32_t mask,uint32_t *received,SdkError *e) {
  if(own(key,e))return -1;
  if(!mask || !received)return refuse(e,2,0);
  *received=Wait(mask);return 0;
 }
-uint64_t sdk_port_new(uint64_t key,SdkError *e) {
- if(own(key,e))return 0;size_t i=0,s=0;while(i<2 && ports[i].token)++i;while(s<4 && signals[s].token)++s;
- if(i==2 || s==4){refuse(e,3,i==2?2:4);return 0;}
- uint64_t token=next_token(KIND_PORT,i),sig=next_token(KIND_SIGNAL,s);
- if(!token||!sig){refuse(e,3,0);return 0;}
- ports[i]=(struct PortSlot){token,NULL,(int)s};signals[s]=(struct SignalSlot){sig,-1,1};
- struct MsgPort *port=CreateMsgPort();if(!port){ports[i]=(struct PortSlot){0};signals[s]=(struct SignalSlot){0};refuse(e,1,0);return 0;}
- ports[i]=(struct PortSlot){token,port,(int)s};signals[s]=(struct SignalSlot){sig,port->mp_SigBit,1};++stats.ports;++stats.signals;return token;
+static struct PortSlot *port_create(SdkError *e) {
+ size_t s=0;while(s<SIGNAL_SLOTS && signals[s].token)++s;
+ if(s==SIGNAL_SLOTS){refuse(e,3,SIGNAL_SLOTS);return NULL;}
+ struct PortSlot *slot=(struct PortSlot *)record_new(&ports,KIND_PORT,sizeof(*slot),e);if(!slot)return NULL;
+ uint64_t sig=next_token(KIND_SIGNAL,s);
+ if(!sig){record_release(&ports,slot,sizeof(*slot));refuse(e,3,0);return NULL;}
+ slot->signal_slot=(int)s;signals[s]=(struct SignalSlot){sig,-1,1};
+ struct MsgPort *port=CreateMsgPort();
+ if(!port){signals[s]=(struct SignalSlot){0};record_release(&ports,slot,sizeof(*slot));refuse(e,1,0);return NULL;}
+ slot->handle=port;signals[s]=(struct SignalSlot){sig,port->mp_SigBit,1};++stats.ports;++stats.signals;return slot;
 }
-static int message_index(uint64_t token) {int i=index_of(token,KIND_MESSAGE,8);return i>=0 && messages[i].token==token?i:-1;}
+uint64_t sdk_port_new(uint64_t key,SdkError *e) {
+ if(own(key,e))return 0;struct PortSlot *slot=port_create(e);return slot?slot->token:0;
+}
+static struct MessageSlot *message_find(uint64_t token) {return (struct MessageSlot *)record_find(&messages,token,KIND_MESSAGE);}
+static struct PortSlot *port_find(uint64_t token) {return (struct PortSlot *)record_find(&ports,token,KIND_PORT);}
 static void detach_message(struct MessageSlot *m) {
  if(m->queued){Remove(&m->native.mn_Node);m->queued=0;m->queued_port=0;}
 }
-static void clear_port(size_t i) {
- uint64_t token=ports[i].token;struct MsgPort *port=ports[i].handle;int s=ports[i].signal_slot;
- for(size_t n=0;n<8;n++)if(messages[n].token){
-  if(messages[n].queued_port==token){detach_message(&messages[n]);messages[n].state=0;messages[n].reply_port=0;messages[n].native.mn_ReplyPort=NULL;if(messages[n].state==2)messages[n].state=0;}
-  if(messages[n].reply_port==token){messages[n].reply_port=0;messages[n].native.mn_ReplyPort=NULL;if(messages[n].state==2)messages[n].state=0;}
+static void clear_port(struct PortSlot *slot) {
+ uint64_t token=slot->token;struct MsgPort *port=slot->handle;int s=slot->signal_slot;
+ for(size_t n=0;n<messages.capacity;n++){
+  struct MessageSlot *m=(struct MessageSlot *)messages.items[n];if(!m)continue;
+  if(m->queued_port==token){detach_message(m);m->state=0;m->reply_port=0;m->native.mn_ReplyPort=NULL;}
+  if(m->reply_port==token){m->reply_port=0;m->native.mn_ReplyPort=NULL;if(m->state==2)m->state=0;}
  }
- ports[i]=(struct PortSlot){0};signals[s]=(struct SignalSlot){0};--stats.ports;--stats.signals;
+ record_release(&ports,slot,sizeof(*slot));signals[s]=(struct SignalSlot){0};--stats.ports;--stats.signals;
  SetSignal(0,1UL<<port->mp_SigBit);DeleteMsgPort(port);
 }
 int sdk_port_drop(uint64_t key,uint64_t token,SdkError *e) {
- if(own(key,e))return -1;int i=index_of(token,KIND_PORT,2);if(i<0 || ports[i].token!=token || !ports[i].handle)return refuse(e,5,0);clear_port((size_t)i);return 0;
+ if(own(key,e))return -1;struct PortSlot *slot=port_find(token);if(!slot || !slot->handle)return refuse(e,5,0);clear_port(slot);return 0;
 }
 uint64_t sdk_message_new(uint64_t key,const uint8_t *data,size_t n,SdkError *e) {
  if(own(key,e))return 0;if(n>256 || (n && !data)){refuse(e,2,0);return 0;}
- size_t i=0;while(i<8 && messages[i].token)++i;if(i==8){refuse(e,3,8);return 0;}
- uint64_t token=next_token(KIND_MESSAGE,i);if(!token){refuse(e,3,0);return 0;}
- struct MessageSlot *m=&messages[i];memset(m,0,sizeof(*m));m->token=token;m->size=n;m->native.mn_Length=sizeof(m->native)+256;
- for(size_t k=0;k<n;k++)m->payload[k]=data[k];++stats.messages;return token;
+ struct MessageSlot *m=(struct MessageSlot *)record_new(&messages,KIND_MESSAGE,sizeof(*m),e);if(!m)return 0;
+ m->size=n;m->native.mn_Length=sizeof(m->native)+256;
+ for(size_t k=0;k<n;k++)m->payload[k]=data[k];++stats.messages;return m->token;
 }
 int sdk_message_drop(uint64_t key,uint64_t token,SdkError *e) {
- if(own(key,e))return -1;int i=message_index(token);if(i<0)return refuse(e,5,0);detach_message(&messages[i]);memset(&messages[i],0,sizeof(messages[i]));--stats.messages;return 0;
+ if(own(key,e))return -1;struct MessageSlot *m=message_find(token);if(!m)return refuse(e,5,0);detach_message(m);record_release(&messages,m,sizeof(*m));--stats.messages;return 0;
 }
 int sdk_message_copy(uint64_t key,uint64_t token,uint8_t *out,size_t cap,SdkError *e) {
- if(own(key,e))return -1;int i=message_index(token);if(i<0 || messages[i].queued)return refuse(e,5,0);
- struct MessageSlot *m=&messages[i];if(cap<m->size || (m->size && !out))return refuse(e,2,0);
+ if(own(key,e))return -1;struct MessageSlot *m=message_find(token);if(!m || m->queued)return refuse(e,5,0);
+ if(cap<m->size || (m->size && !out))return refuse(e,2,0);
  for(size_t k=0;k<m->size;k++)out[k]=m->payload[k];return (int)m->size;
 }
 int sdk_port_put(uint64_t key,uint64_t port_token,uint64_t message_token,uint64_t reply_token,SdkError *e) {
- if(own(key,e))return -1;int p=index_of(port_token,KIND_PORT,2),r=index_of(reply_token,KIND_PORT,2),m=message_index(message_token);
- if(p<0 || r<0 || m<0 || ports[p].token!=port_token || ports[r].token!=reply_token || messages[m].state!=0)return refuse(e,5,0);
- struct MessageSlot *msg=&messages[m];msg->reply_port=reply_token;msg->native.mn_ReplyPort=ports[r].handle;msg->queued=1;msg->state=1;msg->queued_port=port_token;PutMsg(ports[p].handle,&msg->native);return 0;
+ if(own(key,e))return -1;struct PortSlot *p=port_find(port_token),*r=port_find(reply_token);struct MessageSlot *msg=message_find(message_token);
+ if(!p || !r || !msg || msg->state!=0)return refuse(e,5,0);
+ msg->reply_port=reply_token;msg->native.mn_ReplyPort=r->handle;msg->queued=1;msg->state=1;msg->queued_port=port_token;PutMsg(p->handle,&msg->native);return 0;
 }
 int sdk_port_receive(uint64_t key,uint64_t port_token,uint64_t message_token,SdkError *e) {
- if(own(key,e))return -1;int p=index_of(port_token,KIND_PORT,2),m=message_index(message_token);
- if(p<0 || m<0 || ports[p].token!=port_token)return refuse(e,5,0);
- struct MessageSlot *msg=&messages[m];struct MsgPort *port=ports[p].handle;
+ if(own(key,e))return -1;struct PortSlot *p=port_find(port_token);struct MessageSlot *msg=message_find(message_token);
+ if(!p || !msg)return refuse(e,5,0);
+ struct MsgPort *port=p->handle;
  struct Node *head=port->mp_MsgList.lh_Head;
  if(head==(struct Node *)&port->mp_MsgList.lh_Tail)return 0;
  if(head!=&msg->native.mn_Node || !msg->queued || msg->queued_port!=port_token)return refuse(e,5,0);
@@ -304,10 +375,128 @@ int sdk_port_receive(uint64_t key,uint64_t port_token,uint64_t message_token,Sdk
  msg->queued=0;msg->queued_port=0;msg->state=msg->state==1 && msg->reply_port?2:0;return 1;
 }
 int sdk_message_reply(uint64_t key,uint64_t message_token,SdkError *e) {
- if(own(key,e))return -1;int m=message_index(message_token);if(m<0)return refuse(e,5,0);
- struct MessageSlot *msg=&messages[m];int p=index_of(msg->reply_port,KIND_PORT,2);
- if(msg->state!=2 || msg->queued || p<0 || ports[p].token!=msg->reply_port || msg->native.mn_ReplyPort!=ports[p].handle)return refuse(e,5,0);
+ if(own(key,e))return -1;struct MessageSlot *msg=message_find(message_token);if(!msg)return refuse(e,5,0);
+ struct PortSlot *p=port_find(msg->reply_port);
+ if(msg->state!=2 || msg->queued || !p || msg->native.mn_ReplyPort!=p->handle)return refuse(e,5,0);
  msg->queued=1;msg->state=3;msg->queued_port=msg->reply_port;ReplyMsg(&msg->native);return 0;
+}
+
+#define IO_OPEN_SIZE (sizeof(struct IOStdReq)>sizeof(struct timerequest)?sizeof(struct IOStdReq):sizeof(struct timerequest))
+static struct DeviceSlot *device_find(uint64_t token) {return (struct DeviceSlot *)record_find(&devices,token,KIND_DEVICE);}
+static struct IoSlot *io_find(uint64_t token) {return (struct IoSlot *)record_find(&requests,token,KIND_REQUEST);}
+static void *io_alloc(size_t size) {return AllocMem(size,MEMF_PUBLIC|MEMF_CLEAR);}
+uint64_t sdk_device_open(uint64_t key,const uint8_t *name,uint32_t unit,uint32_t flags,SdkError *e) {
+ if(own(key,e))return 0;if(!byte_name(name)){refuse(e,2,0);return 0;}
+ struct DeviceSlot *dev=(struct DeviceSlot *)record_new(&devices,KIND_DEVICE,sizeof(*dev),e);if(!dev)return 0;
+ struct PortSlot *port=port_create(e);if(!port){record_release(&devices,dev,sizeof(*dev));return 0;}
+ struct IORequest *open=(struct IORequest *)io_alloc(IO_OPEN_SIZE);
+ if(!open){clear_port(port);record_release(&devices,dev,sizeof(*dev));refuse(e,1,ERROR_NO_FREE_STORE);return 0;}
+ open->io_Message.mn_Node.ln_Type=NT_REPLYMSG;open->io_Message.mn_ReplyPort=port->handle;open->io_Message.mn_Length=IO_OPEN_SIZE;
+ BYTE error=OpenDevice((CONST_STRPTR)name,unit,open,flags);
+ if(error){FreeMem(open,IO_OPEN_SIZE);clear_port(port);record_release(&devices,dev,sizeof(*dev));refuse(e,1,error);return 0;}
+ dev->open=open;dev->size=IO_OPEN_SIZE;dev->port=port->token;++stats.devices;return dev->token;
+}
+static void device_release(struct DeviceSlot *dev) {
+ struct IORequest *open=dev->open;size_t size=dev->size;uint64_t port_token=dev->port;
+ record_release(&devices,dev,sizeof(*dev));--stats.devices;
+ if(open){CloseDevice(open);FreeMem(open,size);}
+ struct PortSlot *port=port_find(port_token);if(port && port->handle)clear_port(port);
+}
+int sdk_device_close(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct DeviceSlot *dev=device_find(token);if(!dev || !dev->open || dev->requests)return refuse(e,5,0);
+ device_release(dev);return 0;
+}
+uint32_t sdk_device_signal_mask(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return 0;struct DeviceSlot *dev=device_find(token);if(!dev)return 0;
+ struct PortSlot *port=port_find(dev->port);return port && port->handle?1UL<<port->handle->mp_SigBit:0;
+}
+uint64_t sdk_io_new(uint64_t key,uint64_t device,int32_t kind,size_t capacity,SdkError *e) {
+ if(own(key,e))return 0;struct DeviceSlot *dev=device_find(device);if(!dev || !dev->open){refuse(e,5,0);return 0;}
+ if((kind!=IO_KIND_STANDARD && kind!=IO_KIND_TIMER) || capacity>IO_MAX_DATA || (kind==IO_KIND_TIMER && capacity)){refuse(e,2,0);return 0;}
+ struct PortSlot *port=port_find(dev->port);if(!port || !port->handle){refuse(e,5,0);return 0;}
+ struct IoSlot *slot=(struct IoSlot *)record_new(&requests,KIND_REQUEST,sizeof(*slot),e);if(!slot)return 0;
+ size_t size=kind==IO_KIND_TIMER?sizeof(struct timerequest):sizeof(struct IOStdReq);
+ struct IORequest *request=(struct IORequest *)io_alloc(size);
+ uint8_t *buffer=capacity && request?(uint8_t *)io_alloc(capacity):NULL;
+ if(!request || (capacity && !buffer)){
+  if(buffer)FreeMem(buffer,capacity);if(request)FreeMem(request,size);
+  record_release(&requests,slot,sizeof(*slot));refuse(e,1,ERROR_NO_FREE_STORE);return 0;
+ }
+ request->io_Message.mn_Node.ln_Type=NT_REPLYMSG;request->io_Message.mn_ReplyPort=port->handle;request->io_Message.mn_Length=size;
+ request->io_Device=dev->open->io_Device;request->io_Unit=dev->open->io_Unit;
+ slot->device=device;slot->request=request;slot->size=size;slot->buffer=buffer;slot->capacity=capacity;slot->kind=kind;slot->state=IO_IDLE;
+ ++dev->requests;++stats.requests;return slot->token;
+}
+/* Retires the record first, then aborts and reclaims a pending request. */
+static void io_release(struct IoSlot *slot) {
+ struct IORequest *request=slot->request;size_t size=slot->size,capacity=slot->capacity;uint8_t *buffer=slot->buffer;
+ int pending=slot->state==IO_PENDING;struct DeviceSlot *dev=device_find(slot->device);
+ record_release(&requests,slot,sizeof(*slot));--stats.requests;if(dev && dev->requests)--dev->requests;
+ if(pending){AbortIO(request);WaitIO(request);}
+ FreeMem(request,size);if(buffer)FreeMem(buffer,capacity);
+}
+int sdk_io_drop(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct IoSlot *slot=io_find(token);if(!slot)return refuse(e,5,0);
+ io_release(slot);return 0;
+}
+int sdk_io_prepare(uint64_t key,uint64_t token,uint32_t command,uint32_t flags,size_t length,uint32_t offset,SdkError *e) {
+ if(own(key,e))return -1;struct IoSlot *slot=io_find(token);if(!slot || slot->state!=IO_IDLE)return refuse(e,5,0);
+ if(command>0xffff || flags>0xff || (slot->kind==IO_KIND_TIMER && (length || offset)) || length>slot->capacity)return refuse(e,2,0);
+ slot->request->io_Command=(UWORD)command;slot->request->io_Flags=(UBYTE)flags;slot->request->io_Error=0;
+ if(slot->kind==IO_KIND_STANDARD){
+  struct IOStdReq *standard=(struct IOStdReq *)slot->request;
+  standard->io_Data=slot->buffer;standard->io_Length=(ULONG)length;standard->io_Offset=offset;standard->io_Actual=0;
+ }
+ return 0;
+}
+int sdk_io_write(uint64_t key,uint64_t token,const uint8_t *data,size_t n,SdkError *e) {
+ if(own(key,e))return -1;struct IoSlot *slot=io_find(token);if(!slot || slot->state!=IO_IDLE || slot->kind!=IO_KIND_STANDARD)return refuse(e,5,0);
+ if(n>slot->capacity || (n && !data))return refuse(e,2,0);
+ for(size_t k=0;k<n;k++)slot->buffer[k]=data[k];return 0;
+}
+int64_t sdk_io_read(uint64_t key,uint64_t token,uint8_t *out,size_t cap,SdkError *e) {
+ if(own(key,e))return -1;struct IoSlot *slot=io_find(token);if(!slot || slot->state!=IO_IDLE || slot->kind!=IO_KIND_STANDARD)return refuse(e,5,0);
+ size_t n=((struct IOStdReq *)slot->request)->io_Actual;if(n>slot->capacity)n=slot->capacity;
+ if(cap<n || (n && !out))return refuse(e,2,0);
+ for(size_t k=0;k<n;k++)out[k]=slot->buffer[k];return (int64_t)n;
+}
+int sdk_io_set_time(uint64_t key,uint64_t token,uint32_t seconds,uint32_t micros,SdkError *e) {
+ if(own(key,e))return -1;struct IoSlot *slot=io_find(token);if(!slot || slot->state!=IO_IDLE || slot->kind!=IO_KIND_TIMER)return refuse(e,5,0);
+ if(micros>=1000000UL)return refuse(e,2,0);
+ struct timerequest *timer=(struct timerequest *)slot->request;timer->tr_time.tv_secs=seconds;timer->tr_time.tv_micro=micros;return 0;
+}
+int sdk_io_time(uint64_t key,uint64_t token,uint32_t *seconds,uint32_t *micros,SdkError *e) {
+ if(own(key,e))return -1;struct IoSlot *slot=io_find(token);if(!slot || slot->state!=IO_IDLE || slot->kind!=IO_KIND_TIMER)return refuse(e,5,0);
+ if(!seconds || !micros)return refuse(e,2,0);
+ struct timerequest *timer=(struct timerequest *)slot->request;*seconds=timer->tr_time.tv_secs;*micros=timer->tr_time.tv_micro;return 0;
+}
+int sdk_io_result(uint64_t key,uint64_t token,int32_t *device_error,uint32_t *actual,SdkError *e) {
+ if(own(key,e))return -1;struct IoSlot *slot=io_find(token);if(!slot || slot->state!=IO_IDLE)return refuse(e,5,0);
+ if(!device_error || !actual)return refuse(e,2,0);
+ *device_error=(int32_t)(BYTE)slot->request->io_Error;
+ *actual=slot->kind==IO_KIND_STANDARD?((struct IOStdReq *)slot->request)->io_Actual:0;return 0;
+}
+int sdk_io_do(uint64_t key,uint64_t token,int32_t *device_error,SdkError *e) {
+ if(own(key,e))return -1;struct IoSlot *slot=io_find(token);if(!slot || slot->state!=IO_IDLE)return refuse(e,5,0);
+ if(!device_error)return refuse(e,2,0);
+ *device_error=(int32_t)(BYTE)DoIO(slot->request);return 0;
+}
+int sdk_io_send(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct IoSlot *slot=io_find(token);if(!slot || slot->state!=IO_IDLE)return refuse(e,5,0);
+ slot->state=IO_PENDING;SendIO(slot->request);return 0;
+}
+int sdk_io_check(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct IoSlot *slot=io_find(token);if(!slot || slot->state!=IO_PENDING)return refuse(e,5,0);
+ return CheckIO(slot->request)?1:0;
+}
+int sdk_io_wait(uint64_t key,uint64_t token,int32_t *device_error,SdkError *e) {
+ if(own(key,e))return -1;struct IoSlot *slot=io_find(token);if(!slot || slot->state!=IO_PENDING)return refuse(e,5,0);
+ if(!device_error)return refuse(e,2,0);
+ *device_error=(int32_t)(BYTE)WaitIO(slot->request);slot->state=IO_IDLE;return 0;
+}
+int sdk_io_abort(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct IoSlot *slot=io_find(token);if(!slot || slot->state!=IO_PENDING)return refuse(e,5,0);
+ AbortIO(slot->request);return 0;
 }
 int sdk_callback(uint64_t key,uint64_t (*callback)(void *,uint64_t),void *data,uint64_t value,uint64_t *out,SdkError *e) {
  if(own(key,e))return -1;if(callback_active || !callback || !data || !out)return refuse(e,5,0);
@@ -323,6 +512,8 @@ static int test_report_ledgers(void) {
  sdk_diagnostic((const uint8_t *)"[m1-ledger] ports",17,stats.ports);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] signals",19,stats.signals);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] messages",20,stats.messages);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] devices",19,stats.devices);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] requests",20,stats.requests);
  sdk_diagnostic((const uint8_t *)"[m1-native] live",16,backend_live());
  sdk_diagnostic((const uint8_t *)"[m1-native] errors",18,backend_errors);
  sdk_diagnostic((const uint8_t *)"[m1-native] signal-mask-delta",29,(uint64_t)(current_task()->tc_SigAlloc^initial_signal_mask));
@@ -339,13 +530,21 @@ static int cleanup_remaining(void) {
     during a release resumes this C drain iteratively, with no Rust frame or
     recursive teardown retry. Locals are recreated after the setjmp return. */
  if(setjmp(cleanup_resume)){cleanup_error=20;ami_sdk_diagnostic_depth=0;}
- for(size_t i=0;i<8;i++)if(messages[i].token){detach_message(&messages[i]);memset(&messages[i],0,sizeof(messages[i]));--stats.messages;}
- for(size_t i=0;i<16;i++)if(files[i].token){BPTR f=files[i].handle;files[i]=(struct FileSlot){0};if(!f)continue;--stats.files;if(!Close(f)){SIPTR error=IoErr();sdk_diagnostic((const uint8_t *)"close",5,(uint64_t)error);cleanup_error=20;}}
- for(size_t i=0;i<4;i++)if(libraries[i].token){struct Library *l=libraries[i].handle;libraries[i]=(struct LibSlot){0};if(l){--stats.libraries;CloseLibrary(l);}}
- for(size_t i=0;i<2;i++)if(ports[i].token){if(ports[i].handle)clear_port(i);else{signals[ports[i].signal_slot]=(struct SignalSlot){0};ports[i]=(struct PortSlot){0};}}
- for(size_t i=0;i<4;i++)if(signals[i].token){int bit=signals[i].bit;signals[i]=(struct SignalSlot){0};if(bit>=0){--stats.signals;SetSignal(0,1UL<<bit);FreeSignal(bit);}}
+ for(size_t i=0;i<requests.capacity;i++){struct IoSlot *slot=(struct IoSlot *)requests.items[i];if(slot)io_release(slot);}
+ for(size_t i=0;i<devices.capacity;i++){struct DeviceSlot *dev=(struct DeviceSlot *)devices.items[i];if(dev)device_release(dev);}
+ for(size_t i=0;i<messages.capacity;i++){struct MessageSlot *m=(struct MessageSlot *)messages.items[i];if(m){detach_message(m);record_release(&messages,m,sizeof(*m));--stats.messages;}}
+ for(size_t i=0;i<files.capacity;i++){struct FileSlot *slot=(struct FileSlot *)files.items[i];if(!slot)continue;BPTR f=slot->handle;record_release(&files,slot,sizeof(*slot));if(!f)continue;--stats.files;if(!Close(f)){SIPTR error=IoErr();sdk_diagnostic((const uint8_t *)"close",5,(uint64_t)error);cleanup_error=20;}}
+ for(size_t i=0;i<libraries.capacity;i++){struct LibSlot *slot=(struct LibSlot *)libraries.items[i];if(!slot)continue;struct Library *l=slot->handle;record_release(&libraries,slot,sizeof(*slot));if(l){--stats.libraries;CloseLibrary(l);}}
+ for(size_t i=0;i<ports.capacity;i++){struct PortSlot *slot=(struct PortSlot *)ports.items[i];if(!slot)continue;if(slot->handle)clear_port(slot);else{int s=slot->signal_slot;record_release(&ports,slot,sizeof(*slot));signals[s]=(struct SignalSlot){0};}}
+ for(size_t i=0;i<SIGNAL_SLOTS;i++)if(signals[i].token){int bit=signals[i].bit;signals[i]=(struct SignalSlot){0};if(bit>=0){--stats.signals;SetSignal(0,1UL<<bit);FreeSignal(bit);}}
  while(blocks){struct Block *b=blocks;blocks=b->next;size_t total=b->total;--stats.blocks;stats.backing_charge-=b->charge;FreeMem(b,total);}
  if(mandatory_dos){struct Library *l=mandatory_dos;mandatory_dos=NULL;CloseLibrary(l);}
+ if(registry_pool){
+  /* The tables are the pool's last users; the pool is retired with them. */
+  APTR pool=registry_pool;registry_pool=NULL;
+  files=(struct Registry){0};libraries=(struct Registry){0};ports=(struct Registry){0};messages=(struct Registry){0};devices=(struct Registry){0};requests=(struct Registry){0};
+  DeletePool(pool);
+ }
 #ifdef AMI_SDK_TESTING
  if(diagnostic_pool){APTR pool=diagnostic_pool;diagnostic_pool=NULL;DeletePool(pool);}
 #endif
@@ -459,7 +658,10 @@ int main(int argc,char **argv) {
  sdk_diagnostic((const uint8_t *)"[m1-counter] charge-overflow",sizeof("[m1-counter] charge-overflow")-1,charge_overflow_ok);
  sdk_diagnostic((const uint8_t *)"[m1-counter] task-owner",23,owner_ok);
  if(!argument_ok || !charge_overflow_ok || !owner_ok || !compatibility_ok || !allocation_checkers_ok){int closed=sdk_end();(void)closed;return 20;}
+#ifndef AMI_RUST_ABI11
+ /* The stack instrument belongs to the ABI-v1 entry, which checks the 128 KiB stack. */
  if(argc>1 && !strcmp(argv[1],"calibrate") && ami_stack_calibrate()){int failed_cleanup=sdk_end();(void)failed_cleanup;return 20;}
+#endif
  if(argc>1 && !strcmp(argv[1],"cleanup-secondary")){sdk_test_fault(5,1);secondary_on_diagnostic=1;}
 #endif
  result=rust_sdk_main();int closed=sdk_end();

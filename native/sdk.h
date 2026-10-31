@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 typedef struct { int32_t kind; int64_t native; } SdkError;
-typedef struct { size_t blocks, backing_charge, peak_charge, files, libraries, ports, signals, messages, refusals; } SdkStats;
+typedef struct { size_t blocks, backing_charge, peak_charge, files, libraries, ports, signals, messages, refusals, devices, requests; } SdkStats;
 
 /* Shared checked layout arithmetic for the native allocator and host tests. */
 #define AMI_SDK_MIN_ALLOCATION_ALIGNMENT ((size_t)8)
@@ -110,6 +110,22 @@ int sdk_message_copy(uint64_t,uint64_t,uint8_t *,size_t,SdkError *);
 int sdk_port_put(uint64_t,uint64_t,uint64_t,uint64_t,SdkError *);
 int sdk_port_receive(uint64_t,uint64_t,uint64_t,SdkError *);
 int sdk_message_reply(uint64_t,uint64_t,SdkError *);
+uint64_t sdk_device_open(uint64_t,const uint8_t *,uint32_t,uint32_t,SdkError *);
+int sdk_device_close(uint64_t,uint64_t,SdkError *);
+uint32_t sdk_device_signal_mask(uint64_t,uint64_t);
+uint64_t sdk_io_new(uint64_t,uint64_t,int32_t,size_t,SdkError *);
+int sdk_io_drop(uint64_t,uint64_t,SdkError *);
+int sdk_io_prepare(uint64_t,uint64_t,uint32_t,uint32_t,size_t,uint32_t,SdkError *);
+int sdk_io_write(uint64_t,uint64_t,const uint8_t *,size_t,SdkError *);
+int64_t sdk_io_read(uint64_t,uint64_t,uint8_t *,size_t,SdkError *);
+int sdk_io_set_time(uint64_t,uint64_t,uint32_t,uint32_t,SdkError *);
+int sdk_io_time(uint64_t,uint64_t,uint32_t *,uint32_t *,SdkError *);
+int sdk_io_result(uint64_t,uint64_t,int32_t *,uint32_t *,SdkError *);
+int sdk_io_do(uint64_t,uint64_t,int32_t *,SdkError *);
+int sdk_io_send(uint64_t,uint64_t,SdkError *);
+int sdk_io_check(uint64_t,uint64_t,SdkError *);
+int sdk_io_wait(uint64_t,uint64_t,int32_t *,SdkError *);
+int sdk_io_abort(uint64_t,uint64_t,SdkError *);
 int sdk_callback(uint64_t,uint64_t (*)(void *,uint64_t),void *,uint64_t,uint64_t *,SdkError *);
 /* Independent C oracle: count then values; no raw Rust structs enter OS calls. */
 size_t sdk_layout(uint64_t *,size_t);

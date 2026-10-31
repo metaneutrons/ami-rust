@@ -15,9 +15,9 @@ int sdk_test_stderr_redirect(uint64_t key,uint64_t file_token,uint32_t route) {
  if(stderr_route_active)return -1;
  BPTR file=BNULL;
  if(route!=3){
-  int i=index_of(file_token,KIND_FILE,16);
-  if(i<0 || files[i].token!=file_token || !files[i].handle)return -1;
-  file=files[i].handle;
+  struct FileSlot *slot=(struct FileSlot *)record_find(&files,file_token,KIND_FILE);
+  if(!slot || !slot->handle)return -1;
+  file=slot->handle;
  }
  struct Process *p=(struct Process *)owner;
  stderr_saved_error=p->pr_CES;stderr_saved_output=p->pr_COS;stderr_route_active=1;

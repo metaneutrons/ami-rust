@@ -32,7 +32,7 @@ Each of these needs its own target support and release documentation. See the [p
 
 ## What the limits mean for applications
 
-The safe APIs use fixed native registries (for example, at most 16 open files and 8 messages). Those are API limits, not a memory quota, and they are listed on the [`aros` guide](/api/aros/#errors-and-bounds). The guest image and emulator configuration used for qualification are records of how the release was tested. They are not memory limits or resource quotas for your application, which remains subject to ordinary AROS allocation failure.
+The safe APIs keep native registries that grow on demand (release 0.1.0 used fixed ones, for example at most 16 open files and 8 messages). Their bounds are memory, a token space per kind and, for signals, the bits Exec leaves free; they are listed on the [`aros` guide](/api/aros/#errors-and-bounds). The guest image and emulator configuration used for qualification are records of how the release was tested. They are not memory limits or resource quotas for your application, which remains subject to ordinary AROS allocation failure.
 
 ## Versioning of the guarantee
 

@@ -79,6 +79,7 @@ documents are deliberately not published.
   `node tools/check-doc-examples.mjs WORK_DIR` with the 0.1.0 toolchain
   installed to compile them, and the complete programs in the guides, for both
   targets.
+- **Native bridge changes.** `native/*` and `tooling/crates/aros-native-build/native/*` are identical copies, and the installed toolchain's `aros-link` refuses a bridge that differs from the copy it was built with, so a change cannot be tried with a released toolchain. For local work, copy an installed toolchain (`cp -Rc`), build `aros-link` from `tooling/` (`cargo build --release -p aros-native-build --bin aros-link`), replace both `bin/aros-link` and `lib/rustlib/<host>/bin/aros-link` in the copy, link it with `rustup toolchain link`, and build with `cargo +<name>`. Delete the staged `ami-native` directories of earlier builds when the source changes. Such a change reaches users with the next toolchain release.
 - **Node.** The site tooling targets Node 26, the version CI uses (`engines` in `website/package.json`). `node --test` is given explicit files rather than a directory because directory arguments behave differently across Node versions.
 - **Local build.**
 

@@ -9,7 +9,7 @@
 //!
 //! This module's operations do not allocate Rust memory. They return
 //! allocation-free [`Error`] values for native failures, invalid input or
-//! state, task-ownership failures, and fixed-limit exhaustion. The global
+//! state, task-ownership failures, and resource-limit exhaustion. The global
 //! allocator, when installed, is a separate runtime facility.
 
 use core::{ffi::c_void, marker::PhantomData, mem};
@@ -118,6 +118,34 @@ pub enum Operation {
     Stderr = 22,
     /// Waiting on an externally supplied signal mask.
     SignalWaitMask = 23,
+    /// Opening an Exec device.
+    DeviceOpen = 24,
+    /// Closing an Exec device.
+    DeviceClose = 25,
+    /// Creating a device I/O request.
+    RequestNew = 26,
+    /// Releasing a device I/O request.
+    RequestDrop = 27,
+    /// Setting up a device I/O request's command fields.
+    RequestPrepare = 28,
+    /// Copying bytes into a device I/O request's data.
+    RequestWrite = 29,
+    /// Copying bytes out of a device I/O request's data.
+    RequestRead = 30,
+    /// Reading or setting a timer request's time value.
+    RequestTime = 31,
+    /// Reading the result of a completed device I/O request.
+    RequestResult = 32,
+    /// Performing a synchronous device I/O request.
+    RequestDo = 33,
+    /// Sending an asynchronous device I/O request.
+    RequestSend = 34,
+    /// Checking an asynchronous device I/O request.
+    RequestCheck = 35,
+    /// Waiting for an asynchronous device I/O request.
+    RequestWait = 36,
+    /// Aborting an asynchronous device I/O request.
+    RequestAbort = 37,
 }
 
 /// Allocation-free error returned by a safe SDK operation.
@@ -293,8 +321,9 @@ pub enum FileMode {
 ///
 /// The handle is task-affine and cannot outlive the borrowed [`Context`].
 /// Explicit [`close`](Self::close) reports native close errors; `Drop` closes
-/// the handle on a best-effort basis. At most 16 SDK file handles may be open
-/// at once. Every individual transfer is bounded to 64 KiB.
+/// the handle on a best-effort basis. The number of open files is bounded by
+/// available memory, not by a small fixed table. Every individual transfer is
+/// bounded to 64 KiB.
 ///
 /// # Examples
 ///
@@ -327,8 +356,9 @@ impl<'ctx> File<'ctx> {
     /// # Errors
     ///
     /// Returns [`ErrorKind::Native`] if DOS cannot open the file,
-    /// [`ErrorKind::Limit`] if the 16-handle registry is full, or another
-    /// class if the native bridge rejects the context or request.
+    /// [`ErrorKind::Limit`] if the registry's token space is exhausted, or
+    /// another class (including [`ErrorKind::Native`] for lack of memory) if
+    /// the native bridge rejects the context or request.
     pub fn open(context: &'ctx Context, path: &BytePath, mode: FileMode) -> Result<Self, Error> {
         let mut native_error = fresh_sys_error();
         let token = unsafe {
@@ -716,7 +746,7 @@ impl<'ctx> Stderr<'ctx> {
 ///
 /// The handle borrows its creating [`Context`] and is confined to that
 /// application task. Opening requires an explicit minimum library version;
-/// the SDK permits at most four optional library handles at once. `Drop`
+/// the number of open library handles is bounded by available memory. `Drop`
 /// closes the library on a best-effort basis; use [`close`](Self::close) to
 /// observe a bridge refusal while explicitly releasing it.
 ///
@@ -744,8 +774,8 @@ impl<'ctx> Library<'ctx> {
     /// # Errors
     ///
     /// Returns [`ErrorKind::Native`] if the library is unavailable or too old,
-    /// [`ErrorKind::Limit`] when the four-handle registry is full, or another
-    /// class if the bridge rejects the context or request.
+    /// [`ErrorKind::Limit`] when the registry's token space is exhausted, or
+    /// another class if the bridge rejects the context or request.
     pub fn open(
         context: &'ctx Context,
         name: &BytePath,
@@ -832,9 +862,10 @@ impl Drop for Library<'_> {
 
 /// An owned Exec signal bit in the creating application's task.
 ///
-/// The handle is task-affine and borrows its creating [`Context`]. At most
-/// four signal slots are available to the SDK, including the slots reserved
-/// by private message ports. Dropping the handle clears and releases its bit.
+/// The handle is task-affine and borrows its creating [`Context`]. Exec
+/// allocates signals from one 32-bit task mask, so only the bits Exec leaves
+/// free are available, including the bits used by private message ports.
+/// Dropping the handle clears and releases its bit.
 ///
 /// # Examples
 ///
@@ -856,9 +887,9 @@ impl<'ctx> Signal<'ctx> {
     ///
     /// # Errors
     ///
-    /// Returns [`ErrorKind::Limit`] when the SDK signal-slot limit is reached,
-    /// [`ErrorKind::Native`] when Exec cannot allocate a bit, or another class
-    /// if the native bridge rejects the context.
+    /// Returns [`ErrorKind::Native`] when Exec has no free signal bit,
+    /// [`ErrorKind::Limit`] if the SDK's 32-slot table is full, or another
+    /// class if the native bridge rejects the context.
     pub fn new(context: &'ctx Context) -> Result<Self, Error> {
         let mut native_error = fresh_sys_error();
         let token = unsafe { sys::sdk_signal_new(context.key(), &mut native_error) };
@@ -928,9 +959,9 @@ impl Drop for Signal<'_> {
 
 /// Private message port owned by the creating application task.
 ///
-/// The handle is task-affine and borrows its creating [`Context`]. The SDK can
-/// own at most two private ports at once; they are local application resources,
-/// not handles to arbitrary or foreign ports. Dropping a port asks the native
+/// The handle is task-affine and borrows its creating [`Context`]. Private
+/// ports are local application resources, not handles to arbitrary or foreign
+/// ports; each one uses a signal bit. Dropping a port asks the native
 /// registry to detach queued messages and retire their local queue state.
 ///
 /// # Examples
@@ -960,9 +991,10 @@ impl<'ctx> Port<'ctx> {
     ///
     /// # Errors
     ///
-    /// Returns [`ErrorKind::Limit`] if the two-port or shared signal-slot
-    /// limit is reached, [`ErrorKind::Native`] if Exec cannot create the port,
-    /// or another class if the native bridge rejects the context.
+    /// Returns [`ErrorKind::Native`] if Exec cannot create the port or has no
+    /// free signal bit, [`ErrorKind::Limit`] if the registry's token space or
+    /// the 32-slot signal table is exhausted, or another class if the native
+    /// bridge rejects the context.
     pub fn new(context: &'ctx Context) -> Result<Self, Error> {
         let mut native_error = fresh_sys_error();
         let token = unsafe { sys::sdk_port_new(context.key(), &mut native_error) };
@@ -1068,8 +1100,8 @@ impl Drop for Port<'_> {
 ///
 /// The handle is task-affine and borrows its creating [`Context`]. The native
 /// registry owns a stable message record and payload copy, so the input slice
-/// passed to [`Message::new`] need not remain alive. At most eight messages
-/// may be owned at once. Dropping this handle releases the record and detaches
+/// passed to [`Message::new`] need not remain alive. The number of owned
+/// messages is bounded by available memory. Dropping this handle releases the record and detaches
 /// it if it is queued.
 pub struct Message<'ctx> {
     context: &'ctx Context,
@@ -1083,8 +1115,8 @@ impl<'ctx> Message<'ctx> {
     /// # Errors
     ///
     /// Returns [`ErrorKind::Limit`] if the payload exceeds 256 bytes or the
-    /// eight-message registry is full, or another class if the bridge rejects
-    /// the context or request.
+    /// registry's token space is exhausted, or another class if the bridge
+    /// rejects the context or request.
     pub fn new(context: &'ctx Context, payload: &[u8]) -> Result<Self, Error> {
         if payload.len() > MAX_MESSAGE_BYTES {
             return Err(Error::limit(Operation::MessageNew));
@@ -1273,3 +1305,6 @@ unsafe extern "C" fn callback_trampoline(user_data: *mut c_void, input: u64) -> 
     let frame = unsafe { &mut *user_data.cast::<CallbackFrame<'_>>() };
     (frame.callback)(input)
 }
+
+mod device;
+pub use device::*;

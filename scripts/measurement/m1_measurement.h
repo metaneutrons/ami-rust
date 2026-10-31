@@ -43,7 +43,12 @@ _Static_assert(offsetof(struct m0_watch, diagnostic_depth_address) == 96,
 _Static_assert(sizeof(struct m0_watch) == 104, "M1 watch record size");
 
 static inline volatile struct m0_watch *m0_watcher(void) {
+#ifdef AMI_RUST_ABI11
+    /* The pinned ABI-v11 ExecBase has no ThisTask member. */
+    struct Task *task = SysBase ? FindTask(0) : 0;
+#else
     struct Task *task = SysBase ? SysBase->ThisTask : 0;
+#endif
     volatile struct m0_watch *watch = task ? (void *)task->tc_UserData : 0;
     return watch && watch->magic == M0_WATCH_MAGIC ? watch : 0;
 }

@@ -24,7 +24,8 @@ use core::{
 };
 
 use aros::{
-    AppStatus, BytePath, Context, Error, ErrorKind, File, FileMode, Library, Message, Port, Signal,
+    AppStatus, BytePath, Context, Device, Error, ErrorKind, File, FileMode, Library, Message, Port,
+    Request, RequestKind, Signal, wait_signals,
 };
 use aros_sys::{self as sys, SdkError, SdkStats};
 
@@ -44,6 +45,7 @@ const FAULT_SHORT_READ: u32 = 10;
 const FAULT_SHORT_WRITE: u32 = 11;
 const FAULT_ZERO_WRITE: u32 = 12;
 const FAULT_SECONDARY_FATAL: u32 = 14;
+const FAULT_OPEN_DEVICE: u32 = 16;
 
 const FILE_CASES: [(&[u8], usize); 6] = [
     (b"RAM:ami-rust-m1/fixture-0.bin", 0),
@@ -57,6 +59,7 @@ const FILE_CASES: [(&[u8], usize); 6] = [
 unsafe extern "C" {
     fn sdk_test_fault(site: u32, nth: u32);
     fn sdk_test_reset_fault();
+    fn sdk_test_slot_limit(limit: u64);
 }
 
 fn mode(context: &Context) -> Option<&str> {
@@ -87,6 +90,8 @@ fn same_resources(a: SdkStats, b: SdkStats) -> bool {
         && a.ports == b.ports
         && a.signals == b.signals
         && a.messages == b.messages
+        && a.devices == b.devices
+        && a.requests == b.requests
 }
 
 fn one_refusal_since(context: &Context, before: SdkStats) -> bool {
@@ -163,6 +168,13 @@ fn set_fault(site: u32) {
 fn set_fault_nth(site: u32, nth: u32) {
     // SAFETY: test-only native control; the host harness links this symbol.
     unsafe { sdk_test_fault(site, nth) };
+}
+
+/// Lowers the native token space so `Limit` exhaustion is reachable without
+/// exhausting memory; zero restores the production value.
+fn set_slot_limit(limit: u64) {
+    // SAFETY: test-only native control; the host harness links this symbol.
+    unsafe { sdk_test_slot_limit(limit) };
 }
 
 fn reset_fault() {
@@ -895,7 +907,9 @@ fn file_and_path_cases(context: &Context) -> bool {
         return false;
     }
 
-    let mut files: [Option<File<'_>>; 16] = core::array::from_fn(|_| None);
+    // The 0.1 registry held 16 files; 40 prove the registry grows on demand.
+    set_slot_limit(40);
+    let mut files: [Option<File<'_>>; 40] = core::array::from_fn(|_| None);
     for file in &mut files {
         *file = match File::open(context, &empty_path, FileMode::ReadExisting) {
             Ok(file) => Some(file),
@@ -910,9 +924,14 @@ fn file_and_path_cases(context: &Context) -> bool {
         File::open(context, &empty_path, FileMode::ReadExisting),
         ErrorKind::Limit,
     ) {
+        set_slot_limit(0);
         return false;
     }
+    set_slot_limit(0);
     drop(files);
+    if context.statistics().files != baseline.files {
+        return false;
+    }
 
     let mut sentinel = match File::open(context, &sentinel_path, FileMode::ReadExisting) {
         Ok(file) => file,
@@ -964,7 +983,9 @@ fn library_cases(context: &Context) -> bool {
         return false;
     }
 
-    let mut libraries: [Option<Library<'_>>; 4] = core::array::from_fn(|_| None);
+    // The 0.1 registry held 4 libraries; 24 prove the registry grows on demand.
+    set_slot_limit(24);
+    let mut libraries: [Option<Library<'_>>; 24] = core::array::from_fn(|_| None);
     for library in &mut libraries {
         *library = match Library::open(context, &name, 0) {
             Ok(library) => Some(library),
@@ -975,8 +996,10 @@ fn library_cases(context: &Context) -> bool {
         };
     }
     if !expect_error(context, Library::open(context, &name, 0), ErrorKind::Limit) {
+        set_slot_limit(0);
         return false;
     }
+    set_slot_limit(0);
     let Some(first) = libraries[0].take() else {
         return false;
     };
@@ -986,6 +1009,377 @@ fn library_cases(context: &Context) -> bool {
     }
     drop(libraries);
     same_resources(baseline, context.statistics())
+}
+
+/// Registries grow beyond the 0.1 limits, report `Limit` at their token-space
+/// bound, return every slot when handles are dropped, and leave handles that
+/// are forgotten to the native end-of-run cleanup (checked by the ledgers the
+/// native bridge prints at exit).
+fn registry_growth_cases(context: &Context) -> bool {
+    let baseline = context.statistics();
+    let Some(empty_path) = byte_path(b"RAM:ami-rust-m1/fixture-1.bin") else {
+        return false;
+    };
+
+    // Messages: far beyond the 0.1 limit of 8, then the bound, then reuse.
+    set_slot_limit(64);
+    let mut messages: [Option<Message<'_>>; 64] = core::array::from_fn(|_| None);
+    for (index, message) in messages.iter_mut().enumerate() {
+        let bytes = [index as u8; 32];
+        *message = match Message::new(context, &bytes) {
+            Ok(message) => Some(message),
+            Err(error) => {
+                report_error(context, error);
+                set_slot_limit(0);
+                return false;
+            }
+        };
+    }
+    let exhausted = expect_error(context, Message::new(context, b"over"), ErrorKind::Limit);
+    set_slot_limit(0);
+    if !exhausted {
+        return false;
+    }
+    // Releasing one record frees its slot for the next request.
+    drop(messages[17].take());
+    set_slot_limit(64);
+    let reused = Message::new(context, b"reuse");
+    set_slot_limit(0);
+    match reused {
+        Ok(message) => drop(message),
+        Err(error) => {
+            report_error(context, error);
+            return false;
+        }
+    }
+    drop(messages);
+    if !same_resources(baseline, context.statistics()) {
+        return false;
+    }
+
+    // Ports: more than the 0.1 limit of 2, bounded, and every signal returned.
+    set_slot_limit(6);
+    let mut ports: [Option<Port<'_>>; 6] = core::array::from_fn(|_| None);
+    for port in &mut ports {
+        *port = match Port::new(context) {
+            Ok(port) => Some(port),
+            Err(error) => {
+                report_error(context, error);
+                set_slot_limit(0);
+                return false;
+            }
+        };
+    }
+    let exhausted = expect_error(context, Port::new(context), ErrorKind::Limit);
+    set_slot_limit(0);
+    if !exhausted {
+        return false;
+    }
+    drop(ports);
+    if !same_resources(baseline, context.statistics()) {
+        return false;
+    }
+
+    // Signals are limited by Exec, not by the registry: more than the 0.1
+    // limit of 4 must succeed, and exhaustion is a native refusal.
+    let mut signals: [Option<Signal<'_>>; 32] = core::array::from_fn(|_| None);
+    let mut count = 0usize;
+    let mut refused = false;
+    for slot in &mut signals {
+        match Signal::new(context) {
+            Ok(signal) => {
+                *slot = Some(signal);
+                count += 1;
+            }
+            Err(error) if error.kind == ErrorKind::Native => {
+                refused = true;
+                break;
+            }
+            Err(error) => {
+                report_error(context, error);
+                return false;
+            }
+        }
+    }
+    context.diagnostic(b"qualification-signal-count", count as u64);
+    drop(signals);
+    if count <= 4 || !refused || !same_resources(baseline, context.statistics()) {
+        return false;
+    }
+
+    // Handles that are forgotten stay registered until the native cleanup.
+    set_slot_limit(0);
+    let mut forgotten = 0u64;
+    for _ in 0..20 {
+        match File::open(context, &empty_path, FileMode::ReadExisting) {
+            Ok(file) => {
+                core::mem::forget(file);
+                forgotten += 1;
+            }
+            Err(error) => {
+                report_error(context, error);
+                return false;
+            }
+        }
+    }
+    for _ in 0..50 {
+        match Message::new(context, b"forgotten") {
+            Ok(message) => {
+                core::mem::forget(message);
+                forgotten += 1;
+            }
+            Err(error) => {
+                report_error(context, error);
+                return false;
+            }
+        }
+    }
+    for _ in 0..4 {
+        match Port::new(context) {
+            Ok(port) => {
+                core::mem::forget(port);
+                forgotten += 1;
+            }
+            Err(error) => {
+                report_error(context, error);
+                return false;
+            }
+        }
+    }
+    let live = context.statistics();
+    context.diagnostic(b"qualification-forgotten-handles", forgotten);
+    live.files == baseline.files + 20
+        && live.messages == baseline.messages + 50
+        && live.ports == baseline.ports + 4
+}
+
+const UNIT_VBLANK: u32 = 1;
+const TR_ADDREQUEST: u16 = 9;
+const TR_GETSYSTIME: u16 = 10;
+const IOERR_ABORTED: i8 = -2;
+
+fn timer_device<'a>(context: &'a Context) -> Option<Device<'a>> {
+    let name = byte_path(b"timer.device")?;
+    match Device::open(context, &name, UNIT_VBLANK, 0) {
+        Ok(device) => Some(device),
+        Err(error) => {
+            report_error(context, error);
+            None
+        }
+    }
+}
+
+fn timer_request<'d, 'a>(
+    device: &'d Device<'a>,
+    seconds: u32,
+    micros: u32,
+) -> Option<Request<'d, 'a>> {
+    let mut request = Request::new(device, RequestKind::Timer, 0).ok()?;
+    request.prepare(TR_ADDREQUEST, 0, 0, 0).ok()?;
+    request.set_time(seconds, micros).ok()?;
+    Some(request)
+}
+
+/// Device open and close, synchronous and asynchronous requests, abort, drop
+/// of a pending request, input and state refusals, registry growth and an
+/// injected `OpenDevice` failure; every case ends at the baseline counters.
+fn device_cases(context: &Context) -> bool {
+    let baseline = context.statistics();
+
+    // A missing device is a native failure that leaves nothing behind.
+    let Some(missing) = byte_path(b"ami-rust-missing.device") else {
+        return false;
+    };
+    if !expect_error(
+        context,
+        Device::open(context, &missing, 0, 0),
+        ErrorKind::Native,
+    ) || !same_resources(baseline, context.statistics())
+    {
+        return false;
+    }
+    // An injected OpenDevice failure behaves the same way.
+    set_fault(FAULT_OPEN_DEVICE);
+    let injected = timer_device(context);
+    reset_fault();
+    if injected.is_some() || !same_resources(baseline, context.statistics()) {
+        return false;
+    }
+
+    let Some(device) = timer_device(context) else {
+        return false;
+    };
+    if device.signal_mask() == 0 {
+        return false;
+    }
+
+    // TR_GETSYSTIME: a synchronous request fills in the system time.
+    let Some(mut clock) = Request::new(&device, RequestKind::Timer, 0).ok() else {
+        return false;
+    };
+    if clock.prepare(TR_GETSYSTIME, 0, 0, 0).is_err() {
+        return false;
+    }
+    match clock.do_io() {
+        Ok(outcome) if outcome.is_ok() => {}
+        _ => return false,
+    }
+    match clock.time() {
+        Ok((seconds, micros)) if seconds != 0 && micros < 1_000_000 => {}
+        _ => return false,
+    }
+    drop(clock);
+
+    // Asynchronous 50 ms request: signalled through the device's reply port.
+    let Some(mut sleeper) = timer_request(&device, 0, 50_000) else {
+        return false;
+    };
+    if sleeper.send().is_err()
+        || !expect_error(context, sleeper.send(), ErrorKind::State)
+        || !expect_error(
+            context,
+            sleeper.prepare(TR_ADDREQUEST, 0, 0, 0),
+            ErrorKind::State,
+        )
+        || !expect_error(context, sleeper.outcome(), ErrorKind::State)
+        || wait_signals(context, device.signal_mask()).is_err()
+        || sleeper.check() != Ok(true)
+    {
+        return false;
+    }
+    match sleeper.wait() {
+        Ok(outcome) if outcome.is_ok() => {}
+        _ => return false,
+    }
+    if !expect_error(context, sleeper.wait(), ErrorKind::State)
+        || !expect_error(context, sleeper.check(), ErrorKind::State)
+        || !expect_error(context, sleeper.abort(), ErrorKind::State)
+    {
+        return false;
+    }
+    drop(sleeper);
+
+    // Abort: a ten second request is returned at once with IOERR_ABORTED.
+    let Some(mut long) = timer_request(&device, 10, 0) else {
+        return false;
+    };
+    if long.send().is_err() || long.abort().is_err() {
+        return false;
+    }
+    match long.wait() {
+        Ok(outcome) if outcome.device_error == IOERR_ABORTED => {}
+        _ => return false,
+    }
+    drop(long);
+
+    // Dropping a pending request aborts it and leaves no message queued.
+    let Some(mut pending) = timer_request(&device, 10, 0) else {
+        return false;
+    };
+    if pending.send().is_err() {
+        return false;
+    }
+    drop(pending);
+
+    // Refusals before any native work.
+    if !expect_error(
+        context,
+        Request::new(&device, RequestKind::Timer, 1),
+        ErrorKind::Input,
+    ) || !expect_error(
+        context,
+        Request::new(
+            &device,
+            RequestKind::Standard,
+            sys::MAX_REQUEST_DATA_BYTES + 1,
+        ),
+        ErrorKind::Input,
+    ) {
+        return false;
+    }
+    let Some(mut timer) = Request::new(&device, RequestKind::Timer, 0).ok() else {
+        return false;
+    };
+    if !expect_error(context, timer.set_time(0, 1_000_000), ErrorKind::Input)
+        || !expect_error(
+            context,
+            timer.prepare(TR_ADDREQUEST, 0, 1, 0),
+            ErrorKind::Input,
+        )
+        || !expect_error(context, timer.write_data(b"x"), ErrorKind::State)
+        || !expect_error(context, timer.wait(), ErrorKind::State)
+    {
+        return false;
+    }
+    drop(timer);
+    let Some(mut standard) = Request::new(&device, RequestKind::Standard, 8).ok() else {
+        return false;
+    };
+    let mut copy = [0u8; 8];
+    if standard.write_data(&[1u8; 9]).is_ok()
+        || !expect_error(context, standard.write_data(&[1u8; 9]), ErrorKind::Input)
+        || standard.write_data(b"payload!").is_err()
+        || standard.prepare(0, 0, 9, 0).is_ok()
+        || standard.read_data(&mut copy) != Ok(0)
+        || standard.set_time(0, 1).is_ok()
+    {
+        return false;
+    }
+    drop(standard);
+
+    // The device cannot close while a request exists: the borrow forbids it
+    // here, and the native registry refuses it for a raw token as well.
+    // Registry growth: requests beyond any small fixed table, then the bound.
+    set_slot_limit(40);
+    let mut requests: [Option<Request<'_, '_>>; 40] = core::array::from_fn(|_| None);
+    for request in &mut requests {
+        *request = Request::new(&device, RequestKind::Timer, 0).ok();
+        if request.is_none() {
+            set_slot_limit(0);
+            return false;
+        }
+    }
+    let exhausted = expect_error(
+        context,
+        Request::new(&device, RequestKind::Timer, 0),
+        ErrorKind::Limit,
+    );
+    set_slot_limit(0);
+    if !exhausted {
+        return false;
+    }
+    drop(requests);
+
+    if device.close().is_err() {
+        return false;
+    }
+    same_resources(baseline, context.statistics())
+}
+
+/// Leaves a device with a pending request and an idle one forgotten, so the
+/// native end-of-run cleanup must abort, reclaim and release them. The ledgers
+/// printed at exit must all be zero.
+fn device_forgotten_cases(context: &Context) -> bool {
+    let baseline = context.statistics();
+    let Some(device) = timer_device(context) else {
+        return false;
+    };
+    let Some(mut pending) = timer_request(&device, 10, 0) else {
+        return false;
+    };
+    let Some(idle) = Request::new(&device, RequestKind::Standard, 64).ok() else {
+        return false;
+    };
+    if pending.send().is_err() {
+        return false;
+    }
+    let live = context.statistics();
+    context.diagnostic(b"qualification-forgotten-requests", live.requests as u64);
+    let ok = live.devices == baseline.devices + 1 && live.requests == baseline.requests + 2;
+    mem::forget(pending);
+    mem::forget(idle);
+    mem::forget(device);
+    ok
 }
 
 fn signal_port_message_cases(context: &Context) -> bool {
@@ -1004,9 +1398,6 @@ fn signal_port_message_cases(context: &Context) -> bool {
             return false;
         }
     };
-    if !expect_error(context, Port::new(context), ErrorKind::Limit) {
-        return false;
-    }
 
     let signal_a = match Signal::new(context) {
         Ok(signal) => signal,
@@ -1022,9 +1413,6 @@ fn signal_port_message_cases(context: &Context) -> bool {
             return false;
         }
     };
-    if !expect_error(context, Signal::new(context), ErrorKind::Limit) {
-        return false;
-    }
     for _ in 0..10 {
         if let Err(error) = signal_a.post().and_then(|()| signal_a.wait()) {
             report_error(context, error);
@@ -1044,13 +1432,6 @@ fn signal_port_message_cases(context: &Context) -> bool {
                 return false;
             }
         };
-    }
-    if !expect_error(
-        context,
-        Message::new(context, b"ninth-message"),
-        ErrorKind::Limit,
-    ) {
-        return false;
     }
     drop(messages);
 
@@ -2089,6 +2470,27 @@ fn application(context: &Context) -> AppStatus {
                 success(context, b"qualification-port-message", 10)
             } else {
                 fatal(context, 9)
+            }
+        }
+        Some("devices") => {
+            if device_cases(context) {
+                success(context, b"qualification-device-cases", 12)
+            } else {
+                fatal(context, 25)
+            }
+        }
+        Some("devices-forgotten") => {
+            if device_forgotten_cases(context) {
+                success(context, b"qualification-device-forgotten", 2)
+            } else {
+                fatal(context, 26)
+            }
+        }
+        Some("registry") => {
+            if registry_growth_cases(context) {
+                success(context, b"qualification-registry-growth", 5)
+            } else {
+                fatal(context, 24)
             }
         }
         Some("callbacks") => {

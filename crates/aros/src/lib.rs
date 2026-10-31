@@ -48,9 +48,11 @@
 //!
 //! # Bounds and failures
 //!
-//! SDK resources use fixed native registries: at most 16 open files, 4
-//! optional libraries, 2 private ports, 4 owned signal slots, and 8 owned
-//! messages with payloads of at most 256 bytes. A path carries at most 127
+//! SDK resources live in native registries that grow on demand: open files,
+//! optional libraries, private ports and owned messages are bounded by
+//! available memory and by a token space of 1,048,575 handles per kind. Signals
+//! are the exception, because Exec hands out bits from one 32-bit task mask.
+//! Message payloads are at most 256 bytes. A path carries at most 127
 //! bytes before its terminating NUL, and one file or stream transfer is at
 //! most 64 KiB. These limits can produce [`ErrorKind::Limit`] errors.
 //! Native failures, invalid input or state, and task-ownership violations are

@@ -260,6 +260,8 @@ pub struct SdkStats {
     pub signals: usize,
     pub messages: usize,
     pub refusals: usize,
+    pub devices: usize,
+    pub requests: usize,
 }
 
 // These layouts follow AROS `exec/nodes.h`, `exec/lists.h`,
@@ -360,13 +362,17 @@ pub const MAX_PATH_BYTES: usize = 128;
 pub const MIN_ALLOCATION_ALIGNMENT: usize = 1;
 pub const MAX_ALLOCATION_ALIGNMENT: usize = 4096;
 pub const MAX_FILE_TRANSFER_BYTES: usize = 64 * 1024;
-pub const MAX_OWNED_FILES: usize = 16;
-pub const MAX_OPTIONAL_LIBRARIES: usize = 4;
-pub const MAX_PRIVATE_PORTS: usize = 2;
-pub const MAX_OWNED_SIGNALS: usize = 4;
-pub const MAX_OWNED_MESSAGES: usize = 8;
+/// Largest number of simultaneously open files, optional libraries, private
+/// ports or owned messages. Each registry grows on demand, so memory is the
+/// practical bound; this is the size of its token space.
+pub const MAX_HANDLES_PER_KIND: usize = (1 << 20) - 1;
+/// Exec allocates signals from one 32-bit task mask, which caps this count.
+pub const MAX_OWNED_SIGNALS: usize = 32;
 pub const MAX_MESSAGE_PAYLOAD_BYTES: usize = 256;
 pub const MAX_ACTIVE_CALLBACKS: usize = 1;
+pub const MAX_REQUEST_DATA_BYTES: usize = 64 * 1024;
+pub const IO_KIND_STANDARD: i32 = 0;
+pub const IO_KIND_TIMER: i32 = 1;
 pub const MAX_DIAGNOSTIC_BYTES: usize = 256;
 
 pub const SDK_FILE_READ_EXISTING: i32 = 0;
@@ -384,7 +390,7 @@ pub const ERROR_KIND_ZERO_PROGRESS: i32 = 7;
 /// Layout oracle values in the exact order of the M0 C layout table:
 /// Node, Library, Message, List, MsgPort, FileInfoBlock, scalar ABI types,
 /// then the selected spinlock_t storage. No native call or allocation occurs.
-pub const ABI_LAYOUT_VALUE_COUNT: usize = 81;
+pub const ABI_LAYOUT_VALUE_COUNT: usize = 83;
 
 const fn layout_value(value: usize) -> u64 {
     value as u64
@@ -473,6 +479,8 @@ pub const fn layout_values() -> [u64; ABI_LAYOUT_VALUE_COUNT] {
         layout_value(offset_of!(SdkStats, signals)),
         layout_value(offset_of!(SdkStats, messages)),
         layout_value(offset_of!(SdkStats, refusals)),
+        layout_value(offset_of!(SdkStats, devices)),
+        layout_value(offset_of!(SdkStats, requests)),
     ]
 }
 
@@ -550,6 +558,82 @@ unsafe extern "C" {
     pub fn sdk_port_receive(context: u64, port: u64, message: u64, error: *mut SdkError) -> c_int;
     pub fn sdk_message_reply(context: u64, message: u64, error: *mut SdkError) -> c_int;
 
+    pub fn sdk_device_open(
+        context: u64,
+        name: *const u8,
+        unit: u32,
+        flags: u32,
+        error: *mut SdkError,
+    ) -> u64;
+    pub fn sdk_device_close(context: u64, device: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_device_signal_mask(context: u64, device: u64) -> u32;
+    pub fn sdk_io_new(
+        context: u64,
+        device: u64,
+        kind: i32,
+        capacity: usize,
+        error: *mut SdkError,
+    ) -> u64;
+    pub fn sdk_io_drop(context: u64, request: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_io_prepare(
+        context: u64,
+        request: u64,
+        command: u32,
+        flags: u32,
+        length: usize,
+        offset: u32,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_io_write(
+        context: u64,
+        request: u64,
+        data: *const u8,
+        length: usize,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_io_read(
+        context: u64,
+        request: u64,
+        out: *mut u8,
+        capacity: usize,
+        error: *mut SdkError,
+    ) -> i64;
+    pub fn sdk_io_set_time(
+        context: u64,
+        request: u64,
+        seconds: u32,
+        micros: u32,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_io_time(
+        context: u64,
+        request: u64,
+        seconds: *mut u32,
+        micros: *mut u32,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_io_result(
+        context: u64,
+        request: u64,
+        device_error: *mut i32,
+        actual: *mut u32,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_io_do(
+        context: u64,
+        request: u64,
+        device_error: *mut i32,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_io_send(context: u64, request: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_io_check(context: u64, request: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_io_wait(
+        context: u64,
+        request: u64,
+        device_error: *mut i32,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_io_abort(context: u64, request: u64, error: *mut SdkError) -> c_int;
     pub fn sdk_callback(
         context: u64,
         callback: SdkCallback,
