@@ -128,24 +128,61 @@ jobs:
       - name: Check mobile layout
         run: pnpm --dir website run mobile
 
+  assemble:
+    name: Assemble all documentation versions
+    needs: check
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Every version is built from its own git ref.
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.26.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: website/pnpm-lock.yaml
+
+      - name: Build every version
+        run: >-
+          node website/scripts/assemble-site.mjs
+          --out "$RUNNER_TEMP/site"
+          --host x86_64-unknown-linux-gnu
+
+      - name: Check the assembled site
+        run: node website/scripts/check-assembled.mjs "$RUNNER_TEMP/site"
+
       - name: Upload site for review
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: documentation-site
-          path: website/dist
+          path: ${{ runner.temp }}/site
           retention-days: 7
 
       - name: Upload Pages artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
-          path: website/dist
+          path: ${{ runner.temp }}/site
 
   deploy:
     name: Deploy GitHub Pages
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: assemble
+    # One deployment at a time; never cancel one that is running.
+    concurrency:
+      group: documentation-pages-deploy
+      cancel-in-progress: false
     permissions:
       contents: read
       pages: write

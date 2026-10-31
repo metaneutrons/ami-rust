@@ -29,6 +29,7 @@ export default defineConfig({
     define: {
       __DOCS_RELEASE__: JSON.stringify(release),
       __DOCS_REVISION__: JSON.stringify(revision),
+      __DOCS_CHANNEL__: JSON.stringify(process.env.DOCS_CHANNEL === 'next' ? 'next' : 'release'),
     },
   },
   integrations: [

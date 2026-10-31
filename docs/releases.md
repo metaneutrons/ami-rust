@@ -12,14 +12,21 @@ description: The current release, how this documentation relates to it, and the 
 | Toolchain | rustup toolchain `0.1.0`, [installed](/quickstart-toolchain/) from the signed release archives or the immutable rustup catalog |
 | Crates | Git dependencies pinned to the tagged revision; not on crates.io |
 
-## How this documentation relates to the release
+## Documentation versions
 
-This site is built from the repository's `main` branch, and the footer of every page shows the commit it was built from. It is **not** frozen at the tag, so it can run ahead of the released source in two ways:
+The documentation is versioned. Use the version selector in the page header, or the address:
 
-- **Documentation.** Rustdoc comments, examples and guides can be newer than the tag. The [API reference](/reference/) comes from `main` and may carry documentation the tagged source does not.
-- **Examples.** The [MUI hello](/mui-hello/) example lives in the repository's `main` branch and is not part of the `v0.1.0` tag. The SHA-256 example is in both.
+| Address | Documents |
+| --- | --- |
+| `/` and `/v0.1.0/` | The latest release, 0.1.0. |
+| `/v<version>/` | Each other published release. |
+| `/next/` | The development branch, `main`. It may describe behaviour that is not released yet, and search engines are asked not to index it. |
 
-The **public declarations** of `aros` and `aros-mui` on `main` are the same as at the tag: no public item has been added, removed or changed since `v0.1.0`. A project that pins the tagged revision therefore compiles against the API this site documents. To read the source exactly as released, check out the tag:
+Switching version keeps you on the same page when that page exists in the other version. A banner appears on every page that is not for the latest release.
+
+Each release is built from its own git ref, with that ref's own guides, examples and API reference. Corrections to the documentation of a published release are made on a release branch, `release/0.1` for the 0.1 series, and are published without changing the release tag. The footer of every page shows the commit it was built from.
+
+The **public declarations** of `aros` and `aros-mui` in the 0.1 documentation are the same as at the `v0.1.0` tag: no public item has been added, removed or changed since. A project that pins the tagged revision therefore compiles against the API the 0.1 documentation describes. Two things in it are newer than the tag: Rustdoc comments and guides, and the [MUI hello](/mui-hello/) example, which is not part of the `v0.1.0` tag (the SHA-256 example is). To read the source exactly as released, check out the tag:
 
 ```sh
 git clone https://github.com/metaneutrons/ami-rust.git

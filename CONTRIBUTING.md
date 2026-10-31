@@ -65,6 +65,10 @@ documents are deliberately not published.
   source. For generated MUI items that means `tooling/crates/xtask/src/
   mui_safe_codegen.rs`; then run `cargo xtask generate mui` and commit the
   result. `aros` and `aros-mui` deny `missing_docs` and broken intra-doc links.
+- **Versions.** The site publishes one version per release plus `/next/`. `website/versions.json` lists the released versions and the git ref each is built from; `latest` is the version served at the site root. Every version is built from its own ref, so it documents what that release shipped. The base path, version metadata and version switcher are added at publication time by `website/scripts/assemble-site.mjs`, so even old refs get them.
+  - *To publish a new release's docs*, make sure the release's ref contains the site sources, add `{ "version": "X.Y.Z", "ref": "<tag or release branch>" }` to `versions.json`, set `latest`, and merge. For a patch series the ref is usually a `release/X.Y` branch.
+  - *To correct the docs of a published release*, commit to its `release/X.Y` branch, then run the Documentation workflow manually on `main` (Actions, Run workflow), or wait for the next push to `main`. Deployment always runs from `main`.
+  - *To build every version locally*: `node website/scripts/assemble-site.mjs --out "$(mktemp -d)/site" --host "$(rustc -vV | sed -n 's/host: //p')"`, then `node website/scripts/check-assembled.mjs` on the result. The `/next/` build uses your working tree.
 - **Formatting.** `cargo fmt --all --check` is clean for the root workspace and, with `--manifest-path tooling/Cargo.toml`, for the tooling workspace. The generated MUI sources are excluded with `#[rustfmt::skip]` on their `mod` declarations, because `check mui` compares them byte for byte.
 - **ABI.** Items declared for only one ABI must say so in their docs
   (`Available on ABI-v1 targets only.`). The reference generator fails when

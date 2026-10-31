@@ -3,7 +3,7 @@
 // off at the right edge. Starlight clips overflow inside its content pane, so
 // content can be unreachable without the page ever scrolling; both are checked.
 //
-// usage: node scripts/mobile-check.mjs [DIST_DIR] [--shots DIR]
+// usage: node scripts/mobile-check.mjs [DIST_DIR] [--base /v0.1.0] [--shots DIR]
 //
 // Chrome is found through CHROME_BIN, then the usual install locations. The
 // check drives Chrome over the DevTools protocol because the command-line
@@ -20,6 +20,8 @@ const websiteRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname)
 const args = process.argv.slice(2);
 const shotsIndex = args.indexOf('--shots');
 const shotsDirectory = shotsIndex >= 0 ? path.resolve(args.splice(shotsIndex, 2)[1]) : null;
+const baseIndex = args.indexOf('--base');
+const base = baseIndex >= 0 ? (args.splice(baseIndex, 2)[1] ?? '').replace(/\/$/, '') : '';
 const dist = path.resolve(args[0] ?? path.join(websiteRoot, 'dist'));
 const VIEWPORT = { width: 390, height: 844 };
 const REFERENCE_SAMPLE_STEP = 25;
@@ -49,7 +51,9 @@ const selected = [
 
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json', '.xml': 'application/xml' };
 const server = http.createServer((request, response) => {
-  let file = path.join(dist, decodeURIComponent(request.url.split('?')[0]));
+  let requested = decodeURIComponent(request.url.split('?')[0]);
+  if (base && (requested === base || requested.startsWith(`${base}/`))) requested = requested.slice(base.length) || '/';
+  let file = path.join(dist, requested);
   if (existsSync(file) && statSync(file).isDirectory()) file = path.join(file, 'index.html');
   if (!file.startsWith(dist) || !existsSync(file)) { response.writeHead(404).end(); return; }
   response.writeHead(200, { 'content-type': types[path.extname(file)] ?? 'application/octet-stream' }).end(readFileSync(file));
@@ -129,7 +133,7 @@ for (const url of selected) {
     const listener = (message) => { if (message.method === 'Page.loadEventFired' && message.sessionId === sessionId) { listeners.splice(listeners.indexOf(listener), 1); resolve(); } };
     listeners.push(listener);
   });
-  await send('Page.navigate', { url: `${origin}${url}` }, sessionId);
+  await send('Page.navigate', { url: `${origin}${base}${url}` }, sessionId);
   await loaded;
   await new Promise((resolve) => setTimeout(resolve, 150));
   const { result } = await send('Runtime.evaluate', { expression: measure, returnByValue: true }, sessionId);

@@ -1,6 +1,14 @@
 // Structural quality gate for the built documentation site.
 //
-// usage: node scripts/check-site.mjs [DIST_DIR]      (default: website/dist)
+// usage: node scripts/check-site.mjs [DIST_DIR] [--base /v0.1.0] [--dist-only]
+//        (default DIST_DIR: website/dist)
+//
+// --base       the site was built for publication under this path; every
+//              root-relative link must carry it, so links written in Markdown
+//              that were not rebased are reported
+// --dist-only  check only the built files, not the repository sources (content
+//              rules, pinned revision, theme contrast); for builds of another
+//              git ref
 //
 // Errors fail the run; warnings are printed. The checks cover link and anchor
 // integrity, the heading outline, page metadata, content rules for the
@@ -14,7 +22,11 @@ import { JSDOM } from 'jsdom';
 
 const websiteRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repository = path.resolve(websiteRoot, '..');
-const dist = path.resolve(process.argv[2] ?? path.join(websiteRoot, 'dist'));
+const args = process.argv.slice(2);
+const baseIndex = args.indexOf('--base');
+const base = baseIndex >= 0 ? (args.splice(baseIndex, 2)[1] ?? '').replace(/\/$/, '') : '';
+const distOnly = args.includes('--dist-only');
+const dist = path.resolve(args.find((argument) => !argument.startsWith('--')) ?? path.join(websiteRoot, 'dist'));
 const SITE = 'https://ami-rust.metaneutrons.cc';
 
 const errors = [];
@@ -102,8 +114,15 @@ for (const [url, document] of pages) {
     let target;
     if (!pathAndQuery) target = url;
     else {
-      const base = pathAndQuery.split('?')[0];
-      target = new URL(base, `${SITE}${url}`).pathname;
+      let linkPath = pathAndQuery.split('?')[0];
+      if (base && linkPath.startsWith('/')) {
+        if (linkPath !== base && !linkPath.startsWith(`${base}/`)) {
+          fail('links', `${url}: root-relative link ${href} does not carry the base ${base}`);
+          continue;
+        }
+        linkPath = linkPath.slice(base.length) || '/';
+      }
+      target = new URL(linkPath, `${SITE}${url}`).pathname;
     }
     const withSlash = target.endsWith('/') ? target : `${target}/`;
     const isPage = pages.has(target) || pages.has(withSlash);
@@ -121,6 +140,7 @@ for (const [url, document] of pages) {
 for (const [href, sources] of brokenTargets) fail('links', `broken link ${href} (from ${sources[0]}${sources.length > 1 ? ` and ${sources.length - 1} more` : ''})`);
 for (const [href, sources] of brokenAnchors) fail('links', `missing anchor ${href} (from ${sources[0]}${sources.length > 1 ? ` and ${sources.length - 1} more` : ''})`);
 
+if (!distOnly) {
 /* ---------- content rules for hand-written pages ---------- */
 
 const docs = path.join(repository, 'docs');
@@ -211,6 +231,8 @@ for (const [theme, name, foreground, background] of pairs) {
   if (!foreground || !background) { fail('contrast', `${theme} ${name}: token missing in ami-rust.css`); continue; }
   const ratio = contrast(foreground, background);
   if (ratio < 4.5) fail('contrast', `${theme} ${name}: ${foreground} on ${background} is ${ratio.toFixed(2)}:1 (needs 4.5:1)`);
+}
+
 }
 
 /* ---------- published files ---------- */
