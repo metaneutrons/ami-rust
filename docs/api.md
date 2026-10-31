@@ -35,7 +35,7 @@ For MUI the unit of ownership is the **scope**. `Mui::scope` runs a closure with
 
 ## Bounded resources
 
-The SDK keeps small fixed registries instead of growing without limit: 16 open files, 4 optional libraries, 2 private ports, 4 signal slots, and 8 messages of at most 256 bytes. A path is at most 127 bytes and a single file or stream transfer at most 64 KiB. Exceeding a bound returns `ErrorKind::Limit` rather than failing later. These are API limits, not a memory quota; Exec allocation can still fail. The [`aros` guide](/api/aros/#errors-and-bounds) has the table.
+Open files, optional libraries, private ports and owned messages grow on demand and are bounded by memory and by a token space of 1,048,575 handles per kind. Signals are limited by the bits Exec leaves free in the 32-bit task mask. A message payload is at most 256 bytes, a path at most 127 bytes and a single file or stream transfer at most 64 KiB. Reaching a documented bound returns `ErrorKind::Limit`; running out of memory or signal bits returns `ErrorKind::Native`. Release 0.1.0 used fixed registries instead (16 files, 4 libraries, 2 ports, 4 signals, 8 messages). The [`aros` guide](/api/aros/#errors-and-bounds) has the details.
 
 ## Errors
 

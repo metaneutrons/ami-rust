@@ -48,11 +48,19 @@ owner, invalid state, end of file, and zero progress. `Operation` identifies
 the operation that failed; `Error::kind_code()` supplies an allocation-free
 numeric classification for diagnostics.
 
-The initial SDK uses bounded native registries: 16 open files, 4 optional
-libraries, 2 private ports, 4 signal slots, and 8 owned messages with payloads
-of at most 256 bytes. Paths allow 127 bytes before their terminating NUL; one
-file or stream transfer is at most 64 KiB. These are API limits, not a heap
-quota. Exec allocation can still fail when native memory is exhausted.
+The native registries for open files, optional libraries, private ports and
+owned messages grow on demand. Memory is their practical bound, and each kind
+has a token space of 1,048,575 handles; reaching it returns `ErrorKind::Limit`.
+Running out of memory while a registry grows returns `ErrorKind::Native`.
+Signals are the exception: Exec allocates them from one 32-bit task mask, so
+only the bits Exec leaves free are available, and the rest returns
+`ErrorKind::Native`. Owned messages carry payloads of at most 256 bytes. Paths
+allow 127 bytes before their terminating NUL; one file or stream transfer is at
+most 64 KiB.
+
+Release 0.1.0 used fixed registries of 16 files, 4 libraries, 2 ports, 4
+signals and 8 messages. Programs written for those limits keep working;
+they simply no longer meet them.
 
 ## File and stream I/O
 

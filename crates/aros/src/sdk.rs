@@ -9,7 +9,7 @@
 //!
 //! This module's operations do not allocate Rust memory. They return
 //! allocation-free [`Error`] values for native failures, invalid input or
-//! state, task-ownership failures, and fixed-limit exhaustion. The global
+//! state, task-ownership failures, and resource-limit exhaustion. The global
 //! allocator, when installed, is a separate runtime facility.
 
 use core::{ffi::c_void, marker::PhantomData, mem};
@@ -293,8 +293,9 @@ pub enum FileMode {
 ///
 /// The handle is task-affine and cannot outlive the borrowed [`Context`].
 /// Explicit [`close`](Self::close) reports native close errors; `Drop` closes
-/// the handle on a best-effort basis. At most 16 SDK file handles may be open
-/// at once. Every individual transfer is bounded to 64 KiB.
+/// the handle on a best-effort basis. The number of open files is bounded by
+/// available memory, not by a small fixed table. Every individual transfer is
+/// bounded to 64 KiB.
 ///
 /// # Examples
 ///
@@ -327,8 +328,9 @@ impl<'ctx> File<'ctx> {
     /// # Errors
     ///
     /// Returns [`ErrorKind::Native`] if DOS cannot open the file,
-    /// [`ErrorKind::Limit`] if the 16-handle registry is full, or another
-    /// class if the native bridge rejects the context or request.
+    /// [`ErrorKind::Limit`] if the registry's token space is exhausted, or
+    /// another class (including [`ErrorKind::Native`] for lack of memory) if
+    /// the native bridge rejects the context or request.
     pub fn open(context: &'ctx Context, path: &BytePath, mode: FileMode) -> Result<Self, Error> {
         let mut native_error = fresh_sys_error();
         let token = unsafe {
@@ -716,7 +718,7 @@ impl<'ctx> Stderr<'ctx> {
 ///
 /// The handle borrows its creating [`Context`] and is confined to that
 /// application task. Opening requires an explicit minimum library version;
-/// the SDK permits at most four optional library handles at once. `Drop`
+/// the number of open library handles is bounded by available memory. `Drop`
 /// closes the library on a best-effort basis; use [`close`](Self::close) to
 /// observe a bridge refusal while explicitly releasing it.
 ///
@@ -744,8 +746,8 @@ impl<'ctx> Library<'ctx> {
     /// # Errors
     ///
     /// Returns [`ErrorKind::Native`] if the library is unavailable or too old,
-    /// [`ErrorKind::Limit`] when the four-handle registry is full, or another
-    /// class if the bridge rejects the context or request.
+    /// [`ErrorKind::Limit`] when the registry's token space is exhausted, or
+    /// another class if the bridge rejects the context or request.
     pub fn open(
         context: &'ctx Context,
         name: &BytePath,
@@ -832,9 +834,10 @@ impl Drop for Library<'_> {
 
 /// An owned Exec signal bit in the creating application's task.
 ///
-/// The handle is task-affine and borrows its creating [`Context`]. At most
-/// four signal slots are available to the SDK, including the slots reserved
-/// by private message ports. Dropping the handle clears and releases its bit.
+/// The handle is task-affine and borrows its creating [`Context`]. Exec
+/// allocates signals from one 32-bit task mask, so only the bits Exec leaves
+/// free are available, including the bits used by private message ports.
+/// Dropping the handle clears and releases its bit.
 ///
 /// # Examples
 ///
@@ -856,9 +859,9 @@ impl<'ctx> Signal<'ctx> {
     ///
     /// # Errors
     ///
-    /// Returns [`ErrorKind::Limit`] when the SDK signal-slot limit is reached,
-    /// [`ErrorKind::Native`] when Exec cannot allocate a bit, or another class
-    /// if the native bridge rejects the context.
+    /// Returns [`ErrorKind::Native`] when Exec has no free signal bit,
+    /// [`ErrorKind::Limit`] if the SDK's 32-slot table is full, or another
+    /// class if the native bridge rejects the context.
     pub fn new(context: &'ctx Context) -> Result<Self, Error> {
         let mut native_error = fresh_sys_error();
         let token = unsafe { sys::sdk_signal_new(context.key(), &mut native_error) };
@@ -960,9 +963,10 @@ impl<'ctx> Port<'ctx> {
     ///
     /// # Errors
     ///
-    /// Returns [`ErrorKind::Limit`] if the two-port or shared signal-slot
-    /// limit is reached, [`ErrorKind::Native`] if Exec cannot create the port,
-    /// or another class if the native bridge rejects the context.
+    /// Returns [`ErrorKind::Native`] if Exec cannot create the port or has no
+    /// free signal bit, [`ErrorKind::Limit`] if the registry's token space or
+    /// the 32-slot signal table is exhausted, or another class if the native
+    /// bridge rejects the context.
     pub fn new(context: &'ctx Context) -> Result<Self, Error> {
         let mut native_error = fresh_sys_error();
         let token = unsafe { sys::sdk_port_new(context.key(), &mut native_error) };
@@ -1068,8 +1072,8 @@ impl Drop for Port<'_> {
 ///
 /// The handle is task-affine and borrows its creating [`Context`]. The native
 /// registry owns a stable message record and payload copy, so the input slice
-/// passed to [`Message::new`] need not remain alive. At most eight messages
-/// may be owned at once. Dropping this handle releases the record and detaches
+/// passed to [`Message::new`] need not remain alive. The number of owned
+/// messages is bounded by available memory. Dropping this handle releases the record and detaches
 /// it if it is queued.
 pub struct Message<'ctx> {
     context: &'ctx Context,
@@ -1083,8 +1087,8 @@ impl<'ctx> Message<'ctx> {
     /// # Errors
     ///
     /// Returns [`ErrorKind::Limit`] if the payload exceeds 256 bytes or the
-    /// eight-message registry is full, or another class if the bridge rejects
-    /// the context or request.
+    /// registry's token space is exhausted, or another class if the bridge
+    /// rejects the context or request.
     pub fn new(context: &'ctx Context, payload: &[u8]) -> Result<Self, Error> {
         if payload.len() > MAX_MESSAGE_BYTES {
             return Err(Error::limit(Operation::MessageNew));

@@ -360,11 +360,12 @@ pub const MAX_PATH_BYTES: usize = 128;
 pub const MIN_ALLOCATION_ALIGNMENT: usize = 1;
 pub const MAX_ALLOCATION_ALIGNMENT: usize = 4096;
 pub const MAX_FILE_TRANSFER_BYTES: usize = 64 * 1024;
-pub const MAX_OWNED_FILES: usize = 16;
-pub const MAX_OPTIONAL_LIBRARIES: usize = 4;
-pub const MAX_PRIVATE_PORTS: usize = 2;
-pub const MAX_OWNED_SIGNALS: usize = 4;
-pub const MAX_OWNED_MESSAGES: usize = 8;
+/// Largest number of simultaneously open files, optional libraries, private
+/// ports or owned messages. Each registry grows on demand, so memory is the
+/// practical bound; this is the size of its token space.
+pub const MAX_HANDLES_PER_KIND: usize = (1 << 20) - 1;
+/// Exec allocates signals from one 32-bit task mask, which caps this count.
+pub const MAX_OWNED_SIGNALS: usize = 32;
 pub const MAX_MESSAGE_PAYLOAD_BYTES: usize = 256;
 pub const MAX_ACTIVE_CALLBACKS: usize = 1;
 pub const MAX_DIAGNOSTIC_BYTES: usize = 256;

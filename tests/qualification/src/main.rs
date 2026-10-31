@@ -57,6 +57,7 @@ const FILE_CASES: [(&[u8], usize); 6] = [
 unsafe extern "C" {
     fn sdk_test_fault(site: u32, nth: u32);
     fn sdk_test_reset_fault();
+    fn sdk_test_slot_limit(limit: u64);
 }
 
 fn mode(context: &Context) -> Option<&str> {
@@ -163,6 +164,13 @@ fn set_fault(site: u32) {
 fn set_fault_nth(site: u32, nth: u32) {
     // SAFETY: test-only native control; the host harness links this symbol.
     unsafe { sdk_test_fault(site, nth) };
+}
+
+/// Lowers the native token space so `Limit` exhaustion is reachable without
+/// exhausting memory; zero restores the production value.
+fn set_slot_limit(limit: u64) {
+    // SAFETY: test-only native control; the host harness links this symbol.
+    unsafe { sdk_test_slot_limit(limit) };
 }
 
 fn reset_fault() {
@@ -895,7 +903,9 @@ fn file_and_path_cases(context: &Context) -> bool {
         return false;
     }
 
-    let mut files: [Option<File<'_>>; 16] = core::array::from_fn(|_| None);
+    // The 0.1 registry held 16 files; 40 prove the registry grows on demand.
+    set_slot_limit(40);
+    let mut files: [Option<File<'_>>; 40] = core::array::from_fn(|_| None);
     for file in &mut files {
         *file = match File::open(context, &empty_path, FileMode::ReadExisting) {
             Ok(file) => Some(file),
@@ -910,9 +920,14 @@ fn file_and_path_cases(context: &Context) -> bool {
         File::open(context, &empty_path, FileMode::ReadExisting),
         ErrorKind::Limit,
     ) {
+        set_slot_limit(0);
         return false;
     }
+    set_slot_limit(0);
     drop(files);
+    if !same_resources(baseline, context.statistics()) {
+        return false;
+    }
 
     let mut sentinel = match File::open(context, &sentinel_path, FileMode::ReadExisting) {
         Ok(file) => file,
@@ -964,7 +979,9 @@ fn library_cases(context: &Context) -> bool {
         return false;
     }
 
-    let mut libraries: [Option<Library<'_>>; 4] = core::array::from_fn(|_| None);
+    // The 0.1 registry held 4 libraries; 24 prove the registry grows on demand.
+    set_slot_limit(24);
+    let mut libraries: [Option<Library<'_>>; 24] = core::array::from_fn(|_| None);
     for library in &mut libraries {
         *library = match Library::open(context, &name, 0) {
             Ok(library) => Some(library),
@@ -975,8 +992,10 @@ fn library_cases(context: &Context) -> bool {
         };
     }
     if !expect_error(context, Library::open(context, &name, 0), ErrorKind::Limit) {
+        set_slot_limit(0);
         return false;
     }
+    set_slot_limit(0);
     let Some(first) = libraries[0].take() else {
         return false;
     };
@@ -986,6 +1005,148 @@ fn library_cases(context: &Context) -> bool {
     }
     drop(libraries);
     same_resources(baseline, context.statistics())
+}
+
+/// Registries grow beyond the 0.1 limits, report `Limit` at their token-space
+/// bound, return every slot when handles are dropped, and leave handles that
+/// are forgotten to the native end-of-run cleanup (checked by the ledgers the
+/// native bridge prints at exit).
+fn registry_growth_cases(context: &Context) -> bool {
+    let baseline = context.statistics();
+    let Some(empty_path) = byte_path(b"RAM:ami-rust-m1/fixture-1.bin") else {
+        return false;
+    };
+
+    // Messages: far beyond the 0.1 limit of 8, then the bound, then reuse.
+    set_slot_limit(64);
+    let mut messages: [Option<Message<'_>>; 64] = core::array::from_fn(|_| None);
+    for (index, message) in messages.iter_mut().enumerate() {
+        let bytes = [index as u8; 32];
+        *message = match Message::new(context, &bytes) {
+            Ok(message) => Some(message),
+            Err(error) => {
+                report_error(context, error);
+                set_slot_limit(0);
+                return false;
+            }
+        };
+    }
+    let exhausted = expect_error(context, Message::new(context, b"over"), ErrorKind::Limit);
+    set_slot_limit(0);
+    if !exhausted {
+        return false;
+    }
+    // Releasing one record frees its slot for the next request.
+    drop(messages[17].take());
+    set_slot_limit(64);
+    let reused = Message::new(context, b"reuse");
+    set_slot_limit(0);
+    match reused {
+        Ok(message) => drop(message),
+        Err(error) => {
+            report_error(context, error);
+            return false;
+        }
+    }
+    drop(messages);
+    if !same_resources(baseline, context.statistics()) {
+        return false;
+    }
+
+    // Ports: more than the 0.1 limit of 2, bounded, and every signal returned.
+    set_slot_limit(6);
+    let mut ports: [Option<Port<'_>>; 6] = core::array::from_fn(|_| None);
+    for port in &mut ports {
+        *port = match Port::new(context) {
+            Ok(port) => Some(port),
+            Err(error) => {
+                report_error(context, error);
+                set_slot_limit(0);
+                return false;
+            }
+        };
+    }
+    let exhausted = expect_error(context, Port::new(context), ErrorKind::Limit);
+    set_slot_limit(0);
+    if !exhausted {
+        return false;
+    }
+    drop(ports);
+    if !same_resources(baseline, context.statistics()) {
+        return false;
+    }
+
+    // Signals are limited by Exec, not by the registry: more than the 0.1
+    // limit of 4 must succeed, and exhaustion is a native refusal.
+    let mut signals: [Option<Signal<'_>>; 32] = core::array::from_fn(|_| None);
+    let mut count = 0usize;
+    let mut refused = false;
+    for slot in &mut signals {
+        match Signal::new(context) {
+            Ok(signal) => {
+                *slot = Some(signal);
+                count += 1;
+            }
+            Err(error) if error.kind == ErrorKind::Native => {
+                refused = true;
+                break;
+            }
+            Err(error) => {
+                report_error(context, error);
+                return false;
+            }
+        }
+    }
+    context.diagnostic(b"qualification-signal-count", count as u64);
+    drop(signals);
+    if count <= 4 || !refused || !same_resources(baseline, context.statistics()) {
+        return false;
+    }
+
+    // Handles that are forgotten stay registered until the native cleanup.
+    set_slot_limit(0);
+    let mut forgotten = 0u64;
+    for _ in 0..20 {
+        match File::open(context, &empty_path, FileMode::ReadExisting) {
+            Ok(file) => {
+                core::mem::forget(file);
+                forgotten += 1;
+            }
+            Err(error) => {
+                report_error(context, error);
+                return false;
+            }
+        }
+    }
+    for _ in 0..50 {
+        match Message::new(context, b"forgotten") {
+            Ok(message) => {
+                core::mem::forget(message);
+                forgotten += 1;
+            }
+            Err(error) => {
+                report_error(context, error);
+                return false;
+            }
+        }
+    }
+    for _ in 0..4 {
+        match Port::new(context) {
+            Ok(port) => {
+                core::mem::forget(port);
+                forgotten += 1;
+            }
+            Err(error) => {
+                report_error(context, error);
+                return false;
+            }
+        }
+    }
+    let live = context.statistics();
+    context.diagnostic(b"qualification-forgotten-handles", forgotten);
+    live.files == baseline.files + 20
+        && live.messages == baseline.messages + 50
+        && live.ports == baseline.ports + 4
 }
 
 fn signal_port_message_cases(context: &Context) -> bool {
@@ -1004,9 +1165,6 @@ fn signal_port_message_cases(context: &Context) -> bool {
             return false;
         }
     };
-    if !expect_error(context, Port::new(context), ErrorKind::Limit) {
-        return false;
-    }
 
     let signal_a = match Signal::new(context) {
         Ok(signal) => signal,
@@ -1022,9 +1180,6 @@ fn signal_port_message_cases(context: &Context) -> bool {
             return false;
         }
     };
-    if !expect_error(context, Signal::new(context), ErrorKind::Limit) {
-        return false;
-    }
     for _ in 0..10 {
         if let Err(error) = signal_a.post().and_then(|()| signal_a.wait()) {
             report_error(context, error);
@@ -1044,13 +1199,6 @@ fn signal_port_message_cases(context: &Context) -> bool {
                 return false;
             }
         };
-    }
-    if !expect_error(
-        context,
-        Message::new(context, b"ninth-message"),
-        ErrorKind::Limit,
-    ) {
-        return false;
     }
     drop(messages);
 
@@ -2089,6 +2237,13 @@ fn application(context: &Context) -> AppStatus {
                 success(context, b"qualification-port-message", 10)
             } else {
                 fatal(context, 9)
+            }
+        }
+        Some("registry") => {
+            if registry_growth_cases(context) {
+                success(context, b"qualification-registry-growth", 5)
+            } else {
+                fatal(context, 24)
             }
         }
         Some("callbacks") => {
