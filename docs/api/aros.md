@@ -119,6 +119,47 @@ between the two ABIs, never leaves the native bridge. Two request shapes exist:
 standard (`IOStdReq`, with up to 64 KiB of data) and timer (`timerequest`). A
 device error is reported in the `IoOutcome`, not as an `Err`.
 
+## Directories, variables and arguments
+
+| Item | Use |
+| --- | --- |
+| `Dir::open(context, path)` | Opens a directory; it is an `Iterator` of `Result<Entry, Error>`, or call `next_entry`. |
+| `Entry` | Name (bytes), `is_dir`, `is_file`, `size`, `protection`, `modified`, raw `entry_type`. |
+| `metadata(context, path)` | The `Entry` of one path. |
+| `create_dir`, `delete`, `rename` | Create a directory, delete a file or empty directory, rename or move within a volume. |
+| `current_dir`, `set_current_dir` | Read or change the task's current directory; the change is undone when the program ends. |
+| `var`, `set_var`, `delete_var` with `VarScope` | Local (per process) and global (`ENV:`) variables, `Any` looking at local ones first. |
+| `Template::parse(spec)` and `Template::read(args)` | Match the program's arguments against a `ReadArgs` template; see below. |
+
+Names and values are byte strings. Entry sizes come from the qualified 32-bit
+file info block, so a file larger than 2 GiB is not reported correctly. The
+protection bits follow DOS: the low four (delete, execute, write, read) are set
+when the action is *denied*, and the `FIBB_HOLD` bit exists only on ABI-v1.
+Every lock the bridge takes is released, also for a `Dir` that is forgotten, and
+a changed current directory is restored when the program ends. A variable value
+is at most 4096 bytes and cannot contain a NUL byte; a value that does not fit
+the buffer of `var` is a native error (`ERROR_BUFFER_OVERFLOW`, 303) rather than
+a truncated string.
+
+### Argument templates
+
+`Template` follows `ReadArgs`: `FROM/A/M,TO/K,ALL/S,COUNT/N` has a required
+list of values, a keyword-only value, a switch and a number. The modifiers are
+`/A` required, `/K` keyword required, `/S` switch, `/T` toggle (parsed like a
+switch), `/N` number, `/M` any number of values and `/F` the rest of the line.
+Keywords match ignoring case and may have an alias, `QUIET=Q/S`. A keyword is
+written `KEY value` or `KEY=value`, and every `=` separates arguments as in
+`ReadArgs`. A `/M` item leaves the last arguments to the required items after
+it, and a keyword before a `/M` item gives it exactly one value.
+
+The parser is checked against the real dos.library `ReadArgs` on both ABIs: the
+qualification fixture runs 62 argument lists through both and requires the same
+result. It differs in documented ways. A `/N` value outside `i32` is an error
+(`ReadArgs` wraps it around). Quoting is gone once the C start-up has split the
+arguments, so an argument that contains `=` cannot be kept whole; read it from
+`Context::args` instead. The prompting `?` form is not supported. A `/F` item's
+rest of the line is read back with `Values::write_line`.
+
 ## Worked examples
 
 The examples below are complete functions. Each takes the `Context` your entry function receives and returns an `aros::Error` on failure, so `?` works throughout. Every one of them is compiled for both targets by the repository's example check.
@@ -145,6 +186,52 @@ fn copy_to_stdout(context: &Context, path: &[u8]) -> Result<(), Error> {
 ```
 
 `File::read` may return fewer bytes than the buffer holds, so the loop continues until it returns zero. `write_all` retries short writes. The explicit `close` reports a native close error; dropping the file would have closed it silently.
+
+### List a directory
+
+```rust
+use aros::{BytePath, Context, Dir, Error, Stdout, Template};
+
+fn decimal(mut number: u64, buffer: &mut [u8; 20]) -> &[u8] {
+    let mut at = buffer.len();
+    loop {
+        at -= 1;
+        buffer[at] = b'0' + (number % 10) as u8;
+        number /= 10;
+        if number == 0 {
+            return &buffer[at..];
+        }
+    }
+}
+
+fn list(context: &Context) -> Result<(), Error> {
+    // DIR is the directory to list, ALL also prints sizes.
+    let Ok(template) = Template::parse(b"DIR,ALL/S") else {
+        return Ok(());
+    };
+    let Ok(values) = template.read(context.args().skip(1)) else {
+        return Ok(());
+    };
+    let path = BytePath::new(values.text(0).unwrap_or(b"RAM:"))?;
+    let mut out = Stdout::new(context)?;
+    for entry in Dir::open(context, &path)? {
+        let entry = entry?;
+        out.write_all(entry.name())?;
+        if entry.is_dir() {
+            out.write_all(b"/")?;
+        } else if values.switch(1) {
+            out.write_all(b" ")?;
+            out.write_all(decimal(entry.size(), &mut [0u8; 20]))?;
+        }
+        out.write_all(b"\n")?;
+    }
+    Ok(())
+}
+```
+
+Opening can fail with a native error such as `ERROR_OBJECT_NOT_FOUND` (205) or,
+for a file, `ERROR_OBJECT_WRONG_TYPE` (212); the `Dir` handle releases its lock
+when it is dropped.
 
 ### Classify a failure
 

@@ -48,6 +48,11 @@ static TEST_NOINLINE struct MsgPort *test_createmsgport(void) {struct MsgPort *p
 static TEST_NOINLINE void test_deletemsgport(struct MsgPort *p){if(backend_release(5,(uintptr_t)p,0))DeleteMsgPort(p);}
 static TEST_NOINLINE BYTE test_opendevice(CONST_STRPTR name,IPTR unit,struct IORequest *io,ULONG flags) {BYTE r=test_hit(16)?(BYTE)-1:OpenDevice(name,unit,io,flags);if(!r)backend_acquire(6,(uintptr_t)io,0);return r;}
 static TEST_NOINLINE void test_closedevice(struct IORequest *io){if(backend_release(6,(uintptr_t)io,0))CloseDevice(io);}
+static TEST_NOINLINE BPTR test_lock(CONST_STRPTR name,LONG mode){BPTR l=test_hit(17)?BNULL:Lock(name,mode);if(l)backend_acquire(7,(uintptr_t)l,0);return l;}
+static TEST_NOINLINE BPTR test_createdir(CONST_STRPTR name){BPTR l=CreateDir(name);if(l)backend_acquire(7,(uintptr_t)l,0);return l;}
+static TEST_NOINLINE BOOL test_unlock(BPTR l){if(!backend_release(7,(uintptr_t)l,0))return FALSE;return UnLock(l);}
+static TEST_NOINLINE APTR test_allocdosobject(ULONG type,struct TagItem *tags){APTR o=test_hit(18)?NULL:AllocDosObject(type,tags);if(o)backend_acquire(8,(uintptr_t)o,0);return o;}
+static TEST_NOINLINE void test_freedosobject(ULONG type,APTR o){if(backend_release(8,(uintptr_t)o,0))FreeDosObject(type,o);}
 #undef FreeMem
 #undef CloseLibrary
 #undef FreeSignal
@@ -62,6 +67,11 @@ static TEST_NOINLINE void test_closedevice(struct IORequest *io){if(backend_rele
 #undef CreateMsgPort
 #undef OpenDevice
 #undef CloseDevice
+#undef Lock
+#undef CreateDir
+#undef UnLock
+#undef AllocDosObject
+#undef FreeDosObject
 #define FreeMem test_freemem
 #define CloseLibrary test_closelibrary
 #define FreeSignal test_freesignal
@@ -76,6 +86,11 @@ static TEST_NOINLINE void test_closedevice(struct IORequest *io){if(backend_rele
 #define CreateMsgPort test_createmsgport
 #define OpenDevice test_opendevice
 #define CloseDevice test_closedevice
+#define Lock test_lock
+#define CreateDir test_createdir
+#define UnLock test_unlock
+#define AllocDosObject test_allocdosobject
+#define FreeDosObject test_freedosobject
 #else
 #define test_hit(site) 0
 #endif
