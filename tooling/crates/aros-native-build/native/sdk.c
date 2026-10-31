@@ -6,6 +6,7 @@
 #include <exec/tasks.h>
 #include <exec/io.h>
 #include <devices/timer.h>
+#include <dos/var.h>
 #include <dos/dosextens.h>
 #include <intuition/classes.h>
 #include <proto/exec.h>
@@ -27,6 +28,7 @@
 #define KIND_MESSAGE 5UL
 #define KIND_DEVICE 6UL
 #define KIND_REQUEST 7UL
+#define KIND_DIRECTORY 8UL
 #define IO_KIND_STANDARD 0
 #define IO_KIND_TIMER 1
 #define IO_IDLE 0
@@ -48,12 +50,14 @@ struct Registry { void **items;size_t capacity,count; };
    Requests own their IORequest and data copy, so no Rust pointer is ever
    reachable by the device and the layout of timerequest stays in this file. */
 struct DeviceSlot { uint64_t token;struct IORequest *open;size_t size,requests;uint64_t port; };
+struct DirSlot { uint64_t token;BPTR lock;struct FileInfoBlock *fib; };
 struct IoSlot { uint64_t token,device;struct IORequest *request;size_t size;uint8_t *buffer;size_t capacity;int kind,state; };
 #define SLOT_BITS 20U
 #define SLOT_LIMIT ((UINT64_C(1)<<SLOT_BITS)-1)
 #define SEQUENCE_LIMIT ((UINT64_C(1)<<36)-1)
 #define SIGNAL_SLOTS 32
-static struct Registry files,libraries,ports,messages,devices,requests;
+static struct Registry files,libraries,ports,messages,devices,requests,directories;
+static BPTR cwd_original,cwd_owned;
 static struct SignalSlot signals[SIGNAL_SLOTS];
 static APTR registry_pool;
 static uint64_t slot_limit=SLOT_LIMIT;
@@ -498,6 +502,162 @@ int sdk_io_abort(uint64_t key,uint64_t token,SdkError *e) {
  if(own(key,e))return -1;struct IoSlot *slot=io_find(token);if(!slot || slot->state!=IO_PENDING)return refuse(e,5,0);
  AbortIO(slot->request);return 0;
 }
+
+/* Directory iteration, entry information, create, delete, rename, variables
+   and the current directory. Every Lock taken here is released on every path. */
+static void entry_fill(SdkEntry *out,const struct FileInfoBlock *fib) {
+ size_t n=0;while(n<sizeof(out->name)-1 && fib->fib_FileName[n]){out->name[n]=(uint8_t)fib->fib_FileName[n];++n;}
+ out->name[n]=0;out->name_length=(uint32_t)n;
+ out->entry_type=(int32_t)fib->fib_EntryType;out->directory_type=(int32_t)fib->fib_DirEntryType;
+ out->size=(uint64_t)(uint32_t)fib->fib_Size;out->protection=(uint32_t)fib->fib_Protection;
+ out->days=(int32_t)fib->fib_Date.ds_Days;out->minutes=(int32_t)fib->fib_Date.ds_Minute;out->ticks=(int32_t)fib->fib_Date.ds_Tick;
+}
+uint64_t sdk_dir_open(uint64_t key,const uint8_t *path,SdkError *e) {
+ if(own(key,e))return 0;if(!byte_name(path)){refuse(e,2,0);return 0;}
+ struct DirSlot *slot=(struct DirSlot *)record_new(&directories,KIND_DIRECTORY,sizeof(*slot),e);if(!slot)return 0;
+ BPTR lock=Lock((CONST_STRPTR)path,SHARED_LOCK);
+ if(!lock){SIPTR error=IoErr();record_release(&directories,slot,sizeof(*slot));refuse(e,1,error);return 0;}
+ struct FileInfoBlock *fib=(struct FileInfoBlock *)AllocDosObject(DOS_FIB,NULL);
+ if(!fib){UnLock(lock);record_release(&directories,slot,sizeof(*slot));refuse(e,1,ERROR_NO_FREE_STORE);return 0;}
+ BOOL examined=Examine(lock,fib);
+ if(!examined || fib->fib_DirEntryType<0){
+  SIPTR error=examined?ERROR_OBJECT_WRONG_TYPE:IoErr();
+  FreeDosObject(DOS_FIB,fib);UnLock(lock);record_release(&directories,slot,sizeof(*slot));refuse(e,1,error);return 0;
+ }
+ slot->lock=lock;slot->fib=fib;++stats.directories;return slot->token;
+}
+int sdk_dir_next(uint64_t key,uint64_t token,SdkEntry *out,SdkError *e) {
+ if(own(key,e))return -1;struct DirSlot *slot=(struct DirSlot *)record_find(&directories,token,KIND_DIRECTORY);
+ if(!slot || !slot->lock)return refuse(e,5,0);if(!out)return refuse(e,2,0);
+ if(!ExNext(slot->lock,slot->fib)){SIPTR error=IoErr();if(error==ERROR_NO_MORE_ENTRIES)return 0;return refuse(e,1,error);}
+ entry_fill(out,slot->fib);return 1;
+}
+static void dir_release(struct DirSlot *slot) {
+ BPTR lock=slot->lock;struct FileInfoBlock *fib=slot->fib;
+ record_release(&directories,slot,sizeof(*slot));--stats.directories;
+ if(fib)FreeDosObject(DOS_FIB,fib);if(lock)UnLock(lock);
+}
+int sdk_dir_close(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct DirSlot *slot=(struct DirSlot *)record_find(&directories,token,KIND_DIRECTORY);
+ if(!slot)return refuse(e,5,0);dir_release(slot);return 0;
+}
+int sdk_entry_info(uint64_t key,const uint8_t *path,SdkEntry *out,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(path) || !out)return refuse(e,2,0);
+ BPTR lock=Lock((CONST_STRPTR)path,SHARED_LOCK);if(!lock)return refuse(e,1,IoErr());
+ struct FileInfoBlock *fib=(struct FileInfoBlock *)AllocDosObject(DOS_FIB,NULL);
+ if(!fib){UnLock(lock);return refuse(e,1,ERROR_NO_FREE_STORE);}
+ int result=0;
+ if(Examine(lock,fib))entry_fill(out,fib);else result=refuse(e,1,IoErr());
+ FreeDosObject(DOS_FIB,fib);UnLock(lock);return result;
+}
+int sdk_make_dir(uint64_t key,const uint8_t *path,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(path))return refuse(e,2,0);
+ BPTR lock=CreateDir((CONST_STRPTR)path);if(!lock)return refuse(e,1,IoErr());
+ UnLock(lock);return 0;
+}
+int sdk_delete(uint64_t key,const uint8_t *path,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(path))return refuse(e,2,0);
+ if(!DeleteFile((CONST_STRPTR)path))return refuse(e,1,IoErr());return 0;
+}
+int sdk_rename(uint64_t key,const uint8_t *from,const uint8_t *to,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(from) || !byte_name(to))return refuse(e,2,0);
+ if(!Rename((CONST_STRPTR)from,(CONST_STRPTR)to))return refuse(e,1,IoErr());return 0;
+}
+int64_t sdk_cwd_get(uint64_t key,uint8_t *out,size_t cap,SdkError *e) {
+ if(own(key,e))return -1;if(!out || cap<2 || cap>4096)return refuse(e,2,0);
+ BPTR here=CurrentDir(BNULL);CurrentDir(here);
+ if(!here)return refuse(e,1,ERROR_OBJECT_NOT_FOUND);
+ if(!NameFromLock(here,(STRPTR)out,(LONG)cap))return refuse(e,1,IoErr());
+ size_t n=0;while(n<cap && out[n])++n;return (int64_t)n;
+}
+int sdk_cwd_set(uint64_t key,const uint8_t *path,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(path))return refuse(e,2,0);
+ BPTR lock=Lock((CONST_STRPTR)path,SHARED_LOCK);if(!lock)return refuse(e,1,IoErr());
+ struct FileInfoBlock *fib=(struct FileInfoBlock *)AllocDosObject(DOS_FIB,NULL);
+ if(!fib){UnLock(lock);return refuse(e,1,ERROR_NO_FREE_STORE);}
+ BOOL examined=Examine(lock,fib);int directory=examined && fib->fib_DirEntryType>=0;SIPTR error=directory?0:examined?ERROR_OBJECT_WRONG_TYPE:IoErr();
+ FreeDosObject(DOS_FIB,fib);
+ if(!directory){UnLock(lock);return refuse(e,1,error);}
+ BPTR previous=CurrentDir(lock);
+ if(cwd_owned)UnLock(previous);else cwd_original=previous;
+ cwd_owned=lock;return 0;
+}
+static void cwd_restore(void) {
+ if(cwd_owned){BPTR lock=cwd_owned;cwd_owned=BNULL;CurrentDir(cwd_original);cwd_original=BNULL;UnLock(lock);}
+}
+static LONG var_flags(int32_t scope) {return scope==1?GVF_LOCAL_ONLY:scope==2?GVF_GLOBAL_ONLY:0;}
+int64_t sdk_var_get(uint64_t key,const uint8_t *name,uint8_t *out,size_t cap,int32_t scope,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(name) || !out || cap<2 || cap>4096 || scope<0 || scope>2)return refuse(e,2,0);
+ SetIoErr(0);
+ LONG n=GetVar((CONST_STRPTR)name,(STRPTR)out,(LONG)cap,var_flags(scope)|GVF_BINARY_VAR);
+ if(n<0)return refuse(e,1,IoErr());
+ /* On success IoErr holds the variable's full length: a longer value was cut. */
+ if((SIPTR)IoErr()>(SIPTR)n)return refuse(e,1,303);
+ return (int64_t)n;
+}
+int sdk_var_set(uint64_t key,const uint8_t *name,const uint8_t *value,size_t length,int32_t scope,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(name) || (length && !value) || length>4096 || scope<0 || scope>2)return refuse(e,2,0);
+ for(size_t i=0;i<length;i++)if(!value[i])return refuse(e,2,0);
+ static const uint8_t empty[1]={0};
+ if(!SetVar((CONST_STRPTR)name,(CONST_STRPTR)(length?value:empty),(LONG)length,(LONG)(LV_VAR|var_flags(scope)|GVF_BINARY_VAR)))return refuse(e,1,IoErr());return 0;
+}
+int sdk_var_delete(uint64_t key,const uint8_t *name,int32_t scope,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(name) || scope<0 || scope>2)return refuse(e,2,0);
+ if(!DeleteVar((CONST_STRPTR)name,(ULONG)var_flags(scope)))return refuse(e,1,IoErr());return 0;
+}
+
+#ifdef AMI_SDK_TESTING
+/* Qualification oracle: runs the real dos.library ReadArgs on a prepared
+   line and serialises the filled array, one record per item separated by '|':
+   '-' absent, 's' switch, 't=<text>', 'n=<number>', 'm=<a>,<b>' or 'mn=<1>,<2>'.
+   Returns the length written, or -1 when ReadArgs refuses the line. */
+static size_t oracle_put(uint8_t *out,size_t cap,size_t at,const char *text,size_t length) {
+ for(size_t i=0;i<length && at<cap;i++)out[at++]=(uint8_t)text[i];return at;
+}
+static size_t oracle_number(uint8_t *out,size_t cap,size_t at,LONG value) {
+ char digits[16];size_t n=0;unsigned long magnitude=value<0?(unsigned long)(-(long)value):(unsigned long)value;
+ do{digits[n++]=(char)('0'+magnitude%10);magnitude/=10;}while(magnitude);
+ if(value<0)at=oracle_put(out,cap,at,"-",1);
+ while(n)at=oracle_put(out,cap,at,&digits[--n],1);return at;
+}
+int64_t sdk_test_readargs(const uint8_t *tmpl,const uint8_t *line,size_t line_length,const uint8_t *kinds,size_t count,uint8_t *out,size_t cap) {
+ if(!tmpl || !line || !kinds || !out || count>32 || line_length>4096)return -2;
+ SIPTR array[32];for(size_t i=0;i<32;i++)array[i]=0;
+ struct RDArgs *rd=(struct RDArgs *)AllocDosObject(DOS_RDARGS,NULL);if(!rd)return -2;
+ rd->RDA_Source.CS_Buffer=(STRPTR)line;rd->RDA_Source.CS_Length=(LONG)line_length;rd->RDA_Source.CS_CurChr=0;
+ rd->RDA_Flags|=RDAF_NOPROMPT;
+ struct RDArgs *result=ReadArgs((CONST_STRPTR)tmpl,array,rd);
+ if(!result){FreeDosObject(DOS_RDARGS,rd);return -1;}
+ size_t at=0;
+ for(size_t i=0;i<count;i++){
+  if(i)at=oracle_put(out,cap,at,"|",1);
+  switch(kinds[i]){
+  case 0:case 5:
+   if(!array[i])at=oracle_put(out,cap,at,"-",1);
+   else{const char *t=(const char *)array[i];at=oracle_put(out,cap,at,"t=",2);at=oracle_put(out,cap,at,t,strlen(t));}
+   break;
+  case 1:at=oracle_put(out,cap,at,array[i]?"s":"-",1);break;
+  case 2:
+   if(!array[i])at=oracle_put(out,cap,at,"-",1);
+   else{at=oracle_put(out,cap,at,"n=",2);at=oracle_number(out,cap,at,*(LONG *)array[i]);}
+   break;
+  case 3:case 4:
+   if(!array[i])at=oracle_put(out,cap,at,"-",1);
+   else{
+    at=oracle_put(out,cap,at,kinds[i]==3?"m=":"mn=",kinds[i]==3?2:3);
+    for(size_t k=0;((SIPTR *)array[i])[k];k++){
+     if(k)at=oracle_put(out,cap,at,",",1);
+     if(kinds[i]==3){const char *t=(const char *)((SIPTR *)array[i])[k];at=oracle_put(out,cap,at,t,strlen(t));}
+     else at=oracle_number(out,cap,at,*(LONG *)((SIPTR *)array[i])[k]);
+    }
+   }
+   break;
+  }
+ }
+ FreeArgs(result);FreeDosObject(DOS_RDARGS,rd);
+ return at>=cap?-2:(int64_t)at;
+}
+#endif
 int sdk_callback(uint64_t key,uint64_t (*callback)(void *,uint64_t),void *data,uint64_t value,uint64_t *out,SdkError *e) {
  if(own(key,e))return -1;if(callback_active || !callback || !data || !out)return refuse(e,5,0);
  callback_active=1;*out=callback(data,value);callback_active=0;return 0;
@@ -512,6 +672,7 @@ static int test_report_ledgers(void) {
  sdk_diagnostic((const uint8_t *)"[m1-ledger] ports",17,stats.ports);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] signals",19,stats.signals);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] messages",20,stats.messages);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] directories",23,stats.directories);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] devices",19,stats.devices);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] requests",20,stats.requests);
  sdk_diagnostic((const uint8_t *)"[m1-native] live",16,backend_live());
@@ -530,6 +691,8 @@ static int cleanup_remaining(void) {
     during a release resumes this C drain iteratively, with no Rust frame or
     recursive teardown retry. Locals are recreated after the setjmp return. */
  if(setjmp(cleanup_resume)){cleanup_error=20;ami_sdk_diagnostic_depth=0;}
+ for(size_t i=0;i<directories.capacity;i++){struct DirSlot *slot=(struct DirSlot *)directories.items[i];if(slot)dir_release(slot);}
+ cwd_restore();
  for(size_t i=0;i<requests.capacity;i++){struct IoSlot *slot=(struct IoSlot *)requests.items[i];if(slot)io_release(slot);}
  for(size_t i=0;i<devices.capacity;i++){struct DeviceSlot *dev=(struct DeviceSlot *)devices.items[i];if(dev)device_release(dev);}
  for(size_t i=0;i<messages.capacity;i++){struct MessageSlot *m=(struct MessageSlot *)messages.items[i];if(m){detach_message(m);record_release(&messages,m,sizeof(*m));--stats.messages;}}
@@ -542,7 +705,7 @@ static int cleanup_remaining(void) {
  if(registry_pool){
   /* The tables are the pool's last users; the pool is retired with them. */
   APTR pool=registry_pool;registry_pool=NULL;
-  files=(struct Registry){0};libraries=(struct Registry){0};ports=(struct Registry){0};messages=(struct Registry){0};devices=(struct Registry){0};requests=(struct Registry){0};
+  directories=(struct Registry){0};files=(struct Registry){0};libraries=(struct Registry){0};ports=(struct Registry){0};messages=(struct Registry){0};devices=(struct Registry){0};requests=(struct Registry){0};
   DeletePool(pool);
  }
 #ifdef AMI_SDK_TESTING

@@ -14,6 +14,7 @@
 
 extern crate alloc;
 
+mod m2;
 mod stderr;
 
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
@@ -2484,6 +2485,41 @@ fn application(context: &Context) -> AppStatus {
                 success(context, b"qualification-device-forgotten", 2)
             } else {
                 fatal(context, 26)
+            }
+        }
+        Some("fs") => {
+            if m2::fs_cases(context) {
+                success(context, b"qualification-fs-cases", 8)
+            } else {
+                fatal(context, 27)
+            }
+        }
+        Some("fs-forgotten") => {
+            if m2::fs_forgotten_cases(context) {
+                success(context, b"qualification-fs-forgotten", 2)
+            } else {
+                fatal(context, 28)
+            }
+        }
+        Some("cwd-check") => {
+            if m2::cwd_check(context) {
+                success(context, b"qualification-cwd-check", 1)
+            } else {
+                fatal(context, 29)
+            }
+        }
+        Some("env") => {
+            if m2::env_cases(context) {
+                success(context, b"qualification-env-cases", 6)
+            } else {
+                fatal(context, 30)
+            }
+        }
+        Some("args") => {
+            if m2::args_cases(context) {
+                success(context, b"qualification-args-cases", 1)
+            } else {
+                fatal(context, 31)
             }
         }
         Some("registry") => {

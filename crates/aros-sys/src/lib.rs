@@ -262,6 +262,39 @@ pub struct SdkStats {
     pub refusals: usize,
     pub devices: usize,
     pub requests: usize,
+    pub directories: usize,
+}
+
+/// One directory entry as filled in by the native bridge. `name_length` bytes
+/// of `name` are valid and the name is also NUL terminated.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SdkEntry {
+    pub size: u64,
+    pub protection: u32,
+    pub name_length: u32,
+    pub entry_type: i32,
+    pub directory_type: i32,
+    pub days: i32,
+    pub minutes: i32,
+    pub ticks: i32,
+    pub name: [u8; 108],
+}
+
+impl Default for SdkEntry {
+    fn default() -> Self {
+        Self {
+            size: 0,
+            protection: 0,
+            name_length: 0,
+            entry_type: 0,
+            directory_type: 0,
+            days: 0,
+            minutes: 0,
+            ticks: 0,
+            name: [0; 108],
+        }
+    }
 }
 
 // These layouts follow AROS `exec/nodes.h`, `exec/lists.h`,
@@ -390,7 +423,7 @@ pub const ERROR_KIND_ZERO_PROGRESS: i32 = 7;
 /// Layout oracle values in the exact order of the M0 C layout table:
 /// Node, Library, Message, List, MsgPort, FileInfoBlock, scalar ABI types,
 /// then the selected spinlock_t storage. No native call or allocation occurs.
-pub const ABI_LAYOUT_VALUE_COUNT: usize = 83;
+pub const ABI_LAYOUT_VALUE_COUNT: usize = 95;
 
 const fn layout_value(value: usize) -> u64 {
     value as u64
@@ -481,6 +514,18 @@ pub const fn layout_values() -> [u64; ABI_LAYOUT_VALUE_COUNT] {
         layout_value(offset_of!(SdkStats, refusals)),
         layout_value(offset_of!(SdkStats, devices)),
         layout_value(offset_of!(SdkStats, requests)),
+        layout_value(offset_of!(SdkStats, directories)),
+        layout_value(size_of::<SdkEntry>()),
+        layout_value(align_of::<SdkEntry>()),
+        layout_value(offset_of!(SdkEntry, size)),
+        layout_value(offset_of!(SdkEntry, protection)),
+        layout_value(offset_of!(SdkEntry, name_length)),
+        layout_value(offset_of!(SdkEntry, entry_type)),
+        layout_value(offset_of!(SdkEntry, directory_type)),
+        layout_value(offset_of!(SdkEntry, days)),
+        layout_value(offset_of!(SdkEntry, minutes)),
+        layout_value(offset_of!(SdkEntry, ticks)),
+        layout_value(offset_of!(SdkEntry, name)),
     ]
 }
 
@@ -634,6 +679,43 @@ unsafe extern "C" {
         error: *mut SdkError,
     ) -> c_int;
     pub fn sdk_io_abort(context: u64, request: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_dir_open(context: u64, path: *const u8, error: *mut SdkError) -> u64;
+    pub fn sdk_dir_next(
+        context: u64,
+        directory: u64,
+        entry: *mut SdkEntry,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_dir_close(context: u64, directory: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_entry_info(
+        context: u64,
+        path: *const u8,
+        entry: *mut SdkEntry,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_make_dir(context: u64, path: *const u8, error: *mut SdkError) -> c_int;
+    pub fn sdk_delete(context: u64, path: *const u8, error: *mut SdkError) -> c_int;
+    pub fn sdk_rename(context: u64, from: *const u8, to: *const u8, error: *mut SdkError) -> c_int;
+    pub fn sdk_cwd_get(context: u64, out: *mut u8, capacity: usize, error: *mut SdkError) -> i64;
+    pub fn sdk_cwd_set(context: u64, path: *const u8, error: *mut SdkError) -> c_int;
+    pub fn sdk_var_get(
+        context: u64,
+        name: *const u8,
+        out: *mut u8,
+        capacity: usize,
+        scope: i32,
+        error: *mut SdkError,
+    ) -> i64;
+    pub fn sdk_var_set(
+        context: u64,
+        name: *const u8,
+        value: *const u8,
+        length: usize,
+        scope: i32,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_var_delete(context: u64, name: *const u8, scope: i32, error: *mut SdkError)
+    -> c_int;
     pub fn sdk_callback(
         context: u64,
         callback: SdkCallback,

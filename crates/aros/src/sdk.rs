@@ -146,6 +146,30 @@ pub enum Operation {
     RequestWait = 36,
     /// Aborting an asynchronous device I/O request.
     RequestAbort = 37,
+    /// Opening a directory for iteration.
+    DirOpen = 38,
+    /// Reading the next directory entry.
+    DirNext = 39,
+    /// Closing a directory.
+    DirClose = 40,
+    /// Reading the information of one path.
+    EntryInfo = 41,
+    /// Creating a directory.
+    MakeDir = 42,
+    /// Deleting a file or empty directory.
+    Delete = 43,
+    /// Renaming or moving an entry.
+    Rename = 44,
+    /// Reading the current directory.
+    CurrentDir = 45,
+    /// Changing the current directory.
+    SetCurrentDir = 46,
+    /// Reading a variable.
+    VarGet = 47,
+    /// Setting a variable.
+    VarSet = 48,
+    /// Deleting a variable.
+    VarDelete = 49,
 }
 
 /// Allocation-free error returned by a safe SDK operation.
@@ -1306,5 +1330,11 @@ unsafe extern "C" fn callback_trampoline(user_data: *mut c_void, input: u64) -> 
     (frame.callback)(input)
 }
 
+mod args;
 mod device;
+mod env;
+mod fs;
+pub use args::*;
 pub use device::*;
+pub use env::*;
+pub use fs::*;
