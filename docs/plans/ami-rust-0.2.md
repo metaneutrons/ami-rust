@@ -4,7 +4,7 @@ title: ami-rust 0.2 initiative plan
 
 # Initiative plan: ami-rust 0.2 with everyday AROS APIs on ABI1 and ABI11
 
-Epic: pending (created from this plan; the URL is added after creation)
+Epic: https://github.com/metaneutrons/ami-rust/issues/52
 Decision state: proposed; acceptance by the maintainer is recorded under
 "Decision changes"
 
@@ -137,7 +137,7 @@ to its own criteria:
 
 ### M1: Resource model and device I/O
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/53
 Dependencies: none
 
 - M1-A1: Replace the fixed registries for files, libraries, ports, signals
@@ -155,7 +155,7 @@ Dependencies: none
 
 ### M2: Directories, environment and arguments
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/54
 Dependencies: M1
 
 - M2-A1: Directory iteration (`Lock`, `Examine`, `ExNext`), metadata, create
@@ -171,7 +171,7 @@ Dependencies: M1
 
 ### M3: `aros-timer`
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/55
 Dependencies: M1
 
 - M3-A1: A monotonic clock (`ReadEClock`) with documented resolution, and a
@@ -187,7 +187,7 @@ Dependencies: M1
 
 ### M4: Stack-passed arguments on ABI11
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/56
 Dependencies: none
 
 - M4-A1: The generator emits a reviewed ABI11 adapter for calls with seven or
@@ -201,7 +201,7 @@ Dependencies: none
 
 ### M5: `aros-graphics`
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/57
 Dependencies: M1, M4 (for functions with more than six arguments)
 
 - M5-A1: Owned `BitMap` and `RastPort` types, pens and drawing modes, `Move`,
@@ -217,7 +217,7 @@ Dependencies: M1, M4 (for functions with more than six arguments)
 
 ### M6: `aros-intuition`
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/58
 Dependencies: M1, M3, M5
 
 - M6-A1: A tag-based window builder, minimal public screen locking and
@@ -230,7 +230,7 @@ Dependencies: M1, M3, M5
 
 ### M7: `aros-asl`
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/59
 Dependencies: M6
 
 - M7-A1: A file requester with a tag-based builder that returns owned paths.
@@ -239,7 +239,7 @@ Dependencies: M6
 
 ### M8: `aros-locale`
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/60
 Dependencies: M1
 
 - M8-A1: Catalog lookup with built-in default strings, translation from a
@@ -248,7 +248,7 @@ Dependencies: M1
 
 ### M9: `aros-icon` and `aros-workbench`
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/61
 Dependencies: M6
 
 - M9-A1: Disk objects (`GetDiskObject`, `PutDiskObject`, `FreeDiskObject`),
@@ -262,7 +262,7 @@ Dependencies: M6
 
 ### M10: Qualify and prepare the ami-rust 0.2 release candidate
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/62
 Dependencies: M1 through M9
 
 - M10-A1: Build the exact candidate on macOS ARM64, Linux x86-64 and Linux
@@ -277,7 +277,7 @@ Dependencies: M1 through M9
 
 ### S1 (stretch): `aros-async`
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/63
 Dependencies: M1, M3
 
 - S1-A1: A single-task executor with local `!Send` futures woken through
