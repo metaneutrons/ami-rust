@@ -30,6 +30,7 @@ dependencies = [
  "aros",
  "aros-native-build",
  "aros-sys",
+ "aros-timer",
 ]
 
 [[package]]
@@ -87,6 +88,14 @@ dependencies = [
 [[package]]
 name = "aros-sys"
 version = "0.1.0"
+
+[[package]]
+name = "aros-timer"
+version = "0.1.0"
+dependencies = [
+ "aros",
+ "aros-sys",
+]
 
 [[package]]
 name = "base64ct"

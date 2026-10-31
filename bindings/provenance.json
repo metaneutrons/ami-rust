@@ -1,7 +1,7 @@
 {
   "schema": "ami-rust-aros-api-provenance-v1",
   "generator": "0.1.0",
-  "manifest_sha256": "a83baf925cbe55594021796022f4b260e07345d63e7c933cb6a1759ad3c83eed",
+  "manifest_sha256": "2612899f27a443b3e823c92083140f1b23ac216b17328d96febf5e241198bf1f",
   "inputs": [
     {
       "abi": "abi1",
@@ -42,6 +42,16 @@
       "abi": "abi1",
       "path": "defines/muimaster.h",
       "sha256": "267e58ee9e8e431895a93026408dac988d3be3262cdac3e25a3fa29fba17cda5"
+    },
+    {
+      "abi": "abi1",
+      "path": "clib/timer_protos.h",
+      "sha256": "ac42eb70304ea1e346a713f5841d0cee6de0018d79cc521ffbb385650356c24a"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/timer.h",
+      "sha256": "1ea4e3c6a6266dced868ac376abaced23b339f4f85d58fa6d7c060541f1a332e"
     },
     {
       "abi": "abi1",
@@ -92,6 +102,16 @@
       "abi": "abi11",
       "path": "defines/muimaster.h",
       "sha256": "176c21612cbb23ecf2e7488673cacec4d73437ce22f5694f28b9578263c9fbf0"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/timer_protos.h",
+      "sha256": "398480e4034aa9a6500e8ddaad1370952e789154ba4ca0601218538a259b101e"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/timer.h",
+      "sha256": "f012d5964f50e6eed7f5d34b3911ab1768804ec0e823742bd2db8d702fd0290f"
     },
     {
       "abi": "abi11",

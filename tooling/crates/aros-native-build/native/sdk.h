@@ -115,6 +115,8 @@ int sdk_message_reply(uint64_t,uint64_t,SdkError *);
 uint64_t sdk_device_open(uint64_t,const uint8_t *,uint32_t,uint32_t,SdkError *);
 int sdk_device_close(uint64_t,uint64_t,SdkError *);
 uint32_t sdk_device_signal_mask(uint64_t,uint64_t);
+void *sdk_device_base(uint64_t,uint64_t);
+size_t sdk_timer_layout(uint64_t *,size_t);
 uint64_t sdk_io_new(uint64_t,uint64_t,int32_t,size_t,SdkError *);
 int sdk_io_drop(uint64_t,uint64_t,SdkError *);
 int sdk_io_prepare(uint64_t,uint64_t,uint32_t,uint32_t,size_t,uint32_t,SdkError *);

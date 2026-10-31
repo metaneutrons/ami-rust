@@ -693,6 +693,67 @@ pub mod intuition {
     }
 }
 
+pub mod timer {
+    use super::*;
+
+    /// Raw `ReadEClock` call through Timer vector 10 (minimum version 41).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn read_eclock(base: *mut Library, dest: *mut EClockVal) -> u32 {
+        let function = unsafe { vector(base, 10) };
+        let result: u32;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") dest as usize,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result
+    }
+
+    /// Raw `GetSysTime` call through Timer vector 11 (minimum version 41).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_sys_time(base: *mut Library, dest: *mut TimeVal) {
+        let function = unsafe { vector(base, 11) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") dest as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `GetUpTime` call through Timer vector 12 (minimum version 41).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_up_time(base: *mut Library, dest: *mut TimeVal) {
+        let function = unsafe { vector(base, 12) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") dest as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+}
+
 pub mod utility {
     use super::*;
 

@@ -15,6 +15,7 @@
 extern crate alloc;
 
 mod m2;
+mod m3;
 mod stderr;
 
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
@@ -2520,6 +2521,27 @@ fn application(context: &Context) -> AppStatus {
                 success(context, b"qualification-args-cases", 1)
             } else {
                 fatal(context, 31)
+            }
+        }
+        Some("timer") => {
+            if m3::cases(context) {
+                success(context, b"qualification-timer-cases", 9)
+            } else {
+                fatal(context, 32)
+            }
+        }
+        Some("timer-measure") => {
+            if m3::measure(context) {
+                success(context, b"qualification-timer-measure", 2)
+            } else {
+                fatal(context, 33)
+            }
+        }
+        Some("timer-forgotten") => {
+            if m3::forgotten(context) {
+                success(context, b"qualification-timer-forgotten", 1)
+            } else {
+                fatal(context, 34)
             }
         }
         Some("registry") => {
