@@ -5,8 +5,7 @@ title: ami-rust 0.2 initiative plan
 # Initiative plan: ami-rust 0.2 with everyday AROS APIs on ABI1 and ABI11
 
 Epic: https://github.com/metaneutrons/ami-rust/issues/52
-Decision state: proposed; acceptance by the maintainer is recorded under
-"Decision changes"
+Decision state: accepted by the maintainer on 2026-10-31; proposed in PR #64
 
 ## Outcome and boundaries
 
@@ -302,5 +301,6 @@ per qualification run is recorded during M1 rather than estimated here.
 
 ## Decision changes
 
-- 2026-10-31: Proposed. Open questions for the maintainer: acceptance of the
-  milestone order, `aros-async` as a stretch goal and the scope of 0.2.
+- 2026-10-31: The maintainer accepted the plan, including the milestone order,
+  `aros-async` as a stretch goal with a cut line, and the scope of 0.2. Work
+  starts with M1, with the STD-M1 spike of the `std` plan in parallel.
