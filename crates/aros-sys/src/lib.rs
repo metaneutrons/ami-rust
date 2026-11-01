@@ -278,6 +278,7 @@ pub struct SdkEntry {
     pub days: i32,
     pub minutes: i32,
     pub ticks: i32,
+    pub size_exact: u32,
     pub name: [u8; 108],
 }
 
@@ -292,6 +293,7 @@ impl Default for SdkEntry {
             days: 0,
             minutes: 0,
             ticks: 0,
+            size_exact: 0,
             name: [0; 108],
         }
     }
@@ -481,7 +483,7 @@ pub const ERROR_KIND_ZERO_PROGRESS: i32 = 7;
 /// Layout oracle values in the exact order of the M0 C layout table:
 /// Node, Library, Message, List, MsgPort, FileInfoBlock, scalar ABI types,
 /// then the selected spinlock_t storage. No native call or allocation occurs.
-pub const ABI_LAYOUT_VALUE_COUNT: usize = 95;
+pub const ABI_LAYOUT_VALUE_COUNT: usize = 96;
 
 const fn layout_value(value: usize) -> u64 {
     value as u64
@@ -583,6 +585,7 @@ pub const fn layout_values() -> [u64; ABI_LAYOUT_VALUE_COUNT] {
         layout_value(offset_of!(SdkEntry, days)),
         layout_value(offset_of!(SdkEntry, minutes)),
         layout_value(offset_of!(SdkEntry, ticks)),
+        layout_value(offset_of!(SdkEntry, size_exact)),
         layout_value(offset_of!(SdkEntry, name)),
     ]
 }
@@ -737,6 +740,21 @@ unsafe extern "C" {
         error: *mut SdkError,
     ) -> c_int;
     pub fn sdk_io_abort(context: u64, request: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_file_seek(
+        context: u64,
+        file: u64,
+        whence: i32,
+        offset: i64,
+        position: *mut u64,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_file_position(
+        context: u64,
+        file: u64,
+        position: *mut u64,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_file_size(context: u64, file: u64, size: *mut u64, error: *mut SdkError) -> c_int;
     pub fn sdk_dir_open(context: u64, path: *const u8, error: *mut SdkError) -> u64;
     pub fn sdk_dir_next(
         context: u64,

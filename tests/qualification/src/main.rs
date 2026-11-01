@@ -2544,6 +2544,27 @@ fn application(context: &Context) -> AppStatus {
                 fatal(context, 34)
             }
         }
+        Some("positions") => {
+            if m2::positions(context) {
+                success(context, b"qualification-positions", 1)
+            } else {
+                fatal(context, 35)
+            }
+        }
+        Some("big") => {
+            if m2::big(context) {
+                success(context, b"qualification-big", 1)
+            } else {
+                fatal(context, 36)
+            }
+        }
+        Some("info") => {
+            if m2::info(context) {
+                success(context, b"qualification-info", 1)
+            } else {
+                fatal(context, 37)
+            }
+        }
         Some("registry") => {
             if registry_growth_cases(context) {
                 success(context, b"qualification-registry-growth", 5)

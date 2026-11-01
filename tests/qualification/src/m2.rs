@@ -4,8 +4,9 @@ use alloc::{format, string::String, vec::Vec};
 use core::mem;
 
 use aros::{
-    ArgsError, BytePath, Context, Dir, ErrorKind, File, FileMode, ItemKind, Template, VarScope,
-    create_dir, current_dir, delete, delete_var, metadata, rename, set_current_dir, set_var, var,
+    ArgsError, BytePath, Context, Dir, ErrorKind, File, FileMode, ItemKind, SeekFrom, Template,
+    VarScope, create_dir, current_dir, delete, delete_var, metadata, rename, set_current_dir,
+    set_var, var,
 };
 
 use super::{byte_path, expect_error, report_error, same_resources};
@@ -607,4 +608,200 @@ pub fn args_cases(context: &Context) -> bool {
     }
     context.diagnostic(b"qualification-args-cases", CASES.len() as u64);
     mismatches == 0
+}
+
+const ABI11: bool = cfg!(target_abi = "abi11");
+const THREE_GIB: u64 = 3 << 30;
+
+fn report(context: &Context, label: &[u8], result: Result<u64, aros::Error>) {
+    match result {
+        Ok(value) => context.diagnostic(label, value),
+        Err(error) => {
+            context.diagnostic(label, u64::MAX);
+            report_error(context, error);
+        }
+    }
+}
+
+/// Positions and sizes of a small file on the RAM disk, and what a seek far
+/// beyond the end does there (recorded, not assumed).
+pub fn positions(context: &Context) -> bool {
+    let baseline = context.statistics();
+    let Some(path) = byte_path(b"RAM:m11-small.bin") else {
+        return false;
+    };
+    let Ok(mut file) = File::open(context, &path, FileMode::CreateTruncate) else {
+        return false;
+    };
+    let ok = file.write_all(b"0123456789").is_ok()
+        && file.len() == Ok(10)
+        && file.position() == Ok(10)
+        && file.seek(SeekFrom::Start(3)) == Ok(3)
+        && file.position() == Ok(3)
+        && file.seek(SeekFrom::Current(2)) == Ok(5)
+        && file.seek(SeekFrom::End(-1)) == Ok(9)
+        && file.seek(SeekFrom::End(0)) == Ok(10)
+        && file.len() == Ok(10)
+        && file.position() == Ok(10)
+        && expect_error(
+            context,
+            file.seek(SeekFrom::Start(u64::MAX)),
+            ErrorKind::Input,
+        )
+        && expect_error(
+            context,
+            file.seek(SeekFrom::Current(-100)),
+            ErrorKind::Native,
+        )
+        && file.position() == Ok(10);
+    if !ok {
+        return false;
+    }
+    // Reading back after a seek.
+    let mut buffer = [0u8; 4];
+    if file.seek(SeekFrom::Start(2)).is_err()
+        || file.read_exact(&mut buffer).is_err()
+        || &buffer != b"2345"
+    {
+        return false;
+    }
+    // A seek far beyond the end: 64-bit on ABI-v1, a Limit error on ABI-v11.
+    let far = file.seek(SeekFrom::Start(THREE_GIB));
+    match &far {
+        Ok(position) => context.diagnostic(b"qualification-ram-far-seek", *position),
+        Err(error) => {
+            context.diagnostic(b"qualification-ram-far-seek-error", error.native as u64);
+            if ABI11 && error.kind != ErrorKind::Limit {
+                return false;
+            }
+        }
+    }
+    if ABI11 && far.is_ok() {
+        return false;
+    }
+    report(context, b"qualification-ram-len-after-far-seek", file.len());
+    drop(file);
+    // Entry information for a small file is exact on both paths.
+    let exact = metadata(context, &path)
+        .is_ok_and(|entry| entry.is_file() && entry.size_is_exact() && entry.size() <= 10);
+    let _ = delete(context, &path);
+    exact && same_resources(baseline, context.statistics())
+}
+
+/// A file above 2 GiB on the volume named by argument 2 (for example `DH1:`):
+/// write at an offset beyond 2 GiB, read it back, check size and position, and
+/// list the entry. ABI-v11 has no `dos64.library` and must refuse with `Limit`.
+pub fn big(context: &Context) -> bool {
+    let Some(volume) = context.args().nth(2) else {
+        return false;
+    };
+    let mut text = [0u8; 120];
+    if volume.len() > 100 {
+        return false;
+    }
+    text[..volume.len()].copy_from_slice(volume);
+    let name = b"ami-big.bin";
+    text[volume.len()..volume.len() + name.len()].copy_from_slice(name);
+    let Ok(path) = BytePath::new(&text[..volume.len() + name.len()]) else {
+        return false;
+    };
+    let Ok(mut file) = File::open(context, &path, FileMode::CreateTruncate) else {
+        return false;
+    };
+    let Ok(()) = file.write_all(b"head") else {
+        return false;
+    };
+    let far = file.seek(SeekFrom::Start(THREE_GIB));
+    if ABI11 {
+        let refused = expect_error(context, far, ErrorKind::Limit);
+        drop(file);
+        let _ = delete(context, &path);
+        return refused;
+    }
+    if far != Ok(THREE_GIB) || file.write_all(b"tail").is_err() {
+        report(context, b"qualification-big-seek", far);
+        drop(file);
+        let _ = delete(context, &path);
+        return false;
+    }
+    report(context, b"qualification-big-len", file.len());
+    report(context, b"qualification-big-position", file.position());
+    let mut ok = file.len() == Ok(THREE_GIB + 4) && file.position() == Ok(THREE_GIB + 4);
+    let mut tail = [0u8; 4];
+    ok = ok
+        && file.seek(SeekFrom::Start(THREE_GIB)) == Ok(THREE_GIB)
+        && file.read_exact(&mut tail).is_ok()
+        && &tail == b"tail"
+        && file.seek(SeekFrom::End(-4)) == Ok(THREE_GIB)
+        && file.seek(SeekFrom::Start(0)) == Ok(0);
+    let mut head = [0u8; 4];
+    ok = ok && file.read_exact(&mut head).is_ok() && &head == b"head";
+    drop(file);
+    match metadata(context, &path) {
+        Ok(entry) => {
+            context.diagnostic(b"qualification-big-entry-size", entry.size());
+            context.diagnostic(
+                b"qualification-big-entry-exact",
+                u64::from(entry.size_is_exact()),
+            );
+            ok = ok && entry.size() == THREE_GIB + 4 && entry.size_is_exact();
+        }
+        Err(error) => {
+            report_error(context, error);
+            ok = false;
+        }
+    }
+    let _ = delete(context, &path);
+    ok
+}
+
+/// Records what the system reports for the file named by argument 2: the
+/// entry information (size and exactness), a directory listing of its parent
+/// when given as argument 3, and the size, position and seek results of an open
+/// handle. Nothing is asserted; the values are the evidence.
+pub fn info(context: &Context) -> bool {
+    let Some(name) = context.args().nth(2) else {
+        return false;
+    };
+    let Ok(path) = BytePath::new(name) else {
+        return false;
+    };
+    match metadata(context, &path) {
+        Ok(entry) => {
+            context.diagnostic(b"qualification-info-entry-size", entry.size());
+            context.diagnostic(
+                b"qualification-info-entry-exact",
+                u64::from(entry.size_is_exact()),
+            );
+        }
+        Err(error) => report_error(context, error),
+    }
+    if let Some(parent) = context.args().nth(3).and_then(|p| BytePath::new(p).ok())
+        && let Ok(listing) = Dir::open(context, &parent)
+    {
+        for entry in listing.flatten() {
+            context.diagnostic(entry.name(), entry.size());
+        }
+    }
+    let Ok(mut file) = File::open(context, &path, FileMode::ReadExisting) else {
+        return false;
+    };
+    report(context, b"qualification-info-len", file.len());
+    report(
+        context,
+        b"qualification-info-seek-end",
+        file.seek(SeekFrom::End(0)),
+    );
+    report(context, b"qualification-info-position", file.position());
+    report(
+        context,
+        b"qualification-info-seek-3gib",
+        file.seek(SeekFrom::Start(THREE_GIB - 4)),
+    );
+    let mut tail = [0u8; 4];
+    match file.read(&mut tail) {
+        Ok(count) => context.diagnostic(b"qualification-info-read-3gib", count as u64),
+        Err(error) => report_error(context, error),
+    }
+    true
 }

@@ -53,6 +53,10 @@ static TEST_NOINLINE BPTR test_createdir(CONST_STRPTR name){BPTR l=CreateDir(nam
 static TEST_NOINLINE BOOL test_unlock(BPTR l){if(!backend_release(7,(uintptr_t)l,0))return FALSE;return UnLock(l);}
 static TEST_NOINLINE APTR test_allocdosobject(ULONG type,struct TagItem *tags){APTR o=test_hit(18)?NULL:AllocDosObject(type,tags);if(o)backend_acquire(8,(uintptr_t)o,0);return o;}
 static TEST_NOINLINE void test_freedosobject(ULONG type,APTR o){if(backend_release(8,(uintptr_t)o,0))FreeDosObject(type,o);}
+#ifndef AMI_RUST_ABI11
+static TEST_NOINLINE APTR test_allocdosobject64(ULONG type,const struct TagItem *tags){APTR o=test_hit(18)?NULL:AllocDosObject64(type,tags);if(o)backend_acquire(8,(uintptr_t)o,0);return o;}
+static TEST_NOINLINE void test_freedosobject64(ULONG type,APTR o){if(backend_release(8,(uintptr_t)o,0))FreeDosObject64(type,o);}
+#endif
 #undef FreeMem
 #undef CloseLibrary
 #undef FreeSignal
@@ -72,6 +76,10 @@ static TEST_NOINLINE void test_freedosobject(ULONG type,APTR o){if(backend_relea
 #undef UnLock
 #undef AllocDosObject
 #undef FreeDosObject
+#ifndef AMI_RUST_ABI11
+#undef AllocDosObject64
+#undef FreeDosObject64
+#endif
 #define FreeMem test_freemem
 #define CloseLibrary test_closelibrary
 #define FreeSignal test_freesignal
@@ -91,6 +99,10 @@ static TEST_NOINLINE void test_freedosobject(ULONG type,APTR o){if(backend_relea
 #define UnLock test_unlock
 #define AllocDosObject test_allocdosobject
 #define FreeDosObject test_freedosobject
+#ifndef AMI_RUST_ABI11
+#define AllocDosObject64 test_allocdosobject64
+#define FreeDosObject64 test_freedosobject64
+#endif
 #else
 #define test_hit(site) 0
 #endif

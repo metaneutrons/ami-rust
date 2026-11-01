@@ -33,7 +33,7 @@ static const size_t c_layout[]={
 #endif
  LAYOUT(SdkError,OFF(SdkError,kind),OFF(SdkError,native)),
  LAYOUT(SdkStats,OFF(SdkStats,blocks),OFF(SdkStats,backing_charge),OFF(SdkStats,peak_charge),OFF(SdkStats,files),OFF(SdkStats,libraries),OFF(SdkStats,ports),OFF(SdkStats,signals),OFF(SdkStats,messages),OFF(SdkStats,refusals),OFF(SdkStats,devices),OFF(SdkStats,requests),OFF(SdkStats,directories)),
- LAYOUT(SdkEntry,OFF(SdkEntry,size),OFF(SdkEntry,protection),OFF(SdkEntry,name_length),OFF(SdkEntry,entry_type),OFF(SdkEntry,directory_type),OFF(SdkEntry,days),OFF(SdkEntry,minutes),OFF(SdkEntry,ticks),OFF(SdkEntry,name))
+ LAYOUT(SdkEntry,OFF(SdkEntry,size),OFF(SdkEntry,protection),OFF(SdkEntry,name_length),OFF(SdkEntry,entry_type),OFF(SdkEntry,directory_type),OFF(SdkEntry,days),OFF(SdkEntry,minutes),OFF(SdkEntry,ticks),OFF(SdkEntry,size_exact),OFF(SdkEntry,name))
 };
 /* Timer types of the selected SDK: timerequest carries struct timeval on
    ABI-v1 and struct timeval32 on ABI-v11; both are two 32-bit fields. */

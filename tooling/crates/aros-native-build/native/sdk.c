@@ -11,6 +11,10 @@
 #include <intuition/classes.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
+#ifndef AMI_RUST_ABI11
+#include <dos/dos64.h>
+#include <proto/dos64.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -50,7 +54,7 @@ struct Registry { void **items;size_t capacity,count; };
    Requests own their IORequest and data copy, so no Rust pointer is ever
    reachable by the device and the layout of timerequest stays in this file. */
 struct DeviceSlot { uint64_t token;struct IORequest *open;size_t size,requests;uint64_t port; };
-struct DirSlot { uint64_t token;BPTR lock;struct FileInfoBlock *fib; };
+struct DirSlot { uint64_t token;BPTR lock;void *fib;int wide; };
 struct IoSlot { uint64_t token,device;struct IORequest *request;size_t size;uint8_t *buffer;size_t capacity;int kind,state; };
 #define SLOT_BITS 20U
 #define SLOT_LIMIT ((UINT64_C(1)<<SLOT_BITS)-1)
@@ -511,37 +515,115 @@ int sdk_io_abort(uint64_t key,uint64_t token,SdkError *e) {
 
 /* Directory iteration, entry information, create, delete, rename, variables
    and the current directory. Every Lock taken here is released on every path. */
-static void entry_fill(SdkEntry *out,const struct FileInfoBlock *fib) {
- size_t n=0;while(n<sizeof(out->name)-1 && fib->fib_FileName[n]){out->name[n]=(uint8_t)fib->fib_FileName[n];++n;}
+/* ABI-v1 images ship dos64.library, which reports 64-bit sizes and positions
+   and falls back to the 32-bit calls for a handler without 64-bit support.
+   The pinned ABI-v11 tree has no dos64: those builds use the 32-bit calls and
+   refuse what they cannot represent. The library is opened on first use and
+   closed with the other native resources. */
+#ifndef AMI_RUST_ABI11
+struct Library *DOS64Base;
+static int dos64_tried;
+static int dos64_ready(void) {
+ if(!dos64_tried){dos64_tried=1;DOS64Base=OpenLibrary((CONST_STRPTR)"dos64.library",0);}
+ return DOS64Base!=NULL;
+}
+static void dos64_close(void) {
+ if(DOS64Base){struct Library *l=DOS64Base;DOS64Base=NULL;CloseLibrary(l);}
+ dos64_tried=0;
+}
+#else
+static void dos64_close(void) {}
+#endif
+/* A file info block, 32-bit or 64-bit; `wide` tells which. */
+static void *fib_new(int *wide) {
+#ifndef AMI_RUST_ABI11
+ if(dos64_ready()){void *fib=AllocDosObject64(DOS64_FIB,NULL);if(fib){*wide=1;return fib;}}
+#endif
+ *wide=0;return AllocDosObject(DOS_FIB,NULL);
+}
+static void fib_free(void *fib,int wide) {
+#ifndef AMI_RUST_ABI11
+ if(wide){FreeDosObject64(DOS64_FIB,fib);return;}
+#else
+ (void)wide;
+#endif
+ FreeDosObject(DOS_FIB,fib);
+}
+static BOOL fib_examine(BPTR lock,void *fib,int wide) {
+#ifndef AMI_RUST_ABI11
+ if(wide)return Examine64(lock,(struct FileInfoBlock64 *)fib,NULL)?TRUE:FALSE;
+#else
+ (void)wide;
+#endif
+ return Examine(lock,(struct FileInfoBlock *)fib);
+}
+static BOOL fib_next(BPTR lock,void *fib,int wide) {
+#ifndef AMI_RUST_ABI11
+ if(wide)return ExNext64(lock,(struct FileInfoBlock64 *)fib,NULL)?TRUE:FALSE;
+#else
+ (void)wide;
+#endif
+ return ExNext(lock,(struct FileInfoBlock *)fib);
+}
+static int fib_is_file(const void *fib,int wide) {
+#ifndef AMI_RUST_ABI11
+ if(wide)return ((const struct FileInfoBlock64 *)fib)->fib_DirEntryType<0;
+#else
+ (void)wide;
+#endif
+ return ((const struct FileInfoBlock *)fib)->fib_DirEntryType<0;
+}
+#define ENTRY_SIZE_LIMIT UINT64_C(0x7fffffff)
+static void entry_fill(SdkEntry *out,const void *block,int wide) {
+ const UBYTE *name;LONG dir_type,entry_type,protection;const struct DateStamp *date;uint64_t size;
+#ifdef AMI_RUST_ABI11
+ (void)wide;
+#endif
+#ifndef AMI_RUST_ABI11
+ if(wide){
+  const struct FileInfoBlock64 *fib=(const struct FileInfoBlock64 *)block;
+  name=fib->fib_FileName;dir_type=fib->fib_DirEntryType;entry_type=fib->fib_EntryType;protection=fib->fib_Protection;
+  date=&fib->fib_Date;size=(uint64_t)fib->fib_Size;
+  out->size_exact=1;
+ } else
+#endif
+ {
+  const struct FileInfoBlock *fib=(const struct FileInfoBlock *)block;
+  name=fib->fib_FileName;dir_type=fib->fib_DirEntryType;entry_type=fib->fib_EntryType;protection=fib->fib_Protection;
+  date=&fib->fib_Date;size=(uint64_t)(uint32_t)fib->fib_Size;
+  /* A 32-bit size at the 2 GiB limit is what a truncated size looks like. */
+  out->size_exact=size<ENTRY_SIZE_LIMIT?1:0;
+ }
+ size_t n=0;while(n<sizeof(out->name)-1 && name[n]){out->name[n]=(uint8_t)name[n];++n;}
  out->name[n]=0;out->name_length=(uint32_t)n;
- out->entry_type=(int32_t)fib->fib_EntryType;out->directory_type=(int32_t)fib->fib_DirEntryType;
- out->size=(uint64_t)(uint32_t)fib->fib_Size;out->protection=(uint32_t)fib->fib_Protection;
- out->days=(int32_t)fib->fib_Date.ds_Days;out->minutes=(int32_t)fib->fib_Date.ds_Minute;out->ticks=(int32_t)fib->fib_Date.ds_Tick;
+ out->entry_type=(int32_t)entry_type;out->directory_type=(int32_t)dir_type;
+ out->size=size;out->protection=(uint32_t)protection;
+ out->days=(int32_t)date->ds_Days;out->minutes=(int32_t)date->ds_Minute;out->ticks=(int32_t)date->ds_Tick;
 }
 uint64_t sdk_dir_open(uint64_t key,const uint8_t *path,SdkError *e) {
  if(own(key,e))return 0;if(!byte_name(path)){refuse(e,2,0);return 0;}
  struct DirSlot *slot=(struct DirSlot *)record_new(&directories,KIND_DIRECTORY,sizeof(*slot),e);if(!slot)return 0;
  BPTR lock=Lock((CONST_STRPTR)path,SHARED_LOCK);
  if(!lock){SIPTR error=IoErr();record_release(&directories,slot,sizeof(*slot));refuse(e,1,error);return 0;}
- struct FileInfoBlock *fib=(struct FileInfoBlock *)AllocDosObject(DOS_FIB,NULL);
+ int wide;void *fib=fib_new(&wide);
  if(!fib){UnLock(lock);record_release(&directories,slot,sizeof(*slot));refuse(e,1,ERROR_NO_FREE_STORE);return 0;}
- BOOL examined=Examine(lock,fib);
- if(!examined || fib->fib_DirEntryType<0){
+ BOOL examined=fib_examine(lock,fib,wide);
+ if(!examined || fib_is_file(fib,wide)){
   SIPTR error=examined?ERROR_OBJECT_WRONG_TYPE:IoErr();
-  FreeDosObject(DOS_FIB,fib);UnLock(lock);record_release(&directories,slot,sizeof(*slot));refuse(e,1,error);return 0;
+  fib_free(fib,wide);UnLock(lock);record_release(&directories,slot,sizeof(*slot));refuse(e,1,error);return 0;
  }
- slot->lock=lock;slot->fib=fib;++stats.directories;return slot->token;
+ slot->lock=lock;slot->fib=fib;slot->wide=wide;++stats.directories;return slot->token;
 }
 int sdk_dir_next(uint64_t key,uint64_t token,SdkEntry *out,SdkError *e) {
  if(own(key,e))return -1;struct DirSlot *slot=(struct DirSlot *)record_find(&directories,token,KIND_DIRECTORY);
  if(!slot || !slot->lock)return refuse(e,5,0);if(!out)return refuse(e,2,0);
- if(!ExNext(slot->lock,slot->fib)){SIPTR error=IoErr();if(error==ERROR_NO_MORE_ENTRIES)return 0;return refuse(e,1,error);}
- entry_fill(out,slot->fib);return 1;
+ if(!fib_next(slot->lock,slot->fib,slot->wide)){SIPTR error=IoErr();if(error==ERROR_NO_MORE_ENTRIES)return 0;return refuse(e,1,error);}
+ entry_fill(out,slot->fib,slot->wide);return 1;
 }
 static void dir_release(struct DirSlot *slot) {
- BPTR lock=slot->lock;struct FileInfoBlock *fib=slot->fib;
+ BPTR lock=slot->lock;void *fib=slot->fib;int wide=slot->wide;
  record_release(&directories,slot,sizeof(*slot));--stats.directories;
- if(fib)FreeDosObject(DOS_FIB,fib);if(lock)UnLock(lock);
+ if(fib)fib_free(fib,wide);if(lock)UnLock(lock);
 }
 int sdk_dir_close(uint64_t key,uint64_t token,SdkError *e) {
  if(own(key,e))return -1;struct DirSlot *slot=(struct DirSlot *)record_find(&directories,token,KIND_DIRECTORY);
@@ -550,11 +632,66 @@ int sdk_dir_close(uint64_t key,uint64_t token,SdkError *e) {
 int sdk_entry_info(uint64_t key,const uint8_t *path,SdkEntry *out,SdkError *e) {
  if(own(key,e))return -1;if(!byte_name(path) || !out)return refuse(e,2,0);
  BPTR lock=Lock((CONST_STRPTR)path,SHARED_LOCK);if(!lock)return refuse(e,1,IoErr());
- struct FileInfoBlock *fib=(struct FileInfoBlock *)AllocDosObject(DOS_FIB,NULL);
+ int wide;void *fib=fib_new(&wide);
  if(!fib){UnLock(lock);return refuse(e,1,ERROR_NO_FREE_STORE);}
  int result=0;
- if(Examine(lock,fib))entry_fill(out,fib);else result=refuse(e,1,IoErr());
- FreeDosObject(DOS_FIB,fib);UnLock(lock);return result;
+ if(fib_examine(lock,fib,wide))entry_fill(out,fib,wide);else result=refuse(e,1,IoErr());
+ fib_free(fib,wide);UnLock(lock);return result;
+}
+/* File positions and sizes. Offsets are 64-bit; without dos64.library the
+   32-bit calls refuse an offset, position or size they cannot represent
+   rather than wrapping it. */
+static struct FileSlot *file_slot(uint64_t token) {
+ struct FileSlot *slot=(struct FileSlot *)record_find(&files,token,KIND_FILE);
+ return slot && slot->handle?slot:NULL;
+}
+/* The 32-bit Seek reports an error as a negative value, so a position at or
+   above 2 GiB looks like one; DOS sets IoErr only for a real failure. */
+static int seek_refusal(SdkError *e) {
+ SIPTR error=IoErr();
+ return error?refuse(e,1,error):refuse(e,3,INT32_MAX);
+}
+int sdk_file_seek(uint64_t key,uint64_t token,int32_t whence,int64_t offset,uint64_t *position,SdkError *e) {
+ if(own(key,e))return -1;struct FileSlot *slot=file_slot(token);if(!slot)return refuse(e,5,0);
+ if(whence<0 || whence>2 || !position)return refuse(e,2,0);
+ if(whence==0 && offset<0)return refuse(e,2,0);
+ LONG mode=whence==0?OFFSET_BEGINNING:whence==1?OFFSET_CURRENT:OFFSET_END;
+#ifndef AMI_RUST_ABI11
+ if(dos64_ready()){
+  if(Seek64(slot->handle,mode,(QUAD)offset)<0)return refuse(e,1,IoErr());
+  QUAD now=GetFilePosition64(slot->handle);if(now<0)return refuse(e,1,IoErr());
+  *position=(uint64_t)now;return 0;
+ }
+#endif
+ if(offset>INT32_MAX || offset<INT32_MIN)return refuse(e,3,INT32_MAX);
+ SetIoErr(0);
+ if(Seek(slot->handle,(LONG)offset,mode)<0)return seek_refusal(e);
+ LONG now=Seek(slot->handle,0,OFFSET_CURRENT);if(now<0)return seek_refusal(e);
+ *position=(uint64_t)now;return 0;
+}
+int sdk_file_position(uint64_t key,uint64_t token,uint64_t *position,SdkError *e) {
+ if(own(key,e))return -1;struct FileSlot *slot=file_slot(token);if(!slot)return refuse(e,5,0);
+ if(!position)return refuse(e,2,0);
+#ifndef AMI_RUST_ABI11
+ if(dos64_ready()){QUAD now=GetFilePosition64(slot->handle);if(now<0)return refuse(e,1,IoErr());*position=(uint64_t)now;return 0;}
+#endif
+ SetIoErr(0);
+ LONG now=Seek(slot->handle,0,OFFSET_CURRENT);if(now<0)return seek_refusal(e);
+ *position=(uint64_t)now;return 0;
+}
+int sdk_file_size(uint64_t key,uint64_t token,uint64_t *size,SdkError *e) {
+ if(own(key,e))return -1;struct FileSlot *slot=file_slot(token);if(!slot)return refuse(e,5,0);
+ if(!size)return refuse(e,2,0);
+#ifndef AMI_RUST_ABI11
+ if(dos64_ready()){QUAD n=GetFileSize64(slot->handle);if(n<0)return refuse(e,1,IoErr());*size=(uint64_t)n;return 0;}
+#endif
+ struct FileInfoBlock *fib=(struct FileInfoBlock *)AllocDosObject(DOS_FIB,NULL);
+ if(!fib)return refuse(e,1,ERROR_NO_FREE_STORE);
+ int result=0;
+ if(!ExamineFH(slot->handle,fib))result=refuse(e,1,IoErr());
+ else if((uint64_t)(uint32_t)fib->fib_Size>=ENTRY_SIZE_LIMIT)result=refuse(e,3,INT32_MAX);
+ else *size=(uint64_t)(uint32_t)fib->fib_Size;
+ FreeDosObject(DOS_FIB,fib);return result;
 }
 int sdk_make_dir(uint64_t key,const uint8_t *path,SdkError *e) {
  if(own(key,e))return -1;if(!byte_name(path))return refuse(e,2,0);
@@ -707,6 +844,7 @@ static int cleanup_remaining(void) {
  for(size_t i=0;i<ports.capacity;i++){struct PortSlot *slot=(struct PortSlot *)ports.items[i];if(!slot)continue;if(slot->handle)clear_port(slot);else{int s=slot->signal_slot;record_release(&ports,slot,sizeof(*slot));signals[s]=(struct SignalSlot){0};}}
  for(size_t i=0;i<SIGNAL_SLOTS;i++)if(signals[i].token){int bit=signals[i].bit;signals[i]=(struct SignalSlot){0};if(bit>=0){--stats.signals;SetSignal(0,1UL<<bit);FreeSignal(bit);}}
  while(blocks){struct Block *b=blocks;blocks=b->next;size_t total=b->total;--stats.blocks;stats.backing_charge-=b->charge;FreeMem(b,total);}
+ dos64_close();
  if(mandatory_dos){struct Library *l=mandatory_dos;mandatory_dos=NULL;CloseLibrary(l);}
  if(registry_pool){
   /* The tables are the pool's last users; the pool is retired with them. */

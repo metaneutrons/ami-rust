@@ -170,6 +170,12 @@ pub enum Operation {
     VarSet = 48,
     /// Deleting a variable.
     VarDelete = 49,
+    /// Moving a file's position.
+    FileSeek = 50,
+    /// Reading a file's position.
+    FilePosition = 51,
+    /// Reading a file's size.
+    FileSize = 52,
 }
 
 /// Allocation-free error returned by a safe SDK operation.
@@ -341,6 +347,17 @@ pub enum FileMode {
     ReadWrite = 2,
 }
 
+/// A position in a file, for [`File::seek`].
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SeekFrom {
+    /// From the start of the file.
+    Start(u64),
+    /// From the current position.
+    Current(i64),
+    /// From the end of the file.
+    End(i64),
+}
+
 /// Owned DOS file handle tied to its creating application context.
 ///
 /// The handle is task-affine and cannot outlive the borrowed [`Context`].
@@ -465,6 +482,102 @@ impl<'ctx> File<'ctx> {
             buffer = &buffer[written..];
         }
         Ok(())
+    }
+
+    /// Moves the file position and returns the new position from the start.
+    ///
+    /// Positions are 64-bit on ABI-v1 through `dos64.library`, which a volume
+    /// without 64-bit support may still limit to 32 bits. Without
+    /// `dos64.library` (ABI-v11) an offset or position the 32-bit calls cannot
+    /// represent is refused with [`ErrorKind::Limit`] instead of wrapping.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// # use aros::{BytePath, File, FileMode, SeekFrom};
+    /// let path = BytePath::new(b"RAM:data.bin")?;
+    /// let mut file = File::open(context, &path, FileMode::ReadWrite)?;
+    /// let end = file.seek(SeekFrom::End(0))?;
+    /// context.diagnostic(b"length", end);
+    /// file.seek(SeekFrom::Start(0))?;
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ErrorKind::Input`] for a position before the start or a start
+    /// beyond `i64::MAX`, [`ErrorKind::Limit`] for a value the 32-bit calls
+    /// cannot represent, or a native error.
+    pub fn seek(&mut self, from: SeekFrom) -> Result<u64, Error> {
+        let (whence, offset) = match from {
+            SeekFrom::Start(position) => (
+                0,
+                i64::try_from(position).map_err(|_| Error::input(Operation::FileSeek))?,
+            ),
+            SeekFrom::Current(offset) => (1, offset),
+            SeekFrom::End(offset) => (2, offset),
+        };
+        let mut position = 0u64;
+        let mut native_error = fresh_sys_error();
+        let result = unsafe {
+            sys::sdk_file_seek(
+                self.context.key(),
+                self.token,
+                whence,
+                offset,
+                &mut position,
+                &mut native_error,
+            )
+        };
+        if result == 0 {
+            Ok(position)
+        } else {
+            Err(Error::native(Operation::FileSeek, native_error))
+        }
+    }
+
+    /// Returns the current file position from the start.
+    ///
+    /// # Errors
+    ///
+    /// Returns a native error or an ownership error.
+    pub fn position(&self) -> Result<u64, Error> {
+        let mut position = 0u64;
+        let mut native_error = fresh_sys_error();
+        let result = unsafe {
+            sys::sdk_file_position(
+                self.context.key(),
+                self.token,
+                &mut position,
+                &mut native_error,
+            )
+        };
+        if result == 0 {
+            Ok(position)
+        } else {
+            Err(Error::native(Operation::FilePosition, native_error))
+        }
+    }
+
+    /// Returns the size of the file in bytes.
+    ///
+    /// On ABI-v1 with `dos64.library` the size is 64-bit; otherwise a size at
+    /// or above 2 GiB is refused with [`ErrorKind::Limit`] because the 32-bit
+    /// calls cannot report it.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ErrorKind::Limit`] as described, or a native error.
+    pub fn len(&self) -> Result<u64, Error> {
+        let mut size = 0u64;
+        let mut native_error = fresh_sys_error();
+        let result = unsafe {
+            sys::sdk_file_size(self.context.key(), self.token, &mut size, &mut native_error)
+        };
+        if result == 0 {
+            Ok(size)
+        } else {
+            Err(Error::native(Operation::FileSize, native_error))
+        }
     }
 
     /// Closes the native file and consumes this handle, including on failure.

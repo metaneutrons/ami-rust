@@ -341,3 +341,9 @@ per qualification run is recorded during M1 rather than estimated here.
   M11 is added before M10 (its identifier is new so that the others stay stable)
   and M10 depends on it. It rests on `dos64.library`, which exists on ABI-v1 only;
   ABI-v11 keeps the 32-bit limit with an explicit error.
+- 2026-11-01: The maintainer accepted M11 with M11-A4 limited to the API and the
+  fallback behaviour, as that criterion allows: a write above 2 GiB could not be
+  verified because every PFS3 partition crashes the pinned ABI-v1 image while it
+  boots (`pfs3-handler` calls libc with a NULL `StdCBase`; tracked in
+  https://github.com/metaneutrons/AROS-NX/issues/121). The `big` qualification
+  mode is ready to run once a working 64-bit volume exists.
