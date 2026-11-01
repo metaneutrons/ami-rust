@@ -208,7 +208,7 @@ pub fn cases(context: &Context) -> bool {
         if !catalog.is_translated()
             || catalog.string(1, c"Open file") != c"Datei oeffnen"
             || catalog.string(2, c"Cancel") != c"Abbrechen"
-            || catalog.string(3, c"Save as") != c"Speichern unter"
+            || catalog.string(3, c"Save as") != c"Datei sichern"
             || catalog.string(10, c"Yes, please") != c"Ja, bitte"
             || catalog.string(99, c"Only in the program") != c"Only in the program"
         {

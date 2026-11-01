@@ -16,7 +16,7 @@ LANGUAGE = b"deutsch"
 STRINGS = [
     (1, b"Datei oeffnen"),
     (2, b"Abbrechen"),
-    (3, b"Speichern unter"),
+    (3, b"Datei sichern"),
     (10, b"Ja, bitte"),
 ]
 
