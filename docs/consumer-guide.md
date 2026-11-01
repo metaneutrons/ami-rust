@@ -20,6 +20,7 @@ The Cargo **target** selects the AROS ABI, and your source is the same for both.
 | `aros-mui` | Typed MUI objects, ownership scopes, attributes, notifications, callbacks, requesters and the application loop | The preferred MUI crate |
 | `aros-timer` | Time and timers: the monotonic clock, calendar and up time, sleeping and signalled alarms (in the repository after release 0.1.0, not part of it) | Safe, built on `aros` |
 | `aros-graphics` | Off-screen bitmaps and drawing: pens, lines, rectangles, ellipses, polygons, text, pixels and blits (in the repository after release 0.1.0, not part of it) | Safe, built on `aros` |
+| `aros-intuition` | Windows on a public screen with typed events (close, keys, mouse, refresh, resize) and drawing through `aros-graphics` (in the repository after release 0.1.0, not part of it) | Safe, built on `aros` and `aros-graphics` |
 | `aros-sys` | A raw AROS declaration or library vector call that `aros` does not cover yet | Unsafe: you own every pointer, library base and lifetime |
 | `aros-mui-sys` | A raw MUI vector, class, tag or message that `aros-mui` does not model safely | Unsafe: you own the complete native contract |
 | `aros-native-build` | A build dependency. Your `build.rs` calls `aros_native_build::prepare`; your application code never uses it. | Not an application API |

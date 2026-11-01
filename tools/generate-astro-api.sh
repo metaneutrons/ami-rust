@@ -75,9 +75,9 @@ generate_profile() {
     RUSTC="$rustc" RUSTDOC="$rustdoc" RUSTC_BOOTSTRAP=1 \
     RUSTDOCFLAGS="-Z unstable-options --output-format json -Aexplicit_builtin_cfgs_in_flags --cfg target_os=\"aros\" --cfg target_abi=\"$profile\" --cfg target_arch=\"x86_64\"" \
     LC_ALL=C TZ=UTC SOURCE_DATE_EPOCH=1791936000 \
-    "$cargo" doc --manifest-path "$work/source/Cargo.toml" --locked --offline --no-deps -p aros -p aros-mui -p aros-timer -p aros-graphics
+    "$cargo" doc --manifest-path "$work/source/Cargo.toml" --locked --offline --no-deps -p aros -p aros-mui -p aros-timer -p aros-graphics -p aros-intuition
 
-  [[ -s "$target_dir/doc/aros.json" && -s "$target_dir/doc/aros_mui.json" && -s "$target_dir/doc/aros_timer.json" && -s "$target_dir/doc/aros_graphics.json" ]] || \
+  [[ -s "$target_dir/doc/aros.json" && -s "$target_dir/doc/aros_mui.json" && -s "$target_dir/doc/aros_timer.json" && -s "$target_dir/doc/aros_graphics.json" && -s "$target_dir/doc/aros_intuition.json" ]] || \
     fail "$profile rustdoc JSON output is incomplete"
 }
 
@@ -88,9 +88,9 @@ generate_profile abi11
 # when the ABI restrictions stated in the crate docs disagree with the builds.
 node "$source_root/website/scripts/generate-rust-api.mjs" \
   "$output" "$revision" \
-  "$work/api-target-abi1/doc/aros.json" "$work/api-target-abi1/doc/aros_mui.json" "$work/api-target-abi1/doc/aros_timer.json" "$work/api-target-abi1/doc/aros_graphics.json" \
-  "$work/api-target-abi11/doc/aros.json" "$work/api-target-abi11/doc/aros_mui.json" "$work/api-target-abi11/doc/aros_timer.json" "$work/api-target-abi11/doc/aros_graphics.json"
+  "$work/api-target-abi1/doc/aros.json" "$work/api-target-abi1/doc/aros_mui.json" "$work/api-target-abi1/doc/aros_timer.json" "$work/api-target-abi1/doc/aros_graphics.json" "$work/api-target-abi1/doc/aros_intuition.json" \
+  "$work/api-target-abi11/doc/aros.json" "$work/api-target-abi11/doc/aros_mui.json" "$work/api-target-abi11/doc/aros_timer.json" "$work/api-target-abi11/doc/aros_graphics.json" "$work/api-target-abi11/doc/aros_intuition.json"
 
 [[ -s "$output/index.md" && -s "$output/sidebar.json" && -s "$output/abi-differences.md" && \
-   -s "$output/aros/index.md" && -s "$output/aros_mui/index.md" && -s "$output/aros_timer/index.md" && -s "$output/aros_graphics/index.md" ]] || \
+   -s "$output/aros/index.md" && -s "$output/aros_mui/index.md" && -s "$output/aros_timer/index.md" && -s "$output/aros_graphics/index.md" && -s "$output/aros_intuition/index.md" ]] || \
   fail 'Astro API reference is incomplete'

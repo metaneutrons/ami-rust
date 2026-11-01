@@ -66,6 +66,7 @@ export default defineConfig({
             { label: 'The aros-mui crate', link: '/api/aros-mui/' },
             { label: 'The aros-timer crate', link: '/api/aros-timer/' },
             { label: 'The aros-graphics crate', link: '/api/aros-graphics/' },
+            { label: 'The aros-intuition crate', link: '/api/aros-intuition/' },
             { label: 'Build system', link: '/build-system/' },
             { label: 'Editor setup', link: '/editor-setup/' },
             { label: 'Troubleshooting', link: '/troubleshooting/' },

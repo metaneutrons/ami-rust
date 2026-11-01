@@ -18,6 +18,7 @@ mod m2;
 mod m3;
 mod m4;
 mod m5;
+mod m6;
 #[cfg(not(all(target_os = "aros", target_abi = "abi11")))]
 #[path = "probe/x86_64_abi1.rs"]
 mod probe;
@@ -105,6 +106,8 @@ fn same_resources(a: SdkStats, b: SdkStats) -> bool {
         && a.directories == b.directories
         && a.rastports == b.rastports
         && a.bitmaps == b.bitmaps
+        && a.windows == b.windows
+        && a.pubscreens == b.pubscreens
 }
 
 fn one_refusal_since(context: &Context, before: SdkStats) -> bool {
@@ -2609,6 +2612,27 @@ fn application(context: &Context) -> AppStatus {
                 success(context, b"qualification-graphics-dump", 1)
             } else {
                 fatal(context, 42)
+            }
+        }
+        Some("window") => {
+            if m6::cases(context) {
+                success(context, b"qualification-window", 9)
+            } else {
+                fatal(context, 43)
+            }
+        }
+        Some("window-forgotten") => {
+            if m6::forgotten(context) {
+                success(context, b"qualification-window-forgotten", 3)
+            } else {
+                fatal(context, 44)
+            }
+        }
+        Some("window-hold") => {
+            if m6::hold(context) {
+                success(context, b"qualification-window-hold", 1)
+            } else {
+                fatal(context, 45)
             }
         }
         Some("registry") => {

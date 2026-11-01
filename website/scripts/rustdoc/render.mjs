@@ -508,9 +508,9 @@ export function createPageWriter(options) {
     const crates = [...registry.entries.values()].filter((entry) => entry.publicPath.length === 1)
       .sort((a, b) => a.name.localeCompare(b.name));
     const rows = crates.map((entry) => `| ${linkTo(entry)} | ${tableCell(plainSummaryOf(entry))} |`);
-    await writePage(['index.md'], `${frontmatter('Rust API reference', 'Reference documentation for the public aros, aros-mui, aros-timer and aros-graphics crates, generated from the source.')}
+    await writePage(['index.md'], `${frontmatter('Rust API reference', 'Reference documentation for the public aros, aros-mui, aros-timer, aros-graphics and aros-intuition crates, generated from the source.')}
 This reference is generated from the public items and Rustdoc comments of the
-\`aros\`, \`aros-mui\`, \`aros-timer\` and \`aros-graphics\` crates at revision [\`${revision.slice(0, 12)}\`](${repository}/tree/${revision}).
+\`aros\`, \`aros-mui\`, \`aros-timer\`, \`aros-graphics\` and \`aros-intuition\` crates at revision [\`${revision.slice(0, 12)}\`](${repository}/tree/${revision}).
 The API is the same on every supported target. The few items that exist on only one ABI profile (the AROS ABI is selected by the Cargo target, not by the API) say so at the top of their page.
 
 | Crate | Purpose |
@@ -585,7 +585,7 @@ ${variantRows.length ? `| Enum | Variant | Availability |\n| --- | --- | --- |\n
     };
     return [{
       label: 'Rust API reference',
-      items: [{ label: 'Overview', link: '/reference/' }, group('aros', 'aros'), group('aros_mui', 'aros-mui'), group('aros_timer', 'aros-timer'), group('aros_graphics', 'aros-graphics'), { label: 'ABI differences', link: '/reference/abi-differences/' }],
+      items: [{ label: 'Overview', link: '/reference/' }, group('aros', 'aros'), group('aros_mui', 'aros-mui'), group('aros_timer', 'aros-timer'), group('aros_graphics', 'aros-graphics'), group('aros_intuition', 'aros-intuition'), { label: 'ABI differences', link: '/reference/abi-differences/' }],
     }];
   };
 

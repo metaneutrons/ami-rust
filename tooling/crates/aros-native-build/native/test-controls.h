@@ -6,6 +6,38 @@
 #else
 #define TEST_NOINLINE
 #endif
+/* Synthetic input for window tests: events are written to input.device, so a
+   native test drives Intuition the way a keyboard and mouse would. */
+#include <devices/inputevent.h>
+#ifndef IND_ADDEVENT
+#define IND_ADDEVENT (CMD_NONSTD+15)
+#endif
+static struct MsgPort *test_input_port;
+static struct IOStdReq *test_input_io;
+int sdk_test_input_open(void) {
+ if(test_input_io)return 0;
+ test_input_port=CreateMsgPort();if(!test_input_port)return -1;
+ test_input_io=(struct IOStdReq *)CreateIORequest(test_input_port,sizeof(struct IOStdReq));
+ if(!test_input_io){DeleteMsgPort(test_input_port);test_input_port=NULL;return -2;}
+ if(OpenDevice((CONST_STRPTR)"input.device",0,(struct IORequest *)test_input_io,0)){
+  DeleteIORequest((struct IORequest *)test_input_io);test_input_io=NULL;DeleteMsgPort(test_input_port);test_input_port=NULL;return -3;
+ }
+ return 0;
+}
+int sdk_test_input_send(uint32_t class_,uint32_t code,uint32_t qualifier,int32_t x,int32_t y) {
+ if(!test_input_io)return -1;
+ struct InputEvent event;memset(&event,0,sizeof(event));
+ event.ie_Class=(UBYTE)class_;event.ie_Code=(UWORD)code;event.ie_Qualifier=(UWORD)qualifier;
+ event.ie_X=(WORD)x;event.ie_Y=(WORD)y;
+ test_input_io->io_Command=IND_ADDEVENT;test_input_io->io_Data=&event;test_input_io->io_Length=sizeof(event);
+ return (int)DoIO((struct IORequest *)test_input_io);
+}
+void sdk_test_input_close(void) {
+ if(!test_input_io)return;
+ CloseDevice((struct IORequest *)test_input_io);
+ DeleteIORequest((struct IORequest *)test_input_io);test_input_io=NULL;
+ DeleteMsgPort(test_input_port);test_input_port=NULL;
+}
 /* Free memory as Exec reports it, to show that a program gave everything back. */
 uint64_t sdk_test_avail_mem(void) {return (uint64_t)AvailMem(MEMF_ANY);}
 static uint32_t fault_site,fault_nth,fault_seen,diagnostic_probe,secondary_on_diagnostic;

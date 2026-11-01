@@ -29,6 +29,7 @@ version = "0.1.0"
 dependencies = [
  "aros",
  "aros-graphics",
+ "aros-intuition",
  "aros-native-build",
  "aros-sys",
  "aros-timer",
@@ -64,6 +65,15 @@ name = "aros-graphics"
 version = "0.1.0"
 dependencies = [
  "aros",
+ "aros-sys",
+]
+
+[[package]]
+name = "aros-intuition"
+version = "0.1.0"
+dependencies = [
+ "aros",
+ "aros-graphics",
  "aros-sys",
 ]
 

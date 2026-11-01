@@ -830,6 +830,151 @@ pub mod intuition {
         unsafe { function(window, base) }
     }
 
+    /// Raw `LockPubScreen` call through Intuition vector 85 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn lock_pub_screen(base: *mut Library, name: *const c_char) -> *mut c_void {
+        type Function = unsafe extern "C" fn(*const c_char, *mut Library) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 85)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(name, base) }
+    }
+
+    /// Raw `UnlockPubScreen` call through Intuition vector 86 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn unlock_pub_screen(base: *mut Library, name: *mut u8, screen: *mut c_void) {
+        type Function = unsafe extern "C" fn(*mut u8, *mut c_void, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 86)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(name, screen, base) }
+    }
+
+    /// Raw `ActivateWindow` call through Intuition vector 75 (minimum version 33).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn activate_window(base: *mut Library, window: *mut Window) {
+        type Function = unsafe extern "C" fn(*mut Window, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 75)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, base) }
+    }
+
+    /// Raw `WindowToFront` call through Intuition vector 52 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn window_to_front(base: *mut Library, window: *mut Window) {
+        type Function = unsafe extern "C" fn(*mut Window, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 52)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, base) }
+    }
+
+    /// Raw `WindowToBack` call through Intuition vector 51 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn window_to_back(base: *mut Library, window: *mut Window) {
+        type Function = unsafe extern "C" fn(*mut Window, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 51)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, base) }
+    }
+
+    /// Raw `SetWindowTitles` call through Intuition vector 46 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn set_window_titles(
+        base: *mut Library,
+        window: *mut Window,
+        window_title: *const c_char,
+        screen_title: *const c_char,
+    ) {
+        type Function =
+            unsafe extern "C" fn(*mut Window, *const c_char, *const c_char, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 46)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, window_title, screen_title, base) }
+    }
+
+    /// Raw `BeginRefresh` call through Intuition vector 59 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn begin_refresh(base: *mut Library, window: *mut Window) {
+        type Function = unsafe extern "C" fn(*mut Window, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 59)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, base) }
+    }
+
+    /// Raw `EndRefresh` call through Intuition vector 61 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn end_refresh(base: *mut Library, window: *mut Window, complete: BOOL) {
+        type Function = unsafe extern "C" fn(*mut Window, BOOL, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 61)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, complete, base) }
+    }
+
+    /// Raw `MoveWindow` call through Intuition vector 28 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn move_window(base: *mut Library, window: *mut Window, dx: i32, dy: i32) {
+        type Function = unsafe extern "C" fn(*mut Window, i32, i32, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 28)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, dx, dy, base) }
+    }
+
+    /// Raw `SizeWindow` call through Intuition vector 48 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn size_window(base: *mut Library, window: *mut Window, dx: i32, dy: i32) {
+        type Function = unsafe extern "C" fn(*mut Window, i32, i32, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 48)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, dx, dy, base) }
+    }
+
+    /// Raw `ChangeWindowBox` call through Intuition vector 81 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn change_window_box(
+        base: *mut Library,
+        window: *mut Window,
+        left: i32,
+        top: i32,
+        width: i32,
+        height: i32,
+    ) {
+        type Function = unsafe extern "C" fn(*mut Window, i32, i32, i32, i32, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 81)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, left, top, width, height, base) }
+    }
+
     /// Raw `NewObjectA` call through Intuition vector 106 (minimum version 36).
     ///
     /// # Safety

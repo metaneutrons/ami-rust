@@ -1,0 +1,15 @@
+[package]
+name = "aros-intuition"
+version.workspace = true
+edition.workspace = true
+publish = false
+description = "Task-affine Intuition windows, public screens and typed IDCMP events for the selected AROS ABI profile."
+repository = "https://github.com/metaneutrons/ami-rust"
+homepage = "https://github.com/metaneutrons/ami-rust"
+license.workspace = true
+readme = "README.md"
+
+[dependencies]
+aros = { version = "=0.1.0", path = "../aros", default-features = false }
+aros-graphics = { version = "=0.1.0", path = "../aros-graphics" }
+aros-sys = { version = "=0.1.0", path = "../aros-sys" }
