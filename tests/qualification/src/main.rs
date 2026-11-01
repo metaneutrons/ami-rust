@@ -16,6 +16,13 @@ extern crate alloc;
 
 mod m2;
 mod m3;
+mod m4;
+#[cfg(not(all(target_os = "aros", target_abi = "abi11")))]
+#[path = "probe/x86_64_abi1.rs"]
+mod probe;
+#[cfg(all(target_os = "aros", target_abi = "abi11"))]
+#[path = "probe/x86_64_abi11.rs"]
+mod probe;
 mod stderr;
 
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
@@ -2563,6 +2570,13 @@ fn application(context: &Context) -> AppStatus {
                 success(context, b"qualification-info", 1)
             } else {
                 fatal(context, 37)
+            }
+        }
+        Some("probes") => {
+            if m4::cases(context) {
+                success(context, b"qualification-probes", 6)
+            } else {
+                fatal(context, 38)
             }
         }
         Some("registry") => {

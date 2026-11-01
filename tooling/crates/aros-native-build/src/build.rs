@@ -47,6 +47,10 @@ const SOURCES: &[(&str, &[u8])] = &[
         include_bytes!("../native/test-stderr-controls.h"),
     ),
     (
+        "native/test-probe.h",
+        include_bytes!("../native/test-probe.h"),
+    ),
+    (
         "tests/measurement/ami_test_bind_diagnostics.c",
         include_bytes!("../tests/measurement/ami_test_bind_diagnostics.c"),
     ),
