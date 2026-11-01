@@ -261,7 +261,7 @@ Dependencies: M6
 
 ### M11: 64-bit file sizes and positions
 
-Execution: pending
+Execution: https://github.com/metaneutrons/ami-rust/issues/82
 Dependencies: M2
 
 Background: the qualified `FileInfoBlock` is the 32-bit one, so `Entry::size`
