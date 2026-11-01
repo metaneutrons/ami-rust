@@ -175,7 +175,7 @@ to 4 GiB minus one), but `size_is_exact` is still false there because the
 32-bit path cannot tell a correct large value from a capped one. Observed
 on the qualified images, in QEMU, with a FAT32 volume holding a 3 GiB file:
 
-| | ABI-v1 | ABI-v11 |
+| Call | ABI-v1 | ABI-v11 |
 | --- | --- | --- |
 | `metadata` size | 3,221,225,472, exact | 3,221,225,472, not exact |
 | `File::len` | 3,221,225,472 | `Limit` |
