@@ -24,6 +24,7 @@
 #ifdef AMI_SDK_TESTING
 #include "test-file-controls.h"
 #endif
+#include "test-probe.h"
 
 #define KIND_FILE 1UL
 #define KIND_LIBRARY 2UL
