@@ -235,7 +235,7 @@ compile_error!("aros-sys currently implements only the x86-64 AROS vector ABI");
 compile_error!("aros-sys requires AROS ABI-v1 or ABI-v11");
 
 mod generated;
-pub use generated::{dos, exec, intuition, utility};
+pub use generated::{dos, exec, intuition, timer, utility};
 
 /// The C bridge's error record (`native` holds the immediately captured
 /// native error, such as DOS `IoErr`).
@@ -352,6 +352,43 @@ pub struct Message {
     pub length: u16,
 }
 
+/// Exec `struct IORequest`.
+#[repr(C)]
+pub struct IoRequest {
+    pub message: Message,
+    pub device: *mut c_void,
+    pub unit: *mut c_void,
+    pub command: u16,
+    pub flags: u8,
+    pub error: i8,
+}
+
+/// `struct EClockVal` of `devices/timer.h`: the 64-bit E-clock count in two
+/// halves.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct EClockVal {
+    pub hi: u32,
+    pub lo: u32,
+}
+
+/// A time of `devices/timer.h` as seconds and microseconds, 32 bits each. On
+/// ABI-v1 this is `struct timeval`; on ABI-v11 `timerequest` carries
+/// `struct timeval32`, which has the same layout.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct TimeVal {
+    pub secs: u32,
+    pub micros: u32,
+}
+
+/// `struct timerequest`: an `IORequest` followed by a time value.
+#[repr(C)]
+pub struct TimeRequest {
+    pub request: IoRequest,
+    pub time: TimeVal,
+}
+
 #[repr(C)]
 pub struct MsgPort {
     pub node: Node,
@@ -407,6 +444,27 @@ pub const MAX_REQUEST_DATA_BYTES: usize = 64 * 1024;
 pub const IO_KIND_STANDARD: i32 = 0;
 pub const IO_KIND_TIMER: i32 = 1;
 pub const MAX_DIAGNOSTIC_BYTES: usize = 256;
+
+/// Number of values [`timer_layout_values`] and `sdk_timer_layout` produce.
+pub const TIMER_LAYOUT_VALUE_COUNT: usize = 8;
+
+/// The sizes and offsets of the timer types as the Rust declarations here
+/// lay them out; the native bridge reports the same values from the selected
+/// SDK headers (`sdk_timer_layout`), so the ABI-specific `timerequest`
+/// (`struct timeval` on ABI-v1, `struct timeval32` on ABI-v11) is checked on
+/// each ABI.
+pub const fn timer_layout_values() -> [u64; TIMER_LAYOUT_VALUE_COUNT] {
+    [
+        size_of::<TimeRequest>() as u64,
+        align_of::<TimeRequest>() as u64,
+        offset_of!(TimeRequest, time) as u64,
+        size_of::<EClockVal>() as u64,
+        offset_of!(EClockVal, lo) as u64,
+        size_of::<TimeVal>() as u64,
+        offset_of!(TimeVal, micros) as u64,
+        size_of::<IoRequest>() as u64,
+    ]
+}
 
 pub const SDK_FILE_READ_EXISTING: i32 = 0;
 pub const SDK_FILE_CREATE_TRUNCATE: i32 = 1;
@@ -726,5 +784,7 @@ unsafe extern "C" {
     ) -> c_int;
 
     pub fn sdk_layout(values: *mut u64, capacity: usize) -> usize;
+    pub fn sdk_timer_layout(values: *mut u64, capacity: usize) -> usize;
+    pub fn sdk_device_base(context: u64, device: u64) -> *mut c_void;
     pub fn sdk_scalar(signed: i32, unsigned: u32, pointer: usize, wide: u64, size: usize) -> u64;
 }

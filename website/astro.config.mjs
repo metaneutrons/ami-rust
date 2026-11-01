@@ -64,6 +64,7 @@ export default defineConfig({
             { label: 'Programming model', link: '/api/' },
             { label: 'The aros crate', link: '/api/aros/' },
             { label: 'The aros-mui crate', link: '/api/aros-mui/' },
+            { label: 'The aros-timer crate', link: '/api/aros-timer/' },
             { label: 'Build system', link: '/build-system/' },
             { label: 'Editor setup', link: '/editor-setup/' },
             { label: 'Troubleshooting', link: '/troubleshooting/' },

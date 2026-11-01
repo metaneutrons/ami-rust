@@ -421,6 +421,46 @@ pub mod intuition {
     }
 }
 
+pub mod timer {
+    use super::*;
+
+    /// Raw `ReadEClock` call through Timer vector 10 (minimum version 41).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn read_eclock(base: *mut Library, dest: *mut EClockVal) -> u32 {
+        type Function = unsafe extern "C" fn(*mut EClockVal, *mut Library) -> u32;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 10)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(dest, base) }
+    }
+
+    /// Raw `GetSysTime` call through Timer vector 11 (minimum version 41).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_sys_time(base: *mut Library, dest: *mut TimeVal) {
+        type Function = unsafe extern "C" fn(*mut TimeVal, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 11)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(dest, base) }
+    }
+
+    /// Raw `GetUpTime` call through Timer vector 12 (minimum version 41).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_up_time(base: *mut Library, dest: *mut TimeVal) {
+        type Function = unsafe extern "C" fn(*mut TimeVal, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 12)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(dest, base) }
+    }
+}
+
 pub mod utility {
     use super::*;
 

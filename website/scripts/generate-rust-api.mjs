@@ -14,8 +14,8 @@ import { buildMuiRelations } from './rustdoc/relations.mjs';
 
 const REPOSITORY = 'https://github.com/metaneutrons/ami-rust';
 const [outputArgument, revision, ...inputs] = process.argv.slice(2);
-if (!outputArgument || !/^[0-9a-f]{40}$/.test(revision || '') || inputs.length !== 4) {
-  throw new Error('usage: generate-rust-api.mjs OUTPUT_DIR 40_HEX_REVISION ABI1_AROS ABI1_AROS_MUI ABI11_AROS ABI11_AROS_MUI');
+if (!outputArgument || !/^[0-9a-f]{40}$/.test(revision || '') || inputs.length !== 6) {
+  throw new Error('usage: generate-rust-api.mjs OUTPUT_DIR 40_HEX_REVISION ABI1_AROS ABI1_AROS_MUI ABI1_AROS_TIMER ABI11_AROS ABI11_AROS_MUI ABI11_AROS_TIMER');
 }
 
 const outputRoot = path.resolve(outputArgument);
@@ -24,17 +24,17 @@ if (path.basename(outputRoot) !== 'reference' || outputRoot === path.parse(outpu
 }
 
 const crates = [];
-for (const [abi, files] of [['abi1', inputs.slice(0, 2)], ['abi11', inputs.slice(2)]]) {
+for (const [abi, files] of [['abi1', inputs.slice(0, 3)], ['abi11', inputs.slice(3)]]) {
   const names = new Set();
   for (const file of files) {
     const crate = loadCrate(JSON.parse(await readFile(file, 'utf8')), abi);
-    if (!['aros', 'aros_mui'].includes(crate.crateName) || names.has(crate.crateName)) {
-      throw new Error(`expected one aros and one aros_mui document per ABI, found ${crate.crateName}`);
+    if (!['aros', 'aros_mui', 'aros_timer'].includes(crate.crateName) || names.has(crate.crateName)) {
+      throw new Error(`expected one aros, one aros_mui and one aros_timer document per ABI, found ${crate.crateName}`);
     }
     names.add(crate.crateName);
     crates.push(crate);
   }
-  if (names.size !== 2) throw new Error(`${abi}: expected both aros and aros_mui`);
+  if (names.size !== 3) throw new Error(`${abi}: expected aros, aros_mui and aros_timer`);
 }
 
 const registry = buildRegistry(crates);

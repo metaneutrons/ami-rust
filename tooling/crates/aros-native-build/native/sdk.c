@@ -410,6 +410,12 @@ int sdk_device_close(uint64_t key,uint64_t token,SdkError *e) {
  if(own(key,e))return -1;struct DeviceSlot *dev=device_find(token);if(!dev || !dev->open || dev->requests)return refuse(e,5,0);
  device_release(dev);return 0;
 }
+/* The device base for a raw library-style call such as ReadEClock; it stays
+   valid while the device handle is open. */
+void *sdk_device_base(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return NULL;struct DeviceSlot *dev=device_find(token);
+ return dev && dev->open?(void *)dev->open->io_Device:NULL;
+}
 uint32_t sdk_device_signal_mask(uint64_t key,uint64_t token) {
  if(own(key,NULL))return 0;struct DeviceSlot *dev=device_find(token);if(!dev)return 0;
  struct PortSlot *port=port_find(dev->port);return port && port->handle?1UL<<port->handle->mp_SigBit:0;

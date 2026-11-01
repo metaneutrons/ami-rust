@@ -3,6 +3,7 @@
 #include <exec/ports.h>
 #include <exec/libraries.h>
 #include <dos/dosextens.h>
+#include <devices/timer.h>
 #if (__DOS64)
 #error "M1 preserves the qualified legacy FileInfoBlock32 profile"
 #endif
@@ -34,6 +35,20 @@ static const size_t c_layout[]={
  LAYOUT(SdkStats,OFF(SdkStats,blocks),OFF(SdkStats,backing_charge),OFF(SdkStats,peak_charge),OFF(SdkStats,files),OFF(SdkStats,libraries),OFF(SdkStats,ports),OFF(SdkStats,signals),OFF(SdkStats,messages),OFF(SdkStats,refusals),OFF(SdkStats,devices),OFF(SdkStats,requests),OFF(SdkStats,directories)),
  LAYOUT(SdkEntry,OFF(SdkEntry,size),OFF(SdkEntry,protection),OFF(SdkEntry,name_length),OFF(SdkEntry,entry_type),OFF(SdkEntry,directory_type),OFF(SdkEntry,days),OFF(SdkEntry,minutes),OFF(SdkEntry,ticks),OFF(SdkEntry,name))
 };
+/* Timer types of the selected SDK: timerequest carries struct timeval on
+   ABI-v1 and struct timeval32 on ABI-v11; both are two 32-bit fields. */
+static const size_t c_timer_layout[]={
+ sizeof(struct timerequest),_Alignof(struct timerequest),OFF(struct timerequest,tr_time),
+ sizeof(struct EClockVal),OFF(struct EClockVal,ev_lo),
+ sizeof(((struct timerequest*)0)->tr_time),
+ OFF(__typeof__(((struct timerequest*)0)->tr_time),tv_micro),
+ sizeof(struct IORequest)
+};
+size_t sdk_timer_layout(uint64_t *out,size_t cap) {
+ const size_t count=sizeof(c_timer_layout)/sizeof(*c_timer_layout);
+ if(cap<count || !out)return count;
+ for(size_t i=0;i<count;i++)out[i]=c_timer_layout[i];return count;
+}
 size_t sdk_layout(uint64_t *out,size_t cap) {
  const size_t count=sizeof(c_layout)/sizeof(*c_layout);
  if(cap<count || !out)return count;

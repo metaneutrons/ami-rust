@@ -106,7 +106,7 @@ fn run() -> Result<(), String> {
     let mut outputs = BTreeMap::new();
     outputs.insert(
         "crates/aros-sys/src/generated/mod.rs".to_owned(),
-        format_rust(&generate_aros_sys_module())?,
+        format_rust(&generate_aros_sys_module(&manifest))?,
     );
     for abi in [Abi::V1, Abi::V11] {
         outputs.insert(
@@ -281,7 +281,6 @@ fn validate_sdk(
         let defines_path = include.join(format!("defines/{}.h", function.header));
         let clib = fs::read_to_string(clib_path).map_err(display_error)?;
         let defines = fs::read_to_string(defines_path).map_err(display_error)?;
-        verify_clib_block(&clib, function)?;
         let macro_name = format!("#define __{}_WB(", function.c_name);
         let Some(start) = defines.find(&macro_name) else {
             return Err(format!(
@@ -292,6 +291,14 @@ fn validate_sdk(
         let block = &defines[start..];
         let end = block.find("})").unwrap_or(block.len());
         let block = &block[..end];
+        if clib.contains(&format!(", {},", function.c_name)) {
+            verify_clib_block(&clib, function)?;
+        } else {
+            // Some libraries (devices) ship plain prototypes in `clib`; the
+            // vector, library and argument count are then checked against the
+            // `defines` macro and the plain prototype.
+            verify_plain_block(&clib, block, function)?;
+        }
         let requirement = block
             .split_once("AROS_LIBREQ(")
             .and_then(|(_, rest)| rest.split_once(')'))
@@ -303,6 +310,38 @@ fn validate_sdk(
                 function.c_name
             ));
         }
+    }
+    Ok(())
+}
+
+fn verify_plain_block(clib: &str, defines: &str, function: &Function) -> Result<(), String> {
+    let marker = format!(" {}(", function.c_name);
+    let start = clib
+        .find(&marker)
+        .ok_or_else(|| format!("missing AROS prototype for {}", function.c_name))?;
+    let rest = &clib[start + marker.len()..];
+    let end = rest
+        .find(");")
+        .ok_or_else(|| format!("unterminated AROS prototype for {}", function.c_name))?;
+    let arguments = rest[..end].trim();
+    let count = if arguments.is_empty() || arguments == "void" {
+        0
+    } else {
+        arguments.matches(',').count() + 1
+    };
+    if count != function.arguments.len() {
+        return Err(format!(
+            "{} has {count} SDK arguments but {} manifest arguments",
+            function.c_name,
+            function.arguments.len()
+        ));
+    }
+    let vector = format!(", {}, {})", function.vector, function.library);
+    if !defines.contains(&vector) {
+        return Err(format!(
+            "{} does not have vector {} in {}",
+            function.c_name, function.vector, function.library
+        ));
     }
     Ok(())
 }
@@ -357,7 +396,14 @@ impl Abi {
     }
 }
 
-fn generate_aros_sys_module() -> Vec<u8> {
+fn generate_aros_sys_module(manifest: &ApiManifest) -> Vec<u8> {
+    let modules: BTreeSet<_> = manifest
+        .functions
+        .iter()
+        .filter(|function| function.crate_name == "aros-sys")
+        .map(|function| function.module.as_str())
+        .collect();
+    let modules = modules.into_iter().collect::<Vec<_>>().join(", ");
     format!(
         "{GENERATED_NOTICE}\
          #[cfg(any(not(target_os = \"aros\"), target_abi = \"\", target_abi = \"abi1\"))]\n\
@@ -366,7 +412,7 @@ fn generate_aros_sys_module() -> Vec<u8> {
          #[cfg(all(target_os = \"aros\", target_abi = \"abi11\"))]\n\
          #[path = \"x86_64_abi11.rs\"]\n\
          mod backend;\n\n\
-         pub use backend::{{dos, exec, intuition, utility}};\n"
+         pub use backend::{{{modules}}};\n"
     )
     .into_bytes()
 }
