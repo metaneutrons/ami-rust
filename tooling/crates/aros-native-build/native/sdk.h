@@ -4,7 +4,11 @@
 #include <stdint.h>
 #include <stddef.h>
 typedef struct { int32_t kind; int64_t native; } SdkError;
-typedef struct { size_t blocks, backing_charge, peak_charge, files, libraries, ports, signals, messages, refusals, devices, requests, directories, rastports, bitmaps; } SdkStats;
+typedef struct { size_t blocks, backing_charge, peak_charge, files, libraries, ports, signals, messages, refusals, devices, requests, directories, rastports, bitmaps, windows, pubscreens; } SdkStats;
+/* Window geometry as the bridge reads it from struct Window. */
+typedef struct { int32_t left, top, width, height, border_left, border_top, border_right, border_bottom, mouse_x, mouse_y, screen_width, screen_height; uint32_t signal_mask; void *rastport; } SdkWindowInfo;
+/* One IDCMP message, decoded and replied to. */
+typedef struct { uint32_t class_; uint16_t code, qualifier; int16_t x, y; uint32_t seconds, micros; } SdkIntuiEvent;
 /* One directory entry; the layout is checked against the Rust declaration. */
 typedef struct { uint64_t size;uint32_t protection,name_length;int32_t entry_type,directory_type,days,minutes,ticks;uint32_t size_exact;uint8_t name[108]; } SdkEntry;
 
@@ -155,6 +159,18 @@ int sdk_gfx_area_attach(uint64_t,uint64_t,SdkError *);
 int sdk_gfx_rastport_drop(uint64_t,uint64_t,SdkError *);
 uint64_t sdk_gfx_bitmap_register(uint64_t,void *,void *,SdkError *);
 int sdk_gfx_bitmap_release(uint64_t,uint64_t,SdkError *);
+uint64_t sdk_intui_title_new(uint64_t,const uint8_t *,size_t,SdkError *);
+const char *sdk_intui_title_ptr(uint64_t,uint64_t);
+int sdk_intui_window_set_title(uint64_t,uint64_t,const uint8_t *,size_t,SdkError *);
+int sdk_intui_window_attach(uint64_t,uint64_t,void *,void *,SdkError *);
+int sdk_intui_window_cancel(uint64_t,uint64_t,SdkError *);
+int sdk_intui_window_close(uint64_t,uint64_t,SdkError *);
+int sdk_intui_window_info(uint64_t,uint64_t,SdkWindowInfo *,SdkError *);
+int sdk_intui_next_event(uint64_t,uint64_t,SdkIntuiEvent *,SdkError *);
+uint64_t sdk_intui_screen_register(uint64_t,void *,void *,SdkError *);
+int sdk_intui_screen_size(uint64_t,uint64_t,int32_t *,int32_t *,SdkError *);
+int sdk_intui_screen_release(uint64_t,uint64_t,SdkError *);
+size_t sdk_intui_layout(uint64_t *,size_t);
 int sdk_callback(uint64_t,uint64_t (*)(void *,uint64_t),void *,uint64_t,uint64_t *,SdkError *);
 /* Independent C oracle: count then values; no raw Rust structs enter OS calls. */
 size_t sdk_layout(uint64_t *,size_t);

@@ -9,6 +9,8 @@
 #include <dos/var.h>
 #include <graphics/gfx.h>
 #include <graphics/rastport.h>
+#include <intuition/intuition.h>
+#include <intuition/screens.h>
 #include <dos/dosextens.h>
 #include <intuition/classes.h>
 #include <proto/exec.h>
@@ -38,6 +40,9 @@
 #define KIND_DIRECTORY 8UL
 #define KIND_RASTPORT 9UL
 #define KIND_BITMAP 10UL
+#define KIND_WINDOW 11UL
+#define KIND_SCREEN 12UL
+#define SDK_TITLE_MAX 127
 #define GFX_MAX_AREA_VECTORS 1024
 #define IO_KIND_STANDARD 0
 #define IO_KIND_TIMER 1
@@ -66,13 +71,19 @@ struct RastSlot { uint64_t token;struct RastPort *rp;struct AreaInfo *area;void 
 /* A graphics.library bitmap allocated through a raw vector call; the bridge
    remembers the library base so it can free the bitmap if the program does not. */
 struct BitmapSlot { uint64_t token;void *base;void *bitmap; };
+/* An Intuition window. The slot owns the title text, which Intuition keeps a
+   pointer to, so the window can be opened with a stable string before it
+   exists (window is NULL until attached). */
+struct WindowSlot { uint64_t token;void *base;struct Window *window;char title[SDK_TITLE_MAX+1]; };
+/* A locked public screen, unlocked at exit if the program forgets it. */
+struct ScreenSlot { uint64_t token;void *base;void *screen; };
 struct DirSlot { uint64_t token;BPTR lock;void *fib;int wide; };
 struct IoSlot { uint64_t token,device;struct IORequest *request;size_t size;uint8_t *buffer;size_t capacity;int kind,state; };
 #define SLOT_BITS 20U
 #define SLOT_LIMIT ((UINT64_C(1)<<SLOT_BITS)-1)
 #define SEQUENCE_LIMIT ((UINT64_C(1)<<36)-1)
 #define SIGNAL_SLOTS 32
-static struct Registry files,libraries,ports,messages,devices,requests,directories,rastports,bitmaps;
+static struct Registry files,libraries,ports,messages,devices,requests,directories,rastports,bitmaps,windows,pubscreens;
 static BPTR cwd_original,cwd_owned;
 static struct SignalSlot signals[SIGNAL_SLOTS];
 static APTR registry_pool;
@@ -874,27 +885,48 @@ int sdk_gfx_rastport_drop(uint64_t key,uint64_t token,SdkError *e) {
  if(own(key,e))return -1;struct RastSlot *slot=rast_find(token);if(!slot)return refuse(e,5,0);
  rast_release(slot);return 0;
 }
-/* FreeBitMap is vector 154 of graphics.library. The pinned ABI-v11 C SDK has no
-   graphics prototypes, so the call is made by hand: the base goes last on
-   ABI-v1 and in r12 on ABI-v11. */
-#define GFX_FREE_BITMAP_VECTOR 154
-static void gfx_free_bitmap(void *base,void *bitmap) {
- void *function=((void **)base)[-GFX_FREE_BITMAP_VECTOR];
+/* The pinned ABI-v11 C SDK has no graphics or Intuition prototypes, so the
+   cleanup calls are made by hand through the library vector: the base goes
+   last on ABI-v1 and in r12 on ABI-v11 (the red zone and the stack alignment
+   of the caller are kept intact). */
+static void lib_call1(void *base,unsigned vector,void *a0) {
+ void *function=((void **)base)[-(long)vector];
 #ifdef AMI_RUST_ABI11
  __asm__ volatile(
   "pushq %%r12\n\t"
-  "subq $8,%%rsp\n\t"
-  "movq %%rsi,%%r12\n\t"
+  "subq $136,%%rsp\n\t"
+  "movq %%rdx,%%r12\n\t"
   "callq *%%rax\n\t"
-  "addq $8,%%rsp\n\t"
+  "addq $136,%%rsp\n\t"
   "popq %%r12\n\t"
-  : "+a"(function),"+S"(base),"+D"(bitmap)
+  : "+a"(function),"+d"(base),"+D"(a0)
   :
-  : "rcx","rdx","r8","r9","r10","r11","memory","cc");
+  : "rcx","rsi","r8","r9","r10","r11","memory","cc");
 #else
- ((void (*)(void *,void *))function)(bitmap,base);
+ ((void (*)(void *,void *))function)(a0,base);
 #endif
 }
+static void lib_call2(void *base,unsigned vector,void *a0,void *a1) {
+ void *function=((void **)base)[-(long)vector];
+#ifdef AMI_RUST_ABI11
+ __asm__ volatile(
+  "pushq %%r12\n\t"
+  "subq $136,%%rsp\n\t"
+  "movq %%rdx,%%r12\n\t"
+  "callq *%%rax\n\t"
+  "addq $136,%%rsp\n\t"
+  "popq %%r12\n\t"
+  : "+a"(function),"+d"(base),"+D"(a0),"+S"(a1)
+  :
+  : "rcx","r8","r9","r10","r11","memory","cc");
+#else
+ ((void (*)(void *,void *,void *))function)(a0,a1,base);
+#endif
+}
+#define GFX_FREE_BITMAP_VECTOR 154
+#define INTUITION_CLOSE_WINDOW_VECTOR 12
+#define INTUITION_UNLOCK_PUB_SCREEN_VECTOR 86
+static void gfx_free_bitmap(void *base,void *bitmap) {lib_call1(base,GFX_FREE_BITMAP_VECTOR,bitmap);}
 uint64_t sdk_gfx_bitmap_register(uint64_t key,void *base,void *bitmap,SdkError *e) {
  if(own(key,e))return 0;if(!base || !bitmap){refuse(e,2,0);return 0;}
  struct BitmapSlot *slot=(struct BitmapSlot *)record_new(&bitmaps,KIND_BITMAP,sizeof(*slot),e);if(!slot)return 0;
@@ -909,6 +941,83 @@ static void bitmap_free_registered(struct BitmapSlot *slot) {
  void *base=slot->base,*bitmap=slot->bitmap;
  record_release(&bitmaps,slot,sizeof(*slot));--stats.bitmaps;
  gfx_free_bitmap(base,bitmap);
+}
+
+/* Intuition windows and public screens. Window structure access and message
+   decoding stay here, where the SDK headers of the selected ABI are in scope. */
+static struct WindowSlot *window_find(uint64_t token) {return (struct WindowSlot *)record_find(&windows,token,KIND_WINDOW);}
+uint64_t sdk_intui_title_new(uint64_t key,const uint8_t *text,size_t length,SdkError *e) {
+ if(own(key,e))return 0;if(length>SDK_TITLE_MAX || (length && !text)){refuse(e,2,0);return 0;}
+ struct WindowSlot *slot=(struct WindowSlot *)record_new(&windows,KIND_WINDOW,sizeof(*slot),e);if(!slot)return 0;
+ if(length)memcpy(slot->title,text,length);slot->title[length]=0;
+ ++stats.windows;return slot->token;
+}
+const char *sdk_intui_title_ptr(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return NULL;struct WindowSlot *slot=window_find(token);return slot?slot->title:NULL;
+}
+int sdk_intui_window_set_title(uint64_t key,uint64_t token,const uint8_t *text,size_t length,SdkError *e) {
+ if(own(key,e))return -1;struct WindowSlot *slot=window_find(token);if(!slot || !slot->window)return refuse(e,5,0);
+ if(length>SDK_TITLE_MAX || (length && !text))return refuse(e,2,0);
+ if(length)memcpy(slot->title,text,length);slot->title[length]=0;return 0;
+}
+int sdk_intui_window_attach(uint64_t key,uint64_t token,void *base,void *window,SdkError *e) {
+ if(own(key,e))return -1;struct WindowSlot *slot=window_find(token);if(!slot || slot->window || !base || !window)return refuse(e,5,0);
+ slot->base=base;slot->window=(struct Window *)window;return 0;
+}
+/* Forgets a title slot whose window never opened. */
+int sdk_intui_window_cancel(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct WindowSlot *slot=window_find(token);if(!slot || slot->window)return refuse(e,5,0);
+ record_release(&windows,slot,sizeof(*slot));--stats.windows;return 0;
+}
+static void window_close(struct WindowSlot *slot) {
+ void *base=slot->base;struct Window *window=slot->window;
+ record_release(&windows,slot,sizeof(*slot));--stats.windows;
+ if(window)lib_call1(base,INTUITION_CLOSE_WINDOW_VECTOR,window);
+}
+int sdk_intui_window_close(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct WindowSlot *slot=window_find(token);if(!slot)return refuse(e,5,0);
+ window_close(slot);return 0;
+}
+int sdk_intui_window_info(uint64_t key,uint64_t token,SdkWindowInfo *out,SdkError *e) {
+ if(own(key,e))return -1;struct WindowSlot *slot=window_find(token);if(!slot || !slot->window || !out)return refuse(e,5,0);
+ struct Window *w=slot->window;
+ out->left=w->LeftEdge;out->top=w->TopEdge;out->width=w->Width;out->height=w->Height;
+ out->border_left=w->BorderLeft;out->border_top=w->BorderTop;out->border_right=w->BorderRight;out->border_bottom=w->BorderBottom;
+ out->mouse_x=w->MouseX;out->mouse_y=w->MouseY;
+ out->screen_width=w->WScreen?w->WScreen->Width:0;out->screen_height=w->WScreen?w->WScreen->Height:0;
+ out->signal_mask=w->UserPort?(1UL<<w->UserPort->mp_SigBit):0;
+ out->rastport=w->RPort;
+ return 0;
+}
+/* Returns 1 and fills the event, or 0 if none is waiting. */
+int sdk_intui_next_event(uint64_t key,uint64_t token,SdkIntuiEvent *out,SdkError *e) {
+ if(own(key,e))return -1;struct WindowSlot *slot=window_find(token);if(!slot || !slot->window || !out)return refuse(e,5,0);
+ if(!slot->window->UserPort)return 0;
+ struct IntuiMessage *message=(struct IntuiMessage *)GetMsg(slot->window->UserPort);
+ if(!message)return 0;
+ out->class_=message->Class;out->code=message->Code;out->qualifier=message->Qualifier;
+ out->x=message->MouseX;out->y=message->MouseY;out->seconds=message->Seconds;out->micros=message->Micros;
+ ReplyMsg((struct Message *)message);return 1;
+}
+uint64_t sdk_intui_screen_register(uint64_t key,void *base,void *screen,SdkError *e) {
+ if(own(key,e))return 0;if(!base || !screen){refuse(e,2,0);return 0;}
+ struct ScreenSlot *slot=(struct ScreenSlot *)record_new(&pubscreens,KIND_SCREEN,sizeof(*slot),e);if(!slot)return 0;
+ slot->base=base;slot->screen=screen;++stats.pubscreens;return slot->token;
+}
+int sdk_intui_screen_size(uint64_t key,uint64_t token,int32_t *width,int32_t *height,SdkError *e) {
+ if(own(key,e))return -1;struct ScreenSlot *slot=(struct ScreenSlot *)record_find(&pubscreens,token,KIND_SCREEN);
+ if(!slot || !width || !height)return refuse(e,5,0);
+ *width=((struct Screen *)slot->screen)->Width;*height=((struct Screen *)slot->screen)->Height;return 0;
+}
+/* Forgets the lock; the caller unlocks the screen. */
+int sdk_intui_screen_release(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct ScreenSlot *slot=(struct ScreenSlot *)record_find(&pubscreens,token,KIND_SCREEN);
+ if(!slot)return refuse(e,5,0);record_release(&pubscreens,slot,sizeof(*slot));--stats.pubscreens;return 0;
+}
+static void screen_unlock_registered(struct ScreenSlot *slot) {
+ void *base=slot->base,*screen=slot->screen;
+ record_release(&pubscreens,slot,sizeof(*slot));--stats.pubscreens;
+ lib_call2(base,INTUITION_UNLOCK_PUB_SCREEN_VECTOR,NULL,screen);
 }
 int sdk_callback(uint64_t key,uint64_t (*callback)(void *,uint64_t),void *data,uint64_t value,uint64_t *out,SdkError *e) {
  if(own(key,e))return -1;if(callback_active || !callback || !data || !out)return refuse(e,5,0);
@@ -927,6 +1036,8 @@ static int test_report_ledgers(void) {
  sdk_diagnostic((const uint8_t *)"[m1-ledger] directories",23,stats.directories);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] rastports",21,stats.rastports);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] bitmaps",19,stats.bitmaps);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] windows",19,stats.windows);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] pubscreens",22,stats.pubscreens);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] devices",19,stats.devices);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] requests",20,stats.requests);
  sdk_diagnostic((const uint8_t *)"[m1-native] live",16,backend_live());
@@ -947,6 +1058,8 @@ static int cleanup_remaining(void) {
  if(setjmp(cleanup_resume)){cleanup_error=20;ami_sdk_diagnostic_depth=0;}
  for(size_t i=0;i<directories.capacity;i++){struct DirSlot *slot=(struct DirSlot *)directories.items[i];if(slot)dir_release(slot);}
  cwd_restore();
+ for(size_t i=0;i<windows.capacity;i++){struct WindowSlot *slot=(struct WindowSlot *)windows.items[i];if(slot)window_close(slot);}
+ for(size_t i=0;i<pubscreens.capacity;i++){struct ScreenSlot *slot=(struct ScreenSlot *)pubscreens.items[i];if(slot)screen_unlock_registered(slot);}
  for(size_t i=0;i<rastports.capacity;i++){struct RastSlot *slot=(struct RastSlot *)rastports.items[i];if(slot)rast_release(slot);}
  for(size_t i=0;i<bitmaps.capacity;i++){struct BitmapSlot *slot=(struct BitmapSlot *)bitmaps.items[i];if(slot)bitmap_free_registered(slot);}
  for(size_t i=0;i<requests.capacity;i++){struct IoSlot *slot=(struct IoSlot *)requests.items[i];if(slot)io_release(slot);}
@@ -962,7 +1075,7 @@ static int cleanup_remaining(void) {
  if(registry_pool){
   /* The tables are the pool's last users; the pool is retired with them. */
   APTR pool=registry_pool;registry_pool=NULL;
-  rastports=(struct Registry){0};bitmaps=(struct Registry){0};directories=(struct Registry){0};files=(struct Registry){0};libraries=(struct Registry){0};ports=(struct Registry){0};messages=(struct Registry){0};devices=(struct Registry){0};requests=(struct Registry){0};
+  rastports=(struct Registry){0};bitmaps=(struct Registry){0};windows=(struct Registry){0};pubscreens=(struct Registry){0};directories=(struct Registry){0};files=(struct Registry){0};libraries=(struct Registry){0};ports=(struct Registry){0};messages=(struct Registry){0};devices=(struct Registry){0};requests=(struct Registry){0};
   DeletePool(pool);
  }
 #ifdef AMI_SDK_TESTING

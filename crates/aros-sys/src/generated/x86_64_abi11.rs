@@ -1298,6 +1298,231 @@ pub mod intuition {
         }
     }
 
+    /// Raw `LockPubScreen` call through Intuition vector 85 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn lock_pub_screen(base: *mut Library, name: *const c_char) -> *mut c_void {
+        let function = unsafe { vector(base, 85) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") name as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *mut c_void
+    }
+
+    /// Raw `UnlockPubScreen` call through Intuition vector 86 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn unlock_pub_screen(base: *mut Library, name: *mut u8, screen: *mut c_void) {
+        let function = unsafe { vector(base, 86) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") name as usize,
+                in("rsi") screen as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `ActivateWindow` call through Intuition vector 75 (minimum version 33).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn activate_window(base: *mut Library, window: *mut Window) {
+        let function = unsafe { vector(base, 75) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") window as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `WindowToFront` call through Intuition vector 52 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn window_to_front(base: *mut Library, window: *mut Window) {
+        let function = unsafe { vector(base, 52) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") window as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `WindowToBack` call through Intuition vector 51 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn window_to_back(base: *mut Library, window: *mut Window) {
+        let function = unsafe { vector(base, 51) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") window as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `SetWindowTitles` call through Intuition vector 46 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn set_window_titles(
+        base: *mut Library,
+        window: *mut Window,
+        window_title: *const c_char,
+        screen_title: *const c_char,
+    ) {
+        let function = unsafe { vector(base, 46) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") window as usize,
+                in("rsi") window_title as usize,
+                in("rdx") screen_title as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `BeginRefresh` call through Intuition vector 59 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn begin_refresh(base: *mut Library, window: *mut Window) {
+        let function = unsafe { vector(base, 59) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") window as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `EndRefresh` call through Intuition vector 61 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn end_refresh(base: *mut Library, window: *mut Window, complete: BOOL) {
+        let function = unsafe { vector(base, 61) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") window as usize,
+                in("rsi") complete as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `MoveWindow` call through Intuition vector 28 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn move_window(base: *mut Library, window: *mut Window, dx: i32, dy: i32) {
+        let function = unsafe { vector(base, 28) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") window as usize,
+                in("rsi") dx as usize,
+                in("rdx") dy as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `SizeWindow` call through Intuition vector 48 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn size_window(base: *mut Library, window: *mut Window, dx: i32, dy: i32) {
+        let function = unsafe { vector(base, 48) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") window as usize,
+                in("rsi") dx as usize,
+                in("rdx") dy as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `ChangeWindowBox` call through Intuition vector 81 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn change_window_box(
+        base: *mut Library,
+        window: *mut Window,
+        left: i32,
+        top: i32,
+        width: i32,
+        height: i32,
+    ) {
+        let function = unsafe { vector(base, 81) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") window as usize,
+                in("rsi") left as usize,
+                in("rdx") top as usize,
+                in("rcx") width as usize,
+                in("r8") height as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
     /// Raw `NewObjectA` call through Intuition vector 106 (minimum version 36).
     ///
     /// # Safety

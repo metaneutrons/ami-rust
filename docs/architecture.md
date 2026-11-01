@@ -29,6 +29,7 @@ ami-rust has four layers. Applications use the top one; the lower layers exist s
 | [`aros-mui`](/api/aros-mui/) | Typed, scope-owned MUI objects. Built on `aros` and `aros-mui-sys`. |
 | [`aros-timer`](/api/aros-timer/) | Time and timers on `timer.device`. Built on `aros` and the raw timer calls in `aros-sys`. Unreleased. |
 | [`aros-graphics`](/api/aros-graphics/) | Off-screen bitmaps and drawing on `graphics.library`. Built on `aros` and the raw graphics calls in `aros-sys`. Unreleased. |
+| [`aros-intuition`](/api/aros-intuition/) | Windows, public screens and typed IDCMP events on `intuition.library`. Built on `aros`, `aros-graphics` and the raw Intuition calls in `aros-sys`. Unreleased. |
 | `aros-sys` | Raw, allocation-free declarations and calls for the exec, dos, utility, intuition, timer and graphics libraries, plus the bridge's C interface. |
 | `aros-mui-sys` | Raw MUI: every public class ID, attribute, method, value, enum value and `MUIP_*` message in the pinned headers, and the reviewed muimaster vector calls. |
 

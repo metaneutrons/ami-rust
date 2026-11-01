@@ -265,6 +265,8 @@ pub struct SdkStats {
     pub directories: usize,
     pub rastports: usize,
     pub bitmaps: usize,
+    pub windows: usize,
+    pub pubscreens: usize,
 }
 
 /// One directory entry as filled in by the native bridge. `name_length` bytes
@@ -470,6 +472,142 @@ pub const fn timer_layout_values() -> [u64; TIMER_LAYOUT_VALUE_COUNT] {
     ]
 }
 
+/// One window's geometry as the native bridge reads it from `struct Window`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct SdkWindowInfo {
+    pub left: i32,
+    pub top: i32,
+    pub width: i32,
+    pub height: i32,
+    pub border_left: i32,
+    pub border_top: i32,
+    pub border_right: i32,
+    pub border_bottom: i32,
+    pub mouse_x: i32,
+    pub mouse_y: i32,
+    pub screen_width: i32,
+    pub screen_height: i32,
+    pub signal_mask: u32,
+    pub rastport: *mut c_void,
+}
+
+/// One decoded IDCMP message.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct SdkIntuiEvent {
+    pub class: u32,
+    pub code: u16,
+    pub qualifier: u16,
+    pub x: i16,
+    pub y: i16,
+    pub seconds: u32,
+    pub micros: u32,
+}
+
+/// Window tags (`WA_*`) the safe window builder uses.
+pub mod wa {
+    use super::TAG_USER;
+    pub const LEFT: u32 = TAG_USER + 100;
+    pub const TOP: u32 = TAG_USER + 101;
+    pub const WIDTH: u32 = TAG_USER + 102;
+    pub const HEIGHT: u32 = TAG_USER + 103;
+    pub const IDCMP: u32 = TAG_USER + 106;
+    pub const TITLE: u32 = TAG_USER + 110;
+    pub const MIN_WIDTH: u32 = TAG_USER + 114;
+    pub const MIN_HEIGHT: u32 = TAG_USER + 115;
+    pub const MAX_WIDTH: u32 = TAG_USER + 116;
+    pub const MAX_HEIGHT: u32 = TAG_USER + 117;
+    pub const INNER_WIDTH: u32 = TAG_USER + 118;
+    pub const INNER_HEIGHT: u32 = TAG_USER + 119;
+    pub const PUB_SCREEN: u32 = TAG_USER + 121;
+    pub const SIZE_GADGET: u32 = TAG_USER + 129;
+    pub const DRAG_BAR: u32 = TAG_USER + 130;
+    pub const DEPTH_GADGET: u32 = TAG_USER + 131;
+    pub const CLOSE_GADGET: u32 = TAG_USER + 132;
+    pub const REPORT_MOUSE: u32 = TAG_USER + 134;
+    pub const BORDERLESS: u32 = TAG_USER + 136;
+    pub const ACTIVATE: u32 = TAG_USER + 137;
+    pub const SIMPLE_REFRESH: u32 = TAG_USER + 140;
+    pub const SMART_REFRESH: u32 = TAG_USER + 141;
+    pub const GIMME_ZERO_ZERO: u32 = TAG_USER + 145;
+}
+
+/// IDCMP class bits and message codes the safe window API decodes.
+pub mod idcmp {
+    pub const NEW_SIZE: u32 = 1 << 1;
+    pub const REFRESH_WINDOW: u32 = 1 << 2;
+    pub const MOUSE_BUTTONS: u32 = 1 << 3;
+    pub const MOUSE_MOVE: u32 = 1 << 4;
+    pub const CLOSE_WINDOW: u32 = 1 << 9;
+    pub const RAW_KEY: u32 = 1 << 10;
+    pub const ACTIVE_WINDOW: u32 = 1 << 18;
+    pub const INACTIVE_WINDOW: u32 = 1 << 19;
+    pub const VANILLA_KEY: u32 = 1 << 21;
+    pub const SELECT_DOWN: u16 = 0x68;
+    pub const SELECT_UP: u16 = 0xe8;
+    pub const MENU_DOWN: u16 = 0x69;
+    pub const MENU_UP: u16 = 0xe9;
+    pub const MIDDLE_DOWN: u16 = 0x6a;
+    pub const MIDDLE_UP: u16 = 0xea;
+}
+
+/// Number of values [`intuition_layout_values`] and `sdk_intui_layout` produce.
+pub const INTUITION_LAYOUT_VALUE_COUNT: usize = 45;
+
+/// The bridge's window records and the window tag, IDCMP and message code
+/// values as declared here; the native bridge reports the same values from the
+/// selected SDK headers (`sdk_intui_layout`).
+pub const fn intuition_layout_values() -> [u64; INTUITION_LAYOUT_VALUE_COUNT] {
+    [
+        size_of::<SdkWindowInfo>() as u64,
+        align_of::<SdkWindowInfo>() as u64,
+        offset_of!(SdkWindowInfo, signal_mask) as u64,
+        offset_of!(SdkWindowInfo, rastport) as u64,
+        size_of::<SdkIntuiEvent>() as u64,
+        offset_of!(SdkIntuiEvent, x) as u64,
+        offset_of!(SdkIntuiEvent, micros) as u64,
+        wa::LEFT as u64,
+        wa::TOP as u64,
+        wa::WIDTH as u64,
+        wa::HEIGHT as u64,
+        wa::IDCMP as u64,
+        wa::TITLE as u64,
+        wa::MIN_WIDTH as u64,
+        wa::MIN_HEIGHT as u64,
+        wa::MAX_WIDTH as u64,
+        wa::MAX_HEIGHT as u64,
+        wa::INNER_WIDTH as u64,
+        wa::INNER_HEIGHT as u64,
+        wa::PUB_SCREEN as u64,
+        wa::SIZE_GADGET as u64,
+        wa::DRAG_BAR as u64,
+        wa::DEPTH_GADGET as u64,
+        wa::CLOSE_GADGET as u64,
+        wa::REPORT_MOUSE as u64,
+        wa::BORDERLESS as u64,
+        wa::ACTIVATE as u64,
+        wa::SIMPLE_REFRESH as u64,
+        wa::SMART_REFRESH as u64,
+        wa::GIMME_ZERO_ZERO as u64,
+        idcmp::NEW_SIZE as u64,
+        idcmp::REFRESH_WINDOW as u64,
+        idcmp::MOUSE_BUTTONS as u64,
+        idcmp::MOUSE_MOVE as u64,
+        idcmp::CLOSE_WINDOW as u64,
+        idcmp::RAW_KEY as u64,
+        idcmp::VANILLA_KEY as u64,
+        idcmp::ACTIVE_WINDOW as u64,
+        idcmp::INACTIVE_WINDOW as u64,
+        idcmp::SELECT_DOWN as u64,
+        idcmp::SELECT_UP as u64,
+        idcmp::MENU_DOWN as u64,
+        idcmp::MENU_UP as u64,
+        idcmp::MIDDLE_DOWN as u64,
+        idcmp::MIDDLE_UP as u64,
+    ]
+}
+
 pub const SDK_FILE_READ_EXISTING: i32 = 0;
 pub const SDK_FILE_CREATE_TRUNCATE: i32 = 1;
 pub const SDK_FILE_READ_WRITE: i32 = 2;
@@ -485,7 +623,7 @@ pub const ERROR_KIND_ZERO_PROGRESS: i32 = 7;
 /// Layout oracle values in the exact order of the M0 C layout table:
 /// Node, Library, Message, List, MsgPort, FileInfoBlock, scalar ABI types,
 /// then the selected spinlock_t storage. No native call or allocation occurs.
-pub const ABI_LAYOUT_VALUE_COUNT: usize = 98;
+pub const ABI_LAYOUT_VALUE_COUNT: usize = 100;
 
 const fn layout_value(value: usize) -> u64 {
     value as u64
@@ -579,6 +717,8 @@ pub const fn layout_values() -> [u64; ABI_LAYOUT_VALUE_COUNT] {
         layout_value(offset_of!(SdkStats, directories)),
         layout_value(offset_of!(SdkStats, rastports)),
         layout_value(offset_of!(SdkStats, bitmaps)),
+        layout_value(offset_of!(SdkStats, windows)),
+        layout_value(offset_of!(SdkStats, pubscreens)),
         layout_value(size_of::<SdkEntry>()),
         layout_value(align_of::<SdkEntry>()),
         layout_value(offset_of!(SdkEntry, size)),
@@ -786,6 +926,56 @@ unsafe extern "C" {
         error: *mut SdkError,
     ) -> u64;
     pub fn sdk_gfx_bitmap_release(context: u64, bitmap: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_intui_title_new(
+        context: u64,
+        text: *const u8,
+        length: usize,
+        error: *mut SdkError,
+    ) -> u64;
+    pub fn sdk_intui_title_ptr(context: u64, window: u64) -> *const c_char;
+    pub fn sdk_intui_window_set_title(
+        context: u64,
+        window: u64,
+        text: *const u8,
+        length: usize,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_intui_window_attach(
+        context: u64,
+        window: u64,
+        base: *mut c_void,
+        native: *mut c_void,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_intui_window_cancel(context: u64, window: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_intui_window_close(context: u64, window: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_intui_window_info(
+        context: u64,
+        window: u64,
+        info: *mut SdkWindowInfo,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_intui_next_event(
+        context: u64,
+        window: u64,
+        event: *mut SdkIntuiEvent,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_intui_screen_register(
+        context: u64,
+        base: *mut c_void,
+        screen: *mut c_void,
+        error: *mut SdkError,
+    ) -> u64;
+    pub fn sdk_intui_screen_size(
+        context: u64,
+        screen: u64,
+        width: *mut i32,
+        height: *mut i32,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_intui_screen_release(context: u64, screen: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_intui_layout(values: *mut u64, capacity: usize) -> usize;
     pub fn sdk_dir_open(context: u64, path: *const u8, error: *mut SdkError) -> u64;
     pub fn sdk_dir_next(
         context: u64,
