@@ -235,7 +235,7 @@ compile_error!("aros-sys currently implements only the x86-64 AROS vector ABI");
 compile_error!("aros-sys requires AROS ABI-v1 or ABI-v11");
 
 mod generated;
-pub use generated::{dos, exec, intuition, timer, utility};
+pub use generated::{dos, exec, graphics, intuition, timer, utility};
 
 /// The C bridge's error record (`native` holds the immediately captured
 /// native error, such as DOS `IoErr`).
@@ -263,6 +263,8 @@ pub struct SdkStats {
     pub devices: usize,
     pub requests: usize,
     pub directories: usize,
+    pub rastports: usize,
+    pub bitmaps: usize,
 }
 
 /// One directory entry as filled in by the native bridge. `name_length` bytes
@@ -483,7 +485,7 @@ pub const ERROR_KIND_ZERO_PROGRESS: i32 = 7;
 /// Layout oracle values in the exact order of the M0 C layout table:
 /// Node, Library, Message, List, MsgPort, FileInfoBlock, scalar ABI types,
 /// then the selected spinlock_t storage. No native call or allocation occurs.
-pub const ABI_LAYOUT_VALUE_COUNT: usize = 96;
+pub const ABI_LAYOUT_VALUE_COUNT: usize = 98;
 
 const fn layout_value(value: usize) -> u64 {
     value as u64
@@ -575,6 +577,8 @@ pub const fn layout_values() -> [u64; ABI_LAYOUT_VALUE_COUNT] {
         layout_value(offset_of!(SdkStats, devices)),
         layout_value(offset_of!(SdkStats, requests)),
         layout_value(offset_of!(SdkStats, directories)),
+        layout_value(offset_of!(SdkStats, rastports)),
+        layout_value(offset_of!(SdkStats, bitmaps)),
         layout_value(size_of::<SdkEntry>()),
         layout_value(align_of::<SdkEntry>()),
         layout_value(offset_of!(SdkEntry, size)),
@@ -755,6 +759,33 @@ unsafe extern "C" {
         error: *mut SdkError,
     ) -> c_int;
     pub fn sdk_file_size(context: u64, file: u64, size: *mut u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_gfx_rastport_new(context: u64, error: *mut SdkError) -> u64;
+    pub fn sdk_gfx_rastport_ptr(context: u64, rastport: u64) -> *mut c_void;
+    pub fn sdk_gfx_rastport_set_bitmap(
+        context: u64,
+        rastport: u64,
+        bitmap: *mut c_void,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_gfx_area_prepare(
+        context: u64,
+        rastport: u64,
+        max_vectors: i32,
+        width: i32,
+        height: i32,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_gfx_area_ptr(context: u64, rastport: u64, which: i32) -> *mut c_void;
+    pub fn sdk_gfx_area_size(context: u64, rastport: u64, which: i32) -> usize;
+    pub fn sdk_gfx_area_attach(context: u64, rastport: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_gfx_rastport_drop(context: u64, rastport: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_gfx_bitmap_register(
+        context: u64,
+        base: *mut c_void,
+        bitmap: *mut c_void,
+        error: *mut SdkError,
+    ) -> u64;
+    pub fn sdk_gfx_bitmap_release(context: u64, bitmap: u64, error: *mut SdkError) -> c_int;
     pub fn sdk_dir_open(context: u64, path: *const u8, error: *mut SdkError) -> u64;
     pub fn sdk_dir_next(
         context: u64,

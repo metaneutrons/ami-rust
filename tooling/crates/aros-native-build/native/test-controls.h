@@ -6,6 +6,8 @@
 #else
 #define TEST_NOINLINE
 #endif
+/* Free memory as Exec reports it, to show that a program gave everything back. */
+uint64_t sdk_test_avail_mem(void) {return (uint64_t)AvailMem(MEMF_ANY);}
 static uint32_t fault_site,fault_nth,fault_seen,diagnostic_probe,secondary_on_diagnostic;
 static APTR diagnostic_pool;
 extern void ami_test_bind_diagnostics(volatile uint64_t *);

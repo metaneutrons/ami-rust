@@ -7,6 +7,8 @@
 #include <exec/io.h>
 #include <devices/timer.h>
 #include <dos/var.h>
+#include <graphics/gfx.h>
+#include <graphics/rastport.h>
 #include <dos/dosextens.h>
 #include <intuition/classes.h>
 #include <proto/exec.h>
@@ -34,6 +36,9 @@
 #define KIND_DEVICE 6UL
 #define KIND_REQUEST 7UL
 #define KIND_DIRECTORY 8UL
+#define KIND_RASTPORT 9UL
+#define KIND_BITMAP 10UL
+#define GFX_MAX_AREA_VECTORS 1024
 #define IO_KIND_STANDARD 0
 #define IO_KIND_TIMER 1
 #define IO_IDLE 0
@@ -55,13 +60,19 @@ struct Registry { void **items;size_t capacity,count; };
    Requests own their IORequest and data copy, so no Rust pointer is ever
    reachable by the device and the layout of timerequest stays in this file. */
 struct DeviceSlot { uint64_t token;struct IORequest *open;size_t size,requests;uint64_t port; };
+/* A RastPort the bridge allocates, so the Rust side never needs its layout,
+   together with the buffers area fills need (set up on first use). */
+struct RastSlot { uint64_t token;struct RastPort *rp;struct AreaInfo *area;void *vectors;struct TmpRas *tmpras;void *raster;size_t vectors_size,raster_size;int attached; };
+/* A graphics.library bitmap allocated through a raw vector call; the bridge
+   remembers the library base so it can free the bitmap if the program does not. */
+struct BitmapSlot { uint64_t token;void *base;void *bitmap; };
 struct DirSlot { uint64_t token;BPTR lock;void *fib;int wide; };
 struct IoSlot { uint64_t token,device;struct IORequest *request;size_t size;uint8_t *buffer;size_t capacity;int kind,state; };
 #define SLOT_BITS 20U
 #define SLOT_LIMIT ((UINT64_C(1)<<SLOT_BITS)-1)
 #define SEQUENCE_LIMIT ((UINT64_C(1)<<36)-1)
 #define SIGNAL_SLOTS 32
-static struct Registry files,libraries,ports,messages,devices,requests,directories;
+static struct Registry files,libraries,ports,messages,devices,requests,directories,rastports,bitmaps;
 static BPTR cwd_original,cwd_owned;
 static struct SignalSlot signals[SIGNAL_SLOTS];
 static APTR registry_pool;
@@ -802,6 +813,103 @@ int64_t sdk_test_readargs(const uint8_t *tmpl,const uint8_t *line,size_t line_le
  return at>=cap?-2:(int64_t)at;
 }
 #endif
+
+/* Graphics objects. Drawing is done by the generated library calls; the
+   bridge owns the RastPort memory and the fill buffers, and tracks bitmaps. */
+uint64_t sdk_gfx_rastport_new(uint64_t key,SdkError *e) {
+ if(own(key,e))return 0;
+ struct RastSlot *slot=(struct RastSlot *)record_new(&rastports,KIND_RASTPORT,sizeof(*slot),e);if(!slot)return 0;
+ slot->rp=(struct RastPort *)AllocMem(sizeof(struct RastPort),MEMF_PUBLIC|MEMF_CLEAR);
+ if(!slot->rp){record_release(&rastports,slot,sizeof(*slot));refuse(e,1,ERROR_NO_FREE_STORE);return 0;}
+ ++stats.rastports;return slot->token;
+}
+static struct RastSlot *rast_find(uint64_t token) {return (struct RastSlot *)record_find(&rastports,token,KIND_RASTPORT);}
+void *sdk_gfx_rastport_ptr(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return NULL;struct RastSlot *slot=rast_find(token);return slot?slot->rp:NULL;
+}
+int sdk_gfx_rastport_set_bitmap(uint64_t key,uint64_t token,void *bitmap,SdkError *e) {
+ if(own(key,e))return -1;struct RastSlot *slot=rast_find(token);if(!slot)return refuse(e,5,0);
+ slot->rp->BitMap=(struct BitMap *)bitmap;return 0;
+}
+/* Allocates the buffers an area fill needs; the Rust side then calls the
+   InitArea and InitTmpRas vectors on them and attaches them. */
+int sdk_gfx_area_prepare(uint64_t key,uint64_t token,int32_t max_vectors,int32_t width,int32_t height,SdkError *e) {
+ if(own(key,e))return -1;struct RastSlot *slot=rast_find(token);if(!slot || slot->area)return refuse(e,5,0);
+ if(max_vectors<3 || max_vectors>GFX_MAX_AREA_VECTORS || width<1 || height<1 || width>32767 || height>32767)return refuse(e,2,0);
+ size_t vectors=(size_t)max_vectors*5,raster=(size_t)RASSIZE(width,height);
+ struct AreaInfo *area=(struct AreaInfo *)AllocMem(sizeof(struct AreaInfo),MEMF_PUBLIC|MEMF_CLEAR);
+ void *buffer=AllocMem(vectors,MEMF_PUBLIC|MEMF_CLEAR);
+ struct TmpRas *tmpras=(struct TmpRas *)AllocMem(sizeof(struct TmpRas),MEMF_PUBLIC|MEMF_CLEAR);
+ void *plane=AllocMem(raster,MEMF_PUBLIC|MEMF_CLEAR);
+ if(!area || !buffer || !tmpras || !plane){
+  if(plane)FreeMem(plane,raster);if(tmpras)FreeMem(tmpras,sizeof(struct TmpRas));
+  if(buffer)FreeMem(buffer,vectors);if(area)FreeMem(area,sizeof(struct AreaInfo));
+  return refuse(e,1,ERROR_NO_FREE_STORE);
+ }
+ slot->area=area;slot->vectors=buffer;slot->vectors_size=vectors;slot->tmpras=tmpras;slot->raster=plane;slot->raster_size=raster;
+ return 0;
+}
+/* which: 0 AreaInfo, 1 vector buffer, 2 TmpRas, 3 raster */
+void *sdk_gfx_area_ptr(uint64_t key,uint64_t token,int32_t which) {
+ if(own(key,NULL))return NULL;struct RastSlot *slot=rast_find(token);if(!slot)return NULL;
+ switch(which){case 0:return slot->area;case 1:return slot->vectors;case 2:return slot->tmpras;case 3:return slot->raster;default:return NULL;}
+}
+size_t sdk_gfx_area_size(uint64_t key,uint64_t token,int32_t which) {
+ if(own(key,NULL))return 0;struct RastSlot *slot=rast_find(token);if(!slot)return 0;
+ return which==1?slot->vectors_size:which==3?slot->raster_size:0;
+}
+int sdk_gfx_area_attach(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct RastSlot *slot=rast_find(token);if(!slot || !slot->area)return refuse(e,5,0);
+ slot->rp->AreaInfo=slot->area;slot->rp->TmpRas=slot->tmpras;slot->attached=1;return 0;
+}
+static void rast_release(struct RastSlot *slot) {
+ struct RastPort *rp=slot->rp;struct AreaInfo *area=slot->area;void *vectors=slot->vectors;struct TmpRas *tmpras=slot->tmpras;void *raster=slot->raster;
+ size_t vectors_size=slot->vectors_size,raster_size=slot->raster_size;
+ record_release(&rastports,slot,sizeof(*slot));--stats.rastports;
+ if(raster)FreeMem(raster,raster_size);if(tmpras)FreeMem(tmpras,sizeof(struct TmpRas));
+ if(vectors)FreeMem(vectors,vectors_size);if(area)FreeMem(area,sizeof(struct AreaInfo));
+ if(rp)FreeMem(rp,sizeof(struct RastPort));
+}
+int sdk_gfx_rastport_drop(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct RastSlot *slot=rast_find(token);if(!slot)return refuse(e,5,0);
+ rast_release(slot);return 0;
+}
+/* FreeBitMap is vector 154 of graphics.library. The pinned ABI-v11 C SDK has no
+   graphics prototypes, so the call is made by hand: the base goes last on
+   ABI-v1 and in r12 on ABI-v11. */
+#define GFX_FREE_BITMAP_VECTOR 154
+static void gfx_free_bitmap(void *base,void *bitmap) {
+ void *function=((void **)base)[-GFX_FREE_BITMAP_VECTOR];
+#ifdef AMI_RUST_ABI11
+ __asm__ volatile(
+  "pushq %%r12\n\t"
+  "subq $8,%%rsp\n\t"
+  "movq %%rsi,%%r12\n\t"
+  "callq *%%rax\n\t"
+  "addq $8,%%rsp\n\t"
+  "popq %%r12\n\t"
+  : "+a"(function),"+S"(base),"+D"(bitmap)
+  :
+  : "rcx","rdx","r8","r9","r10","r11","memory","cc");
+#else
+ ((void (*)(void *,void *))function)(bitmap,base);
+#endif
+}
+uint64_t sdk_gfx_bitmap_register(uint64_t key,void *base,void *bitmap,SdkError *e) {
+ if(own(key,e))return 0;if(!base || !bitmap){refuse(e,2,0);return 0;}
+ struct BitmapSlot *slot=(struct BitmapSlot *)record_new(&bitmaps,KIND_BITMAP,sizeof(*slot),e);if(!slot)return 0;
+ slot->base=base;slot->bitmap=bitmap;++stats.bitmaps;return slot->token;
+}
+/* Forgets the bitmap; the caller frees it. */
+int sdk_gfx_bitmap_release(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct BitmapSlot *slot=(struct BitmapSlot *)record_find(&bitmaps,token,KIND_BITMAP);
+ if(!slot)return refuse(e,5,0);record_release(&bitmaps,slot,sizeof(*slot));--stats.bitmaps;return 0;
+}
+static void bitmap_free_registered(struct BitmapSlot *slot) {
+ void *base=slot->base,*bitmap=slot->bitmap;
+ record_release(&bitmaps,slot,sizeof(*slot));--stats.bitmaps;
+ gfx_free_bitmap(base,bitmap);
+}
 int sdk_callback(uint64_t key,uint64_t (*callback)(void *,uint64_t),void *data,uint64_t value,uint64_t *out,SdkError *e) {
  if(own(key,e))return -1;if(callback_active || !callback || !data || !out)return refuse(e,5,0);
  callback_active=1;*out=callback(data,value);callback_active=0;return 0;
@@ -817,6 +925,8 @@ static int test_report_ledgers(void) {
  sdk_diagnostic((const uint8_t *)"[m1-ledger] signals",19,stats.signals);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] messages",20,stats.messages);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] directories",23,stats.directories);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] rastports",21,stats.rastports);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] bitmaps",19,stats.bitmaps);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] devices",19,stats.devices);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] requests",20,stats.requests);
  sdk_diagnostic((const uint8_t *)"[m1-native] live",16,backend_live());
@@ -837,6 +947,8 @@ static int cleanup_remaining(void) {
  if(setjmp(cleanup_resume)){cleanup_error=20;ami_sdk_diagnostic_depth=0;}
  for(size_t i=0;i<directories.capacity;i++){struct DirSlot *slot=(struct DirSlot *)directories.items[i];if(slot)dir_release(slot);}
  cwd_restore();
+ for(size_t i=0;i<rastports.capacity;i++){struct RastSlot *slot=(struct RastSlot *)rastports.items[i];if(slot)rast_release(slot);}
+ for(size_t i=0;i<bitmaps.capacity;i++){struct BitmapSlot *slot=(struct BitmapSlot *)bitmaps.items[i];if(slot)bitmap_free_registered(slot);}
  for(size_t i=0;i<requests.capacity;i++){struct IoSlot *slot=(struct IoSlot *)requests.items[i];if(slot)io_release(slot);}
  for(size_t i=0;i<devices.capacity;i++){struct DeviceSlot *dev=(struct DeviceSlot *)devices.items[i];if(dev)device_release(dev);}
  for(size_t i=0;i<messages.capacity;i++){struct MessageSlot *m=(struct MessageSlot *)messages.items[i];if(m){detach_message(m);record_release(&messages,m,sizeof(*m));--stats.messages;}}
@@ -850,7 +962,7 @@ static int cleanup_remaining(void) {
  if(registry_pool){
   /* The tables are the pool's last users; the pool is retired with them. */
   APTR pool=registry_pool;registry_pool=NULL;
-  directories=(struct Registry){0};files=(struct Registry){0};libraries=(struct Registry){0};ports=(struct Registry){0};messages=(struct Registry){0};devices=(struct Registry){0};requests=(struct Registry){0};
+  rastports=(struct Registry){0};bitmaps=(struct Registry){0};directories=(struct Registry){0};files=(struct Registry){0};libraries=(struct Registry){0};ports=(struct Registry){0};messages=(struct Registry){0};devices=(struct Registry){0};requests=(struct Registry){0};
   DeletePool(pool);
  }
 #ifdef AMI_SDK_TESTING

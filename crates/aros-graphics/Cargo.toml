@@ -1,0 +1,14 @@
+[package]
+name = "aros-graphics"
+version.workspace = true
+edition.workspace = true
+publish = false
+description = "Task-affine bitmaps and drawing on graphics.library for the selected AROS ABI profile."
+repository = "https://github.com/metaneutrons/ami-rust"
+homepage = "https://github.com/metaneutrons/ami-rust"
+license.workspace = true
+readme = "README.md"
+
+[dependencies]
+aros = { version = "=0.1.0", path = "../aros", default-features = false }
+aros-sys = { version = "=0.1.0", path = "../aros-sys" }

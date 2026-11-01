@@ -545,6 +545,712 @@ pub mod exec {
     }
 }
 
+pub mod graphics {
+    use super::*;
+
+    /// Raw `BltBitMap` call through Graphics vector 5 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn blt_bit_map(
+        base: *mut Library,
+        src_bit_map: *mut c_void,
+        x_src: i16,
+        y_src: i16,
+        dest_bit_map: *mut c_void,
+        x_dest: i16,
+        y_dest: i16,
+        x_size: i16,
+        y_size: i16,
+        minterm: u32,
+        mask: u32,
+        temp_a: *mut u8,
+    ) -> i32 {
+        let function = unsafe { vector(base, 5) };
+        let result: i32;
+        let stack_arguments: [usize; 5] = [
+            x_size as usize,
+            y_size as usize,
+            minterm as usize,
+            mask as usize,
+            temp_a as usize,
+        ];
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "sub rsp, 48",
+                "mov r11, [{stack} + 0]",
+                "mov [rsp + 0], r11",
+                "mov r11, [{stack} + 8]",
+                "mov [rsp + 8], r11",
+                "mov r11, [{stack} + 16]",
+                "mov [rsp + 16], r11",
+                "mov r11, [{stack} + 24]",
+                "mov [rsp + 24], r11",
+                "mov r11, [{stack} + 32]",
+                "mov [rsp + 32], r11",
+                "call {function}",
+                "add rsp, 48",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") src_bit_map as usize,
+                in("rsi") x_src as usize,
+                in("rdx") y_src as usize,
+                in("rcx") dest_bit_map as usize,
+                in("r8") x_dest as usize,
+                in("r9") y_dest as usize,
+                stack = in(reg) stack_arguments.as_ptr(),
+                out("r11") _,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result
+    }
+
+    /// Raw `TextLength` call through Graphics vector 9 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn text_length(
+        base: *mut Library,
+        rastport: *mut c_void,
+        string: *const c_char,
+        count: u32,
+    ) -> i16 {
+        let function = unsafe { vector(base, 9) };
+        let result: i32;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") string as usize,
+                in("rdx") count as usize,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as i16
+    }
+
+    /// Raw `Text` call through Graphics vector 10 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn text(
+        base: *mut Library,
+        rastport: *mut c_void,
+        string: *const c_char,
+        count: u32,
+    ) {
+        let function = unsafe { vector(base, 10) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") string as usize,
+                in("rdx") count as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `DrawEllipse` call through Graphics vector 30 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn draw_ellipse(
+        base: *mut Library,
+        rastport: *mut c_void,
+        x_center: i16,
+        y_center: i16,
+        a: i16,
+        b: i16,
+    ) {
+        let function = unsafe { vector(base, 30) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") x_center as usize,
+                in("rdx") y_center as usize,
+                in("rcx") a as usize,
+                in("r8") b as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `InitRastPort` call through Graphics vector 33 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn init_rast_port(base: *mut Library, rastport: *mut c_void) {
+        let function = unsafe { vector(base, 33) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `WaitBlit` call through Graphics vector 38 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn wait_blit(base: *mut Library) {
+        let function = unsafe { vector(base, 38) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `SetRast` call through Graphics vector 39 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn set_rast(base: *mut Library, rastport: *mut c_void, pen: u32) {
+        let function = unsafe { vector(base, 39) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") pen as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `Move` call through Graphics vector 40 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn move_to(base: *mut Library, rastport: *mut c_void, x: i16, y: i16) {
+        let function = unsafe { vector(base, 40) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") x as usize,
+                in("rdx") y as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `Draw` call through Graphics vector 41 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn draw(base: *mut Library, rastport: *mut c_void, x: i16, y: i16) {
+        let function = unsafe { vector(base, 41) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") x as usize,
+                in("rdx") y as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `AreaMove` call through Graphics vector 42 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn area_move(base: *mut Library, rastport: *mut c_void, x: i16, y: i16) -> u32 {
+        let function = unsafe { vector(base, 42) };
+        let result: u32;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") x as usize,
+                in("rdx") y as usize,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result
+    }
+
+    /// Raw `AreaDraw` call through Graphics vector 43 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn area_draw(base: *mut Library, rastport: *mut c_void, x: i16, y: i16) -> u32 {
+        let function = unsafe { vector(base, 43) };
+        let result: u32;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") x as usize,
+                in("rdx") y as usize,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result
+    }
+
+    /// Raw `AreaEnd` call through Graphics vector 44 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn area_end(base: *mut Library, rastport: *mut c_void) -> i32 {
+        let function = unsafe { vector(base, 44) };
+        let result: i32;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result
+    }
+
+    /// Raw `InitArea` call through Graphics vector 47 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn init_area(
+        base: *mut Library,
+        areainfo: *mut c_void,
+        buffer: *mut c_void,
+        maxvectors: i16,
+    ) {
+        let function = unsafe { vector(base, 47) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") areainfo as usize,
+                in("rsi") buffer as usize,
+                in("rdx") maxvectors as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `RectFill` call through Graphics vector 51 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn rect_fill(
+        base: *mut Library,
+        rastport: *mut c_void,
+        x_min: i16,
+        y_min: i16,
+        x_max: i16,
+        y_max: i16,
+    ) {
+        let function = unsafe { vector(base, 51) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") x_min as usize,
+                in("rdx") y_min as usize,
+                in("rcx") x_max as usize,
+                in("r8") y_max as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `ReadPixel` call through Graphics vector 53 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn read_pixel(base: *mut Library, rastport: *mut c_void, x: i16, y: i16) -> i32 {
+        let function = unsafe { vector(base, 53) };
+        let result: i32;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") x as usize,
+                in("rdx") y as usize,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result
+    }
+
+    /// Raw `WritePixel` call through Graphics vector 54 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn write_pixel(base: *mut Library, rastport: *mut c_void, x: i16, y: i16) -> i32 {
+        let function = unsafe { vector(base, 54) };
+        let result: i32;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") x as usize,
+                in("rdx") y as usize,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result
+    }
+
+    /// Raw `PolyDraw` call through Graphics vector 56 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn poly_draw(
+        base: *mut Library,
+        rastport: *mut c_void,
+        count: i32,
+        poly_table: *mut i16,
+    ) {
+        let function = unsafe { vector(base, 56) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") count as usize,
+                in("rdx") poly_table as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `SetAPen` call through Graphics vector 57 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn set_apen(base: *mut Library, rastport: *mut c_void, pen: u32) {
+        let function = unsafe { vector(base, 57) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") pen as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `SetBPen` call through Graphics vector 58 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn set_bpen(base: *mut Library, rastport: *mut c_void, pen: u32) {
+        let function = unsafe { vector(base, 58) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") pen as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `SetDrMd` call through Graphics vector 59 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn set_dr_md(base: *mut Library, rastport: *mut c_void, draw_mode: u32) {
+        let function = unsafe { vector(base, 59) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") draw_mode as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `ScrollRaster` call through Graphics vector 66 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn scroll_raster(
+        base: *mut Library,
+        rastport: *mut c_void,
+        dx: i16,
+        dy: i16,
+        x_min: i16,
+        y_min: i16,
+        x_max: i16,
+        y_max: i16,
+    ) {
+        let function = unsafe { vector(base, 66) };
+        let stack_arguments: [usize; 1] = [y_max as usize];
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "sub rsp, 16",
+                "mov r11, [{stack} + 0]",
+                "mov [rsp + 0], r11",
+                "call {function}",
+                "add rsp, 16",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") dx as usize,
+                in("rdx") dy as usize,
+                in("rcx") x_min as usize,
+                in("r8") y_min as usize,
+                in("r9") x_max as usize,
+                stack = in(reg) stack_arguments.as_ptr(),
+                out("r11") _,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `InitTmpRas` call through Graphics vector 78 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn init_tmp_ras(
+        base: *mut Library,
+        tmpras: *mut c_void,
+        buffer: *mut c_void,
+        size: u32,
+    ) -> *mut c_void {
+        let function = unsafe { vector(base, 78) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") tmpras as usize,
+                in("rsi") buffer as usize,
+                in("rdx") size as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *mut c_void
+    }
+
+    /// Raw `BltBitMapRastPort` call through Graphics vector 101 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn blt_bit_map_rast_port(
+        base: *mut Library,
+        src_bit_map: *mut c_void,
+        x_src: i16,
+        y_src: i16,
+        dest_rp: *mut c_void,
+        x_dest: i16,
+        y_dest: i16,
+        x_size: i16,
+        y_size: i16,
+        minterm: u32,
+    ) {
+        let function = unsafe { vector(base, 101) };
+        let stack_arguments: [usize; 3] = [x_size as usize, y_size as usize, minterm as usize];
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "sub rsp, 32",
+                "mov r11, [{stack} + 0]",
+                "mov [rsp + 0], r11",
+                "mov r11, [{stack} + 8]",
+                "mov [rsp + 8], r11",
+                "mov r11, [{stack} + 16]",
+                "mov [rsp + 16], r11",
+                "call {function}",
+                "add rsp, 32",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") src_bit_map as usize,
+                in("rsi") x_src as usize,
+                in("rdx") y_src as usize,
+                in("rcx") dest_rp as usize,
+                in("r8") x_dest as usize,
+                in("r9") y_dest as usize,
+                stack = in(reg) stack_arguments.as_ptr(),
+                out("r11") _,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `EraseRect` call through Graphics vector 135 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn erase_rect(
+        base: *mut Library,
+        rastport: *mut c_void,
+        x_min: i16,
+        y_min: i16,
+        x_max: i16,
+        y_max: i16,
+    ) {
+        let function = unsafe { vector(base, 135) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") rastport as usize,
+                in("rsi") x_min as usize,
+                in("rdx") y_min as usize,
+                in("rcx") x_max as usize,
+                in("r8") y_max as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `AllocBitMap` call through Graphics vector 153 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn alloc_bit_map(
+        base: *mut Library,
+        sizex: u16,
+        sizey: u16,
+        depth: u32,
+        flags: u32,
+        friend_bitmap: *mut c_void,
+    ) -> *mut c_void {
+        let function = unsafe { vector(base, 153) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") sizex as usize,
+                in("rsi") sizey as usize,
+                in("rdx") depth as usize,
+                in("rcx") flags as usize,
+                in("r8") friend_bitmap as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *mut c_void
+    }
+
+    /// Raw `FreeBitMap` call through Graphics vector 154 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn free_bit_map(base: *mut Library, bm: *mut c_void) {
+        let function = unsafe { vector(base, 154) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") bm as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `GetBitMapAttr` call through Graphics vector 160 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_bit_map_attr(
+        base: *mut Library,
+        bitmap: *mut c_void,
+        attribute: u32,
+    ) -> usize {
+        let function = unsafe { vector(base, 160) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") bitmap as usize,
+                in("rsi") attribute as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as usize
+    }
+}
+
 pub mod intuition {
     use super::*;
 

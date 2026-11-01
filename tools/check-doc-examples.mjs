@@ -40,6 +40,7 @@ const crates = [
   { directory: 'crates/aros/src', error: 'aros::Error' },
   { directory: 'crates/aros-mui/src', error: 'aros_mui::Error' },
   { directory: 'crates/aros-timer/src', error: 'aros::Error' },
+  { directory: 'crates/aros-graphics/src', error: 'aros_graphics::Error' },
 ];
 
 const sourceFiles = (directory) => readdirSync(directory, { withFileTypes: true })
@@ -76,7 +77,7 @@ for (const { directory, error } of crates) {
   }
 }
 
-const guides = ['docs/consumer-guide.md', 'docs/api.md', 'docs/api/aros.md', 'docs/api/aros-mui.md', 'docs/api/aros-timer.md'];
+const guides = ['docs/consumer-guide.md', 'docs/api.md', 'docs/api/aros.md', 'docs/api/aros-mui.md', 'docs/api/aros-timer.md', 'docs/api/aros-graphics.md'];
 const withAttributes = (code) => (code.includes('#![no_main]') ? code : `#![no_main]\n#![no_std]\n${code}`);
 const programs = sourcePrograms.map(({ label, code }) => ({ label, code: withAttributes(code) }));
 let buildScript = null;
@@ -108,6 +109,7 @@ publish = false
 aros = { path = "${repository}/crates/aros", features = ["alloc"] }
 aros-mui = { path = "${repository}/crates/aros-mui" }
 aros-timer = { path = "${repository}/crates/aros-timer" }
+aros-graphics = { path = "${repository}/crates/aros-graphics" }
 
 [build-dependencies]
 aros-native-build = { path = "${repository}/tooling/crates/aros-native-build" }

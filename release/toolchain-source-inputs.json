@@ -123,8 +123,8 @@
     {
       "role": "root-Cargo-lock",
       "path": "Cargo.lock",
-      "bytes": 11085,
-      "sha256": "42057754260d0c56d7b08d240a5defba5b16915e29c909e364664232b0d59294"
+      "bytes": 11198,
+      "sha256": "5d0b0822f3909350f65de6437b1d9bd229a01ab6bb152a85bc15ed63c3f8747d"
     },
     {
       "role": "tooling-Cargo-lock",
