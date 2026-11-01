@@ -6,7 +6,7 @@
   "sha256": "dea3c4d945f31406cdfe824581592a9253f1afcffe8423e8a1bc9f528b2267b0",
   "component_root": "vendor",
   "source_locks": {
-    "Cargo.lock": "75e821337c5321a4ac780f344a230ce6548ca746a81f5a78f56f9103f88ad800",
+    "Cargo.lock": "968f2cd7190872710f6a6ba804736e569f405c4c83970af1c45b6084f2f20459",
     "tooling/Cargo.lock": "d129ef969b4a8b926e9c7e8403472dfa56337da2ff841b7098b2f47793c79efe"
   },
   "packages": [
