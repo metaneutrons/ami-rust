@@ -17,6 +17,7 @@ extern crate alloc;
 mod m2;
 mod m3;
 mod m4;
+mod m5;
 #[cfg(not(all(target_os = "aros", target_abi = "abi11")))]
 #[path = "probe/x86_64_abi1.rs"]
 mod probe;
@@ -101,6 +102,9 @@ fn same_resources(a: SdkStats, b: SdkStats) -> bool {
         && a.messages == b.messages
         && a.devices == b.devices
         && a.requests == b.requests
+        && a.directories == b.directories
+        && a.rastports == b.rastports
+        && a.bitmaps == b.bitmaps
 }
 
 fn one_refusal_since(context: &Context, before: SdkStats) -> bool {
@@ -2577,6 +2581,34 @@ fn application(context: &Context) -> AppStatus {
                 success(context, b"qualification-probes", 6)
             } else {
                 fatal(context, 38)
+            }
+        }
+        Some("graphics") => {
+            if m5::cases(context) {
+                success(context, b"qualification-graphics", 7)
+            } else {
+                fatal(context, 39)
+            }
+        }
+        Some("graphics-forgotten") => {
+            if m5::forgotten(context) {
+                success(context, b"qualification-graphics-forgotten", 3)
+            } else {
+                fatal(context, 40)
+            }
+        }
+        Some("avail") => {
+            if m5::available(context) {
+                success(context, b"qualification-avail", 1)
+            } else {
+                fatal(context, 41)
+            }
+        }
+        Some("graphics-dump") => {
+            if m5::dump(context) {
+                success(context, b"qualification-graphics-dump", 1)
+            } else {
+                fatal(context, 42)
             }
         }
         Some("registry") => {

@@ -1,7 +1,7 @@
 {
   "schema": "ami-rust-aros-api-provenance-v1",
   "generator": "0.1.0",
-  "manifest_sha256": "2612899f27a443b3e823c92083140f1b23ac216b17328d96febf5e241198bf1f",
+  "manifest_sha256": "453325a626654b4ea7938450762baf12f570ef321f0e23361156c6b3a1b99ab2",
   "inputs": [
     {
       "abi": "abi1",
@@ -22,6 +22,16 @@
       "abi": "abi1",
       "path": "defines/exec.h",
       "sha256": "a358ab8677dcfefb6325790b0e91ab52e8a9f3ac692508c518f97718dcd1c8ab"
+    },
+    {
+      "abi": "abi1",
+      "path": "clib/graphics_protos.h",
+      "sha256": "d6cf761236d26200f2fc9004813d418ffbecd47e59d4dd50ee81f7155d2596c7"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/graphics.h",
+      "sha256": "24ebb7989c43acaa6f0a58dbcda846344dbaf2ad4dfae5c07d776bfa41c95f67"
     },
     {
       "abi": "abi1",
@@ -82,6 +92,16 @@
       "abi": "abi11",
       "path": "defines/exec.h",
       "sha256": "f9a79343839877d4d1a6fefbb7f259f1fd60a38ebf39a6408cf9e2f27ed5d898"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/graphics_protos.h",
+      "sha256": "c105353422349c2d3a4c92086cea2a11aa34a8d4ff0cb469c109c110031d5314"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/graphics.h",
+      "sha256": "8d992d693a8e8fce2501e2c7f050e0700ee890cc3a2fb4ef8a1d926c162555fa"
     },
     {
       "abi": "abi11",

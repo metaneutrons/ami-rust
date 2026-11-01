@@ -89,8 +89,9 @@ publication. The public base set is:
 - `aros-mui` for task-affine MUI ownership;
 - `aros-mui-sys` for raw MUI vector calls.
 
-`aros-timer` (time and timers on `timer.device`) is in the repository after
-release 0.1.0 and is not part of that release.
+`aros-timer` (time and timers on `timer.device`) and `aros-graphics` (bitmaps
+and drawing on `graphics.library`) are in the repository after release 0.1.0
+and are not part of that release.
 
 The focused `aros-elf` and `aros-native-build` crates are maintainer and build
 support, not application API crates.
