@@ -1,8 +1,18 @@
 {
   "schema": "ami-rust-aros-api-provenance-v1",
   "generator": "0.1.0",
-  "manifest_sha256": "7c20829851e137b33d7b56a4f705cf46fb2a2438ef6cf983e5791b52d12b1bce",
+  "manifest_sha256": "be357e8f93641160622b2133329eec66594eb3dde20abd81d76f39e76a2f9c40",
   "inputs": [
+    {
+      "abi": "abi1",
+      "path": "clib/asl_protos.h",
+      "sha256": "54f90b488c1c69337ede45f03922e6c9e6beb83fe76ab80e4a6fbc5374fa9eee"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/asl.h",
+      "sha256": "009c0eab995ba308c32b0d14c2cbb6c253b78920bbdbf233131d38e1213993e7"
+    },
     {
       "abi": "abi1",
       "path": "clib/dos_protos.h",
@@ -72,6 +82,16 @@
       "abi": "abi1",
       "path": "defines/utility.h",
       "sha256": "bab081e9fa30e55254d719cdc812ed00e0575778bc3feadaf76714416bcecab4"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/asl_protos.h",
+      "sha256": "9d44a80570bb8508616afe6c3a5bc73dd7de094a09dcccb122a1a9c0278961c2"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/asl.h",
+      "sha256": "1e0971821b3ad3e913e79862b7a165e3aa072e7281c6df3577bd067903ee02e1"
     },
     {
       "abi": "abi11",

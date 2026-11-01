@@ -33,7 +33,7 @@ static const size_t c_layout[]={
  LAYOUT(spinlock_t,OFF(spinlock_t,s_Owner),OFF(spinlock_t,s_Isolation)),
 #endif
  LAYOUT(SdkError,OFF(SdkError,kind),OFF(SdkError,native)),
- LAYOUT(SdkStats,OFF(SdkStats,blocks),OFF(SdkStats,backing_charge),OFF(SdkStats,peak_charge),OFF(SdkStats,files),OFF(SdkStats,libraries),OFF(SdkStats,ports),OFF(SdkStats,signals),OFF(SdkStats,messages),OFF(SdkStats,refusals),OFF(SdkStats,devices),OFF(SdkStats,requests),OFF(SdkStats,directories),OFF(SdkStats,rastports),OFF(SdkStats,bitmaps),OFF(SdkStats,windows),OFF(SdkStats,pubscreens)),
+ LAYOUT(SdkStats,OFF(SdkStats,blocks),OFF(SdkStats,backing_charge),OFF(SdkStats,peak_charge),OFF(SdkStats,files),OFF(SdkStats,libraries),OFF(SdkStats,ports),OFF(SdkStats,signals),OFF(SdkStats,messages),OFF(SdkStats,refusals),OFF(SdkStats,devices),OFF(SdkStats,requests),OFF(SdkStats,directories),OFF(SdkStats,rastports),OFF(SdkStats,bitmaps),OFF(SdkStats,windows),OFF(SdkStats,pubscreens),OFF(SdkStats,aslrequests)),
  LAYOUT(SdkEntry,OFF(SdkEntry,size),OFF(SdkEntry,protection),OFF(SdkEntry,name_length),OFF(SdkEntry,entry_type),OFF(SdkEntry,directory_type),OFF(SdkEntry,days),OFF(SdkEntry,minutes),OFF(SdkEntry,ticks),OFF(SdkEntry,size_exact),OFF(SdkEntry,name))
 };
 /* Timer types of the selected SDK: timerequest carries struct timeval on
@@ -66,6 +66,46 @@ size_t sdk_intui_layout(uint64_t *out,size_t cap) {
  const size_t count=sizeof(c_intui_layout)/sizeof(*c_intui_layout);
  if(cap<count || !out)return count;
  for(size_t i=0;i<count;i++)out[i]=c_intui_layout[i];return count;
+}
+/* The asl.library file requester: the bridge's view of the FileRequester and
+   the tags the Rust requester builder uses. The pinned ABI-v11 C SDK has no
+   asl header; its values are those of the ABI-v11 SDK's libraries/asl.h, which
+   are identical to the ABI-v1 header. */
+#ifdef AMI_RUST_ABI11
+#define ASL_TB (TAG_USER + 0x80000)
+#define ASL_FileRequest 0
+#define ASLFR_TitleText (ASL_TB + 1)
+#define ASLFR_Window (ASL_TB + 2)
+#define ASLFR_InitialLeftEdge (ASL_TB + 3)
+#define ASLFR_InitialTopEdge (ASL_TB + 4)
+#define ASLFR_InitialWidth (ASL_TB + 5)
+#define ASLFR_InitialHeight (ASL_TB + 6)
+#define ASLFR_InitialFile (ASL_TB + 8)
+#define ASLFR_InitialDrawer (ASL_TB + 9)
+#define ASLFR_InitialPattern (ASL_TB + 10)
+#define ASLFR_PositiveText (ASL_TB + 18)
+#define ASLFR_NegativeText (ASL_TB + 19)
+#define ASLFR_SleepWindow (ASL_TB + 43)
+#define ASLFR_DoSaveMode (ASL_TB + 44)
+#define ASLFR_DoMultiSelect (ASL_TB + 45)
+#define ASLFR_DoPatterns (ASL_TB + 46)
+#define ASLFR_DrawersOnly (ASL_TB + 47)
+#define ASLFR_RejectIcons (ASL_TB + 60)
+#define ASLFR_PopToFront (ASL_TB + 131)
+#define ASLFR_Activate (ASL_TB + 132)
+#else
+#include <libraries/asl.h>
+#endif
+static const size_t c_asl_layout[]={
+ ASL_FileRequest,ASLFR_TitleText,ASLFR_Window,ASLFR_InitialLeftEdge,ASLFR_InitialTopEdge,
+ ASLFR_InitialWidth,ASLFR_InitialHeight,ASLFR_InitialFile,ASLFR_InitialDrawer,ASLFR_InitialPattern,
+ ASLFR_PositiveText,ASLFR_NegativeText,ASLFR_SleepWindow,ASLFR_DoSaveMode,ASLFR_DoMultiSelect,
+ ASLFR_DoPatterns,ASLFR_DrawersOnly,ASLFR_RejectIcons,ASLFR_PopToFront,ASLFR_Activate
+};
+size_t sdk_asl_layout(uint64_t *out,size_t cap) {
+ const size_t count=sizeof(c_asl_layout)/sizeof(*c_asl_layout);
+ if(cap<count || !out)return count;
+ for(size_t i=0;i<count;i++)out[i]=c_asl_layout[i];return count;
 }
 size_t sdk_layout(uint64_t *out,size_t cap) {
  const size_t count=sizeof(c_layout)/sizeof(*c_layout);

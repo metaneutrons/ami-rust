@@ -44,7 +44,7 @@ const VENDOR_SHA256: &str = "dea3c4d945f31406cdfe824581592a9253f1afcffe8423e8a1b
 const VENDOR_SOURCE_LOCKS: [(&str, &str); 2] = [
     (
         "Cargo.lock",
-        "35b83151aa234cf588829669bf4a2b57835585486d0e76fd8ee859d8d89798ce",
+        "75e821337c5321a4ac780f344a230ce6548ca746a81f5a78f56f9103f88ad800",
     ),
     (
         "tooling/Cargo.lock",

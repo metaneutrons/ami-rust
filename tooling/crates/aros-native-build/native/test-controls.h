@@ -38,6 +38,86 @@ void sdk_test_input_close(void) {
  DeleteIORequest((struct IORequest *)test_input_io);test_input_io=NULL;
  DeleteMsgPort(test_input_port);test_input_port=NULL;
 }
+/* A scripted second process for tests of blocking requesters: it waits until a
+   window with the given title appears on the parent window's screen, then
+   injects the events of the script through its own input.device handle, so the
+   test task can sit in the requester. */
+#include <dos/dostags.h>
+struct ScriptEvent {uint32_t delay_ms,class_,code,qualifier;int32_t x,y;};
+static struct ScriptEvent test_script[64];
+static int test_script_length;
+static volatile int test_script_state;
+static char test_script_title[128];
+static struct Screen *test_script_screen;
+static struct Window *test_script_window;
+void sdk_test_script_reset(void) {test_script_length=0;test_script_state=0;}
+int sdk_test_script_add(uint32_t delay_ms,uint32_t class_,uint32_t code,uint32_t qualifier,int32_t x,int32_t y) {
+ if(test_script_length>=64)return -1;
+ test_script[test_script_length++]=(struct ScriptEvent){delay_ms,class_,code,qualifier,x,y};return 0;
+}
+static int script_window_visible(void) {
+ for(struct Window *w=test_script_screen->FirstWindow;w;w=w->NextWindow)
+  if(w->Title && !strcmp((const char *)w->Title,test_script_title)){test_script_window=w;return 1;}
+ return 0;
+}
+/* A class with bit 8 set is a pointer event whose position is relative to the
+   found window: non-negative values from its top left corner, negative values
+   from its right and bottom edges. */
+static void script_send(struct IOStdReq *io,const struct ScriptEvent *e) {
+ struct InputEvent event;memset(&event,0,sizeof(event));
+ int32_t x=e->x,y=e->y;
+ if((e->class_&0x100) && test_script_window){
+  struct Window *w=test_script_window;
+  x=(x<0?w->LeftEdge+w->Width+x:w->LeftEdge+x);y=(y<0?w->TopEdge+w->Height+y:w->TopEdge+y);
+ }
+ event.ie_Class=(UBYTE)(e->class_&0xff);event.ie_Code=(UWORD)e->code;event.ie_Qualifier=(UWORD)e->qualifier;
+ event.ie_X=(WORD)x;event.ie_Y=(WORD)y;
+ io->io_Command=IND_ADDEVENT;io->io_Data=&event;io->io_Length=sizeof(event);
+ DoIO((struct IORequest *)io);
+}
+static void script_entry(void) {
+ int waited=0;
+ while(!script_window_visible() && waited<500){Delay(1);++waited;}
+ int found=script_window_visible();
+ if(found)Delay(15);
+ struct MsgPort *port=CreateMsgPort();
+ struct IOStdReq *io=port?(struct IOStdReq *)CreateIORequest(port,sizeof(struct IOStdReq)):NULL;
+ int opened=io && !OpenDevice((CONST_STRPTR)"input.device",0,(struct IORequest *)io,0);
+ if(opened){
+  if(found){
+   for(int i=0;i<test_script_length;i++){
+    if(test_script[i].delay_ms)Delay(test_script[i].delay_ms/20?test_script[i].delay_ms/20:1);
+    script_send(io,&test_script[i]);
+   }
+  }else{
+   /* the window never appeared: cancel whatever requester is open */
+   struct ScriptEvent escape_down={0,1,0x45,0,0,0},escape_up={0,1,0xc5,0,0,0};
+   script_send(io,&escape_down);script_send(io,&escape_up);
+  }
+  CloseDevice((struct IORequest *)io);
+ }
+ if(io)DeleteIORequest((struct IORequest *)io);
+ if(port)DeleteMsgPort(port);
+ test_script_state=found?2:3;
+}
+int sdk_test_script_start(const uint8_t *title,size_t length,void *parent_window) {
+ if(length>=sizeof(test_script_title) || !parent_window || test_script_state==1)return -1;
+ memcpy(test_script_title,title,length);test_script_title[length]=0;
+ test_script_screen=((struct Window *)parent_window)->WScreen;
+ test_script_state=1;
+ struct TagItem tags[]={{NP_Entry,(IPTR)script_entry},{NP_Name,(IPTR)"ami-rust test script"},{NP_StackSize,65536},{TAG_DONE,0}};
+ if(!CreateNewProc(tags)){test_script_state=0;return -2;}
+ return 0;
+}
+/* Waits for the script to end: 2 it ran, 3 its window never appeared,
+   1 still running at the timeout. */
+int sdk_test_script_join(uint32_t timeout_ms) {
+ uint32_t waited=0;
+ while(test_script_state==1 && waited<timeout_ms){Delay(2);waited+=40;}
+ int state=test_script_state;
+ if(state!=1)Delay(15);
+ return state;
+}
 /* Free memory as Exec reports it, to show that a program gave everything back. */
 uint64_t sdk_test_avail_mem(void) {return (uint64_t)AvailMem(MEMF_ANY);}
 static uint32_t fault_site,fault_nth,fault_seen,diagnostic_probe,secondary_on_diagnostic;
