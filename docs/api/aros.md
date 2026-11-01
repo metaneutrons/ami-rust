@@ -185,8 +185,9 @@ on the qualified images, in QEMU, with a FAT32 volume holding a 3 GiB file:
 Writing above 2 GiB needs a volume whose handler is 64-bit, which among the
 pinned handlers is PFS3. A PFS3 partition crashes the pinned ABI-v1 image while
 it boots (every RDB image with a PFS3 partition, formatted or not, did; a FAT
-partition and an FFS partition did not), so writes above 2 GiB are not
-verified.
+partition and an FFS partition did not; the cause is a handler that calls libc
+before its library base is set, [AROS-NX issue 121](https://github.com/metaneutrons/AROS-NX/issues/121)),
+so writes above 2 GiB are not verified.
 
 ## Worked examples
 
