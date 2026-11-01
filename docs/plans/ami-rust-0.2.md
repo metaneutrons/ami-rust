@@ -41,7 +41,7 @@ Planned crates, in addition to the existing four:
 | `aros-locale` | `locale.library` | M8 |
 | `aros-icon`, `aros-workbench` | `icon.library`, `workbench.library` | M9 |
 
-Core additions (M1, M2) land in `aros`. Each new crate has a matching `-sys`
+Core additions (M1, M2, M11) land in `aros`. Each new crate has a matching `-sys`
 crate or, where the raw surface is small, raw declarations in `aros-sys`; the
 choice is recorded in the crate's milestone.
 
@@ -259,10 +259,43 @@ Dependencies: M6
 - M9-A4: `AddAppIconA` and `SendAppWindowMessage` are exposed on both ABIs
   once M4 has landed.
 
+### M11: 64-bit file sizes and positions
+
+Execution: https://github.com/metaneutrons/ami-rust/issues/82
+Dependencies: M2
+
+Background: the qualified `FileInfoBlock` is the 32-bit one, so `Entry::size`
+of M2 is wrong above 2 GiB. The ABI-v1 image ships `dos64.library` (`Examine64`,
+`ExNext64`, `ExamineFH64`, `Seek64`, `GetFileSize64`, `Read64`, `Write64`); the
+pinned Deadwood tree and image have no `dos64`. `Examine64` falls back to the
+32-bit call for a handler without 64-bit support, so a volume decides what is
+exact.
+
+- M11-A1: The bridge opens `dos64.library` as an optional library on ABI-v1 and
+  works without it; ABI-v11 and a missing library use the 32-bit calls. The
+  difference is declared on the ABI differences page, not hidden.
+- M11-A2: `Entry::size` is exact up to `u64` where the volume supports 64-bit
+  sizes, and `Entry::size_is_exact` says whether it is: it is false when only
+  the 32-bit value was available and that value is at the 2 GiB limit, which is
+  what a truncated size looks like. What the pinned handlers report for a file
+  above 2 GiB through the 32-bit path is recorded from a native run, not assumed.
+- M11-A3: `File` gains `seek`, `position` and `len` with 64-bit values on
+  ABI-v1 through `dos64.library`; on ABI-v11 they use the 32-bit calls and a
+  position or size at or above 2 GiB is an explicit `ErrorKind::Limit` error
+  instead of a wrapped value.
+- M11-A4: A native test on ABI-v1 writes and reads back at an offset above 2
+  GiB and reads back the size of the file on a volume that supports 64-bit sizes
+  (a disk image provisioned in the guest if the RAM disk cannot); the same test
+  on ABI-v11 records the limit error. If no such volume can be provisioned in
+  the qualification profile, the claim is limited to the API and the fallback
+  behaviour and the milestone says so.
+- M11-A5: Every lock, file info block and library reference the new paths take
+  is released, also for forgotten handles, with zero registry residue.
+
 ### M10: Qualify and prepare the ami-rust 0.2 release candidate
 
 Execution: https://github.com/metaneutrons/ami-rust/issues/62
-Dependencies: M1 through M9
+Dependencies: M1 through M9 and M11
 
 - M10-A1: Build the exact candidate on macOS ARM64, Linux x86-64 and Linux
   ARM64 for both canonical targets.
@@ -304,3 +337,7 @@ per qualification run is recorded during M1 rather than estimated here.
 - 2026-10-31: The maintainer accepted the plan, including the milestone order,
   `aros-async` as a stretch goal with a cut line, and the scope of 0.2. Work
   starts with M1, with the STD-M1 spike of the `std` plan in parallel.
+- 2026-11-01: The maintainer asked for 64-bit file sizes and positions in 0.2.
+  M11 is added before M10 (its identifier is new so that the others stay stable)
+  and M10 depends on it. It rests on `dos64.library`, which exists on ABI-v1 only;
+  ABI-v11 keeps the 32-bit limit with an explicit error.
