@@ -774,6 +774,16 @@ impl<'i, 'ctx> Window<'i, 'ctx> {
         self.intuition.base()
     }
 
+    /// Returns the native `struct Window *`.
+    ///
+    /// The pointer is valid only while this window is open and is meant for
+    /// other safe wrappers that take a parent window, such as the file
+    /// requester of `aros-asl`; using it for anything else is the caller's
+    /// responsibility.
+    pub const fn as_raw(&self) -> *mut c_void {
+        self.window
+    }
+
     /// Returns the signal set of the window's IDCMP port.
     ///
     /// Pass it, alone or combined with the masks of timers and other sources,

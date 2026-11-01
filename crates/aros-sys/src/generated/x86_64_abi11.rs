@@ -8,6 +8,80 @@ unsafe fn vector(base: *mut Library, offset: usize) -> *const c_void {
     unsafe { base.cast::<*const c_void>().sub(offset).read() }
 }
 
+pub mod asl {
+    use super::*;
+
+    /// Raw `AllocAslRequest` call through Asl vector 8 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn alloc_asl_request(
+        base: *mut Library,
+        req_type: u32,
+        tag_list: *mut TagItem,
+    ) -> *mut c_void {
+        let function = unsafe { vector(base, 8) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") req_type as usize,
+                in("rsi") tag_list as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *mut c_void
+    }
+
+    /// Raw `FreeAslRequest` call through Asl vector 9 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn free_asl_request(base: *mut Library, requester: *mut c_void) {
+        let function = unsafe { vector(base, 9) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") requester as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `AslRequest` call through Asl vector 10 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn asl_request(
+        base: *mut Library,
+        requester: *mut c_void,
+        tag_list: *mut TagItem,
+    ) -> BOOL {
+        let function = unsafe { vector(base, 10) };
+        let result: i32;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") requester as usize,
+                in("rsi") tag_list as usize,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as BOOL
+    }
+}
+
 pub mod dos {
     use super::*;
 

@@ -19,6 +19,7 @@ mod m3;
 mod m4;
 mod m5;
 mod m6;
+mod m7;
 #[cfg(not(all(target_os = "aros", target_abi = "abi11")))]
 #[path = "probe/x86_64_abi1.rs"]
 mod probe;
@@ -108,6 +109,7 @@ fn same_resources(a: SdkStats, b: SdkStats) -> bool {
         && a.bitmaps == b.bitmaps
         && a.windows == b.windows
         && a.pubscreens == b.pubscreens
+        && a.aslrequests == b.aslrequests
 }
 
 fn one_refusal_since(context: &Context, before: SdkStats) -> bool {
@@ -2633,6 +2635,20 @@ fn application(context: &Context) -> AppStatus {
                 success(context, b"qualification-window-hold", 1)
             } else {
                 fatal(context, 45)
+            }
+        }
+        Some("asl") => {
+            if m7::cases(context) {
+                success(context, b"qualification-asl", 9)
+            } else {
+                fatal(context, 46)
+            }
+        }
+        Some("asl-forgotten") => {
+            if m7::forgotten(context) {
+                success(context, b"qualification-asl-forgotten", 3)
+            } else {
+                fatal(context, 47)
             }
         }
         Some("registry") => {

@@ -8,6 +8,54 @@ unsafe fn vector(base: *mut Library, offset: usize) -> *const c_void {
     unsafe { base.cast::<*const c_void>().sub(offset).read() }
 }
 
+pub mod asl {
+    use super::*;
+
+    /// Raw `AllocAslRequest` call through Asl vector 8 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn alloc_asl_request(
+        base: *mut Library,
+        req_type: u32,
+        tag_list: *mut TagItem,
+    ) -> *mut c_void {
+        type Function = unsafe extern "C" fn(u32, *mut TagItem, *mut Library) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 8)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(req_type, tag_list, base) }
+    }
+
+    /// Raw `FreeAslRequest` call through Asl vector 9 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn free_asl_request(base: *mut Library, requester: *mut c_void) {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 9)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(requester, base) }
+    }
+
+    /// Raw `AslRequest` call through Asl vector 10 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn asl_request(
+        base: *mut Library,
+        requester: *mut c_void,
+        tag_list: *mut TagItem,
+    ) -> BOOL {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut TagItem, *mut Library) -> BOOL;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 10)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(requester, tag_list, base) }
+    }
+}
+
 pub mod dos {
     use super::*;
 

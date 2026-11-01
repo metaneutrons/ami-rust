@@ -28,6 +28,7 @@ name = "ami-rust-qualification"
 version = "0.1.0"
 dependencies = [
  "aros",
+ "aros-asl",
  "aros-graphics",
  "aros-intuition",
  "aros-native-build",
@@ -48,6 +49,15 @@ dependencies = [
 name = "aros"
 version = "0.1.0"
 dependencies = [
+ "aros-sys",
+]
+
+[[package]]
+name = "aros-asl"
+version = "0.1.0"
+dependencies = [
+ "aros",
+ "aros-intuition",
  "aros-sys",
 ]
 

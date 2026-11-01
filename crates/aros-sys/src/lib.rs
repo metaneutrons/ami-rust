@@ -235,7 +235,7 @@ compile_error!("aros-sys currently implements only the x86-64 AROS vector ABI");
 compile_error!("aros-sys requires AROS ABI-v1 or ABI-v11");
 
 mod generated;
-pub use generated::{dos, exec, graphics, intuition, timer, utility};
+pub use generated::{asl, dos, exec, graphics, intuition, timer, utility};
 
 /// The C bridge's error record (`native` holds the immediately captured
 /// native error, such as DOS `IoErr`).
@@ -267,6 +267,7 @@ pub struct SdkStats {
     pub bitmaps: usize,
     pub windows: usize,
     pub pubscreens: usize,
+    pub aslrequests: usize,
 }
 
 /// One directory entry as filled in by the native bridge. `name_length` bytes
@@ -608,6 +609,63 @@ pub const fn intuition_layout_values() -> [u64; INTUITION_LAYOUT_VALUE_COUNT] {
     ]
 }
 
+/// File requester tags (`ASLFR_*`) and the requester type the safe requester
+/// builder uses.
+pub mod aslfr {
+    use super::TAG_USER;
+    const BASE: u32 = TAG_USER + 0x80000;
+    pub const FILE_REQUEST: u32 = 0;
+    pub const TITLE_TEXT: u32 = BASE + 1;
+    pub const WINDOW: u32 = BASE + 2;
+    pub const INITIAL_LEFT_EDGE: u32 = BASE + 3;
+    pub const INITIAL_TOP_EDGE: u32 = BASE + 4;
+    pub const INITIAL_WIDTH: u32 = BASE + 5;
+    pub const INITIAL_HEIGHT: u32 = BASE + 6;
+    pub const INITIAL_FILE: u32 = BASE + 8;
+    pub const INITIAL_DRAWER: u32 = BASE + 9;
+    pub const INITIAL_PATTERN: u32 = BASE + 10;
+    pub const POSITIVE_TEXT: u32 = BASE + 18;
+    pub const NEGATIVE_TEXT: u32 = BASE + 19;
+    pub const SLEEP_WINDOW: u32 = BASE + 43;
+    pub const DO_SAVE_MODE: u32 = BASE + 44;
+    pub const DO_MULTI_SELECT: u32 = BASE + 45;
+    pub const DO_PATTERNS: u32 = BASE + 46;
+    pub const DRAWERS_ONLY: u32 = BASE + 47;
+    pub const REJECT_ICONS: u32 = BASE + 60;
+    pub const POP_TO_FRONT: u32 = BASE + 131;
+    pub const ACTIVATE: u32 = BASE + 132;
+}
+
+/// Number of values [`asl_layout_values`] and `sdk_asl_layout` produce.
+pub const ASL_LAYOUT_VALUE_COUNT: usize = 20;
+
+/// The requester type and tag values as declared here; the native bridge
+/// reports the same values for the selected ABI (`sdk_asl_layout`).
+pub const fn asl_layout_values() -> [u64; ASL_LAYOUT_VALUE_COUNT] {
+    [
+        aslfr::FILE_REQUEST as u64,
+        aslfr::TITLE_TEXT as u64,
+        aslfr::WINDOW as u64,
+        aslfr::INITIAL_LEFT_EDGE as u64,
+        aslfr::INITIAL_TOP_EDGE as u64,
+        aslfr::INITIAL_WIDTH as u64,
+        aslfr::INITIAL_HEIGHT as u64,
+        aslfr::INITIAL_FILE as u64,
+        aslfr::INITIAL_DRAWER as u64,
+        aslfr::INITIAL_PATTERN as u64,
+        aslfr::POSITIVE_TEXT as u64,
+        aslfr::NEGATIVE_TEXT as u64,
+        aslfr::SLEEP_WINDOW as u64,
+        aslfr::DO_SAVE_MODE as u64,
+        aslfr::DO_MULTI_SELECT as u64,
+        aslfr::DO_PATTERNS as u64,
+        aslfr::DRAWERS_ONLY as u64,
+        aslfr::REJECT_ICONS as u64,
+        aslfr::POP_TO_FRONT as u64,
+        aslfr::ACTIVATE as u64,
+    ]
+}
+
 pub const SDK_FILE_READ_EXISTING: i32 = 0;
 pub const SDK_FILE_CREATE_TRUNCATE: i32 = 1;
 pub const SDK_FILE_READ_WRITE: i32 = 2;
@@ -623,7 +681,7 @@ pub const ERROR_KIND_ZERO_PROGRESS: i32 = 7;
 /// Layout oracle values in the exact order of the M0 C layout table:
 /// Node, Library, Message, List, MsgPort, FileInfoBlock, scalar ABI types,
 /// then the selected spinlock_t storage. No native call or allocation occurs.
-pub const ABI_LAYOUT_VALUE_COUNT: usize = 100;
+pub const ABI_LAYOUT_VALUE_COUNT: usize = 101;
 
 const fn layout_value(value: usize) -> u64 {
     value as u64
@@ -719,6 +777,7 @@ pub const fn layout_values() -> [u64; ABI_LAYOUT_VALUE_COUNT] {
         layout_value(offset_of!(SdkStats, bitmaps)),
         layout_value(offset_of!(SdkStats, windows)),
         layout_value(offset_of!(SdkStats, pubscreens)),
+        layout_value(offset_of!(SdkStats, aslrequests)),
         layout_value(size_of::<SdkEntry>()),
         layout_value(align_of::<SdkEntry>()),
         layout_value(offset_of!(SdkEntry, size)),
@@ -976,6 +1035,29 @@ unsafe extern "C" {
     ) -> c_int;
     pub fn sdk_intui_screen_release(context: u64, screen: u64, error: *mut SdkError) -> c_int;
     pub fn sdk_intui_layout(values: *mut u64, capacity: usize) -> usize;
+    pub fn sdk_asl_register(
+        context: u64,
+        base: *mut c_void,
+        request: *mut c_void,
+        error: *mut SdkError,
+    ) -> u64;
+    pub fn sdk_asl_release(context: u64, request: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_asl_count(
+        context: u64,
+        request: u64,
+        count: *mut i32,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_asl_path(
+        context: u64,
+        request: u64,
+        index: i32,
+        buffer: *mut u8,
+        capacity: usize,
+        length: *mut usize,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_asl_layout(values: *mut u64, capacity: usize) -> usize;
     pub fn sdk_dir_open(context: u64, path: *const u8, error: *mut SdkError) -> u64;
     pub fn sdk_dir_next(
         context: u64,
