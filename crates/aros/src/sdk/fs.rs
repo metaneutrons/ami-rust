@@ -29,8 +29,10 @@ pub struct DateStamp {
 
 /// Information about one file system entry.
 ///
-/// Sizes come from the qualified 32-bit `FileInfoBlock`, so an entry larger
-/// than 2 GiB is not reported correctly.
+/// On ABI-v1 sizes come from `dos64.library` when the system has it, so they
+/// are 64-bit where the volume supports that. Otherwise (ABI-v11, which has no
+/// `dos64`) they come from the qualified 32-bit `FileInfoBlock`; see
+/// [`size_is_exact`](Self::size_is_exact).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Entry {
     raw: SdkEntry,
@@ -57,8 +59,20 @@ impl Entry {
     }
 
     /// Returns the size in bytes; zero for a directory.
+    ///
+    /// Check [`size_is_exact`](Self::size_is_exact): without `dos64.library`
+    /// (ABI-v11, or an ABI-v1 system lacking it) a handler reports sizes in
+    /// 32 bits.
     pub const fn size(&self) -> u64 {
         self.raw.size
+    }
+
+    /// Returns `false` when [`size`](Self::size) may be truncated: only the
+    /// 32-bit size was available and it is at the 2 GiB limit, which is what a
+    /// capped size looks like. It is `true` for a size that came from a 64-bit
+    /// call or is below that limit.
+    pub const fn size_is_exact(&self) -> bool {
+        self.raw.size_exact != 0
     }
 
     /// Returns the DOS protection bits.
