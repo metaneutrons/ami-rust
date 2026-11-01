@@ -44,6 +44,7 @@
 #define KIND_SCREEN 12UL
 #define SDK_TITLE_MAX 127
 #define KIND_ASL 13UL
+#define KIND_LOCALE 14UL
 #define GFX_MAX_AREA_VECTORS 1024
 #define IO_KIND_STANDARD 0
 #define IO_KIND_TIMER 1
@@ -79,6 +80,9 @@ struct WindowSlot { uint64_t token;void *base;struct Window *window;char title[S
 /* An asl.library requester allocated through a raw vector call; freed at exit
    if the program does not. */
 struct AslSlot { uint64_t token;void *base;void *request; };
+/* A locale.library locale (kind 0) or catalog (kind 1), closed at exit if the
+   program does not. */
+struct LocaleSlot { uint64_t token;int kind;void *base;void *object; };
 /* A locked public screen, unlocked at exit if the program forgets it. */
 struct ScreenSlot { uint64_t token;void *base;void *screen; };
 struct DirSlot { uint64_t token;BPTR lock;void *fib;int wide; };
@@ -87,7 +91,7 @@ struct IoSlot { uint64_t token,device;struct IORequest *request;size_t size;uint
 #define SLOT_LIMIT ((UINT64_C(1)<<SLOT_BITS)-1)
 #define SEQUENCE_LIMIT ((UINT64_C(1)<<36)-1)
 #define SIGNAL_SLOTS 32
-static struct Registry files,libraries,ports,messages,devices,requests,directories,rastports,bitmaps,windows,pubscreens,aslrequests;
+static struct Registry files,libraries,ports,messages,devices,requests,directories,rastports,bitmaps,windows,pubscreens,aslrequests,localeobjs;
 static BPTR cwd_original,cwd_owned;
 static struct SignalSlot signals[SIGNAL_SLOTS];
 static APTR registry_pool;
@@ -931,6 +935,8 @@ static void lib_call2(void *base,unsigned vector,void *a0,void *a1) {
 #define INTUITION_CLOSE_WINDOW_VECTOR 12
 #define INTUITION_UNLOCK_PUB_SCREEN_VECTOR 86
 #define ASL_FREE_REQUEST_VECTOR 9
+#define LOCALE_CLOSE_CATALOG_VECTOR 6
+#define LOCALE_CLOSE_LOCALE_VECTOR 7
 static void gfx_free_bitmap(void *base,void *bitmap) {lib_call1(base,GFX_FREE_BITMAP_VECTOR,bitmap);}
 uint64_t sdk_gfx_bitmap_register(uint64_t key,void *base,void *bitmap,SdkError *e) {
  if(own(key,e))return 0;if(!base || !bitmap){refuse(e,2,0);return 0;}
@@ -1085,6 +1091,50 @@ static void asl_free_registered(struct AslSlot *slot) {
  record_release(&aslrequests,slot,sizeof(*slot));--stats.aslrequests;
  lib_call1(base,ASL_FREE_REQUEST_VECTOR,request);
 }
+
+/* locale.library locales and catalogs: the bridge remembers each with the
+   library base so it can close the ones the program forgets. */
+static struct LocaleSlot *locale_find(uint64_t token) {return (struct LocaleSlot *)record_find(&localeobjs,token,KIND_LOCALE);}
+uint64_t sdk_locale_register(uint64_t key,int32_t kind,void *base,void *object,SdkError *e) {
+ if(own(key,e))return 0;if(!base || !object || (kind!=0 && kind!=1)){refuse(e,2,0);return 0;}
+ struct LocaleSlot *slot=(struct LocaleSlot *)record_new(&localeobjs,KIND_LOCALE,sizeof(*slot),e);if(!slot)return 0;
+ slot->kind=kind;slot->base=base;slot->object=object;
+ if(kind==0)++stats.locales;else ++stats.catalogs;
+ return slot->token;
+}
+/* The head of struct Locale. The pinned ABI-v11 C SDK has no locale header, so
+   the fields are declared here; on ABI-v1 they are checked against the SDK
+   header, and the ABI-v11 SDK's libraries/locale.h declares the same struct. */
+struct AmiLocale {
+ char *name;char *language;char *preferred[10];
+ unsigned int flags,codeset,country,telephone;int gmt_offset;
+};
+#ifndef AMI_RUST_ABI11
+#include <libraries/locale.h>
+_Static_assert(offsetof(struct AmiLocale,name)==offsetof(struct Locale,loc_LocaleName),"locale name");
+_Static_assert(offsetof(struct AmiLocale,language)==offsetof(struct Locale,loc_LanguageName),"locale language");
+_Static_assert(offsetof(struct AmiLocale,preferred)==offsetof(struct Locale,loc_PrefLanguages),"locale preferred");
+_Static_assert(offsetof(struct AmiLocale,gmt_offset)==offsetof(struct Locale,loc_GMTOffset),"locale gmt offset");
+#endif
+int sdk_locale_info(uint64_t key,uint64_t token,SdkLocaleInfo *out,SdkError *e) {
+ if(own(key,e))return -1;struct LocaleSlot *slot=locale_find(token);if(!slot || slot->kind!=0 || !out)return refuse(e,5,0);
+ const struct AmiLocale *locale=(const struct AmiLocale *)slot->object;
+ out->locale_name=locale->name;out->language_name=locale->language;
+ for(int i=0;i<10;i++)out->preferred[i]=locale->preferred[i];
+ out->gmt_offset=locale->gmt_offset;return 0;
+}
+/* Forgets the object; the caller closes it. */
+int sdk_locale_release(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct LocaleSlot *slot=locale_find(token);if(!slot)return refuse(e,5,0);
+ if(slot->kind==0)--stats.locales;else --stats.catalogs;
+ record_release(&localeobjs,slot,sizeof(*slot));return 0;
+}
+static void locale_close_registered(struct LocaleSlot *slot) {
+ void *base=slot->base,*object=slot->object;int kind=slot->kind;
+ if(kind==0)--stats.locales;else --stats.catalogs;
+ record_release(&localeobjs,slot,sizeof(*slot));
+ lib_call1(base,kind==0?LOCALE_CLOSE_LOCALE_VECTOR:LOCALE_CLOSE_CATALOG_VECTOR,object);
+}
 int sdk_callback(uint64_t key,uint64_t (*callback)(void *,uint64_t),void *data,uint64_t value,uint64_t *out,SdkError *e) {
  if(own(key,e))return -1;if(callback_active || !callback || !data || !out)return refuse(e,5,0);
  callback_active=1;*out=callback(data,value);callback_active=0;return 0;
@@ -1105,6 +1155,8 @@ static int test_report_ledgers(void) {
  sdk_diagnostic((const uint8_t *)"[m1-ledger] windows",19,stats.windows);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] pubscreens",22,stats.pubscreens);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] aslrequests",23,stats.aslrequests);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] locales",19,stats.locales);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] catalogs",20,stats.catalogs);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] devices",19,stats.devices);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] requests",20,stats.requests);
  sdk_diagnostic((const uint8_t *)"[m1-native] live",16,backend_live());
@@ -1125,6 +1177,7 @@ static int cleanup_remaining(void) {
  if(setjmp(cleanup_resume)){cleanup_error=20;ami_sdk_diagnostic_depth=0;}
  for(size_t i=0;i<directories.capacity;i++){struct DirSlot *slot=(struct DirSlot *)directories.items[i];if(slot)dir_release(slot);}
  cwd_restore();
+ for(int kind=1;kind>=0;kind--)for(size_t i=0;i<localeobjs.capacity;i++){struct LocaleSlot *slot=(struct LocaleSlot *)localeobjs.items[i];if(slot && slot->kind==kind)locale_close_registered(slot);}
  for(size_t i=0;i<aslrequests.capacity;i++){struct AslSlot *slot=(struct AslSlot *)aslrequests.items[i];if(slot)asl_free_registered(slot);}
  for(size_t i=0;i<windows.capacity;i++){struct WindowSlot *slot=(struct WindowSlot *)windows.items[i];if(slot)window_close(slot);}
  for(size_t i=0;i<pubscreens.capacity;i++){struct ScreenSlot *slot=(struct ScreenSlot *)pubscreens.items[i];if(slot)screen_unlock_registered(slot);}
@@ -1143,7 +1196,7 @@ static int cleanup_remaining(void) {
  if(registry_pool){
   /* The tables are the pool's last users; the pool is retired with them. */
   APTR pool=registry_pool;registry_pool=NULL;
-  rastports=(struct Registry){0};bitmaps=(struct Registry){0};windows=(struct Registry){0};pubscreens=(struct Registry){0};aslrequests=(struct Registry){0};directories=(struct Registry){0};files=(struct Registry){0};libraries=(struct Registry){0};ports=(struct Registry){0};messages=(struct Registry){0};devices=(struct Registry){0};requests=(struct Registry){0};
+  rastports=(struct Registry){0};bitmaps=(struct Registry){0};windows=(struct Registry){0};pubscreens=(struct Registry){0};aslrequests=(struct Registry){0};localeobjs=(struct Registry){0};directories=(struct Registry){0};files=(struct Registry){0};libraries=(struct Registry){0};ports=(struct Registry){0};messages=(struct Registry){0};devices=(struct Registry){0};requests=(struct Registry){0};
   DeletePool(pool);
  }
 #ifdef AMI_SDK_TESTING

@@ -1,0 +1,13 @@
+[package]
+name = "aros-locale"
+version.workspace = true
+edition.workspace = true
+publish = false
+description = "Task-affine locale.library catalogs with built-in default strings and date formatting for the selected AROS ABI profile."
+repository = "https://github.com/metaneutrons/ami-rust"
+license.workspace = true
+readme = "README.md"
+
+[dependencies]
+aros = { version = "=0.1.0", path = "../aros", default-features = false }
+aros-sys = { version = "=0.1.0", path = "../aros-sys" }

@@ -4,9 +4,11 @@
 #include <stdint.h>
 #include <stddef.h>
 typedef struct { int32_t kind; int64_t native; } SdkError;
-typedef struct { size_t blocks, backing_charge, peak_charge, files, libraries, ports, signals, messages, refusals, devices, requests, directories, rastports, bitmaps, windows, pubscreens, aslrequests; } SdkStats;
+typedef struct { size_t blocks, backing_charge, peak_charge, files, libraries, ports, signals, messages, refusals, devices, requests, directories, rastports, bitmaps, windows, pubscreens, aslrequests, locales, catalogs; } SdkStats;
 /* Window geometry as the bridge reads it from struct Window. */
 typedef struct { int32_t left, top, width, height, border_left, border_top, border_right, border_bottom, mouse_x, mouse_y, screen_width, screen_height; uint32_t signal_mask; void *rastport; } SdkWindowInfo;
+/* The fields of a locale the bridge reads from struct Locale. */
+typedef struct { const char *locale_name, *language_name, *preferred[10]; int32_t gmt_offset; } SdkLocaleInfo;
 /* One IDCMP message, decoded and replied to. */
 typedef struct { uint32_t class_; uint16_t code, qualifier; int16_t x, y; uint32_t seconds, micros; } SdkIntuiEvent;
 /* One directory entry; the layout is checked against the Rust declaration. */
@@ -176,6 +178,10 @@ int sdk_asl_release(uint64_t,uint64_t,SdkError *);
 int sdk_asl_count(uint64_t,uint64_t,int32_t *,SdkError *);
 int sdk_asl_path(uint64_t,uint64_t,int32_t,uint8_t *,size_t,size_t *,SdkError *);
 size_t sdk_asl_layout(uint64_t *,size_t);
+uint64_t sdk_locale_register(uint64_t,int32_t,void *,void *,SdkError *);
+int sdk_locale_release(uint64_t,uint64_t,SdkError *);
+int sdk_locale_info(uint64_t,uint64_t,SdkLocaleInfo *,SdkError *);
+size_t sdk_locale_layout(uint64_t *,size_t);
 int sdk_callback(uint64_t,uint64_t (*)(void *,uint64_t),void *,uint64_t,uint64_t *,SdkError *);
 /* Independent C oracle: count then values; no raw Rust structs enter OS calls. */
 size_t sdk_layout(uint64_t *,size_t);

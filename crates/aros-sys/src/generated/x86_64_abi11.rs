@@ -1698,6 +1698,176 @@ pub mod intuition {
     }
 }
 
+pub mod locale {
+    use super::*;
+
+    /// Raw `OpenLocale` call through Locale vector 26 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn open_locale(base: *mut Library, name: *const c_char) -> *mut c_void {
+        let function = unsafe { vector(base, 26) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") name as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *mut c_void
+    }
+
+    /// Raw `CloseLocale` call through Locale vector 7 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn close_locale(base: *mut Library, locale: *mut c_void) {
+        let function = unsafe { vector(base, 7) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") locale as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `OpenCatalogA` call through Locale vector 25 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn open_catalog_a(
+        base: *mut Library,
+        locale: *const c_void,
+        name: *const c_char,
+        tags: *const TagItem,
+    ) -> *mut c_void {
+        let function = unsafe { vector(base, 25) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") locale as usize,
+                in("rsi") name as usize,
+                in("rdx") tags as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *mut c_void
+    }
+
+    /// Raw `CloseCatalog` call through Locale vector 6 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn close_catalog(base: *mut Library, catalog: *mut c_void) {
+        let function = unsafe { vector(base, 6) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") catalog as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `GetCatalogStr` call through Locale vector 12 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_catalog_str(
+        base: *mut Library,
+        catalog: *const c_void,
+        string_num: u32,
+        default_string: *const c_char,
+    ) -> *const c_char {
+        let function = unsafe { vector(base, 12) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") catalog as usize,
+                in("rsi") string_num as usize,
+                in("rdx") default_string as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *const c_char
+    }
+
+    /// Raw `FormatDate` call through Locale vector 10 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn format_date(
+        base: *mut Library,
+        locale: *const c_void,
+        format_string: *const c_char,
+        date: *const c_void,
+        hook: *const Hook,
+    ) {
+        let function = unsafe { vector(base, 10) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") locale as usize,
+                in("rsi") format_string as usize,
+                in("rdx") date as usize,
+                in("rcx") hook as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `GetLocaleStr` call through Locale vector 13 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_locale_str(
+        base: *mut Library,
+        locale: *const c_void,
+        string_num: u32,
+    ) -> *const c_char {
+        let function = unsafe { vector(base, 13) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") locale as usize,
+                in("rsi") string_num as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *const c_char
+    }
+}
+
 pub mod timer {
     use super::*;
 
