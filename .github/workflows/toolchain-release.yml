@@ -410,3 +410,113 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
+
+  registry:
+    name: Publish the crates to the registry
+    needs: release
+    if: >-
+      github.repository == 'metaneutrons/ami-rust' && github.ref == 'refs/heads/main' && github.ref_protected &&
+      (inputs.mode == 'publish' || inputs.mode == 'recover')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: release-crates
+    permissions:
+      contents: read
+    steps:
+      - name: Require the protected release context
+        env:
+          VERSION: ${{ inputs.version }}
+          REGISTRY_HOSTNAME: ${{ vars.REGISTRY_HOSTNAME }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME:$GITHUB_REF_PROTECTED" = workflow_dispatch:true
+          [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          [[ "$REGISTRY_HOSTNAME" =~ ^[a-z0-9][a-z0-9.-]*$ ]]
+
+      - name: Resolve the published release commit
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The release is public and not a draft or prerelease before any crate is published.
+          gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease \
+            --jq 'select(.isDraft == false and .isPrerelease == false)' | grep -q .
+          tag_ref=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$VERSION" --jq '.object.type + ":" + .object.sha')
+          [[ "$tag_ref" =~ ^commit:[0-9a-f]{40}$ ]]
+          echo "commit=${tag_ref#commit:}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the exact released source and tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.release.outputs.commit }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 26
+
+      - name: Test the registry tool
+        shell: bash
+        run: node --test tools/registry/
+
+      - name: Package the crates offline with the pinned Rust
+        env:
+          REGISTRY_HOSTNAME: ${{ vars.REGISTRY_HOSTNAME }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tools/package-crates.sh "$RUNNER_TEMP/rg-work" "$RUNNER_TEMP/rg-crates" x86_64-unknown-linux-gnu \
+            metaneutrons "sparse+https://$REGISTRY_HOSTNAME/"
+
+      - name: Build the registry files and their manifest
+        env:
+          REGISTRY_HOSTNAME: ${{ vars.REGISTRY_HOSTNAME }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/registry/registry.mjs index --crates "$RUNNER_TEMP/rg-crates" --out "$RUNNER_TEMP/rg-out" \
+            --index-url "sparse+https://$REGISTRY_HOSTNAME/" --static registry
+          node tools/registry/registry.mjs crates --source . --registry metaneutrons | sort > "$RUNNER_TEMP/rg-expected"
+          find "$RUNNER_TEMP/rg-crates" -type f -name '*.crate' -printf '%f\n' | sed -E 's/-[0-9]+\.[0-9]+\.[0-9]+.*\.crate$//' | sort > "$RUNNER_TEMP/rg-actual"
+          diff "$RUNNER_TEMP/rg-expected" "$RUNNER_TEMP/rg-actual"
+
+      - name: Preflight the bucket and the files to publish
+        env:
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          REGISTRY_HOSTNAME: ${{ vars.REGISTRY_HOSTNAME }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        shell: bash
+        run: node tools/registry/registry.mjs preflight --out "$RUNNER_TEMP/rg-out"
+
+      - name: Publish the crates, then the index, and verify every byte publicly
+        env:
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          REGISTRY_HOSTNAME: ${{ vars.REGISTRY_HOSTNAME }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        shell: bash
+        run: node tools/registry/registry.mjs publish --out "$RUNNER_TEMP/rg-out"
+
+      - name: Read the registry back anonymously
+        env:
+          REGISTRY_HOSTNAME: ${{ vars.REGISTRY_HOSTNAME }}
+        shell: bash
+        run: node tools/registry/registry.mjs verify --out "$RUNNER_TEMP/rg-out"
+
+      - name: Retain the registry manifest
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: registry-manifest-${{ inputs.version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/rg-out/registry-manifest.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0

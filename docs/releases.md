@@ -45,7 +45,7 @@ git checkout v0.1.0
 
 ## Distribution channels
 
-0.1.0 is distributed through GitHub Release archives and an immutable rustup catalog. APT, Homebrew, AUR and crates.io are not channels for 0.1.0. Publishing the crates to crates.io would need its own review of names, public API, ownership and licences.
+0.1.0 is distributed through GitHub Release archives and an immutable rustup catalog. APT, Homebrew, AUR and crates.io are not channels for 0.1.0. The `aros-*` library crates are also delivered through the read-only ami-rust Cargo registry at `crates.metaneutrons.cc` once a release has published them: the protected release workflow packages them offline from the release commit, appends them to the static index without ever changing a published version, and reads every byte back publicly. Publishing the crates to crates.io would need its own review of names, public API, ownership and licences.
 
 ## Changes
 

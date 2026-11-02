@@ -2,7 +2,7 @@
 name = "aros-intuition"
 version.workspace = true
 edition.workspace = true
-publish = false
+publish = ["metaneutrons"]
 description = "Task-affine Intuition windows, public screens and typed IDCMP events for the selected AROS ABI profile."
 repository = "https://github.com/metaneutrons/ami-rust"
 homepage = "https://github.com/metaneutrons/ami-rust"

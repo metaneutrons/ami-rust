@@ -2,7 +2,7 @@
 name = "aros-timer"
 version.workspace = true
 edition.workspace = true
-publish = false
+publish = ["metaneutrons"]
 description = "Task-affine time and timers for the selected AROS ABI profile."
 repository = "https://github.com/metaneutrons/ami-rust"
 homepage = "https://github.com/metaneutrons/ami-rust"

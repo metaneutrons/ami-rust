@@ -80,9 +80,46 @@ cargo +"$toolchain" build --target x86_64-unknown-aros-abi1 --release --locked -
 cargo +"$toolchain" build --target x86_64-unknown-aros-abi11 --release --locked --offline
 ```
 
-The libraries are normal Cargo dependencies. They remain Git-delivered until
-their names and public APIs are stable enough for an intentional crates.io
-publication. The public base set is:
+The libraries are normal Cargo dependencies. They are not on crates.io yet:
+that publication is planned once their names and public APIs have stabilised.
+Until then there are two ways to get them.
+
+**From the Git tag** (works for every release):
+
+```toml
+[dependencies]
+aros = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
+
+[build-dependencies]
+aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
+```
+
+**From the ami-rust registry**, `crates.metaneutrons.cc`, a read-only Cargo
+registry that the release workflow fills with the `aros-*` library crates of
+each release from the release that follows its introduction. Published versions
+never change. Add the registry once to `.cargo/config.toml`:
+
+```toml
+[registries.metaneutrons]
+index = "sparse+https://crates.metaneutrons.cc/"
+```
+
+and depend on the crates by version:
+
+```toml
+[dependencies]
+aros = { version = "0.2", registry = "metaneutrons" }
+aros-mui = { version = "0.2", registry = "metaneutrons" }
+```
+
+`aros-native-build`, the build dependency of every application, is Git-only for
+now: it reads files from the repository (the target specifications and the SDK
+profile), so it cannot yet be built from a registry archive. Take it from the
+tag as above; it does not conflict with registry dependencies. The registry and
+the tag deliver the same sources: the registry archives are `cargo package`
+output of the tagged commit, built offline with the pinned Rust.
+
+The public base set is:
 
 - `aros` for entry, allocation and the safe core API;
 - `aros-sys` for raw AROS ABI declarations;

@@ -2,7 +2,7 @@
 name = "aros-workbench"
 version.workspace = true
 edition.workspace = true
-publish = false
+publish = ["metaneutrons"]
 description = "Task-affine workbench.library application windows, icons and menu items with message receipt for the selected AROS ABI profile."
 repository = "https://github.com/metaneutrons/ami-rust"
 license.workspace = true

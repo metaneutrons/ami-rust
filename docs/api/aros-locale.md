@@ -41,7 +41,7 @@ fn greeting(context: &Context) -> Result<(), aros_locale::Error> {
 
 A program keeps its messages as built-in defaults in the source, each with a number, and asks `Catalog::string(number, default)` for the text. A `Catalog` is a handle even when nothing was found, so the same call works in every case: the library looks in `PROGDIR:Catalogs/<language>/<name>` (only for a program started with a home directory, as from a shell) and then in `LOCALE:Catalogs/<language>/<name>` for each language the user prefers, in order. If a catalog is found, a message it has is returned and one it lacks gives the default; if none is found, or the language asked for is the program's own (`built_in_language`), no catalog is loaded and every call gives the default. The returned `&CStr` borrows both the catalog and the default.
 
-`CatalogOptions::language` forces a language instead of the user's preferences, which is what a test or a language selector needs. `CatalogOptions::version` accepts only a catalog of exactly that version: the library compares the version number in the catalog's `FVER` chunk, so a different version gives the defaults. The fixture catalog of the qualification test (`tools/make-test-catalog.py`) is version 3: asking for 3 finds it and asking for 2 does not.
+`CatalogOptions::language` forces a language instead of the user's preferences, which is what a test or a language selector needs. `CatalogOptions::version` accepts only a catalog of exactly that version: the library compares the version number in the catalog's `FVER` chunk, so a different version gives the defaults. The fixture catalog of the qualification test (`tools/make-test-catalog.mjs`) is version 3: asking for 3 finds it and asking for 2 does not.
 
 ## Dates
 

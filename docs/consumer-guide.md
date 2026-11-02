@@ -35,7 +35,7 @@ Start with `aros`, add `aros-mui` for a graphical interface, and reach for a `-s
 
 ## Depend on the crates
 
-The crates are delivered through Git and are intentionally not on crates.io. Pin a release by its tag:
+The crates are not on crates.io yet; that publication is planned once their names and public APIs have stabilised. Until then they come from Git or from the ami-rust registry. Pin a release by its tag:
 
 ```toml
 [dependencies]
@@ -45,6 +45,22 @@ aros-mui = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
 [build-dependencies]
 aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
 ```
+
+Alternatively, `crates.metaneutrons.cc` is a read-only Cargo registry that holds the `aros-*` library crates of each release from the release that follows its introduction. Add it once to `.cargo/config.toml` and depend on the crates by version:
+
+```toml
+# .cargo/config.toml
+[registries.metaneutrons]
+index = "sparse+https://crates.metaneutrons.cc/"
+```
+
+```toml
+# Cargo.toml
+[dependencies]
+aros = { version = "0.2", registry = "metaneutrons" }
+```
+
+`aros-native-build` stays a Git dependency, because it reads files of the repository and cannot be built from a registry archive yet. Registry and Git dependencies mix freely.
 
 Release tags are immutable, and `Cargo.lock` records the exact commit that the tag pointed to when you resolved, so commit it. Use the tag of the release you installed the toolchain for. See [releases and versions](/releases/) for how this documentation relates to each release.
 

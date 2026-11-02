@@ -2,7 +2,7 @@
 name = "aros-asl"
 version.workspace = true
 edition.workspace = true
-publish = false
+publish = ["metaneutrons"]
 description = "Task-affine asl.library file requesters returning owned paths for the selected AROS ABI profile."
 repository = "https://github.com/metaneutrons/ami-rust"
 license.workspace = true
