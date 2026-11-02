@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>crates.metaneutrons.cc</title>
+<style>
+body{font:16px/1.5 system-ui,sans-serif;max-width:46rem;margin:3rem auto;padding:0 1rem;color:#1d2330}
+code,pre{font-family:ui-monospace,Menlo,monospace;font-size:.92em}
+pre{background:#f2f4f8;padding:.8rem 1rem;overflow:auto;border-radius:6px}
+</style>
+</head>
+<body>
+<h1>crates.metaneutrons.cc</h1>
+<p>A read-only Cargo registry for the <a href="https://github.com/metaneutrons/ami-rust">ami-rust</a>
+<code>aros-*</code> crates (Rust for AROS). It is a static sparse index: there is no publish API,
+and published versions never change. The crates are published here with each ami-rust release and
+will move to crates.io once they have stabilised.</p>
+<h2>Use it</h2>
+<p>In <code>.cargo/config.toml</code>:</p>
+<pre>[registries.metaneutrons]
+index = "sparse+https://crates.metaneutrons.cc/"</pre>
+<p>In <code>Cargo.toml</code>:</p>
+<pre>[dependencies]
+aros = { version = "0.2", registry = "metaneutrons" }</pre>
+<p>The crates build for the <code>x86_64-unknown-aros-abi1</code> and <code>x86_64-unknown-aros-abi11</code>
+targets with the ami-rust toolchain; see the
+<a href="https://github.com/metaneutrons/ami-rust#readme">README</a> for installation.</p>
+</body>
+</html>

@@ -2,7 +2,7 @@
 name = "aros-sys"
 version.workspace = true
 edition.workspace = true
-publish = false
+publish = ["metaneutrons"]
 description = "Raw, allocation-free Rust declarations and vector calls for x86-64 AROS ABI-v1 and ABI-v11."
 repository = "https://github.com/metaneutrons/ami-rust"
 homepage = "https://github.com/metaneutrons/ami-rust"

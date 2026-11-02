@@ -101,6 +101,31 @@ jobs:
         shell: bash
         run: bash tools/build-maintainer-task.sh "$RUNNER_TEMP/ami-rust-ci" "$HOST_TRIPLE"
 
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 26
+
+      - name: Test the registry tool
+        shell: bash
+        run: node --test tools/registry/
+
+      - name: Package the registry crates and build their index (no upload)
+        if: matrix.os == 'ubuntu-24.04'
+        env:
+          HOST_TRIPLE: ${{ matrix.triple }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          index='sparse+https://crates.metaneutrons.cc/'
+          bash tools/package-crates.sh "$RUNNER_TEMP/rg-work" "$RUNNER_TEMP/rg-crates" "$HOST_TRIPLE" metaneutrons "$index"
+          node tools/registry/registry.mjs index --crates "$RUNNER_TEMP/rg-crates" --out "$RUNNER_TEMP/rg-out" \
+            --index-url "$index" --static registry
+          # The crates named by their manifests are the crates that were packaged.
+          node tools/registry/registry.mjs crates --source . --registry metaneutrons | sort > "$RUNNER_TEMP/rg-expected"
+          find "$RUNNER_TEMP/rg-crates" -type f -name '*.crate' -printf '%f\n' | sed -E 's/-[0-9]+\.[0-9]+\.[0-9]+.*\.crate$//' | sort > "$RUNNER_TEMP/rg-actual"
+          diff "$RUNNER_TEMP/rg-expected" "$RUNNER_TEMP/rg-actual"
+
       - name: Check the Rust workspace and release components offline
         shell: bash
         run: |

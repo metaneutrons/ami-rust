@@ -2,7 +2,7 @@
 name = "aros-icon"
 version.workspace = true
 edition.workspace = true
-publish = false
+publish = ["metaneutrons"]
 description = "Task-affine icon.library disk objects, tool types and tool value matching for the selected AROS ABI profile."
 repository = "https://github.com/metaneutrons/ami-rust"
 license.workspace = true

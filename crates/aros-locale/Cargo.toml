@@ -2,7 +2,7 @@
 name = "aros-locale"
 version.workspace = true
 edition.workspace = true
-publish = false
+publish = ["metaneutrons"]
 description = "Task-affine locale.library catalogs with built-in default strings and date formatting for the selected AROS ABI profile."
 repository = "https://github.com/metaneutrons/ami-rust"
 license.workspace = true

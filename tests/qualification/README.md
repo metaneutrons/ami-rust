@@ -12,4 +12,4 @@ The `locale` modes read a fixture catalog from `PROGDIR:`. Put
 `fixtures/Catalogs/deutsch/ami-rust-m8.catalog` on the medium next to the
 program as `Catalogs/deutsch/ami-rust-m8.catalog` (with `run-on-aros`:
 `--add .../ami-rust-m8.catalog=Catalogs/deutsch/ami-rust-m8.catalog`).
-`tools/make-test-catalog.py` writes the file.
+`tools/make-test-catalog.mjs` writes the file.

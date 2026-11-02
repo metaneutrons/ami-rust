@@ -2,7 +2,7 @@
 name = "aros-mui"
 version.workspace = true
 edition.workspace = true
-publish = false
+publish = ["metaneutrons"]
 description = "Task-affine safe MUI object lifecycle for the selected AROS ABI profile."
 repository = "https://github.com/metaneutrons/ami-rust"
 homepage = "https://github.com/metaneutrons/ami-rust"
