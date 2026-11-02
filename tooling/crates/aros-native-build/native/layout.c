@@ -33,7 +33,7 @@ static const size_t c_layout[]={
  LAYOUT(spinlock_t,OFF(spinlock_t,s_Owner),OFF(spinlock_t,s_Isolation)),
 #endif
  LAYOUT(SdkError,OFF(SdkError,kind),OFF(SdkError,native)),
- LAYOUT(SdkStats,OFF(SdkStats,blocks),OFF(SdkStats,backing_charge),OFF(SdkStats,peak_charge),OFF(SdkStats,files),OFF(SdkStats,libraries),OFF(SdkStats,ports),OFF(SdkStats,signals),OFF(SdkStats,messages),OFF(SdkStats,refusals),OFF(SdkStats,devices),OFF(SdkStats,requests),OFF(SdkStats,directories),OFF(SdkStats,rastports),OFF(SdkStats,bitmaps),OFF(SdkStats,windows),OFF(SdkStats,pubscreens),OFF(SdkStats,aslrequests),OFF(SdkStats,locales),OFF(SdkStats,catalogs)),
+ LAYOUT(SdkStats,OFF(SdkStats,blocks),OFF(SdkStats,backing_charge),OFF(SdkStats,peak_charge),OFF(SdkStats,files),OFF(SdkStats,libraries),OFF(SdkStats,ports),OFF(SdkStats,signals),OFF(SdkStats,messages),OFF(SdkStats,refusals),OFF(SdkStats,devices),OFF(SdkStats,requests),OFF(SdkStats,directories),OFF(SdkStats,rastports),OFF(SdkStats,bitmaps),OFF(SdkStats,windows),OFF(SdkStats,pubscreens),OFF(SdkStats,aslrequests),OFF(SdkStats,locales),OFF(SdkStats,catalogs),OFF(SdkStats,icons),OFF(SdkStats,wbports),OFF(SdkStats,wbobjects)),
  LAYOUT(SdkEntry,OFF(SdkEntry,size),OFF(SdkEntry,protection),OFF(SdkEntry,name_length),OFF(SdkEntry,entry_type),OFF(SdkEntry,directory_type),OFF(SdkEntry,days),OFF(SdkEntry,minutes),OFF(SdkEntry,ticks),OFF(SdkEntry,size_exact),OFF(SdkEntry,name))
 };
 /* Timer types of the selected SDK: timerequest carries struct timeval on
@@ -134,6 +134,36 @@ size_t sdk_locale_layout(uint64_t *out,size_t cap) {
  const size_t count=sizeof(c_locale_layout)/sizeof(*c_locale_layout);
  if(cap<count || !out)return count;
  for(size_t i=0;i<count;i++)out[i]=c_locale_layout[i];return count;
+}
+/* Disk object types, application message types and the records of the icon
+   and Workbench part of the bridge. The pinned ABI-v11 C SDK has no workbench
+   header; its values are those of the ABI-v11 SDK's workbench/workbench.h,
+   identical to ABI-v1. */
+#ifdef AMI_RUST_ABI11
+#define WBDISK 1
+#define WBDRAWER 2
+#define WBTOOL 3
+#define WBPROJECT 4
+#define WBGARBAGE 5
+#define WBDEVICE 6
+#define WBKICK 7
+#define WBAPPICON 8
+#define AMTYPE_APPWINDOW 7
+#define AMTYPE_APPICON 8
+#define AMTYPE_APPMENUITEM 9
+#else
+#include <workbench/workbench.h>
+#endif
+static const size_t c_wb_layout[]={
+ WBDISK,WBDRAWER,WBTOOL,WBPROJECT,WBGARBAGE,WBDEVICE,WBKICK,WBAPPICON,
+ AMTYPE_APPWINDOW,AMTYPE_APPICON,AMTYPE_APPMENUITEM,
+ sizeof(SdkIconInfo),OFF(SdkIconInfo,default_tool),OFF(SdkIconInfo,tool_types),
+ sizeof(SdkAppMessage),OFF(SdkAppMessage,mouse_x),OFF(SdkAppMessage,seconds),OFF(SdkAppMessage,id)
+};
+size_t sdk_wb_layout(uint64_t *out,size_t cap) {
+ const size_t count=sizeof(c_wb_layout)/sizeof(*c_wb_layout);
+ if(cap<count || !out)return count;
+ for(size_t i=0;i<count;i++)out[i]=c_wb_layout[i];return count;
 }
 size_t sdk_layout(uint64_t *out,size_t cap) {
  const size_t count=sizeof(c_layout)/sizeof(*c_layout);

@@ -1,7 +1,7 @@
 {
   "schema": "ami-rust-aros-api-provenance-v1",
   "generator": "0.1.0",
-  "manifest_sha256": "28f0f32628d23e0215ba0520c3b07c88bb560e7d5505e9ad924504c765ef32a2",
+  "manifest_sha256": "7a81ec5883f7b6a17647bb94f572cc1bb6118b71321a038c020eee5a806ab3c0",
   "inputs": [
     {
       "abi": "abi1",
@@ -42,6 +42,16 @@
       "abi": "abi1",
       "path": "defines/graphics.h",
       "sha256": "24ebb7989c43acaa6f0a58dbcda846344dbaf2ad4dfae5c07d776bfa41c95f67"
+    },
+    {
+      "abi": "abi1",
+      "path": "clib/icon_protos.h",
+      "sha256": "6a4faf0ab027a2ebe8f6882d01695aad0c4d84e084c8bb69f7af018109ac0caa"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/icon.h",
+      "sha256": "563f6958aa01e4e3624ce850a2a4d9aeaa303828d67a5197f18f7f509b555225"
     },
     {
       "abi": "abi1",
@@ -94,6 +104,16 @@
       "sha256": "bab081e9fa30e55254d719cdc812ed00e0575778bc3feadaf76714416bcecab4"
     },
     {
+      "abi": "abi1",
+      "path": "clib/workbench_protos.h",
+      "sha256": "0e0d26fc95a00e97881405a72dc67cd868acd24d7c84f35f7b3725006cdb2c38"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/workbench.h",
+      "sha256": "5cf88b13140fb87e58832ee2ae69ad52d3d15fb556fbccf51120f927452f0f2c"
+    },
+    {
       "abi": "abi11",
       "path": "clib/asl_protos.h",
       "sha256": "9d44a80570bb8508616afe6c3a5bc73dd7de094a09dcccb122a1a9c0278961c2"
@@ -132,6 +152,16 @@
       "abi": "abi11",
       "path": "defines/graphics.h",
       "sha256": "8d992d693a8e8fce2501e2c7f050e0700ee890cc3a2fb4ef8a1d926c162555fa"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/icon_protos.h",
+      "sha256": "4e52c1b768e4d3143707633db5291e047a1f6449f6c389ba1e51bfe1822cffc3"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/icon.h",
+      "sha256": "dc64099d7dcca95fe3cba0e391263254d2668769fe49bd066bcbd3ab7f103ddb"
     },
     {
       "abi": "abi11",
@@ -182,6 +212,16 @@
       "abi": "abi11",
       "path": "defines/utility.h",
       "sha256": "c404bd062f3172c0e6598894d5658aaf502a34849e8b018687ecbf8e7198a291"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/workbench_protos.h",
+      "sha256": "a85f5b70ad6e8d6d93e504b1803db8ebc80bcd7d808b2778a38f1de736a38425"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/workbench.h",
+      "sha256": "7c490e97b747a3ba80084c9f2d718d867e7cdcb7439dc93a3461b442f095cea5"
     }
   ]
 }

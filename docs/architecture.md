@@ -32,7 +32,9 @@ ami-rust has four layers. Applications use the top one; the lower layers exist s
 | [`aros-intuition`](/api/aros-intuition/) | Windows, public screens and typed IDCMP events on `intuition.library`. Built on `aros`, `aros-graphics` and the raw Intuition calls in `aros-sys`. Unreleased. |
 | [`aros-asl`](/api/aros-asl/) | File requesters on `asl.library` that return owned paths. Built on `aros`, `aros-intuition` and the raw asl calls in `aros-sys`. Unreleased. |
 | [`aros-locale`](/api/aros-locale/) | Message catalogs with built-in default strings and date formatting on `locale.library`. Built on `aros` and the raw locale calls in `aros-sys`. Unreleased. |
-| `aros-sys` | Raw, allocation-free declarations and calls for the exec, dos, utility, intuition, timer, graphics, asl and locale libraries, plus the bridge's C interface. |
+| [`aros-icon`](/api/aros-icon/) | Disk objects, tool types and tool value matching on `icon.library`. Built on `aros` and the raw icon calls in `aros-sys`. Unreleased. |
+| [`aros-workbench`](/api/aros-workbench/) | Application windows, icons and menu items with message receipt on `workbench.library`. Built on `aros`, `aros-icon`, `aros-intuition` and the raw Workbench calls in `aros-sys`. Unreleased. |
+| `aros-sys` | Raw, allocation-free declarations and calls for the exec, dos, utility, intuition, timer, graphics, asl, locale, icon and workbench libraries, plus the bridge's C interface. |
 | `aros-mui-sys` | Raw MUI: every public class ID, attribute, method, value, enum value and `MUIP_*` message in the pinned headers, and the reviewed muimaster vector calls. |
 
 Every safe type is built on the raw crates, and none of them exposes a raw pointer except through an `unsafe` item. The raw crates choose their library-call backend from the Cargo target, which is how the two [ABIs](/targets-and-abis/) are kept out of the safe API.

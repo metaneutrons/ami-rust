@@ -1325,6 +1325,190 @@ pub mod graphics {
     }
 }
 
+pub mod icon {
+    use super::*;
+
+    /// Raw `GetDiskObject` call through Icon vector 13 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_disk_object(base: *mut Library, name: *const c_char) -> *mut c_void {
+        let function = unsafe { vector(base, 13) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") name as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *mut c_void
+    }
+
+    /// Raw `PutDiskObject` call through Icon vector 14 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn put_disk_object(
+        base: *mut Library,
+        name: *const c_char,
+        icon: *mut c_void,
+    ) -> BOOL {
+        let function = unsafe { vector(base, 14) };
+        let result: i32;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") name as usize,
+                in("rsi") icon as usize,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as BOOL
+    }
+
+    /// Raw `FreeDiskObject` call through Icon vector 15 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn free_disk_object(base: *mut Library, diskobj: *mut c_void) {
+        let function = unsafe { vector(base, 15) };
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") diskobj as usize,
+                clobber_abi("C"),
+            );
+        }
+    }
+
+    /// Raw `FindToolType` call through Icon vector 16 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn find_tool_type(
+        base: *mut Library,
+        tool_type_array: *const *const c_char,
+        type_name: *const c_char,
+    ) -> *const c_char {
+        let function = unsafe { vector(base, 16) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") tool_type_array as usize,
+                in("rsi") type_name as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *const c_char
+    }
+
+    /// Raw `MatchToolValue` call through Icon vector 17 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn match_tool_value(
+        base: *mut Library,
+        type_string: *const c_char,
+        value: *const c_char,
+    ) -> BOOL {
+        let function = unsafe { vector(base, 17) };
+        let result: i32;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") type_string as usize,
+                in("rsi") value as usize,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as BOOL
+    }
+
+    /// Raw `GetDefDiskObject` call through Icon vector 20 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_def_disk_object(base: *mut Library, kind: i32) -> *mut c_void {
+        let function = unsafe { vector(base, 20) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") kind as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *mut c_void
+    }
+
+    /// Raw `DeleteDiskObject` call through Icon vector 23 (minimum version 37).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn delete_disk_object(base: *mut Library, name: *const c_char) -> BOOL {
+        let function = unsafe { vector(base, 23) };
+        let result: i32;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") name as usize,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as BOOL
+    }
+
+    /// Raw `NewDiskObject` call through Icon vector 29 (minimum version 44).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn new_disk_object(base: *mut Library, kind: u32) -> *mut c_void {
+        let function = unsafe { vector(base, 29) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") kind as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *mut c_void
+    }
+}
+
 pub mod intuition {
     use super::*;
 
@@ -2005,5 +2189,223 @@ pub mod utility {
             );
         }
         result as *mut TagItem
+    }
+}
+
+pub mod workbench {
+    use super::*;
+
+    /// Raw `AddAppWindowA` call through Workbench vector 8 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn add_app_window_a(
+        base: *mut Library,
+        id: usize,
+        userdata: usize,
+        window: *mut c_void,
+        msgport: *mut c_void,
+        taglist: *mut TagItem,
+    ) -> *mut c_void {
+        let function = unsafe { vector(base, 8) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") id as usize,
+                in("rsi") userdata as usize,
+                in("rdx") window as usize,
+                in("rcx") msgport as usize,
+                in("r8") taglist as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *mut c_void
+    }
+
+    /// Raw `RemoveAppWindow` call through Workbench vector 9 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn remove_app_window(base: *mut Library, app_window: *mut c_void) -> BOOL {
+        let function = unsafe { vector(base, 9) };
+        let result: i32;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") app_window as usize,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as BOOL
+    }
+
+    /// Raw `AddAppIconA` call through Workbench vector 10 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn add_app_icon_a(
+        base: *mut Library,
+        id: usize,
+        userdata: usize,
+        text: *const c_char,
+        msgport: *mut c_void,
+        lock: BPTR,
+        diskobj: *mut c_void,
+        taglist: *mut TagItem,
+    ) -> *mut c_void {
+        let function = unsafe { vector(base, 10) };
+        let result: usize;
+        let stack_arguments: [usize; 1] = [taglist as usize];
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "sub rsp, 16",
+                "mov r11, [{stack} + 0]",
+                "mov [rsp + 0], r11",
+                "call {function}",
+                "add rsp, 16",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") id as usize,
+                in("rsi") userdata as usize,
+                in("rdx") text as usize,
+                in("rcx") msgport as usize,
+                in("r8") lock as usize,
+                in("r9") diskobj as usize,
+                stack = in(reg) stack_arguments.as_ptr(),
+                out("r11") _,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *mut c_void
+    }
+
+    /// Raw `RemoveAppIcon` call through Workbench vector 11 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn remove_app_icon(base: *mut Library, app_icon: *mut c_void) -> BOOL {
+        let function = unsafe { vector(base, 11) };
+        let result: i32;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") app_icon as usize,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as BOOL
+    }
+
+    /// Raw `AddAppMenuItemA` call through Workbench vector 12 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn add_app_menu_item_a(
+        base: *mut Library,
+        id: usize,
+        userdata: usize,
+        text: *const c_char,
+        msgport: *mut c_void,
+        taglist: *mut TagItem,
+    ) -> *mut c_void {
+        let function = unsafe { vector(base, 12) };
+        let result: usize;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") id as usize,
+                in("rsi") userdata as usize,
+                in("rdx") text as usize,
+                in("rcx") msgport as usize,
+                in("r8") taglist as usize,
+                lateout("rax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as *mut c_void
+    }
+
+    /// Raw `RemoveAppMenuItem` call through Workbench vector 13 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn remove_app_menu_item(base: *mut Library, app_menu_item: *mut c_void) -> BOOL {
+        let function = unsafe { vector(base, 13) };
+        let result: i32;
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "call {function}",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") app_menu_item as usize,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as BOOL
+    }
+
+    /// Raw `SendAppWindowMessage` call through Workbench vector 26 (minimum version 45).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn send_app_window_message(
+        base: *mut Library,
+        win: *mut c_void,
+        numfiles: u32,
+        files: *const *const c_char,
+        windowclass: u16,
+        mousex: i16,
+        mousey: i16,
+        seconds: u32,
+        micros: u32,
+    ) -> BOOL {
+        let function = unsafe { vector(base, 26) };
+        let result: i32;
+        let stack_arguments: [usize; 2] = [seconds as usize, micros as usize];
+        // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
+        unsafe {
+            asm!(
+                "sub rsp, 16",
+                "mov r11, [{stack} + 0]",
+                "mov [rsp + 0], r11",
+                "mov r11, [{stack} + 8]",
+                "mov [rsp + 8], r11",
+                "call {function}",
+                "add rsp, 16",
+                function = in(reg) function,
+                in("r12") base,
+                in("rdi") win as usize,
+                in("rsi") numfiles as usize,
+                in("rdx") files as usize,
+                in("rcx") windowclass as usize,
+                in("r8") mousex as usize,
+                in("r9") mousey as usize,
+                stack = in(reg) stack_arguments.as_ptr(),
+                out("r11") _,
+                lateout("eax") result,
+                clobber_abi("C"),
+            );
+        }
+        result as BOOL
     }
 }

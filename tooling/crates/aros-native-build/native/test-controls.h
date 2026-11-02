@@ -118,6 +118,30 @@ int sdk_test_script_join(uint32_t timeout_ms) {
  if(state!=1)Delay(15);
  return state;
 }
+/* Runs a function on a second native process, for tests of calls that block
+   until another task answers (SendAppWindowMessage waits for its receiver). */
+static void (*test_spawn_entry)(void *);
+static void *test_spawn_argument;
+static volatile int test_spawn_state;
+static void spawn_main(void) {
+ test_spawn_entry(test_spawn_argument);
+ test_spawn_state=2;
+}
+int sdk_test_spawn(void (*entry)(void *),void *argument) {
+ if(!entry || test_spawn_state==1)return -1;
+ test_spawn_entry=entry;test_spawn_argument=argument;test_spawn_state=1;
+ struct TagItem tags[]={{NP_Entry,(IPTR)spawn_main},{NP_Name,(IPTR)"ami-rust test helper"},{NP_StackSize,65536},{TAG_DONE,0}};
+ if(!CreateNewProc(tags)){test_spawn_state=0;return -2;}
+ return 0;
+}
+/* 2 the function returned, 1 still running at the timeout, 0 never started. */
+int sdk_test_spawn_join(uint32_t timeout_ms) {
+ uint32_t waited=0;
+ while(test_spawn_state==1 && waited<timeout_ms){Delay(2);waited+=40;}
+ int state=test_spawn_state;
+ if(state==2){Delay(15);test_spawn_state=0;}
+ return state;
+}
 /* Free memory as Exec reports it, to show that a program gave everything back. */
 uint64_t sdk_test_avail_mem(void) {return (uint64_t)AvailMem(MEMF_ANY);}
 static uint32_t fault_site,fault_nth,fault_seen,diagnostic_probe,secondary_on_diagnostic;

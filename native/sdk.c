@@ -45,6 +45,13 @@
 #define SDK_TITLE_MAX 127
 #define KIND_ASL 13UL
 #define KIND_LOCALE 14UL
+#define KIND_ICON 15UL
+#define KIND_WBPORT 16UL
+#define KIND_WBOBJ 17UL
+#define WB_MAX_ARGS 8
+#define WB_PATH_MAX 256
+#define WB_TEXT_LIMIT 512
+#define WB_TEXT_MAX 127
 #define GFX_MAX_AREA_VECTORS 1024
 #define IO_KIND_STANDARD 0
 #define IO_KIND_TIMER 1
@@ -83,6 +90,17 @@ struct AslSlot { uint64_t token;void *base;void *request; };
 /* A locale.library locale (kind 0) or catalog (kind 1), closed at exit if the
    program does not. */
 struct LocaleSlot { uint64_t token;int kind;void *base;void *object; };
+/* A disk object from icon.library. The bridge can replace its default tool and
+   tool types with copies it owns; it puts the originals back before the
+   library frees the object. */
+struct IconSlot { uint64_t token;void *base;struct AmiDiskObject *object;char *orig_default;char **orig_types;void *own_default;size_t own_default_size;void *own_types;size_t own_types_size; };
+/* The message port Workbench sends application messages to, with the last
+   message decoded (the message itself is replied to at once). */
+struct WbPortSlot { uint64_t token;struct MsgPort *port;int paths;size_t path_length[WB_MAX_ARGS];char path[WB_MAX_ARGS][WB_PATH_MAX]; };
+/* An application window, icon or menu item registered with Workbench (kind 0,
+   1, 2). The slot owns the text Workbench keeps a pointer to; handle is NULL
+   until the registration is attached. */
+struct WbObjectSlot { uint64_t token;int kind;void *base;void *handle;struct MsgPort *port;char text[WB_TEXT_MAX+1]; };
 /* A locked public screen, unlocked at exit if the program forgets it. */
 struct ScreenSlot { uint64_t token;void *base;void *screen; };
 struct DirSlot { uint64_t token;BPTR lock;void *fib;int wide; };
@@ -91,7 +109,7 @@ struct IoSlot { uint64_t token,device;struct IORequest *request;size_t size;uint
 #define SLOT_LIMIT ((UINT64_C(1)<<SLOT_BITS)-1)
 #define SEQUENCE_LIMIT ((UINT64_C(1)<<36)-1)
 #define SIGNAL_SLOTS 32
-static struct Registry files,libraries,ports,messages,devices,requests,directories,rastports,bitmaps,windows,pubscreens,aslrequests,localeobjs;
+static struct Registry files,libraries,ports,messages,devices,requests,directories,rastports,bitmaps,windows,pubscreens,aslrequests,localeobjs,iconobjs,wbports,wbobjects;
 static BPTR cwd_original,cwd_owned;
 static struct SignalSlot signals[SIGNAL_SLOTS];
 static APTR registry_pool;
@@ -936,6 +954,10 @@ static void lib_call2(void *base,unsigned vector,void *a0,void *a1) {
 #define INTUITION_UNLOCK_PUB_SCREEN_VECTOR 86
 #define ASL_FREE_REQUEST_VECTOR 9
 #define LOCALE_CLOSE_CATALOG_VECTOR 6
+#define ICON_FREE_DISK_OBJECT_VECTOR 15
+#define WB_REMOVE_APP_WINDOW_VECTOR 9
+#define WB_REMOVE_APP_ICON_VECTOR 11
+#define WB_REMOVE_APP_MENU_ITEM_VECTOR 13
 #define LOCALE_CLOSE_LOCALE_VECTOR 7
 static void gfx_free_bitmap(void *base,void *bitmap) {lib_call1(base,GFX_FREE_BITMAP_VECTOR,bitmap);}
 uint64_t sdk_gfx_bitmap_register(uint64_t key,void *base,void *bitmap,SdkError *e) {
@@ -1135,6 +1157,181 @@ static void locale_close_registered(struct LocaleSlot *slot) {
  record_release(&localeobjs,slot,sizeof(*slot));
  lib_call1(base,kind==0?LOCALE_CLOSE_LOCALE_VECTOR:LOCALE_CLOSE_CATALOG_VECTOR,object);
 }
+
+/* icon.library disk objects and Workbench application objects. The pinned
+   ABI-v11 C SDK has no workbench headers, so the parts of DiskObject and
+   AppMessage the bridge reads are declared here; on ABI-v1 the declarations
+   are checked against the SDK header, and the ABI-v11 SDK's header declares
+   the same structures. */
+struct AmiDiskObject {
+ UWORD magic;UWORD version;struct Gadget gadget;UBYTE type;
+ char *default_tool;char **tool_types;LONG current_x;LONG current_y;void *drawer_data;char *tool_window;LONG stack_size;
+};
+struct AmiAppMessage {
+ struct Message message;UWORD type;IPTR user_data;IPTR id;LONG num_args;struct AmiWBArg *arg_list;
+ UWORD version;UWORD class_;WORD mouse_x;WORD mouse_y;ULONG seconds;ULONG micros;ULONG reserved[8];
+};
+#ifndef AMI_RUST_ABI11
+#include <workbench/workbench.h>
+_Static_assert(sizeof(struct AmiDiskObject)==sizeof(struct DiskObject),"DiskObject size");
+_Static_assert(offsetof(struct AmiDiskObject,type)==offsetof(struct DiskObject,do_Type),"do_Type");
+_Static_assert(offsetof(struct AmiDiskObject,default_tool)==offsetof(struct DiskObject,do_DefaultTool),"do_DefaultTool");
+_Static_assert(offsetof(struct AmiDiskObject,tool_types)==offsetof(struct DiskObject,do_ToolTypes),"do_ToolTypes");
+_Static_assert(offsetof(struct AmiDiskObject,stack_size)==offsetof(struct DiskObject,do_StackSize),"do_StackSize");
+_Static_assert(offsetof(struct AmiDiskObject,current_x)==offsetof(struct DiskObject,do_CurrentX),"do_CurrentX");
+_Static_assert(sizeof(struct AmiAppMessage)==sizeof(struct AppMessage),"AppMessage size");
+_Static_assert(offsetof(struct AmiAppMessage,type)==offsetof(struct AppMessage,am_Type),"am_Type");
+_Static_assert(offsetof(struct AmiAppMessage,user_data)==offsetof(struct AppMessage,am_UserData),"am_UserData");
+_Static_assert(offsetof(struct AmiAppMessage,num_args)==offsetof(struct AppMessage,am_NumArgs),"am_NumArgs");
+_Static_assert(offsetof(struct AmiAppMessage,arg_list)==offsetof(struct AppMessage,am_ArgList),"am_ArgList");
+_Static_assert(offsetof(struct AmiAppMessage,class_)==offsetof(struct AppMessage,am_Class),"am_Class");
+_Static_assert(offsetof(struct AmiAppMessage,mouse_x)==offsetof(struct AppMessage,am_MouseX),"am_MouseX");
+_Static_assert(offsetof(struct AmiAppMessage,seconds)==offsetof(struct AppMessage,am_Seconds),"am_Seconds");
+#endif
+static struct IconSlot *icon_find(uint64_t token) {return (struct IconSlot *)record_find(&iconobjs,token,KIND_ICON);}
+uint64_t sdk_icon_register(uint64_t key,void *base,void *object,SdkError *e) {
+ if(own(key,e))return 0;if(!base || !object){refuse(e,2,0);return 0;}
+ struct IconSlot *slot=(struct IconSlot *)record_new(&iconobjs,KIND_ICON,sizeof(*slot),e);if(!slot)return 0;
+ struct AmiDiskObject *disk=(struct AmiDiskObject *)object;
+ slot->base=base;slot->object=disk;slot->orig_default=disk->default_tool;slot->orig_types=disk->tool_types;
+ ++stats.icons;return slot->token;
+}
+int sdk_icon_info(uint64_t key,uint64_t token,SdkIconInfo *out,SdkError *e) {
+ if(own(key,e))return -1;struct IconSlot *slot=icon_find(token);if(!slot || !out)return refuse(e,5,0);
+ const struct AmiDiskObject *disk=slot->object;
+ out->kind=disk->type;out->stack_size=disk->stack_size;out->x=disk->current_x;out->y=disk->current_y;
+ out->default_tool=disk->default_tool;out->tool_types=(const char *const *)disk->tool_types;return 0;
+}
+static void icon_restore(struct IconSlot *slot) {
+ if(slot->own_default){slot->object->default_tool=slot->orig_default;FreeMem(slot->own_default,slot->own_default_size);slot->own_default=NULL;}
+ if(slot->own_types){slot->object->tool_types=slot->orig_types;FreeMem(slot->own_types,slot->own_types_size);slot->own_types=NULL;}
+}
+int sdk_icon_set_default_tool(uint64_t key,uint64_t token,const uint8_t *text,size_t length,SdkError *e) {
+ if(own(key,e))return -1;struct IconSlot *slot=icon_find(token);if(!slot)return refuse(e,5,0);
+ if(length>WB_TEXT_LIMIT || (length && !text))return refuse(e,2,0);
+ char *copy=(char *)AllocMem(length+1,MEMF_PUBLIC|MEMF_CLEAR);if(!copy)return refuse(e,1,ERROR_NO_FREE_STORE);
+ if(length)memcpy(copy,text,length);
+ if(slot->own_default)FreeMem(slot->own_default,slot->own_default_size);
+ slot->own_default=copy;slot->own_default_size=length+1;slot->object->default_tool=copy;return 0;
+}
+int sdk_icon_set_tool_types(uint64_t key,uint64_t token,const uint8_t *const *items,const size_t *lengths,size_t count,SdkError *e) {
+ if(own(key,e))return -1;struct IconSlot *slot=icon_find(token);if(!slot)return refuse(e,5,0);
+ if(count>64 || (count && (!items || !lengths)))return refuse(e,2,0);
+ size_t total=(count+1)*sizeof(char *);
+ for(size_t i=0;i<count;i++){if(lengths[i]>WB_TEXT_LIMIT)return refuse(e,2,0);total+=lengths[i]+1;}
+ char **array=(char **)AllocMem(total,MEMF_PUBLIC|MEMF_CLEAR);if(!array)return refuse(e,1,ERROR_NO_FREE_STORE);
+ char *text=(char *)(array+count+1);
+ for(size_t i=0;i<count;i++){array[i]=text;if(lengths[i])memcpy(text,items[i],lengths[i]);text+=lengths[i]+1;}
+ array[count]=NULL;
+ if(slot->own_types)FreeMem(slot->own_types,slot->own_types_size);
+ slot->own_types=array;slot->own_types_size=total;slot->object->tool_types=array;return 0;
+}
+int sdk_icon_set_stack(uint64_t key,uint64_t token,int32_t stack,SdkError *e) {
+ if(own(key,e))return -1;struct IconSlot *slot=icon_find(token);if(!slot)return refuse(e,5,0);
+ slot->object->stack_size=stack;return 0;
+}
+/* Puts the library's own tool types back and forgets the object; the caller
+   frees it. */
+int sdk_icon_release(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct IconSlot *slot=icon_find(token);if(!slot)return refuse(e,5,0);
+ icon_restore(slot);record_release(&iconobjs,slot,sizeof(*slot));--stats.icons;return 0;
+}
+static void icon_free_registered(struct IconSlot *slot) {
+ void *base=slot->base,*object=slot->object;
+ icon_restore(slot);record_release(&iconobjs,slot,sizeof(*slot));--stats.icons;
+ lib_call1(base,ICON_FREE_DISK_OBJECT_VECTOR,object);
+}
+
+static struct WbPortSlot *wbport_find(uint64_t token) {return (struct WbPortSlot *)record_find(&wbports,token,KIND_WBPORT);}
+uint64_t sdk_wb_port_new(uint64_t key,SdkError *e) {
+ if(own(key,e))return 0;
+ struct WbPortSlot *slot=(struct WbPortSlot *)record_new(&wbports,KIND_WBPORT,sizeof(*slot),e);if(!slot)return 0;
+ slot->port=CreateMsgPort();
+ if(!slot->port){record_release(&wbports,slot,sizeof(*slot));refuse(e,1,ERROR_NO_FREE_STORE);return 0;}
+ ++stats.wbports;return slot->token;
+}
+void *sdk_wb_port_ptr(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return NULL;struct WbPortSlot *slot=wbport_find(token);return slot?slot->port:NULL;
+}
+uint32_t sdk_wb_port_mask(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return 0;struct WbPortSlot *slot=wbport_find(token);return slot?(1UL<<slot->port->mp_SigBit):0;
+}
+/* Whether a message is waiting. */
+int sdk_wb_port_pending(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return 0;struct WbPortSlot *slot=wbport_find(token);
+ return slot && !IsListEmpty(&slot->port->mp_MsgList);
+}
+/* Returns 1 and fills the message (its paths are kept for sdk_wb_path until
+   the next call), or 0 if none is waiting. The message is replied to here. */
+int sdk_wb_port_next(uint64_t key,uint64_t token,SdkAppMessage *out,SdkError *e) {
+ if(own(key,e))return -1;struct WbPortSlot *slot=wbport_find(token);if(!slot || !out)return refuse(e,5,0);
+ struct AmiAppMessage *message=(struct AmiAppMessage *)GetMsg(slot->port);
+ if(!message)return 0;
+ out->type=message->type;out->class_=message->class_;out->total_args=message->num_args;
+ out->mouse_x=message->mouse_x;out->mouse_y=message->mouse_y;out->seconds=message->seconds;out->micros=message->micros;
+ out->id=message->id;out->user_data=message->user_data;
+ slot->paths=0;
+ for(LONG i=0;message->arg_list && i<message->num_args && i<WB_MAX_ARGS;i++){
+  struct AmiWBArg *arg=&message->arg_list[i];char *path=slot->path[i];path[0]=0;int good=1;
+  if(arg->lock && !NameFromLock(arg->lock,(STRPTR)path,WB_PATH_MAX))good=0;
+  if(good && arg->name && !AddPart((STRPTR)path,(CONST_STRPTR)arg->name,WB_PATH_MAX))good=0;
+  if(!good)path[0]=0;
+  slot->path_length[i]=strlen(path);slot->paths=(int)i+1;
+ }
+ out->num_args=(uint32_t)slot->paths;
+ ReplyMsg((struct Message *)message);return 1;
+}
+int sdk_wb_path(uint64_t key,uint64_t token,int32_t index,uint8_t *buffer,size_t capacity,size_t *length,SdkError *e) {
+ if(own(key,e))return -1;struct WbPortSlot *slot=wbport_find(token);if(!slot || !buffer || !length)return refuse(e,5,0);
+ if(index<0 || index>=slot->paths)return refuse(e,2,0);
+ size_t n=slot->path_length[index];if(n+1>capacity)return refuse(e,3,0);
+ memcpy(buffer,slot->path[index],n+1);*length=n;return 0;
+}
+static void wbport_release(struct WbPortSlot *slot) {
+ struct MsgPort *port=slot->port;
+ record_release(&wbports,slot,sizeof(*slot));--stats.wbports;
+ struct Message *message;
+ while((message=GetMsg(port)))ReplyMsg(message);
+ DeleteMsgPort(port);
+}
+int sdk_wb_port_drop(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct WbPortSlot *slot=wbport_find(token);if(!slot)return refuse(e,5,0);
+ wbport_release(slot);return 0;
+}
+
+static struct WbObjectSlot *wbobject_find(uint64_t token) {return (struct WbObjectSlot *)record_find(&wbobjects,token,KIND_WBOBJ);}
+uint64_t sdk_wb_object_new(uint64_t key,int32_t kind,uint64_t port_token,const uint8_t *text,size_t length,SdkError *e) {
+ if(own(key,e))return 0;if(kind<0 || kind>2 || length>WB_TEXT_MAX || (length && !text)){refuse(e,2,0);return 0;}
+ struct WbPortSlot *port=wbport_find(port_token);if(!port){refuse(e,5,0);return 0;}
+ struct WbObjectSlot *slot=(struct WbObjectSlot *)record_new(&wbobjects,KIND_WBOBJ,sizeof(*slot),e);if(!slot)return 0;
+ slot->kind=kind;slot->port=port->port;if(length)memcpy(slot->text,text,length);slot->text[length]=0;
+ ++stats.wbobjects;return slot->token;
+}
+const char *sdk_wb_object_text(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return NULL;struct WbObjectSlot *slot=wbobject_find(token);return slot?slot->text:NULL;
+}
+int sdk_wb_object_attach(uint64_t key,uint64_t token,void *base,void *handle,SdkError *e) {
+ if(own(key,e))return -1;struct WbObjectSlot *slot=wbobject_find(token);if(!slot || slot->handle || !base || !handle)return refuse(e,5,0);
+ slot->base=base;slot->handle=handle;return 0;
+}
+/* Forgets an object whose registration failed. */
+int sdk_wb_object_cancel(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct WbObjectSlot *slot=wbobject_find(token);if(!slot || slot->handle)return refuse(e,5,0);
+ record_release(&wbobjects,slot,sizeof(*slot));--stats.wbobjects;return 0;
+}
+/* Messages already queued are replied to first: SendAppWindowMessage holds
+   the Workbench lock while it waits for its reply, and the removal needs that
+   lock. */
+static void wbobject_remove(struct WbObjectSlot *slot) {
+ void *base=slot->base,*handle=slot->handle;int kind=slot->kind;struct MsgPort *port=slot->port;
+ record_release(&wbobjects,slot,sizeof(*slot));--stats.wbobjects;
+ if(handle && port){struct Message *message;while((message=GetMsg(port)))ReplyMsg(message);}
+ if(handle)lib_call1(base,kind==0?WB_REMOVE_APP_WINDOW_VECTOR:kind==1?WB_REMOVE_APP_ICON_VECTOR:WB_REMOVE_APP_MENU_ITEM_VECTOR,handle);
+}
+int sdk_wb_object_remove(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct WbObjectSlot *slot=wbobject_find(token);if(!slot)return refuse(e,5,0);
+ wbobject_remove(slot);return 0;
+}
 int sdk_callback(uint64_t key,uint64_t (*callback)(void *,uint64_t),void *data,uint64_t value,uint64_t *out,SdkError *e) {
  if(own(key,e))return -1;if(callback_active || !callback || !data || !out)return refuse(e,5,0);
  callback_active=1;*out=callback(data,value);callback_active=0;return 0;
@@ -1157,6 +1354,9 @@ static int test_report_ledgers(void) {
  sdk_diagnostic((const uint8_t *)"[m1-ledger] aslrequests",23,stats.aslrequests);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] locales",19,stats.locales);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] catalogs",20,stats.catalogs);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] icons",17,stats.icons);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] wbports",19,stats.wbports);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] wbobjects",21,stats.wbobjects);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] devices",19,stats.devices);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] requests",20,stats.requests);
  sdk_diagnostic((const uint8_t *)"[m1-native] live",16,backend_live());
@@ -1177,6 +1377,9 @@ static int cleanup_remaining(void) {
  if(setjmp(cleanup_resume)){cleanup_error=20;ami_sdk_diagnostic_depth=0;}
  for(size_t i=0;i<directories.capacity;i++){struct DirSlot *slot=(struct DirSlot *)directories.items[i];if(slot)dir_release(slot);}
  cwd_restore();
+ for(size_t i=0;i<wbobjects.capacity;i++){struct WbObjectSlot *slot=(struct WbObjectSlot *)wbobjects.items[i];if(slot)wbobject_remove(slot);}
+ for(size_t i=0;i<wbports.capacity;i++){struct WbPortSlot *slot=(struct WbPortSlot *)wbports.items[i];if(slot)wbport_release(slot);}
+ for(size_t i=0;i<iconobjs.capacity;i++){struct IconSlot *slot=(struct IconSlot *)iconobjs.items[i];if(slot)icon_free_registered(slot);}
  for(int kind=1;kind>=0;kind--)for(size_t i=0;i<localeobjs.capacity;i++){struct LocaleSlot *slot=(struct LocaleSlot *)localeobjs.items[i];if(slot && slot->kind==kind)locale_close_registered(slot);}
  for(size_t i=0;i<aslrequests.capacity;i++){struct AslSlot *slot=(struct AslSlot *)aslrequests.items[i];if(slot)asl_free_registered(slot);}
  for(size_t i=0;i<windows.capacity;i++){struct WindowSlot *slot=(struct WindowSlot *)windows.items[i];if(slot)window_close(slot);}
@@ -1196,7 +1399,7 @@ static int cleanup_remaining(void) {
  if(registry_pool){
   /* The tables are the pool's last users; the pool is retired with them. */
   APTR pool=registry_pool;registry_pool=NULL;
-  rastports=(struct Registry){0};bitmaps=(struct Registry){0};windows=(struct Registry){0};pubscreens=(struct Registry){0};aslrequests=(struct Registry){0};localeobjs=(struct Registry){0};directories=(struct Registry){0};files=(struct Registry){0};libraries=(struct Registry){0};ports=(struct Registry){0};messages=(struct Registry){0};devices=(struct Registry){0};requests=(struct Registry){0};
+  rastports=(struct Registry){0};bitmaps=(struct Registry){0};windows=(struct Registry){0};pubscreens=(struct Registry){0};aslrequests=(struct Registry){0};localeobjs=(struct Registry){0};iconobjs=(struct Registry){0};wbports=(struct Registry){0};wbobjects=(struct Registry){0};directories=(struct Registry){0};files=(struct Registry){0};libraries=(struct Registry){0};ports=(struct Registry){0};messages=(struct Registry){0};devices=(struct Registry){0};requests=(struct Registry){0};
   DeletePool(pool);
  }
 #ifdef AMI_SDK_TESTING

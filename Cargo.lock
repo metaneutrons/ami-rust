@@ -30,11 +30,13 @@ dependencies = [
  "aros",
  "aros-asl",
  "aros-graphics",
+ "aros-icon",
  "aros-intuition",
  "aros-locale",
  "aros-native-build",
  "aros-sys",
  "aros-timer",
+ "aros-workbench",
 ]
 
 [[package]]
@@ -73,6 +75,14 @@ dependencies = [
 
 [[package]]
 name = "aros-graphics"
+version = "0.1.0"
+dependencies = [
+ "aros",
+ "aros-sys",
+]
+
+[[package]]
+name = "aros-icon"
 version = "0.1.0"
 dependencies = [
  "aros",
@@ -132,6 +142,16 @@ name = "aros-timer"
 version = "0.1.0"
 dependencies = [
  "aros",
+ "aros-sys",
+]
+
+[[package]]
+name = "aros-workbench"
+version = "0.1.0"
+dependencies = [
+ "aros",
+ "aros-icon",
+ "aros-intuition",
  "aros-sys",
 ]
 

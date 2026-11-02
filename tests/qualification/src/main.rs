@@ -21,6 +21,7 @@ mod m5;
 mod m6;
 mod m7;
 mod m8;
+mod m9;
 #[cfg(not(all(target_os = "aros", target_abi = "abi11")))]
 #[path = "probe/x86_64_abi1.rs"]
 mod probe;
@@ -113,6 +114,9 @@ fn same_resources(a: SdkStats, b: SdkStats) -> bool {
         && a.aslrequests == b.aslrequests
         && a.locales == b.locales
         && a.catalogs == b.catalogs
+        && a.icons == b.icons
+        && a.wbports == b.wbports
+        && a.wbobjects == b.wbobjects
 }
 
 fn one_refusal_since(context: &Context, before: SdkStats) -> bool {
@@ -2673,6 +2677,34 @@ fn application(context: &Context) -> AppStatus {
                 success(context, b"qualification-locale-forgotten", 3)
             } else {
                 fatal(context, 51)
+            }
+        }
+        Some("icon") => {
+            if m9::icons(context) {
+                success(context, b"qualification-icon", 9)
+            } else {
+                fatal(context, 52)
+            }
+        }
+        Some("icon-forgotten") => {
+            if m9::icon_forgotten(context) {
+                success(context, b"qualification-icon-forgotten", 3)
+            } else {
+                fatal(context, 53)
+            }
+        }
+        Some("workbench") => {
+            if m9::workbench(context) {
+                success(context, b"qualification-workbench", 9)
+            } else {
+                fatal(context, 54)
+            }
+        }
+        Some("workbench-forgotten") => {
+            if m9::forgotten(context) {
+                success(context, b"qualification-workbench-forgotten", 3)
+            } else {
+                fatal(context, 55)
             }
         }
         Some("registry") => {
