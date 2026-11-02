@@ -235,7 +235,7 @@ compile_error!("aros-sys currently implements only the x86-64 AROS vector ABI");
 compile_error!("aros-sys requires AROS ABI-v1 or ABI-v11");
 
 mod generated;
-pub use generated::{asl, dos, exec, graphics, intuition, locale, timer, utility};
+pub use generated::{asl, dos, exec, graphics, icon, intuition, locale, timer, utility, workbench};
 
 /// The C bridge's error record (`native` holds the immediately captured
 /// native error, such as DOS `IoErr`).
@@ -270,6 +270,9 @@ pub struct SdkStats {
     pub aslrequests: usize,
     pub locales: usize,
     pub catalogs: usize,
+    pub icons: usize,
+    pub wbports: usize,
+    pub wbobjects: usize,
 }
 
 /// One directory entry as filled in by the native bridge. `name_length` bytes
@@ -720,6 +723,78 @@ pub const fn locale_layout_values() -> [u64; LOCALE_LAYOUT_VALUE_COUNT] {
     ]
 }
 
+/// A disk object as the native bridge reads it from `struct DiskObject`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct SdkIconInfo {
+    pub kind: i32,
+    pub stack_size: i32,
+    pub x: i32,
+    pub y: i32,
+    pub default_tool: *const c_char,
+    pub tool_types: *const *const c_char,
+}
+
+/// One decoded Workbench application message.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct SdkAppMessage {
+    pub kind: u32,
+    pub class: u32,
+    pub num_args: u32,
+    pub total_args: i32,
+    pub mouse_x: i16,
+    pub mouse_y: i16,
+    pub seconds: u32,
+    pub micros: u32,
+    pub id: u64,
+    pub user_data: u64,
+}
+
+/// Disk object types (`WB*`) and application message types (`AMTYPE_*`).
+pub mod wb {
+    pub const DISK: u32 = 1;
+    pub const DRAWER: u32 = 2;
+    pub const TOOL: u32 = 3;
+    pub const PROJECT: u32 = 4;
+    pub const GARBAGE: u32 = 5;
+    pub const DEVICE: u32 = 6;
+    pub const KICK: u32 = 7;
+    pub const APP_ICON: u32 = 8;
+    pub const AMTYPE_APP_WINDOW: u32 = 7;
+    pub const AMTYPE_APP_ICON: u32 = 8;
+    pub const AMTYPE_APP_MENU_ITEM: u32 = 9;
+}
+
+/// Number of values [`wb_layout_values`] and `sdk_wb_layout` produce.
+pub const WB_LAYOUT_VALUE_COUNT: usize = 18;
+
+/// The disk object and message type values and the bridge's icon and message
+/// records as declared here; the native bridge reports the same values for the
+/// selected ABI (`sdk_wb_layout`).
+pub const fn wb_layout_values() -> [u64; WB_LAYOUT_VALUE_COUNT] {
+    [
+        wb::DISK as u64,
+        wb::DRAWER as u64,
+        wb::TOOL as u64,
+        wb::PROJECT as u64,
+        wb::GARBAGE as u64,
+        wb::DEVICE as u64,
+        wb::KICK as u64,
+        wb::APP_ICON as u64,
+        wb::AMTYPE_APP_WINDOW as u64,
+        wb::AMTYPE_APP_ICON as u64,
+        wb::AMTYPE_APP_MENU_ITEM as u64,
+        size_of::<SdkIconInfo>() as u64,
+        offset_of!(SdkIconInfo, default_tool) as u64,
+        offset_of!(SdkIconInfo, tool_types) as u64,
+        size_of::<SdkAppMessage>() as u64,
+        offset_of!(SdkAppMessage, mouse_x) as u64,
+        offset_of!(SdkAppMessage, seconds) as u64,
+        offset_of!(SdkAppMessage, id) as u64,
+    ]
+}
+
 pub const SDK_FILE_READ_EXISTING: i32 = 0;
 pub const SDK_FILE_CREATE_TRUNCATE: i32 = 1;
 pub const SDK_FILE_READ_WRITE: i32 = 2;
@@ -735,7 +810,7 @@ pub const ERROR_KIND_ZERO_PROGRESS: i32 = 7;
 /// Layout oracle values in the exact order of the M0 C layout table:
 /// Node, Library, Message, List, MsgPort, FileInfoBlock, scalar ABI types,
 /// then the selected spinlock_t storage. No native call or allocation occurs.
-pub const ABI_LAYOUT_VALUE_COUNT: usize = 103;
+pub const ABI_LAYOUT_VALUE_COUNT: usize = 106;
 
 const fn layout_value(value: usize) -> u64 {
     value as u64
@@ -834,6 +909,9 @@ pub const fn layout_values() -> [u64; ABI_LAYOUT_VALUE_COUNT] {
         layout_value(offset_of!(SdkStats, aslrequests)),
         layout_value(offset_of!(SdkStats, locales)),
         layout_value(offset_of!(SdkStats, catalogs)),
+        layout_value(offset_of!(SdkStats, icons)),
+        layout_value(offset_of!(SdkStats, wbports)),
+        layout_value(offset_of!(SdkStats, wbobjects)),
         layout_value(size_of::<SdkEntry>()),
         layout_value(align_of::<SdkEntry>()),
         layout_value(offset_of!(SdkEntry, size)),
@@ -1129,6 +1207,74 @@ unsafe extern "C" {
         error: *mut SdkError,
     ) -> c_int;
     pub fn sdk_locale_layout(values: *mut u64, capacity: usize) -> usize;
+    pub fn sdk_icon_register(
+        context: u64,
+        base: *mut c_void,
+        object: *mut c_void,
+        error: *mut SdkError,
+    ) -> u64;
+    pub fn sdk_icon_info(
+        context: u64,
+        icon: u64,
+        info: *mut SdkIconInfo,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_icon_set_default_tool(
+        context: u64,
+        icon: u64,
+        text: *const u8,
+        length: usize,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_icon_set_tool_types(
+        context: u64,
+        icon: u64,
+        items: *const *const u8,
+        lengths: *const usize,
+        count: usize,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_icon_set_stack(context: u64, icon: u64, stack: i32, error: *mut SdkError) -> c_int;
+    pub fn sdk_icon_release(context: u64, icon: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_wb_port_new(context: u64, error: *mut SdkError) -> u64;
+    pub fn sdk_wb_port_ptr(context: u64, port: u64) -> *mut c_void;
+    pub fn sdk_wb_port_mask(context: u64, port: u64) -> u32;
+    pub fn sdk_wb_port_pending(context: u64, port: u64) -> c_int;
+    pub fn sdk_wb_port_next(
+        context: u64,
+        port: u64,
+        message: *mut SdkAppMessage,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_wb_path(
+        context: u64,
+        port: u64,
+        index: i32,
+        buffer: *mut u8,
+        capacity: usize,
+        length: *mut usize,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_wb_port_drop(context: u64, port: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_wb_object_new(
+        context: u64,
+        kind: i32,
+        port: u64,
+        text: *const u8,
+        length: usize,
+        error: *mut SdkError,
+    ) -> u64;
+    pub fn sdk_wb_object_text(context: u64, object: u64) -> *const c_char;
+    pub fn sdk_wb_object_attach(
+        context: u64,
+        object: u64,
+        base: *mut c_void,
+        handle: *mut c_void,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_wb_object_cancel(context: u64, object: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_wb_object_remove(context: u64, object: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_wb_layout(values: *mut u64, capacity: usize) -> usize;
     pub fn sdk_dir_open(context: u64, path: *const u8, error: *mut SdkError) -> u64;
     pub fn sdk_dir_next(
         context: u64,
