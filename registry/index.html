@@ -86,7 +86,7 @@ pre.terminal .comment{color:var(--dim)}
     <p class="eyebrow">Cargo registry · crates.metaneutrons.cc</p>
     <h1>Safe Rust crates for <em>AROS</em>.</h1>
     <p>
-      The <code>aros-*</code> library crates of <a href="https://github.com/metaneutrons/ami-rust">ami-rust</a>,
+      The <code>aros-*</code> library crates and the build tooling of <a href="https://github.com/metaneutrons/ami-rust">ami-rust</a>,
       for the <code>x86_64-unknown-aros-abi1</code> and <code>x86_64-unknown-aros-abi11</code> targets. A read-only
       static sparse registry: there is no publish API, and a published version never changes.
     </p>
@@ -109,7 +109,10 @@ pre.terminal .comment{color:var(--dim)}
 index = "sparse+https://crates.metaneutrons.cc/"</code></pre>
       <pre class="terminal"><code><span class="comment"># Cargo.toml</span>
 [dependencies]
-aros = { version = "<span id="aros-version">0.2</span>", registry = "metaneutrons", default-features = false }</code></pre>
+aros = { version = "<span id="aros-version">0.2</span>", registry = "metaneutrons", default-features = false }
+
+[build-dependencies]
+aros-native-build = { version = "=<span id="native-version">0.2.0</span>", registry = "metaneutrons" }</code></pre>
       <p>
         The crates are <code>no_std</code> and build with the ami-rust toolchain, not with a stock Rust. The
         <a href="https://github.com/metaneutrons/ami-rust#readme">README</a> shows how to install it, and the
@@ -136,6 +139,8 @@ aros = { version = "<span id="aros-version">0.2</span>", registry = "metaneutron
       <article class="card"><div class="card-body"><div class="card-head"><h3>aros-locale</h3></div><p class="tagline">Task-affine locale.library catalogs with built-in default strings and date formatting.</p></div><div class="card-foot"><span class="badge version" data-crate="aros-locale">…</span></div></article>
       <article class="card"><div class="card-body"><div class="card-head"><h3>aros-timer</h3></div><p class="tagline">Task-affine time and timers.</p></div><div class="card-foot"><span class="badge version" data-crate="aros-timer">…</span></div></article>
       <article class="card"><div class="card-body"><div class="card-head"><h3>aros-workbench</h3></div><p class="tagline">Task-affine workbench.library application windows, icons and menu items with message receipt.</p></div><div class="card-foot"><span class="badge version" data-crate="aros-workbench">…</span></div></article>
+      <article class="card"><div class="card-body"><div class="card-head"><h3>aros-native-build</h3></div><p class="tagline">Build-script integration and the focused target linker for AROS; depend on it with the version of your toolchain.</p></div><div class="card-foot"><span class="badge version" data-crate="aros-native-build">…</span></div></article>
+      <article class="card"><div class="card-body"><div class="card-head"><h3>aros-elf</h3></div><p class="tagline">Native ELF validation and section compaction for AROS ABI-v1.</p></div><div class="card-foot"><span class="badge version" data-crate="aros-elf">…</span></div></article>
     </div>
   </section>
 
@@ -184,6 +189,9 @@ aros = { version = "<span id="aros-version">0.2</span>", registry = "metaneutron
       var version = latest(text);
       if (!version) throw new Error('none');
       badge.textContent = version;
+      if (name === 'aros-native-build') {
+        document.getElementById('native-version').textContent = version;
+      }
       if (name === 'aros') {
         var parts = version.split('.');
         document.getElementById('aros-version').textContent = parts[0] + '.' + parts[1];
