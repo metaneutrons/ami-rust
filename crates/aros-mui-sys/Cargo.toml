@@ -10,7 +10,7 @@ license-file = "../aros-sys/LICENSE"
 readme = "README.md"
 
 [dependencies]
-aros-sys = { version = "=0.1.0", path = "../aros-sys" }
+aros-sys = { version = "=0.2.0", path = "../aros-sys" }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = [

@@ -10,7 +10,7 @@ license = "MIT OR Apache-2.0"
 autobins = false
 
 [dependencies]
-aros = { version = "=0.1.0", path = "../../crates/aros", default-features = false }
+aros = { version = "=0.2.0", path = "../../crates/aros", default-features = false }
 
 [[bin]]
 name = "positive-safe"

@@ -9,6 +9,6 @@ license.workspace = true
 readme = "README.md"
 
 [dependencies]
-aros = { version = "=0.1.0", path = "../aros", default-features = false }
-aros-intuition = { version = "=0.1.0", path = "../aros-intuition" }
-aros-sys = { version = "=0.1.0", path = "../aros-sys" }
+aros = { version = "=0.2.0", path = "../aros", default-features = false }
+aros-intuition = { version = "=0.2.0", path = "../aros-intuition" }
+aros-sys = { version = "=0.2.0", path = "../aros-sys" }
