@@ -95,8 +95,8 @@ aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v
 ```
 
 **From the ami-rust registry**, `crates.metaneutrons.cc`, a read-only Cargo
-registry that the release workflow fills with the `aros-*` library crates of
-each release from the release that follows its introduction. Published versions
+registry that the release workflow fills with the `aros-*` library crates and
+the build tooling (`aros-native-build`, `aros-elf`) of each release from the release that follows its introduction. Published versions
 never change. Add the registry once to `.cargo/config.toml`:
 
 ```toml
@@ -110,14 +110,16 @@ and depend on the crates by version:
 [dependencies]
 aros = { version = "0.2", registry = "metaneutrons" }
 aros-mui = { version = "0.2", registry = "metaneutrons" }
+
+[build-dependencies]
+aros-native-build = { version = "=0.2.0", registry = "metaneutrons" }
 ```
 
-`aros-native-build`, the build dependency of every application, is Git-only for
-now: it reads files from the repository (the target specifications and the SDK
-profile), so it cannot yet be built from a registry archive. Take it from the
-tag as above; it does not conflict with registry dependencies. The registry and
-the tag deliver the same sources: the registry archives are `cargo package`
-output of the tagged commit, built offline with the pinned Rust.
+`aros-native-build`, the build dependency of every application, is pinned to the
+toolchain release it was packaged with, so depend on it with `=` and the version
+of the toolchain you installed. Registry and Git dependencies mix freely. The
+registry and the tag deliver the same sources: the registry archives are
+`cargo package` output of the tagged commit, built offline with the pinned Rust.
 
 The public base set is:
 

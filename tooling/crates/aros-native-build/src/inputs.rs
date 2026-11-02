@@ -384,7 +384,7 @@ fn embedded_pins_for_host(host: &str) -> Result<EmbeddedPins> {
             collector: include_str!("../pins/macos-aarch64/collector.json"),
             llvm: include_str!("../pins/macos-aarch64/toolchain.json"),
             csdk: include_str!("../pins/macos-aarch64/csdk.json"),
-            abi11_csdk: include_str!("../../../../release/abi11-csdk/profile.json"),
+            abi11_csdk: include_str!("../data/abi11-csdk-profile.json"),
             abi1_target: include_str!("../pins/x86_64-unknown-aros-abi1.json"),
             abi11_target: include_str!("../pins/x86_64-unknown-aros-abi11.json"),
             abi1_target_libraries: include_str!("../pins/x86_64-unknown-aros-abi1-libraries.json"),
@@ -398,7 +398,7 @@ fn embedded_pins_for_host(host: &str) -> Result<EmbeddedPins> {
             collector: include_str!("../pins/linux-x86_64/collector.json"),
             llvm: include_str!("../pins/linux-x86_64/toolchain.json"),
             csdk: include_str!("../pins/linux-x86_64/csdk.json"),
-            abi11_csdk: include_str!("../../../../release/abi11-csdk/profile.json"),
+            abi11_csdk: include_str!("../data/abi11-csdk-profile.json"),
             abi1_target: include_str!("../pins/x86_64-unknown-aros-abi1.json"),
             abi11_target: include_str!("../pins/x86_64-unknown-aros-abi11.json"),
             abi1_target_libraries: include_str!(
@@ -414,7 +414,7 @@ fn embedded_pins_for_host(host: &str) -> Result<EmbeddedPins> {
             collector: include_str!("../pins/linux-aarch64/collector.json"),
             llvm: include_str!("../pins/linux-aarch64/toolchain.json"),
             csdk: include_str!("../pins/linux-aarch64/csdk.json"),
-            abi11_csdk: include_str!("../../../../release/abi11-csdk/profile.json"),
+            abi11_csdk: include_str!("../data/abi11-csdk-profile.json"),
             abi1_target: include_str!("../pins/x86_64-unknown-aros-abi1.json"),
             abi11_target: include_str!("../pins/x86_64-unknown-aros-abi11.json"),
             abi1_target_libraries: include_str!(
@@ -672,12 +672,12 @@ fn target_spec_identities(pins: &Pins) -> Result<Vec<PortableFile>> {
         (
             ABI1_TARGET,
             ABI1_TARGET_SPEC_PATH,
-            include_bytes!("../../../../targets/x86_64-unknown-aros-abi1.json"),
+            include_bytes!("../data/x86_64-unknown-aros-abi1.json"),
         ),
         (
             ABI11_TARGET,
             ABI11_TARGET_SPEC_PATH,
-            include_bytes!("../../../../targets/x86_64-unknown-aros-abi11.json"),
+            include_bytes!("../data/x86_64-unknown-aros-abi11.json"),
         ),
     ];
     definitions
@@ -1846,6 +1846,38 @@ mod tests {
         assert!(super::refuse_reintroduced_public_helper(&temp.0, relative).is_err());
     }
 
+    #[test]
+    fn bundled_copies_match_the_repository_files() {
+        // The crate carries its own copies so that a published archive builds on
+        // its own; inside the repository they must stay byte for byte the files
+        // the release contract pins.
+        let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let root = manifest.join("../../..");
+        if !root.join("targets").is_dir() {
+            return;
+        }
+        for (bundled, original) in [
+            (
+                "data/x86_64-unknown-aros-abi1.json",
+                "targets/x86_64-unknown-aros-abi1.json",
+            ),
+            (
+                "data/x86_64-unknown-aros-abi11.json",
+                "targets/x86_64-unknown-aros-abi11.json",
+            ),
+            (
+                "data/abi11-csdk-profile.json",
+                "release/abi11-csdk/profile.json",
+            ),
+        ] {
+            assert_eq!(
+                fs::read(manifest.join(bundled)).unwrap(),
+                fs::read(root.join(original)).unwrap(),
+                "{bundled} differs from {original}"
+            );
+        }
+    }
+
     fn changed_text(text: &'static str) -> &'static str {
         Box::leak(format!("{text} ").into_boxed_str())
     }
@@ -1854,7 +1886,7 @@ mod tests {
     fn pinned_target_spec_member_accepts_exact_bytes_and_rejects_corruption() {
         let pins = Pins::for_host("linux-aarch64").unwrap();
         let temp = TempDirectory::new();
-        let target_spec = include_bytes!("../../../../targets/x86_64-unknown-aros-abi1.json");
+        let target_spec = include_bytes!("../data/x86_64-unknown-aros-abi1.json");
         let path = temp.0.join(ABI1_TARGET_SPEC_PATH);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, target_spec).unwrap();

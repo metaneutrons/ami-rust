@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/metaneutrons/ami-rust"
 description = "Cargo build-script integration and focused target linker for AROS ABI-v1"
 readme = "README.md"
-publish = false
+publish = ["metaneutrons"]
 homepage = "https://github.com/metaneutrons/ami-rust"
 
 [dependencies]

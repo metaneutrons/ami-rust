@@ -46,7 +46,7 @@ aros-mui = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
 aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
 ```
 
-Alternatively, `crates.metaneutrons.cc` is a read-only Cargo registry that holds the `aros-*` library crates of each release from the release that follows its introduction. Add it once to `.cargo/config.toml` and depend on the crates by version:
+Alternatively, `crates.metaneutrons.cc` is a read-only Cargo registry that holds the `aros-*` library crates and the build tooling (`aros-native-build`, `aros-elf`) of each release from the release that follows its introduction. Add it once to `.cargo/config.toml` and depend on the crates by version:
 
 ```toml
 # .cargo/config.toml
@@ -58,9 +58,12 @@ index = "sparse+https://crates.metaneutrons.cc/"
 # Cargo.toml
 [dependencies]
 aros = { version = "0.2", registry = "metaneutrons" }
+
+[build-dependencies]
+aros-native-build = { version = "=0.2.0", registry = "metaneutrons" }
 ```
 
-`aros-native-build` stays a Git dependency, because it reads files of the repository and cannot be built from a registry archive yet. Registry and Git dependencies mix freely.
+`aros-native-build` is pinned to the toolchain release it was packaged with, so depend on it with `=` and the version of the toolchain you installed. Registry and Git dependencies mix freely.
 
 Release tags are immutable, and `Cargo.lock` records the exact commit that the tag pointed to when you resolved, so commit it. Use the tag of the release you installed the toolchain for. See [releases and versions](/releases/) for how this documentation relates to each release.
 
