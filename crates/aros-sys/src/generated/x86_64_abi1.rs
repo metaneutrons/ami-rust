@@ -1087,6 +1087,126 @@ pub mod intuition {
     }
 }
 
+pub mod locale {
+    use super::*;
+
+    /// Raw `OpenLocale` call through Locale vector 26 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn open_locale(base: *mut Library, name: *const c_char) -> *mut c_void {
+        type Function = unsafe extern "C" fn(*const c_char, *mut Library) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 26)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(name, base) }
+    }
+
+    /// Raw `CloseLocale` call through Locale vector 7 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn close_locale(base: *mut Library, locale: *mut c_void) {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 7)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(locale, base) }
+    }
+
+    /// Raw `OpenCatalogA` call through Locale vector 25 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn open_catalog_a(
+        base: *mut Library,
+        locale: *const c_void,
+        name: *const c_char,
+        tags: *const TagItem,
+    ) -> *mut c_void {
+        type Function = unsafe extern "C" fn(
+            *const c_void,
+            *const c_char,
+            *const TagItem,
+            *mut Library,
+        ) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 25)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(locale, name, tags, base) }
+    }
+
+    /// Raw `CloseCatalog` call through Locale vector 6 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn close_catalog(base: *mut Library, catalog: *mut c_void) {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 6)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(catalog, base) }
+    }
+
+    /// Raw `GetCatalogStr` call through Locale vector 12 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_catalog_str(
+        base: *mut Library,
+        catalog: *const c_void,
+        string_num: u32,
+        default_string: *const c_char,
+    ) -> *const c_char {
+        type Function =
+            unsafe extern "C" fn(*const c_void, u32, *const c_char, *mut Library) -> *const c_char;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 12)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(catalog, string_num, default_string, base) }
+    }
+
+    /// Raw `FormatDate` call through Locale vector 10 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn format_date(
+        base: *mut Library,
+        locale: *const c_void,
+        format_string: *const c_char,
+        date: *const c_void,
+        hook: *const Hook,
+    ) {
+        type Function = unsafe extern "C" fn(
+            *const c_void,
+            *const c_char,
+            *const c_void,
+            *const Hook,
+            *mut Library,
+        );
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 10)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(locale, format_string, date, hook, base) }
+    }
+
+    /// Raw `GetLocaleStr` call through Locale vector 13 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_locale_str(
+        base: *mut Library,
+        locale: *const c_void,
+        string_num: u32,
+    ) -> *const c_char {
+        type Function = unsafe extern "C" fn(*const c_void, u32, *mut Library) -> *const c_char;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 13)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(locale, string_num, base) }
+    }
+}
+
 pub mod timer {
     use super::*;
 

@@ -235,7 +235,7 @@ compile_error!("aros-sys currently implements only the x86-64 AROS vector ABI");
 compile_error!("aros-sys requires AROS ABI-v1 or ABI-v11");
 
 mod generated;
-pub use generated::{asl, dos, exec, graphics, intuition, timer, utility};
+pub use generated::{asl, dos, exec, graphics, intuition, locale, timer, utility};
 
 /// The C bridge's error record (`native` holds the immediately captured
 /// native error, such as DOS `IoErr`).
@@ -268,6 +268,8 @@ pub struct SdkStats {
     pub windows: usize,
     pub pubscreens: usize,
     pub aslrequests: usize,
+    pub locales: usize,
+    pub catalogs: usize,
 }
 
 /// One directory entry as filled in by the native bridge. `name_length` bytes
@@ -666,6 +668,58 @@ pub const fn asl_layout_values() -> [u64; ASL_LAYOUT_VALUE_COUNT] {
     ]
 }
 
+/// Catalog tags (`OC_*`) and locale string numbers the safe locale API uses.
+pub mod oc {
+    use super::TAG_USER;
+    const BASE: u32 = TAG_USER + 0x90000;
+    pub const BUILT_IN_LANGUAGE: u32 = BASE + 1;
+    pub const VERSION: u32 = BASE + 3;
+    pub const LANGUAGE: u32 = BASE + 4;
+    pub const DAY_1: u32 = 1;
+    pub const ABDAY_1: u32 = 8;
+    pub const MON_1: u32 = 15;
+    pub const ABMON_1: u32 = 27;
+    pub const YES_STR: u32 = 39;
+    pub const NO_STR: u32 = 40;
+    pub const AM_STR: u32 = 41;
+    pub const PM_STR: u32 = 42;
+}
+
+/// The fields of a locale the bridge reads from `struct Locale`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct SdkLocaleInfo {
+    pub locale_name: *const c_char,
+    pub language_name: *const c_char,
+    pub preferred: [*const c_char; 10],
+    pub gmt_offset: i32,
+}
+
+/// Number of values [`locale_layout_values`] and `sdk_locale_layout` produce.
+pub const LOCALE_LAYOUT_VALUE_COUNT: usize = 15;
+
+/// The catalog tag and string number values as declared here; the native
+/// bridge reports the same values for the selected ABI (`sdk_locale_layout`).
+pub const fn locale_layout_values() -> [u64; LOCALE_LAYOUT_VALUE_COUNT] {
+    [
+        oc::BUILT_IN_LANGUAGE as u64,
+        oc::VERSION as u64,
+        oc::LANGUAGE as u64,
+        oc::DAY_1 as u64,
+        oc::ABDAY_1 as u64,
+        oc::MON_1 as u64,
+        oc::ABMON_1 as u64,
+        oc::YES_STR as u64,
+        oc::NO_STR as u64,
+        oc::AM_STR as u64,
+        oc::PM_STR as u64,
+        size_of::<SdkLocaleInfo>() as u64,
+        offset_of!(SdkLocaleInfo, language_name) as u64,
+        offset_of!(SdkLocaleInfo, preferred) as u64,
+        offset_of!(SdkLocaleInfo, gmt_offset) as u64,
+    ]
+}
+
 pub const SDK_FILE_READ_EXISTING: i32 = 0;
 pub const SDK_FILE_CREATE_TRUNCATE: i32 = 1;
 pub const SDK_FILE_READ_WRITE: i32 = 2;
@@ -681,7 +735,7 @@ pub const ERROR_KIND_ZERO_PROGRESS: i32 = 7;
 /// Layout oracle values in the exact order of the M0 C layout table:
 /// Node, Library, Message, List, MsgPort, FileInfoBlock, scalar ABI types,
 /// then the selected spinlock_t storage. No native call or allocation occurs.
-pub const ABI_LAYOUT_VALUE_COUNT: usize = 101;
+pub const ABI_LAYOUT_VALUE_COUNT: usize = 103;
 
 const fn layout_value(value: usize) -> u64 {
     value as u64
@@ -778,6 +832,8 @@ pub const fn layout_values() -> [u64; ABI_LAYOUT_VALUE_COUNT] {
         layout_value(offset_of!(SdkStats, windows)),
         layout_value(offset_of!(SdkStats, pubscreens)),
         layout_value(offset_of!(SdkStats, aslrequests)),
+        layout_value(offset_of!(SdkStats, locales)),
+        layout_value(offset_of!(SdkStats, catalogs)),
         layout_value(size_of::<SdkEntry>()),
         layout_value(align_of::<SdkEntry>()),
         layout_value(offset_of!(SdkEntry, size)),
@@ -1058,6 +1114,21 @@ unsafe extern "C" {
         error: *mut SdkError,
     ) -> c_int;
     pub fn sdk_asl_layout(values: *mut u64, capacity: usize) -> usize;
+    pub fn sdk_locale_register(
+        context: u64,
+        kind: i32,
+        base: *mut c_void,
+        object: *mut c_void,
+        error: *mut SdkError,
+    ) -> u64;
+    pub fn sdk_locale_release(context: u64, object: u64, error: *mut SdkError) -> c_int;
+    pub fn sdk_locale_info(
+        context: u64,
+        locale: u64,
+        info: *mut SdkLocaleInfo,
+        error: *mut SdkError,
+    ) -> c_int;
+    pub fn sdk_locale_layout(values: *mut u64, capacity: usize) -> usize;
     pub fn sdk_dir_open(context: u64, path: *const u8, error: *mut SdkError) -> u64;
     pub fn sdk_dir_next(
         context: u64,

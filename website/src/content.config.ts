@@ -22,6 +22,7 @@ export const collections = {
         'api/aros-graphics.md',
         'api/aros-intuition.md',
         'api/aros-asl.md',
+        'api/aros-locale.md',
         'build-system.md',
         'architecture.md',
         'mui-hello.mdx',

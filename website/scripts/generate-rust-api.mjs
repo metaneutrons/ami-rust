@@ -14,8 +14,8 @@ import { buildMuiRelations } from './rustdoc/relations.mjs';
 
 const REPOSITORY = 'https://github.com/metaneutrons/ami-rust';
 const [outputArgument, revision, ...inputs] = process.argv.slice(2);
-if (!outputArgument || !/^[0-9a-f]{40}$/.test(revision || '') || inputs.length !== 12) {
-  throw new Error('usage: generate-rust-api.mjs OUTPUT_DIR 40_HEX_REVISION ABI1_AROS ABI1_AROS_MUI ABI1_AROS_TIMER ABI1_AROS_GRAPHICS ABI1_AROS_INTUITION ABI1_AROS_ASL ABI11_AROS ABI11_AROS_MUI ABI11_AROS_TIMER ABI11_AROS_GRAPHICS ABI11_AROS_INTUITION ABI11_AROS_ASL');
+if (!outputArgument || !/^[0-9a-f]{40}$/.test(revision || '') || inputs.length !== 14) {
+  throw new Error('usage: generate-rust-api.mjs OUTPUT_DIR 40_HEX_REVISION ABI1_AROS ABI1_AROS_MUI ABI1_AROS_TIMER ABI1_AROS_GRAPHICS ABI1_AROS_INTUITION ABI1_AROS_ASL ABI1_AROS_LOCALE ABI11_AROS ABI11_AROS_MUI ABI11_AROS_TIMER ABI11_AROS_GRAPHICS ABI11_AROS_INTUITION ABI11_AROS_ASL ABI11_AROS_LOCALE');
 }
 
 const outputRoot = path.resolve(outputArgument);
@@ -24,17 +24,17 @@ if (path.basename(outputRoot) !== 'reference' || outputRoot === path.parse(outpu
 }
 
 const crates = [];
-for (const [abi, files] of [['abi1', inputs.slice(0, 6)], ['abi11', inputs.slice(6)]]) {
+for (const [abi, files] of [['abi1', inputs.slice(0, 7)], ['abi11', inputs.slice(7)]]) {
   const names = new Set();
   for (const file of files) {
     const crate = loadCrate(JSON.parse(await readFile(file, 'utf8')), abi);
-    if (!['aros', 'aros_mui', 'aros_timer', 'aros_graphics', 'aros_intuition', 'aros_asl'].includes(crate.crateName) || names.has(crate.crateName)) {
-      throw new Error(`expected one aros, one aros_mui, one aros_timer, one aros_graphics, one aros_intuition and one aros_asl document per ABI, found ${crate.crateName}`);
+    if (!['aros', 'aros_mui', 'aros_timer', 'aros_graphics', 'aros_intuition', 'aros_asl', 'aros_locale'].includes(crate.crateName) || names.has(crate.crateName)) {
+      throw new Error(`expected one aros, one aros_mui, one aros_timer, one aros_graphics, one aros_intuition, one aros_asl and one aros_locale document per ABI, found ${crate.crateName}`);
     }
     names.add(crate.crateName);
     crates.push(crate);
   }
-  if (names.size !== 6) throw new Error(`${abi}: expected aros, aros_mui, aros_timer, aros_graphics, aros_intuition and aros_asl`);
+  if (names.size !== 7) throw new Error(`${abi}: expected aros, aros_mui, aros_timer, aros_graphics, aros_intuition, aros_asl and aros_locale`);
 }
 
 const registry = buildRegistry(crates);

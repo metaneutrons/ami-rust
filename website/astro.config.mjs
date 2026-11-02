@@ -68,6 +68,7 @@ export default defineConfig({
             { label: 'The aros-graphics crate', link: '/api/aros-graphics/' },
             { label: 'The aros-intuition crate', link: '/api/aros-intuition/' },
             { label: 'The aros-asl crate', link: '/api/aros-asl/' },
+            { label: 'The aros-locale crate', link: '/api/aros-locale/' },
             { label: 'Build system', link: '/build-system/' },
             { label: 'Editor setup', link: '/editor-setup/' },
             { label: 'Troubleshooting', link: '/troubleshooting/' },

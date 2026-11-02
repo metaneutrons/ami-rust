@@ -43,6 +43,7 @@ const crates = [
   { directory: 'crates/aros-graphics/src', error: 'aros_graphics::Error' },
   { directory: 'crates/aros-intuition/src', error: 'aros_intuition::Error' },
   { directory: 'crates/aros-asl/src', error: 'aros_asl::Error' },
+  { directory: 'crates/aros-locale/src', error: 'aros_locale::Error' },
 ];
 
 const sourceFiles = (directory) => readdirSync(directory, { withFileTypes: true })
@@ -79,7 +80,7 @@ for (const { directory, error } of crates) {
   }
 }
 
-const guides = ['docs/consumer-guide.md', 'docs/api.md', 'docs/api/aros.md', 'docs/api/aros-mui.md', 'docs/api/aros-timer.md', 'docs/api/aros-graphics.md', 'docs/api/aros-intuition.md', 'docs/api/aros-asl.md'];
+const guides = ['docs/consumer-guide.md', 'docs/api.md', 'docs/api/aros.md', 'docs/api/aros-mui.md', 'docs/api/aros-timer.md', 'docs/api/aros-graphics.md', 'docs/api/aros-intuition.md', 'docs/api/aros-asl.md', 'docs/api/aros-locale.md'];
 const withAttributes = (code) => (code.includes('#![no_main]') ? code : `#![no_main]\n#![no_std]\n${code}`);
 const programs = sourcePrograms.map(({ label, code }) => ({ label, code: withAttributes(code) }));
 let buildScript = null;
@@ -114,6 +115,7 @@ aros-timer = { path = "${repository}/crates/aros-timer" }
 aros-graphics = { path = "${repository}/crates/aros-graphics" }
 aros-intuition = { path = "${repository}/crates/aros-intuition" }
 aros-asl = { path = "${repository}/crates/aros-asl" }
+aros-locale = { path = "${repository}/crates/aros-locale" }
 
 [build-dependencies]
 aros-native-build = { path = "${repository}/tooling/crates/aros-native-build" }

@@ -1,7 +1,7 @@
 {
   "schema": "ami-rust-aros-api-provenance-v1",
   "generator": "0.1.0",
-  "manifest_sha256": "be357e8f93641160622b2133329eec66594eb3dde20abd81d76f39e76a2f9c40",
+  "manifest_sha256": "28f0f32628d23e0215ba0520c3b07c88bb560e7d5505e9ad924504c765ef32a2",
   "inputs": [
     {
       "abi": "abi1",
@@ -52,6 +52,16 @@
       "abi": "abi1",
       "path": "defines/intuition.h",
       "sha256": "37c713a7751ca84b1f7a709d4be236e3dfcc89993285e3f2f7136e9aad9dc364"
+    },
+    {
+      "abi": "abi1",
+      "path": "clib/locale_protos.h",
+      "sha256": "de4b446df52f0fb42dcc09106b385d1e2c4f2dedc1d9cf676b3b1f79af259f53"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/locale.h",
+      "sha256": "8bac2a13bc2e74e9f82005d2ba546b051903048b94958b9b85961c0b8620ad94"
     },
     {
       "abi": "abi1",
@@ -132,6 +142,16 @@
       "abi": "abi11",
       "path": "defines/intuition.h",
       "sha256": "34f36270b9a2b8c6f3372ece8661481995645e18aa303837dca4daf25626541d"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/locale_protos.h",
+      "sha256": "d98f3ac9010aa3439225ce82a7112fb541e313802a92fa79538aa47675ec299b"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/locale.h",
+      "sha256": "f3729338bbaef628430806157048ec6cae3ddcf5904f51f2b17d209a902ff0c2"
     },
     {
       "abi": "abi11",

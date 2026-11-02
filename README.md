@@ -91,8 +91,9 @@ publication. The public base set is:
 
 `aros-timer` (time and timers on `timer.device`), `aros-graphics` (bitmaps
 and drawing on `graphics.library`), `aros-intuition` (windows and events on
-`intuition.library`) and `aros-asl` (file requesters on `asl.library`) are in
-the repository after release 0.1.0 and are not part of that release.
+`intuition.library`), `aros-asl` (file requesters on `asl.library`) and
+`aros-locale` (catalogs and dates on `locale.library`) are in the repository
+after release 0.1.0 and are not part of that release.
 
 The focused `aros-elf` and `aros-native-build` crates are maintainer and build
 support, not application API crates.

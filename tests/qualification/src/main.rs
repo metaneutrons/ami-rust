@@ -20,6 +20,7 @@ mod m4;
 mod m5;
 mod m6;
 mod m7;
+mod m8;
 #[cfg(not(all(target_os = "aros", target_abi = "abi11")))]
 #[path = "probe/x86_64_abi1.rs"]
 mod probe;
@@ -110,6 +111,8 @@ fn same_resources(a: SdkStats, b: SdkStats) -> bool {
         && a.windows == b.windows
         && a.pubscreens == b.pubscreens
         && a.aslrequests == b.aslrequests
+        && a.locales == b.locales
+        && a.catalogs == b.catalogs
 }
 
 fn one_refusal_since(context: &Context, before: SdkStats) -> bool {
@@ -2649,6 +2652,27 @@ fn application(context: &Context) -> AppStatus {
                 success(context, b"qualification-asl-forgotten", 3)
             } else {
                 fatal(context, 47)
+            }
+        }
+        Some("locale") => {
+            if m8::cases(context) {
+                success(context, b"qualification-locale", 9)
+            } else {
+                fatal(context, 49)
+            }
+        }
+        Some("locale-bounded") => {
+            if m8::bounded(context) {
+                success(context, b"qualification-locale-bounded", 3)
+            } else {
+                fatal(context, 50)
+            }
+        }
+        Some("locale-forgotten") => {
+            if m8::forgotten(context) {
+                success(context, b"qualification-locale-forgotten", 3)
+            } else {
+                fatal(context, 51)
             }
         }
         Some("registry") => {

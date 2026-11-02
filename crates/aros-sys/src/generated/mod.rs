@@ -6,4 +6,4 @@ mod backend;
 #[path = "x86_64_abi11.rs"]
 mod backend;
 
-pub use backend::{asl, dos, exec, graphics, intuition, timer, utility};
+pub use backend::{asl, dos, exec, graphics, intuition, locale, timer, utility};

@@ -33,7 +33,7 @@ static const size_t c_layout[]={
  LAYOUT(spinlock_t,OFF(spinlock_t,s_Owner),OFF(spinlock_t,s_Isolation)),
 #endif
  LAYOUT(SdkError,OFF(SdkError,kind),OFF(SdkError,native)),
- LAYOUT(SdkStats,OFF(SdkStats,blocks),OFF(SdkStats,backing_charge),OFF(SdkStats,peak_charge),OFF(SdkStats,files),OFF(SdkStats,libraries),OFF(SdkStats,ports),OFF(SdkStats,signals),OFF(SdkStats,messages),OFF(SdkStats,refusals),OFF(SdkStats,devices),OFF(SdkStats,requests),OFF(SdkStats,directories),OFF(SdkStats,rastports),OFF(SdkStats,bitmaps),OFF(SdkStats,windows),OFF(SdkStats,pubscreens),OFF(SdkStats,aslrequests)),
+ LAYOUT(SdkStats,OFF(SdkStats,blocks),OFF(SdkStats,backing_charge),OFF(SdkStats,peak_charge),OFF(SdkStats,files),OFF(SdkStats,libraries),OFF(SdkStats,ports),OFF(SdkStats,signals),OFF(SdkStats,messages),OFF(SdkStats,refusals),OFF(SdkStats,devices),OFF(SdkStats,requests),OFF(SdkStats,directories),OFF(SdkStats,rastports),OFF(SdkStats,bitmaps),OFF(SdkStats,windows),OFF(SdkStats,pubscreens),OFF(SdkStats,aslrequests),OFF(SdkStats,locales),OFF(SdkStats,catalogs)),
  LAYOUT(SdkEntry,OFF(SdkEntry,size),OFF(SdkEntry,protection),OFF(SdkEntry,name_length),OFF(SdkEntry,entry_type),OFF(SdkEntry,directory_type),OFF(SdkEntry,days),OFF(SdkEntry,minutes),OFF(SdkEntry,ticks),OFF(SdkEntry,size_exact),OFF(SdkEntry,name))
 };
 /* Timer types of the selected SDK: timerequest carries struct timeval on
@@ -106,6 +106,34 @@ size_t sdk_asl_layout(uint64_t *out,size_t cap) {
  const size_t count=sizeof(c_asl_layout)/sizeof(*c_asl_layout);
  if(cap<count || !out)return count;
  for(size_t i=0;i<count;i++)out[i]=c_asl_layout[i];return count;
+}
+/* locale.library: the catalog tags and string numbers the Rust API uses. The
+   pinned ABI-v11 C SDK has no locale header; its values are those of the
+   ABI-v11 SDK's libraries/locale.h and localestd.h, identical to ABI-v1. */
+#ifdef AMI_RUST_ABI11
+#define OC_TagBase (TAG_USER + 0x90000)
+#define OC_BuiltInLanguage (OC_TagBase + 1)
+#define OC_Version (OC_TagBase + 3)
+#define OC_Language (OC_TagBase + 4)
+#define DAY_1 1
+#define ABDAY_1 8
+#define MON_1 15
+#define ABMON_1 27
+#define YESSTR 39
+#define NOSTR 40
+#define AM_STR 41
+#define PM_STR 42
+#else
+#include <libraries/locale.h>
+#endif
+static const size_t c_locale_layout[]={
+ OC_BuiltInLanguage,OC_Version,OC_Language,DAY_1,ABDAY_1,MON_1,ABMON_1,YESSTR,NOSTR,AM_STR,PM_STR,
+ sizeof(SdkLocaleInfo),OFF(SdkLocaleInfo,language_name),OFF(SdkLocaleInfo,preferred),OFF(SdkLocaleInfo,gmt_offset)
+};
+size_t sdk_locale_layout(uint64_t *out,size_t cap) {
+ const size_t count=sizeof(c_locale_layout)/sizeof(*c_locale_layout);
+ if(cap<count || !out)return count;
+ for(size_t i=0;i<count;i++)out[i]=c_locale_layout[i];return count;
 }
 size_t sdk_layout(uint64_t *out,size_t cap) {
  const size_t count=sizeof(c_layout)/sizeof(*c_layout);
