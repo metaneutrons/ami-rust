@@ -5,7 +5,6 @@ edition.workspace = true
 publish = ["metaneutrons"]
 description = "Safe no_std application API for the selected AROS ABI profile."
 repository = "https://github.com/metaneutrons/ami-rust"
-homepage = "https://github.com/metaneutrons/ami-rust"
 license.workspace = true
 readme = "README.md"
 
@@ -16,5 +15,8 @@ alloc = []
 [dependencies]
 aros-sys = { version = "=0.2.0", path = "../aros-sys" }
 
-[lints]
-workspace = true
+[lints.rust]
+missing_docs = "deny"
+
+[lints.rustdoc]
+broken_intra_doc_links = "deny"

@@ -2896,7 +2896,7 @@ unsafe extern "C" {
     /// local then global variables, 1 for local only and 2 for global only (`ENV:`); anything else is
     /// `ERROR_KIND_INPUT`. The value is read as binary (`GVF_BINARY_VAR`) and the result is its length
     /// without the terminator; a terminator is stored too. A value longer than `capacity` is refused
-    /// rather than cut: `ERROR_KIND_NATIVE` with `native` 303. A missing variable or other DOS failure is
+    /// rather than cut: `ERROR_KIND_NATIVE` with `native` 303 (`ERROR_BUFFER_OVERFLOW`). A missing variable or other DOS failure is
     /// `ERROR_KIND_NATIVE` with the `IoErr` code. Returns -1 on failure.
     ///
     /// # Safety

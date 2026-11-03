@@ -5,12 +5,12 @@
 // the ami-rust registry must deny `missing_docs`, and nothing in its sources
 // may switch the lint off.
 //
-// A crate denies the lint when its manifest says so under `[lints.rust]`, or
-// when it opts in to the workspace lints (`[lints] workspace = true`) and the
-// workspace manifest that governs it denies the lint. The crates of the root
-// workspace are governed by the root `Cargo.toml`; `aros-elf` and
-// `aros-native-build` form their own workspace under `tooling/` and set the
-// lint in their own manifests.
+// A crate denies the lint when its manifest says so under `[lints.rust]`. A
+// crate may instead opt in to `[workspace.lints]` (`[lints] workspace =
+// true`), in which case the workspace manifest that governs it must deny the
+// lint; the repository sets the lint per crate, because Cargo warns about every
+// workspace member that does not inherit workspace lints, and the example and
+// test programs are deliberately outside the policy.
 //
 // usage: check-docs-policy.mjs [REPOSITORY_ROOT]
 

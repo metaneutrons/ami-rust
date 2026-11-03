@@ -14,5 +14,8 @@ aros-icon = { version = "=0.2.0", path = "../aros-icon" }
 aros-intuition = { version = "=0.2.0", path = "../aros-intuition" }
 aros-sys = { version = "=0.2.0", path = "../aros-sys" }
 
-[lints]
-workspace = true
+[lints.rust]
+missing_docs = "deny"
+
+[lints.rustdoc]
+broken_intra_doc_links = "deny"
