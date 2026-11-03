@@ -166,7 +166,7 @@ struct PackageProofWire {
 }
 
 /// Parse native inputs while preserving exact positive workflow counters up to
-/// Python's historical 4,300-digit JSON-integer boundary. A bounded borrowed
+/// the historical 4,300-digit JSON-integer boundary of the reference parser. A bounded borrowed
 /// prepass locates the counter tokens; the strict duplicate/depth/schema pass
 /// then runs over a temporary copy with only over-u64 counter lexemes replaced.
 pub fn parse_native_package_pins(raw: &[u8]) -> Result<NativePackagePins> {

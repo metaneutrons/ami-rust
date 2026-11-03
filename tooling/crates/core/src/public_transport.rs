@@ -413,7 +413,7 @@ fn decoded_tar_limit(record: &NativeTransportRecord) -> Result<usize> {
             .ok_or_else(|| Refusal::new("native transport TAR length overflow"))?;
     }
     // Account for each header AND each file's independent block padding, then
-    // the two end blocks and Python's complete 10 KiB record padding.
+    // the two end blocks and the complete 10 KiB record padding of the original writer.
     tar_bytes
         .checked_add(TAR_RECORD_BYTES - 1)
         .map(|n| n / TAR_RECORD_BYTES * TAR_RECORD_BYTES)
