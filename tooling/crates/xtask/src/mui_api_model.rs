@@ -492,7 +492,18 @@ fn generate_raw_bindings(model: &ApiModel, abi: &str) -> std::result::Result<Str
             } else {
                 rust_type
             };
-            output.push_str(&format!("    pub {name}: {rust_type},\n"));
+            let declaration = field.declaration.trim().trim_end_matches(';').trim();
+            if declaration.contains('`') || declaration.contains('\n') {
+                return Err(format!(
+                    "{}:{}: the declaration of `{name}` cannot be quoted in a documentation comment",
+                    message.source.path, field.line
+                ));
+            }
+            output.push_str(&format!(
+                "    /// Field `{name}`, declared as `{declaration}` at `{}:{}`.\n\
+                 \x20   pub {name}: {rust_type},\n",
+                message.source.path, field.line
+            ));
         }
         output.push_str("}\n\n");
     }

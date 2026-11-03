@@ -1,3 +1,5 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
 #![no_std]
 //! Raw MUI vector calls for the selected AROS x86-64 ABI profile.
 
@@ -48,6 +50,7 @@ pub use raw::*;
 /// Minimum muimaster.library API version used by this initial surface.
 pub const MUI_API_VERSION: u16 = 19;
 
+/// Opaque BOOPSI object, addressed by a pointer to its public part.
 pub type Object = c_void;
 
 /// Value stored with the x86-64 AROS `STACKED` field alignment.
@@ -60,6 +63,7 @@ pub type Object = c_void;
 pub struct Stacked<T>(pub T);
 
 impl<T> Stacked<T> {
+    /// Wraps `value` in its stacked, 8-byte aligned form.
     pub const fn new(value: T) -> Self {
         Self(value)
     }
@@ -75,12 +79,19 @@ impl<T> From<T> for Stacked<T> {
 #[repr(C)]
 #[derive(Debug)]
 pub struct MuiCustomClass {
+    /// Free data of the class implementor (`mcc_UserData`).
     pub user_data: *mut c_void,
+    /// The `utility.library` base that muimaster opened for the class (`mcc_UtilityBase`).
     pub utility_base: *mut Library,
+    /// The `dos.library` base that muimaster opened for the class (`mcc_DOSBase`).
     pub dos_base: *mut Library,
+    /// The `graphics.library` base that muimaster opened for the class (`mcc_GfxBase`).
     pub graphics_base: *mut Library,
+    /// The `intuition.library` base that muimaster opened for the class (`mcc_IntuitionBase`).
     pub intuition_base: *mut Library,
+    /// The superclass of the custom class (`mcc_Super`).
     pub super_class: *mut IClass,
+    /// The BOOPSI class itself (`mcc_Class`).
     pub class: *mut IClass,
     /// Private muimaster-owned storage retained for exact C layout.
     pub(crate) module: *mut Library,

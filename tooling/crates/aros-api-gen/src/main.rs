@@ -510,7 +510,13 @@ fn generate_backend(manifest: &ApiManifest, crate_name: &str, abi: Abi) -> Resul
     for (module, functions) in modules {
         let nested = crate_name == "aros-sys";
         if nested {
-            output.push_str(&format!("\npub mod {module} {{\n    use super::*;\n"));
+            let library = &functions[0].library;
+            output.push_str(&format!(
+                "\n/// Raw calls through the {library} vector table: {} functions, each an `unsafe` call\n\
+                 /// whose requirements are listed under its `# Safety` heading.\n\
+                 pub mod {module} {{\n    use super::*;\n",
+                functions.len()
+            ));
         }
         for function in functions {
             output.push_str(&generate_function(function, abi, nested)?);

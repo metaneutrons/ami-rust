@@ -11,37 +11,60 @@
 use core::ffi::{c_char, c_int, c_void};
 use core::mem::{align_of, offset_of, size_of};
 
+/// Untyped pointer, the C `APTR` (`void *`) of the AROS headers.
 pub type APTR = *mut c_void;
 /// `AROS_FAST_BPTR` selects `APTR` for BPTR in the pinned x86-64 SDK.
 pub type BPTR = APTR;
+/// AROS `BOOL`: a 16-bit integer used as a truth value, where zero is false and any other value is
+/// true.
 pub type BOOL = i16;
+/// AROS `BYTE`: an 8-bit signed integer.
 pub type BYTE = i8;
+/// AROS `IPTR`: an unsigned integer exactly as wide as a pointer, used where a field holds either a
+/// number or an address.
 pub type IPTR = usize;
+/// AROS `LONG`: a 32-bit signed integer.
 pub type LONG = i32;
+/// AROS `SIPTR`: the signed counterpart of [`IPTR`], as wide as a pointer.
 pub type SIPTR = isize;
+/// Identifier of a [`TagItem`]. Tags of the system have bit 31 clear; application tags start at
+/// [`TAG_USER`].
 pub type Tag = u32;
+/// AROS `UBYTE`: an 8-bit unsigned integer.
 pub type UBYTE = u8;
+/// AROS `ULONG`: a 32-bit unsigned integer.
 pub type ULONG = u32;
 
+/// Tag that ends a tag list. The `data` of the item is ignored.
 pub const TAG_DONE: u32 = 0;
+/// Tag of an item that the receiver skips; its `data` is ignored.
 pub const TAG_IGNORE: u32 = 1;
+/// Tag that continues the list: the `data` of the item is the address of another tag list to read
+/// next.
 pub const TAG_MORE: u32 = 2;
+/// Tag that skips items: the receiver also skips the number of following items given by `data`.
 pub const TAG_SKIP: u32 = 3;
+/// First tag value reserved for applications and for class- or library-specific tags: bit 31 set.
 pub const TAG_USER: u32 = 1 << 31;
 
 /// AROS `struct TagItem` for the selected 64-bit ABI.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TagItem {
+    /// The tag identifier: [`TAG_DONE`], [`TAG_IGNORE`], [`TAG_MORE`], [`TAG_SKIP`] or a library
+    /// tag.
     pub tag: u32,
+    /// The value of the tag: a number, or a pointer stored as an integer, depending on the tag.
     pub data: usize,
 }
 
 impl TagItem {
+    /// Creates an item with the given tag and value.
     pub const fn new(tag: u32, data: usize) -> Self {
         Self { tag, data }
     }
 
+    /// Creates the terminating item of a tag list: [`TAG_DONE`] with a value of zero.
     pub const fn done() -> Self {
         Self::new(TAG_DONE, 0)
     }
@@ -60,7 +83,9 @@ pub type Msg = *mut c_void;
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MinNode {
+    /// The next node in the list. The last node points at the list's tail marker.
     pub successor: *mut MinNode,
+    /// The previous node in the list. The first node points at the list's head marker.
     pub predecessor: *mut MinNode,
 }
 
@@ -68,9 +93,15 @@ pub struct MinNode {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct Hook {
+    /// The link by which the hook can be put on a list.
     pub min_node: MinNode,
+    /// The function the system calls to run the hook (`h_Entry`). On this ABI it is an ordinary C
+    /// function taking the hook, an object and a message.
     pub entry: *mut c_void,
+    /// A second entry point (`h_SubEntry`) that the hook's own implementation may use from `entry`;
+    /// the system does not call it.
     pub sub_entry: *mut c_void,
+    /// Free data owned by the hook's implementation (`h_Data`).
     pub data: *mut c_void,
 }
 
@@ -79,17 +110,32 @@ pub struct Hook {
 #[repr(C)]
 #[derive(Debug)]
 pub struct IClass {
+    /// The hook that dispatches methods to this class (`cl_Dispatcher`).
     pub dispatcher: Hook,
+    /// Reserved by the system (`cl_Reserved`); never modify it.
     pub reserved: u32,
+    /// The class this class inherits from (`cl_Super`).
     pub super_class: *mut IClass,
+    /// The public name of the class (`cl_ID`), or null for a private class.
     pub id: *const c_char,
+    /// Offset of this class's instance data within an object (`cl_InstOffset`).
     pub instance_offset: u16,
+    /// Size of the instance data that this class adds to its superclass (`cl_InstSize`).
     pub instance_size: u16,
+    /// Data that the implementor of the class may use freely (`cl_UserData`).
     pub user_data: usize,
+    /// Number of direct subclasses (`cl_SubclassCount`).
     pub subclass_count: u32,
+    /// Number of live objects made from this class (`cl_ObjectCount`). It must be zero before the
+    /// class is removed.
     pub object_count: u32,
+    /// Class flags (`cl_Flags`); `CLF_INLIST` (bit 0) is set while the class is in the public class
+    /// list.
     pub flags: u32,
+    /// Total size of an object of this class: `cl_InstOffset + cl_InstSize + sizeof(struct
+    /// _Object)` (`cl_ObjectSize`).
     pub object_size: u32,
+    /// The memory pool the class uses for its objects (`cl_MemoryPool`).
     pub memory_pool: *mut c_void,
 }
 
@@ -242,7 +288,11 @@ pub use generated::{asl, dos, exec, graphics, icon, intuition, locale, timer, ut
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct SdkError {
+    /// The class of the error: one of the `ERROR_KIND_*` values, or zero when the call recorded no
+    /// error.
     pub kind: i32,
+    /// The native error code captured immediately after the failing call, such as the DOS `IoErr`
+    /// value; zero when there is none.
     pub native: i64,
 }
 
@@ -251,27 +301,51 @@ pub struct SdkError {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct SdkStats {
+    /// Memory blocks that are currently allocated through the bridge.
     pub blocks: usize,
+    /// The accounting charge of the blocks that are currently allocated. The bridge charges twice
+    /// the block size plus a fixed overhead for each block.
     pub backing_charge: usize,
+    /// The highest value `backing_charge` has reached.
     pub peak_charge: usize,
+    /// Files that are currently open.
     pub files: usize,
+    /// Libraries that are currently open through the bridge.
     pub libraries: usize,
+    /// Message ports that currently exist.
     pub ports: usize,
+    /// Signal bits that are currently allocated.
     pub signals: usize,
+    /// Messages that currently exist.
     pub messages: usize,
+    /// Operations the bridge has refused since it started, counted cumulatively: invalid arguments,
+    /// exhausted bounds, wrong owner and failed allocations.
     pub refusals: usize,
+    /// Devices that are currently open.
     pub devices: usize,
+    /// Device I/O requests that currently exist.
     pub requests: usize,
+    /// Directory scans that are currently open.
     pub directories: usize,
+    /// Rastports that currently exist.
     pub rastports: usize,
+    /// Bitmaps that are currently registered.
     pub bitmaps: usize,
+    /// Windows that are currently open.
     pub windows: usize,
+    /// Public screens that are currently registered.
     pub pubscreens: usize,
+    /// ASL requesters that currently exist.
     pub aslrequests: usize,
+    /// Locales that are currently open.
     pub locales: usize,
+    /// Message catalogs that are currently open.
     pub catalogs: usize,
+    /// Icons (disk objects) that are currently loaded.
     pub icons: usize,
+    /// Workbench application ports that currently exist.
     pub wbports: usize,
+    /// Workbench application windows, icons and menu items that are currently registered.
     pub wbobjects: usize,
 }
 
@@ -280,15 +354,27 @@ pub struct SdkStats {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SdkEntry {
+    /// Size of the entry in bytes.
     pub size: u64,
+    /// The protection bits of the entry.
     pub protection: u32,
+    /// Number of valid bytes in `name`, not counting the terminating NUL.
     pub name_length: u32,
+    /// The entry type the file system reports (`fib_EntryType`).
     pub entry_type: i32,
+    /// The directory entry type (`fib_DirEntryType`): greater than zero for a directory, less than
+    /// zero for a file.
     pub directory_type: i32,
+    /// Days since 1 January 1978 of the last change.
     pub days: i32,
+    /// Minutes since midnight of the last change.
     pub minutes: i32,
+    /// Ticks of 1/50 second since the start of the minute of the last change.
     pub ticks: i32,
+    /// One when `size` is exact, zero when it came from a 32-bit field that reached the 2 GiB limit
+    /// and may be truncated.
     pub size_exact: u32,
+    /// The name of the entry: `name_length` bytes followed by a NUL, at most 107 bytes.
     pub name: [u8; 108],
 }
 
@@ -317,21 +403,36 @@ impl Default for SdkEntry {
 // lock. ABI-v11 has no such padding: `struct Library` ends at `lib_OpenCnt`
 // and `struct MsgPort` ends in the private extension field `mp_Private`.
 
+/// AROS `struct Node` (`exec/nodes.h`): the link, type, priority and name that every item of an
+/// Exec list carries.
 #[repr(C)]
 pub struct Node {
+    /// The next node in the list. The last node points at the list's tail marker.
     pub succ: *mut Node,
+    /// The previous node in the list. The first node points at the list's head marker.
     pub pred: *mut Node,
+    /// The node type (`ln_Type`), an `NT_*` value such as `NT_TASK` or `NT_MSGPORT`.
     pub kind: u8,
+    /// The node priority (`ln_Pri`, -128 to 127), used to order nodes in lists that are kept
+    /// sorted.
     pub priority: i8,
+    /// Pointer to the NUL-terminated name of the node (`ln_Name`), or null.
     pub name: *mut u8,
 }
 
+/// AROS `struct List` (`exec/lists.h`): the header of a doubly linked list of [`Node`]s. An empty
+/// list has `head` pointing at `tail` and `tail_pred` pointing at `head`.
 #[repr(C)]
 pub struct List {
+    /// The first node, or the address of the `tail` field when the list is empty (`lh_Head`).
     pub head: *mut Node,
+    /// The tail marker. It is always null (`lh_Tail`); the last node's `succ` points at this field.
     pub tail: *mut Node,
+    /// The last node, or the address of the `head` field when the list is empty (`lh_TailPred`).
     pub tail_pred: *mut Node,
+    /// The type of the nodes in the list (`lh_Type`), an `NT_*` value.
     pub kind: u8,
+    /// Padding that keeps the structure aligned (`l_pad`).
     pub _pad: u8,
 }
 
@@ -341,43 +442,75 @@ pub struct List {
 #[cfg(not(target_abi = "abi11"))]
 #[repr(C)]
 pub struct SpinLockPadding {
+    /// The lock word of the `spinlock_t` storage.
     pub lock_word: u32,
+    /// The owner field of the `spinlock_t` storage.
     pub owner: *mut c_void,
+    /// Padding bytes that complete the `spinlock_t` storage.
     pub isolation: [u8; 112],
 }
 
+/// AROS `struct Library` (`exec/libraries.h`): the common header at the base of every library; the
+/// vector table lies before it. On ABI-v1 the structure ends with SMP padding, see
+/// [`SpinLockPadding`]; on ABI-v11 it ends at `open_count`.
 #[repr(C)]
 pub struct Library {
+    /// The node by which the library is linked into Exec's library list; its name is the library
+    /// name.
     pub node: Node,
+    /// Library flags (`lib_Flags`): the `LIBF_*` bits such as changed, sum used and delayed
+    /// expunge.
     pub flags: u8,
+    /// Padding (`lib_pad`) after the flags.
     pub _pad: u8,
+    /// Size in bytes of the vector table that lies before the library base (`lib_NegSize`).
     pub negative_size: u16,
+    /// Size in bytes of the library structure and its private data from the base on
+    /// (`lib_PosSize`).
     pub positive_size: u16,
+    /// Major version number (`lib_Version`).
     pub version: u16,
+    /// Minor version number (`lib_Revision`).
     pub revision: u16,
+    /// Pointer to a NUL-terminated identification string (`lib_IdString`), or null.
     pub id_string: *mut u8,
+    /// The library checksum (`lib_Sum`).
     pub checksum: ULONG,
+    /// Number of current openers (`lib_OpenCnt`).
     pub open_count: u16,
     /// The SMP spinlock storage after the public fields (ABI-v1 only).
     #[cfg(not(target_abi = "abi11"))]
     pub spinlock_padding: SpinLockPadding,
 }
 
+/// AROS `struct Message` (`exec/ports.h`): the header of a message that is sent to a [`MsgPort`].
+/// Messages that carry data embed this header at the start of their own structure.
 #[repr(C)]
 pub struct Message {
+    /// The node by which the message is queued on a port; its type is `NT_MESSAGE` or, once replied
+    /// to, `NT_REPLYMSG` (`mn_Node`).
     pub node: Node,
+    /// The port that receives the message when the receiver replies, or null (`mn_ReplyPort`).
     pub reply_port: *mut MsgPort,
+    /// Total length of the message in bytes, including this header (`mn_Length`).
     pub length: u16,
 }
 
 /// Exec `struct IORequest`.
 #[repr(C)]
 pub struct IoRequest {
+    /// The message header; a request is sent to a device as a message (`io_Message`).
     pub message: Message,
+    /// The device the request is for (`io_Device`), filled in when the device is opened.
     pub device: *mut c_void,
+    /// The unit of the device (`io_Unit`), filled in when the device is opened.
     pub unit: *mut c_void,
+    /// The command to perform (`io_Command`), a device command number.
     pub command: u16,
+    /// Request flags (`io_Flags`), the `IOF_*` bits.
     pub flags: u8,
+    /// The error code the device sets (`io_Error`): zero for success, negative values for the
+    /// standard device errors.
     pub error: i8,
 }
 
@@ -386,7 +519,9 @@ pub struct IoRequest {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct EClockVal {
+    /// The upper 32 bits of the E-clock count (`ev_hi`).
     pub hi: u32,
+    /// The lower 32 bits of the E-clock count (`ev_lo`).
     pub lo: u32,
 }
 
@@ -396,23 +531,38 @@ pub struct EClockVal {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct TimeVal {
+    /// Seconds.
     pub secs: u32,
+    /// Microseconds, from 0 to 999999.
     pub micros: u32,
 }
 
 /// `struct timerequest`: an `IORequest` followed by a time value.
 #[repr(C)]
 pub struct TimeRequest {
+    /// The standard request header (`tr_node`).
     pub request: IoRequest,
+    /// The time value of the request (`tr_time`): a delay for a delay request, or the time that a
+    /// time query fills in.
     pub time: TimeVal,
 }
 
+/// AROS `struct MsgPort` (`exec/ports.h`): a queue of messages with a rule for what happens when
+/// one arrives. On ABI-v1 the structure ends with SMP padding, see [`SpinLockPadding`]; on ABI-v11
+/// it ends in a private extension field.
 #[repr(C)]
 pub struct MsgPort {
+    /// The node by which the port is linked into Exec's port list when it is public; its name is
+    /// the port name (`mp_Node`).
     pub node: Node,
+    /// What happens when a message arrives (`mp_Flags`): signal a task, cause a software interrupt,
+    /// or nothing (`PA_SIGNAL`, `PA_SOFTINT`, `PA_IGNORE`).
     pub flags: u8,
+    /// Number of the signal bit allocated for the port (`mp_SigBit`).
     pub signal_bit: u8,
+    /// The task that is signalled when a message arrives (`mp_SigTask`).
     pub signal_task: APTR,
+    /// The queue of messages that have arrived and not yet been taken (`mp_MsgList`).
     pub message_list: List,
     /// The SMP spinlock storage after the public fields (ABI-v1).
     #[cfg(not(target_abi = "abi11"))]
@@ -422,10 +572,15 @@ pub struct MsgPort {
     pub private: [IPTR; 2],
 }
 
+/// AROS `struct DateStamp` (`dos/dosextens.h`): a date and time as days, minutes and ticks since 1
+/// January 1978.
 #[repr(C)]
 pub struct DateStamp {
+    /// Days since 1 January 1978 (`ds_Days`).
     pub days: LONG,
+    /// Minutes since midnight (`ds_Minute`).
     pub minutes: LONG,
+    /// Ticks of 1/50 second since the start of the minute (`ds_Tick`).
     pub ticks: LONG,
 }
 
@@ -433,27 +588,51 @@ pub struct DateStamp {
 /// selects `FileInfoBlock32` and its LONG-sized file and block counts.
 #[repr(C)]
 pub struct FileInfoBlock {
+    /// A key that the file system uses to identify the entry (`fib_DiskKey`).
     pub disk_key: IPTR,
+    /// Type of the entry (`fib_DirEntryType`): greater than zero for a directory, less than zero
+    /// for a file.
     pub directory_entry_type: LONG,
+    /// The NUL-terminated name of the entry (`fib_FileName`), at most 107 bytes.
     pub file_name: [u8; 108],
+    /// The protection bits of the entry (`fib_Protection`).
     pub protection: LONG,
+    /// The entry type the file system reports (`fib_EntryType`); it has the same sign convention as
+    /// `directory_entry_type`.
     pub entry_type: LONG,
+    /// Size of the file in bytes (`fib_Size`). In this 32-bit profile a size of 2 GiB or more
+    /// cannot be represented.
     pub size: LONG,
+    /// Number of blocks the file occupies (`fib_NumBlocks`).
     pub num_blocks: LONG,
+    /// Date of the last change (`fib_Date`).
     pub date: DateStamp,
+    /// The NUL-terminated file comment (`fib_Comment`), at most 79 bytes.
     pub comment: [u8; 80],
+    /// Owner user ID (`fib_OwnerUID`), for file systems that record owners.
     pub owner_uid: u16,
+    /// Owner group ID (`fib_OwnerGID`), for file systems that record owners.
     pub owner_gid: u16,
+    /// Reserved bytes (`fib_Reserved`); do not use.
     pub reserved: [u8; 32],
 }
 
 // Bounds implemented by the safe SDK layer. Paths include the trailing NUL;
 // argument bytes are the combined encoded size, including any terminators.
+/// Most command-line arguments the bridge accepts; with more, start-up fails with return code 10.
 pub const MAX_ARGUMENTS: usize = 32;
+/// Most bytes in all command-line arguments together, counting a terminating NUL for each argument;
+/// with more, start-up fails with return code 10.
 pub const MAX_ARGUMENT_BYTES: usize = 4096;
+/// Longest path accepted by the file functions, including the terminating NUL. The safe API
+/// therefore accepts paths of at most one byte less.
 pub const MAX_PATH_BYTES: usize = 128;
+/// Smallest alignment the safe allocator API accepts. The bridge raises any alignment below 8 to 8.
 pub const MIN_ALLOCATION_ALIGNMENT: usize = 1;
+/// Largest alignment the bridge accepts for an allocation. It must also be a power of two.
 pub const MAX_ALLOCATION_ALIGNMENT: usize = 4096;
+/// Most bytes one `sdk_file_io` call moves; a longer request is refused as invalid input. The safe
+/// file read and write loops split longer buffers into several calls.
 pub const MAX_FILE_TRANSFER_BYTES: usize = 64 * 1024;
 /// Largest number of simultaneously open files, optional libraries, private
 /// ports or owned messages. Each registry grows on demand, so memory is the
@@ -461,11 +640,19 @@ pub const MAX_FILE_TRANSFER_BYTES: usize = 64 * 1024;
 pub const MAX_HANDLES_PER_KIND: usize = (1 << 20) - 1;
 /// Exec allocates signals from one 32-bit task mask, which caps this count.
 pub const MAX_OWNED_SIGNALS: usize = 32;
+/// Most payload bytes of one owned message.
 pub const MAX_MESSAGE_PAYLOAD_BYTES: usize = 256;
+/// Number of callbacks that may run through `sdk_callback` at one time. A second, nested call is
+/// refused with `ERROR_KIND_STATE`.
 pub const MAX_ACTIVE_CALLBACKS: usize = 1;
+/// Most data bytes that a device I/O request can carry.
 pub const MAX_REQUEST_DATA_BYTES: usize = 64 * 1024;
+/// Request kind for `sdk_io_new`: a standard `IOStdReq`, which carries a data buffer.
 pub const IO_KIND_STANDARD: i32 = 0;
+/// Request kind for `sdk_io_new`: a `timerequest`, which carries a time value and no data buffer.
 pub const IO_KIND_TIMER: i32 = 1;
+/// Size of the buffer in which the bridge formats one diagnostic line: the label (cut to 230
+/// bytes), a space, the code in decimal and a newline.
 pub const MAX_DIAGNOSTIC_BYTES: usize = 256;
 
 /// Number of values [`timer_layout_values`] and `sdk_timer_layout` produce.
@@ -493,19 +680,33 @@ pub const fn timer_layout_values() -> [u64; TIMER_LAYOUT_VALUE_COUNT] {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct SdkWindowInfo {
+    /// Left edge of the window on its screen, in pixels.
     pub left: i32,
+    /// Top edge of the window on its screen, in pixels.
     pub top: i32,
+    /// Width of the window including its borders, in pixels.
     pub width: i32,
+    /// Height of the window including its borders, in pixels.
     pub height: i32,
+    /// Width of the left border in pixels.
     pub border_left: i32,
+    /// Height of the top border in pixels.
     pub border_top: i32,
+    /// Width of the right border in pixels.
     pub border_right: i32,
+    /// Height of the bottom border in pixels.
     pub border_bottom: i32,
+    /// Horizontal mouse position relative to the window (`MouseX`).
     pub mouse_x: i32,
+    /// Vertical mouse position relative to the window (`MouseY`).
     pub mouse_y: i32,
+    /// Width of the screen the window is on, in pixels.
     pub screen_width: i32,
+    /// Height of the screen the window is on, in pixels.
     pub screen_height: i32,
+    /// The signal mask of the window's IDCMP port: wait on it to be woken when an event arrives.
     pub signal_mask: u32,
+    /// The window's `RastPort`, for drawing into the window.
     pub rastport: *mut c_void,
 }
 
@@ -513,59 +714,106 @@ pub struct SdkWindowInfo {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct SdkIntuiEvent {
+    /// The IDCMP class of the event: one `IDCMP_*` bit, see [`idcmp`].
     pub class: u32,
+    /// The message code (`Code`); for mouse buttons one of the `idcmp::SELECT_*`, `MENU_*` or
+    /// `MIDDLE_*` values, for a raw key the key code.
     pub code: u16,
+    /// The qualifier bits that were set when the event happened (`Qualifier`).
     pub qualifier: u16,
+    /// Horizontal mouse position of the event, relative to the window (`MouseX`).
     pub x: i16,
+    /// Vertical mouse position of the event, relative to the window (`MouseY`).
     pub y: i16,
+    /// Seconds of the event's time stamp (`Seconds`).
     pub seconds: u32,
+    /// Microseconds of the event's time stamp (`Micros`).
     pub micros: u32,
 }
 
 /// Window tags (`WA_*`) the safe window builder uses.
 pub mod wa {
     use super::TAG_USER;
+    /// `WA_Left`: left edge of the window on its screen.
     pub const LEFT: u32 = TAG_USER + 100;
+    /// `WA_Top`: top edge of the window on its screen.
     pub const TOP: u32 = TAG_USER + 101;
+    /// `WA_Width`: outer width of the window.
     pub const WIDTH: u32 = TAG_USER + 102;
+    /// `WA_Height`: outer height of the window.
     pub const HEIGHT: u32 = TAG_USER + 103;
+    /// `WA_IDCMP`: the IDCMP classes the window wants to receive.
     pub const IDCMP: u32 = TAG_USER + 106;
+    /// `WA_Title`: the window title, a NUL-terminated string.
     pub const TITLE: u32 = TAG_USER + 110;
+    /// `WA_MinWidth`: smallest width the user may size the window to.
     pub const MIN_WIDTH: u32 = TAG_USER + 114;
+    /// `WA_MinHeight`: smallest height the user may size the window to.
     pub const MIN_HEIGHT: u32 = TAG_USER + 115;
+    /// `WA_MaxWidth`: largest width the user may size the window to.
     pub const MAX_WIDTH: u32 = TAG_USER + 116;
+    /// `WA_MaxHeight`: largest height the user may size the window to.
     pub const MAX_HEIGHT: u32 = TAG_USER + 117;
+    /// `WA_InnerWidth`: width of the usable area inside the borders.
     pub const INNER_WIDTH: u32 = TAG_USER + 118;
+    /// `WA_InnerHeight`: height of the usable area inside the borders.
     pub const INNER_HEIGHT: u32 = TAG_USER + 119;
+    /// `WA_PubScreen`: the public screen to open the window on.
     pub const PUB_SCREEN: u32 = TAG_USER + 121;
+    /// `WA_SizeGadget`: give the window a sizing gadget.
     pub const SIZE_GADGET: u32 = TAG_USER + 129;
+    /// `WA_DragBar`: give the window a drag bar.
     pub const DRAG_BAR: u32 = TAG_USER + 130;
+    /// `WA_DepthGadget`: give the window a depth-arrangement gadget.
     pub const DEPTH_GADGET: u32 = TAG_USER + 131;
+    /// `WA_CloseGadget`: give the window a close gadget.
     pub const CLOSE_GADGET: u32 = TAG_USER + 132;
+    /// `WA_ReportMouse`: report mouse movement while the window is active.
     pub const REPORT_MOUSE: u32 = TAG_USER + 134;
+    /// `WA_Borderless`: open the window without borders.
     pub const BORDERLESS: u32 = TAG_USER + 136;
+    /// `WA_Activate`: activate the window when it opens.
     pub const ACTIVATE: u32 = TAG_USER + 137;
+    /// `WA_SimpleRefresh`: the application redraws damaged parts itself.
     pub const SIMPLE_REFRESH: u32 = TAG_USER + 140;
+    /// `WA_SmartRefresh`: the system saves and restores the hidden parts of the window.
     pub const SMART_REFRESH: u32 = TAG_USER + 141;
+    /// `WA_GimmeZeroZero`: give the window a separate border layer so that drawing starts at the
+    /// inner origin.
     pub const GIMME_ZERO_ZERO: u32 = TAG_USER + 145;
 }
 
 /// IDCMP class bits and message codes the safe window API decodes.
 pub mod idcmp {
+    /// `IDCMP_NEWSIZE`: the window was resized.
     pub const NEW_SIZE: u32 = 1 << 1;
+    /// `IDCMP_REFRESHWINDOW`: part of the window needs to be redrawn.
     pub const REFRESH_WINDOW: u32 = 1 << 2;
+    /// `IDCMP_MOUSEBUTTONS`: a mouse button changed state; the message code tells which.
     pub const MOUSE_BUTTONS: u32 = 1 << 3;
+    /// `IDCMP_MOUSEMOVE`: the mouse moved.
     pub const MOUSE_MOVE: u32 = 1 << 4;
+    /// `IDCMP_CLOSEWINDOW`: the user activated the close gadget.
     pub const CLOSE_WINDOW: u32 = 1 << 9;
+    /// `IDCMP_RAWKEY`: a key changed state; the message code is the raw key code.
     pub const RAW_KEY: u32 = 1 << 10;
+    /// `IDCMP_ACTIVEWINDOW`: the window became active.
     pub const ACTIVE_WINDOW: u32 = 1 << 18;
+    /// `IDCMP_INACTIVEWINDOW`: the window stopped being active.
     pub const INACTIVE_WINDOW: u32 = 1 << 19;
+    /// `IDCMP_VANILLAKEY`: a key press that maps to a character; the message code is the character.
     pub const VANILLA_KEY: u32 = 1 << 21;
+    /// `SELECTDOWN`: message code of a mouse-button message for the left (select) button pressed.
     pub const SELECT_DOWN: u16 = 0x68;
+    /// `SELECTUP`: message code of a mouse-button message for the left (select) button released.
     pub const SELECT_UP: u16 = 0xe8;
+    /// `MENUDOWN`: message code of a mouse-button message for the right (menu) button pressed.
     pub const MENU_DOWN: u16 = 0x69;
+    /// `MENUUP`: message code of a mouse-button message for the right (menu) button released.
     pub const MENU_UP: u16 = 0xe9;
+    /// `MIDDLEDOWN`: message code of a mouse-button message for the middle button pressed.
     pub const MIDDLE_DOWN: u16 = 0x6a;
+    /// `MIDDLEUP`: message code of a mouse-button message for the middle button released.
     pub const MIDDLE_UP: u16 = 0xea;
 }
 
@@ -630,25 +878,45 @@ pub const fn intuition_layout_values() -> [u64; INTUITION_LAYOUT_VALUE_COUNT] {
 pub mod aslfr {
     use super::TAG_USER;
     const BASE: u32 = TAG_USER + 0x80000;
+    /// `ASL_FileRequest`: the requester type that asks for a file.
     pub const FILE_REQUEST: u32 = 0;
+    /// `ASLFR_TitleText`: the requester title.
     pub const TITLE_TEXT: u32 = BASE + 1;
+    /// `ASLFR_Window`: the window the requester belongs to.
     pub const WINDOW: u32 = BASE + 2;
+    /// `ASLFR_InitialLeftEdge`: left edge of the requester.
     pub const INITIAL_LEFT_EDGE: u32 = BASE + 3;
+    /// `ASLFR_InitialTopEdge`: top edge of the requester.
     pub const INITIAL_TOP_EDGE: u32 = BASE + 4;
+    /// `ASLFR_InitialWidth`: width of the requester.
     pub const INITIAL_WIDTH: u32 = BASE + 5;
+    /// `ASLFR_InitialHeight`: height of the requester.
     pub const INITIAL_HEIGHT: u32 = BASE + 6;
+    /// `ASLFR_InitialFile`: the file name shown first.
     pub const INITIAL_FILE: u32 = BASE + 8;
+    /// `ASLFR_InitialDrawer`: the drawer shown first.
     pub const INITIAL_DRAWER: u32 = BASE + 9;
+    /// `ASLFR_InitialPattern`: the file name pattern shown first.
     pub const INITIAL_PATTERN: u32 = BASE + 10;
+    /// `ASLFR_PositiveText`: the label of the confirming button.
     pub const POSITIVE_TEXT: u32 = BASE + 18;
+    /// `ASLFR_NegativeText`: the label of the cancelling button.
     pub const NEGATIVE_TEXT: u32 = BASE + 19;
+    /// `ASLFR_SleepWindow`: block input to the window that owns the requester while it is open.
     pub const SLEEP_WINDOW: u32 = BASE + 43;
+    /// `ASLFR_DoSaveMode`: use the requester to choose a file to save.
     pub const DO_SAVE_MODE: u32 = BASE + 44;
+    /// `ASLFR_DoMultiSelect`: allow selecting more than one file.
     pub const DO_MULTI_SELECT: u32 = BASE + 45;
+    /// `ASLFR_DoPatterns`: show a pattern gadget.
     pub const DO_PATTERNS: u32 = BASE + 46;
+    /// `ASLFR_DrawersOnly`: let the user choose a drawer, not a file.
     pub const DRAWERS_ONLY: u32 = BASE + 47;
+    /// `ASLFR_RejectIcons`: hide `.info` icon files.
     pub const REJECT_ICONS: u32 = BASE + 60;
+    /// `ASLFR_PopToFront`: bring the requester screen to the front.
     pub const POP_TO_FRONT: u32 = BASE + 131;
+    /// `ASLFR_Activate`: activate the requester window when it opens.
     pub const ACTIVATE: u32 = BASE + 132;
 }
 
@@ -686,16 +954,32 @@ pub const fn asl_layout_values() -> [u64; ASL_LAYOUT_VALUE_COUNT] {
 pub mod oc {
     use super::TAG_USER;
     const BASE: u32 = TAG_USER + 0x90000;
+    /// `OC_BuiltInLanguage`: the language of the built-in strings of the application, used when no
+    /// catalog is found.
     pub const BUILT_IN_LANGUAGE: u32 = BASE + 1;
+    /// `OC_Version`: the catalog version that is required.
     pub const VERSION: u32 = BASE + 3;
+    /// `OC_Language`: the language to open the catalog for, instead of the user's preferred
+    /// languages.
     pub const LANGUAGE: u32 = BASE + 4;
+    /// `DAY_1`: string number of the name of the first day of the week (Sunday); the other days
+    /// follow.
     pub const DAY_1: u32 = 1;
+    /// `ABDAY_1`: string number of the abbreviated name of the first day of the week; the other
+    /// days follow.
     pub const ABDAY_1: u32 = 8;
+    /// `MON_1`: string number of the name of the first month (January); the other months follow.
     pub const MON_1: u32 = 15;
+    /// `ABMON_1`: string number of the abbreviated name of the first month; the other months
+    /// follow.
     pub const ABMON_1: u32 = 27;
+    /// `YESSTR`: string number of the word for "yes".
     pub const YES_STR: u32 = 39;
+    /// `NOSTR`: string number of the word for "no".
     pub const NO_STR: u32 = 40;
+    /// `AMSTR`: string number of the morning marker.
     pub const AM_STR: u32 = 41;
+    /// `PMSTR`: string number of the afternoon marker.
     pub const PM_STR: u32 = 42;
 }
 
@@ -703,9 +987,14 @@ pub mod oc {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct SdkLocaleInfo {
+    /// The NUL-terminated name of the locale (`loc_LocaleName`). The string belongs to the locale.
     pub locale_name: *const c_char,
+    /// The NUL-terminated name of the language of the locale (`loc_LanguageName`). The string
+    /// belongs to the locale.
     pub language_name: *const c_char,
+    /// The preferred languages in order (`loc_PrefLanguages`). Unused entries are null.
     pub preferred: [*const c_char; 10],
+    /// The offset from GMT as locale.library reports it (`loc_GMTOffset`), in minutes.
     pub gmt_offset: i32,
 }
 
@@ -738,11 +1027,19 @@ pub const fn locale_layout_values() -> [u64; LOCALE_LAYOUT_VALUE_COUNT] {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct SdkIconInfo {
+    /// The type of the disk object (`do_Type`): one of the `wb::DISK` to `wb::APP_ICON` values.
     pub kind: i32,
+    /// The stack size in bytes that is recorded for starting the object (`do_StackSize`).
     pub stack_size: i32,
+    /// Horizontal position of the icon in its drawer window (`do_CurrentX`).
     pub x: i32,
+    /// Vertical position of the icon in its drawer window (`do_CurrentY`).
     pub y: i32,
+    /// The NUL-terminated default tool (`do_DefaultTool`), or null. The string belongs to the disk
+    /// object.
     pub default_tool: *const c_char,
+    /// The null-terminated array of tool type strings (`do_ToolTypes`), or null. The array belongs
+    /// to the disk object.
     pub tool_types: *const *const c_char,
 }
 
@@ -750,30 +1047,53 @@ pub struct SdkIconInfo {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct SdkAppMessage {
+    /// The message type (`am_Type`): one of the `wb::AMTYPE_*` values.
     pub kind: u32,
+    /// The message class (`am_Class`).
     pub class: u32,
+    /// Number of paths of this message that the bridge decoded and kept: at most 8, and at most
+    /// `total_args`.
     pub num_args: u32,
+    /// Number of arguments the message carried (`am_NumArgs`).
     pub total_args: i32,
+    /// Horizontal mouse position of a drop (`am_MouseX`).
     pub mouse_x: i16,
+    /// Vertical mouse position of a drop (`am_MouseY`).
     pub mouse_y: i16,
+    /// Seconds of the message's time stamp (`am_Seconds`).
     pub seconds: u32,
+    /// Microseconds of the message's time stamp (`am_Micros`).
     pub micros: u32,
+    /// The identifier that was given when the window, icon or menu item was added (`am_ID`).
     pub id: u64,
+    /// The user data that was given when the window, icon or menu item was added (`am_UserData`).
     pub user_data: u64,
 }
 
 /// Disk object types (`WB*`) and application message types (`AMTYPE_*`).
 pub mod wb {
+    /// `WBDISK`: a disk icon.
     pub const DISK: u32 = 1;
+    /// `WBDRAWER`: a drawer icon.
     pub const DRAWER: u32 = 2;
+    /// `WBTOOL`: a program icon.
     pub const TOOL: u32 = 3;
+    /// `WBPROJECT`: a document icon with a default tool.
     pub const PROJECT: u32 = 4;
+    /// `WBGARBAGE`: the trashcan icon.
     pub const GARBAGE: u32 = 5;
+    /// `WBDEVICE`: a device icon.
     pub const DEVICE: u32 = 6;
+    /// `WBKICK`: a Kickstart disk icon.
     pub const KICK: u32 = 7;
+    /// `WBAPPICON`: an icon that an application put on the Workbench.
     pub const APP_ICON: u32 = 8;
+    /// `AMTYPE_APPWINDOW`: message type of an icon dropped on an application window.
     pub const AMTYPE_APP_WINDOW: u32 = 7;
+    /// `AMTYPE_APPICON`: message type of an icon dropped on, or a double click on, an application
+    /// icon.
     pub const AMTYPE_APP_ICON: u32 = 8;
+    /// `AMTYPE_APPMENUITEM`: message type of an application menu item that was chosen.
     pub const AMTYPE_APP_MENU_ITEM: u32 = 9;
 }
 
@@ -806,16 +1126,34 @@ pub const fn wb_layout_values() -> [u64; WB_LAYOUT_VALUE_COUNT] {
     ]
 }
 
+/// File mode for `sdk_file_open`: open an existing file for reading.
 pub const SDK_FILE_READ_EXISTING: i32 = 0;
+/// File mode for `sdk_file_open`: create the file, or empty it if it exists, and open it for
+/// writing.
 pub const SDK_FILE_CREATE_TRUNCATE: i32 = 1;
+/// File mode for `sdk_file_open`: open an existing file for reading and writing.
 pub const SDK_FILE_READ_WRITE: i32 = 2;
 
+/// Error class: a native AROS call or an allocation failed. `SdkError::native` holds its error code
+/// (for example the DOS `IoErr` value or `ERROR_NO_FREE_STORE`), or zero when none was available.
 pub const ERROR_KIND_NATIVE: i32 = 1;
+/// Error class: an argument was invalid, such as a null pointer, a length over a bound, or a name
+/// that is not NUL terminated within the allowed length.
 pub const ERROR_KIND_INPUT: i32 = 2;
+/// Error class: a bound was reached, for example a file size that does not fit the 32-bit file
+/// information of the profile.
 pub const ERROR_KIND_LIMIT: i32 = 3;
+/// Error class: the call was refused because the bridge is not active, the context token is not the
+/// current one, or the calling task is not the task that started the bridge.
 pub const ERROR_KIND_OWNER: i32 = 4;
+/// Error class: the handle is unknown or already released, or the operation is not allowed in the
+/// state of the object, for example a nested callback.
 pub const ERROR_KIND_STATE: i32 = 5;
+/// Error class: the end of the data was reached. The bridge does not set this class itself; if a
+/// call ever reports it, the safe layer maps it to the `Eof` error kind.
 pub const ERROR_KIND_EOF: i32 = 6;
+/// Error class: a transfer made no progress. The bridge does not set this class itself; if a call
+/// ever reports it, the safe layer maps it to the `ZeroProgress` error kind.
 pub const ERROR_KIND_ZERO_PROGRESS: i32 = 7;
 
 /// Layout oracle values in the exact order of the M0 C layout table:
@@ -833,6 +1171,10 @@ const fn layout_value(value: usize) -> u64 {
     value as u64
 }
 
+/// The layout of the exec, DOS and bridge records as the Rust declarations here lay them out, in
+/// the order of the native `sdk_layout` table, so that the two can be compared value by value. The
+/// table has [`ABI_LAYOUT_VALUE_COUNT`] entries: 106 on ABI-v1 and 101 on ABI-v11, which has no
+/// `spinlock_t`.
 pub const fn layout_values() -> [u64; ABI_LAYOUT_VALUE_COUNT] {
     let mut values = [0u64; ABI_LAYOUT_VALUE_COUNT];
     let mut next = 0;
