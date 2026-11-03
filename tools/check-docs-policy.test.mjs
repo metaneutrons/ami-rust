@@ -11,7 +11,7 @@ import { check, publishedCrates } from './check-docs-policy.mjs';
 const crate = (name, { publish = '["metaneutrons"]', lints = '[lints]\nworkspace = true\n' } = {}) =>
   `[package]\nname = "${name}"\nversion = "0.1.0"\npublish = ${publish}\n${lints}`;
 
-function tree({ rootLints = 'missing_docs = "deny"', toolingLints = '', crates = {}, tooling = {}, sources = {} }) {
+function tree({ rootLints = 'missing_docs = "deny"', toolingLints = '', crates = {}, tooling = {}, sources = {}, guides = 'all' }) {
   const root = mkdtempSync(join(tmpdir(), 'docs-policy-'));
   const put = (path, text) => {
     mkdirSync(dirname(join(root, path)), { recursive: true });
@@ -22,6 +22,12 @@ function tree({ rootLints = 'missing_docs = "deny"', toolingLints = '', crates =
   for (const [name, text] of Object.entries(crates)) put(`crates/${name}/Cargo.toml`, text);
   for (const [name, text] of Object.entries(tooling)) put(`tooling/crates/${name}/Cargo.toml`, text);
   for (const [path, text] of Object.entries(sources)) put(path, text);
+  const names = [...Object.keys(crates), ...Object.keys(tooling)];
+  if (guides === 'all') {
+    for (const name of names) put(`docs/api/${name}.md`, '---\ntitle: x\n---\n');
+    put('website/src/content.config.ts', names.map((n) => `'api/${n}.md',`).join('\n'));
+    put('website/astro.config.mjs', names.map((n) => `{ link: '/api/${n}/' },`).join('\n'));
+  }
   return root;
 }
 
@@ -59,6 +65,14 @@ test('crates that are not published are not checked', () => {
   const root = tree({ crates: { internal: crate('internal', { publish: 'false', lints: '' }) }, sources: { 'crates/internal/src/lib.rs': '#![allow(missing_docs)]\n' } });
   assert.deepEqual(publishedCrates(root), []);
   assert.deepEqual(check(root), []);
+});
+
+test('counter-probe: a published crate without a guide, collection entry or sidebar entry is refused', () => {
+  const root = tree({ crates: { one: crate('one') }, sources: { 'crates/one/src/lib.rs': '' }, guides: 'none' });
+  const problems = check(root).join('\n');
+  assert.match(problems, /one: has no guide page docs\/api\/one.md/);
+  assert.match(problems, /not in website\/src\/content.config.ts/);
+  assert.match(problems, /not in the sidebar/);
 });
 
 test('the repository itself satisfies the policy', () => {

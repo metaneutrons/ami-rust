@@ -16,20 +16,21 @@ The Cargo **target** selects the AROS ABI, and your source is the same for both.
 
 | Crate | Use it for | Safe boundary |
 | --- | --- | --- |
-| `aros` | Application entry, task-local context, Exec-backed allocation, files, streams, libraries, signals, local ports and messages | The default application crate |
-| `aros-mui` | Typed MUI objects, ownership scopes, attributes, notifications, callbacks, requesters and the application loop | The preferred MUI crate |
-| `aros-timer` | Time and timers: the monotonic clock, calendar and up time, sleeping and signalled alarms (in the repository after release 0.1.0, not part of it) | Safe, built on `aros` |
-| `aros-graphics` | Off-screen bitmaps and drawing: pens, lines, rectangles, ellipses, polygons, text, pixels and blits (in the repository after release 0.1.0, not part of it) | Safe, built on `aros` |
-| `aros-intuition` | Windows on a public screen with typed events (close, keys, mouse, refresh, resize) and drawing through `aros-graphics` (in the repository after release 0.1.0, not part of it) | Safe, built on `aros` and `aros-graphics` |
-| `aros-asl` | The file requester: open, save and drawer selection, multi-selection, returning owned paths (in the repository after release 0.1.0, not part of it) | Safe, built on `aros` and `aros-intuition` |
-| `aros-locale` | Message catalogs with built-in default strings, the user's locale and date formatting (in the repository after release 0.1.0, not part of it) | Safe, built on `aros` |
-| `aros-icon` | Icons (`.info` files): type, default tool, tool types, stack size, and tool value matching (in the repository after release 0.1.0, not part of it) | Safe, built on `aros` |
-| `aros-workbench` | A window that accepts dropped icons, an icon on the desktop and a Tools menu item, with message receipt (in the repository after release 0.1.0, not part of it) | Safe, built on `aros`, `aros-icon` and `aros-intuition` |
-| `aros-sys` | A raw AROS declaration or library vector call that `aros` does not cover yet | Unsafe: you own every pointer, library base and lifetime |
-| `aros-mui-sys` | A raw MUI vector, class, tag or message that `aros-mui` does not model safely | Unsafe: you own the complete native contract |
-| `aros-native-build` | A build dependency. Your `build.rs` calls `aros_native_build::prepare`; your application code never uses it. | Not an application API |
+| [`aros`](/api/aros/) | Application entry, task-local context, Exec-backed allocation, files, streams, libraries, signals, local ports and messages | The default application crate |
+| [`aros-mui`](/api/aros-mui/) | Typed MUI objects, ownership scopes, attributes, notifications, callbacks, requesters and the application loop | The preferred MUI crate |
+| [`aros-timer`](/api/aros-timer/) | Time and timers: the monotonic clock, calendar and up time, sleeping and signalled alarms (new in 0.2.0) | Safe, built on `aros` |
+| [`aros-graphics`](/api/aros-graphics/) | Off-screen bitmaps and drawing: pens, lines, rectangles, ellipses, polygons, text, pixels and blits (new in 0.2.0) | Safe, built on `aros` |
+| [`aros-intuition`](/api/aros-intuition/) | Windows on a public screen with typed events (close, keys, mouse, refresh, resize) and drawing through `aros-graphics` (new in 0.2.0) | Safe, built on `aros` and `aros-graphics` |
+| [`aros-asl`](/api/aros-asl/) | The file requester: open, save and drawer selection, multi-selection, returning owned paths (new in 0.2.0) | Safe, built on `aros` and `aros-intuition` |
+| [`aros-locale`](/api/aros-locale/) | Message catalogs with built-in default strings, the user's locale and date formatting (new in 0.2.0) | Safe, built on `aros` |
+| [`aros-icon`](/api/aros-icon/) | Icons (`.info` files): type, default tool, tool types, stack size, and tool value matching (new in 0.2.0) | Safe, built on `aros` |
+| [`aros-workbench`](/api/aros-workbench/) | A window that accepts dropped icons, an icon on the desktop and a Tools menu item, with message receipt (new in 0.2.0) | Safe, built on `aros`, `aros-icon` and `aros-intuition` |
+| [`aros-sys`](/api/aros-sys/) | A raw AROS declaration or library vector call that `aros` does not cover yet | Unsafe: you own every pointer, library base and lifetime |
+| [`aros-mui-sys`](/api/aros-mui-sys/) | A raw MUI vector, class, tag or message that `aros-mui` does not model safely | Unsafe: you own the complete native contract |
+| [`aros-native-build`](/api/aros-native-build/) | A build dependency. Your `build.rs` calls `aros_native_build::prepare`; your application code never uses it. | Not an application API |
+| [`aros-elf`](/api/aros-elf/) | A host library that audits AROS ELF objects and shortens their section names; `aros-native-build` and the maintainer tools use it. | Not an application API |
 
-`aros-elf` and the tools in the repository are internal; see [architecture](/architecture/).
+The other tools in the repository are internal; see [architecture](/architecture/).
 
 Start with `aros`, add `aros-mui` for a graphical interface, and reach for a `-sys` crate only when you can document the raw pointer, tag, vector and lifetime contract that prevents a safe wrapper. For the concepts behind the safe crates, read the [programming model](/api/).
 
