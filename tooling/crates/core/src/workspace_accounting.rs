@@ -2,7 +2,7 @@
 //!
 //! The scanner does not follow symlinks or open symlinks/special entries. It
 //! samples regular-file sizes using one no-follow stat and counts hard links
-//! once per directory entry, as the historical Python walker does.
+//! once per directory entry, as the historical reference walker does.
 //! Caller-selected entry and work bounds are required. The caller must validate
 //! that the supplied root is the intended filesystem boundary. A present tree
 //! is not an atomic snapshot against a concurrent same-UID writer; child
@@ -149,7 +149,7 @@ impl EntrySnapshot {
 /// Missing root paths return zero, matching the historical helper. Any other
 /// root-open failure is visible. ENOENT for an entry that vanishes after
 /// enumeration, a classified child directory removed before open, or an opened
-/// child directory removed before metadata inspection is skipped as in Python;
+/// child directory removed before metadata inspection is skipped as the reference walker did;
 /// other errors remain visible. Regular-file sizes are one `fstatat` sample and
 /// can change before the next walk.
 pub fn scan(root: &Path, limits: ScanLimits) -> Result<Accounting, ScanError> {

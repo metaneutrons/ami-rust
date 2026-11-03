@@ -1225,7 +1225,7 @@ fn finish_plan(plan: ArchivePlan, limits: &ArchiveLimits) -> Result<ArchivePlan>
         }
     }
 
-    // Python safe_extract_tar creates all regular files first, then processes
+    // The original extractor creates all regular files first, then processes
     // links in original order. Mirror the hard-link availability rule so
     // forward links to not-yet-created hard links are rejected in preflight.
     for (member_index, member) in plan.members.iter().enumerate() {

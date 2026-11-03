@@ -1,5 +1,5 @@
 //! Exact package-pinned source checkout using native Git and isolated config.
-//! Source Python files are inert data; no source helper is imported or run.
+//! Script files in the source tree are inert data; no source helper is imported or run.
 use crate::{
     Refusal, Result, consumer_session::ConsumerSession, directory::Directory,
     package_records::NativePackagePins,

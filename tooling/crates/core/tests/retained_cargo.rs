@@ -1,4 +1,4 @@
-//! Opt-in compatibility check against the immutable, Python-produced R1 bytes.
+//! Opt-in compatibility check against the immutable R1 bytes of the earlier release.
 //! This reads historical data; it never executes Cargo or a historical helper.
 use ami_rust_core::{
     cargo_archive::{CargoArchiveSpec, extract_flat_cargo_archive},

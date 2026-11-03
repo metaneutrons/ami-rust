@@ -75,7 +75,7 @@ pub fn parse_authentication_metadata(
     crate::json::check_raw_value_prepass(raw, profile)?;
 
     // Borrow the two integer lexemes before serde_json::Value can round a
-    // Python-valid integer above u64. The complete strict tree pass follows.
+    // integer above u64 that the reference parser accepts. The complete strict tree pass follows.
     let mut deserializer = serde_json::Deserializer::from_slice(raw);
     deserializer.disable_recursion_limit();
     let counters: CounterEnvelope<'_> = CounterEnvelope::deserialize(&mut deserializer)

@@ -515,7 +515,7 @@ fn write_profile_tar<W: Write>(
         let full_path = format!("{CSDK_ROOT_PREFIX}{}", identity.path);
         header.set_path(&full_path)?;
         header.set_cksum();
-        // Python tarfile's canonical field is six octal digits, NUL,
+        // The original tar writer's canonical checksum field is six octal digits, NUL,
         // then space. tar::Header's default is seven digits then NUL.
         // Format the structured header before appending it; never patch
         // a completed archive or allow append_data to reset the field.

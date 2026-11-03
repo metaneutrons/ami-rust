@@ -51,8 +51,8 @@ const SUBJECTS: [&str; 3] = ["SHAUTIL", "release.json", "sdk.tar.xz"];
 type BundleScanner =
     fn(&Directory, &BTreeSet<String>, &BTreeSet<String>) -> Result<BundleMeasurement>;
 
-/// Select the schema explicitly. Legacy inspection never activates a Python
-/// driver or grants permission to install it through a native consumer path.
+/// Select the schema explicitly. Legacy inspection never activates a legacy
+/// interpreter-based driver or grants permission to install it through a native consumer path.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum ReleaseFlavor {
     LegacyInspection,
