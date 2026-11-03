@@ -156,7 +156,7 @@ pub fn compact_elf_sections_with_report(bytes: &[u8]) -> Result<CompactedElf> {
         .get(old_string_range.clone())
         .ok_or_else(|| Refusal::new("truncated section names"))?;
 
-    // Match the frozen Python transform: each section header receives its own
+    // Match the frozen original transform: each section header receives its own
     // string-table entry, including duplicate names that formerly shared one.
     let mut compacted_names = Vec::new();
     compacted_names
