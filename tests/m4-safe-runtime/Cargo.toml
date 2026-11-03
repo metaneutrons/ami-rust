@@ -12,8 +12,8 @@ name = "ami-rust-m4-safe-runtime"
 path = "src/main.rs"
 
 [dependencies]
-aros = { version = "=0.1.0", path = "../../crates/aros", features = ["alloc"] }
-aros-mui = { version = "=0.1.0", path = "../../crates/aros-mui" }
+aros = { version = "=0.2.0", path = "../../crates/aros", features = ["alloc"] }
+aros-mui = { version = "=0.2.0", path = "../../crates/aros-mui" }
 
 [workspace]
 resolver = "3"

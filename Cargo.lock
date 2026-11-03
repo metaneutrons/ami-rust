@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "ami-rust-dependencies"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros",
  "aros-native-build",
@@ -16,7 +16,7 @@ dependencies = [
 
 [[package]]
 name = "ami-rust-minimal"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros",
  "aros-native-build",
@@ -25,7 +25,7 @@ dependencies = [
 
 [[package]]
 name = "ami-rust-qualification"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros",
  "aros-asl",
@@ -41,7 +41,7 @@ dependencies = [
 
 [[package]]
 name = "ami-rust-sha256sum"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros",
  "aros-native-build",
@@ -50,14 +50,14 @@ dependencies = [
 
 [[package]]
 name = "aros"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros-sys",
 ]
 
 [[package]]
 name = "aros-asl"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros",
  "aros-intuition",
@@ -75,7 +75,7 @@ dependencies = [
 
 [[package]]
 name = "aros-graphics"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros",
  "aros-sys",
@@ -83,7 +83,7 @@ dependencies = [
 
 [[package]]
 name = "aros-icon"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros",
  "aros-sys",
@@ -91,7 +91,7 @@ dependencies = [
 
 [[package]]
 name = "aros-intuition"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros",
  "aros-graphics",
@@ -100,7 +100,7 @@ dependencies = [
 
 [[package]]
 name = "aros-locale"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros",
  "aros-sys",
@@ -108,7 +108,7 @@ dependencies = [
 
 [[package]]
 name = "aros-mui"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros",
  "aros-mui-sys",
@@ -117,7 +117,7 @@ dependencies = [
 
 [[package]]
 name = "aros-mui-sys"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros-sys",
 ]
@@ -135,11 +135,11 @@ dependencies = [
 
 [[package]]
 name = "aros-sys"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "aros-timer"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros",
  "aros-sys",
@@ -147,7 +147,7 @@ dependencies = [
 
 [[package]]
 name = "aros-workbench"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros",
  "aros-icon",

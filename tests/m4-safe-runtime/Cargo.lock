@@ -12,14 +12,14 @@ dependencies = [
 
 [[package]]
 name = "aros"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros-sys",
 ]
 
 [[package]]
 name = "aros-mui"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros",
  "aros-mui-sys",
@@ -28,11 +28,11 @@ dependencies = [
 
 [[package]]
 name = "aros-mui-sys"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aros-sys",
 ]
 
 [[package]]
 name = "aros-sys"
-version = "0.1.0"
+version = "0.2.0"
