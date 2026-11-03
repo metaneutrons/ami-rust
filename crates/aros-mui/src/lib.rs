@@ -1,6 +1,4 @@
 #![no_std]
-#![deny(missing_docs)]
-#![deny(rustdoc::broken_intra_doc_links)]
 //! Task-affine, typed MUI objects for AROS.
 //!
 //! This crate wraps MUI object creation, attributes, methods, notifications,

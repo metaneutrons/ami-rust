@@ -1,6 +1,4 @@
 #![no_std]
-#![deny(missing_docs)]
-#![deny(rustdoc::broken_intra_doc_links)]
 //! Task-affine time and timers for AROS, on `timer.device`.
 //!
 //! [`Timer`] opens `timer.device` through [`aros::Device`] and owns it. Three

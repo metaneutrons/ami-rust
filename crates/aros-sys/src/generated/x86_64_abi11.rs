@@ -8,6 +8,8 @@ unsafe fn vector(base: *mut Library, offset: usize) -> *const c_void {
     unsafe { base.cast::<*const c_void>().sub(offset).read() }
 }
 
+/// Raw calls through the Asl vector table: 3 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
 pub mod asl {
     use super::*;
 
@@ -82,6 +84,8 @@ pub mod asl {
     }
 }
 
+/// Raw calls through the Dos vector table: 13 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
 pub mod dos {
     use super::*;
 
@@ -375,6 +379,8 @@ pub mod dos {
     }
 }
 
+/// Raw calls through the Exec vector table: 12 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
 pub mod exec {
     use super::*;
 
@@ -619,6 +625,8 @@ pub mod exec {
     }
 }
 
+/// Raw calls through the Graphics vector table: 27 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
 pub mod graphics {
     use super::*;
 
@@ -1325,6 +1333,8 @@ pub mod graphics {
     }
 }
 
+/// Raw calls through the Icon vector table: 8 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
 pub mod icon {
     use super::*;
 
@@ -1509,6 +1519,8 @@ pub mod icon {
     }
 }
 
+/// Raw calls through the Intuition vector table: 17 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
 pub mod intuition {
     use super::*;
 
@@ -1882,6 +1894,8 @@ pub mod intuition {
     }
 }
 
+/// Raw calls through the Locale vector table: 7 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
 pub mod locale {
     use super::*;
 
@@ -2052,6 +2066,8 @@ pub mod locale {
     }
 }
 
+/// Raw calls through the Timer vector table: 3 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
 pub mod timer {
     use super::*;
 
@@ -2113,6 +2129,8 @@ pub mod timer {
     }
 }
 
+/// Raw calls through the Utility vector table: 3 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
 pub mod utility {
     use super::*;
 
@@ -2192,6 +2210,8 @@ pub mod utility {
     }
 }
 
+/// Raw calls through the Workbench vector table: 7 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
 pub mod workbench {
     use super::*;
 

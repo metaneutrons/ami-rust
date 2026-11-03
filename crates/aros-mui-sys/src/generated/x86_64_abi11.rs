@@ -2943,7 +2943,9 @@ pub const fn MUIV_Window_Width_Visible(p: i32) -> i32 { (-100-(p)) }
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_AboutMUI {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:51`.
     pub MethodID: Stacked<u32>,
+    /// Field `refwindow`, declared as `STACKED Object *refwindow` at `classes/application.h:52`.
     pub refwindow: Stacked<*mut Object>,
 }
 
@@ -2951,7 +2953,9 @@ pub struct MUIP_Application_AboutMUI {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_AddInputHandler {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:57`.
     pub MethodID: Stacked<u32>,
+    /// Field `ihnode`, declared as `STACKED struct MUI_InputHandlerNode *ihnode` at `classes/application.h:58`.
     pub ihnode: Stacked<*mut c_void>,
 }
 
@@ -2959,6 +2963,7 @@ pub struct MUIP_Application_AddInputHandler {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_CheckRefresh {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:63`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -2966,7 +2971,9 @@ pub struct MUIP_Application_CheckRefresh {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_GetMenuCheck {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:68`.
     pub MethodID: Stacked<u32>,
+    /// Field `MenuID`, declared as `STACKED ULONG MenuID` at `classes/application.h:69`.
     pub MenuID: Stacked<u32>,
 }
 
@@ -2974,7 +2981,9 @@ pub struct MUIP_Application_GetMenuCheck {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_GetMenuState {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:74`.
     pub MethodID: Stacked<u32>,
+    /// Field `MenuID`, declared as `STACKED ULONG MenuID` at `classes/application.h:75`.
     pub MenuID: Stacked<u32>,
 }
 
@@ -2982,7 +2991,9 @@ pub struct MUIP_Application_GetMenuState {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_Input {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:80`.
     pub MethodID: Stacked<u32>,
+    /// Field `signal`, declared as `STACKED ULONG *signal` at `classes/application.h:81`.
     pub signal: Stacked<*mut u32>,
 }
 
@@ -2990,6 +3001,7 @@ pub struct MUIP_Application_Input {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_InputBuffered {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:86`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -2997,7 +3009,9 @@ pub struct MUIP_Application_InputBuffered {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_Load {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:91`.
     pub MethodID: Stacked<u32>,
+    /// Field `name`, declared as `STACKED STRPTR name` at `classes/application.h:92`.
     pub name: Stacked<*mut c_char>,
 }
 
@@ -3005,7 +3019,9 @@ pub struct MUIP_Application_Load {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_NewInput {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:97`.
     pub MethodID: Stacked<u32>,
+    /// Field `signal`, declared as `STACKED ULONG *signal` at `classes/application.h:98`.
     pub signal: Stacked<*mut u32>,
 }
 
@@ -3013,7 +3029,9 @@ pub struct MUIP_Application_NewInput {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_OpenConfigWindow {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:103`.
     pub MethodID: Stacked<u32>,
+    /// Field `flags`, declared as `STACKED ULONG flags` at `classes/application.h:104`.
     pub flags: Stacked<u32>,
 }
 
@@ -3021,7 +3039,9 @@ pub struct MUIP_Application_OpenConfigWindow {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_OpenWindows {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:178`.
     pub MethodID: Stacked<u32>,
+    /// Field `windows`, declared as `STACKED struct List *windows` at `classes/application.h:179`.
     pub windows: Stacked<*mut c_void>,
 }
 
@@ -3029,8 +3049,11 @@ pub struct MUIP_Application_OpenWindows {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_PushMethod {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:109`.
     pub MethodID: Stacked<u32>,
+    /// Field `dest`, declared as `STACKED Object *dest` at `classes/application.h:110`.
     pub dest: Stacked<*mut Object>,
+    /// Field `count`, declared as `STACKED LONG count` at `classes/application.h:111`.
     pub count: Stacked<i32>,
 }
 
@@ -3038,7 +3061,9 @@ pub struct MUIP_Application_PushMethod {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_RemInputHandler {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:124`.
     pub MethodID: Stacked<u32>,
+    /// Field `ihnode`, declared as `STACKED struct MUI_InputHandlerNode *ihnode` at `classes/application.h:125`.
     pub ihnode: Stacked<*mut c_void>,
 }
 
@@ -3046,7 +3071,9 @@ pub struct MUIP_Application_RemInputHandler {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_ReturnID {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:130`.
     pub MethodID: Stacked<u32>,
+    /// Field `retid`, declared as `STACKED ULONG retid` at `classes/application.h:131`.
     pub retid: Stacked<u32>,
 }
 
@@ -3054,7 +3081,9 @@ pub struct MUIP_Application_ReturnID {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_Save {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:136`.
     pub MethodID: Stacked<u32>,
+    /// Field `name`, declared as `STACKED STRPTR name` at `classes/application.h:137`.
     pub name: Stacked<*mut c_char>,
 }
 
@@ -3062,8 +3091,11 @@ pub struct MUIP_Application_Save {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_SetConfigItem {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:142`.
     pub MethodID: Stacked<u32>,
+    /// Field `item`, declared as `STACKED ULONG item` at `classes/application.h:143`.
     pub item: Stacked<u32>,
+    /// Field `data`, declared as `STACKED APTR data` at `classes/application.h:144`.
     pub data: Stacked<*mut c_void>,
 }
 
@@ -3071,7 +3103,9 @@ pub struct MUIP_Application_SetConfigItem {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_SetConfigdata {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:172`.
     pub MethodID: Stacked<u32>,
+    /// Field `configdata`, declared as `STACKED APTR configdata` at `classes/application.h:173`.
     pub configdata: Stacked<*mut c_void>,
 }
 
@@ -3079,8 +3113,11 @@ pub struct MUIP_Application_SetConfigdata {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_SetMenuCheck {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:149`.
     pub MethodID: Stacked<u32>,
+    /// Field `MenuID`, declared as `STACKED ULONG MenuID` at `classes/application.h:150`.
     pub MenuID: Stacked<u32>,
+    /// Field `stat`, declared as `STACKED LONG stat` at `classes/application.h:151`.
     pub stat: Stacked<i32>,
 }
 
@@ -3088,8 +3125,11 @@ pub struct MUIP_Application_SetMenuCheck {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_SetMenuState {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:156`.
     pub MethodID: Stacked<u32>,
+    /// Field `MenuID`, declared as `STACKED ULONG MenuID` at `classes/application.h:157`.
     pub MenuID: Stacked<u32>,
+    /// Field `stat`, declared as `STACKED LONG stat` at `classes/application.h:158`.
     pub stat: Stacked<i32>,
 }
 
@@ -3097,10 +3137,15 @@ pub struct MUIP_Application_SetMenuState {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_ShowHelp {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:163`.
     pub MethodID: Stacked<u32>,
+    /// Field `window`, declared as `STACKED Object *window` at `classes/application.h:164`.
     pub window: Stacked<*mut Object>,
+    /// Field `name`, declared as `STACKED char *name` at `classes/application.h:165`.
     pub name: Stacked<*mut c_char>,
+    /// Field `node`, declared as `STACKED char *node` at `classes/application.h:166`.
     pub node: Stacked<*mut c_char>,
+    /// Field `line`, declared as `STACKED LONG line` at `classes/application.h:167`.
     pub line: Stacked<i32>,
 }
 
@@ -3108,9 +3153,13 @@ pub struct MUIP_Application_ShowHelp {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_UnpushMethod {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:116`.
     pub MethodID: Stacked<u32>,
+    /// Field `dest`, declared as `STACKED Object *dest` at `classes/application.h:117`.
     pub dest: Stacked<*mut Object>,
+    /// Field `methodid`, declared as `STACKED IPTR methodid` at `classes/application.h:118`.
     pub methodid: Stacked<isize>,
+    /// Field `method`, declared as `STACKED ULONG method` at `classes/application.h:119`.
     pub method: Stacked<u32>,
 }
 
@@ -3118,6 +3167,7 @@ pub struct MUIP_Application_UnpushMethod {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Application_UpdateMenus {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/application.h:184`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -3125,7 +3175,9 @@ pub struct MUIP_Application_UpdateMenus {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_AskMinMax {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:87`.
     pub MethodID: Stacked<u32>,
+    /// Field `MinMaxInfo`, declared as `STACKED struct MUI_MinMax *MinMaxInfo` at `classes/area.h:88`.
     pub MinMaxInfo: Stacked<*mut c_void>,
 }
 
@@ -3133,8 +3185,11 @@ pub struct MUIP_AskMinMax {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_CallHook {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:49`.
     pub MethodID: Stacked<u32>,
+    /// Field `Hook`, declared as `STACKED struct Hook *Hook` at `classes/notify.h:50`.
     pub Hook: Stacked<*mut c_void>,
+    /// Field `param1`, declared as `STACKED IPTR param1` at `classes/notify.h:51`.
     pub param1: Stacked<isize>,
 }
 
@@ -3142,6 +3197,7 @@ pub struct MUIP_CallHook {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Cleanup {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:93`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -3149,7 +3205,9 @@ pub struct MUIP_Cleanup {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Configdata_GetPubScrnDesc {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/configdata.h:196`.
     pub MethodID: Stacked<u32>,
+    /// Field `name`, declared as `STACKED CONST_STRPTR name` at `classes/configdata.h:197`.
     pub name: Stacked<*const c_char>,
 }
 
@@ -3157,7 +3215,9 @@ pub struct MUIP_Configdata_GetPubScrnDesc {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Configdata_GetString {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/configdata.h:202`.
     pub MethodID: Stacked<u32>,
+    /// Field `id`, declared as `STACKED ULONG id` at `classes/configdata.h:203`.
     pub id: Stacked<u32>,
 }
 
@@ -3165,7 +3225,9 @@ pub struct MUIP_Configdata_GetString {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Configdata_GetULong {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/configdata.h:208`.
     pub MethodID: Stacked<u32>,
+    /// Field `id`, declared as `STACKED ULONG id` at `classes/configdata.h:209`.
     pub id: Stacked<u32>,
 }
 
@@ -3173,7 +3235,9 @@ pub struct MUIP_Configdata_GetULong {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Configdata_Load {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/configdata.h:248`.
     pub MethodID: Stacked<u32>,
+    /// Field `filename`, declared as `STACKED CONST_STRPTR filename` at `classes/configdata.h:249`.
     pub filename: Stacked<*const c_char>,
 }
 
@@ -3181,7 +3245,9 @@ pub struct MUIP_Configdata_Load {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Configdata_Save {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/configdata.h:242`.
     pub MethodID: Stacked<u32>,
+    /// Field `filename`, declared as `STACKED CONST_STRPTR filename` at `classes/configdata.h:243`.
     pub filename: Stacked<*const c_char>,
 }
 
@@ -3189,8 +3255,11 @@ pub struct MUIP_Configdata_Save {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Configdata_SetFont {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/configdata.h:235`.
     pub MethodID: Stacked<u32>,
+    /// Field `id`, declared as `STACKED ULONG id` at `classes/configdata.h:236`.
     pub id: Stacked<u32>,
+    /// Field `font`, declared as `STACKED CONST_STRPTR font` at `classes/configdata.h:237`.
     pub font: Stacked<*const c_char>,
 }
 
@@ -3198,8 +3267,11 @@ pub struct MUIP_Configdata_SetFont {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Configdata_SetFramespec {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/configdata.h:228`.
     pub MethodID: Stacked<u32>,
+    /// Field `id`, declared as `STACKED ULONG id` at `classes/configdata.h:229`.
     pub id: Stacked<u32>,
+    /// Field `framespec`, declared as `STACKED CONST_STRPTR framespec` at `classes/configdata.h:230`.
     pub framespec: Stacked<*const c_char>,
 }
 
@@ -3207,8 +3279,11 @@ pub struct MUIP_Configdata_SetFramespec {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Configdata_SetImspec {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/configdata.h:221`.
     pub MethodID: Stacked<u32>,
+    /// Field `id`, declared as `STACKED ULONG id` at `classes/configdata.h:222`.
     pub id: Stacked<u32>,
+    /// Field `imspec`, declared as `STACKED CONST_STRPTR imspec` at `classes/configdata.h:223`.
     pub imspec: Stacked<*const c_char>,
 }
 
@@ -3216,8 +3291,11 @@ pub struct MUIP_Configdata_SetImspec {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Configdata_SetPenspec {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/configdata.h:254`.
     pub MethodID: Stacked<u32>,
+    /// Field `id`, declared as `STACKED ULONG id` at `classes/configdata.h:255`.
     pub id: Stacked<u32>,
+    /// Field `penspec`, declared as `STACKED CONST_STRPTR penspec` at `classes/configdata.h:256`.
     pub penspec: Stacked<*const c_char>,
 }
 
@@ -3225,8 +3303,11 @@ pub struct MUIP_Configdata_SetPenspec {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Configdata_SetString {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/configdata.h:261`.
     pub MethodID: Stacked<u32>,
+    /// Field `id`, declared as `STACKED ULONG id` at `classes/configdata.h:262`.
     pub id: Stacked<u32>,
+    /// Field `string`, declared as `STACKED CONST_STRPTR string` at `classes/configdata.h:263`.
     pub string: Stacked<*const c_char>,
 }
 
@@ -3234,8 +3315,11 @@ pub struct MUIP_Configdata_SetString {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Configdata_SetULong {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/configdata.h:214`.
     pub MethodID: Stacked<u32>,
+    /// Field `id`, declared as `STACKED ULONG id` at `classes/configdata.h:215`.
     pub id: Stacked<u32>,
+    /// Field `val`, declared as `STACKED ULONG val` at `classes/configdata.h:216`.
     pub val: Stacked<u32>,
 }
 
@@ -3243,7 +3327,9 @@ pub struct MUIP_Configdata_SetULong {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_ConnectParent {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:174`.
     pub MethodID: Stacked<u32>,
+    /// Field `parent`, declared as `STACKED Object *parent` at `classes/notify.h:175`.
     pub parent: Stacked<*mut Object>,
 }
 
@@ -3251,8 +3337,11 @@ pub struct MUIP_ConnectParent {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_ContextMenuBuild {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:98`.
     pub MethodID: Stacked<u32>,
+    /// Field `mx`, declared as `STACKED LONG mx` at `classes/area.h:99`.
     pub mx: Stacked<i32>,
+    /// Field `my`, declared as `STACKED LONG my` at `classes/area.h:100`.
     pub my: Stacked<i32>,
 }
 
@@ -3260,7 +3349,9 @@ pub struct MUIP_ContextMenuBuild {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_ContextMenuChoice {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:105`.
     pub MethodID: Stacked<u32>,
+    /// Field `item`, declared as `STACKED Object *item` at `classes/area.h:106`.
     pub item: Stacked<*mut Object>,
 }
 
@@ -3268,10 +3359,15 @@ pub struct MUIP_ContextMenuChoice {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_CreateBubble {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:111`.
     pub MethodID: Stacked<u32>,
+    /// Field `x`, declared as `STACKED LONG x` at `classes/area.h:112`.
     pub x: Stacked<i32>,
+    /// Field `y`, declared as `STACKED LONG y` at `classes/area.h:113`.
     pub y: Stacked<i32>,
+    /// Field `txt`, declared as `STACKED char *txt` at `classes/area.h:114`.
     pub txt: Stacked<*mut c_char>,
+    /// Field `flags`, declared as `STACKED ULONG flags` at `classes/area.h:115`.
     pub flags: Stacked<u32>,
 }
 
@@ -3279,9 +3375,13 @@ pub struct MUIP_CreateBubble {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_CreateDragImage {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:120`.
     pub MethodID: Stacked<u32>,
+    /// Field `touchx`, declared as `STACKED LONG touchx` at `classes/area.h:121`.
     pub touchx: Stacked<i32>,
+    /// Field `touchy`, declared as `STACKED LONG touchy` at `classes/area.h:122`.
     pub touchy: Stacked<i32>,
+    /// Field `flags`, declared as `STACKED ULONG flags` at `classes/area.h:123`.
     pub flags: Stacked<u32>,
 }
 
@@ -3289,11 +3389,17 @@ pub struct MUIP_CreateDragImage {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_CreateFrameClippingRegion {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:362`.
     pub MethodID: Stacked<u32>,
+    /// Field `left`, declared as `STACKED LONG left` at `classes/area.h:363`.
     pub left: Stacked<i32>,
+    /// Field `top`, declared as `STACKED LONG top` at `classes/area.h:364`.
     pub top: Stacked<i32>,
+    /// Field `width`, declared as `STACKED LONG width` at `classes/area.h:365`.
     pub width: Stacked<i32>,
+    /// Field `height`, declared as `STACKED LONG height` at `classes/area.h:366`.
     pub height: Stacked<i32>,
+    /// Field `clipinfo`, declared as `STACKED struct Region *clipinfo` at `classes/area.h:367`.
     pub clipinfo: Stacked<*mut c_void>,
 }
 
@@ -3301,8 +3407,11 @@ pub struct MUIP_CreateFrameClippingRegion {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_CreateShortHelp {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:128`.
     pub MethodID: Stacked<u32>,
+    /// Field `mx`, declared as `STACKED LONG mx` at `classes/area.h:129`.
     pub mx: Stacked<i32>,
+    /// Field `my`, declared as `STACKED LONG my` at `classes/area.h:130`.
     pub my: Stacked<i32>,
 }
 
@@ -3310,12 +3419,19 @@ pub struct MUIP_CreateShortHelp {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_CustomBackfill {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:135`.
     pub MethodID: Stacked<u32>,
+    /// Field `left`, declared as `STACKED LONG left` at `classes/area.h:136`.
     pub left: Stacked<i32>,
+    /// Field `top`, declared as `STACKED LONG top` at `classes/area.h:137`.
     pub top: Stacked<i32>,
+    /// Field `right`, declared as `STACKED LONG right` at `classes/area.h:138`.
     pub right: Stacked<i32>,
+    /// Field `bottom`, declared as `STACKED LONG bottom` at `classes/area.h:139`.
     pub bottom: Stacked<i32>,
+    /// Field `xoffset`, declared as `STACKED LONG xoffset` at `classes/area.h:140`.
     pub xoffset: Stacked<i32>,
+    /// Field `yoffset`, declared as `STACKED LONG yoffset` at `classes/area.h:141`.
     pub yoffset: Stacked<i32>,
 }
 
@@ -3323,9 +3439,13 @@ pub struct MUIP_CustomBackfill {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Dataspace_Add {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/dataspace.h:27`.
     pub MethodID: Stacked<u32>,
+    /// Field `data`, declared as `STACKED APTR data` at `classes/dataspace.h:28`.
     pub data: Stacked<*mut c_void>,
+    /// Field `len`, declared as `STACKED LONG len` at `classes/dataspace.h:29`.
     pub len: Stacked<i32>,
+    /// Field `id`, declared as `STACKED ULONG id` at `classes/dataspace.h:30`.
     pub id: Stacked<u32>,
 }
 
@@ -3333,6 +3453,7 @@ pub struct MUIP_Dataspace_Add {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Dataspace_Clear {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/dataspace.h:35`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -3340,7 +3461,9 @@ pub struct MUIP_Dataspace_Clear {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Dataspace_Find {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/dataspace.h:40`.
     pub MethodID: Stacked<u32>,
+    /// Field `id`, declared as `STACKED ULONG id` at `classes/dataspace.h:41`.
     pub id: Stacked<u32>,
 }
 
@@ -3348,7 +3471,9 @@ pub struct MUIP_Dataspace_Find {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Dataspace_Merge {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/dataspace.h:46`.
     pub MethodID: Stacked<u32>,
+    /// Field `dataspace`, declared as `STACKED Object *dataspace` at `classes/dataspace.h:47`.
     pub dataspace: Stacked<*mut Object>,
 }
 
@@ -3356,7 +3481,9 @@ pub struct MUIP_Dataspace_Merge {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Dataspace_ReadIFF {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/dataspace.h:52`.
     pub MethodID: Stacked<u32>,
+    /// Field `handle`, declared as `STACKED struct IFFHandle *handle` at `classes/dataspace.h:53`.
     pub handle: Stacked<*mut c_void>,
 }
 
@@ -3364,7 +3491,9 @@ pub struct MUIP_Dataspace_ReadIFF {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Dataspace_Remove {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/dataspace.h:58`.
     pub MethodID: Stacked<u32>,
+    /// Field `id`, declared as `STACKED ULONG id` at `classes/dataspace.h:59`.
     pub id: Stacked<u32>,
 }
 
@@ -3372,9 +3501,13 @@ pub struct MUIP_Dataspace_Remove {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Dataspace_WriteIFF {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/dataspace.h:64`.
     pub MethodID: Stacked<u32>,
+    /// Field `handle`, declared as `STACKED struct IFFHandle *handle` at `classes/dataspace.h:65`.
     pub handle: Stacked<*mut c_void>,
+    /// Field `r#type`, declared as `STACKED ULONG type` at `classes/dataspace.h:66`.
     pub r#type: Stacked<u32>,
+    /// Field `id`, declared as `STACKED ULONG id` at `classes/dataspace.h:67`.
     pub id: Stacked<u32>,
 }
 
@@ -3382,7 +3515,9 @@ pub struct MUIP_Dataspace_WriteIFF {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_DeleteBubble {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:146`.
     pub MethodID: Stacked<u32>,
+    /// Field `bubble`, declared as `STACKED APTR bubble` at `classes/area.h:147`.
     pub bubble: Stacked<*mut c_void>,
 }
 
@@ -3390,7 +3525,9 @@ pub struct MUIP_DeleteBubble {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_DeleteDragImage {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:152`.
     pub MethodID: Stacked<u32>,
+    /// Field `di`, declared as `STACKED struct MUI_DragImage *di` at `classes/area.h:153`.
     pub di: Stacked<*mut c_void>,
 }
 
@@ -3398,7 +3535,9 @@ pub struct MUIP_DeleteDragImage {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_DeleteShortHelp {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:158`.
     pub MethodID: Stacked<u32>,
+    /// Field `help`, declared as `STACKED STRPTR help` at `classes/area.h:159`.
     pub help: Stacked<*mut c_char>,
 }
 
@@ -3406,6 +3545,7 @@ pub struct MUIP_DeleteShortHelp {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Dirlist_ReRead {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/dirlist.h:21`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -3413,6 +3553,7 @@ pub struct MUIP_Dirlist_ReRead {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_DisconnectParent {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:180`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -3420,9 +3561,13 @@ pub struct MUIP_DisconnectParent {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_DoDrag {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:164`.
     pub MethodID: Stacked<u32>,
+    /// Field `touchx`, declared as `STACKED LONG touchx` at `classes/area.h:165`.
     pub touchx: Stacked<i32>,
+    /// Field `touchy`, declared as `STACKED LONG touchy` at `classes/area.h:166`.
     pub touchy: Stacked<i32>,
+    /// Field `flags`, declared as `STACKED ULONG flags` at `classes/area.h:167`.
     pub flags: Stacked<u32>,
 }
 
@@ -3430,7 +3575,9 @@ pub struct MUIP_DoDrag {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_DragBegin {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:178`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj` at `classes/area.h:179`.
     pub obj: Stacked<*mut Object>,
 }
 
@@ -3438,9 +3585,13 @@ pub struct MUIP_DragBegin {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_DragDrop {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:184`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj` at `classes/area.h:185`.
     pub obj: Stacked<*mut Object>,
+    /// Field `x`, declared as `STACKED LONG x` at `classes/area.h:186`.
     pub x: Stacked<i32>,
+    /// Field `y`, declared as `STACKED LONG y` at `classes/area.h:187`.
     pub y: Stacked<i32>,
 }
 
@@ -3448,7 +3599,9 @@ pub struct MUIP_DragDrop {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_DragFinish {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:192`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj` at `classes/area.h:193`.
     pub obj: Stacked<*mut Object>,
 }
 
@@ -3456,7 +3609,9 @@ pub struct MUIP_DragFinish {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_DragQuery {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:198`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj` at `classes/area.h:199`.
     pub obj: Stacked<*mut Object>,
 }
 
@@ -3464,10 +3619,15 @@ pub struct MUIP_DragQuery {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_DragReport {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:204`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj` at `classes/area.h:205`.
     pub obj: Stacked<*mut Object>,
+    /// Field `x`, declared as `STACKED LONG x` at `classes/area.h:206`.
     pub x: Stacked<i32>,
+    /// Field `y`, declared as `STACKED LONG y` at `classes/area.h:207`.
     pub y: Stacked<i32>,
+    /// Field `update`, declared as `STACKED LONG update` at `classes/area.h:208`.
     pub update: Stacked<i32>,
 }
 
@@ -3475,7 +3635,9 @@ pub struct MUIP_DragReport {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Draw {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:213`.
     pub MethodID: Stacked<u32>,
+    /// Field `flags`, declared as `STACKED ULONG flags` at `classes/area.h:214`.
     pub flags: Stacked<u32>,
 }
 
@@ -3483,13 +3645,21 @@ pub struct MUIP_Draw {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_DrawBackground {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:219`.
     pub MethodID: Stacked<u32>,
+    /// Field `left`, declared as `STACKED LONG left` at `classes/area.h:220`.
     pub left: Stacked<i32>,
+    /// Field `top`, declared as `STACKED LONG top` at `classes/area.h:221`.
     pub top: Stacked<i32>,
+    /// Field `width`, declared as `STACKED LONG width` at `classes/area.h:222`.
     pub width: Stacked<i32>,
+    /// Field `height`, declared as `STACKED LONG height` at `classes/area.h:223`.
     pub height: Stacked<i32>,
+    /// Field `xoffset`, declared as `STACKED LONG xoffset` at `classes/area.h:224`.
     pub xoffset: Stacked<i32>,
+    /// Field `yoffset`, declared as `STACKED LONG yoffset` at `classes/area.h:225`.
     pub yoffset: Stacked<i32>,
+    /// Field `flags`, declared as `STACKED LONG flags` at `classes/area.h:226`.
     pub flags: Stacked<i32>,
 }
 
@@ -3497,14 +3667,23 @@ pub struct MUIP_DrawBackground {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_DrawBackgroundBuffered {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:231`.
     pub MethodID: Stacked<u32>,
+    /// Field `rp`, declared as `STACKED struct RastPort *rp` at `classes/area.h:232`.
     pub rp: Stacked<*mut c_void>,
+    /// Field `left`, declared as `STACKED LONG left` at `classes/area.h:233`.
     pub left: Stacked<i32>,
+    /// Field `top`, declared as `STACKED LONG top` at `classes/area.h:234`.
     pub top: Stacked<i32>,
+    /// Field `width`, declared as `STACKED LONG width` at `classes/area.h:235`.
     pub width: Stacked<i32>,
+    /// Field `height`, declared as `STACKED LONG height` at `classes/area.h:236`.
     pub height: Stacked<i32>,
+    /// Field `xoffset`, declared as `STACKED LONG xoffset` at `classes/area.h:237`.
     pub xoffset: Stacked<i32>,
+    /// Field `yoffset`, declared as `STACKED LONG yoffset` at `classes/area.h:238`.
     pub yoffset: Stacked<i32>,
+    /// Field `flags`, declared as `STACKED LONG flags` at `classes/area.h:239`.
     pub flags: Stacked<i32>,
 }
 
@@ -3512,13 +3691,21 @@ pub struct MUIP_DrawBackgroundBuffered {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_DrawParentBackground {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:308`.
     pub MethodID: Stacked<u32>,
+    /// Field `left`, declared as `STACKED LONG left` at `classes/area.h:309`.
     pub left: Stacked<i32>,
+    /// Field `top`, declared as `STACKED LONG top` at `classes/area.h:310`.
     pub top: Stacked<i32>,
+    /// Field `width`, declared as `STACKED LONG width` at `classes/area.h:311`.
     pub width: Stacked<i32>,
+    /// Field `height`, declared as `STACKED LONG height` at `classes/area.h:312`.
     pub height: Stacked<i32>,
+    /// Field `xoffset`, declared as `STACKED LONG xoffset` at `classes/area.h:313`.
     pub xoffset: Stacked<i32>,
+    /// Field `yoffset`, declared as `STACKED LONG yoffset` at `classes/area.h:314`.
     pub yoffset: Stacked<i32>,
+    /// Field `flags`, declared as `STACKED LONG flags` at `classes/area.h:315`.
     pub flags: Stacked<i32>,
 }
 
@@ -3526,7 +3713,9 @@ pub struct MUIP_DrawParentBackground {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Export {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:56`.
     pub MethodID: Stacked<u32>,
+    /// Field `dataspace`, declared as `STACKED Object *dataspace` at `classes/notify.h:57`.
     pub dataspace: Stacked<*mut Object>,
 }
 
@@ -3534,7 +3723,9 @@ pub struct MUIP_Export {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Family_AddHead {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/family.h:29`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj` at `classes/family.h:30`.
     pub obj: Stacked<*mut Object>,
 }
 
@@ -3542,7 +3733,9 @@ pub struct MUIP_Family_AddHead {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Family_AddTail {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/family.h:35`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj` at `classes/family.h:36`.
     pub obj: Stacked<*mut Object>,
 }
 
@@ -3550,8 +3743,11 @@ pub struct MUIP_Family_AddTail {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Family_GetChild {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/family.h:66`.
     pub MethodID: Stacked<u32>,
+    /// Field `nr`, declared as `STACKED LONG nr` at `classes/family.h:67`.
     pub nr: Stacked<i32>,
+    /// Field `r#ref`, declared as `STACKED Object *ref` at `classes/family.h:68`.
     pub r#ref: Stacked<*mut Object>,
 }
 
@@ -3559,8 +3755,11 @@ pub struct MUIP_Family_GetChild {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Family_Insert {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/family.h:41`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj` at `classes/family.h:42`.
     pub obj: Stacked<*mut Object>,
+    /// Field `pred`, declared as `STACKED Object *pred` at `classes/family.h:43`.
     pub pred: Stacked<*mut Object>,
 }
 
@@ -3568,7 +3767,9 @@ pub struct MUIP_Family_Insert {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Family_Remove {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/family.h:48`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj` at `classes/family.h:49`.
     pub obj: Stacked<*mut Object>,
 }
 
@@ -3576,7 +3777,9 @@ pub struct MUIP_Family_Remove {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Family_Sort {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/family.h:54`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj[1]` at `classes/family.h:55`.
     pub obj: Stacked<[*mut Object; 1]>,
 }
 
@@ -3584,7 +3787,9 @@ pub struct MUIP_Family_Sort {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Family_Transfer {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/family.h:60`.
     pub MethodID: Stacked<u32>,
+    /// Field `family`, declared as `STACKED Object *family` at `classes/family.h:61`.
     pub family: Stacked<*mut Object>,
 }
 
@@ -3592,7 +3797,9 @@ pub struct MUIP_Family_Transfer {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_FindUData {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:62`.
     pub MethodID: Stacked<u32>,
+    /// Field `udata`, declared as `STACKED IPTR udata` at `classes/notify.h:63`.
     pub udata: Stacked<isize>,
 }
 
@@ -3600,7 +3807,9 @@ pub struct MUIP_FindUData {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Floattext_Append {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/floattext.h:21`.
     pub MethodID: Stacked<u32>,
+    /// Field `Text`, declared as `STACKED CONST_STRPTR Text` at `classes/floattext.h:22`.
     pub Text: Stacked<*const c_char>,
 }
 
@@ -3608,8 +3817,11 @@ pub struct MUIP_Floattext_Append {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_GetConfigItem {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:68`.
     pub MethodID: Stacked<u32>,
+    /// Field `id`, declared as `STACKED ULONG id` at `classes/notify.h:69`.
     pub id: Stacked<u32>,
+    /// Field `storage`, declared as `STACKED IPTR *storage` at `classes/notify.h:70`.
     pub storage: Stacked<*mut isize>,
 }
 
@@ -3617,9 +3829,13 @@ pub struct MUIP_GetConfigItem {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_GetUData {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:75`.
     pub MethodID: Stacked<u32>,
+    /// Field `udata`, declared as `STACKED ULONG udata` at `classes/notify.h:76`.
     pub udata: Stacked<u32>,
+    /// Field `attr`, declared as `STACKED ULONG attr` at `classes/notify.h:77`.
     pub attr: Stacked<u32>,
+    /// Field `storage`, declared as `STACKED IPTR *storage` at `classes/notify.h:78`.
     pub storage: Stacked<*mut isize>,
 }
 
@@ -3627,6 +3843,7 @@ pub struct MUIP_GetUData {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_GoActive {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:244`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -3634,6 +3851,7 @@ pub struct MUIP_GoActive {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_GoInactive {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:249`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -3641,7 +3859,9 @@ pub struct MUIP_GoInactive {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Group_AddHead {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/group.h:29`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj` at `classes/group.h:30`.
     pub obj: Stacked<*mut Object>,
 }
 
@@ -3649,7 +3869,9 @@ pub struct MUIP_Group_AddHead {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Group_AddTail {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/group.h:35`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj` at `classes/group.h:36`.
     pub obj: Stacked<*mut Object>,
 }
 
@@ -3657,7 +3879,9 @@ pub struct MUIP_Group_AddTail {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Group_DoMethodNoForward {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/group.h:70`.
     pub MethodID: Stacked<u32>,
+    /// Field `DoMethodID`, declared as `STACKED ULONG DoMethodID` at `classes/group.h:71`.
     pub DoMethodID: Stacked<u32>,
 }
 
@@ -3665,6 +3889,7 @@ pub struct MUIP_Group_DoMethodNoForward {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Group_ExitChange {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/group.h:41`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -3672,6 +3897,7 @@ pub struct MUIP_Group_ExitChange {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Group_InitChange {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/group.h:52`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -3679,7 +3905,9 @@ pub struct MUIP_Group_InitChange {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Group_Remove {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/group.h:63`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj` at `classes/group.h:64`.
     pub obj: Stacked<*mut Object>,
 }
 
@@ -3687,7 +3915,9 @@ pub struct MUIP_Group_Remove {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Group_Sort {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/group.h:57`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj[1]` at `classes/group.h:58`.
     pub obj: Stacked<[*mut Object; 1]>,
 }
 
@@ -3695,8 +3925,11 @@ pub struct MUIP_Group_Sort {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_HandleEvent {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:254`.
     pub MethodID: Stacked<u32>,
+    /// Field `imsg`, declared as `STACKED struct IntuiMessage *imsg` at `classes/area.h:255`.
     pub imsg: Stacked<*mut c_void>,
+    /// Field `muikey`, declared as `STACKED LONG muikey` at `classes/area.h:256`.
     pub muikey: Stacked<i32>,
 }
 
@@ -3704,8 +3937,11 @@ pub struct MUIP_HandleEvent {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_HandleInput {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:261`.
     pub MethodID: Stacked<u32>,
+    /// Field `imsg`, declared as `STACKED struct IntuiMessage *imsg` at `classes/area.h:262`.
     pub imsg: Stacked<*mut c_void>,
+    /// Field `muikey`, declared as `STACKED LONG muikey` at `classes/area.h:263`.
     pub muikey: Stacked<i32>,
 }
 
@@ -3713,6 +3949,7 @@ pub struct MUIP_HandleInput {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Hide {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:268`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -3720,7 +3957,9 @@ pub struct MUIP_Hide {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Import {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:83`.
     pub MethodID: Stacked<u32>,
+    /// Field `dataspace`, declared as `STACKED Object *dataspace` at `classes/notify.h:84`.
     pub dataspace: Stacked<*mut Object>,
 }
 
@@ -3728,7 +3967,9 @@ pub struct MUIP_Import {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_KillNotify {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:89`.
     pub MethodID: Stacked<u32>,
+    /// Field `TrigAttr`, declared as `STACKED ULONG TrigAttr` at `classes/notify.h:90`.
     pub TrigAttr: Stacked<u32>,
 }
 
@@ -3736,8 +3977,11 @@ pub struct MUIP_KillNotify {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_KillNotifyObj {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:95`.
     pub MethodID: Stacked<u32>,
+    /// Field `TrigAttr`, declared as `STACKED ULONG TrigAttr` at `classes/notify.h:96`.
     pub TrigAttr: Stacked<u32>,
+    /// Field `dest`, declared as `STACKED Object *dest` at `classes/notify.h:97`.
     pub dest: Stacked<*mut Object>,
 }
 
@@ -3745,6 +3989,7 @@ pub struct MUIP_KillNotifyObj {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Layout {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:303`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -3752,6 +3997,7 @@ pub struct MUIP_Layout {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_Clear {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:39`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -3759,10 +4005,15 @@ pub struct MUIP_List_Clear {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_Compare {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:44`.
     pub MethodID: Stacked<u32>,
+    /// Field `entry1`, declared as `STACKED APTR entry1` at `classes/list.h:45`.
     pub entry1: Stacked<*mut c_void>,
+    /// Field `entry2`, declared as `STACKED APTR entry2` at `classes/list.h:46`.
     pub entry2: Stacked<*mut c_void>,
+    /// Field `sort_type1`, declared as `STACKED LONG sort_type1` at `classes/list.h:47`.
     pub sort_type1: Stacked<i32>,
+    /// Field `sort_type2`, declared as `STACKED LONG sort_type2` at `classes/list.h:48`.
     pub sort_type2: Stacked<i32>,
 }
 
@@ -3770,8 +4021,11 @@ pub struct MUIP_List_Compare {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_Construct {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:53`.
     pub MethodID: Stacked<u32>,
+    /// Field `entry`, declared as `STACKED APTR entry` at `classes/list.h:54`.
     pub entry: Stacked<*mut c_void>,
+    /// Field `pool`, declared as `STACKED APTR pool` at `classes/list.h:55`.
     pub pool: Stacked<*mut c_void>,
 }
 
@@ -3779,8 +4033,11 @@ pub struct MUIP_List_Construct {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_CreateImage {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:60`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj` at `classes/list.h:61`.
     pub obj: Stacked<*mut Object>,
+    /// Field `flags`, declared as `STACKED ULONG flags` at `classes/list.h:62`.
     pub flags: Stacked<u32>,
 }
 
@@ -3788,7 +4045,9 @@ pub struct MUIP_List_CreateImage {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_DeleteImage {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:67`.
     pub MethodID: Stacked<u32>,
+    /// Field `listimg`, declared as `STACKED APTR listimg` at `classes/list.h:68`.
     pub listimg: Stacked<*mut c_void>,
 }
 
@@ -3796,8 +4055,11 @@ pub struct MUIP_List_DeleteImage {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_Destruct {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:73`.
     pub MethodID: Stacked<u32>,
+    /// Field `entry`, declared as `STACKED APTR entry` at `classes/list.h:74`.
     pub entry: Stacked<*mut c_void>,
+    /// Field `pool`, declared as `STACKED APTR pool` at `classes/list.h:75`.
     pub pool: Stacked<*mut c_void>,
 }
 
@@ -3805,10 +4067,15 @@ pub struct MUIP_List_Destruct {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_Display {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:80`.
     pub MethodID: Stacked<u32>,
+    /// Field `entry`, declared as `STACKED APTR entry` at `classes/list.h:81`.
     pub entry: Stacked<*mut c_void>,
+    /// Field `array`, declared as `STACKED STRPTR *array` at `classes/list.h:82`.
     pub array: Stacked<*mut *mut c_char>,
+    /// Field `entry_pos`, declared as `STACKED LONG entry_pos` at `classes/list.h:83`.
     pub entry_pos: Stacked<i32>,
+    /// Field `preparses`, declared as `STACKED STRPTR *preparses` at `classes/list.h:84`.
     pub preparses: Stacked<*mut *mut c_char>,
 }
 
@@ -3816,8 +4083,11 @@ pub struct MUIP_List_Display {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_Exchange {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:89`.
     pub MethodID: Stacked<u32>,
+    /// Field `pos1`, declared as `STACKED LONG pos1` at `classes/list.h:90`.
     pub pos1: Stacked<i32>,
+    /// Field `pos2`, declared as `STACKED LONG pos2` at `classes/list.h:91`.
     pub pos2: Stacked<i32>,
 }
 
@@ -3825,8 +4095,11 @@ pub struct MUIP_List_Exchange {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_GetEntry {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:96`.
     pub MethodID: Stacked<u32>,
+    /// Field `pos`, declared as `STACKED LONG pos` at `classes/list.h:97`.
     pub pos: Stacked<i32>,
+    /// Field `entry`, declared as `STACKED APTR *entry` at `classes/list.h:98`.
     pub entry: Stacked<*mut *mut c_void>,
 }
 
@@ -3834,9 +4107,13 @@ pub struct MUIP_List_GetEntry {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_Insert {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:103`.
     pub MethodID: Stacked<u32>,
+    /// Field `entries`, declared as `STACKED APTR *entries` at `classes/list.h:104`.
     pub entries: Stacked<*mut *mut c_void>,
+    /// Field `count`, declared as `STACKED LONG count` at `classes/list.h:105`.
     pub count: Stacked<i32>,
+    /// Field `pos`, declared as `STACKED LONG pos` at `classes/list.h:106`.
     pub pos: Stacked<i32>,
 }
 
@@ -3844,8 +4121,11 @@ pub struct MUIP_List_Insert {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_InsertSingle {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:111`.
     pub MethodID: Stacked<u32>,
+    /// Field `entry`, declared as `STACKED APTR entry` at `classes/list.h:112`.
     pub entry: Stacked<*mut c_void>,
+    /// Field `pos`, declared as `STACKED LONG pos` at `classes/list.h:113`.
     pub pos: Stacked<i32>,
 }
 
@@ -3853,7 +4133,9 @@ pub struct MUIP_List_InsertSingle {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_Jump {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:118`.
     pub MethodID: Stacked<u32>,
+    /// Field `pos`, declared as `STACKED LONG pos` at `classes/list.h:119`.
     pub pos: Stacked<i32>,
 }
 
@@ -3861,8 +4143,11 @@ pub struct MUIP_List_Jump {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_Move {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:124`.
     pub MethodID: Stacked<u32>,
+    /// Field `from`, declared as `STACKED LONG from` at `classes/list.h:125`.
     pub from: Stacked<i32>,
+    /// Field `to`, declared as `STACKED LONG to` at `classes/list.h:126`.
     pub to: Stacked<i32>,
 }
 
@@ -3870,7 +4155,9 @@ pub struct MUIP_List_Move {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_NextSelected {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:131`.
     pub MethodID: Stacked<u32>,
+    /// Field `pos`, declared as `STACKED LONG *pos` at `classes/list.h:132`.
     pub pos: Stacked<*mut i32>,
 }
 
@@ -3878,8 +4165,11 @@ pub struct MUIP_List_NextSelected {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_Redraw {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:137`.
     pub MethodID: Stacked<u32>,
+    /// Field `pos`, declared as `STACKED LONG pos` at `classes/list.h:138`.
     pub pos: Stacked<i32>,
+    /// Field `entry`, declared as `STACKED APTR entry` at `classes/list.h:139`.
     pub entry: Stacked<*mut c_void>,
 }
 
@@ -3887,7 +4177,9 @@ pub struct MUIP_List_Redraw {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_Remove {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:144`.
     pub MethodID: Stacked<u32>,
+    /// Field `pos`, declared as `STACKED LONG pos` at `classes/list.h:145`.
     pub pos: Stacked<i32>,
 }
 
@@ -3895,9 +4187,13 @@ pub struct MUIP_List_Remove {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_Select {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:150`.
     pub MethodID: Stacked<u32>,
+    /// Field `pos`, declared as `STACKED LONG pos` at `classes/list.h:151`.
     pub pos: Stacked<i32>,
+    /// Field `seltype`, declared as `STACKED LONG seltype` at `classes/list.h:152`.
     pub seltype: Stacked<i32>,
+    /// Field `info`, declared as `STACKED LONG *info` at `classes/list.h:153`.
     pub info: Stacked<*mut i32>,
 }
 
@@ -3905,9 +4201,13 @@ pub struct MUIP_List_Select {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_SelectChange {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:174`.
     pub MethodID: Stacked<u32>,
+    /// Field `pos`, declared as `STACKED LONG pos` at `classes/list.h:175`.
     pub pos: Stacked<i32>,
+    /// Field `state`, declared as `STACKED LONG state` at `classes/list.h:176`.
     pub state: Stacked<i32>,
+    /// Field `flags`, declared as `STACKED ULONG flags` at `classes/list.h:177`.
     pub flags: Stacked<u32>,
 }
 
@@ -3915,6 +4215,7 @@ pub struct MUIP_List_SelectChange {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_Sort {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:158`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -3922,9 +4223,13 @@ pub struct MUIP_List_Sort {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_List_TestPos {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/list.h:163`.
     pub MethodID: Stacked<u32>,
+    /// Field `x`, declared as `STACKED LONG x` at `classes/list.h:164`.
     pub x: Stacked<i32>,
+    /// Field `y`, declared as `STACKED LONG y` at `classes/list.h:165`.
     pub y: Stacked<i32>,
+    /// Field `res`, declared as `STACKED struct MUI_List_TestPos_Result *res` at `classes/list.h:166`.
     pub res: Stacked<*mut c_void>,
 }
 
@@ -3932,9 +4237,13 @@ pub struct MUIP_List_TestPos {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_MultiSet {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:102`.
     pub MethodID: Stacked<u32>,
+    /// Field `attr`, declared as `STACKED ULONG attr` at `classes/notify.h:103`.
     pub attr: Stacked<u32>,
+    /// Field `val`, declared as `STACKED IPTR val` at `classes/notify.h:104`.
     pub val: Stacked<isize>,
+    /// Field `obj`, declared as `STACKED APTR obj` at `classes/notify.h:105`.
     pub obj: Stacked<*mut c_void>,
 }
 
@@ -3942,8 +4251,11 @@ pub struct MUIP_MultiSet {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_NoNotifySet {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:110`.
     pub MethodID: Stacked<u32>,
+    /// Field `attr`, declared as `STACKED ULONG attr` at `classes/notify.h:111`.
     pub attr: Stacked<u32>,
+    /// Field `val`, declared as `STACKED IPTR val` at `classes/notify.h:112`.
     pub val: Stacked<isize>,
 }
 
@@ -3951,10 +4263,15 @@ pub struct MUIP_NoNotifySet {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Notify {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:117`.
     pub MethodID: Stacked<u32>,
+    /// Field `TrigAttr`, declared as `STACKED ULONG TrigAttr` at `classes/notify.h:118`.
     pub TrigAttr: Stacked<u32>,
+    /// Field `TrigVal`, declared as `STACKED IPTR TrigVal` at `classes/notify.h:119`.
     pub TrigVal: Stacked<isize>,
+    /// Field `DestObj`, declared as `STACKED APTR DestObj` at `classes/notify.h:120`.
     pub DestObj: Stacked<*mut c_void>,
+    /// Field `FollowParams`, declared as `STACKED ULONG FollowParams` at `classes/notify.h:121`.
     pub FollowParams: Stacked<u32>,
 }
 
@@ -3962,7 +4279,9 @@ pub struct MUIP_Notify {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Numeric_Decrease {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/numeric.h:25`.
     pub MethodID: Stacked<u32>,
+    /// Field `amount`, declared as `STACKED LONG amount` at `classes/numeric.h:26`.
     pub amount: Stacked<i32>,
 }
 
@@ -3970,7 +4289,9 @@ pub struct MUIP_Numeric_Decrease {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Numeric_Increase {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/numeric.h:31`.
     pub MethodID: Stacked<u32>,
+    /// Field `amount`, declared as `STACKED LONG amount` at `classes/numeric.h:32`.
     pub amount: Stacked<i32>,
 }
 
@@ -3978,9 +4299,13 @@ pub struct MUIP_Numeric_Increase {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Numeric_ScaleToValue {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/numeric.h:37`.
     pub MethodID: Stacked<u32>,
+    /// Field `scalemin`, declared as `STACKED LONG scalemin` at `classes/numeric.h:38`.
     pub scalemin: Stacked<i32>,
+    /// Field `scalemax`, declared as `STACKED LONG scalemax` at `classes/numeric.h:39`.
     pub scalemax: Stacked<i32>,
+    /// Field `scale`, declared as `STACKED LONG scale` at `classes/numeric.h:40`.
     pub scale: Stacked<i32>,
 }
 
@@ -3988,6 +4313,7 @@ pub struct MUIP_Numeric_ScaleToValue {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Numeric_SetDefault {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/numeric.h:45`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -3995,7 +4321,9 @@ pub struct MUIP_Numeric_SetDefault {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Numeric_Stringify {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/numeric.h:50`.
     pub MethodID: Stacked<u32>,
+    /// Field `value`, declared as `STACKED LONG value` at `classes/numeric.h:51`.
     pub value: Stacked<i32>,
 }
 
@@ -4003,8 +4331,11 @@ pub struct MUIP_Numeric_Stringify {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Numeric_ValueToScale {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/numeric.h:56`.
     pub MethodID: Stacked<u32>,
+    /// Field `scalemin`, declared as `STACKED LONG scalemin` at `classes/numeric.h:57`.
     pub scalemin: Stacked<i32>,
+    /// Field `scalemax`, declared as `STACKED LONG scalemax` at `classes/numeric.h:58`.
     pub scalemax: Stacked<i32>,
 }
 
@@ -4012,9 +4343,13 @@ pub struct MUIP_Numeric_ValueToScale {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Numeric_ValueToScaleExt {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/numeric.h:85`.
     pub MethodID: Stacked<u32>,
+    /// Field `value`, declared as `STACKED LONG value` at `classes/numeric.h:86`.
     pub value: Stacked<i32>,
+    /// Field `scalemin`, declared as `STACKED LONG scalemin` at `classes/numeric.h:87`.
     pub scalemin: Stacked<i32>,
+    /// Field `scalemax`, declared as `STACKED LONG scalemax` at `classes/numeric.h:88`.
     pub scalemax: Stacked<i32>,
 }
 
@@ -4022,7 +4357,9 @@ pub struct MUIP_Numeric_ValueToScaleExt {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Pendisplay_SetColormap {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/pendisplay.h:22`.
     pub MethodID: Stacked<u32>,
+    /// Field `colormap`, declared as `STACKED LONG colormap` at `classes/pendisplay.h:23`.
     pub colormap: Stacked<i32>,
 }
 
@@ -4030,7 +4367,9 @@ pub struct MUIP_Pendisplay_SetColormap {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Pendisplay_SetMUIPen {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/pendisplay.h:28`.
     pub MethodID: Stacked<u32>,
+    /// Field `muipen`, declared as `STACKED LONG muipen` at `classes/pendisplay.h:29`.
     pub muipen: Stacked<i32>,
 }
 
@@ -4038,9 +4377,13 @@ pub struct MUIP_Pendisplay_SetMUIPen {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Pendisplay_SetRGB {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/pendisplay.h:34`.
     pub MethodID: Stacked<u32>,
+    /// Field `r`, declared as `STACKED ULONG r` at `classes/pendisplay.h:35`.
     pub r: Stacked<u32>,
+    /// Field `g`, declared as `STACKED ULONG g` at `classes/pendisplay.h:36`.
     pub g: Stacked<u32>,
+    /// Field `b`, declared as `STACKED ULONG b` at `classes/pendisplay.h:37`.
     pub b: Stacked<u32>,
 }
 
@@ -4048,13 +4391,21 @@ pub struct MUIP_Pendisplay_SetRGB {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Pixmap_DrawSection {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/pixmap.h:21`.
     pub MethodID: Stacked<u32>,
+    /// Field `sx`, declared as `STACKED LONG sx` at `classes/pixmap.h:22`.
     pub sx: Stacked<i32>,
+    /// Field `sy`, declared as `STACKED LONG sy` at `classes/pixmap.h:23`.
     pub sy: Stacked<i32>,
+    /// Field `sw`, declared as `STACKED LONG sw` at `classes/pixmap.h:24`.
     pub sw: Stacked<i32>,
+    /// Field `sh`, declared as `STACKED LONG sh` at `classes/pixmap.h:25`.
     pub sh: Stacked<i32>,
+    /// Field `mri`, declared as `STACKED struct MUI_RenderInfo *mri` at `classes/pixmap.h:26`.
     pub mri: Stacked<*mut c_void>,
+    /// Field `dx`, declared as `STACKED LONG dx` at `classes/pixmap.h:27`.
     pub dx: Stacked<i32>,
+    /// Field `dy`, declared as `STACKED LONG dy` at `classes/pixmap.h:28`.
     pub dy: Stacked<i32>,
 }
 
@@ -4062,7 +4413,9 @@ pub struct MUIP_Pixmap_DrawSection {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Popstring_Close {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/popstring.h:21`.
     pub MethodID: Stacked<u32>,
+    /// Field `result`, declared as `STACKED LONG result` at `classes/popstring.h:22`.
     pub result: Stacked<i32>,
 }
 
@@ -4070,6 +4423,7 @@ pub struct MUIP_Popstring_Close {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Popstring_Open {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/popstring.h:27`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4077,7 +4431,9 @@ pub struct MUIP_Popstring_Open {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Process_Kill {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/process.h:22`.
     pub MethodID: Stacked<u32>,
+    /// Field `maxdelay`, declared as `STACKED LONG maxdelay` at `classes/process.h:23`.
     pub maxdelay: Stacked<i32>,
 }
 
@@ -4085,6 +4441,7 @@ pub struct MUIP_Process_Kill {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Process_Launch {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/process.h:28`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4092,8 +4449,11 @@ pub struct MUIP_Process_Launch {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Process_Process {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/process.h:33`.
     pub MethodID: Stacked<u32>,
+    /// Field `kill`, declared as `STACKED ULONG *kill` at `classes/process.h:34`.
     pub kill: Stacked<*mut u32>,
+    /// Field `proc`, declared as `STACKED Object *proc` at `classes/process.h:35`.
     pub proc: Stacked<*mut Object>,
 }
 
@@ -4101,7 +4461,9 @@ pub struct MUIP_Process_Process {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Process_Signal {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/process.h:40`.
     pub MethodID: Stacked<u32>,
+    /// Field `sigs`, declared as `STACKED ULONG sigs` at `classes/process.h:41`.
     pub sigs: Stacked<u32>,
 }
 
@@ -4109,7 +4471,9 @@ pub struct MUIP_Process_Signal {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Prop_Decrease {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/prop.h:21`.
     pub MethodID: Stacked<u32>,
+    /// Field `amount`, declared as `STACKED LONG amount` at `classes/prop.h:22`.
     pub amount: Stacked<i32>,
 }
 
@@ -4117,7 +4481,9 @@ pub struct MUIP_Prop_Decrease {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Prop_Increase {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/prop.h:27`.
     pub MethodID: Stacked<u32>,
+    /// Field `amount`, declared as `STACKED LONG amount` at `classes/prop.h:28`.
     pub amount: Stacked<i32>,
 }
 
@@ -4125,7 +4491,9 @@ pub struct MUIP_Prop_Increase {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_QueryFrameCharacteristics {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:355`.
     pub MethodID: Stacked<u32>,
+    /// Field `characteristics`, declared as `STACKED struct MUI_FrameCharacteristics *characteristics` at `classes/area.h:356`.
     pub characteristics: Stacked<*mut c_void>,
 }
 
@@ -4133,6 +4501,7 @@ pub struct MUIP_QueryFrameCharacteristics {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Semaphore_Attempt {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/semaphore.h:24`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4140,6 +4509,7 @@ pub struct MUIP_Semaphore_Attempt {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Semaphore_AttemptShared {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/semaphore.h:29`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4147,6 +4517,7 @@ pub struct MUIP_Semaphore_AttemptShared {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Semaphore_Obtain {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/semaphore.h:34`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4154,6 +4525,7 @@ pub struct MUIP_Semaphore_Obtain {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Semaphore_ObtainShared {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/semaphore.h:39`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4161,6 +4533,7 @@ pub struct MUIP_Semaphore_ObtainShared {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Semaphore_Release {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/semaphore.h:44`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4168,8 +4541,11 @@ pub struct MUIP_Semaphore_Release {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Set {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:126`.
     pub MethodID: Stacked<u32>,
+    /// Field `attr`, declared as `STACKED ULONG attr` at `classes/notify.h:127`.
     pub attr: Stacked<u32>,
+    /// Field `val`, declared as `STACKED IPTR val` at `classes/notify.h:128`.
     pub val: Stacked<isize>,
 }
 
@@ -4177,9 +4553,13 @@ pub struct MUIP_Set {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_SetAsString {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:133`.
     pub MethodID: Stacked<u32>,
+    /// Field `attr`, declared as `STACKED ULONG attr` at `classes/notify.h:134`.
     pub attr: Stacked<u32>,
+    /// Field `format`, declared as `STACKED char *format` at `classes/notify.h:135`.
     pub format: Stacked<*mut c_char>,
+    /// Field `val`, declared as `STACKED IPTR val` at `classes/notify.h:136`.
     pub val: Stacked<isize>,
 }
 
@@ -4187,9 +4567,13 @@ pub struct MUIP_SetAsString {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_SetUData {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:141`.
     pub MethodID: Stacked<u32>,
+    /// Field `udata`, declared as `STACKED IPTR udata` at `classes/notify.h:142`.
     pub udata: Stacked<isize>,
+    /// Field `attr`, declared as `STACKED ULONG attr` at `classes/notify.h:143`.
     pub attr: Stacked<u32>,
+    /// Field `val`, declared as `STACKED IPTR val` at `classes/notify.h:144`.
     pub val: Stacked<isize>,
 }
 
@@ -4197,9 +4581,13 @@ pub struct MUIP_SetUData {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_SetUDataOnce {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:149`.
     pub MethodID: Stacked<u32>,
+    /// Field `udata`, declared as `STACKED IPTR udata` at `classes/notify.h:150`.
     pub udata: Stacked<isize>,
+    /// Field `attr`, declared as `STACKED ULONG attr` at `classes/notify.h:151`.
     pub attr: Stacked<u32>,
+    /// Field `val`, declared as `STACKED IPTR val` at `classes/notify.h:152`.
     pub val: Stacked<isize>,
 }
 
@@ -4207,7 +4595,9 @@ pub struct MUIP_SetUDataOnce {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Settingsgroup_ConfigToGadgets {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/settingsgroup.h:23`.
     pub MethodID: Stacked<u32>,
+    /// Field `configdata`, declared as `STACKED Object *configdata` at `classes/settingsgroup.h:24`.
     pub configdata: Stacked<*mut Object>,
 }
 
@@ -4215,7 +4605,9 @@ pub struct MUIP_Settingsgroup_ConfigToGadgets {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Settingsgroup_GadgetsToConfig {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/settingsgroup.h:29`.
     pub MethodID: Stacked<u32>,
+    /// Field `configdata`, declared as `STACKED Object *configdata` at `classes/settingsgroup.h:30`.
     pub configdata: Stacked<*mut Object>,
 }
 
@@ -4223,7 +4615,9 @@ pub struct MUIP_Settingsgroup_GadgetsToConfig {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Setup {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:273`.
     pub MethodID: Stacked<u32>,
+    /// Field `RenderInfo`, declared as `STACKED struct MUI_RenderInfo *RenderInfo` at `classes/area.h:274`.
     pub RenderInfo: Stacked<*mut c_void>,
 }
 
@@ -4231,6 +4625,7 @@ pub struct MUIP_Setup {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Show {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:279`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4238,6 +4633,7 @@ pub struct MUIP_Show {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_String_ClearSelected {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/string.h:75`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4245,8 +4641,11 @@ pub struct MUIP_String_ClearSelected {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_String_FileNameStart {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/string.h:80`.
     pub MethodID: Stacked<u32>,
+    /// Field `buffer`, declared as `STACKED STRPTR buffer` at `classes/string.h:81`.
     pub buffer: Stacked<*mut c_char>,
+    /// Field `pos`, declared as `STACKED LONG pos` at `classes/string.h:82`.
     pub pos: Stacked<i32>,
 }
 
@@ -4254,8 +4653,11 @@ pub struct MUIP_String_FileNameStart {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_String_Insert {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/string.h:87`.
     pub MethodID: Stacked<u32>,
+    /// Field `text`, declared as `STACKED STRPTR text` at `classes/string.h:88`.
     pub text: Stacked<*mut c_char>,
+    /// Field `pos`, declared as `STACKED LONG pos` at `classes/string.h:89`.
     pub pos: Stacked<i32>,
 }
 
@@ -4263,7 +4665,9 @@ pub struct MUIP_String_Insert {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_UnknownDropDestination {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/area.h:172`.
     pub MethodID: Stacked<u32>,
+    /// Field `imsg`, declared as `STACKED struct IntuiMessage *imsg` at `classes/area.h:173`.
     pub imsg: Stacked<*mut c_void>,
 }
 
@@ -4271,6 +4675,7 @@ pub struct MUIP_UnknownDropDestination {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_ActionIconify {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:42`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4278,7 +4683,9 @@ pub struct MUIP_Window_ActionIconify {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_AddControlCharHandler {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:116`.
     pub MethodID: Stacked<u32>,
+    /// Field `ccnode`, declared as `STACKED struct MUI_EventHandlerNode *ccnode` at `classes/window.h:117`.
     pub ccnode: Stacked<*mut c_void>,
 }
 
@@ -4286,7 +4693,9 @@ pub struct MUIP_Window_AddControlCharHandler {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_AddEventHandler {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:47`.
     pub MethodID: Stacked<u32>,
+    /// Field `ehnode`, declared as `STACKED struct MUI_EventHandlerNode *ehnode` at `classes/window.h:48`.
     pub ehnode: Stacked<*mut c_void>,
 }
 
@@ -4294,6 +4703,7 @@ pub struct MUIP_Window_AddEventHandler {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_AllocGadgetID {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:122`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4301,6 +4711,7 @@ pub struct MUIP_Window_AllocGadgetID {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_Cleanup {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:53`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4308,10 +4719,15 @@ pub struct MUIP_Window_Cleanup {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_DragObject {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:139`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj` at `classes/window.h:140`.
     pub obj: Stacked<*mut Object>,
+    /// Field `touchx`, declared as `STACKED LONG touchx` at `classes/window.h:141`.
     pub touchx: Stacked<i32>,
+    /// Field `touchy`, declared as `STACKED LONG touchy` at `classes/window.h:142`.
     pub touchy: Stacked<i32>,
+    /// Field `flags`, declared as `STACKED ULONG flags` at `classes/window.h:143`.
     pub flags: Stacked<u32>,
 }
 
@@ -4319,13 +4735,21 @@ pub struct MUIP_Window_DragObject {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_DrawBackground {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:127`.
     pub MethodID: Stacked<u32>,
+    /// Field `left`, declared as `STACKED LONG left` at `classes/window.h:128`.
     pub left: Stacked<i32>,
+    /// Field `top`, declared as `STACKED LONG top` at `classes/window.h:129`.
     pub top: Stacked<i32>,
+    /// Field `width`, declared as `STACKED LONG width` at `classes/window.h:130`.
     pub width: Stacked<i32>,
+    /// Field `height`, declared as `STACKED LONG height` at `classes/window.h:131`.
     pub height: Stacked<i32>,
+    /// Field `xoffset`, declared as `STACKED LONG xoffset` at `classes/window.h:132`.
     pub xoffset: Stacked<i32>,
+    /// Field `yoffset`, declared as `STACKED LONG yoffset` at `classes/window.h:133`.
     pub yoffset: Stacked<i32>,
+    /// Field `flags`, declared as `STACKED LONG flags` at `classes/window.h:134`.
     pub flags: Stacked<i32>,
 }
 
@@ -4333,7 +4757,9 @@ pub struct MUIP_Window_DrawBackground {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_FreeGadgetID {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:148`.
     pub MethodID: Stacked<u32>,
+    /// Field `gadgetid`, declared as `STACKED LONG gadgetid` at `classes/window.h:149`.
     pub gadgetid: Stacked<i32>,
 }
 
@@ -4341,7 +4767,9 @@ pub struct MUIP_Window_FreeGadgetID {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_GetMenuCheck {
+    /// Field `MethodID`, declared as `STACKULONG MethodID` at `classes/window.h:178`.
     pub MethodID: Stacked<u32>,
+    /// Field `MenuID`, declared as `STACKED ULONG MenuID` at `classes/window.h:179`.
     pub MenuID: Stacked<u32>,
 }
 
@@ -4349,7 +4777,9 @@ pub struct MUIP_Window_GetMenuCheck {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_GetMenuState {
+    /// Field `MethodID`, declared as `STACKULONG MethodID` at `classes/window.h:184`.
     pub MethodID: Stacked<u32>,
+    /// Field `MenuID`, declared as `STACKED ULONG MenuID` at `classes/window.h:185`.
     pub MenuID: Stacked<u32>,
 }
 
@@ -4357,7 +4787,9 @@ pub struct MUIP_Window_GetMenuState {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_RecalcDisplay {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:154`.
     pub MethodID: Stacked<u32>,
+    /// Field `originator`, declared as `STACKED Object *originator` at `classes/window.h:155`.
     pub originator: Stacked<*mut Object>,
 }
 
@@ -4365,7 +4797,9 @@ pub struct MUIP_Window_RecalcDisplay {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_RemControlCharHandler {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:160`.
     pub MethodID: Stacked<u32>,
+    /// Field `ccnode`, declared as `STACKED struct MUI_EventHandlerNode *ccnode` at `classes/window.h:161`.
     pub ccnode: Stacked<*mut c_void>,
 }
 
@@ -4373,7 +4807,9 @@ pub struct MUIP_Window_RemControlCharHandler {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_RemEventHandler {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:58`.
     pub MethodID: Stacked<u32>,
+    /// Field `ehnode`, declared as `STACKED struct MUI_EventHandlerNode *ehnode` at `classes/window.h:59`.
     pub ehnode: Stacked<*mut c_void>,
 }
 
@@ -4381,6 +4817,7 @@ pub struct MUIP_Window_RemEventHandler {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_ScreenToBack {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:64`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4388,6 +4825,7 @@ pub struct MUIP_Window_ScreenToBack {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_ScreenToFront {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:69`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4395,7 +4833,9 @@ pub struct MUIP_Window_ScreenToFront {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_SetCycleChain {
+    /// Field `MethodID`, declared as `STACKULONG MethodID` at `classes/window.h:190`.
     pub MethodID: Stacked<u32>,
+    /// Field `obj`, declared as `STACKED Object *obj[1]` at `classes/window.h:191`.
     pub obj: Stacked<[*mut Object; 1]>,
 }
 
@@ -4403,8 +4843,11 @@ pub struct MUIP_Window_SetCycleChain {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_SetMenuCheck {
+    /// Field `MethodID`, declared as `STACKULONG MethodID` at `classes/window.h:196`.
     pub MethodID: Stacked<u32>,
+    /// Field `MenuID`, declared as `STACKED ULONG MenuID` at `classes/window.h:197`.
     pub MenuID: Stacked<u32>,
+    /// Field `stat`, declared as `STACKED LONG stat` at `classes/window.h:198`.
     pub stat: Stacked<i32>,
 }
 
@@ -4412,8 +4855,11 @@ pub struct MUIP_Window_SetMenuCheck {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_SetMenuState {
+    /// Field `MethodID`, declared as `STACKULONG MethodID` at `classes/window.h:203`.
     pub MethodID: Stacked<u32>,
+    /// Field `MenuID`, declared as `STACKED ULONG MenuID` at `classes/window.h:204`.
     pub MenuID: Stacked<u32>,
+    /// Field `stat`, declared as `STACKED LONG stat` at `classes/window.h:205`.
     pub stat: Stacked<i32>,
 }
 
@@ -4421,6 +4867,7 @@ pub struct MUIP_Window_SetMenuState {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_Setup {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:74`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4428,7 +4875,9 @@ pub struct MUIP_Window_Setup {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_Snapshot {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:79`.
     pub MethodID: Stacked<u32>,
+    /// Field `flags`, declared as `STACKED LONG flags` at `classes/window.h:80`.
     pub flags: Stacked<i32>,
 }
 
@@ -4436,6 +4885,7 @@ pub struct MUIP_Window_Snapshot {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_ToBack {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:85`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4443,6 +4893,7 @@ pub struct MUIP_Window_ToBack {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_ToFront {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:90`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4450,6 +4901,7 @@ pub struct MUIP_Window_ToFront {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_Window_UpdateMenu {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/window.h:166`.
     pub MethodID: Stacked<u32>,
 }
 
@@ -4457,8 +4909,11 @@ pub struct MUIP_Window_UpdateMenu {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_WriteLong {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:157`.
     pub MethodID: Stacked<u32>,
+    /// Field `val`, declared as `STACKED ULONG val` at `classes/notify.h:158`.
     pub val: Stacked<u32>,
+    /// Field `memory`, declared as `STACKED ULONG *memory` at `classes/notify.h:159`.
     pub memory: Stacked<*mut u32>,
 }
 
@@ -4466,8 +4921,11 @@ pub struct MUIP_WriteLong {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MUIP_WriteString {
+    /// Field `MethodID`, declared as `STACKED ULONG MethodID` at `classes/notify.h:164`.
     pub MethodID: Stacked<u32>,
+    /// Field `str`, declared as `STACKED char *str` at `classes/notify.h:165`.
     pub str: Stacked<*mut c_char>,
+    /// Field `memory`, declared as `STACKED char *memory` at `classes/notify.h:166`.
     pub memory: Stacked<*mut c_char>,
 }
 

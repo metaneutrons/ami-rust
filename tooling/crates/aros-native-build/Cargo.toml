@@ -8,7 +8,6 @@ repository = "https://github.com/metaneutrons/ami-rust"
 description = "Cargo build-script integration and focused target linker for AROS ABI-v1"
 readme = "README.md"
 publish = ["metaneutrons"]
-homepage = "https://github.com/metaneutrons/ami-rust"
 
 [dependencies]
 aros-elf = { version = "=0.2.0", path = "../aros-elf" }
@@ -18,7 +17,11 @@ sha2 = "=0.11.1"
 libc = "=0.2.191"
 
 [lints.rust]
+missing_docs = "deny"
 unsafe_code = "deny"
+
+[lints.rustdoc]
+broken_intra_doc_links = "deny"
 
 [lints.clippy]
 all = { level = "deny", priority = -1 }

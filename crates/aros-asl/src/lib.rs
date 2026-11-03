@@ -1,6 +1,4 @@
 #![no_std]
-#![deny(missing_docs)]
-#![deny(rustdoc::broken_intra_doc_links)]
 //! Task-affine file requesters for AROS, on `asl.library`.
 //!
 //! [`Asl`] opens `asl.library` through [`aros::Library`] and owns the

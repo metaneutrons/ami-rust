@@ -11,25 +11,42 @@ const ELF_HEADER_SIZE: usize = 64;
 const SECTION_HEADER_SIZE: usize = 64;
 const SHT_NOBITS: u32 = 8;
 
+/// One section whose name was shortened by compaction.
 #[derive(Debug, serde::Serialize)]
 pub struct SectionRename {
+    /// Index of the section in the section header table.
     pub section: usize,
+    /// The section name before compaction.
     pub from: String,
+    /// The section name after compaction, of the form `.r<section>`.
     pub to: String,
 }
 
+/// Measurements of one successful compaction.
 #[derive(Debug, serde::Serialize)]
 pub struct CompactionReport {
+    /// Size of the input ELF file in bytes.
     pub input_bytes: usize,
+    /// Size of the compacted ELF file in bytes.
     pub output_bytes: usize,
+    /// Bytes removed from the file, which is the shrinkage of the section name
+    /// string table (a multiple of 8).
     pub saved_metadata_bytes: usize,
+    /// Number of sections whose name was shortened; equals `renames.len()`.
     pub sections_renamed: usize,
+    /// Always `true` in a returned report: every file-backed section other than
+    /// the name table was compared byte-for-byte with its source and a mismatch
+    /// is an error instead.
     pub all_other_section_payloads_preserved: bool,
+    /// The shortened sections, in section-table order.
     pub renames: Vec<SectionRename>,
 }
 
+/// A compacted ELF file together with the report describing the change.
 pub struct CompactedElf {
+    /// The complete compacted ELF file.
     pub bytes: Vec<u8>,
+    /// What changed relative to the input.
     pub report: CompactionReport,
 }
 
@@ -39,6 +56,31 @@ pub fn compact_elf_sections(bytes: &[u8]) -> Result<Vec<u8>> {
     compact_elf_sections_with_report(bytes).map(|result| result.bytes)
 }
 
+/// Compact the section names of a native AROS relocatable ELF file and report
+/// what changed, as [`compact_elf_sections`] does without the report.
+///
+/// The input must be a 64-bit little-endian ELF version 1 file with OS/ABI byte
+/// `0x0f` and ABI version 1, of type `ET_REL` for x86-64, with no program
+/// headers and 64-byte section header entries. The section name string table
+/// must end before the section header table begins.
+///
+/// A section is renamed to `.r<index>` when its name contains `._R` and starts
+/// with `.ltext.`, `.lrodata.`, `.ldata.`, `.lbss.` or the same four with a
+/// `.rela` prefix, or when it starts with `.lrodata..Lanon.` or
+/// `.rela.lrodata..Lanon.`. Every section header gets its own name entry, so
+/// sections that shared one name no longer share an entry; an empty name keeps
+/// offset 0. The name table is rewritten and padded so the shrinkage is a
+/// multiple of 8, the content after it moves down by that amount, and the
+/// section header offset and the file offsets of later sections are adjusted.
+///
+/// # Errors
+///
+/// Returns a [`Refusal`] with exit status 2 when the identity, type, machine or
+/// header fields do not match, any table or payload range is truncated or
+/// overflows, a section name is not UTF-8, the new name table would be larger
+/// than the old one, a section alignment would be violated by the move, or a
+/// section payload differs between input and output. The input is never
+/// modified.
 pub fn compact_elf_sections_with_report(bytes: &[u8]) -> Result<CompactedElf> {
     const EXPECTED_IDENTITY: [u8; 9] = [0x7f, b'E', b'L', b'F', 2, 1, 1, 0x0f, 1];
     if bytes.get(..EXPECTED_IDENTITY.len()) != Some(EXPECTED_IDENTITY.as_slice()) {
@@ -114,7 +156,7 @@ pub fn compact_elf_sections_with_report(bytes: &[u8]) -> Result<CompactedElf> {
         .get(old_string_range.clone())
         .ok_or_else(|| Refusal::new("truncated section names"))?;
 
-    // Match the frozen Python transform: each section header receives its own
+    // Match the frozen original transform: each section header receives its own
     // string-table entry, including duplicate names that formerly shared one.
     let mut compacted_names = Vec::new();
     compacted_names

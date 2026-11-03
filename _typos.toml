@@ -11,3 +11,5 @@ extend-exclude = [
 [default.extend-words]
 # MUIA_Dropable is the native MUI spelling.
 Dropable = "Dropable"
+# `.rela` is the prefix of an ELF relocation section.
+rela = "rela"

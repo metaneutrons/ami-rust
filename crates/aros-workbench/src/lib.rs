@@ -1,6 +1,4 @@
 #![no_std]
-#![deny(missing_docs)]
-#![deny(rustdoc::broken_intra_doc_links)]
 //! Task-affine Workbench applications for AROS, on `workbench.library`.
 //!
 //! [`Workbench`] opens `workbench.library` through [`aros::Library`] and owns

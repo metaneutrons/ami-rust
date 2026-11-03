@@ -12,3 +12,9 @@ readme = "README.md"
 aros = { version = "=0.2.0", path = "../aros", default-features = false }
 aros-intuition = { version = "=0.2.0", path = "../aros-intuition" }
 aros-sys = { version = "=0.2.0", path = "../aros-sys" }
+
+[lints.rust]
+missing_docs = "deny"
+
+[lints.rustdoc]
+broken_intra_doc_links = "deny"

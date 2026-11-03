@@ -63,6 +63,9 @@ const SOURCES: &[(&str, &[u8])] = &[
 /// Options for the retained qualification-only native C hooks.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BuildOptions {
+    /// Also compile the diagnostic binding C unit (`bind.o`) and define
+    /// `AMI_SDK_TESTING=1` for every C unit. The choice is recorded with the
+    /// native objects and the linker then includes `bind.o`. Defaults to `false`.
     pub testing: bool,
 }
 
