@@ -1302,32 +1302,274 @@ pub const fn layout_values() -> [u64; ABI_LAYOUT_VALUE_COUNT] {
     values
 }
 
+/// Callback run by [`sdk_callback`] on the owner task.
+///
+/// It receives the `user_data` pointer given to `sdk_callback` and the `input` value, and returns the
+/// output value that `sdk_callback` stores. It runs synchronously inside the `sdk_callback` call.
+/// It must return normally; it must not unwind or jump out of the call.
 pub type SdkCallback = unsafe extern "C" fn(*mut c_void, u64) -> u64;
 
 unsafe extern "C" {
+    // Native bridge runtime. The bridge is implemented in `native/sdk.c` and the other `native/*.c`
+    // files; every function below is the Rust declaration of one C function with the same name.
+    // Conventions that hold for the whole interface:
+    //  - A handle is a nonzero `u64` token issued by the bridge. It is valid only for the runtime that
+    //    issued it and only until it is released or `sdk_end` runs. A stale, foreign or wrong-kind token
+    //    is refused, it is not dereferenced.
+    //  - `context` is the key from `sdk_context` or `sdk_claim_context`.
+    //  - Functions that return a handle return 0 on failure. Functions that return `c_int` return 0 on
+    //    success and -1 on failure unless their own documentation says otherwise.
+    //  - `error` may be null. When it is not null it is cleared on entry and filled on failure.
+    //  - Path and name arguments are byte strings and must be NUL terminated within 128 bytes (127
+    //    payload bytes). Other byte arguments are given with an explicit length and are not
+    //    NUL terminated unless stated.
+    /// Starts the native runtime for the current task, which becomes the owner task.
+    ///
+    /// The native `main` calls this once, before it calls the Rust entry point `rust_sdk_main`; the safe
+    /// crates never call it. `argv` is kept and later served by [`sdk_arg_count`] and [`sdk_arg`].
+    ///
+    /// Returns 0 on success, 10 when the arguments are refused (`argc` outside 1..=32, a null `argv` or
+    /// null element, an element of 4096 bytes or more, or more than 4096 bytes in total including the
+    /// terminators), and 20 when the runtime cannot start: it already started, is active or is closing
+    /// (a second call after `sdk_end` also returns 20), the Exec or DOS library is not the expected
+    /// version, `dos.library` cannot be opened, or the token space or the registry pool cannot be created.
+    ///
+    /// # Safety
+    ///
+    /// `argv` must point to `argc` pointers, each to a NUL-terminated string, and the strings must stay
+    /// valid until `sdk_end` has returned. Call it at most once per process, on the task that is to own
+    /// the runtime.
     pub fn sdk_begin(argc: c_int, argv: *mut *mut c_char) -> c_int;
+    /// Releases every resource the program still holds and stops the runtime.
+    ///
+    /// The remaining native objects are released in a fixed order: directories, the current directory
+    /// changed by `sdk_cwd_set`, Workbench objects and ports, icons, locale catalogs then locales, asl
+    /// requesters, windows, public screens, rastports, bitmaps, I/O requests, devices, messages, files,
+    /// libraries, message ports, signals, allocator blocks, then `dos64.library` (ABI-v1 only) and
+    /// `dos.library`. Afterwards every handle and the context key are invalid, so later calls with the old
+    /// key fail the context check (`ERROR_KIND_OWNER`).
+    ///
+    /// Returns 0 when the teardown was clean and 20 when the runtime is not active, is already closing, the
+    /// caller is not the owner task, or a release failed (for example a file that could not be closed).
+    /// The native `main` calls it after `rust_sdk_main` returns; the safe crates never call it.
+    ///
+    /// # Safety
+    ///
+    /// Call it only on the owner task, once, with no native object still in use. Nothing created from the
+    /// runtime (handles, pointers returned by the `*_ptr` functions, blocks from `sdk_alloc`) may be used
+    /// after it returns.
     pub fn sdk_end() -> c_int;
+    /// Returns the context key, or 0 when there is none for this caller.
+    ///
+    /// The result is nonzero only while the runtime is active and not closing and the calling task is the
+    /// owner task. It does not claim the key, so it can be called repeatedly; use [`sdk_claim_context`] to
+    /// take the single claim.
+    ///
+    /// # Context check
+    ///
+    /// Every function below that takes `context` first fails with `ERROR_KIND_OWNER` (4) unless `context`
+    /// equals this key, the runtime is active and not closing, and the caller is the owner task. This is
+    /// how task affinity is enforced: a handle can only be used on the task that ran `sdk_begin`. Each
+    /// such refusal is counted in `SdkStats::refusals`.
+    ///
+    /// Other failure classes used by the bridge: `ERROR_KIND_NATIVE` (1) is a failed operating system
+    /// call (`native` is the DOS or Exec error code) or lack of memory; `ERROR_KIND_INPUT` (2) is a
+    /// rejected argument; `ERROR_KIND_LIMIT` (3) is a bridge limit or a value the call cannot represent;
+    /// `ERROR_KIND_STATE` (5) is an unknown, stale or wrong-state handle.
+    ///
+    /// # Safety
+    ///
+    /// No pointer is involved. Call it on the task whose key is wanted; on any other task it returns 0.
     pub fn sdk_context() -> u64;
+    /// Returns the context key once and 0 on every later call.
+    ///
+    /// It succeeds only when [`sdk_context`] would return the key and no earlier call has claimed it. The
+    /// Rust `dispatch` function uses it so that the application function is entered once and a nested
+    /// dispatch is refused.
+    ///
+    /// # Safety
+    ///
+    /// No pointer is involved. Call it on the owner task.
     pub fn sdk_claim_context() -> u64;
+    /// Returns the number of program arguments passed to `sdk_begin`, including the program name.
+    ///
+    /// Returns 0 when the context check fails (see [`sdk_context`]), which cannot be told apart from an
+    /// empty list; `sdk_begin` guarantees at least one argument.
+    ///
+    /// # Safety
+    ///
+    /// `context` must be the current context key and the call must be on the owner task, otherwise the
+    /// result is 0.
     pub fn sdk_arg_count(context: u64) -> usize;
+    /// Returns argument `index` and stores its length in `length`.
+    ///
+    /// The pointer is the argument string given to `sdk_begin` (the C storage keeps its NUL terminator),
+    /// and `*length` is its length in bytes without the terminator. The bytes are not converted to UTF-8.
+    /// Returns null, leaving `length` unwritten, when the context check fails (see [`sdk_context`]),
+    /// `length` is null or `index` is not below [`sdk_arg_count`]. No error record is filled.
+    ///
+    /// # Safety
+    ///
+    /// `length` must be valid for a write of one `usize`. The returned pointer is borrowed from the
+    /// `argv` of `sdk_begin` and is valid only until `sdk_end`; do not write through it.
     pub fn sdk_arg(context: u64, index: usize, length: *mut usize) -> *const u8;
+    /// Allocates `size` bytes with the given alignment from Exec memory and returns a pointer to them.
+    ///
+    /// The memory is not initialised. `alignment` must be a power of two of at most 4096; an alignment
+    /// below 8 is treated as 8. A `size` of 0 returns a valid pointer to a one-byte block. Returns null,
+    /// and counts a refusal in `SdkStats::refusals`, when the runtime is not active, is closing or the
+    /// caller is not the owner task, when the alignment or size is invalid or overflows, when called while
+    /// `sdk_diagnostic` is running, or when memory is exhausted. No context key is taken; the owner task
+    /// is checked directly.
+    ///
+    /// Free the block with [`sdk_dealloc`] using the same `size` and `alignment`. Blocks that are still
+    /// allocated at `sdk_end` are freed there. This is the entry point of the Rust `ExecAllocator`.
+    ///
+    /// # Safety
+    ///
+    /// Call it only on the owner task while the runtime is active. The returned pointer is valid for
+    /// `size` bytes until freed and must not be freed any other way.
     pub fn sdk_alloc(size: usize, alignment: usize) -> *mut c_void;
+    /// Frees a block returned by [`sdk_alloc`].
+    ///
+    /// `pointer`, `size` and `alignment` must be exactly the values of the allocation. A pointer the
+    /// bridge does not know, a size or alignment that differs from the allocation, or a call from another
+    /// task or outside the active runtime is refused: it is counted in `SdkStats::refusals` and nothing is
+    /// freed. It returns nothing and takes no error record.
+    ///
+    /// # Safety
+    ///
+    /// Call it only on the owner task. After a successful free the pointer must not be used again, and a
+    /// block must not be freed twice.
     pub fn sdk_dealloc(pointer: *mut c_void, size: usize, alignment: usize);
+    /// Writes a one-line diagnostic to the Exec debug output (`RawPutChar`).
+    ///
+    /// The line is the first `length` bytes of the label (at most 230; the rest is dropped), a space, the
+    /// decimal value of the code and a newline. A null `bytes` writes only the code. The label is bytes,
+    /// not text, and is not NUL terminated. It uses a fixed 256-byte stack buffer and does not allocate,
+    /// and the bridge refuses [`sdk_alloc`] while it runs.
+    ///
+    /// The third parameter is named `context` in this declaration but it is the numeric code printed after
+    /// the label (`code` in `native/sdk.h`); it is not checked as a context key. The call performs no
+    /// context or task check and fills no error record. The Rust `Context::diagnostic` passes its `code`.
+    ///
+    /// # Safety
+    ///
+    /// `bytes` must be null or valid for reads of `length` bytes.
     pub fn sdk_diagnostic(bytes: *const u8, length: usize, context: u64);
+    /// Reports a fatal condition, releases everything and ends the program with exit code 20. It never
+    /// returns.
+    ///
+    /// The first call writes `ami-rust fatal <reason>` through the diagnostic output (the parameter is
+    /// named `context` in this declaration but it is the reason code, `reason` in the C source). If the
+    /// runtime is active and the caller is the owner task, it then performs the same cleanup as
+    /// `sdk_end` and leaves through `_Exit(20)`. A second call prints `ami-rust nested fatal` first. A call
+    /// made while cleanup is already running writes a fixed message and either resumes the cleanup or
+    /// exits with 20. The Rust panic handler of `entry!` and the allocation-failure path call it.
+    ///
+    /// # Safety
+    ///
+    /// Call it only to end the program: no destructor or Rust frame runs afterwards.
     pub fn sdk_fatal(context: u64) -> !;
+    /// Returns a copy of the bridge's resource counters.
+    ///
+    /// The record counts live blocks, the backing charge and its peak, and the live number of each handle
+    /// kind, plus `refusals`, the number of calls the bridge has refused. The call has no context or task
+    /// check, fills no error record and does not allocate.
+    ///
+    /// # Safety
+    ///
+    /// No pointer is involved. The values are meaningful only between `sdk_begin` and `sdk_end`.
     pub fn sdk_stats() -> SdkStats;
 
+    // Exec libraries.
+    /// Opens the shared library `name` (Exec `OpenLibrary`) and returns a handle for it.
+    ///
+    /// `name` is a NUL-terminated byte string of at most 127 bytes, such as `intuition.library`.
+    /// `minimum_version` is passed to `OpenLibrary`. Returns 0 on failure: `ERROR_KIND_INPUT` for a missing
+    /// or unterminated name, `ERROR_KIND_NATIVE` with `native` 0 when the library cannot be opened,
+    /// `ERROR_KIND_LIMIT` when the registry is full.
+    ///
+    /// Release the handle with [`sdk_library_close`]; a handle that is still open at `sdk_end` is closed
+    /// there. Use [`sdk_library_base`] to get the library base pointer.
+    ///
+    /// # Safety
+    ///
+    /// `name` must be valid for reads up to its NUL (within 128 bytes) and `error` must be null or valid
+    /// for a write of an `SdkError`.
     pub fn sdk_library_open(
         context: u64,
         name: *const u8,
         minimum_version: u16,
         error: *mut SdkError,
     ) -> u64;
+    /// Returns the library base pointer of an open library handle.
+    ///
+    /// The pointer is what the generated raw library bindings take. It stays valid until the handle is
+    /// closed with [`sdk_library_close`] and must be used only on the owner task. Returns null when the
+    /// context check fails or the handle is unknown. No error record is filled, but the refusal is counted.
+    ///
+    /// # Safety
+    ///
+    /// Do not use the pointer after the handle is closed, from another task, or for a library other than
+    /// the one that was opened.
     pub fn sdk_library_base(context: u64, library: u64) -> *mut c_void;
+    /// Closes a library opened with [`sdk_library_open`] (Exec `CloseLibrary`).
+    ///
+    /// Returns 0 on success and -1 on failure (`ERROR_KIND_STATE` for an unknown handle). The handle is
+    /// forgotten before the library is closed, and the base pointer from [`sdk_library_base`] must not be
+    /// used afterwards.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`. Close each handle once.
     pub fn sdk_library_close(context: u64, library: u64, error: *mut SdkError) -> c_int;
 
+    // DOS files and the standard streams. A file is closed with `sdk_file_close`.
+    /// Opens the DOS file `path` and returns a handle for it.
+    ///
+    /// `path` is a NUL-terminated byte string of at most 127 bytes. `mode` is 0 to open an existing file
+    /// for reading (`MODE_OLDFILE`), 1 to create a file or truncate an existing one (`MODE_NEWFILE`) or 2
+    /// to open for reading and writing (`MODE_READWRITE`); any other value is `ERROR_KIND_INPUT`. Returns 0
+    /// on failure; for a DOS failure `error.kind` is `ERROR_KIND_NATIVE` and `native` is the `IoErr` code.
+    ///
+    /// Release it with [`sdk_file_close`]; a file still open at `sdk_end` is closed there.
+    ///
+    /// # Safety
+    ///
+    /// `path` must be valid for reads up to its NUL (within 128 bytes) and `error` must be null or valid
+    /// for a write of an `SdkError`.
     pub fn sdk_file_open(context: u64, path: *const u8, mode: i32, error: *mut SdkError) -> u64;
+    /// Closes a file opened with [`sdk_file_open`].
+    ///
+    /// Returns 0 on success and -1 on failure. The handle is forgotten before DOS `Close` runs, so after
+    /// an `ERROR_KIND_NATIVE` failure (`native` is the `IoErr` code) the handle is already gone and the
+    /// close cannot be retried; an unknown handle is `ERROR_KIND_STATE`. The standard stream handles from
+    /// [`sdk_stdout`] and [`sdk_stderr`] are not files and are refused with `ERROR_KIND_STATE`.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_file_close(context: u64, file: u64, error: *mut SdkError) -> c_int;
+    /// Reads from or writes to a file or a standard stream with one DOS call, and returns the number of
+    /// bytes transferred.
+    ///
+    /// `file` is a handle from [`sdk_file_open`], [`sdk_stdout`] or [`sdk_stderr`]. `write` is 0 to read
+    /// into `buffer` and 1 to write from it; `length` is the number of bytes, at most 65536. `buffer` may
+    /// be null only when `length` is 0. The result is the count DOS reported, which may be smaller than
+    /// `length`; a read that returns 0 means end of file. It is -1 on failure: `ERROR_KIND_INPUT` for a
+    /// length over 65536, a null buffer with a nonzero length or a `write` other than 0 or 1;
+    /// `ERROR_KIND_STATE` for an unknown handle, a read on a standard stream, or a write to the error
+    /// stream from a task that is not a DOS process; `ERROR_KIND_NATIVE` when DOS or the stream fails
+    /// (`native` is the `IoErr` code, or 0 when no output stream exists).
+    ///
+    /// The output stream is `Output()` of the owner task and the error stream is `pr_CES`, or `pr_COS` if
+    /// that is null, resolved on every write and never closed.
+    ///
+    /// # Safety
+    ///
+    /// `buffer` must be valid for `length` bytes: writable for a read, readable for a write (the pointer
+    /// is `*mut` for both, a write does not modify it). `error` must be null or valid for a write.
     pub fn sdk_file_io(
         context: u64,
         file: u64,
@@ -1336,13 +1578,77 @@ unsafe extern "C" {
         write: i32,
         error: *mut SdkError,
     ) -> i64;
+    /// Returns the handle of the program's standard output, or 0 when the context check fails.
+    ///
+    /// The handle is a fixed token. It can only be written, through [`sdk_file_io`]; it is not a file and is
+    /// never closed.
+    ///
+    /// # Safety
+    ///
+    /// No pointer is involved. Use the handle only on the owner task.
     pub fn sdk_stdout(context: u64) -> u64;
+    /// Returns the handle of the program's standard error stream, or 0.
+    ///
+    /// It is 0 when the context check fails or when the owner task is not a DOS process (only a process
+    /// has the error and output streams). The handle can only be written, through [`sdk_file_io`], and is
+    /// never closed. Each write uses the process error stream (`pr_CES`), or its output stream (`pr_COS`)
+    /// when none is set.
+    ///
+    /// # Safety
+    ///
+    /// No pointer is involved. Use the handle only on the owner task.
     pub fn sdk_stderr(context: u64) -> u64;
 
+    // Exec signals. The bridge keeps at most 32 signal slots, which message ports and device reply ports
+    // also use.
+    /// Allocates an Exec signal bit (`AllocSignal(-1)`) on the owner task and returns a handle for it.
+    ///
+    /// Returns 0 on failure: `ERROR_KIND_LIMIT` when all 32 signal slots are in use (`native` is 32) or the
+    /// token space is exhausted, `ERROR_KIND_NATIVE` when Exec has no free signal bit. Release it with
+    /// [`sdk_signal_drop`]; a signal left allocated at `sdk_end` is freed there.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_signal_new(context: u64, error: *mut SdkError) -> u64;
+    /// Frees a signal allocated with [`sdk_signal_new`].
+    ///
+    /// The bit is cleared (`SetSignal`) and freed (`FreeSignal`). Returns 0 on success and -1 on failure
+    /// (`ERROR_KIND_STATE` for an unknown handle).
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`. Do not wait on the signal afterwards.
     pub fn sdk_signal_drop(context: u64, signal: u64, error: *mut SdkError) -> c_int;
+    /// Sets the signal bit on the owner task (`Signal`).
+    ///
+    /// The call signals the calling task itself, so a following [`sdk_signal_wait`] on the same handle
+    /// returns at once. Returns 0 on success and -1 on failure (`ERROR_KIND_STATE` for an unknown handle).
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_signal_post(context: u64, signal: u64, error: *mut SdkError) -> c_int;
+    /// Blocks the owner task until the signal bit of the handle is set (Exec `Wait` on that bit).
+    ///
+    /// Returns 0 once it returned and -1 on failure (`ERROR_KIND_STATE` for an unknown handle). Without a
+    /// call to [`sdk_signal_post`] (or an external source of the bit) the call does not return.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`. The call blocks the task.
     pub fn sdk_signal_wait(context: u64, signal: u64, error: *mut SdkError) -> c_int;
+    /// Blocks the owner task until any bit of `mask` is set (Exec `Wait`) and stores the signals that
+    /// caused the return in `received`.
+    ///
+    /// `mask` must not be 0 and `received` must not be null, otherwise `ERROR_KIND_INPUT`. The bits are
+    /// not required to belong to bridge handles; the mask normally comes from [`sdk_device_signal_mask`],
+    /// `SdkWindowInfo::signal_mask` or [`sdk_wb_port_mask`], possibly combined. Returns 0 on success and -1 on
+    /// failure. If no source can set a bit of `mask` the call does not return.
+    ///
+    /// # Safety
+    ///
+    /// `received` must be valid for a write of a `u32` and `error` must be null or valid for a write.
     pub fn sdk_signal_wait_mask(
         context: u64,
         mask: u32,
@@ -1350,15 +1656,64 @@ unsafe extern "C" {
         error: *mut SdkError,
     ) -> c_int;
 
+    // Message ports and messages. A message is a bridge-owned record of up to 256 payload bytes; it is
+    // queued on a port with `sdk_port_put`, taken with `sdk_port_receive` and answered with
+    // `sdk_message_reply`.
+    /// Creates an Exec message port (`CreateMsgPort`) and returns a handle for it.
+    ///
+    /// The port uses one of the 32 signal slots. Returns 0 on failure: `ERROR_KIND_LIMIT` when the slots
+    /// or the token space are exhausted, `ERROR_KIND_NATIVE` when the port cannot be created. Release it
+    /// with [`sdk_port_drop`]; a port left at `sdk_end` is deleted there.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_port_new(context: u64, error: *mut SdkError) -> u64;
+    /// Deletes a port created with [`sdk_port_new`] (`DeleteMsgPort`) and frees its signal slot.
+    ///
+    /// Messages still queued on the port are taken off it and become idle again; messages that named this
+    /// port as their reply port lose that reply port. Returns 0 on success and -1 on failure
+    /// (`ERROR_KIND_STATE` for an unknown handle).
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_port_drop(context: u64, port: u64, error: *mut SdkError) -> c_int;
+    /// Creates a message holding a copy of `length` payload bytes and returns a handle for it.
+    ///
+    /// `length` is at most 256, otherwise `ERROR_KIND_INPUT`; `bytes` may be null only when `length` is 0.
+    /// The bytes are not NUL terminated. The new message is idle and belongs to no port. Returns 0 on
+    /// failure. Release it with [`sdk_message_drop`]; a message left at `sdk_end` is freed there.
+    ///
+    /// # Safety
+    ///
+    /// `bytes` must be valid for reads of `length` bytes when `length` is nonzero, and `error` must be
+    /// null or valid for a write of an `SdkError`.
     pub fn sdk_message_new(
         context: u64,
         bytes: *const u8,
         length: usize,
         error: *mut SdkError,
     ) -> u64;
+    /// Frees a message created with [`sdk_message_new`], first removing it from the port it is queued on.
+    ///
+    /// Returns 0 on success and -1 on failure (`ERROR_KIND_STATE` for an unknown handle).
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_message_drop(context: u64, message: u64, error: *mut SdkError) -> c_int;
+    /// Copies the payload of a message into `output` and returns its length in bytes.
+    ///
+    /// The whole payload is copied; the result is the payload length (0 to 256). Returns -1 on failure:
+    /// `ERROR_KIND_STATE` for an unknown handle or a message that is currently queued on a port,
+    /// `ERROR_KIND_INPUT` when `capacity` is smaller than the payload or `output` is null for a nonempty
+    /// payload.
+    ///
+    /// # Safety
+    ///
+    /// `output` must be valid for writes of `capacity` bytes (unless the payload is empty) and `error`
+    /// must be null or valid for a write of an `SdkError`.
     pub fn sdk_message_copy(
         context: u64,
         message: u64,
@@ -1366,6 +1721,16 @@ unsafe extern "C" {
         capacity: usize,
         error: *mut SdkError,
     ) -> c_int;
+    /// Queues `message` on `port` (Exec `PutMsg`) with `reply_port` as the reply port.
+    ///
+    /// `message` must be idle, that is neither queued nor waiting for a reply. `port` and `reply_port` are
+    /// both required handles from [`sdk_port_new`]; a 0 or unknown reply port is refused. Returns 0 on success and -1 on failure (`ERROR_KIND_STATE`
+    /// for an unknown port, reply port or message, or a message that is not idle).
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`. The message must not be dropped or
+    /// copied while it is queued.
     pub fn sdk_port_put(
         context: u64,
         port: u64,
@@ -1373,9 +1738,46 @@ unsafe extern "C" {
         reply_port: u64,
         error: *mut SdkError,
     ) -> c_int;
+    /// Takes `message` from the head of `port` (Exec `GetMsg`) if it is waiting there.
+    ///
+    /// Returns 1 when the message was taken and 0 when the port has no message (not an error). The bridge
+    /// can take only its own message record, so a head message other than `message`, or a `message`
+    /// that is not queued on this `port`, is -1 with `ERROR_KIND_STATE`, as is an unknown handle. A message
+    /// taken after [`sdk_port_put`] can be answered with [`sdk_message_reply`]; a message taken from its
+    /// reply port after the reply is idle again.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_port_receive(context: u64, port: u64, message: u64, error: *mut SdkError) -> c_int;
+    /// Replies to a message that was received from a port (Exec `ReplyMsg`).
+    ///
+    /// The message is queued on its reply port and is taken there with [`sdk_port_receive`]. Returns 0 on
+    /// success and -1 on failure (`ERROR_KIND_STATE` for an unknown message, a message that was not
+    /// received after a put, a message already queued, or a reply port that no longer exists).
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_message_reply(context: u64, message: u64, error: *mut SdkError) -> c_int;
 
+    // Exec devices and I/O requests. A device handle owns an open device and one reply port; every
+    // request of the device completes on that port. A device cannot be closed while it has requests.
+    /// Opens an Exec device unit (`OpenDevice`) and returns a handle for it.
+    ///
+    /// `name` is the NUL-terminated device name (at most 127 bytes, for example `timer.device`); `unit`
+    /// and `flags` are passed to `OpenDevice`. The call also creates the device's reply port, which uses
+    /// one of the 32 signal slots. Returns 0 on failure: `ERROR_KIND_INPUT` for a bad name,
+    /// `ERROR_KIND_NATIVE` with the `OpenDevice` error in `native` (or `ERROR_NO_FREE_STORE`),
+    /// `ERROR_KIND_LIMIT` when the slots or the registry are exhausted.
+    ///
+    /// Release it with [`sdk_device_close`] after all its requests are dropped; a device left open at
+    /// `sdk_end` is closed there.
+    ///
+    /// # Safety
+    ///
+    /// `name` must be valid for reads up to its NUL (within 128 bytes) and `error` must be null or valid
+    /// for a write of an `SdkError`.
     pub fn sdk_device_open(
         context: u64,
         name: *const u8,
@@ -1383,8 +1785,38 @@ unsafe extern "C" {
         flags: u32,
         error: *mut SdkError,
     ) -> u64;
+    /// Closes a device opened with [`sdk_device_open`] (`CloseDevice`) and deletes its reply port.
+    ///
+    /// Returns 0 on success and -1 on failure. `ERROR_KIND_STATE` is returned for an unknown handle and
+    /// also when requests created with [`sdk_io_new`] are still alive on the device; drop them first. The
+    /// base pointer from [`sdk_device_base`] must not be used afterwards.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_device_close(context: u64, device: u64, error: *mut SdkError) -> c_int;
+    /// Returns the signal mask of the device's reply port, `1 << signal bit`, or 0.
+    ///
+    /// It returns 0 when the context check fails or the handle is unknown. Pass it to
+    /// [`sdk_signal_wait_mask`] to wait for a request of the device to complete. No error record is filled.
+    ///
+    /// # Safety
+    ///
+    /// No pointer is involved. Use it on the owner task only.
     pub fn sdk_device_signal_mask(context: u64, device: u64) -> u32;
+    /// Creates an I/O request for a device and returns a handle for it.
+    ///
+    /// `kind` is `IO_KIND_STANDARD` (0, an `IOStdReq` with a data area) or `IO_KIND_TIMER` (1, a
+    /// `timerequest`); anything else is `ERROR_KIND_INPUT`. `capacity` is the size in bytes of the
+    /// bridge-owned data area, at most 65536; it must be 0 for a timer request. The request replies to the
+    /// device's reply port. Returns 0 on failure (`ERROR_KIND_STATE` for an unknown device,
+    /// `ERROR_KIND_INPUT`, `ERROR_KIND_NATIVE` with `ERROR_NO_FREE_STORE`, or `ERROR_KIND_LIMIT`).
+    ///
+    /// Release it with [`sdk_io_drop`]. A request still alive at `sdk_end` is released there.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_io_new(
         context: u64,
         device: u64,
@@ -1392,7 +1824,27 @@ unsafe extern "C" {
         capacity: usize,
         error: *mut SdkError,
     ) -> u64;
+    /// Frees a request created with [`sdk_io_new`].
+    ///
+    /// A request that is still pending is aborted and waited for first (`AbortIO`, `WaitIO`), so the call
+    /// can block until the device finishes. Returns 0 on success and -1 on failure (`ERROR_KIND_STATE` for
+    /// an unknown handle).
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_io_drop(context: u64, request: u64, error: *mut SdkError) -> c_int;
+    /// Sets the command fields of an idle request before it is performed.
+    ///
+    /// `command` (at most 0xffff) becomes `io_Command` and `flags` (at most 0xff) becomes `io_Flags`;
+    /// `io_Error` is cleared. For a standard request `length` (at most the request's capacity) becomes
+    /// `io_Length`, `offset` becomes `io_Offset`, `io_Data` points to the request's own data area and
+    /// `io_Actual` is cleared. For a timer request `length` and `offset` must be 0. Violations are
+    /// `ERROR_KIND_INPUT`; an unknown request, or one that is pending, is `ERROR_KIND_STATE`.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_io_prepare(
         context: u64,
         request: u64,
@@ -1402,6 +1854,16 @@ unsafe extern "C" {
         offset: u32,
         error: *mut SdkError,
     ) -> c_int;
+    /// Copies `length` bytes into the data area of an idle standard request.
+    ///
+    /// `length` must not exceed the capacity given to [`sdk_io_new`] and `data` may be null only for
+    /// length 0, otherwise `ERROR_KIND_INPUT`. A timer request, a pending request or an unknown handle is
+    /// `ERROR_KIND_STATE`. The bytes are not NUL terminated. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `data` must be valid for reads of `length` bytes when `length` is nonzero, and `error` must be
+    /// null or valid for a write of an `SdkError`.
     pub fn sdk_io_write(
         context: u64,
         request: u64,
@@ -1409,6 +1871,17 @@ unsafe extern "C" {
         length: usize,
         error: *mut SdkError,
     ) -> c_int;
+    /// Copies the bytes a device produced out of an idle standard request and returns their count.
+    ///
+    /// The count is the request's `io_Actual`, limited to its capacity, and all of those bytes are copied.
+    /// Returns -1 on failure: `ERROR_KIND_INPUT` when `capacity` is smaller than the count or `out` is
+    /// null for a nonzero count; `ERROR_KIND_STATE` for a timer request, a pending request or an unknown
+    /// handle.
+    ///
+    /// # Safety
+    ///
+    /// `out` must be valid for writes of `capacity` bytes, and `error` must be null or valid for a write
+    /// of an `SdkError`.
     pub fn sdk_io_read(
         context: u64,
         request: u64,
@@ -1416,6 +1889,15 @@ unsafe extern "C" {
         capacity: usize,
         error: *mut SdkError,
     ) -> i64;
+    /// Sets the time value of an idle timer request (`tr_time`).
+    ///
+    /// `micros` must be below 1,000,000, otherwise `ERROR_KIND_INPUT`. A standard request, a pending
+    /// request or an unknown handle is `ERROR_KIND_STATE`. Returns 0 on success and -1 on failure. The
+    /// size of the native time fields is checked by [`sdk_timer_layout`]; both ABIs use two 32-bit fields.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_io_set_time(
         context: u64,
         request: u64,
@@ -1423,6 +1905,15 @@ unsafe extern "C" {
         micros: u32,
         error: *mut SdkError,
     ) -> c_int;
+    /// Reads the time value of an idle timer request into `seconds` and `micros`.
+    ///
+    /// Both pointers must be non-null, otherwise `ERROR_KIND_INPUT`. A standard request, a pending request
+    /// or an unknown handle is `ERROR_KIND_STATE`. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `seconds` and `micros` must be valid for writes of a `u32`, and `error` must be null or valid for a
+    /// write of an `SdkError`.
     pub fn sdk_io_time(
         context: u64,
         request: u64,
@@ -1430,6 +1921,17 @@ unsafe extern "C" {
         micros: *mut u32,
         error: *mut SdkError,
     ) -> c_int;
+    /// Reads the outcome of an idle request that has been performed.
+    ///
+    /// `device_error` receives `io_Error` as a signed byte (0 means success) and `actual` receives
+    /// `io_Actual` for a standard request or 0 for a timer request. Both pointers must be non-null,
+    /// otherwise `ERROR_KIND_INPUT`. A pending request or an unknown handle is `ERROR_KIND_STATE`. Returns
+    /// 0 on success and -1 on failure; a nonzero `device_error` is not a bridge failure.
+    ///
+    /// # Safety
+    ///
+    /// `device_error` and `actual` must be valid for writes, and `error` must be null or valid for a write
+    /// of an `SdkError`.
     pub fn sdk_io_result(
         context: u64,
         request: u64,
@@ -1437,21 +1939,87 @@ unsafe extern "C" {
         actual: *mut u32,
         error: *mut SdkError,
     ) -> c_int;
+    /// Performs an idle request synchronously (`DoIO`) and stores the device's result in `device_error`.
+    ///
+    /// `device_error` receives the signed byte `DoIO` returned (0 is success). The request stays idle
+    /// afterwards, so [`sdk_io_result`] and [`sdk_io_read`] can be used. The call blocks the owner task
+    /// until the device finishes. `device_error` null is `ERROR_KIND_INPUT`; a pending request or an
+    /// unknown handle is `ERROR_KIND_STATE`. Returns 0 when the request was run and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `device_error` must be valid for a write of an `i32`, and `error` must be null or valid for a write
+    /// of an `SdkError`. The request must have been set up with [`sdk_io_prepare`] (or [`sdk_io_set_time`]).
     pub fn sdk_io_do(
         context: u64,
         request: u64,
         device_error: *mut i32,
         error: *mut SdkError,
     ) -> c_int;
+    /// Starts an idle request asynchronously (`SendIO`) and marks it pending.
+    ///
+    /// Returns 0 on success and -1 on failure (`ERROR_KIND_STATE` for a pending request or an unknown
+    /// handle). The request completes on the device's reply port, whose signal is
+    /// [`sdk_device_signal_mask`]. A pending request must be finished with [`sdk_io_wait`], or dropped
+    /// with [`sdk_io_drop`], before it can be used again.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_io_send(context: u64, request: u64, error: *mut SdkError) -> c_int;
+    /// Tests whether a pending request has completed (`CheckIO`).
+    ///
+    /// Returns 1 when it has completed, 0 when it is still in progress and -1 on failure
+    /// (`ERROR_KIND_STATE` for a request that is not pending or an unknown handle). A completed request
+    /// stays pending for the bridge until [`sdk_io_wait`] reclaims it.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_io_check(context: u64, request: u64, error: *mut SdkError) -> c_int;
+    /// Waits for a pending request to finish (`WaitIO`), stores its result and makes it idle again.
+    ///
+    /// `device_error` receives the signed byte `WaitIO` returned (0 is success); it must be non-null,
+    /// otherwise `ERROR_KIND_INPUT`. A request that is not pending or an unknown handle is
+    /// `ERROR_KIND_STATE`. Returns 0 on success and -1 on failure. The call blocks the owner task until the
+    /// request has completed.
+    ///
+    /// # Safety
+    ///
+    /// `device_error` must be valid for a write of an `i32`, and `error` must be null or valid for a write
+    /// of an `SdkError`.
     pub fn sdk_io_wait(
         context: u64,
         request: u64,
         device_error: *mut i32,
         error: *mut SdkError,
     ) -> c_int;
+    /// Asks the device to abort a pending request (`AbortIO`).
+    ///
+    /// The request stays pending: call [`sdk_io_wait`] afterwards to reclaim it. Returns 0 when the abort
+    /// was requested and -1 on failure (`ERROR_KIND_STATE` for a request that is not pending or an unknown
+    /// handle).
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_io_abort(context: u64, request: u64, error: *mut SdkError) -> c_int;
+    /// Moves the position of an open file and stores the new absolute position in `position`.
+    ///
+    /// `whence` is 0 for the start, 1 for the current position and 2 for the end; `offset` is signed and
+    /// must not be negative with whence 0 (`ERROR_KIND_INPUT`, which also covers any other `whence` and a
+    /// null `position`). An unknown handle is `ERROR_KIND_STATE`.
+    ///
+    /// ABI difference: on ABI-v1 with `dos64.library` (opened on first use) the 64-bit calls are used and
+    /// the offset and position are full 64-bit. Without it, and always on ABI-v11, the 32-bit `Seek` is
+    /// used: an offset outside the `i32` range, or a resulting position of 2 GiB or more, is refused with
+    /// `ERROR_KIND_LIMIT` (`native` is `i32::MAX`) instead of wrapping. DOS failures are `ERROR_KIND_NATIVE`
+    /// with the `IoErr` code. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `position` must be valid for a write of a `u64`, and `error` must be null or valid for a write of
+    /// an `SdkError`.
     pub fn sdk_file_seek(
         context: u64,
         file: u64,
@@ -1460,21 +2028,87 @@ unsafe extern "C" {
         position: *mut u64,
         error: *mut SdkError,
     ) -> c_int;
+    /// Stores the current absolute position of an open file in `position`.
+    ///
+    /// A null `position` is `ERROR_KIND_INPUT` and an unknown handle is `ERROR_KIND_STATE`. The ABI
+    /// difference is the one of [`sdk_file_seek`]: 64-bit with `dos64.library` on ABI-v1, otherwise the
+    /// 32-bit call, which refuses a position of 2 GiB or more with `ERROR_KIND_LIMIT`. Returns 0 on success
+    /// and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `position` must be valid for a write of a `u64`, and `error` must be null or valid for a write of
+    /// an `SdkError`.
     pub fn sdk_file_position(
         context: u64,
         file: u64,
         position: *mut u64,
         error: *mut SdkError,
     ) -> c_int;
+    /// Stores the size in bytes of an open file in `size`.
+    ///
+    /// A null `size` is `ERROR_KIND_INPUT` and an unknown handle is `ERROR_KIND_STATE`. ABI difference: on
+    /// ABI-v1 with `dos64.library` the size is 64-bit. Without it, and always on ABI-v11, the size comes
+    /// from a 32-bit `ExamineFH`, and a size of `0x7fffffff` bytes or more is refused with
+    /// `ERROR_KIND_LIMIT` (`native` is `i32::MAX`) because it cannot be reported exactly. A DOS failure is
+    /// `ERROR_KIND_NATIVE`. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `size` must be valid for a write of a `u64`, and `error` must be null or valid for a write of an
+    /// `SdkError`.
     pub fn sdk_file_size(context: u64, file: u64, size: *mut u64, error: *mut SdkError) -> c_int;
+    // graphics.library objects. The bridge owns the RastPort memory and the buffers for area fills,
+    // tracks bitmaps, and leaves all drawing to the raw library calls on the pointers it returns.
+    /// Allocates a zeroed `RastPort` that the bridge owns and returns a handle for it.
+    ///
+    /// The memory is not initialised by `InitRastPort`; the caller does that through the library on the
+    /// pointer from [`sdk_gfx_rastport_ptr`]. Returns 0 on failure (`ERROR_KIND_NATIVE` with
+    /// `ERROR_NO_FREE_STORE`, or `ERROR_KIND_LIMIT`). Release it with [`sdk_gfx_rastport_drop`]; a
+    /// rastport left at `sdk_end` is freed there.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_gfx_rastport_new(context: u64, error: *mut SdkError) -> u64;
+    /// Returns the pointer to the `RastPort` memory of a rastport handle, or null.
+    ///
+    /// Null means the context check failed or the handle is unknown. No error record is filled. The
+    /// pointer is valid until [`sdk_gfx_rastport_drop`].
+    ///
+    /// # Safety
+    ///
+    /// Use the pointer only on the owner task and not after the handle is dropped.
     pub fn sdk_gfx_rastport_ptr(context: u64, rastport: u64) -> *mut c_void;
+    /// Stores `bitmap` in the `BitMap` field of the rastport.
+    ///
+    /// The bitmap pointer is not checked or retained by the bridge; it normally comes from `AllocBitMap`.
+    /// Returns 0 on success and -1 on failure (`ERROR_KIND_STATE` for an unknown handle).
+    ///
+    /// # Safety
+    ///
+    /// `bitmap` must be a valid `BitMap` that outlives every use of the rastport, and `error` must be null
+    /// or valid for a write of an `SdkError`.
     pub fn sdk_gfx_rastport_set_bitmap(
         context: u64,
         rastport: u64,
         bitmap: *mut c_void,
         error: *mut SdkError,
     ) -> c_int;
+    /// Allocates the buffers an area fill needs for a rastport.
+    ///
+    /// It allocates an `AreaInfo`, a vector buffer of `max_vectors * 5` bytes, a `TmpRas` and a raster of
+    /// `RASSIZE(width, height)` bytes, all zeroed. `max_vectors` must be 3 to 1024 and `width` and `height`
+    /// 1 to 32767, otherwise `ERROR_KIND_INPUT`. It can run once per rastport: an unknown handle or a
+    /// rastport that is already prepared is `ERROR_KIND_STATE`. Lack of memory is `ERROR_KIND_NATIVE` with
+    /// `ERROR_NO_FREE_STORE`. Returns 0 on success and -1 on failure.
+    ///
+    /// The buffers are only allocated. The caller then runs `InitArea` and `InitTmpRas` on them (see
+    /// [`sdk_gfx_area_ptr`]) and calls [`sdk_gfx_area_attach`].
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_gfx_area_prepare(
         context: u64,
         rastport: u64,
@@ -1483,24 +2117,118 @@ unsafe extern "C" {
         height: i32,
         error: *mut SdkError,
     ) -> c_int;
+    /// Returns a pointer to one of the area-fill buffers of a prepared rastport.
+    ///
+    /// `which` is 0 for the `AreaInfo`, 1 for the vector buffer, 2 for the `TmpRas` and 3 for the raster.
+    /// Returns null for any other value, for a rastport not yet prepared with [`sdk_gfx_area_prepare`],
+    /// when the context check fails or the handle is unknown. No error record is filled. The buffers are
+    /// valid until [`sdk_gfx_rastport_drop`].
+    ///
+    /// # Safety
+    ///
+    /// Use the pointer only on the owner task and not after the rastport is dropped.
     pub fn sdk_gfx_area_ptr(context: u64, rastport: u64, which: i32) -> *mut c_void;
+    /// Returns the size in bytes of an area-fill buffer.
+    ///
+    /// `which` 1 returns the vector buffer size (`max_vectors * 5`) and 3 the raster size
+    /// (`RASSIZE(width, height)`). Every other `which` returns 0, as do a rastport that is not prepared, a
+    /// failed context check and an unknown handle.
+    ///
+    /// # Safety
+    ///
+    /// No pointer is involved. Use it on the owner task only.
     pub fn sdk_gfx_area_size(context: u64, rastport: u64, which: i32) -> usize;
+    /// Links the prepared `AreaInfo` and `TmpRas` into the rastport.
+    ///
+    /// It sets the `AreaInfo` and `TmpRas` fields of the `RastPort`. Returns 0 on success and -1 on
+    /// failure (`ERROR_KIND_STATE` for an unknown handle or a rastport that was not prepared). Call it
+    /// after `InitArea` and `InitTmpRas` have been run on the buffers.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`. The buffers must have been initialised
+    /// by the library first.
     pub fn sdk_gfx_area_attach(context: u64, rastport: u64, error: *mut SdkError) -> c_int;
+    /// Frees a rastport and any area buffers that belong to it.
+    ///
+    /// The `RastPort` memory, `AreaInfo`, vector buffer, `TmpRas` and raster are freed. Returns 0 on
+    /// success and -1 on failure (`ERROR_KIND_STATE` for an unknown handle).
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`. Do not use the rastport pointers
+    /// afterwards, and do not drop a rastport that a window or a blit still uses.
     pub fn sdk_gfx_rastport_drop(context: u64, rastport: u64, error: *mut SdkError) -> c_int;
+    /// Records a bitmap so the bridge can free it if the program does not.
+    ///
+    /// `base` is the open `graphics.library` base (from [`sdk_library_base`]) and `bitmap` is the pointer
+    /// returned by `AllocBitMap`. Both must be non-null, otherwise `ERROR_KIND_INPUT`. Returns a handle, or
+    /// 0 on failure. The bridge does not allocate the bitmap and does not own it while the handle exists:
+    /// the caller frees it with `FreeBitMap` after [`sdk_gfx_bitmap_release`]. A bitmap still registered at
+    /// `sdk_end` is freed there through the library vector.
+    ///
+    /// # Safety
+    ///
+    /// `base` and `bitmap` must be valid, and `error` must be null or valid for a write of an `SdkError`.
+    /// The library must stay open while the handle exists.
     pub fn sdk_gfx_bitmap_register(
         context: u64,
         base: *mut c_void,
         bitmap: *mut c_void,
         error: *mut SdkError,
     ) -> u64;
+    /// Forgets a registered bitmap without freeing it.
+    ///
+    /// Returns 0 on success and -1 on failure (`ERROR_KIND_STATE` for an unknown handle). After a
+    /// successful release the caller owns the bitmap and frees it with `FreeBitMap`. After a failure it
+    /// must not free it, because the bridge may still do so.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_gfx_bitmap_release(context: u64, bitmap: u64, error: *mut SdkError) -> c_int;
+    // Intuition windows and public screens. A window handle exists before the window does: it first owns
+    // the title text, which Intuition keeps a pointer to, and the opened window is attached afterwards.
+    /// Creates a window record that owns a copy of the title text and returns its handle.
+    ///
+    /// `length` is at most 127 bytes, otherwise `ERROR_KIND_INPUT`, and `text` may be null only for length
+    /// 0. The text is not NUL terminated on input; the record stores it with a terminator. No window
+    /// exists yet: pass the pointer from [`sdk_intui_title_ptr`] as `WA_Title` to `OpenWindowTagList`, then
+    /// call [`sdk_intui_window_attach`], or [`sdk_intui_window_cancel`] if opening failed. Returns 0 on
+    /// failure.
+    ///
+    /// # Safety
+    ///
+    /// `text` must be valid for reads of `length` bytes when `length` is nonzero, and `error` must be null
+    /// or valid for a write of an `SdkError`.
     pub fn sdk_intui_title_new(
         context: u64,
         text: *const u8,
         length: usize,
         error: *mut SdkError,
     ) -> u64;
+    /// Returns a pointer to the NUL-terminated title text stored in a window record, or null.
+    ///
+    /// Null means the context check failed or the handle is unknown. The pointer is stable until the
+    /// record is released with [`sdk_intui_window_close`] or [`sdk_intui_window_cancel`], so Intuition may
+    /// keep it. No error record is filled.
+    ///
+    /// # Safety
+    ///
+    /// Do not read it after the record is released, and do not write through it.
     pub fn sdk_intui_title_ptr(context: u64, window: u64) -> *const c_char;
+    /// Replaces the title text in the record of an attached window.
+    ///
+    /// The text (at most 127 bytes, `text` null only for length 0; otherwise `ERROR_KIND_INPUT`) is copied
+    /// into the same buffer, so the pointer from [`sdk_intui_title_ptr`] stays the same. This does not
+    /// tell Intuition: the caller then calls `SetWindowTitles` with that pointer. A record without an
+    /// attached window, or an unknown handle, is `ERROR_KIND_STATE`. Returns 0 on success and -1 on
+    /// failure.
+    ///
+    /// # Safety
+    ///
+    /// `text` must be valid for reads of `length` bytes when `length` is nonzero, and `error` must be null
+    /// or valid for a write of an `SdkError`.
     pub fn sdk_intui_window_set_title(
         context: u64,
         window: u64,
@@ -1508,6 +2236,17 @@ unsafe extern "C" {
         length: usize,
         error: *mut SdkError,
     ) -> c_int;
+    /// Records the opened window in its title record.
+    ///
+    /// `base` is the open `intuition.library` base and `window` the pointer from `OpenWindowTagList`;
+    /// both must be non-null. A null argument, an unknown handle or a record that already has a window is
+    /// `ERROR_KIND_STATE`. Returns 0 on success and -1 on failure. From now on the bridge closes the window
+    /// (`CloseWindow` through the library vector) in [`sdk_intui_window_close`] or at `sdk_end`.
+    ///
+    /// # Safety
+    ///
+    /// `base` and `window` must be the valid library base and a window opened with it, and `error` must
+    /// be null or valid for a write of an `SdkError`.
     pub fn sdk_intui_window_attach(
         context: u64,
         window: u64,
@@ -1515,26 +2254,87 @@ unsafe extern "C" {
         native: *mut c_void,
         error: *mut SdkError,
     ) -> c_int;
+    /// Discards a window record whose window never opened.
+    ///
+    /// It is for a record that has no attached window; one with a window, or an unknown handle, is
+    /// `ERROR_KIND_STATE`. Nothing is closed. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`. Intuition must not still hold the
+    /// title pointer.
     pub fn sdk_intui_window_cancel(context: u64, window: u64, error: *mut SdkError) -> c_int;
+    /// Closes the window of a record and frees the record.
+    ///
+    /// The record is retired first; if a window is attached it is closed with `CloseWindow` through the
+    /// library vector. A record without a window is just freed. Returns 0 on success and -1 on failure
+    /// (`ERROR_KIND_STATE` for an unknown handle). The window pointer, its rastport and the title pointer
+    /// are invalid afterwards.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`. Nothing may still use the window or its
+    /// rastport.
     pub fn sdk_intui_window_close(context: u64, window: u64, error: *mut SdkError) -> c_int;
+    /// Reads the geometry and port information of an attached window into `info`.
+    ///
+    /// It fills position, size, border widths, mouse position, the size of the window's screen (0 if it has
+    /// none), the signal mask of the window's IDCMP port (0 if it has none) and the window's `RastPort`
+    /// pointer. A record without a window, an unknown handle or a null `info` is `ERROR_KIND_STATE`.
+    /// Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `info` must be valid for a write of an `SdkWindowInfo`, and `error` must be null or valid for a
+    /// write of an `SdkError`.
     pub fn sdk_intui_window_info(
         context: u64,
         window: u64,
         info: *mut SdkWindowInfo,
         error: *mut SdkError,
     ) -> c_int;
+    /// Takes the next IDCMP message of an attached window, decodes it into `event` and replies to it.
+    ///
+    /// Returns 1 and fills `event` when a message was waiting, 0 when there is none (or the window has no
+    /// IDCMP port), and -1 on failure (`ERROR_KIND_STATE` for a record without a window, an unknown handle
+    /// or a null `event`). The message is replied to inside the call, so no Intuition pointer escapes.
+    ///
+    /// # Safety
+    ///
+    /// `event` must be valid for a write of an `SdkIntuiEvent`, and `error` must be null or valid for a
+    /// write of an `SdkError`.
     pub fn sdk_intui_next_event(
         context: u64,
         window: u64,
         event: *mut SdkIntuiEvent,
         error: *mut SdkError,
     ) -> c_int;
+    /// Records a locked public screen so the bridge can unlock it if the program does not.
+    ///
+    /// `base` is the open `intuition.library` base and `screen` the pointer from `LockPubScreen`; both must
+    /// be non-null, otherwise `ERROR_KIND_INPUT`. Returns a handle, or 0 on failure. The bridge does not
+    /// lock the screen. A screen still registered at `sdk_end` is unlocked there (`UnlockPubScreen` through
+    /// the library vector). Normal release is [`sdk_intui_screen_release`] followed by the caller's own
+    /// unlock.
+    ///
+    /// # Safety
+    ///
+    /// `base` and `screen` must be valid, and `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_intui_screen_register(
         context: u64,
         base: *mut c_void,
         screen: *mut c_void,
         error: *mut SdkError,
     ) -> u64;
+    /// Stores the width and height of a registered screen in `width` and `height`.
+    ///
+    /// An unknown handle, or a null `width` or `height`, is `ERROR_KIND_STATE`. Returns 0 on success and
+    /// -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `width` and `height` must be valid for writes of an `i32`, the screen must still be locked, and
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_intui_screen_size(
         context: u64,
         screen: u64,
@@ -1542,21 +2342,84 @@ unsafe extern "C" {
         height: *mut i32,
         error: *mut SdkError,
     ) -> c_int;
+    /// Forgets a registered screen without unlocking it.
+    ///
+    /// Returns 0 on success and -1 on failure (`ERROR_KIND_STATE` for an unknown handle). After a
+    /// successful release the caller owns the lock and calls `UnlockPubScreen`; after a failure it must
+    /// not, because the bridge may still do so.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_intui_screen_release(context: u64, screen: u64, error: *mut SdkError) -> c_int;
+    /// Copies the Intuition layout oracle values into `values` and returns how many there are.
+    ///
+    /// The values are computed by the C compiler from the SDK headers: the size, alignment and key offsets
+    /// of `SdkWindowInfo` and `SdkIntuiEvent`, the `WA_*` tag numbers, the `IDCMP_*` classes and the mouse
+    /// button codes used by the window API. `intuition_layout_values` holds the Rust side to compare with.
+    /// The count is always returned; the values are written only when `values` is non-null and `capacity`
+    /// is at least the count. No context is needed.
+    ///
+    /// # Safety
+    ///
+    /// `values` must be null or valid for writes of `capacity` `u64` values.
     pub fn sdk_intui_layout(values: *mut u64, capacity: usize) -> usize;
+    // asl.library file requesters.
+    /// Records a file requester so the bridge can free it if the program does not.
+    ///
+    /// `base` is the open `asl.library` base and `request` the pointer from `AllocAslRequest`; both must be
+    /// non-null, otherwise `ERROR_KIND_INPUT`. Returns a handle, or 0 on failure. A requester still
+    /// registered at `sdk_end` is freed there (`FreeAslRequest` through the library vector). Normal release
+    /// is [`sdk_asl_release`] followed by the caller's own free.
+    ///
+    /// # Safety
+    ///
+    /// `base` and `request` must be valid and the request must be a file requester, and `error` must be
+    /// null or valid for a write of an `SdkError`.
     pub fn sdk_asl_register(
         context: u64,
         base: *mut c_void,
         request: *mut c_void,
         error: *mut SdkError,
     ) -> u64;
+    /// Forgets a registered requester without freeing it.
+    ///
+    /// Returns 0 on success and -1 on failure (`ERROR_KIND_STATE` for an unknown handle). After a
+    /// successful release the caller frees the requester with `FreeAslRequest`.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_asl_release(context: u64, request: u64, error: *mut SdkError) -> c_int;
+    /// Stores in `count` how many paths the last accepted requester call selected.
+    ///
+    /// It is the length of the multi-selection argument list when there is one, otherwise 1 (the single
+    /// drawer and file). An unknown handle or a null `count` is `ERROR_KIND_STATE`. Returns 0 on success
+    /// and -1 on failure. It reads the requester's current fields, so call it after `AslRequest` returned
+    /// true.
+    ///
+    /// # Safety
+    ///
+    /// `count` must be valid for a write of an `i32`, and `error` must be null or valid for a write of an
+    /// `SdkError`.
     pub fn sdk_asl_count(
         context: u64,
         request: u64,
         count: *mut i32,
         error: *mut SdkError,
     ) -> c_int;
+    /// Builds selected path number `index` into `buffer` and stores its length in `length`.
+    ///
+    /// The path joins the drawer (or the lock of a multi-selected entry) and the file name by DOS rules,
+    /// and is written NUL terminated; `*length` excludes the terminator. `capacity` must be at least 2.
+    /// Returns 0 on success and -1 on failure: `ERROR_KIND_STATE` for an unknown handle, a null `buffer` or
+    /// `length`, a `capacity` under 2 or a negative `index`; `ERROR_KIND_INPUT` for an `index` at or above
+    /// the count from [`sdk_asl_count`]; `ERROR_KIND_LIMIT` when the path does not fit in `capacity`.
+    ///
+    /// # Safety
+    ///
+    /// `buffer` must be valid for writes of `capacity` bytes, `length` for a write of a `usize`, and
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_asl_path(
         context: u64,
         request: u64,
@@ -1566,7 +2429,31 @@ unsafe extern "C" {
         length: *mut usize,
         error: *mut SdkError,
     ) -> c_int;
+    /// Copies the asl layout oracle values into `values` and returns how many there are.
+    ///
+    /// The values are the file requester type and the `ASLFR_*` tag numbers the requester builder uses. On
+    /// ABI-v11 they come from constants declared in `native/layout.c` because the pinned C SDK has no asl
+    /// header; on ABI-v1 they come from the SDK header. `asl_layout_values` holds the Rust side to compare
+    /// with. The count is always returned; the values are written only when `values` is non-null and
+    /// `capacity` is at least the count. No context is needed.
+    ///
+    /// # Safety
+    ///
+    /// `values` must be null or valid for writes of `capacity` `u64` values.
     pub fn sdk_asl_layout(values: *mut u64, capacity: usize) -> usize;
+    // locale.library locales and catalogs.
+    /// Records a locale or catalog so the bridge can close it if the program does not.
+    ///
+    /// `kind` is 0 for a locale (from `OpenLocale`) and 1 for a catalog (from `OpenCatalog`); any other
+    /// `kind`, or a null `base` or `object`, is `ERROR_KIND_INPUT`. `base` is the open `locale.library`
+    /// base. Returns a handle, or 0 on failure. An object still registered at `sdk_end` is closed there
+    /// through the library vector, catalogs before locales. Normal release is [`sdk_locale_release`]
+    /// followed by the caller's own close.
+    ///
+    /// # Safety
+    ///
+    /// `base` and `object` must be valid and match `kind`, and `error` must be null or valid for a write
+    /// of an `SdkError`.
     pub fn sdk_locale_register(
         context: u64,
         kind: i32,
@@ -1574,26 +2461,91 @@ unsafe extern "C" {
         object: *mut c_void,
         error: *mut SdkError,
     ) -> u64;
+    /// Forgets a registered locale or catalog without closing it.
+    ///
+    /// Returns 0 on success and -1 on failure (`ERROR_KIND_STATE` for an unknown handle). After a
+    /// successful release the caller closes the object with `CloseLocale` or `CloseCatalog`.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_locale_release(context: u64, object: u64, error: *mut SdkError) -> c_int;
+    /// Reads the name, language, preferred languages and GMT offset of a registered locale into `info`.
+    ///
+    /// The strings are pointers into the `Locale` structure (NUL terminated, possibly null) and stay
+    /// valid only while the locale is open. A catalog handle, an unknown handle or a null `info` is
+    /// `ERROR_KIND_STATE`. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `info` must be valid for a write of an `SdkLocaleInfo`, and `error` must be null or valid for a
+    /// write of an `SdkError`. Do not use the string pointers after the locale is closed.
     pub fn sdk_locale_info(
         context: u64,
         locale: u64,
         info: *mut SdkLocaleInfo,
         error: *mut SdkError,
     ) -> c_int;
+    /// Copies the locale layout oracle values into `values` and returns how many there are.
+    ///
+    /// The values are the catalog tags (`OC_*`), the string numbers the Rust API uses and the size and key
+    /// offsets of `SdkLocaleInfo`. On ABI-v11 they come from constants declared in `native/layout.c`
+    /// because the pinned C SDK has no locale header; on ABI-v1 they come from the SDK header.
+    /// `locale_layout_values` holds the Rust side to compare with. The count is always returned; the
+    /// values are written only when `values` is non-null and `capacity` is at least the count. No context
+    /// is needed.
+    ///
+    /// # Safety
+    ///
+    /// `values` must be null or valid for writes of `capacity` `u64` values.
     pub fn sdk_locale_layout(values: *mut u64, capacity: usize) -> usize;
+    // icon.library disk objects. The bridge can replace the default tool and tool types of an object with
+    // copies it owns, and puts the originals back before the object is freed.
+    /// Records a disk object so the bridge can free it if the program does not.
+    ///
+    /// `base` is the open `icon.library` base and `object` the pointer returned by `GetDiskObject` or a
+    /// similar call; both must be non-null, otherwise `ERROR_KIND_INPUT`. The current default tool and tool
+    /// types pointers are remembered as the originals. Returns a handle, or 0 on failure. An object still
+    /// registered at `sdk_end` is freed there (`FreeDiskObject` through the library vector). Normal release
+    /// is [`sdk_icon_release`] followed by the caller's own free.
+    ///
+    /// # Safety
+    ///
+    /// `base` and `object` must be valid, and `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_icon_register(
         context: u64,
         base: *mut c_void,
         object: *mut c_void,
         error: *mut SdkError,
     ) -> u64;
+    /// Reads the type, stack size, position, default tool and tool types of a disk object into `info`.
+    ///
+    /// The string pointers refer to the object's current default tool and tool-types array (null if the
+    /// object has none) and are valid only until the object is changed or freed. An unknown handle or a
+    /// null `info` is `ERROR_KIND_STATE`. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `info` must be valid for a write of an `SdkIconInfo`, and `error` must be null or valid for a write
+    /// of an `SdkError`. Do not use the pointers after the object is released or changed.
     pub fn sdk_icon_info(
         context: u64,
         icon: u64,
         info: *mut SdkIconInfo,
         error: *mut SdkError,
     ) -> c_int;
+    /// Replaces the default tool of a disk object with a copy of `text`.
+    ///
+    /// `length` is at most 512 bytes, otherwise `ERROR_KIND_INPUT`, and `text` may be null only for
+    /// length 0. The bytes are not NUL terminated on input; the copy is. The copy is owned by the bridge
+    /// and replaces an earlier copy; it is freed by [`sdk_icon_release`] and the original pointer is put
+    /// back first. An unknown handle is `ERROR_KIND_STATE` and lack of memory `ERROR_KIND_NATIVE`. Returns
+    /// 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `text` must be valid for reads of `length` bytes when `length` is nonzero, and `error` must be null
+    /// or valid for a write of an `SdkError`.
     pub fn sdk_icon_set_default_tool(
         context: u64,
         icon: u64,
@@ -1601,6 +2553,20 @@ unsafe extern "C" {
         length: usize,
         error: *mut SdkError,
     ) -> c_int;
+    /// Replaces the tool types of a disk object with copies of `count` strings.
+    ///
+    /// `items` points to `count` pointers and `lengths` to `count` byte lengths; item `i` is `lengths[i]`
+    /// bytes at `items[i]` (at most 512 each), not NUL terminated on input. `count` is at most 64; both
+    /// arrays may be null only when `count` is 0, which installs an empty list. The bridge builds a
+    /// NULL-terminated array of NUL-terminated copies that it owns; it replaces an earlier one and is freed
+    /// by [`sdk_icon_release`] after the original array is put back. Violations are `ERROR_KIND_INPUT`,
+    /// an unknown handle is `ERROR_KIND_STATE` and lack of memory `ERROR_KIND_NATIVE`. Returns 0 on
+    /// success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `items` and `lengths` must be valid for reads of `count` entries, and every `items[i]` valid for
+    /// reads of `lengths[i]` bytes. `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_icon_set_tool_types(
         context: u64,
         icon: u64,
@@ -1609,18 +2575,100 @@ unsafe extern "C" {
         count: usize,
         error: *mut SdkError,
     ) -> c_int;
+    /// Sets the stack size field of a disk object to `stack`.
+    ///
+    /// The value is stored as given, with no range check. Returns 0 on success and -1 on failure
+    /// (`ERROR_KIND_STATE` for an unknown handle).
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_icon_set_stack(context: u64, icon: u64, stack: i32, error: *mut SdkError) -> c_int;
+    /// Puts the library's own default tool and tool types back and forgets the object without freeing it.
+    ///
+    /// The bridge's copies are freed. Returns 0 on success and -1 on failure (`ERROR_KIND_STATE` for an
+    /// unknown handle). After a successful release the caller frees the object with `FreeDiskObject`;
+    /// after a failure it must not, because the bridge may still do so.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`. Pointers from [`sdk_icon_info`] taken
+    /// before the release must not be used afterwards.
     pub fn sdk_icon_release(context: u64, icon: u64, error: *mut SdkError) -> c_int;
+    // Workbench application messages and objects. The port is a message port for messages that
+    // Workbench sends to application windows, icons and menu items; an object records one such
+    // registration with `workbench.library`.
+    /// Creates a message port for Workbench application messages and returns a handle for it.
+    ///
+    /// The port is created with `CreateMsgPort`. It does not use one of the 32 signal slots of
+    /// [`sdk_signal_new`]; its mask is [`sdk_wb_port_mask`]. Returns 0 on failure (`ERROR_KIND_NATIVE`
+    /// with `ERROR_NO_FREE_STORE`, or `ERROR_KIND_LIMIT`). Release it with [`sdk_wb_port_drop`]; a port
+    /// left at `sdk_end` is deleted there.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_wb_port_new(context: u64, error: *mut SdkError) -> u64;
+    /// Returns the `MsgPort` pointer of a Workbench port handle, or null.
+    ///
+    /// The pointer is what `AddAppWindowA`, `AddAppIconA` and `AddAppMenuItemA` take as the message port.
+    /// Null means the context check failed or the handle is unknown. No error record is filled. It is
+    /// valid until [`sdk_wb_port_drop`].
+    ///
+    /// # Safety
+    ///
+    /// Use the pointer only on the owner task and not after the port is dropped.
     pub fn sdk_wb_port_ptr(context: u64, port: u64) -> *mut c_void;
+    /// Returns the signal mask of the port, `1 << signal bit`, or 0.
+    ///
+    /// It returns 0 when the context check fails or the handle is unknown. Pass it to
+    /// [`sdk_signal_wait_mask`] to wait for application messages. No error record is filled.
+    ///
+    /// # Safety
+    ///
+    /// No pointer is involved. Use it on the owner task only.
     pub fn sdk_wb_port_mask(context: u64, port: u64) -> u32;
+    /// Reports whether a message is waiting on the port, without taking it.
+    ///
+    /// Returns 1 if the port's message list is not empty and 0 otherwise. It also returns 0 when the
+    /// context check fails or the handle is unknown; no error record is filled, so an error cannot be
+    /// distinguished from an empty port.
+    ///
+    /// # Safety
+    ///
+    /// No pointer is involved. Use it on the owner task only.
     pub fn sdk_wb_port_pending(context: u64, port: u64) -> c_int;
+    /// Takes the next application message, decodes it into `message` and replies to it.
+    ///
+    /// Returns 1 and fills `message` when one was waiting, 0 when there is none, and -1 on failure
+    /// (`ERROR_KIND_STATE` for an unknown handle or a null `message`). The record has the type, class,
+    /// mouse position, time, id and user data; `total_args` is the number of arguments Workbench sent and
+    /// `num_args` the number of paths the bridge kept, at most 8. The paths are kept in the port record,
+    /// each at most 255 bytes, and read with [`sdk_wb_path`] until the next call that returns a message. An
+    /// argument whose lock or name cannot be turned into a path is kept as an empty path. The message is
+    /// replied to inside the call, so no Workbench pointer escapes.
+    ///
+    /// # Safety
+    ///
+    /// `message` must be valid for a write of an `SdkAppMessage`, and `error` must be null or valid for a
+    /// write of an `SdkError`.
     pub fn sdk_wb_port_next(
         context: u64,
         port: u64,
         message: *mut SdkAppMessage,
         error: *mut SdkError,
     ) -> c_int;
+    /// Copies path number `index` of the last message taken from the port into `buffer`.
+    ///
+    /// The path is written NUL terminated and `*length` is its length without the terminator.
+    /// `capacity` must be at least the length plus one, otherwise `ERROR_KIND_LIMIT`. `index` must be below
+    /// `SdkAppMessage::num_args` of that message, otherwise `ERROR_KIND_INPUT`. An unknown handle, or a null
+    /// `buffer` or `length`, is `ERROR_KIND_STATE`. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `buffer` must be valid for writes of `capacity` bytes, `length` for a write of a `usize`, and
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_wb_path(
         context: u64,
         port: u64,
@@ -1630,7 +2678,29 @@ unsafe extern "C" {
         length: *mut usize,
         error: *mut SdkError,
     ) -> c_int;
+    /// Deletes a Workbench port created with [`sdk_wb_port_new`].
+    ///
+    /// Messages still waiting on it are replied to first, then the port is deleted. Returns 0 on success
+    /// and -1 on failure (`ERROR_KIND_STATE` for an unknown handle).
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`. Objects created on this port keep a raw
+    /// pointer to it, so remove them with [`sdk_wb_object_remove`] before dropping the port.
     pub fn sdk_wb_port_drop(context: u64, port: u64, error: *mut SdkError) -> c_int;
+    /// Creates a record for one Workbench registration and returns its handle.
+    ///
+    /// `kind` is 0 for an application window, 1 for an application icon and 2 for an application menu item,
+    /// otherwise `ERROR_KIND_INPUT`. `port` must be a handle from [`sdk_wb_port_new`] (`ERROR_KIND_STATE`
+    /// otherwise). `text` is the name or title to register, at most 127 bytes, and may be null only for
+    /// length 0; it is copied and not NUL terminated on input. Nothing is registered with Workbench yet:
+    /// pass the pointer from [`sdk_wb_object_text`] to the library call, then use [`sdk_wb_object_attach`],
+    /// or [`sdk_wb_object_cancel`] if the registration failed. Returns 0 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `text` must be valid for reads of `length` bytes when `length` is nonzero, and `error` must be null
+    /// or valid for a write of an `SdkError`.
     pub fn sdk_wb_object_new(
         context: u64,
         kind: i32,
@@ -1639,7 +2709,27 @@ unsafe extern "C" {
         length: usize,
         error: *mut SdkError,
     ) -> u64;
+    /// Returns a pointer to the NUL-terminated text stored in a registration record, or null.
+    ///
+    /// Null means the context check failed or the handle is unknown. The pointer is stable until the record
+    /// is removed or cancelled, so Workbench may keep it. No error record is filled.
+    ///
+    /// # Safety
+    ///
+    /// Do not read it after the record is released, and do not write through it.
     pub fn sdk_wb_object_text(context: u64, object: u64) -> *const c_char;
+    /// Records the Workbench registration handle in an object record.
+    ///
+    /// `base` is the open `workbench.library` base and `handle` the pointer returned by `AddAppWindowA`,
+    /// `AddAppIconA` or `AddAppMenuItemA`; both must be non-null. A null argument, an unknown handle or a
+    /// record that already has a handle is `ERROR_KIND_STATE`. Returns 0 on success and -1 on failure. From
+    /// now on the bridge removes the registration through the library vector in [`sdk_wb_object_remove`]
+    /// or at `sdk_end`.
+    ///
+    /// # Safety
+    ///
+    /// `base` and `handle` must be valid and match the object's `kind`, and `error` must be null or valid
+    /// for a write of an `SdkError`.
     pub fn sdk_wb_object_attach(
         context: u64,
         object: u64,
@@ -1647,28 +2737,172 @@ unsafe extern "C" {
         handle: *mut c_void,
         error: *mut SdkError,
     ) -> c_int;
+    /// Discards a record whose registration was never attached.
+    ///
+    /// An attached record, or an unknown handle, is `ERROR_KIND_STATE`; use [`sdk_wb_object_remove`] for an
+    /// attached record. Nothing is removed from Workbench. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_wb_object_cancel(context: u64, object: u64, error: *mut SdkError) -> c_int;
+    /// Removes a Workbench registration and frees its record.
+    ///
+    /// The record is retired first. If it is attached, messages already waiting on its port are replied to
+    /// (Workbench waits for those replies while it holds a lock the removal needs), and then
+    /// `RemoveAppWindow`, `RemoveAppIcon` or `RemoveAppMenuItem` is called through the library vector
+    /// according to the kind. An unattached record is simply freed. Returns 0 on success and -1 on failure
+    /// (`ERROR_KIND_STATE` for an unknown handle).
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`. Do not use the text pointer afterwards.
     pub fn sdk_wb_object_remove(context: u64, object: u64, error: *mut SdkError) -> c_int;
+    /// Copies the Workbench layout oracle values into `values` and returns how many there are.
+    ///
+    /// The values are the `WB*` disk object types, the `AMTYPE_APP*` message types and the size and key
+    /// offsets of `SdkIconInfo` and `SdkAppMessage`. On ABI-v11 they come from constants declared in
+    /// `native/layout.c` because the pinned C SDK has no workbench header; on ABI-v1 they come from the
+    /// SDK header. `wb_layout_values` holds the Rust side to compare with. The count is always returned;
+    /// the values are written only when `values` is non-null and `capacity` is at least the count. No
+    /// context is needed.
+    ///
+    /// # Safety
+    ///
+    /// `values` must be null or valid for writes of `capacity` `u64` values.
     pub fn sdk_wb_layout(values: *mut u64, capacity: usize) -> usize;
+    // DOS directories, paths, variables and the current directory. Locks taken here are released on every
+    // path, and the current directory change is undone at `sdk_end`.
+    /// Opens the directory `path` for iteration and returns a handle for it.
+    ///
+    /// The directory is locked with a shared lock and examined. `path` is a NUL-terminated byte string of
+    /// at most 127 bytes (`ERROR_KIND_INPUT` otherwise). A path that is not a directory fails with
+    /// `ERROR_KIND_NATIVE` and `native` `ERROR_OBJECT_WRONG_TYPE`; other DOS failures carry the `IoErr`
+    /// code. Returns 0 on failure. Release it with [`sdk_dir_close`]; a directory left open at `sdk_end` is
+    /// closed there.
+    ///
+    /// # Safety
+    ///
+    /// `path` must be valid for reads up to its NUL (within 128 bytes) and `error` must be null or valid
+    /// for a write of an `SdkError`.
     pub fn sdk_dir_open(context: u64, path: *const u8, error: *mut SdkError) -> u64;
+    /// Reads the next entry of an open directory into `entry`.
+    ///
+    /// Returns 1 and fills `entry` when there is an entry, 0 at the end of the directory (DOS
+    /// `ERROR_NO_MORE_ENTRIES`, not an error), and -1 on failure (`ERROR_KIND_STATE` for an unknown handle,
+    /// `ERROR_KIND_INPUT` for a null `entry`, `ERROR_KIND_NATIVE` with the `IoErr` code). The name is
+    /// truncated to 107 bytes and stored NUL terminated, `name_length` is its stored length. Negative
+    /// `directory_type` is a file. ABI difference: on ABI-v1 with `dos64.library` the entry carries the
+    /// exact 64-bit size and `size_exact` is 1. Otherwise (always on ABI-v11) the 32-bit size is used and
+    /// `size_exact` is 0 when the size is `0x7fffffff` or more, since it may have been truncated.
+    ///
+    /// # Safety
+    ///
+    /// `entry` must be valid for a write of an `SdkEntry`, and `error` must be null or valid for a write
+    /// of an `SdkError`.
     pub fn sdk_dir_next(
         context: u64,
         directory: u64,
         entry: *mut SdkEntry,
         error: *mut SdkError,
     ) -> c_int;
+    /// Closes a directory opened with [`sdk_dir_open`] and releases its lock.
+    ///
+    /// Returns 0 on success and -1 on failure (`ERROR_KIND_STATE` for an unknown handle).
+    ///
+    /// # Safety
+    ///
+    /// `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_dir_close(context: u64, directory: u64, error: *mut SdkError) -> c_int;
+    /// Reads the information of the file or directory `path` into `entry`.
+    ///
+    /// The object is locked, examined and unlocked inside the call. `path` is a NUL-terminated byte string
+    /// of at most 127 bytes, and `entry` must not be null (`ERROR_KIND_INPUT` otherwise). DOS failures are
+    /// `ERROR_KIND_NATIVE` with the `IoErr` code (for example the object not existing). The entry fields,
+    /// including the name truncation and the `size_exact` rule of the two ABIs, are as for
+    /// [`sdk_dir_next`]. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `path` must be valid for reads up to its NUL, `entry` must be valid for a write of an `SdkEntry`,
+    /// and `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_entry_info(
         context: u64,
         path: *const u8,
         entry: *mut SdkEntry,
         error: *mut SdkError,
     ) -> c_int;
+    /// Creates the directory `path` (DOS `CreateDir`).
+    ///
+    /// `path` is a NUL-terminated byte string of at most 127 bytes (`ERROR_KIND_INPUT` otherwise). The lock
+    /// that `CreateDir` returns is released inside the call. DOS failures are `ERROR_KIND_NATIVE` with the
+    /// `IoErr` code. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `path` must be valid for reads up to its NUL, and `error` must be null or valid for a write of an
+    /// `SdkError`.
     pub fn sdk_make_dir(context: u64, path: *const u8, error: *mut SdkError) -> c_int;
+    /// Deletes the file or empty directory `path` (DOS `DeleteFile`).
+    ///
+    /// `path` is a NUL-terminated byte string of at most 127 bytes (`ERROR_KIND_INPUT` otherwise). DOS
+    /// failures, such as a protected file or a directory that is not empty, are `ERROR_KIND_NATIVE` with
+    /// the `IoErr` code. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `path` must be valid for reads up to its NUL, and `error` must be null or valid for a write of an
+    /// `SdkError`.
     pub fn sdk_delete(context: u64, path: *const u8, error: *mut SdkError) -> c_int;
+    /// Renames or moves `from` to `to` (DOS `Rename`).
+    ///
+    /// Both are NUL-terminated byte strings of at most 127 bytes (`ERROR_KIND_INPUT` otherwise). DOS
+    /// failures are `ERROR_KIND_NATIVE` with the `IoErr` code. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `from` and `to` must be valid for reads up to their NUL, and `error` must be null or valid for a
+    /// write of an `SdkError`.
     pub fn sdk_rename(context: u64, from: *const u8, to: *const u8, error: *mut SdkError) -> c_int;
+    /// Writes the full path of the current directory into `out` and returns its length.
+    ///
+    /// `out` must not be null and `capacity` must be 2 to 4096, otherwise `ERROR_KIND_INPUT`. The path is
+    /// produced by `NameFromLock`, written NUL terminated within `capacity`, and the result is its length
+    /// without the terminator. Returns -1 on failure: `ERROR_KIND_NATIVE` with the `IoErr` code (for
+    /// example when the buffer is too small) or with `ERROR_OBJECT_NOT_FOUND` when the task has no current
+    /// directory.
+    ///
+    /// # Safety
+    ///
+    /// `out` must be valid for writes of `capacity` bytes, and `error` must be null or valid for a write
+    /// of an `SdkError`.
     pub fn sdk_cwd_get(context: u64, out: *mut u8, capacity: usize, error: *mut SdkError) -> i64;
+    /// Makes the directory `path` the current directory of the owner task.
+    ///
+    /// `path` is a NUL-terminated byte string of at most 127 bytes (`ERROR_KIND_INPUT` otherwise). The path
+    /// must name a directory: a file fails with `ERROR_KIND_NATIVE` and `native` `ERROR_OBJECT_WRONG_TYPE`,
+    /// and other DOS failures carry the `IoErr` code. The bridge keeps the new lock and restores the
+    /// original current directory at `sdk_end`, so the launching shell keeps its own. Returns 0 on success
+    /// and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `path` must be valid for reads up to its NUL, and `error` must be null or valid for a write of an
+    /// `SdkError`.
     pub fn sdk_cwd_set(context: u64, path: *const u8, error: *mut SdkError) -> c_int;
+    /// Copies the value of the variable `name` into `out` and returns its length in bytes.
+    ///
+    /// `name` is NUL terminated. `out` must not be null and `capacity` must be 2 to 4096; `scope` is 0 for
+    /// local then global variables, 1 for local only and 2 for global only (`ENV:`); anything else is
+    /// `ERROR_KIND_INPUT`. The value is read as binary (`GVF_BINARY_VAR`) and the result is its length
+    /// without the terminator; a terminator is stored too. A value longer than `capacity` is refused
+    /// rather than cut: `ERROR_KIND_NATIVE` with `native` 303. A missing variable or other DOS failure is
+    /// `ERROR_KIND_NATIVE` with the `IoErr` code. Returns -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `name` must be valid for reads up to its NUL, `out` must be valid for writes of `capacity` bytes,
+    /// and `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_var_get(
         context: u64,
         name: *const u8,
@@ -1677,6 +2911,17 @@ unsafe extern "C" {
         scope: i32,
         error: *mut SdkError,
     ) -> i64;
+    /// Sets the variable `name` to the `length` bytes at `value`.
+    ///
+    /// `name` is NUL terminated; `value` is not and must contain no 0 byte; `length` is at most 4096 and
+    /// `value` may be null only for length 0, which stores an empty value; `scope` is as for
+    /// [`sdk_var_get`]. Violations are `ERROR_KIND_INPUT`. The value is stored as a binary variable. A
+    /// DOS failure is `ERROR_KIND_NATIVE` with the `IoErr` code. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `name` must be valid for reads up to its NUL, `value` must be valid for reads of `length` bytes
+    /// when `length` is nonzero, and `error` must be null or valid for a write of an `SdkError`.
     pub fn sdk_var_set(
         context: u64,
         name: *const u8,
@@ -1685,8 +2930,32 @@ unsafe extern "C" {
         scope: i32,
         error: *mut SdkError,
     ) -> c_int;
+    /// Deletes the variable `name` in the given scope (DOS `DeleteVar`).
+    ///
+    /// `name` is NUL terminated and `scope` is 0, 1 or 2 as for [`sdk_var_get`]; anything else is
+    /// `ERROR_KIND_INPUT`. A DOS failure, such as a missing variable, is `ERROR_KIND_NATIVE` with the
+    /// `IoErr` code. Returns 0 on success and -1 on failure.
+    ///
+    /// # Safety
+    ///
+    /// `name` must be valid for reads up to its NUL, and `error` must be null or valid for a write of an
+    /// `SdkError`.
     pub fn sdk_var_delete(context: u64, name: *const u8, scope: i32, error: *mut SdkError)
     -> c_int;
+    /// Calls `callback(user_data, input)` on the owner task and stores its result in `output`.
+    ///
+    /// The call is synchronous and the callback runs on the calling task. The Rust `call` function wraps
+    /// it. Returns 0 after the callback returned
+    /// and -1 on failure without calling it: the context check, a null `callback`, `user_data` or
+    /// `output`, or a callback that is already running (nested calls are refused), all with
+    /// `ERROR_KIND_OWNER` or `ERROR_KIND_STATE`.
+    ///
+    /// # Safety
+    ///
+    /// `callback` must be a valid function for the whole call and must return normally; unwinding out of it
+    /// is undefined behaviour. `user_data` must be valid for whatever the callback does with it, `output`
+    /// must be valid for a write of a `u64`, and `error` must be null or valid for a write of an
+    /// `SdkError`.
     pub fn sdk_callback(
         context: u64,
         callback: SdkCallback,
@@ -1696,8 +2965,54 @@ unsafe extern "C" {
         error: *mut SdkError,
     ) -> c_int;
 
+    // Layout and scalar oracles, computed by the C compiler from the SDK headers of the selected ABI. The
+    // qualification tests compare them with the Rust declarations. They need no context. For the
+    // `*_layout` functions the count is always returned and the values are written only when the output
+    // pointer is non-null and the capacity is at least the count, so a call with a null pointer or a zero
+    // capacity asks for the count.
+    /// Copies the core ABI layout oracle values into `values` and returns how many there are.
+    ///
+    /// The values are, in order, the size, alignment and field offsets of `Node`, `Library`, `Message`,
+    /// `List`, `MsgPort` and `FileInfoBlock`, the size and alignment of `IPTR`, `BPTR`, `LONG` and `ULONG`,
+    /// `spinlock_t`, and the bridge records `SdkError`, `SdkStats` and `SdkEntry`. ABI difference: the
+    /// `spinlock_t` values and the `Library` and `MsgPort` tail fields are present on ABI-v1 only, so the
+    /// count is 106 on ABI-v1 and 101 on ABI-v11 (`ABI_LAYOUT_VALUE_COUNT`). `layout_values` holds the
+    /// Rust side to compare with.
+    ///
+    /// # Safety
+    ///
+    /// `values` must be null or valid for writes of `capacity` `u64` values.
     pub fn sdk_layout(values: *mut u64, capacity: usize) -> usize;
+    /// Copies the timer layout oracle values into `values` and returns how many there are.
+    ///
+    /// The values are the size, alignment and `tr_time` offset of `timerequest`, the size and `ev_lo` offset
+    /// of `EClockVal`, the size of the `tr_time` field, the offset of its microseconds member and the size of
+    /// `IORequest`. `timerequest` carries a `struct timeval` on ABI-v1 and a `struct timeval32` on
+    /// ABI-v11; both are two 32-bit fields. `timer_layout_values` holds the Rust side to compare with.
+    ///
+    /// # Safety
+    ///
+    /// `values` must be null or valid for writes of `capacity` `u64` values.
     pub fn sdk_timer_layout(values: *mut u64, capacity: usize) -> usize;
+    /// Returns the device base pointer (`io_Device`) of an open device handle, or null.
+    ///
+    /// The pointer is for raw library-style calls such as the timer functions `ReadEClock`. It stays valid
+    /// while the handle is open. Null means the context check failed or the handle is unknown. No error
+    /// record is filled.
+    ///
+    /// # Safety
+    ///
+    /// Use the pointer only on the owner task, only for the API of the device that was opened and not
+    /// after [`sdk_device_close`].
     pub fn sdk_device_base(context: u64, device: u64) -> *mut c_void;
+    /// Combines five scalar arguments with exclusive-or and returns the result.
+    ///
+    /// The result is `((signed as u32 as u64) << 32) ^ unsigned ^ pointer ^ wide ^ size`. The qualification
+    /// test uses it to check that integers of each width and a pointer-sized value cross the Rust-to-C call
+    /// unchanged. It has no side effects and needs no context.
+    ///
+    /// # Safety
+    ///
+    /// No pointer is dereferenced; `pointer` is only a number.
     pub fn sdk_scalar(signed: i32, unsigned: u32, pointer: usize, wide: u64, size: usize) -> u64;
 }
