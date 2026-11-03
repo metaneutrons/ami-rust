@@ -13,41 +13,73 @@ use std::{
 /// A program and its exact argument vector, ready for an external supervisor.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CommandRecipe {
+    /// Path of the executable to run.
     pub program: PathBuf,
+    /// Arguments in the order they must be passed, excluding the program name.
+    /// Paths are kept as `OsString` so non-UTF-8 bytes survive unchanged.
     pub arguments: Vec<OsString>,
 }
 
 /// Paths selected and verified by the caller for the native build.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NativeRecipePaths {
+    /// Root of the staged native sources (`native/*.c` and
+    /// `tests/measurement/`). It is also mapped to `/ami-rust` in compiled
+    /// objects through `-ffile-prefix-map`.
     pub source_root: PathBuf,
+    /// Root of the LLVM component: `bin/clang`, `bin/llvm-objcopy`,
+    /// `bin/llvm-strip` and the `libclang_rt.builtins` archive live below it.
     pub toolchain_root: PathBuf,
+    /// Root of the C SDK for the selected ABI: `include/`, `lib/startup.o` and
+    /// the libraries linked by the collector live below it.
     pub sdk_root: PathBuf,
+    /// Path of the linker program that [`NativeBuildRecipe::collector_spec_for_cargo`]
+    /// runs.
     pub collector: PathBuf,
 }
 
 /// Inputs that affect the fixed native command recipes.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NativeBuildRecipe {
+    /// The verified input paths.
     pub paths: NativeRecipePaths,
+    /// The AROS ABI the commands are built for.
     pub abi: ArosAbi,
+    /// Whether the qualification-only testing hooks are included: the
+    /// `AMI_SDK_TESTING=1` define, the `bind.o` object and its compile step.
     pub testing: bool,
 }
 
+/// The AROS ABI a native build targets. It is chosen by the Cargo target
+/// (`x86_64-unknown-aros-abi1` or `x86_64-unknown-aros-abi11`) and serialized as
+/// `abi1` or `abi11`. It changes the SDK root, the startup symbol handling, the
+/// objects linked and the library list.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ArosAbi {
+    /// Target `x86_64-unknown-aros-abi1`. Adds `entry.o` to the build and link,
+    /// renames `__startup_entry` to `ami_sdk_startup_entry` in `startup.o`, and
+    /// uses its own library list.
     Abi1,
+    /// Target `x86_64-unknown-aros-abi11`. Defines `AMI_RUST_ABI11=1` for C
+    /// units, builds no `entry.o`, leaves the startup symbol unchanged, and uses
+    /// its own SDK root and a longer library list.
     Abi11,
 }
 
 /// C translation units in the frozen producer sequence.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CSourceUnit {
+    /// `native/entry.c`, compiled to `entry.o`.
     Entry,
+    /// `native/sdk.c`, compiled to `sdk.o`.
     Sdk,
+    /// `native/layout.c`, compiled to `layout.o`.
     Layout,
+    /// `native/eh-frame-start.c`, compiled to `eh-frame-start.o`.
     EhFrameStart,
+    /// `tests/measurement/ami_test_bind_diagnostics.c`, compiled to `bind.o`.
+    /// Only available when the recipe has `testing` set.
     BindDiagnostics,
 }
 

@@ -1,3 +1,5 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
 //! Ordinary Cargo build-script integration for the pinned AROS x86-64 target.
 //!
 //! Call [`prepare`] from an application's additive `build.rs`. Cargo continues
