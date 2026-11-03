@@ -15,3 +15,6 @@ alloc = []
 
 [dependencies]
 aros-sys = { version = "=0.2.0", path = "../aros-sys" }
+
+[lints]
+workspace = true

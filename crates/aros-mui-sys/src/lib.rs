@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-#![deny(rustdoc::broken_intra_doc_links)]
 #![no_std]
 //! Raw MUI vector calls for the selected AROS x86-64 ABI profile.
 

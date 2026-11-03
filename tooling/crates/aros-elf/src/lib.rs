@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-#![deny(rustdoc::broken_intra_doc_links)]
 //! Host-side AROS native ELF validation and section-name compaction.
 //!
 //! This library does not select SDKs, execute commands, authenticate toolchains,

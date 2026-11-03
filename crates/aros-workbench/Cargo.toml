@@ -13,3 +13,6 @@ aros = { version = "=0.2.0", path = "../aros", default-features = false }
 aros-icon = { version = "=0.2.0", path = "../aros-icon" }
 aros-intuition = { version = "=0.2.0", path = "../aros-intuition" }
 aros-sys = { version = "=0.2.0", path = "../aros-sys" }
+
+[lints]
+workspace = true

@@ -7,6 +7,14 @@ version = "0.2.0"
 edition = "2024"
 publish = false
 license = "MIT OR Apache-2.0"
+[workspace.lints.rust]
+missing_docs = "deny"
+unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(target_os, values("aros"))',
+    'cfg(target_abi, values("", "abi1", "abi11"))',
+] }
+[workspace.lints.rustdoc]
+broken_intra_doc_links = "deny"
 [profile.release]
 opt-level = 2
 panic = "abort"

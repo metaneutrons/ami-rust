@@ -12,8 +12,5 @@ readme = "README.md"
 [dependencies]
 aros-sys = { version = "=0.2.0", path = "../aros-sys" }
 
-[lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = [
-    'cfg(target_os, values("aros"))',
-    'cfg(target_abi, values("", "abi1", "abi11"))',
-] }
+[lints]
+workspace = true

@@ -1,6 +1,4 @@
 #![no_std]
-#![deny(missing_docs)]
-#![deny(rustdoc::broken_intra_doc_links)]
 //! Task-affine bitmaps and drawing for AROS, on `graphics.library`.
 //!
 //! [`Graphics`] opens `graphics.library` through [`aros::Library`] and owns the

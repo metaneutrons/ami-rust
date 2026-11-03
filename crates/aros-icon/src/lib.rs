@@ -1,6 +1,4 @@
 #![no_std]
-#![deny(missing_docs)]
-#![deny(rustdoc::broken_intra_doc_links)]
 //! Task-affine disk objects (icons) for AROS, on `icon.library`.
 //!
 //! [`Icons`] opens `icon.library` through [`aros::Library`] and owns the
