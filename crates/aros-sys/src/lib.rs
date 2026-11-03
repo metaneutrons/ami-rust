@@ -311,9 +311,11 @@ impl Default for SdkEntry {
 
 // These layouts follow AROS `exec/nodes.h`, `exec/lists.h`,
 // `exec/libraries.h`, `exec/ports.h`, `dos/dos.h`, and
-// `aros/types/spinlock_s.h`. The selected public `__AROSPLATFORM_SMP__`
-// definition embeds spinlock_t as padding because `__AROSEXEC_SMP__` is not
-// enabled; it does not describe an active Exec SMP lock.
+// `aros/types/spinlock_s.h`. On ABI-v1 the selected public
+// `__AROSPLATFORM_SMP__` definition embeds spinlock_t as padding because
+// `__AROSEXEC_SMP__` is not enabled; it does not describe an active Exec SMP
+// lock. ABI-v11 has no such padding: `struct Library` ends at `lib_OpenCnt`
+// and `struct MsgPort` ends in the private extension field `mp_Private`.
 
 #[repr(C)]
 pub struct Node {
@@ -334,7 +336,9 @@ pub struct List {
 }
 
 /// The public spinlock_t storage included by the selected SMP-layout define.
-/// It is padding in the selected non-Exec-SMP ABI profile.
+/// It is padding in the selected non-Exec-SMP ABI profile. It exists on ABI-v1
+/// only; ABI-v11 has no `spinlock_t`.
+#[cfg(not(target_abi = "abi11"))]
 #[repr(C)]
 pub struct SpinLockPadding {
     pub lock_word: u32,
@@ -354,6 +358,8 @@ pub struct Library {
     pub id_string: *mut u8,
     pub checksum: ULONG,
     pub open_count: u16,
+    /// The SMP spinlock storage after the public fields (ABI-v1 only).
+    #[cfg(not(target_abi = "abi11"))]
     pub spinlock_padding: SpinLockPadding,
 }
 
@@ -408,7 +414,12 @@ pub struct MsgPort {
     pub signal_bit: u8,
     pub signal_task: APTR,
     pub message_list: List,
+    /// The SMP spinlock storage after the public fields (ABI-v1).
+    #[cfg(not(target_abi = "abi11"))]
     pub spinlock_padding: SpinLockPadding,
+    /// The private extension field `mp_Private` (ABI-v11).
+    #[cfg(target_abi = "abi11")]
+    pub private: [IPTR; 2],
 }
 
 #[repr(C)]
@@ -810,121 +821,143 @@ pub const ERROR_KIND_ZERO_PROGRESS: i32 = 7;
 /// Layout oracle values in the exact order of the M0 C layout table:
 /// Node, Library, Message, List, MsgPort, FileInfoBlock, scalar ABI types,
 /// then the selected spinlock_t storage. No native call or allocation occurs.
+#[cfg(not(target_abi = "abi11"))]
 pub const ABI_LAYOUT_VALUE_COUNT: usize = 106;
+
+/// ABI-v11 has no `spinlock_t`: the Library and MsgPort tails and the four
+/// spinlock values are not part of its table.
+#[cfg(target_abi = "abi11")]
+pub const ABI_LAYOUT_VALUE_COUNT: usize = 101;
 
 const fn layout_value(value: usize) -> u64 {
     value as u64
 }
 
 pub const fn layout_values() -> [u64; ABI_LAYOUT_VALUE_COUNT] {
-    [
-        layout_value(size_of::<Node>()),
-        layout_value(align_of::<Node>()),
-        layout_value(offset_of!(Node, succ)),
-        layout_value(offset_of!(Node, pred)),
-        layout_value(offset_of!(Node, kind)),
-        layout_value(offset_of!(Node, priority)),
-        layout_value(offset_of!(Node, name)),
-        layout_value(size_of::<Library>()),
-        layout_value(align_of::<Library>()),
-        layout_value(offset_of!(Library, node)),
-        layout_value(offset_of!(Library, flags)),
-        layout_value(offset_of!(Library, _pad)),
-        layout_value(offset_of!(Library, negative_size)),
-        layout_value(offset_of!(Library, positive_size)),
-        layout_value(offset_of!(Library, version)),
-        layout_value(offset_of!(Library, revision)),
-        layout_value(offset_of!(Library, id_string)),
-        layout_value(offset_of!(Library, checksum)),
-        layout_value(offset_of!(Library, open_count)),
-        layout_value(offset_of!(Library, spinlock_padding)),
-        layout_value(size_of::<Message>()),
-        layout_value(align_of::<Message>()),
-        layout_value(offset_of!(Message, node)),
-        layout_value(offset_of!(Message, reply_port)),
-        layout_value(offset_of!(Message, length)),
-        layout_value(size_of::<List>()),
-        layout_value(align_of::<List>()),
-        layout_value(offset_of!(List, head)),
-        layout_value(offset_of!(List, tail)),
-        layout_value(offset_of!(List, tail_pred)),
-        layout_value(offset_of!(List, kind)),
-        layout_value(offset_of!(List, _pad)),
-        layout_value(size_of::<MsgPort>()),
-        layout_value(align_of::<MsgPort>()),
-        layout_value(offset_of!(MsgPort, node)),
-        layout_value(offset_of!(MsgPort, flags)),
-        layout_value(offset_of!(MsgPort, signal_bit)),
-        layout_value(offset_of!(MsgPort, signal_task)),
-        layout_value(offset_of!(MsgPort, message_list)),
-        layout_value(offset_of!(MsgPort, spinlock_padding)),
-        layout_value(size_of::<FileInfoBlock>()),
-        layout_value(align_of::<FileInfoBlock>()),
-        layout_value(offset_of!(FileInfoBlock, disk_key)),
-        layout_value(offset_of!(FileInfoBlock, directory_entry_type)),
-        layout_value(offset_of!(FileInfoBlock, file_name)),
-        layout_value(offset_of!(FileInfoBlock, protection)),
-        layout_value(offset_of!(FileInfoBlock, entry_type)),
-        layout_value(offset_of!(FileInfoBlock, size)),
-        layout_value(offset_of!(FileInfoBlock, num_blocks)),
-        layout_value(offset_of!(FileInfoBlock, date)),
-        layout_value(offset_of!(FileInfoBlock, comment)),
-        layout_value(offset_of!(FileInfoBlock, owner_uid)),
-        layout_value(offset_of!(FileInfoBlock, owner_gid)),
-        layout_value(offset_of!(FileInfoBlock, reserved)),
-        layout_value(size_of::<IPTR>()),
-        layout_value(align_of::<IPTR>()),
-        layout_value(size_of::<BPTR>()),
-        layout_value(align_of::<BPTR>()),
-        layout_value(size_of::<LONG>()),
-        layout_value(align_of::<LONG>()),
-        layout_value(size_of::<ULONG>()),
-        layout_value(align_of::<ULONG>()),
-        layout_value(size_of::<SpinLockPadding>()),
-        layout_value(align_of::<SpinLockPadding>()),
-        layout_value(offset_of!(SpinLockPadding, owner)),
-        layout_value(offset_of!(SpinLockPadding, isolation)),
-        layout_value(size_of::<SdkError>()),
-        layout_value(align_of::<SdkError>()),
-        layout_value(offset_of!(SdkError, kind)),
-        layout_value(offset_of!(SdkError, native)),
-        layout_value(size_of::<SdkStats>()),
-        layout_value(align_of::<SdkStats>()),
-        layout_value(offset_of!(SdkStats, blocks)),
-        layout_value(offset_of!(SdkStats, backing_charge)),
-        layout_value(offset_of!(SdkStats, peak_charge)),
-        layout_value(offset_of!(SdkStats, files)),
-        layout_value(offset_of!(SdkStats, libraries)),
-        layout_value(offset_of!(SdkStats, ports)),
-        layout_value(offset_of!(SdkStats, signals)),
-        layout_value(offset_of!(SdkStats, messages)),
-        layout_value(offset_of!(SdkStats, refusals)),
-        layout_value(offset_of!(SdkStats, devices)),
-        layout_value(offset_of!(SdkStats, requests)),
-        layout_value(offset_of!(SdkStats, directories)),
-        layout_value(offset_of!(SdkStats, rastports)),
-        layout_value(offset_of!(SdkStats, bitmaps)),
-        layout_value(offset_of!(SdkStats, windows)),
-        layout_value(offset_of!(SdkStats, pubscreens)),
-        layout_value(offset_of!(SdkStats, aslrequests)),
-        layout_value(offset_of!(SdkStats, locales)),
-        layout_value(offset_of!(SdkStats, catalogs)),
-        layout_value(offset_of!(SdkStats, icons)),
-        layout_value(offset_of!(SdkStats, wbports)),
-        layout_value(offset_of!(SdkStats, wbobjects)),
-        layout_value(size_of::<SdkEntry>()),
-        layout_value(align_of::<SdkEntry>()),
-        layout_value(offset_of!(SdkEntry, size)),
-        layout_value(offset_of!(SdkEntry, protection)),
-        layout_value(offset_of!(SdkEntry, name_length)),
-        layout_value(offset_of!(SdkEntry, entry_type)),
-        layout_value(offset_of!(SdkEntry, directory_type)),
-        layout_value(offset_of!(SdkEntry, days)),
-        layout_value(offset_of!(SdkEntry, minutes)),
-        layout_value(offset_of!(SdkEntry, ticks)),
-        layout_value(offset_of!(SdkEntry, size_exact)),
-        layout_value(offset_of!(SdkEntry, name)),
-    ]
+    let mut values = [0u64; ABI_LAYOUT_VALUE_COUNT];
+    let mut next = 0;
+    macro_rules! value {
+        ($value:expr) => {
+            values[next] = layout_value($value);
+            next += 1;
+        };
+    }
+    value!(size_of::<Node>());
+    value!(align_of::<Node>());
+    value!(offset_of!(Node, succ));
+    value!(offset_of!(Node, pred));
+    value!(offset_of!(Node, kind));
+    value!(offset_of!(Node, priority));
+    value!(offset_of!(Node, name));
+    value!(size_of::<Library>());
+    value!(align_of::<Library>());
+    value!(offset_of!(Library, node));
+    value!(offset_of!(Library, flags));
+    value!(offset_of!(Library, _pad));
+    value!(offset_of!(Library, negative_size));
+    value!(offset_of!(Library, positive_size));
+    value!(offset_of!(Library, version));
+    value!(offset_of!(Library, revision));
+    value!(offset_of!(Library, id_string));
+    value!(offset_of!(Library, checksum));
+    value!(offset_of!(Library, open_count));
+    #[cfg(not(target_abi = "abi11"))]
+    value!(offset_of!(Library, spinlock_padding));
+    value!(size_of::<Message>());
+    value!(align_of::<Message>());
+    value!(offset_of!(Message, node));
+    value!(offset_of!(Message, reply_port));
+    value!(offset_of!(Message, length));
+    value!(size_of::<List>());
+    value!(align_of::<List>());
+    value!(offset_of!(List, head));
+    value!(offset_of!(List, tail));
+    value!(offset_of!(List, tail_pred));
+    value!(offset_of!(List, kind));
+    value!(offset_of!(List, _pad));
+    value!(size_of::<MsgPort>());
+    value!(align_of::<MsgPort>());
+    value!(offset_of!(MsgPort, node));
+    value!(offset_of!(MsgPort, flags));
+    value!(offset_of!(MsgPort, signal_bit));
+    value!(offset_of!(MsgPort, signal_task));
+    value!(offset_of!(MsgPort, message_list));
+    #[cfg(not(target_abi = "abi11"))]
+    value!(offset_of!(MsgPort, spinlock_padding));
+    #[cfg(target_abi = "abi11")]
+    value!(offset_of!(MsgPort, private));
+    value!(size_of::<FileInfoBlock>());
+    value!(align_of::<FileInfoBlock>());
+    value!(offset_of!(FileInfoBlock, disk_key));
+    value!(offset_of!(FileInfoBlock, directory_entry_type));
+    value!(offset_of!(FileInfoBlock, file_name));
+    value!(offset_of!(FileInfoBlock, protection));
+    value!(offset_of!(FileInfoBlock, entry_type));
+    value!(offset_of!(FileInfoBlock, size));
+    value!(offset_of!(FileInfoBlock, num_blocks));
+    value!(offset_of!(FileInfoBlock, date));
+    value!(offset_of!(FileInfoBlock, comment));
+    value!(offset_of!(FileInfoBlock, owner_uid));
+    value!(offset_of!(FileInfoBlock, owner_gid));
+    value!(offset_of!(FileInfoBlock, reserved));
+    value!(size_of::<IPTR>());
+    value!(align_of::<IPTR>());
+    value!(size_of::<BPTR>());
+    value!(align_of::<BPTR>());
+    value!(size_of::<LONG>());
+    value!(align_of::<LONG>());
+    value!(size_of::<ULONG>());
+    value!(align_of::<ULONG>());
+    #[cfg(not(target_abi = "abi11"))]
+    value!(size_of::<SpinLockPadding>());
+    #[cfg(not(target_abi = "abi11"))]
+    value!(align_of::<SpinLockPadding>());
+    #[cfg(not(target_abi = "abi11"))]
+    value!(offset_of!(SpinLockPadding, owner));
+    #[cfg(not(target_abi = "abi11"))]
+    value!(offset_of!(SpinLockPadding, isolation));
+    value!(size_of::<SdkError>());
+    value!(align_of::<SdkError>());
+    value!(offset_of!(SdkError, kind));
+    value!(offset_of!(SdkError, native));
+    value!(size_of::<SdkStats>());
+    value!(align_of::<SdkStats>());
+    value!(offset_of!(SdkStats, blocks));
+    value!(offset_of!(SdkStats, backing_charge));
+    value!(offset_of!(SdkStats, peak_charge));
+    value!(offset_of!(SdkStats, files));
+    value!(offset_of!(SdkStats, libraries));
+    value!(offset_of!(SdkStats, ports));
+    value!(offset_of!(SdkStats, signals));
+    value!(offset_of!(SdkStats, messages));
+    value!(offset_of!(SdkStats, refusals));
+    value!(offset_of!(SdkStats, devices));
+    value!(offset_of!(SdkStats, requests));
+    value!(offset_of!(SdkStats, directories));
+    value!(offset_of!(SdkStats, rastports));
+    value!(offset_of!(SdkStats, bitmaps));
+    value!(offset_of!(SdkStats, windows));
+    value!(offset_of!(SdkStats, pubscreens));
+    value!(offset_of!(SdkStats, aslrequests));
+    value!(offset_of!(SdkStats, locales));
+    value!(offset_of!(SdkStats, catalogs));
+    value!(offset_of!(SdkStats, icons));
+    value!(offset_of!(SdkStats, wbports));
+    value!(offset_of!(SdkStats, wbobjects));
+    value!(size_of::<SdkEntry>());
+    value!(align_of::<SdkEntry>());
+    value!(offset_of!(SdkEntry, size));
+    value!(offset_of!(SdkEntry, protection));
+    value!(offset_of!(SdkEntry, name_length));
+    value!(offset_of!(SdkEntry, entry_type));
+    value!(offset_of!(SdkEntry, directory_type));
+    value!(offset_of!(SdkEntry, days));
+    value!(offset_of!(SdkEntry, minutes));
+    value!(offset_of!(SdkEntry, ticks));
+    value!(offset_of!(SdkEntry, size_exact));
+    value!(offset_of!(SdkEntry, name));
+    assert!(next == ABI_LAYOUT_VALUE_COUNT);
+    values
 }
 
 pub type SdkCallback = unsafe extern "C" fn(*mut c_void, u64) -> u64;
