@@ -461,9 +461,13 @@ jobs:
         with:
           node-version: 26
 
-      - name: Test the registry tool
+      - name: Test the maintainer tools
         shell: bash
-        run: node --test tools/registry/
+        run: node --test tools/
+
+      - name: Check that every published crate denies missing_docs
+        shell: bash
+        run: node tools/check-docs-policy.mjs
 
       - name: Package the crates offline with the pinned Rust
         env:

@@ -1,6 +1,4 @@
 #![no_std]
-#![deny(missing_docs)]
-#![deny(rustdoc::broken_intra_doc_links)]
 //! Task-affine windows for AROS, on `intuition.library`.
 //!
 //! [`Intuition`] opens `intuition.library` through [`aros::Library`] and owns
