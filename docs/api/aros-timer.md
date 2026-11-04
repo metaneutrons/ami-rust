@@ -67,6 +67,6 @@ Measured in the qualification fixture (QEMU 11.1, `qemu64-v1`, single-threaded T
 
 Both ABIs report an E-clock of 1,193,180 Hz. `MicroHz` sleeps finished within about 2 ms of the request; `VBlank` sleeps are rounded to the 20 ms video tick and can finish up to about 20 ms late. An alarm aborted while pending was returned in about 0.14 ms. Prefer `MicroHz` unless the coarse unit's lower cost matters.
 
-## Layouts
+## Native layouts
 
 The `timerequest` structure differs between the two ABIs: it carries a `struct timeval` on ABI-v1 and a `struct timeval32` on ABI-v11. It never leaves the native bridge, and the qualification fixture compares its size and offsets, and those of `EClockVal` and the time value, with the Rust declarations on each ABI (`aros_sys::timer_layout_values`).

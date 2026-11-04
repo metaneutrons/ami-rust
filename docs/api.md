@@ -3,9 +3,9 @@ title: Programming model
 description: The ownership, lifetime and failure rules shared by the safe crates.
 ---
 
-The safe crates (`aros`, `aros-mui`, `aros-timer`, `aros-graphics`, `aros-intuition`, `aros-asl`, `aros-locale`, `aros-icon` and `aros-workbench`) are `no_std` libraries built around one idea: **an AROS resource belongs to the task that created it, and Rust's types make that visible.** This page explains the rules that apply to every handle. The per-crate guides, listed in the [consumer guide](/consumer-guide/#select-a-crate), cover each type, and the [API reference](/reference/) lists every item.
+The safe crates (`aros`, `aros-mui`, `aros-timer`, `aros-graphics`, `aros-intuition`, `aros-asl`, `aros-locale`, `aros-icon` and `aros-workbench`) are `no_std` libraries built around one idea: **an AROS resource belongs to the task that created it, and Rust's types make that visible.** This page explains the rules that apply to every handle. The per-crate guides, listed in the [crates guide](/consumer-guide/#select-a-crate), cover each type, and the [API reference](/reference/) lists every item.
 
-## The `Context` is a witness
+## The `Context` proves you are on the owner task
 
 The native runtime starts your program, claims one owner task and calls your entry function with a `&Context`. The `Context` carries no resource. It proves that you are on the application task, inside the live entry frame. Every safe handle is created from it and borrows it:
 
