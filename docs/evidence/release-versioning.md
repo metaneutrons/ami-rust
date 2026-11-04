@@ -33,6 +33,9 @@ The release sequence is:
 6. verify the public bytes and promote the unchanged release;
 7. package the 13 crates offline from the release commit and append them to the
    registry, never changing a published version, and read every byte back.
+8. mark the merged release proposal `autorelease: tagged` (a non-fatal step of the
+   release job), because release-please opens no new proposal while a merged one
+   is still `autorelease: pending`.
 
 APT, Homebrew, AUR, and crates.io are not 0.2.0 publication channels. Packaging
 corrections after publication require a new semantic version; old release bytes

@@ -114,6 +114,10 @@ jobs:
         shell: bash
         run: node tools/check-docs-policy.mjs
 
+      - name: Test the release relabel script
+        shell: bash
+        run: bash tools/test-relabel-release-pr.sh
+
       - name: Package the registry crates and build their index (no upload)
         if: matrix.os == 'ubuntu-24.04'
         env:
