@@ -4,12 +4,13 @@ title: SDK compatibility boundary
 
 # SDK compatibility boundary
 
-Current 0.1.0 scope: PC x86-64 AROS ABI-v1 and ABI-v11 native ELF under the
+Current 0.2.0 scope: PC x86-64 AROS ABI-v1 and ABI-v11 native ELF under the
 qualified QEMU boot profiles. The corresponding public Cargo targets are
 `x86_64-unknown-aros-abi1` and `x86_64-unknown-aros-abi11`. No other ABI/CPU
 combination or physical machine is included in this scope. The M1 record
-qualifies the shared runtime subset; the 0.1.0 release decision is recorded in
-[the M7 qualification](https://ami-rust.metaneutrons.cc/m7-qualification/). The complete target JSON and host
+qualifies the shared runtime subset; the release decisions are recorded in
+[the M7 qualification](https://ami-rust.metaneutrons.cc/m7-qualification/) (0.1.0) and
+[the M10 qualification](m10-qualification.md) (0.2.0). The complete target JSON and host
 component file/symlink inventories are in the authenticated SDK contract.
 Selection fails on any changed or missing input.
 
@@ -24,7 +25,7 @@ Selection fails on any changed or missing input.
 | Native collector | Pinned host-native collector included in each SDK; exact bytes/profile in the authenticated host inventory |
 | AROS C SDK | ABI1: source-derived portable Developer tree pinned by `release/portable-csdk/spec.json`; ABI11: complete `SDK-202609-any-x86_64.zip`, SHA-256 `8a4e5f09f027844501c1421bd3948c4e55ceb005a16b0bd3575276f40c8977e6` |
 | Boot inputs | ABI1 SHA-256 `9c89b54802ea51c0cd9d07f48d2e069c2644a21ee59e87a0b09ba3837b1247b1`; ABI11 SHA-256 `2228f09c73f8c7650372543e9a97f93020a1fab7ebbf4865b194c5aa9cc8ccd7` |
-| M7 runtime baselines | ABI1 SHA-256 `d981ef90144d0489c7520674def22f564cc4a79637d2ce7f42be1319d6a228a4`; ABI11 SHA-256 `99c332be5a358799122c87d3e624d2d6e9576a721d28514a01c8b3f289d3dda4` |
+| M7 runtime baselines (0.1.0) | ABI1 SHA-256 `d981ef90144d0489c7520674def22f564cc4a79637d2ce7f42be1319d6a228a4`; ABI11 SHA-256 `99c332be5a358799122c87d3e624d2d6e9576a721d28514a01c8b3f289d3dda4` |
 | QEMU | 11.1.3, binary SHA-256 `0dba441e49c3cda068f3b33916ad9d2146d173d9bb65a6a62ce2e61d3211baaf`; pc-i440fx-11.1, qemu64-v1, TCG single, one CPU, 512 MiB RAM, no network, immutable ISO, full 512 MiB FAT test medium |
 
 The qualification profile uses a 128 KiB startup stack and requires measured
@@ -40,15 +41,17 @@ binutils and libc development files (`build-essential`) on Ubuntu.
 
 Direct archives and Rustup components use a per-host signed file inventory.
 The [source checkout guide](https://ami-rust.metaneutrons.cc/quickstart-toolchain/) describes the public
-boundary before the first release. The exact candidate identities and results
-are recorded in [the M7 qualification](https://ami-rust.metaneutrons.cc/m7-qualification/). The boot/ABI
+boundary of each release. The exact candidate identities and results
+are recorded in [the M7 qualification](https://ami-rust.metaneutrons.cc/m7-qualification/) (0.1.0)
+and [the M10 qualification](m10-qualification.md) (0.2.0). The boot/ABI
 baselines above remain
 unchanged; physical hardware, AROS-hosted Rust/Cargo/rustup and other CPU/ABI
 targets require separate qualification.
 
 Core and alloc, the bounded task-affine facade, synchronous callbacks, file I/O,
-libraries, signals, local ports/messages and fixed-buffer diagnostics are within
-the measured subset. std, threads, networking, native rustc on AROS, arbitrary
+libraries, signals, ports/messages, devices, directories, time, graphics, windows,
+requesters, locales, icons, Workbench application windows and fixed-buffer
+diagnostics are within the measured subset. std, threads, networking, native rustc on AROS, arbitrary
 crates, other Amiga operating systems and hardware support remain excluded.
 
 Rust and C dependency licenses are component-specific. First-party dual licensing

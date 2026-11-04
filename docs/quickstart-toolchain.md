@@ -3,7 +3,7 @@ title: Install and build
 description: Install the ami-rust toolchain with rustup, configure Cargo and build a native AROS executable.
 ---
 
-ami-rust 0.1.0 is distributed as authenticated GitHub Release archives and as an immutable rustup catalog. Both routes install the same qualified SDK, and neither replaces your default toolchain. Once it is installed you build with ordinary Cargo and cross-compile for AROS from macOS or Linux.
+ami-rust 0.2.0 is distributed as authenticated GitHub Release archives and as an immutable rustup catalog. Both routes install the same qualified SDK, and neither replaces your default toolchain. Once it is installed you build with ordinary Cargo and cross-compile for AROS from macOS or Linux.
 
 ## Prerequisites
 
@@ -21,21 +21,21 @@ The direct-archive route additionally needs `curl`, `cosign`, `jq`, `shasum` and
 The rustup catalog is rooted at an immutable, reviewed Git commit; its component URLs select the signed GitHub Release assets.
 
 ```sh
-version=0.1.0
-catalog_commit=bb5cc2e428b89685eeec2ae249701cc23fd135d7
+version=0.2.0
+catalog_commit=88b1c3adaac0e2eab90741d3285cce4e32bfdd64
 export RUSTUP_DIST_SERVER="https://raw.githubusercontent.com/metaneutrons/ami-rust/$catalog_commit/distribution/rustup/$version"
 rustup toolchain install "$version" --profile minimal --no-self-update
 toolchain="$version"
 ```
 
-`RUSTUP_DIST_SERVER` only matters for the install. Afterwards rustup selects the toolchain by name, `+0.1.0`, on every supported host.
+`RUSTUP_DIST_SERVER` only matters for the install. Afterwards rustup selects the toolchain by name, `+0.2.0`, on every supported host.
 
 ## Install the direct archive
 
 Use this route when you want to verify the signatures yourself, or when rustup's catalog is not an option.
 
 ```sh
-version=0.1.0
+version=0.2.0
 case "$(uname -s):$(uname -m)" in
   Darwin:arm64|Darwin:aarch64) host=aarch64-apple-darwin; platform=macos-aarch64 ;;
   Linux:x86_64) host=x86_64-unknown-linux-gnu; platform=linux-x86_64 ;;
@@ -80,7 +80,7 @@ cargo +"$toolchain" --version
 rustc +"$toolchain" -vV     # release 1.100.0-nightly, LLVM 23.1.1
 ```
 
-Keep using the same shell: each installation route sets `toolchain` to its registered name. In a new shell, set `toolchain=0.1.0` for the rustup route, or use the `ami-rust-0.1.0-<host>` name shown by `rustup toolchain list` for the archive route.
+Keep using the same shell: each installation route sets `toolchain` to its registered name. In a new shell, set `toolchain=0.2.0` for the rustup route, or use the `ami-rust-0.2.0-<host>` name shown by `rustup toolchain list` for the archive route.
 
 The compiler is a nightly-based build because the AROS targets are custom target specifications, which stable Rust does not accept. That is also why the Cargo configuration below passes `-Zunstable-options`.
 

@@ -1,25 +1,27 @@
 ---
 title: Compatibility
-description: What ami-rust 0.1 supports and what is outside its boundary.
+description: What ami-rust 0.2 supports and what is outside its boundary.
 ---
 
-This page is the boundary of what ami-rust 0.1 supports. Anything not listed as supported is outside the release, even if it happens to work.
+This page is the boundary of what ami-rust 0.2 supports. Anything not listed as supported is outside the release, even if it happens to work.
 
 ## Supported
 
-| Area | Supported in 0.1 |
+| Area | Supported in 0.2 |
 | --- | --- |
 | Target system | PC x86-64 AROS, in two ABI profiles: `x86_64-unknown-aros-abi1` (ABI-v1) and `x86_64-unknown-aros-abi11` (ABI-v11). See [targets and ABIs](/targets-and-abis/). |
 | Development hosts | macOS 26 on Apple Silicon, Ubuntu 24.04 on x86-64, Ubuntu 24.04 on ARM64. |
 | Language surface | `no_std` and `alloc`. Allocation is available through `aros` when `entry!` installs `ExecAllocator`. |
 | Toolchain use | Upstream `rustup` and ordinary Cargo. The SDK contains the matching compiler, Cargo, target libraries, a relocatable C SDK and the AROS link tools. |
-| Execution evidence | Native runs of the qualified examples on both ABI profiles in the recorded [QEMU profile](/run-on-aros/#running-in-an-emulator). |
+| Application APIs | Nine safe crates, `aros`, `aros-mui`, `aros-timer`, `aros-graphics`, `aros-intuition`, `aros-asl`, `aros-locale`, `aros-icon` and `aros-workbench`, with the same items on both ABI profiles. See [crates and consumer guide](/consumer-guide/) and [ABI differences](/reference/abi-differences/). |
+| Large files | 64-bit file sizes and positions on ABI-v1 through `dos64.library`. On ABI-v11 a size, position or offset beyond the 32-bit calls is the `Limit` error; see [large files](/api/aros/#large-files). |
+| Execution evidence | Native runs of the qualified fixture modes and examples on both ABI profiles in the recorded [QEMU profile](/run-on-aros/#running-in-an-emulator). |
 
 Native host build scripts and procedural macros need the normal native prerequisites for your host: Xcode Command Line Tools on macOS, or a C compiler, binutils and libc development packages on Ubuntu.
 
-## Outside the 0.1 boundary
+## Outside the 0.2 boundary
 
-0.1 does not promise any of the following:
+0.2 does not promise any of the following:
 
 - full `std`;
 - threads and networking;
@@ -36,4 +38,4 @@ The safe APIs keep native registries that grow on demand (release 0.1.0 used fix
 
 ## Versioning of the guarantee
 
-The boundary above describes the tagged release. The public item signatures of `aros` and `aros-mui` are unchanged on `main` since that tag, and this documentation is built from `main`; see [releases and versions](/releases/).
+The boundary above describes release 0.2.0, and this documentation is built from its tag; see [releases and versions](/releases/).

@@ -40,14 +40,14 @@ The crates are not on crates.io yet; that publication is planned once their name
 
 ```toml
 [dependencies]
-aros = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0", features = ["alloc"] }
-aros-mui = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
+aros = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.2.0", features = ["alloc"] }
+aros-mui = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.2.0" }
 
 [build-dependencies]
-aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
+aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.2.0" }
 ```
 
-Alternatively, `crates.metaneutrons.cc` is a read-only Cargo registry that holds the `aros-*` library crates and the build tooling (`aros-native-build`, `aros-elf`) of each release from the release that follows its introduction. Add it once to `.cargo/config.toml` and depend on the crates by version:
+Alternatively, `crates.metaneutrons.cc` is a read-only Cargo registry that holds the `aros-*` library crates and the build tooling (`aros-native-build`, `aros-elf`) of each release, starting with 0.2.0. Add it once to `.cargo/config.toml` and depend on the crates by version:
 
 ```toml
 # .cargo/config.toml
@@ -79,10 +79,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-aros = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0", features = ["alloc"] }
+aros = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.2.0", features = ["alloc"] }
 
 [build-dependencies]
-aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
+aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.2.0" }
 ```
 
 `build.rs` compiles the native bridge that the SDK needs, inside Cargo's own output directory:
@@ -115,7 +115,7 @@ aros::entry!(application);
 
 `entry!` defines the native entry symbol and a panic handler, so use it exactly once in the final application crate. Use `entry!(application, alloc)` when your program needs the global allocator.
 
-Add the [Cargo configuration](/quickstart-toolchain/#configure-cargo), build with `cargo +0.1.0 build --target x86_64-unknown-aros-abi11 --release`, and [run it on AROS](/run-on-aros/).
+Add the [Cargo configuration](/quickstart-toolchain/#configure-cargo), build with `cargo +0.2.0 build --target x86_64-unknown-aros-abi11 --release`, and [run it on AROS](/run-on-aros/).
 
 ## A graphical program
 
@@ -186,4 +186,4 @@ The Cargo configuration, the toolchain and the `--locked --offline` workflow are
 
 ## Scope and compatibility
 
-0.1.0 supports `no_std` plus `alloc`, not full `std`. Its native evidence covers the qualified QEMU profiles for ABI-v1 and ABI-v11. It does not establish support for a different CPU, physical hardware, arbitrary crates, threads, networking or an AROS-hosted Rust compiler. See the [compatibility boundary](/compatibility/) and the [API reference](/reference/) for the exact limits.
+0.2.0 supports `no_std` plus `alloc`, not full `std`. Its native evidence covers the qualified QEMU profiles for ABI-v1 and ABI-v11. It does not establish support for a different CPU, physical hardware, arbitrary crates, threads, networking or an AROS-hosted Rust compiler. See the [compatibility boundary](/compatibility/) and the [API reference](/reference/) for the exact limits.

@@ -13,13 +13,13 @@ import screenshot from '../assets/mui-hello-abi11.webp';
 
 ## Build it
 
-The example is in the repository's `main` branch. It is not part of the `v0.1.0` source tag; see [releases and versions](/releases/). Clone the repository, [install the toolchain](/quickstart-toolchain/), then build from the repository root:
+The example is in the repository, in both `main` and the `v0.2.0` tag. Clone the repository, [install the toolchain](/quickstart-toolchain/), then build from the repository root:
 
 ```sh
 git clone https://github.com/metaneutrons/ami-rust.git
 cd ami-rust
 
-toolchain=0.1.0
+toolchain=0.2.0
 cargo +"$toolchain" fetch --locked --manifest-path examples/mui-hello/Cargo.toml
 cargo +"$toolchain" build --manifest-path examples/mui-hello/Cargo.toml \
   --target x86_64-unknown-aros-abi11 --release --locked --offline
