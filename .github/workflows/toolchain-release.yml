@@ -41,6 +41,7 @@ jobs:
     environment: release
     permissions:
       contents: write
+      pull-requests: write
       actions: read
       id-token: write
       attestations: write
@@ -400,6 +401,20 @@ jobs:
           set -euo pipefail
           "$RUNNER_TEMP/rp3-tools/gh" release edit "v$VERSION" --repo "$GITHUB_REPOSITORY" \
             --prerelease=false --latest
+
+      # release-please refuses to open the next proposal while the merged one is
+      # still labelled pending. The release is already public here, so a failure
+      # to relabel must not fail the run (the documentation deploy follows it);
+      # it shows as a warning and the script can be run by hand.
+      - name: Mark the merged release proposal as tagged
+        if: inputs.mode == 'publish' || inputs.mode == 'recover'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH: ${{ runner.temp }}/rp3-tools/gh
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: bash tools/relabel-release-pr.sh "$VERSION"
 
       - name: Retain the signed exact candidate without creating a release
         if: inputs.mode == 'prepare-signed'
