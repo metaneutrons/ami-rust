@@ -24,9 +24,9 @@ The documentation is versioned. Use the version selector in the page header, or 
 
 Switching version keeps you on the same page when that page exists in the other version. A banner appears on every page that is not for the latest release.
 
-The documentation of a release is built from that release's tag. The tag is immutable and contains the guides, examples and API reference that the release shipped, so a published version's documentation does not change afterwards. A correction goes into the next release, and shows up in the development docs straight away. The footer of every page shows the commit it was built from.
+The documentation of a release is built from that release's tag. The tag is immutable and contains the guides, examples and API reference that the release shipped. If the documentation of a published release turns out to be wrong, it is corrected on a branch, `release/<major>.<minor>`, that contains the tag and changes nothing but documentation files (`docs/`, `website/`, `README.md` and `CONTRIBUTING.md`), and the site is built from that branch. The site tooling refuses a branch that does not contain the tag or that changes any other file, so a corrected page still describes exactly what the release shipped, and the release's bytes and tag never change. The footer of every page shows the commit it was built from.
 
-The 0.1.0 documentation is the one exception. The documentation site was added after the 0.1.0 release, so the `v0.1.0` tag has no site sources. The 0.1 documentation is built from the `release/0.1` branch instead, and corrections to it are made there. Every release from 0.2.0 on is built from its tag. To read the source exactly as released, check out the tag:
+The 0.1.0 documentation is built from the `release/0.1` branch for a different reason: the documentation site was added after the 0.1.0 release, so the `v0.1.0` tag has no site sources, and corrections to it are made on that branch. The 0.2.0 documentation is built from `release/0.2`, which corrects page titles and statements that were left over from 0.1 in the release; its code is exactly that of the tag. To read the source exactly as released, check out the tag:
 
 ```sh
 git clone https://github.com/metaneutrons/ami-rust.git
