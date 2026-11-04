@@ -1,5 +1,5 @@
 ---
-title: Crates and consumer guide
+title: Choosing and using the crates
 description: Which ami-rust crates to depend on, how to add them to a project, and complete minimal programs.
 ---
 

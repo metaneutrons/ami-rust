@@ -47,7 +47,7 @@ fn accept_drops(context: &Context) -> Result<(), aros_workbench::Error> {
 
 A registration borrows the port and, for a window or an icon, the window or disk object, so none of them can be closed while Workbench still knows it. Dropping a registration removes it. The bridge owns the port and the texts Workbench keeps pointers to, and records every registration with the library base, so ones that the program forgets are removed when it finishes: first the registrations, then the port with any messages still queued returned, and only then the windows and disk objects. Removing a registration first replies to the messages already queued on the port, because the removal needs the Workbench lock that a waiting sender holds.
 
-## Sending a drop to one's own window
+## Sending a drop to your own window
 
 `SendAppWindowMessage`, in `aros_sys::workbench` on both ABIs (eight arguments, so on ABI-v11 it goes through the stack-argument adapter, as does `AddAppIconA` with seven), delivers an application window message to a window's registered `AppWindow`. It is **synchronous**: it returns only after the receiver has replied to the message, and it holds the Workbench lock while it waits. Called from the task that reads the `AppPort` it waits for itself and never returns, so this crate has no safe wrapper for it; a second task has to make the call. The qualification test does that from a second native process and reads the message in the first.
 
@@ -55,10 +55,10 @@ A registration borrows the port and, for a window or an icon, the window or disk
 
 An icon or menu item text is at most 127 bytes, with no NUL byte. The crate wraps application windows, icons and menu items; the other application and Workbench calls (`WorkbenchControlA`, `OpenWorkbenchObjectA`, drop zones and so on) are not wrapped.
 
-## Native evidence
+## Tested on AROS
 
 On the pinned ABI-v1 and ABI-v11 images, with identical results: without an application window the send is refused at once; with one registered, a two-file drop sent from a second process arrives as one typed message with the id and user data given at registration, the pointer position (30, 40), the time stamp, a total of two paths and the two paths (`RAM Disk:m9dir/a.txt` and `RAM Disk:m9dir/b.txt`), and the sender then returns; a three-file drop arrives the same way; a wait on the port and a timer returns only the timer's signal when nothing is sent; an application icon and a menu item register and are removed while the window still gets its messages; a message queued when the application window is removed is replied to, which lets the blocked sender finish; and the ledgers return to zero. A forgotten window, port, icon, menu item and disk object were removed at the end of the run and the Exec free memory was the same from the first run on. Icon and menu messages were not triggered: that needs the user. These are observations of that profile, not guarantees on another system.
 
-## The pinned SDK headers
+## Differences in the SDK headers
 
 The pinned ABI-v11 C SDK has no `workbench/workbench.h`. The bridge therefore declares the `AppMessage` and `WBArg` fields it reads; on ABI-v1 the declarations are checked against the SDK header at build time, and on ABI-v11 they follow the ABI-v11 SDK's header, whose structures are identical to the ABI-v1 header. The message type values are compared with the bridge's on each ABI (`aros_sys::wb_layout_values`).

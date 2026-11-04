@@ -113,11 +113,11 @@ cargo +"$toolchain" build --target x86_64-unknown-aros-abi1  --release --locked 
 
 For a new project, `generate-lockfile` resolves dependencies and writes `Cargo.lock`; commit it. If the project already has a lockfile, skip that command to preserve its pinned dependencies. After a successful `cargo fetch` the build runs offline. The executable is `target/<target>/release/<package-name>`.
 
-To get started, copy the minimal program from the [consumer guide](/consumer-guide/#a-minimal-program) or the [MUI hello example](/mui-hello/). Then see [Run on AROS](/run-on-aros/) for getting the result onto a system and starting it.
+To get started, copy the minimal program from the [crates guide](/consumer-guide/#a-minimal-program) or the [MUI hello example](/mui-hello/). Then see [Run on AROS](/run-on-aros/) for getting the result onto a system and starting it.
 
 If a build fails with a message about `RUSTC_WRAPPER`, `RUST_TARGET_PATH` or `-Zunstable-options`, see [Troubleshooting](/troubleshooting/).
 
-## Boundaries
+## Scope
 
 - The compiler runs on the macOS or Linux development host; the executable runs on AROS x86-64.
 - The libraries provide `no_std` and `alloc`, not full `std`.

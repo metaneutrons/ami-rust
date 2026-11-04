@@ -57,10 +57,10 @@ A `Locale` and a `Catalog` borrow their `Locales`, which stays open while either
 
 A catalog name, a template or a locale name is at most 127 bytes and a language name at most 63, with no NUL byte; a day number above 6, a month number above 11 or a preferred-language index above 9 is `Error::Invalid`. Numbers, money, `ParseDate`, string comparison and character classes are not wrapped.
 
-## Native evidence
+## Tested on AROS
 
 On the pinned ABI-v1 and ABI-v11 images the default locale is the built-in English one (language driver `english.language`, preferred language `english`, GMT offset 0), and both ABIs gave the same results. All seven day names and twelve month names, full and abbreviated, came back as expected. Four fixed instants were formatted with two templates and compared with strings computed on the host, not by the library: 1 January 1978 00:00:00 (a Sunday), 29 February 2000 12:34:56 (a leap day), 1 November 2026 23:59:50 and 19 January 2038 03:14:07, covering the weekday, day-of-year and time codes. A forced `deutsch` catalog from the fixture file translated four messages and left a fifth, absent one at its default; the same catalog opened twice was shared and closed once per open; a missing language, the built-in language and the user's own language gave defaults; and the version test above held. The ledgers return to zero. These are observations of that profile, not guarantees on another system.
 
-## The pinned SDK headers
+## Differences in the SDK headers
 
 The pinned ABI-v11 C SDK has no `libraries/locale.h`. The bridge therefore declares the head of `struct Locale` that it reads (the names, the preferred languages and the GMT offset); on ABI-v1 the declaration is checked against the SDK header at build time, and on ABI-v11 it follows the ABI-v11 SDK's `libraries/locale.h`, whose `struct Locale` is identical to the ABI-v1 header. The catalog tags and string numbers the Rust code uses are compared with the bridge's values on each ABI (`aros_sys::locale_layout_values`).

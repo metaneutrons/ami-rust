@@ -79,7 +79,7 @@ bytes and an overlong payload. `File::open` accepts these modes:
 `Stderr` offer `write` and `write_all` on borrowed DOS process handles; neither
 closes its underlying handle.
 
-## Libraries, signals, and local messages
+## Libraries, signals and local messages
 
 | Item | Use |
 | --- | --- |
@@ -189,7 +189,7 @@ partition and an FFS partition did not; the cause is a handler that calls libc
 before its library base is set, [AROS-NX issue 121](https://github.com/metaneutrons/AROS-NX/issues/121)),
 so writes above 2 GiB are not verified.
 
-## Worked examples
+## Examples
 
 The examples below are complete functions. Each takes the `Context` your entry function receives and returns an `aros::Error` on failure, so `?` works throughout. Every one of them is compiled for both targets by the repository's example check.
 

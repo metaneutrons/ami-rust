@@ -13,7 +13,7 @@ This page is the boundary of what ami-rust 0.2 supports. Anything not listed as 
 | Development hosts | macOS 26 on Apple Silicon, Ubuntu 24.04 on x86-64, Ubuntu 24.04 on ARM64. |
 | Language surface | `no_std` and `alloc`. Allocation is available through `aros` when `entry!` installs `ExecAllocator`. |
 | Toolchain use | Upstream `rustup` and ordinary Cargo. The SDK contains the matching compiler, Cargo, target libraries, a relocatable C SDK and the AROS link tools. |
-| Application APIs | Nine safe crates, `aros`, `aros-mui`, `aros-timer`, `aros-graphics`, `aros-intuition`, `aros-asl`, `aros-locale`, `aros-icon` and `aros-workbench`, with the same items on both ABI profiles. See [crates and consumer guide](/consumer-guide/) and [ABI differences](/reference/abi-differences/). |
+| Application APIs | Nine safe crates, `aros`, `aros-mui`, `aros-timer`, `aros-graphics`, `aros-intuition`, `aros-asl`, `aros-locale`, `aros-icon` and `aros-workbench`, with the same items on both ABI profiles. See [choosing and using the crates](/consumer-guide/) and [ABI differences](/reference/abi-differences/). |
 | Large files | 64-bit file sizes and positions on ABI-v1 through `dos64.library`. On ABI-v11 a size, position or offset beyond the 32-bit calls is the `Limit` error; see [large files](/api/aros/#large-files). |
 | Execution evidence | Native runs of the qualified fixture modes and examples on both ABI profiles in the recorded [QEMU profile](/run-on-aros/#running-in-an-emulator). |
 
@@ -36,6 +36,6 @@ Each of these needs its own target support and release documentation. See the [p
 
 The safe APIs keep native registries that grow on demand (release 0.1.0 used fixed ones, for example at most 16 open files and 8 messages). Their bounds are memory, a token space per kind and, for signals, the bits Exec leaves free; they are listed on the [`aros` guide](/api/aros/#errors-and-bounds). The guest image and emulator configuration used for qualification are records of how the release was tested. They are not memory limits or resource quotas for your application, which remains subject to ordinary AROS allocation failure.
 
-## Versioning of the guarantee
+## Which release this describes
 
 The boundary above describes release 0.2.0, and this documentation is built from its tag; see [releases and versions](/releases/).

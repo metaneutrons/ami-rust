@@ -69,6 +69,6 @@ Cargo invokes `aros-link` because your `.cargo/config.toml` names it as the targ
 
 If any step fails, `aros-link` prints `aros-link: <reason>` and returns a non-zero status, so Cargo never sees a half-validated executable. The executable's ELF type is reported as relocatable by tools such as `file`. That is how AROS executables are linked, not an error.
 
-## Why the guards matter
+## Why the checks matter
 
 AROS programs call libraries through vector tables whose calling convention differs between the two [ABIs](/targets-and-abis/). If the compiler, C SDK or linker came from a different toolchain, the result could build cleanly and then misbehave on the target. Refusing at build time is cheaper than debugging it on a guest.

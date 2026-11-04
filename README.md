@@ -139,7 +139,7 @@ icons and menu items on `workbench.library`) are new in 0.2.0.
 The focused `aros-elf` and `aros-native-build` crates are maintainer and build
 support, not application API crates.
 
-See the [consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/), the
+See the [crates guide](https://ami-rust.metaneutrons.cc/consumer-guide/), the
 [programming model](https://ami-rust.metaneutrons.cc/api/), the
 [API reference](https://ami-rust.metaneutrons.cc/reference/), the
 [MUI hello-world example](https://ami-rust.metaneutrons.cc/mui-hello/), and the
@@ -185,7 +185,7 @@ The documentation site is <https://ami-rust.metaneutrons.cc/>.
 - [Install and build](https://ami-rust.metaneutrons.cc/quickstart-toolchain/)
 - [Run on AROS](https://ami-rust.metaneutrons.cc/run-on-aros/)
 - [Targets and ABIs](https://ami-rust.metaneutrons.cc/targets-and-abis/)
-- [Crates and consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/)
+- [Choosing and using the crates](https://ami-rust.metaneutrons.cc/consumer-guide/)
 - [Programming model](https://ami-rust.metaneutrons.cc/api/)
 - [Rust API reference](https://ami-rust.metaneutrons.cc/reference/)
 - [Compatibility boundary](https://ami-rust.metaneutrons.cc/compatibility/)

@@ -84,7 +84,7 @@ A `Window` borrows its `Intuition` and a `PubScreen` borrows it too, so the libr
 
 A title is at most 127 bytes and a public screen name at most 63 bytes; neither may contain a NUL byte. The builder sets at most 24 tags. Coordinates are 16-bit. The window is a plain Intuition window: gadgets, menus and `BOOPSI` images are not wrapped.
 
-## Native evidence
+## Tested on AROS
 
 The qualification fixture opens a window on the Workbench screen of the pinned ABI-v1 and ABI-v11 images and drives it with input it injects through `input.device`: an absolute pointer move, a click, a key, a resize and a click on the close gadget. Every event comes back as the typed value, with the pointer position in window coordinates matching the injected one exactly on both ABIs; a pixel drawn at the click position reads back as the pen drawn at a known spot; a wait on the window and a timer returns only the timer's signal when there is no input; events left unread when the window is dropped are discarded; and the ledgers return to zero. These are observations of that profile, not guarantees on another system. Differences between the profiles that a program can see: the window borders are 4 by 15 pixels (left, top) on ABI-v1 and 10 by 25 on ABI-v11, and the Workbench screen is 800 by 600 and 1024 by 768.
 
