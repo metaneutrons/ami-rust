@@ -1,9 +1,9 @@
 ---
-title: The aros-workbench crate
+title: "aros-workbench: application windows, icons and menu items"
 description: "Workbench application windows, icons and menu items with message receipt and cleanup."
 ---
 
-`aros-workbench` is the application side of Workbench for an active `aros::Context`: a window that accepts dropped icons, an icon on the desktop and an item in the Tools menu. `Workbench::open` owns `workbench.library`, `AppPort` is the message port Workbench sends to, and `AppWindow`, `AppIcon` and `AppMenuItem` register with it. It is `no_std`, allocates nothing on the Rust heap and is the same on ABI-v1 and ABI-v11. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_workbench/). It is available from the repository after release 0.1.0 and is not part of that release.
+`aros-workbench` is the application side of Workbench for an active `aros::Context`: a window that accepts dropped icons, an icon on the desktop and an item in the Tools menu. `Workbench::open` owns `workbench.library`, `AppPort` is the message port Workbench sends to, and `AppWindow`, `AppIcon` and `AppMenuItem` register with it. It is `no_std`, allocates nothing on the Rust heap and is the same on ABI-v1 and ABI-v11. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_workbench/). It is new in 0.2.0.
 
 | Item | Use |
 | --- | --- |

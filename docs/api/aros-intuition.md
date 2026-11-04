@@ -1,9 +1,9 @@
 ---
-title: The aros-intuition crate
+title: "aros-intuition: windows and events"
 description: "Windows on a public screen with typed IDCMP events and drawing into the window's rastport."
 ---
 
-`aros-intuition` opens windows through `intuition.library` for an active `aros::Context` and reads their events. `Intuition::open` owns the library, `PubScreen::lock` locks a public screen, and `WindowBuilder::open` creates a `Window`. It is `no_std`, allocates nothing on the Rust heap and is the same on ABI-v1 and ABI-v11. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_intuition/). It is available from the repository after release 0.1.0 and is not part of that release. Drawing is done with [`aros-graphics`](/api/aros-graphics/).
+`aros-intuition` opens windows through `intuition.library` for an active `aros::Context` and reads their events. `Intuition::open` owns the library, `PubScreen::lock` locks a public screen, and `WindowBuilder::open` creates a `Window`. It is `no_std`, allocates nothing on the Rust heap and is the same on ABI-v1 and ABI-v11. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_intuition/). It is new in 0.2.0. Drawing is done with [`aros-graphics`](/api/aros-graphics/).
 
 | Item | Use |
 | --- | --- |

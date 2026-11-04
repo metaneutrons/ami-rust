@@ -1,5 +1,5 @@
 ---
-title: The aros-sys crate
+title: "aros-sys: raw AROS declarations"
 description: Raw declarations of AROS libraries, records and the native bridge for both ABI profiles. The layer under the safe crates.
 ---
 

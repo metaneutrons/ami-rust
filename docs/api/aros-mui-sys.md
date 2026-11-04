@@ -1,5 +1,5 @@
 ---
-title: The aros-mui-sys crate
+title: "aros-mui-sys: raw MUI declarations"
 description: Raw MUI constants, method messages and muimaster calls for both ABI profiles. The layer under aros-mui.
 ---
 

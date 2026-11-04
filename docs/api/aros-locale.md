@@ -1,9 +1,9 @@
 ---
-title: The aros-locale crate
+title: "aros-locale: catalogs and dates"
 description: "Message catalogs with built-in default strings, the user's locale and date formatting on locale.library."
 ---
 
-`aros-locale` gives a program the user's language for an active `aros::Context`: message catalogs that fall back to the program's own strings, and dates written with the locale's day and month names. `Locales::open` owns `locale.library`, `Locale::open` opens the user's locale and `Catalog::open` looks up a catalog. It is `no_std`, allocates nothing on the Rust heap and is the same on ABI-v1 and ABI-v11. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_locale/). It is available from the repository after release 0.1.0 and is not part of that release.
+`aros-locale` gives a program the user's language for an active `aros::Context`: message catalogs that fall back to the program's own strings, and dates written with the locale's day and month names. `Locales::open` owns `locale.library`, `Locale::open` opens the user's locale and `Catalog::open` looks up a catalog. It is `no_std`, allocates nothing on the Rust heap and is the same on ABI-v1 and ABI-v11. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_locale/). It is new in 0.2.0.
 
 | Item | Use |
 | --- | --- |

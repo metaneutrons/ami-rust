@@ -1,9 +1,9 @@
 ---
 title: Programming model
-description: The ownership, lifetime and failure rules shared by the aros and aros-mui crates.
+description: The ownership, lifetime and failure rules shared by the safe crates.
 ---
 
-`aros` and `aros-mui` are `no_std` libraries built around one idea: **an AROS resource belongs to the task that created it, and Rust's types make that visible.** This page explains the rules that apply to every handle. The per-crate guides ([`aros`](/api/aros/), [`aros-mui`](/api/aros-mui/)) cover each type, and the [API reference](/reference/) lists every item.
+The safe crates (`aros`, `aros-mui`, `aros-timer`, `aros-graphics`, `aros-intuition`, `aros-asl`, `aros-locale`, `aros-icon` and `aros-workbench`) are `no_std` libraries built around one idea: **an AROS resource belongs to the task that created it, and Rust's types make that visible.** This page explains the rules that apply to every handle. The per-crate guides, listed in the [consumer guide](/consumer-guide/#select-a-crate), cover each type, and the [API reference](/reference/) lists every item.
 
 ## The `Context` is a witness
 
