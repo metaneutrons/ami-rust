@@ -11,8 +11,10 @@
 // The development docs are built from the checkout this script runs in. Each
 // release is built from its release tag, with that tag's own docs, crates and
 // website sources, so a released version documents what that release shipped.
-// The exception is a release that predates the site, built from the legacy ref
-// that website/versions.json names.
+// There are two exceptions, named in website/versions.json: a release that
+// predates the site, built from its legacy ref, and a release whose documentation
+// is corrected on a branch that differs from the tag only in documentation files
+// (see versions.mjs).
 // Only the deployment layer (base path, version metadata and the switcher) comes
 // from this checkout, which is why it is applied after each build.
 
@@ -102,7 +104,7 @@ try {
   for (const note of discovered.notes) log(`note: ${note}`);
   for (const entry of discovered.versions.filter((candidate) => !only || only === candidate.version)) {
     const worktree = path.join(scratch, `wt-${entry.version}`);
-    log(`${entry.version}: ${entry.source === 'tag' ? 'tag' : 'legacy ref'} ${entry.ref} at ${entry.commit.slice(0, 12)}`);
+    log(`${entry.version}: ${{ tag: 'tag', legacy: 'legacy ref', corrected: 'corrected ref' }[entry.source]} ${entry.ref} at ${entry.commit.slice(0, 12)}`);
     run('git', ['worktree', 'add', '--detach', worktree, entry.commit], { cwd: repository });
     try {
       const isLatest = entry.version === discovered.latest;
