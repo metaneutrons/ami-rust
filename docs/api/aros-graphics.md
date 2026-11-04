@@ -1,9 +1,9 @@
 ---
-title: The aros-graphics crate
+title: "aros-graphics: bitmaps and drawing"
 description: "Off-screen bitmaps and drawing on graphics.library: pens, lines, rectangles, ellipses, polygons, text, pixels and blits."
 ---
 
-`aros-graphics` draws into off-screen bitmaps through `graphics.library` for an active `aros::Context`. It is `no_std`, allocates nothing on the Rust heap and is the same on ABI-v1 and ABI-v11. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_graphics/). It is available from the repository after release 0.1.0 and is not part of that release. Windows and screens come with the Intuition crate; until then the borrowed form `RastPortRef` is the way to draw on a rastport that something else owns.
+`aros-graphics` draws into off-screen bitmaps through `graphics.library` for an active `aros::Context`. It is `no_std`, allocates nothing on the Rust heap and is the same on ABI-v1 and ABI-v11. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_graphics/). It is new in 0.2.0. Windows and screens come with the Intuition crate; until then the borrowed form `RastPortRef` is the way to draw on a rastport that something else owns.
 
 | Item | Use |
 | --- | --- |

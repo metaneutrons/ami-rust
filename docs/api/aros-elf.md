@@ -1,5 +1,5 @@
 ---
-title: The aros-elf crate
+title: "aros-elf: ELF validation and compaction"
 description: Host-side validation of AROS native ELF objects and the fixed section-name compaction used by the build.
 ---
 

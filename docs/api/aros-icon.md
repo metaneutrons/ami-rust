@@ -1,9 +1,9 @@
 ---
-title: The aros-icon crate
+title: "aros-icon: icons and tool types"
 description: "icon.library disk objects: icons, tool types, default tools and tool value matching."
 ---
 
-`aros-icon` reads and writes icons for an active `aros::Context`. `Icons::open` owns `icon.library`, `DiskObject` is the icon of a file, drawer or disk, and tool types are read as plain byte entries or looked up by name. It is `no_std`, allocates nothing on the Rust heap and is the same on ABI-v1 and ABI-v11. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_icon/). It is available from the repository after release 0.1.0 and is not part of that release.
+`aros-icon` reads and writes icons for an active `aros::Context`. `Icons::open` owns `icon.library`, `DiskObject` is the icon of a file, drawer or disk, and tool types are read as plain byte entries or looked up by name. It is `no_std`, allocates nothing on the Rust heap and is the same on ABI-v1 and ABI-v11. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_icon/). It is new in 0.2.0.
 
 | Item | Use |
 | --- | --- |
