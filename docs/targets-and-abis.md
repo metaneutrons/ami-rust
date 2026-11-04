@@ -9,7 +9,7 @@ ami-rust builds for two x86-64 AROS ABI profiles. ABI-v1 is the upstream AROS st
 | --- | --- | --- |
 | Cargo target | `x86_64-unknown-aros-abi1` | `x86_64-unknown-aros-abi11` |
 | AROS it targets | [Upstream AROS](https://github.com/aros-development-team/AROS), the standard, qualified through the [AROS-NX](https://github.com/metaneutrons/AROS-NX) integration fork | [Deadwood's AROS](https://github.com/deadwood2/AROS) port, code-named ABIv11 |
-| Pinned for 0.1.0 | AROS-NX commit `e0d5e367d15c` | Deadwood tag `ABIv11_2026.09`, commit `fbc242c1046c` |
+| Pinned for 0.2.0 | AROS-NX commit `e0d5e367d15c` | Deadwood tag `ABIv11_2026.09`, commit `fbc242c1046c` |
 | Where to get a system | Build or obtain an upstream AROS x86-64 image | Deadwood's [ABIv11 downloads](https://axrt.org/downloads-aros-64bit) (`pc-x86_64` and `linux-x86_64`) |
 | Library base passed | As the last ordinary argument | In register `r12` |
 

@@ -7,13 +7,13 @@ description: A small command-line AROS program that hashes a file using the safe
 
 ## Build it
 
-The example is in the repository, in both `main` and the `v0.1.0` tag. [Install the toolchain](/quickstart-toolchain/), clone the repository and build from its root:
+The example is in the repository, in both `main` and the `v0.2.0` tag. [Install the toolchain](/quickstart-toolchain/), clone the repository and build from its root:
 
 ```sh
 git clone https://github.com/metaneutrons/ami-rust.git
 cd ami-rust
 
-toolchain=0.1.0
+toolchain=0.2.0
 cargo +"$toolchain" fetch --locked --manifest-path examples/sha256sum/Cargo.toml
 cargo +"$toolchain" build --manifest-path examples/sha256sum/Cargo.toml \
   --target x86_64-unknown-aros-abi11 --release --locked --offline

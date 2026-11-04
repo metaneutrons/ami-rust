@@ -22,13 +22,13 @@
 // setup, as in Rustdoc. Blocks that contain `entry!` are whole programs and
 // are covered by the example crates instead.
 //
-// usage: check-doc-examples.mjs WORK_DIR [TOOLCHAIN]    (default toolchain: 0.1.0)
+// usage: check-doc-examples.mjs WORK_DIR [TOOLCHAIN]    (default toolchain: 0.2.0)
 
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-const [workArgument, toolchain = '0.1.0'] = process.argv.slice(2);
+const [workArgument, toolchain = '0.2.0'] = process.argv.slice(2);
 if (!workArgument) {
   console.error('usage: check-doc-examples.mjs WORK_DIR [TOOLCHAIN]');
   process.exit(2);

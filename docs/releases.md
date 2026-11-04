@@ -7,10 +7,10 @@ description: The current release, how this documentation relates to it, and the 
 
 | Item | Detail |
 | --- | --- |
-| Version | 0.1.0 |
-| Source tag | [`v0.1.0`](https://github.com/metaneutrons/ami-rust/releases/tag/v0.1.0), commit `8456843ca869a738dde6dc7b7a062a2fdc3b6597` |
-| Toolchain | rustup toolchain `0.1.0`, [installed](/quickstart-toolchain/) from the signed release archives or the immutable rustup catalog |
-| Crates | Git dependencies pinned to the tagged revision; not on crates.io |
+| Version | 0.2.0 |
+| Source tag | [`v0.2.0`](https://github.com/metaneutrons/ami-rust/releases/tag/v0.2.0) |
+| Toolchain | rustup toolchain `0.2.0`, [installed](/quickstart-toolchain/) from the signed release archives or the immutable rustup catalog |
+| Crates | The 13 `aros-*` library and build crates in the ami-rust registry at `crates.metaneutrons.cc`, or as Git dependencies pinned to the tagged revision; not on crates.io |
 
 ## Documentation versions
 
@@ -18,22 +18,20 @@ The documentation is versioned. Use the version selector in the page header, or 
 
 | Address | Documents |
 | --- | --- |
-| `/` and `/v0.1.0/` | The latest release, 0.1.0. |
-| `/v<version>/` | Each other published release. |
+| `/` and `/v0.2.0/` | The latest release, 0.2.0. |
+| `/v<version>/` | Each other published release, such as `/v0.1.0/`. |
 | `/next/` | The development branch, `main`. It may describe behaviour that is not released yet, and search engines are asked not to index it. |
 
 Switching version keeps you on the same page when that page exists in the other version. A banner appears on every page that is not for the latest release.
 
 The documentation of a release is built from that release's tag. The tag is immutable and contains the guides, examples and API reference that the release shipped, so a published version's documentation does not change afterwards. A correction goes into the next release, and shows up in the development docs straight away. The footer of every page shows the commit it was built from.
 
-The 0.1.0 documentation is the one exception. The documentation site was added after the 0.1.0 release, so the `v0.1.0` tag has no site sources. The 0.1 documentation is built from the `release/0.1` branch instead, and corrections to it are made there. Every release from the first one that contains the site is built from its tag.
-
-The **public declarations** of `aros` and `aros-mui` in the 0.1 documentation are the same as at the `v0.1.0` tag: no public item has been added, removed or changed since. A project that pins the tagged revision therefore compiles against the API the 0.1 documentation describes. Two things in it are newer than the tag: Rustdoc comments and guides, and the [MUI hello](/mui-hello/) example, which is not part of the `v0.1.0` tag (the SHA-256 example is). To read the source exactly as released, check out the tag:
+The 0.1.0 documentation is the one exception. The documentation site was added after the 0.1.0 release, so the `v0.1.0` tag has no site sources. The 0.1 documentation is built from the `release/0.1` branch instead, and corrections to it are made there. Every release from 0.2.0 on is built from its tag. To read the source exactly as released, check out the tag:
 
 ```sh
 git clone https://github.com/metaneutrons/ami-rust.git
 cd ami-rust
-git checkout v0.1.0
+git checkout v0.2.0
 ```
 
 ## Version model
@@ -45,7 +43,7 @@ git checkout v0.1.0
 
 ## Distribution channels
 
-0.1.0 is distributed through GitHub Release archives and an immutable rustup catalog. APT, Homebrew, AUR and crates.io are not channels for 0.1.0. The `aros-*` library crates and the build tooling (`aros-native-build`, `aros-elf`) are also delivered through the read-only ami-rust Cargo registry at `crates.metaneutrons.cc` once a release has published them: the protected release workflow packages them offline from the release commit, appends them to the static index without ever changing a published version, and reads every byte back publicly. Publishing the crates to crates.io would need its own review of names, public API, ownership and licences.
+0.2.0 is distributed through GitHub Release archives and an immutable rustup catalog. APT, Homebrew, AUR and crates.io are not channels for 0.2.0. The 13 `aros-*` library crates and build tooling crates (`aros-native-build`, `aros-elf`) are also delivered through the read-only ami-rust Cargo registry at `crates.metaneutrons.cc`, which 0.2.0 is the first release to fill: the protected release workflow packages them offline from the release commit, appends them to the static index without ever changing a published version, and reads every byte back publicly. Publishing the crates to crates.io would need its own review of names, public API, ownership and licences.
 
 ## Changes
 
