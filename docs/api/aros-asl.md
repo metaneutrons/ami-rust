@@ -54,10 +54,10 @@ A `FileRequester` borrows its `Asl`, which stays open while any requester exists
 
 A path is at most 512 bytes, a title 127, a drawer 255, a file name 107, a pattern 63 and a button label 31; text with a NUL byte is refused. The builder sets at most 24 tags. Multi-selection and save mode exclude each other in the library, and drawers only excludes multi-selection. Font and screen mode requesters are not wrapped.
 
-## Native evidence
+## Tested on AROS
 
 The qualification fixture shows requesters on the Workbench screen of the pinned ABI-v1 and ABI-v11 images, behind a parent window, and drives them from a second native process that injects input through `input.device` once the requester's window has appeared. With identical results on both ABIs: Escape cancels; typing `m7file.txt` and pressing Return in the file gadget returns `RAM:m7file.txt`, and showing the same requester again and pressing Return returns the same path; save mode with a pattern returns `RAM:out.txt`; cursor down in the list followed by Return returns the second file of a three-file drawer; clicking one row and shift-clicking another, then the confirm button, returns the two files (`RAM Disk:m7dir/a.txt` and `RAM Disk:m7dir/c.txt`); and drawers only with the confirm button returns `RAM:m7dir`. The ledgers return to zero. The clicks are positioned relative to the requester window from measurements of that layout, so they are specific to the two pinned images; the other cases do not depend on layout. These are observations of that profile, not guarantees on another system.
 
-## The pinned SDK headers
+## Differences in the SDK headers
 
 The pinned ABI-v11 C SDK has no `libraries/asl.h`. The bridge therefore declares the few `FileRequester` fields it reads itself; on ABI-v1 the declaration is checked against the SDK header at build time, and on ABI-v11 it follows the ABI-v11 SDK's `libraries/asl.h`, whose requester structure and tag values are identical to the ABI-v1 header. The qualification fixture compares the tag values the Rust code uses with the bridge's values on each ABI (`aros_sys::asl_layout_values`).

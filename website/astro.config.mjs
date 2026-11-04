@@ -60,7 +60,7 @@ export default defineConfig({
         {
           label: 'Guides',
           items: [
-            { label: 'Crates and consumer guide', link: '/consumer-guide/' },
+            { label: 'Choosing and using the crates', link: '/consumer-guide/' },
             { label: 'Programming model', link: '/api/' },
             {
               label: 'Crates',

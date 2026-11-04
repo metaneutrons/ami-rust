@@ -81,7 +81,7 @@ mask supplied by the preceding native input step. It returns `LoopExit::Quit`
 for MUI's reserved quit ID or `LoopExit::Handler(id)` when the handler asks to
 exit.
 
-## Custom classes and raw boundary
+## Custom classes and the raw boundary
 
 `Scope::custom_class::<S>()` registers a safe custom class described by
 `CustomClassSpec`; `CustomBuilder` constructs a `CustomObject`. Safe custom
@@ -96,7 +96,7 @@ builders, generated attributes, notifications, hooks, and custom classes.
 For a full application, start with
 [MUI hello](/mui-hello/).
 
-## Worked examples
+## Examples
 
 Each of these is a complete, compile-checked example on the item's reference page:
 

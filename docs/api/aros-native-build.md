@@ -16,7 +16,7 @@ Add it as a build dependency and call `prepare` from `build.rs`:
 aros-native-build = { version = "=0.2.0", registry = "metaneutrons" }
 ```
 
-Depend on it with `=` and the version of the toolchain you installed, so that the bridge sources it compiles are those of that toolchain release; the installed `aros-link` refuses a bridge that differs from the copy it was built with. The same crate is also available as a Git dependency on the release tag; see the [consumer guide](/consumer-guide/). The `build.rs` that calls it is shown in the [build system](/build-system/#buildrs) guide.
+Depend on it with `=` and the version of the toolchain you installed, so that the bridge sources it compiles are those of that toolchain release; the installed `aros-link` refuses a bridge that differs from the copy it was built with. The same crate is also available as a Git dependency on the release tag; see the [crates guide](/consumer-guide/). The `build.rs` that calls it is shown in the [build system](/build-system/#buildrs) guide.
 
 ## What it contains
 

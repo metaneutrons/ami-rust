@@ -45,10 +45,10 @@ A `DiskObject` borrows its `Icons`, which stays open while any disk object exist
 
 A path is at most 127 bytes. The default tool and each tool type are at most 512 bytes, an icon has at most 64 tool types, and none may contain a NUL byte; these are `Error::Invalid` before any native call. `put` writes only the icon file, not the image data of an icon the program never loaded. Drawer windows, icon drawing and layout (`DrawIconStateA`, `LayoutIconA`) are not wrapped.
 
-## Native evidence
+## Tested on AROS
 
 On the pinned ABI-v1 and ABI-v11 images, with identical results: the default project icon has type project and no tool types; a default tool, three tool types (`MODE=fast`, `DEBUG`, `LEVEL=3`) and a 16 KiB stack come back from the accessors in order; `find_tool_type` returns `fast`, an empty value for the bare `DEBUG` (found with a different case), `3`, and nothing for a missing name; `match_tool_value` matches `fast` and `FAST` against `slow|fast` and not `medium`; `put` writes `RAM:m9file.info` and a fresh `open` reads back the same type, tool, types and stack; `delete` removes it and a further `open` is `NotFound`; a blank tool icon has no tool types; refusals of over-long paths, NUL bytes and 65 tool types; and the ledgers return to zero. These are observations of that profile, not guarantees on another system.
 
-## The pinned SDK headers
+## Differences in the SDK headers
 
 The pinned ABI-v11 C SDK has no `workbench/workbench.h`. The bridge therefore declares the `DiskObject` fields it uses; on ABI-v1 the declaration is checked against the SDK header at build time, and on ABI-v11 it follows the ABI-v11 SDK's header, whose `struct DiskObject` is identical to the ABI-v1 header. The disk object type values are compared with the bridge's on each ABI (`aros_sys::wb_layout_values`).
