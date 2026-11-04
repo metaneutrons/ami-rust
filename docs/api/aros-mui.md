@@ -1,5 +1,5 @@
 ---
-title: The aros-mui crate
+title: "aros-mui: safe MUI objects and events"
 description: "Typed, scope-owned MUI objects: builders, attributes, notifications, hooks, custom classes and the application loop."
 ---
 

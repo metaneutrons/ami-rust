@@ -1,9 +1,9 @@
 ---
-title: The aros-asl crate
+title: "aros-asl: file requesters"
 description: "The asl.library file requester with a tag-based builder that returns owned paths."
 ---
 
-`aros-asl` shows the `asl.library` file requester for an active `aros::Context`. `Asl::open` owns the library, `FileRequestBuilder` describes the requester and `FileRequester::request` shows it and returns the selected paths as owned values. It is `no_std`, allocates nothing on the Rust heap and is the same on ABI-v1 and ABI-v11. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_asl/). It is available from the repository after release 0.1.0 and is not part of that release.
+`aros-asl` shows the `asl.library` file requester for an active `aros::Context`. `Asl::open` owns the library, `FileRequestBuilder` describes the requester and `FileRequester::request` shows it and returns the selected paths as owned values. It is `no_std`, allocates nothing on the Rust heap and is the same on ABI-v1 and ABI-v11. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_asl/). It is new in 0.2.0.
 
 | Item | Use |
 | --- | --- |

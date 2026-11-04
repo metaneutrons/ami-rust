@@ -1,5 +1,5 @@
 ---
-title: The aros-native-build crate
+title: "aros-native-build: build script and linker"
 description: The build-script helper and target linker that turn an ordinary Cargo project into a verified AROS executable.
 ---
 

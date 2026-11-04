@@ -1,5 +1,5 @@
 ---
-title: The aros crate
+title: "aros: safe application API"
 description: "Entry, context, files, streams, libraries, signals, ports and messages: the safe foundation for AROS applications."
 ---
 

@@ -1,9 +1,9 @@
 ---
-title: The aros-timer crate
+title: "aros-timer: time and timers"
 description: "Time and timers on timer.device: the monotonic E-clock, calendar and up time, sleeping and signalled alarms."
 ---
 
-`aros-timer` is the time layer for an active `aros::Context`. `Timer::open` owns `timer.device` and the reply port its requests share, and reads three kinds of time. It is `no_std`, allocates nothing and is the same on ABI-v1 and ABI-v11. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_timer/). It is available from the repository after release 0.1.0 and is not part of that release.
+`aros-timer` is the time layer for an active `aros::Context`. `Timer::open` owns `timer.device` and the reply port its requests share, and reads three kinds of time. It is `no_std`, allocates nothing and is the same on ABI-v1 and ABI-v11. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_timer/). It is new in 0.2.0.
 
 | Item | Use |
 | --- | --- |
