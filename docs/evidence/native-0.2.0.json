@@ -1,0 +1,795 @@
+{
+  "schema": "ami-rust-native-evidence-v1",
+  "version": "0.2.0",
+  "toolchain": "0.2.0",
+  "source_commit": "14ae922e6b0038e241ff2b0ddf2b5a05fa781628",
+  "source_clean": true,
+  "fixture": [
+    {
+      "abi": "abi1",
+      "mode": "abi",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "ab1b1d02edecce3c936c8d228771caf4c402421bb5a24cb096afa82490e60a60"
+    },
+    {
+      "abi": "abi1",
+      "mode": "alloc",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "bb9a987b8709e861286f4de50c963eac089a302dff12acb10741d5f7425520a4"
+    },
+    {
+      "abi": "abi1",
+      "mode": "args",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "7ebad82b3545f57972de85efafd4e99369945875cc63982c2e82800799078d75"
+    },
+    {
+      "abi": "abi1",
+      "mode": "asl",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "e6186a81aea6eee0eefedaae951bc0db0d68c9ea35efd0136f013fd065bacdbc"
+    },
+    {
+      "abi": "abi1",
+      "mode": "asl-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "94108fbe842537846636746a57ab30667f7d964ea8e023aaf878cb9dbd08b4a1"
+    },
+    {
+      "abi": "abi1",
+      "mode": "callbacks",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "285c1dab77b11d0c48f9e3ee3c3c026fefccea32b8e9881204a222c58d253407"
+    },
+    {
+      "abi": "abi1",
+      "mode": "calibrate",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "c1817dad34441b4559e451164a997dad0e1703d117b5f5b12fa5307a56214d57"
+    },
+    {
+      "abi": "abi1",
+      "mode": "churn",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "aedfe77113b6f83f061b36096ee073dc03e909a623ada09b0c3217a31adc9683"
+    },
+    {
+      "abi": "abi1",
+      "mode": "cleanup",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "a6abab6e5e04ed6ba2fc13a79ec34dda0a0771fc166dc92d30daa8d87ff00130"
+    },
+    {
+      "abi": "abi1",
+      "mode": "cwd-check",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "6dc0e76a51488cd5eee8c853cbc51c2572b239e7dc60d9527fd91f828dbe12f2"
+    },
+    {
+      "abi": "abi1",
+      "mode": "devices",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "01f0cc576d81f79039b0ee8f9d4fd3651c82968d9e9f7c1150b3b2af181abef6"
+    },
+    {
+      "abi": "abi1",
+      "mode": "devices-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "8332e30cd959e87cdca107d44dac43049466c7af232dad3f363c65d78c7bda5c"
+    },
+    {
+      "abi": "abi1",
+      "mode": "env",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "77c3106ce5293da7242c760c34deea71549f4645d4b79c411e4ac564d2c7ad69"
+    },
+    {
+      "abi": "abi1",
+      "mode": "files",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "87d83572ac680282db194e004d3fa5e56d51b8426c68d01131af0151780eedf3"
+    },
+    {
+      "abi": "abi1",
+      "mode": "file-protected",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "2cb46fb9f774380d09b7d2060ee08e7d955beb4146e1e99a6a7e5cd6bfde872e"
+    },
+    {
+      "abi": "abi1",
+      "mode": "fs",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "54fd2c98f3d7d08f5c71535ebaf88212eb709c978bdf17b86a9a03c907887ed8"
+    },
+    {
+      "abi": "abi1",
+      "mode": "fs-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "e050d08556e4b435b8849b904f0a2549b9bc4a8d5864ead605068f3d83ee2024"
+    },
+    {
+      "abi": "abi1",
+      "mode": "graphics",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "4f69de8e9a41561294f85b091b8010bc145b8c7cac3b0b0fc7b7b0804d7e9632"
+    },
+    {
+      "abi": "abi1",
+      "mode": "graphics-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "253b9f5216b7795679f569e7abd68e5c677a27f03b918b825e6d72207c5785bd"
+    },
+    {
+      "abi": "abi1",
+      "mode": "icon",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "0d7b710bc2d6293e409be55dceaf251265db171f9cb3eb89ecb0973a0d3d2162"
+    },
+    {
+      "abi": "abi1",
+      "mode": "icon-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "ae13bb52a69d03e71b6339f404114af2ef1160d6dc553d1faf6baebc8c4d7c7b"
+    },
+    {
+      "abi": "abi1",
+      "mode": "libraries",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "bb9c544890b2c385b07253dd3a7731ad8cc8b2fb150038fb34509fd750200910"
+    },
+    {
+      "abi": "abi1",
+      "mode": "locale",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "6ebed695dfeb49c61229942cbef035b568962438c46917d657060ba7984397df"
+    },
+    {
+      "abi": "abi1",
+      "mode": "locale-bounded",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "93c8a17ca8c4a9364fcec1b4d6f4a112823cefd7e4ce0acd1a0729e316a96470"
+    },
+    {
+      "abi": "abi1",
+      "mode": "locale-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "0d30fbf80f5a1115aed8837982d4e9710e19f91e7dd04fba129b562c7ac5ffef"
+    },
+    {
+      "abi": "abi1",
+      "mode": "memory-large",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "462662e53d2f1530afb890cc0f2e32395fbf4f43ae5205ab1bbf94242677ec6e"
+    },
+    {
+      "abi": "abi1",
+      "mode": "ports",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "49331faf13ce541708d94c314669659c5aec602a8d72fd7ef02ddf6cd580d83a"
+    },
+    {
+      "abi": "abi1",
+      "mode": "positions",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "e3788915dbc1531823130f5def5347b0ffe4668c3b087d881a25ec11062daaef"
+    },
+    {
+      "abi": "abi1",
+      "mode": "probes",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "bcb4fcd3891969f5adce59d89d4e110ad40aacd368e63194f3c42c703fcfad89"
+    },
+    {
+      "abi": "abi1",
+      "mode": "registry",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "531507e03f264d240a7293be83d13b62547d1a4fec8d1a6f8253c4c0981af5e5"
+    },
+    {
+      "abi": "abi1",
+      "mode": "stderr",
+      "return_code": 0,
+      "attempts": 2,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "d41c40913d46a8a2d08d7f3e08acee8a8e5a75da788dcd9b798798e98d430457"
+    },
+    {
+      "abi": "abi1",
+      "mode": "timer",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "6e3493629ad5cb10c9a2ec100df955d358fd3ea27f04f40d7fcd8f62ae054017"
+    },
+    {
+      "abi": "abi1",
+      "mode": "timer-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "ce559182382c901b58d281dc34c766869998750e25ccfa7b34250058e31c6407"
+    },
+    {
+      "abi": "abi1",
+      "mode": "window",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "eddd9fac367e994bbd1ccdc9cc54471230f775d2af797f585b3d00e04ebb451f"
+    },
+    {
+      "abi": "abi1",
+      "mode": "window-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "87a75026b26369ce0bba6ef36a201a1efa1b323da7a4efa24ea073971d9e522d"
+    },
+    {
+      "abi": "abi1",
+      "mode": "workbench",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "012917ba1d8c3a548679c550fe77193af82634adf3ae51877e25180c581970d1"
+    },
+    {
+      "abi": "abi1",
+      "mode": "workbench-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "47bef55feaf421af5cc11dd31b64544ad95342e6afb34a74b31ae24689293a96",
+      "serial_log_sha256": "201d0334a35ee1771263397ca499112c7a375d6dd927106207af9c73c5a641f9"
+    },
+    {
+      "abi": "abi11",
+      "mode": "abi",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "235e1fa6cb76a389e8598d5c0643b048550cde9b877510560842cc5d863ec4e2"
+    },
+    {
+      "abi": "abi11",
+      "mode": "alloc",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "9d78b313a124e009f2c589dff5cb4e4dd3804c03e78d8b571f4e614dcd5b886d"
+    },
+    {
+      "abi": "abi11",
+      "mode": "args",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "a2f1a4e8a03203f6e084dc7d7c3b85970cfd8ddb7dc8b73b180ad14a56b1489a"
+    },
+    {
+      "abi": "abi11",
+      "mode": "asl",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "5bc5c09a0b032d8a7e98adfe9874e3d3c3f842fed0fa35348e2f0a733f610d71"
+    },
+    {
+      "abi": "abi11",
+      "mode": "asl-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "754410aaee7fff24eda284a2bd4de3ccf4ecf0d302a2df669c209b71787dc96a"
+    },
+    {
+      "abi": "abi11",
+      "mode": "callbacks",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "ca96b4eebe6cf8dc1d3da73694d548ccd9788db7e86d542f28263d104e6e5dda"
+    },
+    {
+      "abi": "abi11",
+      "mode": "calibrate",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "4abbcc852314838523ecb1027a8c2372056a04c643b6650f7b06b06ed9c0a763"
+    },
+    {
+      "abi": "abi11",
+      "mode": "churn",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "78b689aa40a61e4de7c975226aac0a049a1a40afd8c8fdf9c95aea7582a0b77e"
+    },
+    {
+      "abi": "abi11",
+      "mode": "cleanup",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "094224f59b18bbcfb522f9b6c616d6311fe2afa9b2aad0320707d2f20648c6e1"
+    },
+    {
+      "abi": "abi11",
+      "mode": "cwd-check",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "abb7cfe18c8867fd47082003f9bfca37d3fa7ecc62d47d5be3b8937d9bbb3a5a"
+    },
+    {
+      "abi": "abi11",
+      "mode": "devices",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "fe9e4a2eef4e174ff20322cf446aa79ba1ecaf74f07e292d3217d06074d3fcb1"
+    },
+    {
+      "abi": "abi11",
+      "mode": "devices-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "b8dc052ca10047c9b9518d83d5ca1aaad3dde5b642084ccade1e199f27e47abe"
+    },
+    {
+      "abi": "abi11",
+      "mode": "env",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "11cf9afb001ec24d84e509cb591825071c2db5a6441d597c35ebe291b636637d"
+    },
+    {
+      "abi": "abi11",
+      "mode": "files",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "6ffab9a652a94afde57ec21ed767a69b916c86b9c2ca827d47a5d1d2c26a1bf1"
+    },
+    {
+      "abi": "abi11",
+      "mode": "file-protected",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "a78378d141427a2732a33dfcab9ea6c45e02f8399e8e5e7a69b5876ea6915d5d"
+    },
+    {
+      "abi": "abi11",
+      "mode": "fs",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "132bc949741ebfbc6275304bbe717273c724409ad055486c2de599c8c51de324"
+    },
+    {
+      "abi": "abi11",
+      "mode": "fs-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "001c34c49c4a2386512ea178b0c9e6b9fcc3d33bd20b7688baa651a9d6349115"
+    },
+    {
+      "abi": "abi11",
+      "mode": "graphics",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "c7db7ad1c5120d75b900dcd25073a289d04b1611e07c2d40055b17543e524ba8"
+    },
+    {
+      "abi": "abi11",
+      "mode": "graphics-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "eeee41891ee22954384aa027dabd7696e8ee338e9ca97101352cc2bda6b0e9b2"
+    },
+    {
+      "abi": "abi11",
+      "mode": "icon",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "4b32c5b290a53a13835cd26820cb699f478febd30162606bc5215b7356669400"
+    },
+    {
+      "abi": "abi11",
+      "mode": "icon-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "a04d6acc9fc7316b72ed2b53818cb9947bdfa21aaddeb97ed215b73297717dd6"
+    },
+    {
+      "abi": "abi11",
+      "mode": "libraries",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "4b154f24bc721ad8567dc0df91fb2787ada7b16bbb116ed004481ff49d41887c"
+    },
+    {
+      "abi": "abi11",
+      "mode": "locale",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "7451c0c5c6922b844c29e62ddc7ffc726acaee44302c33ce6d28b0c60b857683"
+    },
+    {
+      "abi": "abi11",
+      "mode": "locale-bounded",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "074f59620c1e2e8de12bfc358a46e897dd176aa2be271009d6c0c705e6d63c1a"
+    },
+    {
+      "abi": "abi11",
+      "mode": "locale-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "bcfac55c47d59a8115250d0b3d2741d17aef90149016d67579764f1d3f4c307b"
+    },
+    {
+      "abi": "abi11",
+      "mode": "memory-large",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "c33e03da1a84dbcc7c06e0592c7be0bb1e3359c794ad339a98048c62102e393d"
+    },
+    {
+      "abi": "abi11",
+      "mode": "ports",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "dc50462a97dbf7fe77fa07a892dd18e3ac1ae04ef92bcc32d7c45049cc88d065"
+    },
+    {
+      "abi": "abi11",
+      "mode": "positions",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "0b6ce05c29734fcb18de912607dea59af2d5498f12b2fd77aba5e60c77021dce"
+    },
+    {
+      "abi": "abi11",
+      "mode": "probes",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "7c4f038adb0bb3689a5857b7b07450b9c28aa2695d780f6d69a320b84ed53f05"
+    },
+    {
+      "abi": "abi11",
+      "mode": "registry",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "709dc463d0ac1f1b568b0e6a82ff9757c723168386c12ce4dfce0a6d5bf7e6c6"
+    },
+    {
+      "abi": "abi11",
+      "mode": "stderr",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "0329f0937c7c09bdf8d9814fa44014b5e3428ce1b6f8d917ae4a13971accfba8"
+    },
+    {
+      "abi": "abi11",
+      "mode": "timer",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "924368cd8d5e02ee3ca965564c2564b70e7e532619b1ec297fae84c51eb78f80"
+    },
+    {
+      "abi": "abi11",
+      "mode": "timer-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "8671d400377539d5a4c1ff955263cfd8b063c403baae5b901753a556e506e8fe"
+    },
+    {
+      "abi": "abi11",
+      "mode": "window",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "76d617d01e3e5f700f4fa3c353f4c07709de94699f5b6a8701c15508538d5215"
+    },
+    {
+      "abi": "abi11",
+      "mode": "window-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "67988be2771e2463a1df0a7355416be3c7ff3cdb5489a085956445fc6c230a30"
+    },
+    {
+      "abi": "abi11",
+      "mode": "workbench",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "29511c13fcf2fbc21711f9aa3d5b5aefd065bf21fec3edf22a7d060fbe1ccf74"
+    },
+    {
+      "abi": "abi11",
+      "mode": "workbench-forgotten",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "a0decacf169e0e345bf2b193add17721a93f0847378f23d4498d5cff9c040ff9"
+    },
+    {
+      "abi": "abi11",
+      "mode": "big",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "b41aaa5938321bc84bd54a90b57cacf9f0646df065ff09ae746515013c58bca9",
+      "serial_log_sha256": "cebea07104eb771809c955b123b415d24428e67da73fe62214b812e9c8401142"
+    }
+  ],
+  "applications": [
+    {
+      "abi": "abi1",
+      "path": "examples/minimal",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "244842ef381d704c030c0fab7b12c40735c49a367609e1d54cb4901c509864e6",
+      "serial_log_sha256": "9c3e83f969ec1c56cd594d2ddd03e0da4ba2c5c9d198ff5bf6a3c160a201ceba"
+    },
+    {
+      "abi": "abi1",
+      "path": "examples/sha256sum",
+      "return_code": 10,
+      "attempts": 1,
+      "binary_sha256": "bc5a80bcc3b05f0d145801f75b589812180ffaa6943e25c0df24c28382d59910",
+      "serial_log_sha256": "7509842d94156bb9abb79108a91380a081e60a816b7317e8cbeb8108186e8048"
+    },
+    {
+      "abi": "abi1",
+      "path": "examples/mui-hello",
+      "return_code": null,
+      "attempts": 1,
+      "binary_sha256": "8dedee02f0ba29c4a7a72beaff3af78631c9c3068df3c48e13fa6b82748c563f",
+      "serial_log_sha256": "0bd63cdea702602f62fbbe8dbafa09191dccea1c2f8d07bbc98694776c8fcc10",
+      "screenshot_sha256": "3dd59991603d11ae2dba68fc451e1551ebbb79adc8fa105361e39d2c723f8e12"
+    },
+    {
+      "abi": "abi1",
+      "path": "tests/m1-runtime",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "0f19a470861c8f9a5b8eb3f7f91a75abe6b5454e7f09aad02813953fb9d51e8f",
+      "serial_log_sha256": "c80fdec76e7fa523ed75f79cf84de04d5913db823cf9dbd91a4d24af96af5de9"
+    },
+    {
+      "abi": "abi1",
+      "path": "tests/dependencies",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "03279d854272bd3fb5db7df7ea296c02f0059193e91733ce62319c3ccfe9b99b",
+      "serial_log_sha256": "e038d277db7f19289ce8874cc9671065a02e0d5456267e37a249e347d329b681"
+    },
+    {
+      "abi": "abi1",
+      "path": "tests/m4-safe-runtime",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "fa2750ea53f1d3da599e7e147f352c269407c496ca521157ac834d75111e7128",
+      "serial_log_sha256": "1530a14bdc7580986144e52365fea48660769c51f009acf52d90d2438aa1eb98"
+    },
+    {
+      "abi": "abi1",
+      "path": "tests/m5-gallery",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "4f3abd459a5d27a2234b243441dc9f767ef222e86e0baeabdeaeda49d7f87dd1",
+      "serial_log_sha256": "45a374939ba0be36e392f7c421b32d2dbb40dd089a72fd41c0209a57ca71a24a"
+    },
+    {
+      "abi": "abi1",
+      "path": "tests/m6-interactions",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "f07609424fc87fc04c878954ae67cd771bac60448e6254ddab31645f84f0865a",
+      "serial_log_sha256": "e8a5ad5c04c303a204f3e73255d03a81a58a920eb30180745e82a181757a23a3"
+    },
+    {
+      "abi": "abi11",
+      "path": "examples/minimal",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "51eb6cf336c2658ed0707dd987999b0758f3cde52fac5c4395009cc1bf75e2a4",
+      "serial_log_sha256": "ec3603aa48a4333c5cb101266c027c5308e6b3f503b93a1842f618b82779f3da"
+    },
+    {
+      "abi": "abi11",
+      "path": "examples/sha256sum",
+      "return_code": 10,
+      "attempts": 1,
+      "binary_sha256": "e8678f16a51749dc87a440ba2cf3ff93d1d5d35accbe30c6e92bb25ca3b4dd8d",
+      "serial_log_sha256": "91636af3533bcf588363025a36ac2b3c3a213e1207978c29db4640b6eed06f58"
+    },
+    {
+      "abi": "abi11",
+      "path": "examples/mui-hello",
+      "return_code": null,
+      "attempts": 1,
+      "binary_sha256": "c3c26f96e88db2bc5891a8b2df7179d1420220fe81682627b26d278b3d3b13ce",
+      "serial_log_sha256": "f2f7da36c1e745874ddc2e945e11f53392f791cff859324a862453a61d49ad2a",
+      "screenshot_sha256": "ef88fa8ffada8919b1716ea59b53df28f754e73be5dd4a332391a20072758275"
+    },
+    {
+      "abi": "abi11",
+      "path": "tests/m1-runtime",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "bbbd3b32041ee77333d5171c863817c2ab6f97dbb34ef4d8e6ca90e6ee00f3df",
+      "serial_log_sha256": "f35f01b7b5eacdc0613e5144cb83e99442c8200233b09c26e5ad333862a6a11f"
+    },
+    {
+      "abi": "abi11",
+      "path": "tests/dependencies",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "f5d19ade66e21338a34d598cd1a0a3f51bac1221cad3fbb0607e1874f8d77d33",
+      "serial_log_sha256": "d3e3d734a7430966e91574765504148066f0602fe58e63568cb6d0389023734b"
+    },
+    {
+      "abi": "abi11",
+      "path": "tests/m4-safe-runtime",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "20bd2a6aa52c2a229074792ad08bbd590a2134b937d5e93730a02053ca5acea2",
+      "serial_log_sha256": "c6e5834e8ffcc0c5e09a57011f347cbb5d9d86f9ebaec89cad580cfd31df35f1"
+    },
+    {
+      "abi": "abi11",
+      "path": "tests/m5-gallery",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "27c17e20f7893e2d9e1ab804aba9eda345bf56d43d30e33310e75fada5cf6109",
+      "serial_log_sha256": "bb4433edab4091fcbd917abefecc3477c03ad0f896e502a51d7020ac3b90584d"
+    },
+    {
+      "abi": "abi11",
+      "path": "tests/m6-interactions",
+      "return_code": 0,
+      "attempts": 1,
+      "binary_sha256": "910c3adfedbd32d3a734b16d224d6977de47f376db29e7423c29ba6bd485a6f9",
+      "serial_log_sha256": "328bf5759bee0f88732d484e175e389077a28bbd770c96d45717071feef05297"
+    }
+  ],
+  "compile_fail": [
+    {
+      "bin": "positive-safe",
+      "built": true,
+      "error": null
+    },
+    {
+      "bin": "use-after-close",
+      "built": false,
+      "error": "error[E0382]: borrow of moved value: `file`"
+    },
+    {
+      "bin": "context-exit",
+      "built": false,
+      "error": "error: lifetime may not live long enough"
+    },
+    {
+      "bin": "clone-file",
+      "built": false,
+      "error": "error[E0277]: the trait bound `File<'_>: Clone` is not satisfied"
+    },
+    {
+      "bin": "send-file",
+      "built": false,
+      "error": "error[E0277]: `*mut ()` cannot be shared between threads safely"
+    },
+    {
+      "bin": "sync-file",
+      "built": false,
+      "error": "error[E0277]: `*mut ()` cannot be shared between threads safely"
+    },
+    {
+      "bin": "borrowed-callback-escape",
+      "built": false,
+      "error": "error: lifetime may not live long enough"
+    },
+    {
+      "bin": "target-std",
+      "built": false,
+      "error": "error[E0463]: can't find crate for `std`"
+    }
+  ],
+  "host_checks": [
+    {
+      "name": "mui-layout",
+      "status": "pass",
+      "output": "abi1: BOOPSI_LAYOUT_VALUES 24, MUI_CUSTOM_CLASS_LAYOUT_VALUES 10, MUI_LAYOUT_VALUES 835, MUI_CONSTANT_VALUES 5 agree with the C compiler\nabi11: BOOPSI_LAYOUT_VALUES 24, MUI_CUSTOM_CLASS_LAYOUT_VALUES 10, MUI_LAYOUT_VALUES 816, MUI_CONSTANT_VALUES 4 agree with the C compiler"
+    },
+    {
+      "name": "doc-examples",
+      "status": "pass",
+      "output": "checking 41 source examples, 13 guide examples and 6 complete programs (build script from docs/consumer-guide.md:91) with toolchain 0.2.0\nPASS x86_64-unknown-aros-abi1 examples\nPASS x86_64-unknown-aros-abi1 programs/program_0\nPASS x86_64-unknown-aros-abi1 programs/program_1\nPASS x86_64-unknown-aros-abi1 programs/program_2\nPASS x86_64-unknown-aros-abi1 programs/program_3\nPASS x86_64-unknown-aros-abi1 programs/program_4\nPASS x86_64-unknown-aros-abi1 programs/program_5\nPASS x86_64-unknown-aros-abi11 examples\nPASS x86_64-unknown-aros-abi11 programs/program_0\nPASS x86_64-unknown-aros-abi11 programs/program_1\nPASS x86_64-unknown-aros-abi11 programs/program_2\nPASS x86_64-unknown-aros-abi11 programs/program_3\nPASS x86_64-unknown-aros-abi11 programs/program_4\nPASS x86_64-unknown-aros-abi11 programs/program_5"
+    }
+  ]
+}
