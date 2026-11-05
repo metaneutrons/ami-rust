@@ -13,12 +13,12 @@ Find your symptom by its message. Build problems come first, then problems on th
 AROS native bridge: Refusal { message: "RUSTC_WRAPPER conflicts with the pinned compiler selection", exit_code: 2 }
 ```
 
-**Cause.** A compiler wrapper is active. The build refuses wrappers because one can replace the pinned compiler. A wrapper is often set once in `~/.cargo/config.toml` (`[build] rustc-wrapper = "…"`), so it can surprise you in a project that never mentions it. `RUSTC_WORKSPACE_WRAPPER` is treated the same way.
+**Cause.** A compiler wrapper is active. The build refuses wrappers because a wrapper can replace the pinned compiler. People often set a wrapper once in `~/.cargo/config.toml` (`[build] rustc-wrapper = "…"`), so it can surprise you in a project that never mentions it. `RUSTC_WORKSPACE_WRAPPER` is treated the same way.
 
-- **The caching wrapper `sccache`** is accepted by release 0.2.0 and later: it only caches the output of the compiler Cargo selected, and the checks on the compiler, Cargo and linker still apply. The 0.1.0 tag refuses it too, so with that revision either disable it as below or move your `rev` to a later revision.
-- **Any other wrapper** is refused by every revision. Disable it as below.
+- **The caching wrapper `sccache`** is accepted by release 0.2.0 and later. It only caches the output of the compiler that Cargo selected, and the checks on the compiler, Cargo and linker still apply. Release 0.1.0 refuses `sccache` too. With that release, either disable the wrapper as below or move to 0.2.0 or later.
+- **Any other wrapper** is refused by every release. Disable it as below.
 
-Release 0.2.0 and later also print this explanation, with the fix, next to the refusal. The 0.1.0 tag shows only the message above.
+Release 0.2.0 and later print this explanation and the fix next to the refusal. Release 0.1.0 prints only the message above.
 
 **Fix.** Disable the wrapper for this build, in whichever way suits you:
 
@@ -83,39 +83,46 @@ cargo +0.2.0 build --target x86_64-unknown-aros-abi11 --release --locked --offli
 
 ### `can't find crate for 'std'`
 
-**Cause.** The code, or a dependency, does not declare `#![no_std]`. 0.2.0 supports `no_std` plus `alloc`, not full `std`.
+**Cause.** Your code, or a dependency, does not declare `#![no_std]`. Release 0.2.0 supports `no_std` plus `alloc`, not the full `std`.
 
-**Fix.** Declare `#![no_std]` in your crates, and choose dependencies that support `no_std`. Many crates do so behind a feature such as `default-features = false`.
+**Fix.** Declare `#![no_std]` in your own crates, and choose dependencies that support `no_std`. Many crates support it once you turn off their default features (`default-features = false`), and some have a `no_std` or `alloc` feature to turn on.
 
 ### `unresolved import 'aros_mui::classes::Panel'` (or another MUI item)
 
-**Cause.** The item is declared only for ABI-v1 and you are building for ABI-v11.
+**Cause.** The item exists only for ABI-v1, and you are building for ABI-v11.
 
-**Fix.** Build for `x86_64-unknown-aros-abi1`, or avoid the item. The [ABI differences](/reference/abi-differences/) page lists all of them.
+**Fix.** Build for `x86_64-unknown-aros-abi1`, or do without the item. The [ABI differences](/reference/abi-differences/) page lists every such item.
 
 ## Problems on the AROS system
 
 ### The program returns code 20 immediately
 
-The native start-up refuses to run when its checks fail, and it prints nothing. Check, in order:
+The native start-up refuses to run when one of its checks fails, and it prints nothing. Check, in order:
 
-1. **`exec.library` and `dos.library` versions.** They must be 51 and 50. `Version exec.library` and `Version dos.library` report them. A different version usually means an AROS build that this release was not qualified against.
-2. **Stack size.** On ABI-v1 the stack must be exactly 128 KiB. Run `Stack 131072` in the shell before starting the program.
-3. **ABI pairing.** An executable built for one ABI will not work on a system of the other. Check that the target you built for matches the AROS you run; see [targets and ABIs](/targets-and-abis/).
+1. **`exec.library` and `dos.library` versions.** `exec.library` must be version 51 and `dos.library` version 50. `Version exec.library` and `Version dos.library` report them. A different version usually means an AROS build that this release was not qualified against.
+2. **Stack size.** On ABI-v1 the stack must be exactly 128 KiB. Run `Stack 131072` in the shell before you start the program.
 
-Return code 20 is also what `AppStatus::Fatal` and a panic produce, so if your program does start, look for those too.
+Return code 20 is also what `AppStatus::Fatal` and a panic produce. If your program does start, look for those too.
 
 ### The program returns code 10 before doing anything
 
-The arguments exceeded the start-up limit: 4096 bytes in total, including a terminating NUL for each argument. Pass less, or read the data from a file.
+The start-up refuses an argument list that is too long. The limits are 32 arguments, counting the program name as one, and 4096 bytes in total, counting a terminating NUL for each argument. Pass fewer arguments, or read the data from a file.
+
+Return code 10 is also what `AppStatus::Error` produces, so if your program does start, look for that too.
+
+### The system stops with a kernel exception when the program starts
+
+**Cause.** The executable was built for the other ABI. In our tests on the qualified images, an ABI-v11 executable on the ABI-v1 system, and an ABI-v1 executable on the ABI-v11 system, both stopped the system with a kernel exception. The program does not return an error code.
+
+**Fix.** Build for the target that matches the AROS you run, then start the system again. See [targets and ABIs](/targets-and-abis/).
 
 ### No output appears
 
-`Context::diagnostic` writes through the system's low-level debug output, which many AROS configurations do not show. Use `Stdout` or `Stderr` for output you want to see. See [Run on AROS](/run-on-aros/#diagnostics).
+`Context::diagnostic` writes through the system's low-level debug output, which many AROS configurations do not show. Use `Stdout` or `Stderr` for output that you want to see. See [Run on AROS](/run-on-aros/#diagnostics).
 
 ### A MUI program starts but the shell never returns
 
-That is expected. A MUI application stays in its event loop until MUI reports `QUIT`. In [MUI hello](/mui-hello/) that happens when you close the window. A program that never opens a window or never arranges a `QUIT` return ID will not end by itself.
+That is expected. A MUI application stays in its event loop until MUI reports `QUIT`. In [MUI hello](/mui-hello/), that happens when you close the window. A program that never arranges a `QUIT` return ID, for example when the window is asked to close, as MUI hello does, will not end by itself.
 
 ## Still stuck?
 

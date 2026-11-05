@@ -3,10 +3,14 @@ title: "aros-mui: safe MUI objects and events"
 description: "Typed, scope-owned MUI objects: builders, attributes, notifications, hooks, custom classes and the application loop."
 ---
 
-`aros-mui` is the safe-facing MUI layer. It opens `muimaster.library` and
+`aros-mui` is the safe MUI layer. It opens `muimaster.library` and
 `intuition.library` for an active `aros::Context`, then confines all native
-objects to a non-escaping `Mui::scope` closure. It supports the x86-64 AROS
-ABI-v1 and ABI-v11 targets; a [few classes](/reference/abi-differences/) exist on only one. The rules shared by every handle are in the [programming model](/api/); every item is listed in the [reference](/reference/aros_mui/).
+objects to a `Mui::scope` closure that they cannot escape. It supports the
+x86-64 AROS ABI-v1 and ABI-v11 targets, although a
+[few classes](/reference/abi-differences/) exist on only one of them.
+
+The rules shared by every handle are in the [programming model](/api/). Every
+item is listed in the [reference](/reference/aros_mui/).
 
 ```rust
 use aros::Context;
@@ -34,21 +38,21 @@ fn show_label(context: &Context) -> Result<(), Error> {
 | `Mui::open(context)` | Opens MUI and Intuition for the active task. Keep it alive for all scopes. |
 | `Mui::scope` | Runs a higher-ranked closure with a fresh `Scope`; scope-bound values cannot escape it. |
 | `Scope` | Owns native roots, string arrays, hooks, and custom-class registrations. |
-| `Object<'scope, C>` | A copyable typed view of native storage owned by its `Scope`; copying never clones or disposes native state. |
+| `Object<'scope, C>` | A copyable, typed view of native storage that its `Scope` owns. Copying never clones or disposes native state. |
 | `Object::adopt` | Transfers native child ownership only between compatible classes in the same scope. |
 | `Object::upcast` | Changes the compile-time class view without changing lifetime or ownership. |
 
-Every handle is task-affine. Objects, hooks, retained strings, and custom
-classes from one scope cannot be used in another scope. Ownership cycles,
-duplicate attachment, and a second window root are rejected before a native
-call.
+Every handle stays on the task that created it. Objects, hooks, retained strings
+and custom classes from one scope cannot be used in another scope. The crate
+rejects ownership cycles, duplicate attachment and a second window root before
+it makes a native call.
 
 ## Construction and attributes
 
 `Scope::builder::<C>()` creates a `Builder<C>`. Add construction attributes
 with `Builder::with::<A>(value)`, then call `build`. `Object::set::<A>(value)`
-and `Object::get::<A>()` accept only generated descriptors that are valid for
-the object's class and access direction.
+and `Object::get::<A>()` accept only generated descriptors that are valid for the
+object's class and for that direction of access.
 
 | Module | Contents |
 | --- | --- |
@@ -57,8 +61,8 @@ the object's class and access direction.
 | `methods` | Generated method descriptors. |
 | `values` | Checked MUI enum and value types. |
 
-The generated class, attribute, method, and value types are part of the crate's
-public API. The reference derives their relations from the type system:
+The generated class, attribute, method and value types are part of the crate's
+public API. The reference derives how they relate from the type system. It has
 the [class hierarchy](/reference/aros_mui/classes/) with each class's own and
 inherited attributes, the [attribute index](/reference/aros_mui/attributes/) with
 value type and access mode (construct, set, get), the
@@ -67,38 +71,41 @@ value type and access mode (construct, set, get), the
 
 ## Notifications and event loop
 
-`Object::notify` starts a typed notification from a readable attribute.
-`Notification` can send an application `ReturnId`, make a typed no-notify
-write, or invoke a scope-retained `Hook`. `Trigger::EveryTime` listens to every
-change; `Trigger::Value(value)` listens for a typed match.
+`Object::notify` starts a typed notification from a readable attribute. A
+`Notification` can send an application `ReturnId`, make a typed write that does
+not notify, or invoke a `Hook` that the scope retains. `Trigger::EveryTime` fires
+on every change of the attribute, and `Trigger::Value(value)` fires only when the
+attribute equals `value`.
 
-Hooks are non-reentrant and valid only for their scope. A hook receives the
-native `HookCall` supplied by MUI; callers must not assume that a value trigger
-provides the current source-attribute value in every native case.
+A hook is valid only for its scope, and it is not reentrant. It receives the
+native `HookCall` that MUI supplies. With `Trigger::Value`, do not assume that
+the `HookCall` carries the current value of the source attribute, because that is
+not so in every case.
 
-`Object<Application>::run` processes MUI return IDs and waits for the signal
-mask supplied by the preceding native input step. It returns `LoopExit::Quit`
-for MUI's reserved quit ID or `LoopExit::Handler(id)` when the handler asks to
-exit.
+`Object<Application>::run` is the event loop. It passes every return ID except
+`QUIT` to your handler, which returns `LoopControl::Continue` or
+`LoopControl::Exit`. Between steps it waits, through `aros::wait_signals`, for the
+signals that MUI asked for. The loop returns `LoopExit::Quit` when MUI reports
+`QUIT`, or `LoopExit::Handler(id)` when your handler chose to exit on return ID
+`id`.
 
 ## Custom classes and the raw boundary
 
-`Scope::custom_class::<S>()` registers a safe custom class described by
-`CustomClassSpec`; `CustomBuilder` constructs a `CustomObject`. Safe custom
-methods are argument-free Rust enum values. Foreign-layout native messages are
-forwarded to the native superclass or require the explicit raw boundary.
+`Scope::custom_class::<S>()` registers a safe custom class that a
+`CustomClassSpec` describes, and a `CustomBuilder` constructs a `CustomObject`.
+The methods of a safe custom class are argument-free Rust enum values. A native
+message whose layout the class does not describe is forwarded to the native
+superclass. To handle such a message yourself, you need the explicit raw
+boundary.
 
-`ForeignPtr`, `RawAttribute`, `RawMethod`, and `Object::call_raw` are expert
-interfaces. Their callers must uphold message layout, pointer lifetime,
-ownership, and native retention rules. Ordinary applications should use
-builders, generated attributes, notifications, hooks, and custom classes.
-
-For a full application, start with
-[MUI hello](/mui-hello/).
+`ForeignPtr`, `RawAttribute`, `RawMethod` and `Object::call_raw` are expert
+interfaces. When you use them, you must uphold the rules for message layout,
+pointer lifetime, ownership and native retention. Ordinary applications should
+use builders, generated attributes, notifications, hooks and custom classes.
 
 ## Examples
 
-Each of these is a complete, compile-checked example on the item's reference page:
+Each of these has a complete example, which the repository compiles, on the reference page of the item:
 
 | To do this | See |
 | --- | --- |
