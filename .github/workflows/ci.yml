@@ -114,6 +114,10 @@ jobs:
         shell: bash
         run: node tools/check-docs-policy.mjs
 
+      - name: Check that every test program and script is used
+        shell: bash
+        run: node tools/check-orphans.mjs
+
       - name: Test the release relabel script
         shell: bash
         run: bash tools/test-relabel-release-pr.sh
