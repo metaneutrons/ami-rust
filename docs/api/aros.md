@@ -32,7 +32,7 @@ aros::entry!(application, alloc);
 | `entry!(application, alloc)` | Also installs `ExecAllocator`; native allocation may still fail. |
 | `AppStatus` | Return `Success`, `Error`, or `Fatal` from the entry function. |
 | `Context` | Borrowed proof of the active application task. Use it to create every safe SDK handle. |
-| `Context::args()` | Iterates borrowed argument bytes. Argument strings need not be UTF-8. |
+| `Context::args()` | Iterates the arguments as borrowed bytes. The first is the program name. They need not be UTF-8, and there are at most 32 of them, 4096 bytes in total. |
 | `Context::diagnostic(label, code)` | Emits a bounded, allocation-free diagnostic. |
 | `Context::statistics()` | Returns an `aros_sys::SdkStats` snapshot without allocating. |
 | `ExecAllocator` | Global allocator backed by public Exec allocation. Available with the default `alloc` feature. |
@@ -48,19 +48,21 @@ owner, invalid state, end of file, and zero progress. `Operation` identifies
 the operation that failed; `Error::kind_code()` supplies an allocation-free
 numeric classification for diagnostics.
 
-The native registries for open files, optional libraries, private ports and
-owned messages grow on demand. Memory is their practical bound, and each kind
-has a token space of 1,048,575 handles; reaching it returns `ErrorKind::Limit`.
-Running out of memory while a registry grows returns `ErrorKind::Native`.
-Signals are the exception: Exec allocates them from one 32-bit task mask, so
-only the bits Exec leaves free are available, and the rest returns
-`ErrorKind::Native`. Owned messages carry payloads of at most 256 bytes. Paths
-allow 127 bytes before their terminating NUL; one file or stream transfer is at
-most 64 KiB.
+The limits are:
 
-Release 0.1.0 used fixed registries of 16 files, 4 libraries, 2 ports, 4
-signals and 8 messages. Programs written for those limits keep working;
-they simply no longer meet them.
+- **Files, optional libraries, private ports and owned messages** grow on
+  demand, so memory is their practical bound. Each kind also has a token space of
+  1,048,575 handles, and reaching it returns `ErrorKind::Limit`. Running out of
+  memory while a registry grows returns `ErrorKind::Native`.
+- **Signals** are the exception. Exec allocates them from one 32-bit task mask,
+  so only the bits Exec leaves free are available. When none is left, the
+  result is `ErrorKind::Native`.
+- **Sizes.** An owned message carries at most 256 bytes of payload. A path can
+  have 127 bytes, not counting its terminating NUL. One file or stream transfer
+  moves at most 64 KiB.
+
+Release 0.1.0 had fixed limits of 16 files, 4 libraries, 2 ports, 4 signals and
+8 messages. A program written for them keeps working under the new ones.
 
 ## File and stream I/O
 
@@ -74,10 +76,12 @@ bytes and an overlong payload. `File::open` accepts these modes:
 | `FileMode::ReadWrite` | Open or create a read/write file. |
 
 `File` provides `read`, `write`, `read_exact`, `write_all`, `seek` (with
-`SeekFrom`), `position`, `len` and consuming `close`. Single reads and writes may make partial progress; the `*_exact` and
-`*_all` variants continue until complete or return an error. `Stdout` and
-`Stderr` offer `write` and `write_all` on borrowed DOS process handles; neither
-closes its underlying handle.
+`SeekFrom`), `position`, `len` and a consuming `close`. A single read or write
+may make only partial progress. The `*_exact` and `*_all` variants continue
+until they are complete or fail.
+
+`Stdout` and `Stderr` offer `write` and `write_all` on the process's DOS output
+handles. They only borrow those handles and never close them.
 
 ## Libraries, signals and local messages
 
@@ -89,14 +93,15 @@ closes its underlying handle.
 | `Port::new(context)` | Creates a private local message port. |
 | `Message::new(context, payload)` | Owns bounded payload and native message storage. |
 | `Port::send(message, reply)` | Queues a message and defines its reply route. |
-| `Port::receive(message)` | Checks whether that supplied message is queued here; it does not drain arbitrary messages. |
+| `Port::receive(message)` | Takes the message you pass off the queue when it is the first one. It returns `Ok(false)` when the queue is empty and an `ErrorKind::State` error when another message is first. |
 | `Message::reply()` | Replies to a received local message. |
 
-`aros::call(context, &mut callback, input)` invokes a `FnMut(u64) -> u64`
-synchronously. Its callback frame cannot be retained by native code.
-`Library::raw_base` is deliberately unsafe and lifetime-bound. Prefer a focused
-safe crate such as [`aros-mui`](/api/aros-mui/)
-for higher-level library APIs.
+`aros::call(context, &mut callback, input)` invokes an `FnMut(u64) -> u64`
+synchronously. Native code cannot keep its callback frame.
+
+`Library::raw_base` is deliberately `unsafe`, and the pointer it returns is
+bound to the library's lifetime. For the API of a library, prefer a focused safe
+crate such as [`aros-mui`](/api/aros-mui/).
 
 ## Devices and I/O requests
 
@@ -111,13 +116,15 @@ for higher-level library APIs.
 | `Request::outcome()`, `read_data`, `time` | Read the device error, transferred byte count, data and time value of an idle request. |
 
 A request is idle or pending. Dropping or closing a pending request aborts it
-and waits for the device to return it, so no message stays queued, and
-forgotten requests and devices are aborted and closed when the program
-finishes. A `Request` borrows its `Device`, so a device cannot be closed under
-a request. The `IORequest` layout, including the difference of `timerequest`
-between the two ABIs, never leaves the native bridge. Two request shapes exist:
-standard (`IOStdReq`, with up to 64 KiB of data) and timer (`timerequest`). A
-device error is reported in the `IoOutcome`, not as an `Err`.
+and waits for the device to return it, so no message stays queued. A request or
+device that you forget is aborted and closed when the program finishes. A
+`Request` borrows its `Device`, so you cannot close a device while a request
+uses it.
+
+The `IORequest` layout never leaves the native bridge, including the difference
+in `timerequest` between the two ABIs. Two request shapes exist: standard
+(`IOStdReq`, with up to 64 KiB of data) and timer (`timerequest`). A device error
+is reported in the `IoOutcome`, not as an `Err`.
 
 ## Directories, variables and arguments
 
@@ -131,33 +138,43 @@ device error is reported in the `IoOutcome`, not as an `Err`.
 | `var`, `set_var`, `delete_var` with `VarScope` | Local (per process) and global (`ENV:`) variables, `Any` looking at local ones first. |
 | `Template::parse(spec)` and `Template::read(args)` | Match the program's arguments against a `ReadArgs` template; see below. |
 
-Names and values are byte strings. The protection bits follow DOS: the low
-four (delete, execute, write and read) are set when the action is *denied*, and
-the `FIBB_HOLD` bit exists only on ABI-v1.
-Every lock the bridge takes is released, also for a `Dir` that is forgotten, and
-a changed current directory is restored when the program ends. A variable value
-is at most 4096 bytes and cannot contain a NUL byte; a value that does not fit
-the buffer of `var` is a native error (`ERROR_BUFFER_OVERFLOW`, 303) rather than
-a truncated string.
+Names and values are byte strings. The protection bits follow DOS: the low four
+(delete, execute, write and read) are set when the action is *denied*. The
+`FIBB_HOLD` bit exists only on ABI-v1.
+
+The bridge releases every lock it takes, even the lock of a `Dir` that you forget,
+and it restores a changed current directory when the program ends. A variable
+value is at most 4096 bytes and cannot contain a NUL byte. When a value does not
+fit the buffer you give `var`, the result is a native error
+(`ERROR_BUFFER_OVERFLOW`, 303), not a truncated string.
 
 ### Argument templates
 
-`Template` follows `ReadArgs`: `FROM/A/M,TO/K,ALL/S,COUNT/N` has a required
-list of values, a keyword-only value, a switch and a number. The modifiers are
-`/A` required, `/K` keyword required, `/S` switch, `/T` toggle (parsed like a
-switch), `/N` number, `/M` any number of values and `/F` the rest of the line.
-Keywords match ignoring case and may have an alias, `QUIET=Q/S`. A keyword is
-written `KEY value` or `KEY=value`, and every `=` separates arguments as in
-`ReadArgs`. A `/M` item leaves the last arguments to the required items after
-it, and a keyword before a `/M` item gives it exactly one value.
+`Template` follows `ReadArgs`. `FROM/A/M,TO/K,ALL/S,COUNT/N`, for example, has a
+required list of values, a value that must follow its keyword, a switch and a
+number. The modifiers are:
 
-The parser is checked against the real dos.library `ReadArgs` on both ABIs: the
+- `/A`: required.
+- `/K`: the value must follow its keyword.
+- `/S`: switch.
+- `/T`: toggle, parsed like a switch.
+- `/N`: number.
+- `/M`: any number of values.
+- `/F`: the rest of the line. Read it back with `Values::write_line`.
+
+Keywords match regardless of case and may have an alias, as in `QUIET=Q/S`. You
+write a keyword as `KEY value` or `KEY=value`, and every `=` separates arguments,
+as in `ReadArgs`. A `/M` item leaves the last arguments to the required items
+after it, and a keyword before a `/M` item gives it exactly one value.
+
+The parser is checked against the real dos.library `ReadArgs` on both ABIs. The
 qualification fixture runs 62 argument lists through both and requires the same
-result. It differs in documented ways. A `/N` value outside `i32` is an error
-(`ReadArgs` wraps it around). Quoting is gone once the C start-up has split the
-arguments, so an argument that contains `=` cannot be kept whole; read it from
-`Context::args` instead. The prompting `?` form is not supported. A `/F` item's
-rest of the line is read back with `Values::write_line`.
+result. The parser differs from `ReadArgs` in three documented ways:
+
+- A `/N` value outside `i32` is an error, where `ReadArgs` wraps it around.
+- Quoting is gone once the C start-up has split the arguments, so an argument
+  that contains `=` cannot be kept whole. Read it from `Context::args` instead.
+- The prompting `?` form is not supported.
 
 ## Large files
 
@@ -182,16 +199,17 @@ on the qualified images, in QEMU, with a FAT32 volume holding a 3 GiB file:
 | `seek(End(0))`, `position` | 3,221,225,472 | `Limit` |
 | `seek(Start(3 GiB - 4))` | `ERROR_OBJECT_TOO_LARGE` (the handler is 32-bit) | `Limit` |
 
-Writing above 2 GiB needs a volume whose handler is 64-bit, which among the
-pinned handlers is PFS3. A PFS3 partition crashes the pinned ABI-v1 image while
-it boots (every RDB image with a PFS3 partition, formatted or not, did; a FAT
-partition and an FFS partition did not; the cause is a handler that calls libc
-before its library base is set, [AROS-NX issue 121](https://github.com/metaneutrons/AROS-NX/issues/121)),
-so writes above 2 GiB are not verified.
+Writing above 2 GiB needs a volume whose handler is 64-bit. Of the pinned
+handlers, that is PFS3. But a PFS3 partition crashes the pinned ABI-v1 image
+while it boots. Every RDB image with a PFS3 partition did, formatted or not,
+while images with a FAT or an FFS partition did not. The cause is a handler that
+calls the C library before its library base is set
+([AROS-NX issue 121](https://github.com/metaneutrons/AROS-NX/issues/121)).
+Writes above 2 GiB are therefore not verified.
 
 ## Examples
 
-The examples below are complete functions. Each takes the `Context` your entry function receives and returns an `aros::Error` on failure, so `?` works throughout. Every one of them is compiled for both targets by the repository's example check.
+The examples below are complete functions. Each takes the `Context` that your entry function receives and reports failure as an `aros::Error`, so `?` works throughout. The repository's example check compiles every one of them for both targets.
 
 ### Copy a file to standard output
 
@@ -214,7 +232,7 @@ fn copy_to_stdout(context: &Context, path: &[u8]) -> Result<(), Error> {
 }
 ```
 
-`File::read` may return fewer bytes than the buffer holds, so the loop continues until it returns zero. `write_all` retries short writes. The explicit `close` reports a native close error; dropping the file would have closed it silently.
+`File::read` may return fewer bytes than the buffer holds, so the loop goes on until it returns zero. `write_all` retries short writes. The explicit `close` reports a native close error, which dropping the file would have hidden.
 
 ### List a directory
 
@@ -234,10 +252,12 @@ fn decimal(mut number: u64, buffer: &mut [u8; 20]) -> &[u8] {
 }
 
 fn list(context: &Context) -> Result<(), Error> {
-    // DIR is the directory to list, ALL also prints sizes.
+    // DIR is the directory to list, ALL also prints sizes. This example ends
+    // silently on a bad template or argument list; a real program would report it.
     let Ok(template) = Template::parse(b"DIR,ALL/S") else {
         return Ok(());
     };
+    // The first argument is the program name.
     let Ok(values) = template.read(context.args().skip(1)) else {
         return Ok(());
     };
@@ -259,7 +279,7 @@ fn list(context: &Context) -> Result<(), Error> {
 ```
 
 Opening can fail with a native error such as `ERROR_OBJECT_NOT_FOUND` (205) or,
-for a file, `ERROR_OBJECT_WRONG_TYPE` (212); the `Dir` handle releases its lock
+for a file, `ERROR_OBJECT_WRONG_TYPE` (212). The `Dir` handle releases its lock
 when it is dropped.
 
 ### Classify a failure
@@ -281,6 +301,11 @@ fn exists(context: &Context, path: &[u8]) -> Result<bool, Error> {
 }
 ```
 
+This function treats every native open failure as "does not exist", including a
+failure for another reason such as a protected file. Compare `error.native` with
+the DOS error code you expect, for example `ERROR_OBJECT_NOT_FOUND` (205), to tell
+the causes apart.
+
 ### Send a message between private ports
 
 ```rust
@@ -301,4 +326,4 @@ fn ping(context: &Context) -> Result<(), Error> {
 }
 ```
 
-Ports are private to your application and at most two exist at once. `receive` checks that the message you pass is at the head of the queue; it does not search past another message.
+Ports are private to your application. `receive` takes the message you pass off the queue only when it is the first one; it does not search past another message.
