@@ -36,7 +36,7 @@ bash "$source_root/tools/bootstrap-host-rust.sh" "$work/bootstrap" "$host_triple
 
 git -C "$source_root" archive --format=tar HEAD \
   Cargo.toml Cargo.lock crates examples/minimal examples/sha256sum \
-  tests/qualification tests/dependencies native tooling/crates/aros-elf \
+  tests/qualification tests/dependencies tooling/crates/aros-elf \
   tooling/crates/aros-native-build | tar -xf - -C "$work/source"
 node "$source_root/website/scripts/prepare-rustdoc-source.mjs" "$work/source"
 
