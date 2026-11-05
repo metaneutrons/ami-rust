@@ -168,17 +168,21 @@ const runCompileFail = ({ toolchain, work }) => {
 
 // A host check names a script and its arguments. In the arguments {work} is a
 // fresh directory of the check, {toolchain} the toolchain and {abi1-source},
-// {abi11-source} and {abi11-sdk} the options of the same name.
+// {abi11-source} and {abi11-sdk} the options of the same name. Anything else is
+// passed as it is.
+export const resolveArguments = (template, values) => template.map((argument) => {
+  const placeholder = /^\{([a-z0-9-]+)\}$/.exec(argument);
+  if (!placeholder) return argument;
+  const value = values[placeholder[1]];
+  if (value === undefined) throw new Error(`a host check needs the option --${placeholder[1]}`);
+  return value;
+});
+
 const runHostChecks = ({ toolchain, work, mui }) => {
   const manifest = JSON.parse(readFileSync(path.join(repository, 'tests/programs.json'), 'utf8'));
-  const values = { toolchain, '{abi1-source}': mui.abi1Source, '{abi11-source}': mui.abi11Source, '{abi11-sdk}': mui.abi11Sdk };
   return manifest.host_checks.map(({ name, script, arguments: template }) => {
-    const resolved = template.map((argument) => {
-      const value = argument === '{work}' ? path.join(work, name)
-        : argument === '{toolchain}' ? toolchain
-          : values[argument];
-      if (value === undefined) throw new Error(`host check ${name} needs the option ${argument.replace(/[{}]/g, '--')}`);
-      return value;
+    const resolved = resolveArguments(template, {
+      work: path.join(work, name), toolchain, 'abi1-source': mui.abi1Source, 'abi11-source': mui.abi11Source, 'abi11-sdk': mui.abi11Sdk,
     });
     const result = spawnSync('node', [path.join(repository, script), ...resolved], { encoding: 'utf8' });
     console.log(`host check ${name}: ${result.status === 0 ? 'pass' : 'FAIL'}`);
@@ -198,12 +202,14 @@ const main = () => {
     source_commit: git('rev-parse', 'HEAD'),
     source_clean: git('status', '--porcelain', '--untracked-files=no') === '',
   });
-  if (context.only.includes('fixture')) evidence.fixture = runFixture(context);
-  if (context.only.includes('applications')) evidence.applications = runApplications(context);
-  if (context.only.includes('compile-fail')) evidence.compile_fail = runCompileFail(context);
-  if (context.only.includes('host-checks')) evidence.host_checks = runHostChecks(context);
   mkdirSync(path.dirname(context.output), { recursive: true });
-  writeFileSync(context.output, `${JSON.stringify(evidence, null, 2)}\n`);
+  const save = () => writeFileSync(context.output, `${JSON.stringify(evidence, null, 2)}\n`);
+  // Each group is saved when it is done, so a failure later does not lose an hour of boots.
+  if (context.only.includes('fixture')) { evidence.fixture = runFixture(context); save(); }
+  if (context.only.includes('applications')) { evidence.applications = runApplications(context); save(); }
+  if (context.only.includes('compile-fail')) { evidence.compile_fail = runCompileFail(context); save(); }
+  if (context.only.includes('host-checks')) { evidence.host_checks = runHostChecks(context); save(); }
+  save();
   console.log(`wrote ${context.output}`);
 };
 
