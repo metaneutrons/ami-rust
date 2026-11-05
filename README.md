@@ -172,7 +172,10 @@ signing, AROS execution, and publication remain protected workflow stages.
 | --- | --- |
 | `crates/` | Public AROS and Amiga libraries |
 | `examples/` | Native AROS example applications |
-| `native/` | Startup and runtime support |
+| `tests/` | Test programs: the qualification fixture, native applications and compile-fail fixtures, listed in `tests/programs.json` |
+| `tools/` | Maintainer scripts and the checks CI runs |
+| `bindings/` | Generated API models, including the MUI model and its C layout files |
+| `docs/`, `website/` | The documentation and its site |
 | `targets/` | Rust target specification |
 | `tooling/` | Rust-only producer and qualification libraries |
 | `release/` | Pinned inputs, contracts, notices, and source obligations |

@@ -5130,7 +5130,7 @@ pub struct MUIP_WriteString {
     pub memory: Stacked<*mut c_char>,
 }
 
-/// Number of C layout values used by the M3 qualification oracle.
+/// Number of C layout values that `tools/check-mui-layout.mjs` compares with the C compiler.
 #[doc(hidden)]
 pub const MUI_LAYOUT_VALUE_COUNT: usize = 835;
 

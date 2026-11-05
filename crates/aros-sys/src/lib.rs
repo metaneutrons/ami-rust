@@ -1310,7 +1310,7 @@ pub const fn layout_values() -> [u64; ABI_LAYOUT_VALUE_COUNT] {
 pub type SdkCallback = unsafe extern "C" fn(*mut c_void, u64) -> u64;
 
 unsafe extern "C" {
-    // Native bridge runtime. The bridge is implemented in `native/sdk.c` and the other `native/*.c`
+    // Native bridge runtime. The bridge is implemented in `aros-native-build/native/sdk.c` and the other `aros-native-build/native/*.c`
     // files; every function below is the Rust declaration of one C function with the same name.
     // Conventions that hold for the whole interface:
     //  - A handle is a nonzero `u64` token issued by the bridge. It is valid only for the runtime that
@@ -1450,7 +1450,7 @@ unsafe extern "C" {
     /// and the bridge refuses [`sdk_alloc`] while it runs.
     ///
     /// The third parameter is named `context` in this declaration but it is the numeric code printed after
-    /// the label (`code` in `native/sdk.h`); it is not checked as a context key. The call performs no
+    /// the label (`code` in `aros-native-build/native/sdk.h`); it is not checked as a context key. The call performs no
     /// context or task check and fills no error record. The Rust `Context::diagnostic` passes its `code`.
     ///
     /// # Safety
@@ -2432,7 +2432,7 @@ unsafe extern "C" {
     /// Copies the asl layout oracle values into `values` and returns how many there are.
     ///
     /// The values are the file requester type and the `ASLFR_*` tag numbers the requester builder uses. On
-    /// ABI-v11 they come from constants declared in `native/layout.c` because the pinned C SDK has no asl
+    /// ABI-v11 they come from constants declared in `aros-native-build/native/layout.c` because the pinned C SDK has no asl
     /// header; on ABI-v1 they come from the SDK header. `asl_layout_values` holds the Rust side to compare
     /// with. The count is always returned; the values are written only when `values` is non-null and
     /// `capacity` is at least the count. No context is needed.
@@ -2489,7 +2489,7 @@ unsafe extern "C" {
     /// Copies the locale layout oracle values into `values` and returns how many there are.
     ///
     /// The values are the catalog tags (`OC_*`), the string numbers the Rust API uses and the size and key
-    /// offsets of `SdkLocaleInfo`. On ABI-v11 they come from constants declared in `native/layout.c`
+    /// offsets of `SdkLocaleInfo`. On ABI-v11 they come from constants declared in `aros-native-build/native/layout.c`
     /// because the pinned C SDK has no locale header; on ABI-v1 they come from the SDK header.
     /// `locale_layout_values` holds the Rust side to compare with. The count is always returned; the
     /// values are written only when `values` is non-null and `capacity` is at least the count. No context
@@ -2762,7 +2762,7 @@ unsafe extern "C" {
     ///
     /// The values are the `WB*` disk object types, the `AMTYPE_APP*` message types and the size and key
     /// offsets of `SdkIconInfo` and `SdkAppMessage`. On ABI-v11 they come from constants declared in
-    /// `native/layout.c` because the pinned C SDK has no workbench header; on ABI-v1 they come from the
+    /// `aros-native-build/native/layout.c` because the pinned C SDK has no workbench header; on ABI-v1 they come from the
     /// SDK header. `wb_layout_values` holds the Rust side to compare with. The count is always returned;
     /// the values are written only when `values` is non-null and `capacity` is at least the count. No
     /// context is needed.

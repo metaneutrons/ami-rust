@@ -17,7 +17,10 @@ access, visibility, source, and expression information. `provenance.json`
 identifies every consulted header and class-descriptor source by repository,
 commit, path, role, and SHA-256 digest. The same generator emits the committed
 ABI-specific Rust surface under `crates/aros-mui-sys/src/generated/` and the
-independent C layout oracles under `tests/m3-runtime/native/`.
+independent C layout files `layout-abi1.c` and `layout-abi11.c` in this directory.
+`node tools/check-mui-layout.mjs` compiles them with an installed toolchain's
+Clang and compares the values with the Rust constants of `aros-sys` and
+`aros-mui-sys`; no boot is needed, and the check is part of the release evidence.
 
 Generate the committed model from local clones containing the pinned commits:
 

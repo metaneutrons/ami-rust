@@ -73,6 +73,25 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 26
+
+      - name: Check the test programs and scripts, and that the release has its native evidence
+        env:
+          MODE: ${{ inputs.mode }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Publishing needs the native evidence of the version that is published.
+          flags=()
+          if test "$MODE" = publish || test "$MODE" = recover; then
+            flags=(--evidence)
+          fi
+          node tools/check-orphans.mjs "${flags[@]}" --version "$VERSION"
+
       - name: Build the pinned maintainer task
         if: inputs.mode != 'prepare-catalog'
         shell: bash

@@ -145,10 +145,12 @@ boot. The digest of the `sha256sum` result was compared with the host's
 ## Limitations of this evidence
 
 - The 0.1.0 qualification applications `tests/m3-runtime`, `tests/m4-safe-runtime`
-  and `tests/m5-gallery` need the explicit native objects of the 0.1.0
-  qualification workflow and do not build with the 0.2.0 helper. They are not
-  part of this matrix; the MUI paths are covered by `tests/m1-runtime`,
-  `tests/m6-interactions` and `mui-hello`.
+  and `tests/m5-gallery` were not part of this matrix. Their build scripts
+  required inputs that only the 0.1.0 qualification setup provided, so they
+  could not be built the ordinary way, and none of the three was run for 0.2.0.
+  The MUI paths were covered by `tests/m1-runtime`, `tests/m6-interactions` and
+  `mui-hello`. [After the release](#after-the-release) says what was done about
+  it.
 - The 64-bit file claim of M11 is limited, as M11-A4 allows, to the API and its
   fallback behaviour: the qualification profile could not provision a volume on
   which a write above 2 GiB can be tested. The ABI-v11 `Limit` refusal is tested.
@@ -190,3 +192,29 @@ Release, rustup catalog publication or registry upload was created.
 - M10-A4: PRESERVED. Publication still requires a separate explicit maintainer
   command: the tag, the GitHub Release, the rustup catalog and the registry
   upload.
+
+## After the release
+
+The three applications above were an orphaned part of the test suite: nothing
+built or ran them for 0.2.0. A review of every test program and script of the
+repository removed what nothing used and brought the rest up to date:
+
+- `tests/m4-safe-runtime` and `tests/m5-gallery` now build with the same helper
+  as the examples, and pass on both ABIs.
+- `tests/m3-runtime` is gone. Its comparison of the layout constants of
+  `aros-sys` and `aros-mui-sys` with the C compiler is now
+  `tools/check-mui-layout.mjs`, which needs no boot; it passes for both ABIs.
+- `tests/programs.json` lists every test program, and `tools/check-orphans.mjs`
+  refuses anything that is not listed or not used. CI runs it, and the release
+  workflow runs it with `--evidence` before it publishes: a release needs
+  `docs/evidence/native-<version>.json`, produced by `tools/native-matrix.mjs`,
+  with every mode, application, compile-fail fixture and host check of the
+  manifest.
+
+`docs/evidence/native-0.2.0.json` is that evidence for the `main` branch after the
+release, built with the released 0.2.0 toolchain: every fixture mode on both ABIs
+(75 boots), the eight applications on both ABIs, the eight compile-fail fixtures,
+the MUI layout check and the documentation examples. It is a second run, not the
+qualification of the tag. The source differs from the qualified source in
+documentation comments, test programs and tools only, but the binaries are not
+those in the tables above.

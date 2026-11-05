@@ -49,6 +49,15 @@ Do not commit credentials, private signing keys, local paths, generated SDK
 archives, or local qualification output. New third-party inputs require their
 licence, source identity, digest, and corresponding-source record.
 
+## Test programs, scripts and release evidence
+
+A test program or script that nothing builds, runs or checks looks like coverage and is not, so none may stay.
+
+- **Programs.** Every program under `tests/`, `examples/` and `release/` (a directory with a `Cargo.toml`) is listed in `tests/programs.json` with how it is shown to work: the qualification fixture and its modes, the applications that run on AROS, the compile-fail fixtures, or a host check. A program builds with `aros_native_build::prepare`, reads no environment variable of a retired setup, and pins the `aros` crates to the current version. Nothing sits loose in `tests/`, and there is no `scripts/` directory.
+- **Scripts.** Every script in `tools/` is run by a workflow, called by another script, named in `tests/programs.json`, or is a test that `node --test tools/` runs. A workflow line that only lists a path filter does not count.
+- **The check.** `node tools/check-orphans.mjs` enforces all of this. CI runs it on every change, and the release workflow runs it before it publishes. When you remove a feature, remove its program and scripts in the same pull request. A program or script that is no longer wanted is deleted, not parked.
+- **Native evidence.** A release needs `docs/evidence/native-<version>.json`: every fixture mode on both ABIs, every application on both ABIs, every compile-fail fixture and every host check, each with the result the manifest expects. `node tools/native-matrix.mjs --toolchain NAME --runner PATH ...` builds and runs them with the installed toolchain of the release and writes the file; the runner is the emulator wrapper described at the top of the script. `node tools/check-orphans.mjs --evidence` verifies the file, and the release workflow refuses to publish without it. A new program, mode or check is therefore part of the next release's evidence as soon as it is listed.
+
 ## Documentation
 
 The site lives in `website/` (Astro and Starlight) and publishes the pages
@@ -77,10 +86,10 @@ documents are deliberately not published.
   that sentence disagrees with the two compiled builds.
 - **Examples.** Rustdoc examples are written as `ignore` blocks that form the
   body of a function with `context: &aros::Context` in scope. Run
-  `node tools/check-doc-examples.mjs WORK_DIR` with the 0.2.0 toolchain
-  installed to compile them, and the complete programs in the guides, for both
-  targets.
-- **Native bridge changes.** `native/*` and `tooling/crates/aros-native-build/native/*` are identical copies, and the installed toolchain's `aros-link` refuses a bridge that differs from the copy it was built with, so a change cannot be tried with a released toolchain. For local work, copy an installed toolchain (`cp -Rc`), build `aros-link` from `tooling/` (`cargo build --release -p aros-native-build --bin aros-link`), replace both `bin/aros-link` and `lib/rustlib/<host>/bin/aros-link` in the copy, link it with `rustup toolchain link`, and build with `cargo +<name>`. Delete the staged `ami-native` directories of earlier builds when the source changes. Such a change reaches users with the next toolchain release.
+  `node tools/check-doc-examples.mjs WORK_DIR` with the toolchain of the
+  release installed to compile them, and the complete programs in the guides,
+  for both targets. The native evidence of a release includes this check.
+- **Native bridge changes.** The bridge sources are `tooling/crates/aros-native-build/native/*`. The installed toolchain's `aros-link` refuses a bridge that differs from the copy it was built with, so a change cannot be tried with a released toolchain. For local work, copy an installed toolchain (`cp -Rc`), build `aros-link` from `tooling/` (`cargo build --release -p aros-native-build --bin aros-link`), replace both `bin/aros-link` and `lib/rustlib/<host>/bin/aros-link` in the copy, link it with `rustup toolchain link`, and build with `cargo +<name>`. Delete the staged `ami-native` directories of earlier builds when the source changes. Such a change reaches users with the next toolchain release.
 - **Node.** The site tooling targets Node 26, the version CI uses (`engines` in `website/package.json`). `node --test` is given explicit files rather than a directory because directory arguments behave differently across Node versions.
 - **Local build.**
 
