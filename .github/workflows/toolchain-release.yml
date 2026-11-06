@@ -80,15 +80,16 @@ jobs:
 
       - name: Check the test programs and scripts, and that the release has its native evidence
         env:
+          GH_TOKEN: ${{ github.token }}
           MODE: ${{ inputs.mode }}
           VERSION: ${{ inputs.version }}
         shell: bash
         run: |
           set -euo pipefail
           # Publishing needs the native evidence of the version that is published.
-          flags=()
+          flags=(--check-issues)
           if test "$MODE" = publish || test "$MODE" = recover; then
-            flags=(--evidence)
+            flags+=(--evidence)
           fi
           node tools/check-orphans.mjs "${flags[@]}" --version "$VERSION"
 

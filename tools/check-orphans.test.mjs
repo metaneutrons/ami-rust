@@ -5,7 +5,7 @@
 // must name exactly that. Run with: node --test tools/
 
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -51,6 +51,8 @@ const evidence = () => ({
   compile_fail: [{ bin: 'fine', built: true, error: null }, { bin: 'bad', built: false, error: 'error[E0382]: borrow of moved value' }],
   host_checks: [{ name: 'layout', status: 'pass' }],
 });
+
+const read = (file) => readFileSync(path.join(repository, file), 'utf8');
 
 const writeEvidence = (value) => put('docs/evidence/native-1.2.3.json', JSON.stringify(value));
 
@@ -132,6 +134,85 @@ describe('the version', () => {
     const list = problems({ evidence: true, version: '1.2.4' }).join('\n');
     assert.match(list, /there is no native evidence for 1\.2\.4/);
     assert.match(list, /pins aros to =1\.2\.3, but the version is 1\.2\.4/);
+  });
+});
+
+describe('programs in development', () => {
+  const develop = (extra = {}) => {
+    program('examples/unfinished');
+    const value = manifest();
+    value.in_development = [{ path: 'examples/unfinished', issue: '#66', reason: 'Needs a patched standard library that the matrix cannot prepare.', ...extra }];
+    put('tests/programs.json', JSON.stringify(value));
+  };
+  const open = () => 'open';
+
+  it('accepts a listed program with an open owning issue, and the evidence does not cover it', () => {
+    develop();
+    assert.deepEqual(problems(), []);
+    assert.deepEqual(problems({ issueState: open }), []);
+    assert.deepEqual(problems({ evidence: true, issueState: open }), []);
+  });
+
+  it('counter-probe: without the entry the same program is an orphan', () => {
+    develop();
+    put('tests/programs.json', JSON.stringify(manifest()));
+    assert.match(problems().join('\n'), /examples\/unfinished is a program that tests\/programs\.json does not list/);
+  });
+
+  it('counter-probe: an entry without a well-formed issue or a real reason is refused', () => {
+    develop({ issue: '66' });
+    assert.match(problems().join('\n'), /needs the open issue that owns it, written like "#66"/);
+    develop({ issue: undefined });
+    assert.match(problems().join('\n'), /needs the open issue that owns it/);
+    develop({ reason: 'todo' });
+    assert.match(problems().join('\n'), /needs a reason \(at least ten characters\)/);
+  });
+
+  it('counter-probe: a program that is an application and in development, or listed twice, is refused', () => {
+    develop({ path: 'examples/app' });
+    assert.match(problems().join('\n'), /lists examples\/app as an application and as in development/);
+    const value = JSON.parse(read('tests/programs.json'));
+    value.in_development = [value.in_development[0], value.in_development[0]];
+    put('tests/programs.json', JSON.stringify(value));
+    assert.match(problems().join('\n'), /lists examples\/app twice under in_development/);
+  });
+
+  it('counter-probe: an entry whose program is gone is refused', () => {
+    develop();
+    rmSync(path.join(repository, 'examples/unfinished'), { recursive: true });
+    assert.match(problems().join('\n'), /lists examples\/unfinished, which has no Cargo\.toml/);
+  });
+
+  it('counter-probe: an unfinished program must still use the current helper and version', () => {
+    develop();
+    put('examples/unfinished/build.rs', 'fn main() { let _ = std::env::var_os("AMI_RUST_M9_NATIVE_OBJECTS"); }\n');
+    program('examples/unfinished', { build: false, pin: '1.0.0' });
+    put('examples/unfinished/build.rs', 'fn main() { let _ = std::env::var_os("AMI_RUST_M9_NATIVE_OBJECTS"); }\n');
+    const list = problems().join('\n');
+    assert.match(list, /examples\/unfinished\/build\.rs does not call aros_native_build::prepare/);
+    assert.match(list, /examples\/unfinished\/Cargo\.toml pins aros to =1\.0\.0/);
+  });
+
+  it('counter-probe: a result in the evidence for it is stale, because the matrix does not run it', () => {
+    develop();
+    const value = evidence();
+    value.applications.push({ abi: 'abi1', path: 'examples/unfinished', return_code: 0 });
+    writeEvidence(value);
+    assert.match(problems({ evidence: true }).join('\n'), /stale result for examples\/unfinished on abi1/);
+  });
+
+  it('counter-probe: a closed owning issue, and an issue that cannot be read, are refused', () => {
+    develop();
+    assert.match(problems({ issueState: () => 'closed' }).join('\n'), /examples\/unfinished is in development under #66, which is closed; finish it/);
+    assert.match(problems({ issueState: () => 'unknown' }).join('\n'), /could not read the state of #66, the owner of examples\/unfinished/);
+    assert.deepEqual(problems(), [], 'the issue is only read when asked');
+  });
+
+  it('asks for the state of the issue that the entry names', () => {
+    develop({ issue: '#123' });
+    const asked = [];
+    problems({ issueState: (number) => { asked.push(number); return 'open'; } });
+    assert.deepEqual(asked, [123]);
   });
 });
 

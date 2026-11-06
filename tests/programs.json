@@ -165,6 +165,7 @@
       "expected_return_code": 0
     }
   ],
+  "in_development": [],
   "compile_fail": {
     "path": "tests/compile-fail",
     "target": "x86_64-unknown-aros-abi1",

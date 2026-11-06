@@ -7,10 +7,16 @@
 // coverage and is not. This check keeps them from accumulating:
 //
 // - Every program under tests/, examples/ and release/ (a directory with a
-//   Cargo.toml) is
-//   listed in tests/programs.json, and everything listed exists. The manifest
-//   names how each program is shown to work: the qualification fixture, the
-//   applications that run on AROS, the compile-fail fixtures, the host checks.
+//   Cargo.toml) is listed in tests/programs.json, and everything listed exists.
+//   The manifest names how each program is shown to work: the qualification
+//   fixture, the applications that run on AROS, the compile-fail fixtures, the
+//   host checks.
+// - A program that is not finished yet may be listed under "in_development"
+//   instead, with the open issue that owns it and the reason it cannot be run
+//   by the matrix yet. It must still build with the current helper and version,
+//   but the release evidence does not cover it. With --check-issues the owning
+//   issue must still be open: when it is closed, the program is either finished
+//   and moves to "applications", or it is deleted.
 // - A program uses the current helper and the current version: its build script
 //   calls `aros_native_build::prepare` and reads no environment variable of a
 //   retired setup, and every `aros*` dependency is pinned to version.txt.
@@ -25,11 +31,14 @@
 // mode, application, compile-fail fixture and host check in the manifest with
 // the expected result. The release workflow runs it with --evidence.
 //
-// usage: check-orphans.mjs [--evidence] [--version X.Y.Z] [--repository DIR]
+// usage: check-orphans.mjs [--evidence] [--check-issues] [--version X.Y.Z] [--repository DIR]
 //
 // The version defaults to version.txt; the release workflow passes the version
-// it is about to publish.
+// it is about to publish. --check-issues reads the state of each owning issue
+// with the GitHub CLI (`gh`), in the repository named by GITHUB_REPOSITORY when
+// it is set.
 
+import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
@@ -63,11 +72,30 @@ export const programDirectories = (repository) => {
   return found.sort();
 };
 
-const programProblems = (repository, manifest, version) => {
+const ISSUE = /^#[1-9][0-9]*$/;
+
+const developmentProblems = (manifest) => {
   const problems = [];
+  const applications = new Set((manifest.applications ?? []).map((entry) => entry.path));
+  const seen = new Set();
+  for (const entry of manifest.in_development ?? []) {
+    const label = `in_development entry ${JSON.stringify(entry.path ?? null)}`;
+    if (typeof entry.path !== 'string' || !entry.path) { problems.push(`tests/programs.json: an in_development entry has no path`); continue; }
+    if (!ISSUE.test(entry.issue ?? '')) problems.push(`tests/programs.json: ${label} needs the open issue that owns it, written like "#66"`);
+    if (typeof entry.reason !== 'string' || entry.reason.trim().length < 10) problems.push(`tests/programs.json: ${label} needs a reason (at least ten characters) that says why it cannot be run by the matrix yet`);
+    if (applications.has(entry.path)) problems.push(`tests/programs.json lists ${entry.path} as an application and as in development; it is one or the other`);
+    if (seen.has(entry.path)) problems.push(`tests/programs.json lists ${entry.path} twice under in_development`);
+    seen.add(entry.path);
+  }
+  return problems;
+};
+
+const programProblems = (repository, manifest, version) => {
+  const problems = developmentProblems(manifest);
   const registered = new Set([
     manifest.fixture?.path,
     ...(manifest.applications ?? []).map((entry) => entry.path),
+    ...(manifest.in_development ?? []).map((entry) => entry.path),
     manifest.compile_fail?.path,
   ].filter(Boolean));
   for (const directory of programDirectories(repository)) {
@@ -222,7 +250,31 @@ const evidenceProblems = (repository, manifest, version) => {
   return problems;
 };
 
-export const check = ({ repository, evidence = false, version: requested }) => {
+// The state of an issue as the GitHub CLI reports it: 'open', 'closed' or, when it
+// cannot be read, 'unknown'.
+export const issueStateFromGitHub = (number) => {
+  const repo = process.env.GITHUB_REPOSITORY ? ['--repo', process.env.GITHUB_REPOSITORY] : [];
+  const result = spawnSync('gh', ['issue', 'view', String(number), ...repo, '--json', 'state', '--jq', '.state'], { encoding: 'utf8' });
+  if (result.status !== 0) return 'unknown';
+  return result.stdout.trim().toLowerCase();
+};
+
+const issueProblems = (manifest, issueState) => {
+  const problems = [];
+  for (const entry of manifest.in_development ?? []) {
+    if (!ISSUE.test(entry.issue ?? '')) continue;
+    const state = issueState(Number(entry.issue.slice(1)));
+    if (state === 'open') continue;
+    if (state === 'closed') {
+      problems.push(`${entry.path} is in development under ${entry.issue}, which is closed; finish it and move it to "applications", or delete it`);
+    } else {
+      problems.push(`could not read the state of ${entry.issue}, the owner of ${entry.path}; check that \`gh\` works and that the issue exists`);
+    }
+  }
+  return problems;
+};
+
+export const check = ({ repository, evidence = false, version: requested, issueState }) => {
   const manifestFile = path.join(repository, 'tests/programs.json');
   if (!existsSync(manifestFile)) return ['tests/programs.json is missing'];
   const manifest = JSON.parse(read(manifestFile));
@@ -238,6 +290,7 @@ export const check = ({ repository, evidence = false, version: requested }) => {
   if (manifest.evidence?.produced_by && !existsSync(path.join(repository, manifest.evidence.produced_by))) {
     problems.push(`tests/programs.json names ${manifest.evidence.produced_by} as the producer of the evidence, and it does not exist`);
   }
+  if (issueState) problems.push(...issueProblems(manifest, issueState));
   if (evidence) problems.push(...evidenceProblems(repository, manifest, version));
   return problems;
 };
@@ -248,7 +301,11 @@ const main = () => {
   const repository = path.resolve(at < 0 ? path.join(path.dirname(new URL(import.meta.url).pathname), '..') : argv[at + 1]);
   const evidence = argv.includes('--evidence');
   const versionAt = argv.indexOf('--version');
-  const problems = check({ repository, evidence, version: versionAt < 0 ? undefined : argv[versionAt + 1] });
+  const problems = check({
+    repository, evidence,
+    version: versionAt < 0 ? undefined : argv[versionAt + 1],
+    issueState: argv.includes('--check-issues') ? issueStateFromGitHub : undefined,
+  });
   if (problems.length) {
     console.error(`orphan check: ${problems.length} problem${problems.length > 1 ? 's' : ''}\n${problems.map((problem) => `  - ${problem}`).join('\n')}`);
     process.exit(1);
