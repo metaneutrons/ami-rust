@@ -281,6 +281,13 @@ milestone; the three-host matrix runs at STD-M8.
   timeboxed spike in parallel with milestone M1 of the 0.2 plan. The first
   `std` release, and whether STD-M5 and STD-M6 are part of it, remain open and
   are decided at STD-M8.
+- 2026-10-31: The maintainer accepted STD-M1 as a spike (draft PR #78): `std`
+  builds, links and runs a trivial call on both ABIs. The patch set stays
+  unreviewed and the pipeline, Linux hosts and start-up ownership remain open,
+  so STD-M1 is not an accepted implementation. Findings that change this plan:
+  `aros::entry!` cannot be combined with `std`; the ABI-v1 SDK ships a static
+  `libpthread.a` defining the thread functions listed as missing, the ABI-v11
+  SDK has no pthread library; `time_t` is 32-bit in both C libraries.
 - 2026-11-02: The maintainer decided, on the maintainer's recommendation after
   the STD-M1 spike:
   - STD-M5 (networking) and STD-M6 (processes) are **deferred** from the
@@ -311,3 +318,24 @@ milestone; the three-host matrix runs at STD-M8.
     has reviewed its five policy points (`restricted_std` in `build.rs`, the
     interim synchronisation guard, the 2^32 allocation limit, the Cargo source
     override and the random seed).
+- 2026-11-05: The maintainer reviewed the five policy points of the STD-M1
+  spike. The patch itself is still not code-reviewed. Decisions:
+  - `restricted_std` is **not** set in `build.rs` for now, so a `std` program
+    keeps declaring `#![feature(restricted_std)]`, which marks `std` on AROS as
+    experimental. Dropping the requirement later breaks nobody, while adding it
+    later would break every user, so it is revisited when `std` is supported.
+  - The interim synchronisation guard is accepted until STD-M4, which replaces
+    it. Until then `std` objects must not be shared with tasks that the program
+    creates itself.
+  - The 2^32-byte allocation limit is accepted. The reason is an out-of-range
+    table access in the Exec TLSF allocator that `malloc` reaches for requests of
+    2^37 bytes or more (AROS-NX#124; tracked in #113). The same code is in
+    vanilla AROS and in the Deadwood tree.
+  - The `__CARGO_TESTS_ONLY_SRC_ROOT` override is accepted for the spike only.
+    STD-M7 stages a private sysroot, as the producer already does for `core` and
+    `alloc`, and the release pipeline must not depend on the variable.
+  - The weak random seed is accepted for STD-M1 only. STD-M3-A3 uses
+    `getentropy` on ABI-v1, where AROS-NX and vanilla AROS provide it. On ABI-v11
+    the Deadwood tree has nothing to call, so `std` reads `RDRAND` directly after
+    a `CPUID` check and falls back to the documented mixer. A pull request that
+    brings `getentropy` to Deadwood is tracked in #115.
