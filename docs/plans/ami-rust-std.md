@@ -339,3 +339,13 @@ milestone; the three-host matrix runs at STD-M8.
     the Deadwood tree has nothing to call, so `std` reads `RDRAND` directly after
     a `CPUID` check and falls back to the documented mixer. A pull request that
     brings `getentropy` to Deadwood is tracked in #115.
+- 2026-11-06: The maintainer accepted the STD-M2 start-up design (STD-M2-A1). The
+  native `main` stays the only owner of the task. The target specifications set
+  the target option `entry-name` so that rustc names the entry of a `fn main`
+  program `ami_rust_entry`, and the patched `std` supplies `rust_sdk_main`, which
+  calls it with the arguments that the C start-up stored. A panic or abort is
+  return code 20, an error returned from `main` is 10, and `process::exit(n)` gives
+  `n` as it is. `aros::Context` stays usable from a `std` program through the one
+  claim of `aros::dispatch`; `fn main` and `aros::entry!` in one crate do not
+  compile. This changes the pinned target specifications, so it ships with the
+  `std` release and the pinned release inputs are qualified again with it.

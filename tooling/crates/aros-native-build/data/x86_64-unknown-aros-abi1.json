@@ -15,6 +15,7 @@
   "panic-strategy": "abort",
   "max-atomic-width": 64,
   "executables": true,
+  "entry-name": "ami_rust_entry",
   "dynamic-linking": false,
   "position-independent-executables": false,
   "static-position-independent-executables": false,

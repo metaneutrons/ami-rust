@@ -1610,7 +1610,7 @@ mod tests {
             ),
             (
                 "target",
-                "5840e8bc7cb7b810a6948d8f9042a992a18ec000351d21e697538489c146367f",
+                "76a48903f4bde78aee187a0e07adc8308239be7f9b8e3716c07ad08b0e97986c",
                 arm.abi1_target,
             ),
             (
@@ -2037,11 +2037,11 @@ mod tests {
             for (path, sha256) in [
                 (
                     super::ABI1_TARGET_SPEC_PATH,
-                    "0e9cde740c93949d4cab27690cb9d93dc9fb89dc96388ff5be0eb7296ba38807",
+                    "a8f8150a1b6773101ff5690046d9a31a87690d53eb191e8838160d2e1d72c7f5",
                 ),
                 (
                     super::ABI11_TARGET_SPEC_PATH,
-                    "5616c1e062232b43154237fe40826795cc48e148f903f0a1a8087d224d8a49c9",
+                    "3caae3c57bc2aca9857be4193373862be557660f566955b287e4d5af88eff3a3",
                 ),
             ] {
                 let target = portable

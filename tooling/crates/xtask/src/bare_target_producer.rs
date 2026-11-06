@@ -1524,15 +1524,15 @@ fn parse_target_definition(pin_raw: &[u8], spec_raw: &[u8]) -> Result<TargetDefi
     let (pin_bytes, pin_sha256, spec_bytes, spec_sha256) = match target {
         "x86_64-unknown-aros-abi1" => (
             253,
-            "5840e8bc7cb7b810a6948d8f9042a992a18ec000351d21e697538489c146367f",
-            972,
-            "0e9cde740c93949d4cab27690cb9d93dc9fb89dc96388ff5be0eb7296ba38807",
+            "76a48903f4bde78aee187a0e07adc8308239be7f9b8e3716c07ad08b0e97986c",
+            1006,
+            "a8f8150a1b6773101ff5690046d9a31a87690d53eb191e8838160d2e1d72c7f5",
         ),
         "x86_64-unknown-aros-abi11" => (
             254,
-            "382d0ad643fb659fe14a5074cc709be15f6a53524baf406fbf6563c68914dfe7",
-            980,
-            "5616c1e062232b43154237fe40826795cc48e148f903f0a1a8087d224d8a49c9",
+            "2378eaf9dd34692ded4b15e666135d912da89e1f0d9903f1a3652de4f924da84",
+            1014,
+            "3caae3c57bc2aca9857be4193373862be557660f566955b287e4d5af88eff3a3",
         ),
         _ => {
             return Err(Refusal::new(

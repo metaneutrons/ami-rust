@@ -1,4 +1,3 @@
-#![no_main]
 // std on AROS is experimental: the patched std does not mark AROS as a supported platform,
 // so every program that uses it opts in to restricted_std.
 #![feature(restricted_std)]
@@ -177,7 +176,8 @@ fn application(_context: &Context) -> AppStatus {
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn rust_sdk_main() -> i32 {
-    aros::dispatch(application)
+// An ordinary `fn main`: the toolchain renames the entry that rustc generates, so it does not
+// clash with the native `main`. The probe uses the `aros` context through its one claim.
+fn main() -> std::process::ExitCode {
+    std::process::ExitCode::from(aros::dispatch(application) as u8)
 }
