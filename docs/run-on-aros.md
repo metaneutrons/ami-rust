@@ -7,7 +7,7 @@ description: Get an ami-rust executable onto an AROS system, start it, and read 
 
 ## What the target system must provide
 
-The native start-up code checks its environment before it runs any Rust code. If a check fails the program returns immediately, with return code 20 (or 10 for oversized arguments), and prints nothing.
+The native start-up code checks its environment before it runs any Rust code. If a check fails the program returns immediately, with return code 20 (or 10 for too many or too long arguments), and prints nothing.
 
 | Requirement | Why |
 | --- | --- |
@@ -36,14 +36,14 @@ Check the library versions with the shell's `Version` command (`Version exec.lib
 
 5. **Read the return code.** The shell stores it in `RC`.
 
-Arguments reach the program as raw bytes through `Context::args`. The native start-up accepts at most 4096 argument bytes in total; more than that makes the program return code 10 before it runs.
+Arguments reach the program as raw bytes through `Context::args`. The native start-up accepts at most 32 arguments, counting the program name, and at most 4096 argument bytes in total, counting a terminating NUL for each argument. More than that makes the program return code 10 before it runs.
 
 ## Return codes
 
 | Code | Meaning |
 | --- | --- |
 | 0 | The application function returned `AppStatus::Success`. |
-| 10 | `AppStatus::Error`, or the arguments exceeded 4096 bytes. |
+| 10 | `AppStatus::Error`, or too many or too long arguments (more than 32, or more than 4096 bytes). |
 | 20 | `AppStatus::Fatal`, a panic, or a refused start-up (wrong `exec.library` or `dos.library` version, or on ABI-v1 a stack that is not 128 KiB). |
 
 A panic never unwinds into AROS. The runtime enters its native fatal path and the program ends with `AppStatus::Fatal`. After the application function returns, the runtime releases every tracked resource, including handles whose Rust owners were forgotten.
