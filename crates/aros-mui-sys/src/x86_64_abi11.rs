@@ -67,11 +67,13 @@ pub unsafe fn request_a(
 ) -> i32 {
     let function = unsafe { vector(base, 7) };
     let result: i32;
+    let stack_arguments: [usize; 1] = [parameters as usize];
     // SAFETY: ABI-v11 uses the SysV argument registers and requires the library base in r12.
     unsafe {
         asm!(
             "sub rsp, 16",
-            "mov [rsp], {stack_argument}",
+            "mov r11, [{stack} + 0]",
+            "mov [rsp + 0], r11",
             "call {function}",
             "add rsp, 16",
             function = in(reg) function,
@@ -82,7 +84,8 @@ pub unsafe fn request_a(
             in("rcx") title as usize,
             in("r8") gadgets as usize,
             in("r9") format as usize,
-            stack_argument = in(reg) parameters as usize,
+            stack = in(reg) stack_arguments.as_ptr(),
+            out("r11") _,
             lateout("eax") result,
             clobber_abi("C"),
         );

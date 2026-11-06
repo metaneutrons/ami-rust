@@ -22,13 +22,13 @@
 // setup, as in Rustdoc. Blocks that contain `entry!` are whole programs and
 // are covered by the example crates instead.
 //
-// usage: check-doc-examples.mjs WORK_DIR [TOOLCHAIN]    (default toolchain: 0.1.0)
+// usage: check-doc-examples.mjs WORK_DIR [TOOLCHAIN]    (default toolchain: 0.2.0)
 
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-const [workArgument, toolchain = '0.1.0'] = process.argv.slice(2);
+const [workArgument, toolchain = '0.2.0'] = process.argv.slice(2);
 if (!workArgument) {
   console.error('usage: check-doc-examples.mjs WORK_DIR [TOOLCHAIN]');
   process.exit(2);
@@ -39,6 +39,13 @@ const work = path.resolve(workArgument);
 const crates = [
   { directory: 'crates/aros/src', error: 'aros::Error' },
   { directory: 'crates/aros-mui/src', error: 'aros_mui::Error' },
+  { directory: 'crates/aros-timer/src', error: 'aros::Error' },
+  { directory: 'crates/aros-graphics/src', error: 'aros_graphics::Error' },
+  { directory: 'crates/aros-intuition/src', error: 'aros_intuition::Error' },
+  { directory: 'crates/aros-asl/src', error: 'aros_asl::Error' },
+  { directory: 'crates/aros-locale/src', error: 'aros_locale::Error' },
+  { directory: 'crates/aros-icon/src', error: 'aros_icon::Error' },
+  { directory: 'crates/aros-workbench/src', error: 'aros_workbench::Error' },
 ];
 
 const sourceFiles = (directory) => readdirSync(directory, { withFileTypes: true })
@@ -75,7 +82,7 @@ for (const { directory, error } of crates) {
   }
 }
 
-const guides = ['docs/consumer-guide.md', 'docs/api.md', 'docs/api/aros.md', 'docs/api/aros-mui.md'];
+const guides = ['docs/consumer-guide.md', 'docs/api.md', 'docs/api/aros.md', 'docs/api/aros-mui.md', 'docs/api/aros-timer.md', 'docs/api/aros-graphics.md', 'docs/api/aros-intuition.md', 'docs/api/aros-asl.md', 'docs/api/aros-locale.md', 'docs/api/aros-icon.md', 'docs/api/aros-workbench.md'];
 const withAttributes = (code) => (code.includes('#![no_main]') ? code : `#![no_main]\n#![no_std]\n${code}`);
 const programs = sourcePrograms.map(({ label, code }) => ({ label, code: withAttributes(code) }));
 let buildScript = null;
@@ -106,6 +113,13 @@ publish = false
 [dependencies]
 aros = { path = "${repository}/crates/aros", features = ["alloc"] }
 aros-mui = { path = "${repository}/crates/aros-mui" }
+aros-timer = { path = "${repository}/crates/aros-timer" }
+aros-graphics = { path = "${repository}/crates/aros-graphics" }
+aros-intuition = { path = "${repository}/crates/aros-intuition" }
+aros-asl = { path = "${repository}/crates/aros-asl" }
+aros-locale = { path = "${repository}/crates/aros-locale" }
+aros-icon = { path = "${repository}/crates/aros-icon" }
+aros-workbench = { path = "${repository}/crates/aros-workbench" }
 
 [build-dependencies]
 aros-native-build = { path = "${repository}/tooling/crates/aros-native-build" }

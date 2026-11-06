@@ -5,7 +5,7 @@
 //! rechecks the source-level acquisition pins against the compiled baseline,
 //! materializes components in the private consumer session, and verifies all
 //! six component inventories before returning their roots. It never executes
-//! Python or source helpers and never writes consumer readiness state.
+//! interpreters or source helpers and never writes consumer readiness state.
 
 use crate::{
     Refusal, Result,

@@ -6,10 +6,19 @@
 #include <exec/tasks.h>
 #include <exec/io.h>
 #include <devices/timer.h>
+#include <dos/var.h>
+#include <graphics/gfx.h>
+#include <graphics/rastport.h>
+#include <intuition/intuition.h>
+#include <intuition/screens.h>
 #include <dos/dosextens.h>
 #include <intuition/classes.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
+#ifndef AMI_RUST_ABI11
+#include <dos/dos64.h>
+#include <proto/dos64.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -19,6 +28,7 @@
 #ifdef AMI_SDK_TESTING
 #include "test-file-controls.h"
 #endif
+#include "test-probe.h"
 
 #define KIND_FILE 1UL
 #define KIND_LIBRARY 2UL
@@ -27,6 +37,22 @@
 #define KIND_MESSAGE 5UL
 #define KIND_DEVICE 6UL
 #define KIND_REQUEST 7UL
+#define KIND_DIRECTORY 8UL
+#define KIND_RASTPORT 9UL
+#define KIND_BITMAP 10UL
+#define KIND_WINDOW 11UL
+#define KIND_SCREEN 12UL
+#define SDK_TITLE_MAX 127
+#define KIND_ASL 13UL
+#define KIND_LOCALE 14UL
+#define KIND_ICON 15UL
+#define KIND_WBPORT 16UL
+#define KIND_WBOBJ 17UL
+#define WB_MAX_ARGS 8
+#define WB_PATH_MAX 256
+#define WB_TEXT_LIMIT 512
+#define WB_TEXT_MAX 127
+#define GFX_MAX_AREA_VECTORS 1024
 #define IO_KIND_STANDARD 0
 #define IO_KIND_TIMER 1
 #define IO_IDLE 0
@@ -48,12 +74,43 @@ struct Registry { void **items;size_t capacity,count; };
    Requests own their IORequest and data copy, so no Rust pointer is ever
    reachable by the device and the layout of timerequest stays in this file. */
 struct DeviceSlot { uint64_t token;struct IORequest *open;size_t size,requests;uint64_t port; };
+/* A RastPort the bridge allocates, so the Rust side never needs its layout,
+   together with the buffers area fills need (set up on first use). */
+struct RastSlot { uint64_t token;struct RastPort *rp;struct AreaInfo *area;void *vectors;struct TmpRas *tmpras;void *raster;size_t vectors_size,raster_size;int attached; };
+/* A graphics.library bitmap allocated through a raw vector call; the bridge
+   remembers the library base so it can free the bitmap if the program does not. */
+struct BitmapSlot { uint64_t token;void *base;void *bitmap; };
+/* An Intuition window. The slot owns the title text, which Intuition keeps a
+   pointer to, so the window can be opened with a stable string before it
+   exists (window is NULL until attached). */
+struct WindowSlot { uint64_t token;void *base;struct Window *window;char title[SDK_TITLE_MAX+1]; };
+/* An asl.library requester allocated through a raw vector call; freed at exit
+   if the program does not. */
+struct AslSlot { uint64_t token;void *base;void *request; };
+/* A locale.library locale (kind 0) or catalog (kind 1), closed at exit if the
+   program does not. */
+struct LocaleSlot { uint64_t token;int kind;void *base;void *object; };
+/* A disk object from icon.library. The bridge can replace its default tool and
+   tool types with copies it owns; it puts the originals back before the
+   library frees the object. */
+struct IconSlot { uint64_t token;void *base;struct AmiDiskObject *object;char *orig_default;char **orig_types;void *own_default;size_t own_default_size;void *own_types;size_t own_types_size; };
+/* The message port Workbench sends application messages to, with the last
+   message decoded (the message itself is replied to at once). */
+struct WbPortSlot { uint64_t token;struct MsgPort *port;int paths;size_t path_length[WB_MAX_ARGS];char path[WB_MAX_ARGS][WB_PATH_MAX]; };
+/* An application window, icon or menu item registered with Workbench (kind 0,
+   1, 2). The slot owns the text Workbench keeps a pointer to; handle is NULL
+   until the registration is attached. */
+struct WbObjectSlot { uint64_t token;int kind;void *base;void *handle;struct MsgPort *port;char text[WB_TEXT_MAX+1]; };
+/* A locked public screen, unlocked at exit if the program forgets it. */
+struct ScreenSlot { uint64_t token;void *base;void *screen; };
+struct DirSlot { uint64_t token;BPTR lock;void *fib;int wide; };
 struct IoSlot { uint64_t token,device;struct IORequest *request;size_t size;uint8_t *buffer;size_t capacity;int kind,state; };
 #define SLOT_BITS 20U
 #define SLOT_LIMIT ((UINT64_C(1)<<SLOT_BITS)-1)
 #define SEQUENCE_LIMIT ((UINT64_C(1)<<36)-1)
 #define SIGNAL_SLOTS 32
-static struct Registry files,libraries,ports,messages,devices,requests;
+static struct Registry files,libraries,ports,messages,devices,requests,directories,rastports,bitmaps,windows,pubscreens,aslrequests,localeobjs,iconobjs,wbports,wbobjects;
+static BPTR cwd_original,cwd_owned;
 static struct SignalSlot signals[SIGNAL_SLOTS];
 static APTR registry_pool;
 static uint64_t slot_limit=SLOT_LIMIT;
@@ -406,6 +463,12 @@ int sdk_device_close(uint64_t key,uint64_t token,SdkError *e) {
  if(own(key,e))return -1;struct DeviceSlot *dev=device_find(token);if(!dev || !dev->open || dev->requests)return refuse(e,5,0);
  device_release(dev);return 0;
 }
+/* The device base for a raw library-style call such as ReadEClock; it stays
+   valid while the device handle is open. */
+void *sdk_device_base(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return NULL;struct DeviceSlot *dev=device_find(token);
+ return dev && dev->open?(void *)dev->open->io_Device:NULL;
+}
 uint32_t sdk_device_signal_mask(uint64_t key,uint64_t token) {
  if(own(key,NULL))return 0;struct DeviceSlot *dev=device_find(token);if(!dev)return 0;
  struct PortSlot *port=port_find(dev->port);return port && port->handle?1UL<<port->handle->mp_SigBit:0;
@@ -498,6 +561,777 @@ int sdk_io_abort(uint64_t key,uint64_t token,SdkError *e) {
  if(own(key,e))return -1;struct IoSlot *slot=io_find(token);if(!slot || slot->state!=IO_PENDING)return refuse(e,5,0);
  AbortIO(slot->request);return 0;
 }
+
+/* Directory iteration, entry information, create, delete, rename, variables
+   and the current directory. Every Lock taken here is released on every path. */
+/* ABI-v1 images ship dos64.library, which reports 64-bit sizes and positions
+   and falls back to the 32-bit calls for a handler without 64-bit support.
+   The pinned ABI-v11 tree has no dos64: those builds use the 32-bit calls and
+   refuse what they cannot represent. The library is opened on first use and
+   closed with the other native resources. */
+#ifndef AMI_RUST_ABI11
+struct Library *DOS64Base;
+static int dos64_tried;
+static int dos64_ready(void) {
+ if(!dos64_tried){dos64_tried=1;DOS64Base=OpenLibrary((CONST_STRPTR)"dos64.library",0);}
+ return DOS64Base!=NULL;
+}
+static void dos64_close(void) {
+ if(DOS64Base){struct Library *l=DOS64Base;DOS64Base=NULL;CloseLibrary(l);}
+ dos64_tried=0;
+}
+#else
+static void dos64_close(void) {}
+#endif
+/* A file info block, 32-bit or 64-bit; `wide` tells which. */
+static void *fib_new(int *wide) {
+#ifndef AMI_RUST_ABI11
+ if(dos64_ready()){void *fib=AllocDosObject64(DOS64_FIB,NULL);if(fib){*wide=1;return fib;}}
+#endif
+ *wide=0;return AllocDosObject(DOS_FIB,NULL);
+}
+static void fib_free(void *fib,int wide) {
+#ifndef AMI_RUST_ABI11
+ if(wide){FreeDosObject64(DOS64_FIB,fib);return;}
+#else
+ (void)wide;
+#endif
+ FreeDosObject(DOS_FIB,fib);
+}
+static BOOL fib_examine(BPTR lock,void *fib,int wide) {
+#ifndef AMI_RUST_ABI11
+ if(wide)return Examine64(lock,(struct FileInfoBlock64 *)fib,NULL)?TRUE:FALSE;
+#else
+ (void)wide;
+#endif
+ return Examine(lock,(struct FileInfoBlock *)fib);
+}
+static BOOL fib_next(BPTR lock,void *fib,int wide) {
+#ifndef AMI_RUST_ABI11
+ if(wide)return ExNext64(lock,(struct FileInfoBlock64 *)fib,NULL)?TRUE:FALSE;
+#else
+ (void)wide;
+#endif
+ return ExNext(lock,(struct FileInfoBlock *)fib);
+}
+static int fib_is_file(const void *fib,int wide) {
+#ifndef AMI_RUST_ABI11
+ if(wide)return ((const struct FileInfoBlock64 *)fib)->fib_DirEntryType<0;
+#else
+ (void)wide;
+#endif
+ return ((const struct FileInfoBlock *)fib)->fib_DirEntryType<0;
+}
+#define ENTRY_SIZE_LIMIT UINT64_C(0x7fffffff)
+static void entry_fill(SdkEntry *out,const void *block,int wide) {
+ const UBYTE *name;LONG dir_type,entry_type,protection;const struct DateStamp *date;uint64_t size;
+#ifdef AMI_RUST_ABI11
+ (void)wide;
+#endif
+#ifndef AMI_RUST_ABI11
+ if(wide){
+  const struct FileInfoBlock64 *fib=(const struct FileInfoBlock64 *)block;
+  name=fib->fib_FileName;dir_type=fib->fib_DirEntryType;entry_type=fib->fib_EntryType;protection=fib->fib_Protection;
+  date=&fib->fib_Date;size=(uint64_t)fib->fib_Size;
+  out->size_exact=1;
+ } else
+#endif
+ {
+  const struct FileInfoBlock *fib=(const struct FileInfoBlock *)block;
+  name=fib->fib_FileName;dir_type=fib->fib_DirEntryType;entry_type=fib->fib_EntryType;protection=fib->fib_Protection;
+  date=&fib->fib_Date;size=(uint64_t)(uint32_t)fib->fib_Size;
+  /* A 32-bit size at the 2 GiB limit is what a truncated size looks like. */
+  out->size_exact=size<ENTRY_SIZE_LIMIT?1:0;
+ }
+ size_t n=0;while(n<sizeof(out->name)-1 && name[n]){out->name[n]=(uint8_t)name[n];++n;}
+ out->name[n]=0;out->name_length=(uint32_t)n;
+ out->entry_type=(int32_t)entry_type;out->directory_type=(int32_t)dir_type;
+ out->size=size;out->protection=(uint32_t)protection;
+ out->days=(int32_t)date->ds_Days;out->minutes=(int32_t)date->ds_Minute;out->ticks=(int32_t)date->ds_Tick;
+}
+uint64_t sdk_dir_open(uint64_t key,const uint8_t *path,SdkError *e) {
+ if(own(key,e))return 0;if(!byte_name(path)){refuse(e,2,0);return 0;}
+ struct DirSlot *slot=(struct DirSlot *)record_new(&directories,KIND_DIRECTORY,sizeof(*slot),e);if(!slot)return 0;
+ BPTR lock=Lock((CONST_STRPTR)path,SHARED_LOCK);
+ if(!lock){SIPTR error=IoErr();record_release(&directories,slot,sizeof(*slot));refuse(e,1,error);return 0;}
+ int wide;void *fib=fib_new(&wide);
+ if(!fib){UnLock(lock);record_release(&directories,slot,sizeof(*slot));refuse(e,1,ERROR_NO_FREE_STORE);return 0;}
+ BOOL examined=fib_examine(lock,fib,wide);
+ if(!examined || fib_is_file(fib,wide)){
+  SIPTR error=examined?ERROR_OBJECT_WRONG_TYPE:IoErr();
+  fib_free(fib,wide);UnLock(lock);record_release(&directories,slot,sizeof(*slot));refuse(e,1,error);return 0;
+ }
+ slot->lock=lock;slot->fib=fib;slot->wide=wide;++stats.directories;return slot->token;
+}
+int sdk_dir_next(uint64_t key,uint64_t token,SdkEntry *out,SdkError *e) {
+ if(own(key,e))return -1;struct DirSlot *slot=(struct DirSlot *)record_find(&directories,token,KIND_DIRECTORY);
+ if(!slot || !slot->lock)return refuse(e,5,0);if(!out)return refuse(e,2,0);
+ if(!fib_next(slot->lock,slot->fib,slot->wide)){SIPTR error=IoErr();if(error==ERROR_NO_MORE_ENTRIES)return 0;return refuse(e,1,error);}
+ entry_fill(out,slot->fib,slot->wide);return 1;
+}
+static void dir_release(struct DirSlot *slot) {
+ BPTR lock=slot->lock;void *fib=slot->fib;int wide=slot->wide;
+ record_release(&directories,slot,sizeof(*slot));--stats.directories;
+ if(fib)fib_free(fib,wide);if(lock)UnLock(lock);
+}
+int sdk_dir_close(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct DirSlot *slot=(struct DirSlot *)record_find(&directories,token,KIND_DIRECTORY);
+ if(!slot)return refuse(e,5,0);dir_release(slot);return 0;
+}
+int sdk_entry_info(uint64_t key,const uint8_t *path,SdkEntry *out,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(path) || !out)return refuse(e,2,0);
+ BPTR lock=Lock((CONST_STRPTR)path,SHARED_LOCK);if(!lock)return refuse(e,1,IoErr());
+ int wide;void *fib=fib_new(&wide);
+ if(!fib){UnLock(lock);return refuse(e,1,ERROR_NO_FREE_STORE);}
+ int result=0;
+ if(fib_examine(lock,fib,wide))entry_fill(out,fib,wide);else result=refuse(e,1,IoErr());
+ fib_free(fib,wide);UnLock(lock);return result;
+}
+/* File positions and sizes. Offsets are 64-bit; without dos64.library the
+   32-bit calls refuse an offset, position or size they cannot represent
+   rather than wrapping it. */
+static struct FileSlot *file_slot(uint64_t token) {
+ struct FileSlot *slot=(struct FileSlot *)record_find(&files,token,KIND_FILE);
+ return slot && slot->handle?slot:NULL;
+}
+/* The 32-bit Seek reports an error as a negative value, so a position at or
+   above 2 GiB looks like one; DOS sets IoErr only for a real failure. */
+static int seek_refusal(SdkError *e) {
+ SIPTR error=IoErr();
+ return error?refuse(e,1,error):refuse(e,3,INT32_MAX);
+}
+int sdk_file_seek(uint64_t key,uint64_t token,int32_t whence,int64_t offset,uint64_t *position,SdkError *e) {
+ if(own(key,e))return -1;struct FileSlot *slot=file_slot(token);if(!slot)return refuse(e,5,0);
+ if(whence<0 || whence>2 || !position)return refuse(e,2,0);
+ if(whence==0 && offset<0)return refuse(e,2,0);
+ LONG mode=whence==0?OFFSET_BEGINNING:whence==1?OFFSET_CURRENT:OFFSET_END;
+#ifndef AMI_RUST_ABI11
+ if(dos64_ready()){
+  if(Seek64(slot->handle,mode,(QUAD)offset)<0)return refuse(e,1,IoErr());
+  QUAD now=GetFilePosition64(slot->handle);if(now<0)return refuse(e,1,IoErr());
+  *position=(uint64_t)now;return 0;
+ }
+#endif
+ if(offset>INT32_MAX || offset<INT32_MIN)return refuse(e,3,INT32_MAX);
+ SetIoErr(0);
+ if(Seek(slot->handle,(LONG)offset,mode)<0)return seek_refusal(e);
+ LONG now=Seek(slot->handle,0,OFFSET_CURRENT);if(now<0)return seek_refusal(e);
+ *position=(uint64_t)now;return 0;
+}
+int sdk_file_position(uint64_t key,uint64_t token,uint64_t *position,SdkError *e) {
+ if(own(key,e))return -1;struct FileSlot *slot=file_slot(token);if(!slot)return refuse(e,5,0);
+ if(!position)return refuse(e,2,0);
+#ifndef AMI_RUST_ABI11
+ if(dos64_ready()){QUAD now=GetFilePosition64(slot->handle);if(now<0)return refuse(e,1,IoErr());*position=(uint64_t)now;return 0;}
+#endif
+ SetIoErr(0);
+ LONG now=Seek(slot->handle,0,OFFSET_CURRENT);if(now<0)return seek_refusal(e);
+ *position=(uint64_t)now;return 0;
+}
+int sdk_file_size(uint64_t key,uint64_t token,uint64_t *size,SdkError *e) {
+ if(own(key,e))return -1;struct FileSlot *slot=file_slot(token);if(!slot)return refuse(e,5,0);
+ if(!size)return refuse(e,2,0);
+#ifndef AMI_RUST_ABI11
+ if(dos64_ready()){QUAD n=GetFileSize64(slot->handle);if(n<0)return refuse(e,1,IoErr());*size=(uint64_t)n;return 0;}
+#endif
+ struct FileInfoBlock *fib=(struct FileInfoBlock *)AllocDosObject(DOS_FIB,NULL);
+ if(!fib)return refuse(e,1,ERROR_NO_FREE_STORE);
+ int result=0;
+ if(!ExamineFH(slot->handle,fib))result=refuse(e,1,IoErr());
+ else if((uint64_t)(uint32_t)fib->fib_Size>=ENTRY_SIZE_LIMIT)result=refuse(e,3,INT32_MAX);
+ else *size=(uint64_t)(uint32_t)fib->fib_Size;
+ FreeDosObject(DOS_FIB,fib);return result;
+}
+int sdk_make_dir(uint64_t key,const uint8_t *path,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(path))return refuse(e,2,0);
+ BPTR lock=CreateDir((CONST_STRPTR)path);if(!lock)return refuse(e,1,IoErr());
+ UnLock(lock);return 0;
+}
+int sdk_delete(uint64_t key,const uint8_t *path,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(path))return refuse(e,2,0);
+ if(!DeleteFile((CONST_STRPTR)path))return refuse(e,1,IoErr());return 0;
+}
+int sdk_rename(uint64_t key,const uint8_t *from,const uint8_t *to,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(from) || !byte_name(to))return refuse(e,2,0);
+ if(!Rename((CONST_STRPTR)from,(CONST_STRPTR)to))return refuse(e,1,IoErr());return 0;
+}
+int64_t sdk_cwd_get(uint64_t key,uint8_t *out,size_t cap,SdkError *e) {
+ if(own(key,e))return -1;if(!out || cap<2 || cap>4096)return refuse(e,2,0);
+ BPTR here=CurrentDir(BNULL);CurrentDir(here);
+ if(!here)return refuse(e,1,ERROR_OBJECT_NOT_FOUND);
+ if(!NameFromLock(here,(STRPTR)out,(LONG)cap))return refuse(e,1,IoErr());
+ size_t n=0;while(n<cap && out[n])++n;return (int64_t)n;
+}
+int sdk_cwd_set(uint64_t key,const uint8_t *path,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(path))return refuse(e,2,0);
+ BPTR lock=Lock((CONST_STRPTR)path,SHARED_LOCK);if(!lock)return refuse(e,1,IoErr());
+ struct FileInfoBlock *fib=(struct FileInfoBlock *)AllocDosObject(DOS_FIB,NULL);
+ if(!fib){UnLock(lock);return refuse(e,1,ERROR_NO_FREE_STORE);}
+ BOOL examined=Examine(lock,fib);int directory=examined && fib->fib_DirEntryType>=0;SIPTR error=directory?0:examined?ERROR_OBJECT_WRONG_TYPE:IoErr();
+ FreeDosObject(DOS_FIB,fib);
+ if(!directory){UnLock(lock);return refuse(e,1,error);}
+ BPTR previous=CurrentDir(lock);
+ if(cwd_owned)UnLock(previous);else cwd_original=previous;
+ cwd_owned=lock;return 0;
+}
+static void cwd_restore(void) {
+ if(cwd_owned){BPTR lock=cwd_owned;cwd_owned=BNULL;CurrentDir(cwd_original);cwd_original=BNULL;UnLock(lock);}
+}
+static LONG var_flags(int32_t scope) {return scope==1?GVF_LOCAL_ONLY:scope==2?GVF_GLOBAL_ONLY:0;}
+int64_t sdk_var_get(uint64_t key,const uint8_t *name,uint8_t *out,size_t cap,int32_t scope,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(name) || !out || cap<2 || cap>4096 || scope<0 || scope>2)return refuse(e,2,0);
+ SetIoErr(0);
+ LONG n=GetVar((CONST_STRPTR)name,(STRPTR)out,(LONG)cap,var_flags(scope)|GVF_BINARY_VAR);
+ if(n<0)return refuse(e,1,IoErr());
+ /* On success IoErr holds the variable's full length: a longer value was cut. */
+ if((SIPTR)IoErr()>(SIPTR)n)return refuse(e,1,303);
+ return (int64_t)n;
+}
+int sdk_var_set(uint64_t key,const uint8_t *name,const uint8_t *value,size_t length,int32_t scope,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(name) || (length && !value) || length>4096 || scope<0 || scope>2)return refuse(e,2,0);
+ for(size_t i=0;i<length;i++)if(!value[i])return refuse(e,2,0);
+ static const uint8_t empty[1]={0};
+ if(!SetVar((CONST_STRPTR)name,(CONST_STRPTR)(length?value:empty),(LONG)length,(LONG)(LV_VAR|var_flags(scope)|GVF_BINARY_VAR)))return refuse(e,1,IoErr());return 0;
+}
+int sdk_var_delete(uint64_t key,const uint8_t *name,int32_t scope,SdkError *e) {
+ if(own(key,e))return -1;if(!byte_name(name) || scope<0 || scope>2)return refuse(e,2,0);
+ if(!DeleteVar((CONST_STRPTR)name,(ULONG)var_flags(scope)))return refuse(e,1,IoErr());return 0;
+}
+
+#ifdef AMI_SDK_TESTING
+/* Qualification oracle: runs the real dos.library ReadArgs on a prepared
+   line and serialises the filled array, one record per item separated by '|':
+   '-' absent, 's' switch, 't=<text>', 'n=<number>', 'm=<a>,<b>' or 'mn=<1>,<2>'.
+   Returns the length written, or -1 when ReadArgs refuses the line. */
+static size_t oracle_put(uint8_t *out,size_t cap,size_t at,const char *text,size_t length) {
+ for(size_t i=0;i<length && at<cap;i++)out[at++]=(uint8_t)text[i];return at;
+}
+static size_t oracle_number(uint8_t *out,size_t cap,size_t at,LONG value) {
+ char digits[16];size_t n=0;unsigned long magnitude=value<0?(unsigned long)(-(long)value):(unsigned long)value;
+ do{digits[n++]=(char)('0'+magnitude%10);magnitude/=10;}while(magnitude);
+ if(value<0)at=oracle_put(out,cap,at,"-",1);
+ while(n)at=oracle_put(out,cap,at,&digits[--n],1);return at;
+}
+int64_t sdk_test_readargs(const uint8_t *tmpl,const uint8_t *line,size_t line_length,const uint8_t *kinds,size_t count,uint8_t *out,size_t cap) {
+ if(!tmpl || !line || !kinds || !out || count>32 || line_length>4096)return -2;
+ SIPTR array[32];for(size_t i=0;i<32;i++)array[i]=0;
+ struct RDArgs *rd=(struct RDArgs *)AllocDosObject(DOS_RDARGS,NULL);if(!rd)return -2;
+ rd->RDA_Source.CS_Buffer=(STRPTR)line;rd->RDA_Source.CS_Length=(LONG)line_length;rd->RDA_Source.CS_CurChr=0;
+ rd->RDA_Flags|=RDAF_NOPROMPT;
+ struct RDArgs *result=ReadArgs((CONST_STRPTR)tmpl,array,rd);
+ if(!result){FreeDosObject(DOS_RDARGS,rd);return -1;}
+ size_t at=0;
+ for(size_t i=0;i<count;i++){
+  if(i)at=oracle_put(out,cap,at,"|",1);
+  switch(kinds[i]){
+  case 0:case 5:
+   if(!array[i])at=oracle_put(out,cap,at,"-",1);
+   else{const char *t=(const char *)array[i];at=oracle_put(out,cap,at,"t=",2);at=oracle_put(out,cap,at,t,strlen(t));}
+   break;
+  case 1:at=oracle_put(out,cap,at,array[i]?"s":"-",1);break;
+  case 2:
+   if(!array[i])at=oracle_put(out,cap,at,"-",1);
+   else{at=oracle_put(out,cap,at,"n=",2);at=oracle_number(out,cap,at,*(LONG *)array[i]);}
+   break;
+  case 3:case 4:
+   if(!array[i])at=oracle_put(out,cap,at,"-",1);
+   else{
+    at=oracle_put(out,cap,at,kinds[i]==3?"m=":"mn=",kinds[i]==3?2:3);
+    for(size_t k=0;((SIPTR *)array[i])[k];k++){
+     if(k)at=oracle_put(out,cap,at,",",1);
+     if(kinds[i]==3){const char *t=(const char *)((SIPTR *)array[i])[k];at=oracle_put(out,cap,at,t,strlen(t));}
+     else at=oracle_number(out,cap,at,*(LONG *)((SIPTR *)array[i])[k]);
+    }
+   }
+   break;
+  }
+ }
+ FreeArgs(result);FreeDosObject(DOS_RDARGS,rd);
+ return at>=cap?-2:(int64_t)at;
+}
+#endif
+
+/* Graphics objects. Drawing is done by the generated library calls; the
+   bridge owns the RastPort memory and the fill buffers, and tracks bitmaps. */
+uint64_t sdk_gfx_rastport_new(uint64_t key,SdkError *e) {
+ if(own(key,e))return 0;
+ struct RastSlot *slot=(struct RastSlot *)record_new(&rastports,KIND_RASTPORT,sizeof(*slot),e);if(!slot)return 0;
+ slot->rp=(struct RastPort *)AllocMem(sizeof(struct RastPort),MEMF_PUBLIC|MEMF_CLEAR);
+ if(!slot->rp){record_release(&rastports,slot,sizeof(*slot));refuse(e,1,ERROR_NO_FREE_STORE);return 0;}
+ ++stats.rastports;return slot->token;
+}
+static struct RastSlot *rast_find(uint64_t token) {return (struct RastSlot *)record_find(&rastports,token,KIND_RASTPORT);}
+void *sdk_gfx_rastport_ptr(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return NULL;struct RastSlot *slot=rast_find(token);return slot?slot->rp:NULL;
+}
+int sdk_gfx_rastport_set_bitmap(uint64_t key,uint64_t token,void *bitmap,SdkError *e) {
+ if(own(key,e))return -1;struct RastSlot *slot=rast_find(token);if(!slot)return refuse(e,5,0);
+ slot->rp->BitMap=(struct BitMap *)bitmap;return 0;
+}
+/* Allocates the buffers an area fill needs; the Rust side then calls the
+   InitArea and InitTmpRas vectors on them and attaches them. */
+int sdk_gfx_area_prepare(uint64_t key,uint64_t token,int32_t max_vectors,int32_t width,int32_t height,SdkError *e) {
+ if(own(key,e))return -1;struct RastSlot *slot=rast_find(token);if(!slot || slot->area)return refuse(e,5,0);
+ if(max_vectors<3 || max_vectors>GFX_MAX_AREA_VECTORS || width<1 || height<1 || width>32767 || height>32767)return refuse(e,2,0);
+ size_t vectors=(size_t)max_vectors*5,raster=(size_t)RASSIZE(width,height);
+ struct AreaInfo *area=(struct AreaInfo *)AllocMem(sizeof(struct AreaInfo),MEMF_PUBLIC|MEMF_CLEAR);
+ void *buffer=AllocMem(vectors,MEMF_PUBLIC|MEMF_CLEAR);
+ struct TmpRas *tmpras=(struct TmpRas *)AllocMem(sizeof(struct TmpRas),MEMF_PUBLIC|MEMF_CLEAR);
+ void *plane=AllocMem(raster,MEMF_PUBLIC|MEMF_CLEAR);
+ if(!area || !buffer || !tmpras || !plane){
+  if(plane)FreeMem(plane,raster);if(tmpras)FreeMem(tmpras,sizeof(struct TmpRas));
+  if(buffer)FreeMem(buffer,vectors);if(area)FreeMem(area,sizeof(struct AreaInfo));
+  return refuse(e,1,ERROR_NO_FREE_STORE);
+ }
+ slot->area=area;slot->vectors=buffer;slot->vectors_size=vectors;slot->tmpras=tmpras;slot->raster=plane;slot->raster_size=raster;
+ return 0;
+}
+/* which: 0 AreaInfo, 1 vector buffer, 2 TmpRas, 3 raster */
+void *sdk_gfx_area_ptr(uint64_t key,uint64_t token,int32_t which) {
+ if(own(key,NULL))return NULL;struct RastSlot *slot=rast_find(token);if(!slot)return NULL;
+ switch(which){case 0:return slot->area;case 1:return slot->vectors;case 2:return slot->tmpras;case 3:return slot->raster;default:return NULL;}
+}
+size_t sdk_gfx_area_size(uint64_t key,uint64_t token,int32_t which) {
+ if(own(key,NULL))return 0;struct RastSlot *slot=rast_find(token);if(!slot)return 0;
+ return which==1?slot->vectors_size:which==3?slot->raster_size:0;
+}
+int sdk_gfx_area_attach(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct RastSlot *slot=rast_find(token);if(!slot || !slot->area)return refuse(e,5,0);
+ slot->rp->AreaInfo=slot->area;slot->rp->TmpRas=slot->tmpras;slot->attached=1;return 0;
+}
+static void rast_release(struct RastSlot *slot) {
+ struct RastPort *rp=slot->rp;struct AreaInfo *area=slot->area;void *vectors=slot->vectors;struct TmpRas *tmpras=slot->tmpras;void *raster=slot->raster;
+ size_t vectors_size=slot->vectors_size,raster_size=slot->raster_size;
+ record_release(&rastports,slot,sizeof(*slot));--stats.rastports;
+ if(raster)FreeMem(raster,raster_size);if(tmpras)FreeMem(tmpras,sizeof(struct TmpRas));
+ if(vectors)FreeMem(vectors,vectors_size);if(area)FreeMem(area,sizeof(struct AreaInfo));
+ if(rp)FreeMem(rp,sizeof(struct RastPort));
+}
+int sdk_gfx_rastport_drop(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct RastSlot *slot=rast_find(token);if(!slot)return refuse(e,5,0);
+ rast_release(slot);return 0;
+}
+/* The pinned ABI-v11 C SDK has no graphics or Intuition prototypes, so the
+   cleanup calls are made by hand through the library vector: the base goes
+   last on ABI-v1 and in r12 on ABI-v11 (the red zone and the stack alignment
+   of the caller are kept intact). */
+static void lib_call1(void *base,unsigned vector,void *a0) {
+ void *function=((void **)base)[-(long)vector];
+#ifdef AMI_RUST_ABI11
+ __asm__ volatile(
+  "pushq %%r12\n\t"
+  "subq $136,%%rsp\n\t"
+  "movq %%rdx,%%r12\n\t"
+  "callq *%%rax\n\t"
+  "addq $136,%%rsp\n\t"
+  "popq %%r12\n\t"
+  : "+a"(function),"+d"(base),"+D"(a0)
+  :
+  : "rcx","rsi","r8","r9","r10","r11","memory","cc");
+#else
+ ((void (*)(void *,void *))function)(a0,base);
+#endif
+}
+static void lib_call2(void *base,unsigned vector,void *a0,void *a1) {
+ void *function=((void **)base)[-(long)vector];
+#ifdef AMI_RUST_ABI11
+ __asm__ volatile(
+  "pushq %%r12\n\t"
+  "subq $136,%%rsp\n\t"
+  "movq %%rdx,%%r12\n\t"
+  "callq *%%rax\n\t"
+  "addq $136,%%rsp\n\t"
+  "popq %%r12\n\t"
+  : "+a"(function),"+d"(base),"+D"(a0),"+S"(a1)
+  :
+  : "rcx","r8","r9","r10","r11","memory","cc");
+#else
+ ((void (*)(void *,void *,void *))function)(a0,a1,base);
+#endif
+}
+#define GFX_FREE_BITMAP_VECTOR 154
+#define INTUITION_CLOSE_WINDOW_VECTOR 12
+#define INTUITION_UNLOCK_PUB_SCREEN_VECTOR 86
+#define ASL_FREE_REQUEST_VECTOR 9
+#define LOCALE_CLOSE_CATALOG_VECTOR 6
+#define ICON_FREE_DISK_OBJECT_VECTOR 15
+#define WB_REMOVE_APP_WINDOW_VECTOR 9
+#define WB_REMOVE_APP_ICON_VECTOR 11
+#define WB_REMOVE_APP_MENU_ITEM_VECTOR 13
+#define LOCALE_CLOSE_LOCALE_VECTOR 7
+static void gfx_free_bitmap(void *base,void *bitmap) {lib_call1(base,GFX_FREE_BITMAP_VECTOR,bitmap);}
+uint64_t sdk_gfx_bitmap_register(uint64_t key,void *base,void *bitmap,SdkError *e) {
+ if(own(key,e))return 0;if(!base || !bitmap){refuse(e,2,0);return 0;}
+ struct BitmapSlot *slot=(struct BitmapSlot *)record_new(&bitmaps,KIND_BITMAP,sizeof(*slot),e);if(!slot)return 0;
+ slot->base=base;slot->bitmap=bitmap;++stats.bitmaps;return slot->token;
+}
+/* Forgets the bitmap; the caller frees it. */
+int sdk_gfx_bitmap_release(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct BitmapSlot *slot=(struct BitmapSlot *)record_find(&bitmaps,token,KIND_BITMAP);
+ if(!slot)return refuse(e,5,0);record_release(&bitmaps,slot,sizeof(*slot));--stats.bitmaps;return 0;
+}
+static void bitmap_free_registered(struct BitmapSlot *slot) {
+ void *base=slot->base,*bitmap=slot->bitmap;
+ record_release(&bitmaps,slot,sizeof(*slot));--stats.bitmaps;
+ gfx_free_bitmap(base,bitmap);
+}
+
+/* Intuition windows and public screens. Window structure access and message
+   decoding stay here, where the SDK headers of the selected ABI are in scope. */
+static struct WindowSlot *window_find(uint64_t token) {return (struct WindowSlot *)record_find(&windows,token,KIND_WINDOW);}
+uint64_t sdk_intui_title_new(uint64_t key,const uint8_t *text,size_t length,SdkError *e) {
+ if(own(key,e))return 0;if(length>SDK_TITLE_MAX || (length && !text)){refuse(e,2,0);return 0;}
+ struct WindowSlot *slot=(struct WindowSlot *)record_new(&windows,KIND_WINDOW,sizeof(*slot),e);if(!slot)return 0;
+ if(length)memcpy(slot->title,text,length);slot->title[length]=0;
+ ++stats.windows;return slot->token;
+}
+const char *sdk_intui_title_ptr(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return NULL;struct WindowSlot *slot=window_find(token);return slot?slot->title:NULL;
+}
+int sdk_intui_window_set_title(uint64_t key,uint64_t token,const uint8_t *text,size_t length,SdkError *e) {
+ if(own(key,e))return -1;struct WindowSlot *slot=window_find(token);if(!slot || !slot->window)return refuse(e,5,0);
+ if(length>SDK_TITLE_MAX || (length && !text))return refuse(e,2,0);
+ if(length)memcpy(slot->title,text,length);slot->title[length]=0;return 0;
+}
+int sdk_intui_window_attach(uint64_t key,uint64_t token,void *base,void *window,SdkError *e) {
+ if(own(key,e))return -1;struct WindowSlot *slot=window_find(token);if(!slot || slot->window || !base || !window)return refuse(e,5,0);
+ slot->base=base;slot->window=(struct Window *)window;return 0;
+}
+/* Forgets a title slot whose window never opened. */
+int sdk_intui_window_cancel(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct WindowSlot *slot=window_find(token);if(!slot || slot->window)return refuse(e,5,0);
+ record_release(&windows,slot,sizeof(*slot));--stats.windows;return 0;
+}
+static void window_close(struct WindowSlot *slot) {
+ void *base=slot->base;struct Window *window=slot->window;
+ record_release(&windows,slot,sizeof(*slot));--stats.windows;
+ if(window)lib_call1(base,INTUITION_CLOSE_WINDOW_VECTOR,window);
+}
+int sdk_intui_window_close(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct WindowSlot *slot=window_find(token);if(!slot)return refuse(e,5,0);
+ window_close(slot);return 0;
+}
+int sdk_intui_window_info(uint64_t key,uint64_t token,SdkWindowInfo *out,SdkError *e) {
+ if(own(key,e))return -1;struct WindowSlot *slot=window_find(token);if(!slot || !slot->window || !out)return refuse(e,5,0);
+ struct Window *w=slot->window;
+ out->left=w->LeftEdge;out->top=w->TopEdge;out->width=w->Width;out->height=w->Height;
+ out->border_left=w->BorderLeft;out->border_top=w->BorderTop;out->border_right=w->BorderRight;out->border_bottom=w->BorderBottom;
+ out->mouse_x=w->MouseX;out->mouse_y=w->MouseY;
+ out->screen_width=w->WScreen?w->WScreen->Width:0;out->screen_height=w->WScreen?w->WScreen->Height:0;
+ out->signal_mask=w->UserPort?(1UL<<w->UserPort->mp_SigBit):0;
+ out->rastport=w->RPort;
+ return 0;
+}
+/* Returns 1 and fills the event, or 0 if none is waiting. */
+int sdk_intui_next_event(uint64_t key,uint64_t token,SdkIntuiEvent *out,SdkError *e) {
+ if(own(key,e))return -1;struct WindowSlot *slot=window_find(token);if(!slot || !slot->window || !out)return refuse(e,5,0);
+ if(!slot->window->UserPort)return 0;
+ struct IntuiMessage *message=(struct IntuiMessage *)GetMsg(slot->window->UserPort);
+ if(!message)return 0;
+ out->class_=message->Class;out->code=message->Code;out->qualifier=message->Qualifier;
+ out->x=message->MouseX;out->y=message->MouseY;out->seconds=message->Seconds;out->micros=message->Micros;
+ ReplyMsg((struct Message *)message);return 1;
+}
+uint64_t sdk_intui_screen_register(uint64_t key,void *base,void *screen,SdkError *e) {
+ if(own(key,e))return 0;if(!base || !screen){refuse(e,2,0);return 0;}
+ struct ScreenSlot *slot=(struct ScreenSlot *)record_new(&pubscreens,KIND_SCREEN,sizeof(*slot),e);if(!slot)return 0;
+ slot->base=base;slot->screen=screen;++stats.pubscreens;return slot->token;
+}
+int sdk_intui_screen_size(uint64_t key,uint64_t token,int32_t *width,int32_t *height,SdkError *e) {
+ if(own(key,e))return -1;struct ScreenSlot *slot=(struct ScreenSlot *)record_find(&pubscreens,token,KIND_SCREEN);
+ if(!slot || !width || !height)return refuse(e,5,0);
+ *width=((struct Screen *)slot->screen)->Width;*height=((struct Screen *)slot->screen)->Height;return 0;
+}
+/* Forgets the lock; the caller unlocks the screen. */
+int sdk_intui_screen_release(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct ScreenSlot *slot=(struct ScreenSlot *)record_find(&pubscreens,token,KIND_SCREEN);
+ if(!slot)return refuse(e,5,0);record_release(&pubscreens,slot,sizeof(*slot));--stats.pubscreens;return 0;
+}
+static void screen_unlock_registered(struct ScreenSlot *slot) {
+ void *base=slot->base,*screen=slot->screen;
+ record_release(&pubscreens,slot,sizeof(*slot));--stats.pubscreens;
+ lib_call2(base,INTUITION_UNLOCK_PUB_SCREEN_VECTOR,NULL,screen);
+}
+
+/* asl.library file requesters. The pinned ABI-v11 C SDK has no asl header, so
+   the few FileRequester fields the bridge reads are declared here; on ABI-v1
+   the declaration is checked against the SDK header. */
+struct AmiWBArg { BPTR lock;char *name; };
+struct AmiFileRequester {
+ UBYTE reserved0[4];char *file;char *drawer;UBYTE reserved1[10];
+ WORD left,top,width,height;UBYTE reserved2[2];
+ LONG num_args;struct AmiWBArg *arg_list;void *user_data;UBYTE reserved3[8];char *pattern;
+};
+#ifndef AMI_RUST_ABI11
+#include <libraries/asl.h>
+_Static_assert(sizeof(struct AmiFileRequester)==sizeof(struct FileRequester),"asl FileRequester size");
+_Static_assert(offsetof(struct AmiFileRequester,file)==offsetof(struct FileRequester,fr_File),"asl fr_File");
+_Static_assert(offsetof(struct AmiFileRequester,drawer)==offsetof(struct FileRequester,fr_Drawer),"asl fr_Drawer");
+_Static_assert(offsetof(struct AmiFileRequester,num_args)==offsetof(struct FileRequester,fr_NumArgs),"asl fr_NumArgs");
+_Static_assert(offsetof(struct AmiFileRequester,arg_list)==offsetof(struct FileRequester,fr_ArgList),"asl fr_ArgList");
+_Static_assert(offsetof(struct AmiFileRequester,pattern)==offsetof(struct FileRequester,fr_Pattern),"asl fr_Pattern");
+#endif
+static struct AslSlot *asl_find(uint64_t token) {return (struct AslSlot *)record_find(&aslrequests,token,KIND_ASL);}
+uint64_t sdk_asl_register(uint64_t key,void *base,void *request,SdkError *e) {
+ if(own(key,e))return 0;if(!base || !request){refuse(e,2,0);return 0;}
+ struct AslSlot *slot=(struct AslSlot *)record_new(&aslrequests,KIND_ASL,sizeof(*slot),e);if(!slot)return 0;
+ slot->base=base;slot->request=request;++stats.aslrequests;return slot->token;
+}
+/* Forgets the requester; the caller frees it. */
+int sdk_asl_release(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct AslSlot *slot=asl_find(token);if(!slot)return refuse(e,5,0);
+ record_release(&aslrequests,slot,sizeof(*slot));--stats.aslrequests;return 0;
+}
+/* How many paths the last accepted request selected: the argument list of a
+   multi-selection, otherwise the single drawer and file. */
+int sdk_asl_count(uint64_t key,uint64_t token,int32_t *count,SdkError *e) {
+ if(own(key,e))return -1;struct AslSlot *slot=asl_find(token);if(!slot || !count)return refuse(e,5,0);
+ struct AmiFileRequester *fr=(struct AmiFileRequester *)slot->request;
+ *count=(fr->num_args>0 && fr->arg_list)?(int32_t)fr->num_args:1;return 0;
+}
+/* Builds path `index` into `buffer` (NUL-terminated) and returns its length. */
+int sdk_asl_path(uint64_t key,uint64_t token,int32_t index,uint8_t *buffer,size_t capacity,size_t *length,SdkError *e) {
+ if(own(key,e))return -1;struct AslSlot *slot=asl_find(token);if(!slot || !buffer || !length || capacity<2 || index<0)return refuse(e,5,0);
+ struct AmiFileRequester *fr=(struct AmiFileRequester *)slot->request;
+ buffer[0]=0;
+ if(fr->num_args>0 && fr->arg_list){
+  if(index>=fr->num_args)return refuse(e,2,0);
+  struct AmiWBArg *arg=&fr->arg_list[index];
+  if(arg->lock){if(!NameFromLock(arg->lock,(STRPTR)buffer,(LONG)capacity))return refuse(e,3,0);}
+  if(arg->name && !AddPart((STRPTR)buffer,(CONST_STRPTR)arg->name,(ULONG)capacity))return refuse(e,3,0);
+ }else{
+  if(index!=0)return refuse(e,2,0);
+  size_t drawer=fr->drawer?strlen(fr->drawer):0;
+  if(drawer>=capacity)return refuse(e,3,0);
+  if(drawer)memcpy(buffer,fr->drawer,drawer);buffer[drawer]=0;
+  if(fr->file && fr->file[0] && !AddPart((STRPTR)buffer,(CONST_STRPTR)fr->file,(ULONG)capacity))return refuse(e,3,0);
+ }
+ *length=strlen((const char *)buffer);return 0;
+}
+static void asl_free_registered(struct AslSlot *slot) {
+ void *base=slot->base,*request=slot->request;
+ record_release(&aslrequests,slot,sizeof(*slot));--stats.aslrequests;
+ lib_call1(base,ASL_FREE_REQUEST_VECTOR,request);
+}
+
+/* locale.library locales and catalogs: the bridge remembers each with the
+   library base so it can close the ones the program forgets. */
+static struct LocaleSlot *locale_find(uint64_t token) {return (struct LocaleSlot *)record_find(&localeobjs,token,KIND_LOCALE);}
+uint64_t sdk_locale_register(uint64_t key,int32_t kind,void *base,void *object,SdkError *e) {
+ if(own(key,e))return 0;if(!base || !object || (kind!=0 && kind!=1)){refuse(e,2,0);return 0;}
+ struct LocaleSlot *slot=(struct LocaleSlot *)record_new(&localeobjs,KIND_LOCALE,sizeof(*slot),e);if(!slot)return 0;
+ slot->kind=kind;slot->base=base;slot->object=object;
+ if(kind==0)++stats.locales;else ++stats.catalogs;
+ return slot->token;
+}
+/* The head of struct Locale. The pinned ABI-v11 C SDK has no locale header, so
+   the fields are declared here; on ABI-v1 they are checked against the SDK
+   header, and the ABI-v11 SDK's libraries/locale.h declares the same struct. */
+struct AmiLocale {
+ char *name;char *language;char *preferred[10];
+ unsigned int flags,codeset,country,telephone;int gmt_offset;
+};
+#ifndef AMI_RUST_ABI11
+#include <libraries/locale.h>
+_Static_assert(offsetof(struct AmiLocale,name)==offsetof(struct Locale,loc_LocaleName),"locale name");
+_Static_assert(offsetof(struct AmiLocale,language)==offsetof(struct Locale,loc_LanguageName),"locale language");
+_Static_assert(offsetof(struct AmiLocale,preferred)==offsetof(struct Locale,loc_PrefLanguages),"locale preferred");
+_Static_assert(offsetof(struct AmiLocale,gmt_offset)==offsetof(struct Locale,loc_GMTOffset),"locale gmt offset");
+#endif
+int sdk_locale_info(uint64_t key,uint64_t token,SdkLocaleInfo *out,SdkError *e) {
+ if(own(key,e))return -1;struct LocaleSlot *slot=locale_find(token);if(!slot || slot->kind!=0 || !out)return refuse(e,5,0);
+ const struct AmiLocale *locale=(const struct AmiLocale *)slot->object;
+ out->locale_name=locale->name;out->language_name=locale->language;
+ for(int i=0;i<10;i++)out->preferred[i]=locale->preferred[i];
+ out->gmt_offset=locale->gmt_offset;return 0;
+}
+/* Forgets the object; the caller closes it. */
+int sdk_locale_release(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct LocaleSlot *slot=locale_find(token);if(!slot)return refuse(e,5,0);
+ if(slot->kind==0)--stats.locales;else --stats.catalogs;
+ record_release(&localeobjs,slot,sizeof(*slot));return 0;
+}
+static void locale_close_registered(struct LocaleSlot *slot) {
+ void *base=slot->base,*object=slot->object;int kind=slot->kind;
+ if(kind==0)--stats.locales;else --stats.catalogs;
+ record_release(&localeobjs,slot,sizeof(*slot));
+ lib_call1(base,kind==0?LOCALE_CLOSE_LOCALE_VECTOR:LOCALE_CLOSE_CATALOG_VECTOR,object);
+}
+
+/* icon.library disk objects and Workbench application objects. The pinned
+   ABI-v11 C SDK has no workbench headers, so the parts of DiskObject and
+   AppMessage the bridge reads are declared here; on ABI-v1 the declarations
+   are checked against the SDK header, and the ABI-v11 SDK's header declares
+   the same structures. */
+struct AmiDiskObject {
+ UWORD magic;UWORD version;struct Gadget gadget;UBYTE type;
+ char *default_tool;char **tool_types;LONG current_x;LONG current_y;void *drawer_data;char *tool_window;LONG stack_size;
+};
+struct AmiAppMessage {
+ struct Message message;UWORD type;IPTR user_data;IPTR id;LONG num_args;struct AmiWBArg *arg_list;
+ UWORD version;UWORD class_;WORD mouse_x;WORD mouse_y;ULONG seconds;ULONG micros;ULONG reserved[8];
+};
+#ifndef AMI_RUST_ABI11
+#include <workbench/workbench.h>
+_Static_assert(sizeof(struct AmiDiskObject)==sizeof(struct DiskObject),"DiskObject size");
+_Static_assert(offsetof(struct AmiDiskObject,type)==offsetof(struct DiskObject,do_Type),"do_Type");
+_Static_assert(offsetof(struct AmiDiskObject,default_tool)==offsetof(struct DiskObject,do_DefaultTool),"do_DefaultTool");
+_Static_assert(offsetof(struct AmiDiskObject,tool_types)==offsetof(struct DiskObject,do_ToolTypes),"do_ToolTypes");
+_Static_assert(offsetof(struct AmiDiskObject,stack_size)==offsetof(struct DiskObject,do_StackSize),"do_StackSize");
+_Static_assert(offsetof(struct AmiDiskObject,current_x)==offsetof(struct DiskObject,do_CurrentX),"do_CurrentX");
+_Static_assert(sizeof(struct AmiAppMessage)==sizeof(struct AppMessage),"AppMessage size");
+_Static_assert(offsetof(struct AmiAppMessage,type)==offsetof(struct AppMessage,am_Type),"am_Type");
+_Static_assert(offsetof(struct AmiAppMessage,user_data)==offsetof(struct AppMessage,am_UserData),"am_UserData");
+_Static_assert(offsetof(struct AmiAppMessage,num_args)==offsetof(struct AppMessage,am_NumArgs),"am_NumArgs");
+_Static_assert(offsetof(struct AmiAppMessage,arg_list)==offsetof(struct AppMessage,am_ArgList),"am_ArgList");
+_Static_assert(offsetof(struct AmiAppMessage,class_)==offsetof(struct AppMessage,am_Class),"am_Class");
+_Static_assert(offsetof(struct AmiAppMessage,mouse_x)==offsetof(struct AppMessage,am_MouseX),"am_MouseX");
+_Static_assert(offsetof(struct AmiAppMessage,seconds)==offsetof(struct AppMessage,am_Seconds),"am_Seconds");
+#endif
+static struct IconSlot *icon_find(uint64_t token) {return (struct IconSlot *)record_find(&iconobjs,token,KIND_ICON);}
+uint64_t sdk_icon_register(uint64_t key,void *base,void *object,SdkError *e) {
+ if(own(key,e))return 0;if(!base || !object){refuse(e,2,0);return 0;}
+ struct IconSlot *slot=(struct IconSlot *)record_new(&iconobjs,KIND_ICON,sizeof(*slot),e);if(!slot)return 0;
+ struct AmiDiskObject *disk=(struct AmiDiskObject *)object;
+ slot->base=base;slot->object=disk;slot->orig_default=disk->default_tool;slot->orig_types=disk->tool_types;
+ ++stats.icons;return slot->token;
+}
+int sdk_icon_info(uint64_t key,uint64_t token,SdkIconInfo *out,SdkError *e) {
+ if(own(key,e))return -1;struct IconSlot *slot=icon_find(token);if(!slot || !out)return refuse(e,5,0);
+ const struct AmiDiskObject *disk=slot->object;
+ out->kind=disk->type;out->stack_size=disk->stack_size;out->x=disk->current_x;out->y=disk->current_y;
+ out->default_tool=disk->default_tool;out->tool_types=(const char *const *)disk->tool_types;return 0;
+}
+static void icon_restore(struct IconSlot *slot) {
+ if(slot->own_default){slot->object->default_tool=slot->orig_default;FreeMem(slot->own_default,slot->own_default_size);slot->own_default=NULL;}
+ if(slot->own_types){slot->object->tool_types=slot->orig_types;FreeMem(slot->own_types,slot->own_types_size);slot->own_types=NULL;}
+}
+int sdk_icon_set_default_tool(uint64_t key,uint64_t token,const uint8_t *text,size_t length,SdkError *e) {
+ if(own(key,e))return -1;struct IconSlot *slot=icon_find(token);if(!slot)return refuse(e,5,0);
+ if(length>WB_TEXT_LIMIT || (length && !text))return refuse(e,2,0);
+ char *copy=(char *)AllocMem(length+1,MEMF_PUBLIC|MEMF_CLEAR);if(!copy)return refuse(e,1,ERROR_NO_FREE_STORE);
+ if(length)memcpy(copy,text,length);
+ if(slot->own_default)FreeMem(slot->own_default,slot->own_default_size);
+ slot->own_default=copy;slot->own_default_size=length+1;slot->object->default_tool=copy;return 0;
+}
+int sdk_icon_set_tool_types(uint64_t key,uint64_t token,const uint8_t *const *items,const size_t *lengths,size_t count,SdkError *e) {
+ if(own(key,e))return -1;struct IconSlot *slot=icon_find(token);if(!slot)return refuse(e,5,0);
+ if(count>64 || (count && (!items || !lengths)))return refuse(e,2,0);
+ size_t total=(count+1)*sizeof(char *);
+ for(size_t i=0;i<count;i++){if(lengths[i]>WB_TEXT_LIMIT)return refuse(e,2,0);total+=lengths[i]+1;}
+ char **array=(char **)AllocMem(total,MEMF_PUBLIC|MEMF_CLEAR);if(!array)return refuse(e,1,ERROR_NO_FREE_STORE);
+ char *text=(char *)(array+count+1);
+ for(size_t i=0;i<count;i++){array[i]=text;if(lengths[i])memcpy(text,items[i],lengths[i]);text+=lengths[i]+1;}
+ array[count]=NULL;
+ if(slot->own_types)FreeMem(slot->own_types,slot->own_types_size);
+ slot->own_types=array;slot->own_types_size=total;slot->object->tool_types=array;return 0;
+}
+int sdk_icon_set_stack(uint64_t key,uint64_t token,int32_t stack,SdkError *e) {
+ if(own(key,e))return -1;struct IconSlot *slot=icon_find(token);if(!slot)return refuse(e,5,0);
+ slot->object->stack_size=stack;return 0;
+}
+/* Puts the library's own tool types back and forgets the object; the caller
+   frees it. */
+int sdk_icon_release(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct IconSlot *slot=icon_find(token);if(!slot)return refuse(e,5,0);
+ icon_restore(slot);record_release(&iconobjs,slot,sizeof(*slot));--stats.icons;return 0;
+}
+static void icon_free_registered(struct IconSlot *slot) {
+ void *base=slot->base,*object=slot->object;
+ icon_restore(slot);record_release(&iconobjs,slot,sizeof(*slot));--stats.icons;
+ lib_call1(base,ICON_FREE_DISK_OBJECT_VECTOR,object);
+}
+
+static struct WbPortSlot *wbport_find(uint64_t token) {return (struct WbPortSlot *)record_find(&wbports,token,KIND_WBPORT);}
+uint64_t sdk_wb_port_new(uint64_t key,SdkError *e) {
+ if(own(key,e))return 0;
+ struct WbPortSlot *slot=(struct WbPortSlot *)record_new(&wbports,KIND_WBPORT,sizeof(*slot),e);if(!slot)return 0;
+ slot->port=CreateMsgPort();
+ if(!slot->port){record_release(&wbports,slot,sizeof(*slot));refuse(e,1,ERROR_NO_FREE_STORE);return 0;}
+ ++stats.wbports;return slot->token;
+}
+void *sdk_wb_port_ptr(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return NULL;struct WbPortSlot *slot=wbport_find(token);return slot?slot->port:NULL;
+}
+uint32_t sdk_wb_port_mask(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return 0;struct WbPortSlot *slot=wbport_find(token);return slot?(1UL<<slot->port->mp_SigBit):0;
+}
+/* Whether a message is waiting. */
+int sdk_wb_port_pending(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return 0;struct WbPortSlot *slot=wbport_find(token);
+ return slot && !IsListEmpty(&slot->port->mp_MsgList);
+}
+/* Returns 1 and fills the message (its paths are kept for sdk_wb_path until
+   the next call), or 0 if none is waiting. The message is replied to here. */
+int sdk_wb_port_next(uint64_t key,uint64_t token,SdkAppMessage *out,SdkError *e) {
+ if(own(key,e))return -1;struct WbPortSlot *slot=wbport_find(token);if(!slot || !out)return refuse(e,5,0);
+ struct AmiAppMessage *message=(struct AmiAppMessage *)GetMsg(slot->port);
+ if(!message)return 0;
+ out->type=message->type;out->class_=message->class_;out->total_args=message->num_args;
+ out->mouse_x=message->mouse_x;out->mouse_y=message->mouse_y;out->seconds=message->seconds;out->micros=message->micros;
+ out->id=message->id;out->user_data=message->user_data;
+ slot->paths=0;
+ for(LONG i=0;message->arg_list && i<message->num_args && i<WB_MAX_ARGS;i++){
+  struct AmiWBArg *arg=&message->arg_list[i];char *path=slot->path[i];path[0]=0;int good=1;
+  if(arg->lock && !NameFromLock(arg->lock,(STRPTR)path,WB_PATH_MAX))good=0;
+  if(good && arg->name && !AddPart((STRPTR)path,(CONST_STRPTR)arg->name,WB_PATH_MAX))good=0;
+  if(!good)path[0]=0;
+  slot->path_length[i]=strlen(path);slot->paths=(int)i+1;
+ }
+ out->num_args=(uint32_t)slot->paths;
+ ReplyMsg((struct Message *)message);return 1;
+}
+int sdk_wb_path(uint64_t key,uint64_t token,int32_t index,uint8_t *buffer,size_t capacity,size_t *length,SdkError *e) {
+ if(own(key,e))return -1;struct WbPortSlot *slot=wbport_find(token);if(!slot || !buffer || !length)return refuse(e,5,0);
+ if(index<0 || index>=slot->paths)return refuse(e,2,0);
+ size_t n=slot->path_length[index];if(n+1>capacity)return refuse(e,3,0);
+ memcpy(buffer,slot->path[index],n+1);*length=n;return 0;
+}
+static void wbport_release(struct WbPortSlot *slot) {
+ struct MsgPort *port=slot->port;
+ record_release(&wbports,slot,sizeof(*slot));--stats.wbports;
+ struct Message *message;
+ while((message=GetMsg(port)))ReplyMsg(message);
+ DeleteMsgPort(port);
+}
+int sdk_wb_port_drop(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct WbPortSlot *slot=wbport_find(token);if(!slot)return refuse(e,5,0);
+ wbport_release(slot);return 0;
+}
+
+static struct WbObjectSlot *wbobject_find(uint64_t token) {return (struct WbObjectSlot *)record_find(&wbobjects,token,KIND_WBOBJ);}
+uint64_t sdk_wb_object_new(uint64_t key,int32_t kind,uint64_t port_token,const uint8_t *text,size_t length,SdkError *e) {
+ if(own(key,e))return 0;if(kind<0 || kind>2 || length>WB_TEXT_MAX || (length && !text)){refuse(e,2,0);return 0;}
+ struct WbPortSlot *port=wbport_find(port_token);if(!port){refuse(e,5,0);return 0;}
+ struct WbObjectSlot *slot=(struct WbObjectSlot *)record_new(&wbobjects,KIND_WBOBJ,sizeof(*slot),e);if(!slot)return 0;
+ slot->kind=kind;slot->port=port->port;if(length)memcpy(slot->text,text,length);slot->text[length]=0;
+ ++stats.wbobjects;return slot->token;
+}
+const char *sdk_wb_object_text(uint64_t key,uint64_t token) {
+ if(own(key,NULL))return NULL;struct WbObjectSlot *slot=wbobject_find(token);return slot?slot->text:NULL;
+}
+int sdk_wb_object_attach(uint64_t key,uint64_t token,void *base,void *handle,SdkError *e) {
+ if(own(key,e))return -1;struct WbObjectSlot *slot=wbobject_find(token);if(!slot || slot->handle || !base || !handle)return refuse(e,5,0);
+ slot->base=base;slot->handle=handle;return 0;
+}
+/* Forgets an object whose registration failed. */
+int sdk_wb_object_cancel(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct WbObjectSlot *slot=wbobject_find(token);if(!slot || slot->handle)return refuse(e,5,0);
+ record_release(&wbobjects,slot,sizeof(*slot));--stats.wbobjects;return 0;
+}
+/* Messages already queued are replied to first: SendAppWindowMessage holds
+   the Workbench lock while it waits for its reply, and the removal needs that
+   lock. */
+static void wbobject_remove(struct WbObjectSlot *slot) {
+ void *base=slot->base,*handle=slot->handle;int kind=slot->kind;struct MsgPort *port=slot->port;
+ record_release(&wbobjects,slot,sizeof(*slot));--stats.wbobjects;
+ if(handle && port){struct Message *message;while((message=GetMsg(port)))ReplyMsg(message);}
+ if(handle)lib_call1(base,kind==0?WB_REMOVE_APP_WINDOW_VECTOR:kind==1?WB_REMOVE_APP_ICON_VECTOR:WB_REMOVE_APP_MENU_ITEM_VECTOR,handle);
+}
+int sdk_wb_object_remove(uint64_t key,uint64_t token,SdkError *e) {
+ if(own(key,e))return -1;struct WbObjectSlot *slot=wbobject_find(token);if(!slot)return refuse(e,5,0);
+ wbobject_remove(slot);return 0;
+}
 int sdk_callback(uint64_t key,uint64_t (*callback)(void *,uint64_t),void *data,uint64_t value,uint64_t *out,SdkError *e) {
  if(own(key,e))return -1;if(callback_active || !callback || !data || !out)return refuse(e,5,0);
  callback_active=1;*out=callback(data,value);callback_active=0;return 0;
@@ -512,6 +1346,17 @@ static int test_report_ledgers(void) {
  sdk_diagnostic((const uint8_t *)"[m1-ledger] ports",17,stats.ports);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] signals",19,stats.signals);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] messages",20,stats.messages);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] directories",23,stats.directories);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] rastports",21,stats.rastports);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] bitmaps",19,stats.bitmaps);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] windows",19,stats.windows);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] pubscreens",22,stats.pubscreens);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] aslrequests",23,stats.aslrequests);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] locales",19,stats.locales);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] catalogs",20,stats.catalogs);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] icons",17,stats.icons);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] wbports",19,stats.wbports);
+ sdk_diagnostic((const uint8_t *)"[m1-ledger] wbobjects",21,stats.wbobjects);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] devices",19,stats.devices);
  sdk_diagnostic((const uint8_t *)"[m1-ledger] requests",20,stats.requests);
  sdk_diagnostic((const uint8_t *)"[m1-native] live",16,backend_live());
@@ -530,6 +1375,17 @@ static int cleanup_remaining(void) {
     during a release resumes this C drain iteratively, with no Rust frame or
     recursive teardown retry. Locals are recreated after the setjmp return. */
  if(setjmp(cleanup_resume)){cleanup_error=20;ami_sdk_diagnostic_depth=0;}
+ for(size_t i=0;i<directories.capacity;i++){struct DirSlot *slot=(struct DirSlot *)directories.items[i];if(slot)dir_release(slot);}
+ cwd_restore();
+ for(size_t i=0;i<wbobjects.capacity;i++){struct WbObjectSlot *slot=(struct WbObjectSlot *)wbobjects.items[i];if(slot)wbobject_remove(slot);}
+ for(size_t i=0;i<wbports.capacity;i++){struct WbPortSlot *slot=(struct WbPortSlot *)wbports.items[i];if(slot)wbport_release(slot);}
+ for(size_t i=0;i<iconobjs.capacity;i++){struct IconSlot *slot=(struct IconSlot *)iconobjs.items[i];if(slot)icon_free_registered(slot);}
+ for(int kind=1;kind>=0;kind--)for(size_t i=0;i<localeobjs.capacity;i++){struct LocaleSlot *slot=(struct LocaleSlot *)localeobjs.items[i];if(slot && slot->kind==kind)locale_close_registered(slot);}
+ for(size_t i=0;i<aslrequests.capacity;i++){struct AslSlot *slot=(struct AslSlot *)aslrequests.items[i];if(slot)asl_free_registered(slot);}
+ for(size_t i=0;i<windows.capacity;i++){struct WindowSlot *slot=(struct WindowSlot *)windows.items[i];if(slot)window_close(slot);}
+ for(size_t i=0;i<pubscreens.capacity;i++){struct ScreenSlot *slot=(struct ScreenSlot *)pubscreens.items[i];if(slot)screen_unlock_registered(slot);}
+ for(size_t i=0;i<rastports.capacity;i++){struct RastSlot *slot=(struct RastSlot *)rastports.items[i];if(slot)rast_release(slot);}
+ for(size_t i=0;i<bitmaps.capacity;i++){struct BitmapSlot *slot=(struct BitmapSlot *)bitmaps.items[i];if(slot)bitmap_free_registered(slot);}
  for(size_t i=0;i<requests.capacity;i++){struct IoSlot *slot=(struct IoSlot *)requests.items[i];if(slot)io_release(slot);}
  for(size_t i=0;i<devices.capacity;i++){struct DeviceSlot *dev=(struct DeviceSlot *)devices.items[i];if(dev)device_release(dev);}
  for(size_t i=0;i<messages.capacity;i++){struct MessageSlot *m=(struct MessageSlot *)messages.items[i];if(m){detach_message(m);record_release(&messages,m,sizeof(*m));--stats.messages;}}
@@ -538,11 +1394,12 @@ static int cleanup_remaining(void) {
  for(size_t i=0;i<ports.capacity;i++){struct PortSlot *slot=(struct PortSlot *)ports.items[i];if(!slot)continue;if(slot->handle)clear_port(slot);else{int s=slot->signal_slot;record_release(&ports,slot,sizeof(*slot));signals[s]=(struct SignalSlot){0};}}
  for(size_t i=0;i<SIGNAL_SLOTS;i++)if(signals[i].token){int bit=signals[i].bit;signals[i]=(struct SignalSlot){0};if(bit>=0){--stats.signals;SetSignal(0,1UL<<bit);FreeSignal(bit);}}
  while(blocks){struct Block *b=blocks;blocks=b->next;size_t total=b->total;--stats.blocks;stats.backing_charge-=b->charge;FreeMem(b,total);}
+ dos64_close();
  if(mandatory_dos){struct Library *l=mandatory_dos;mandatory_dos=NULL;CloseLibrary(l);}
  if(registry_pool){
   /* The tables are the pool's last users; the pool is retired with them. */
   APTR pool=registry_pool;registry_pool=NULL;
-  files=(struct Registry){0};libraries=(struct Registry){0};ports=(struct Registry){0};messages=(struct Registry){0};devices=(struct Registry){0};requests=(struct Registry){0};
+  rastports=(struct Registry){0};bitmaps=(struct Registry){0};windows=(struct Registry){0};pubscreens=(struct Registry){0};aslrequests=(struct Registry){0};localeobjs=(struct Registry){0};iconobjs=(struct Registry){0};wbports=(struct Registry){0};wbobjects=(struct Registry){0};directories=(struct Registry){0};files=(struct Registry){0};libraries=(struct Registry){0};ports=(struct Registry){0};messages=(struct Registry){0};devices=(struct Registry){0};requests=(struct Registry){0};
   DeletePool(pool);
  }
 #ifdef AMI_SDK_TESTING

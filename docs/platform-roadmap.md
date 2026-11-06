@@ -2,9 +2,9 @@
 title: Platform roadmap
 ---
 
-## Initial release
+## Releases so far
 
-Version 0.1.0 targets PC x86-64 AROS ABI-v1 and ABI-v11 through the canonical
+Versions 0.1.0 and 0.2.0 target PC x86-64 AROS ABI-v1 and ABI-v11 through the canonical
 `x86_64-unknown-aros-abi1` and `x86_64-unknown-aros-abi11` targets. The
 supported cross-development hosts are macOS Apple Silicon, Linux x86-64, and
 Linux ARM64. All three hosts produce both AROS targets from the same pinned
@@ -22,6 +22,17 @@ Additional AROS targets are independent ports, not aliases of x86-64:
 
 AArch64 is the next likely target. RV32 remains exploratory until AROS itself
 has a stable ABI and bootable baseline for it.
+
+## Rust `std`
+
+Full `std` is planned as its own release after 0.2, not as part of it, and is
+not yet promised. The [plan](https://github.com/metaneutrons/ami-rust/blob/main/docs/plans/ami-rust-std.md)
+orders the work: runtime start-up, standard streams, arguments, environment and
+panic handling first; then time, random numbers and the file system; then
+threads and synchronisation, built on Exec tasks, signals and semaphores.
+Networking and processes are deferred from the first `std` release. Until then
+ami-rust supports `no_std` plus `alloc`, as the [compatibility](/compatibility/)
+page states.
 
 ## Native AROS toolchain
 

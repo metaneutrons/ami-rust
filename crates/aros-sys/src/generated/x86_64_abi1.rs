@@ -8,6 +8,58 @@ unsafe fn vector(base: *mut Library, offset: usize) -> *const c_void {
     unsafe { base.cast::<*const c_void>().sub(offset).read() }
 }
 
+/// Raw calls through the Asl vector table: 3 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
+pub mod asl {
+    use super::*;
+
+    /// Raw `AllocAslRequest` call through Asl vector 8 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn alloc_asl_request(
+        base: *mut Library,
+        req_type: u32,
+        tag_list: *mut TagItem,
+    ) -> *mut c_void {
+        type Function = unsafe extern "C" fn(u32, *mut TagItem, *mut Library) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 8)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(req_type, tag_list, base) }
+    }
+
+    /// Raw `FreeAslRequest` call through Asl vector 9 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn free_asl_request(base: *mut Library, requester: *mut c_void) {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 9)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(requester, base) }
+    }
+
+    /// Raw `AslRequest` call through Asl vector 10 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn asl_request(
+        base: *mut Library,
+        requester: *mut c_void,
+        tag_list: *mut TagItem,
+    ) -> BOOL {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut TagItem, *mut Library) -> BOOL;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 10)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(requester, tag_list, base) }
+    }
+}
+
+/// Raw calls through the Dos vector table: 13 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
 pub mod dos {
     use super::*;
 
@@ -173,6 +225,8 @@ pub mod dos {
     }
 }
 
+/// Raw calls through the Exec vector table: 12 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
 pub mod exec {
     use super::*;
 
@@ -325,6 +379,601 @@ pub mod exec {
     }
 }
 
+/// Raw calls through the Graphics vector table: 27 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
+pub mod graphics {
+    use super::*;
+
+    /// Raw `BltBitMap` call through Graphics vector 5 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn blt_bit_map(
+        base: *mut Library,
+        src_bit_map: *mut c_void,
+        x_src: i16,
+        y_src: i16,
+        dest_bit_map: *mut c_void,
+        x_dest: i16,
+        y_dest: i16,
+        x_size: i16,
+        y_size: i16,
+        minterm: u32,
+        mask: u32,
+        temp_a: *mut u8,
+    ) -> i32 {
+        type Function = unsafe extern "C" fn(
+            *mut c_void,
+            i16,
+            i16,
+            *mut c_void,
+            i16,
+            i16,
+            i16,
+            i16,
+            u32,
+            u32,
+            *mut u8,
+            *mut Library,
+        ) -> i32;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 5)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe {
+            function(
+                src_bit_map,
+                x_src,
+                y_src,
+                dest_bit_map,
+                x_dest,
+                y_dest,
+                x_size,
+                y_size,
+                minterm,
+                mask,
+                temp_a,
+                base,
+            )
+        }
+    }
+
+    /// Raw `TextLength` call through Graphics vector 9 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn text_length(
+        base: *mut Library,
+        rastport: *mut c_void,
+        string: *const c_char,
+        count: u32,
+    ) -> i16 {
+        type Function = unsafe extern "C" fn(*mut c_void, *const c_char, u32, *mut Library) -> i16;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 9)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, string, count, base) }
+    }
+
+    /// Raw `Text` call through Graphics vector 10 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn text(
+        base: *mut Library,
+        rastport: *mut c_void,
+        string: *const c_char,
+        count: u32,
+    ) {
+        type Function = unsafe extern "C" fn(*mut c_void, *const c_char, u32, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 10)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, string, count, base) }
+    }
+
+    /// Raw `DrawEllipse` call through Graphics vector 30 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn draw_ellipse(
+        base: *mut Library,
+        rastport: *mut c_void,
+        x_center: i16,
+        y_center: i16,
+        a: i16,
+        b: i16,
+    ) {
+        type Function = unsafe extern "C" fn(*mut c_void, i16, i16, i16, i16, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 30)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, x_center, y_center, a, b, base) }
+    }
+
+    /// Raw `InitRastPort` call through Graphics vector 33 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn init_rast_port(base: *mut Library, rastport: *mut c_void) {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 33)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, base) }
+    }
+
+    /// Raw `WaitBlit` call through Graphics vector 38 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn wait_blit(base: *mut Library) {
+        type Function = unsafe extern "C" fn(*mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 38)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(base) }
+    }
+
+    /// Raw `SetRast` call through Graphics vector 39 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn set_rast(base: *mut Library, rastport: *mut c_void, pen: u32) {
+        type Function = unsafe extern "C" fn(*mut c_void, u32, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 39)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, pen, base) }
+    }
+
+    /// Raw `Move` call through Graphics vector 40 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn move_to(base: *mut Library, rastport: *mut c_void, x: i16, y: i16) {
+        type Function = unsafe extern "C" fn(*mut c_void, i16, i16, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 40)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, x, y, base) }
+    }
+
+    /// Raw `Draw` call through Graphics vector 41 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn draw(base: *mut Library, rastport: *mut c_void, x: i16, y: i16) {
+        type Function = unsafe extern "C" fn(*mut c_void, i16, i16, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 41)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, x, y, base) }
+    }
+
+    /// Raw `AreaMove` call through Graphics vector 42 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn area_move(base: *mut Library, rastport: *mut c_void, x: i16, y: i16) -> u32 {
+        type Function = unsafe extern "C" fn(*mut c_void, i16, i16, *mut Library) -> u32;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 42)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, x, y, base) }
+    }
+
+    /// Raw `AreaDraw` call through Graphics vector 43 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn area_draw(base: *mut Library, rastport: *mut c_void, x: i16, y: i16) -> u32 {
+        type Function = unsafe extern "C" fn(*mut c_void, i16, i16, *mut Library) -> u32;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 43)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, x, y, base) }
+    }
+
+    /// Raw `AreaEnd` call through Graphics vector 44 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn area_end(base: *mut Library, rastport: *mut c_void) -> i32 {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut Library) -> i32;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 44)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, base) }
+    }
+
+    /// Raw `InitArea` call through Graphics vector 47 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn init_area(
+        base: *mut Library,
+        areainfo: *mut c_void,
+        buffer: *mut c_void,
+        maxvectors: i16,
+    ) {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut c_void, i16, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 47)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(areainfo, buffer, maxvectors, base) }
+    }
+
+    /// Raw `RectFill` call through Graphics vector 51 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn rect_fill(
+        base: *mut Library,
+        rastport: *mut c_void,
+        x_min: i16,
+        y_min: i16,
+        x_max: i16,
+        y_max: i16,
+    ) {
+        type Function = unsafe extern "C" fn(*mut c_void, i16, i16, i16, i16, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 51)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, x_min, y_min, x_max, y_max, base) }
+    }
+
+    /// Raw `ReadPixel` call through Graphics vector 53 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn read_pixel(base: *mut Library, rastport: *mut c_void, x: i16, y: i16) -> i32 {
+        type Function = unsafe extern "C" fn(*mut c_void, i16, i16, *mut Library) -> i32;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 53)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, x, y, base) }
+    }
+
+    /// Raw `WritePixel` call through Graphics vector 54 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn write_pixel(base: *mut Library, rastport: *mut c_void, x: i16, y: i16) -> i32 {
+        type Function = unsafe extern "C" fn(*mut c_void, i16, i16, *mut Library) -> i32;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 54)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, x, y, base) }
+    }
+
+    /// Raw `PolyDraw` call through Graphics vector 56 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn poly_draw(
+        base: *mut Library,
+        rastport: *mut c_void,
+        count: i32,
+        poly_table: *mut i16,
+    ) {
+        type Function = unsafe extern "C" fn(*mut c_void, i32, *mut i16, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 56)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, count, poly_table, base) }
+    }
+
+    /// Raw `SetAPen` call through Graphics vector 57 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn set_apen(base: *mut Library, rastport: *mut c_void, pen: u32) {
+        type Function = unsafe extern "C" fn(*mut c_void, u32, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 57)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, pen, base) }
+    }
+
+    /// Raw `SetBPen` call through Graphics vector 58 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn set_bpen(base: *mut Library, rastport: *mut c_void, pen: u32) {
+        type Function = unsafe extern "C" fn(*mut c_void, u32, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 58)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, pen, base) }
+    }
+
+    /// Raw `SetDrMd` call through Graphics vector 59 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn set_dr_md(base: *mut Library, rastport: *mut c_void, draw_mode: u32) {
+        type Function = unsafe extern "C" fn(*mut c_void, u32, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 59)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, draw_mode, base) }
+    }
+
+    /// Raw `ScrollRaster` call through Graphics vector 66 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn scroll_raster(
+        base: *mut Library,
+        rastport: *mut c_void,
+        dx: i16,
+        dy: i16,
+        x_min: i16,
+        y_min: i16,
+        x_max: i16,
+        y_max: i16,
+    ) {
+        type Function =
+            unsafe extern "C" fn(*mut c_void, i16, i16, i16, i16, i16, i16, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 66)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, dx, dy, x_min, y_min, x_max, y_max, base) }
+    }
+
+    /// Raw `InitTmpRas` call through Graphics vector 78 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn init_tmp_ras(
+        base: *mut Library,
+        tmpras: *mut c_void,
+        buffer: *mut c_void,
+        size: u32,
+    ) -> *mut c_void {
+        type Function =
+            unsafe extern "C" fn(*mut c_void, *mut c_void, u32, *mut Library) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 78)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(tmpras, buffer, size, base) }
+    }
+
+    /// Raw `BltBitMapRastPort` call through Graphics vector 101 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn blt_bit_map_rast_port(
+        base: *mut Library,
+        src_bit_map: *mut c_void,
+        x_src: i16,
+        y_src: i16,
+        dest_rp: *mut c_void,
+        x_dest: i16,
+        y_dest: i16,
+        x_size: i16,
+        y_size: i16,
+        minterm: u32,
+    ) {
+        type Function = unsafe extern "C" fn(
+            *mut c_void,
+            i16,
+            i16,
+            *mut c_void,
+            i16,
+            i16,
+            i16,
+            i16,
+            u32,
+            *mut Library,
+        );
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 101)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe {
+            function(
+                src_bit_map,
+                x_src,
+                y_src,
+                dest_rp,
+                x_dest,
+                y_dest,
+                x_size,
+                y_size,
+                minterm,
+                base,
+            )
+        }
+    }
+
+    /// Raw `EraseRect` call through Graphics vector 135 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn erase_rect(
+        base: *mut Library,
+        rastport: *mut c_void,
+        x_min: i16,
+        y_min: i16,
+        x_max: i16,
+        y_max: i16,
+    ) {
+        type Function = unsafe extern "C" fn(*mut c_void, i16, i16, i16, i16, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 135)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(rastport, x_min, y_min, x_max, y_max, base) }
+    }
+
+    /// Raw `AllocBitMap` call through Graphics vector 153 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn alloc_bit_map(
+        base: *mut Library,
+        sizex: u16,
+        sizey: u16,
+        depth: u32,
+        flags: u32,
+        friend_bitmap: *mut c_void,
+    ) -> *mut c_void {
+        type Function =
+            unsafe extern "C" fn(u16, u16, u32, u32, *mut c_void, *mut Library) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 153)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(sizex, sizey, depth, flags, friend_bitmap, base) }
+    }
+
+    /// Raw `FreeBitMap` call through Graphics vector 154 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn free_bit_map(base: *mut Library, bm: *mut c_void) {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 154)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(bm, base) }
+    }
+
+    /// Raw `GetBitMapAttr` call through Graphics vector 160 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_bit_map_attr(
+        base: *mut Library,
+        bitmap: *mut c_void,
+        attribute: u32,
+    ) -> usize {
+        type Function = unsafe extern "C" fn(*mut c_void, u32, *mut Library) -> usize;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 160)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(bitmap, attribute, base) }
+    }
+}
+
+/// Raw calls through the Icon vector table: 8 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
+pub mod icon {
+    use super::*;
+
+    /// Raw `GetDiskObject` call through Icon vector 13 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_disk_object(base: *mut Library, name: *const c_char) -> *mut c_void {
+        type Function = unsafe extern "C" fn(*const c_char, *mut Library) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 13)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(name, base) }
+    }
+
+    /// Raw `PutDiskObject` call through Icon vector 14 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn put_disk_object(
+        base: *mut Library,
+        name: *const c_char,
+        icon: *mut c_void,
+    ) -> BOOL {
+        type Function = unsafe extern "C" fn(*const c_char, *mut c_void, *mut Library) -> BOOL;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 14)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(name, icon, base) }
+    }
+
+    /// Raw `FreeDiskObject` call through Icon vector 15 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn free_disk_object(base: *mut Library, diskobj: *mut c_void) {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 15)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(diskobj, base) }
+    }
+
+    /// Raw `FindToolType` call through Icon vector 16 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn find_tool_type(
+        base: *mut Library,
+        tool_type_array: *const *const c_char,
+        type_name: *const c_char,
+    ) -> *const c_char {
+        type Function = unsafe extern "C" fn(
+            *const *const c_char,
+            *const c_char,
+            *mut Library,
+        ) -> *const c_char;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 16)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(tool_type_array, type_name, base) }
+    }
+
+    /// Raw `MatchToolValue` call through Icon vector 17 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn match_tool_value(
+        base: *mut Library,
+        type_string: *const c_char,
+        value: *const c_char,
+    ) -> BOOL {
+        type Function = unsafe extern "C" fn(*const c_char, *const c_char, *mut Library) -> BOOL;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 17)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(type_string, value, base) }
+    }
+
+    /// Raw `GetDefDiskObject` call through Icon vector 20 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_def_disk_object(base: *mut Library, kind: i32) -> *mut c_void {
+        type Function = unsafe extern "C" fn(i32, *mut Library) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 20)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(kind, base) }
+    }
+
+    /// Raw `DeleteDiskObject` call through Icon vector 23 (minimum version 37).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn delete_disk_object(base: *mut Library, name: *const c_char) -> BOOL {
+        type Function = unsafe extern "C" fn(*const c_char, *mut Library) -> BOOL;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 23)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(name, base) }
+    }
+
+    /// Raw `NewDiskObject` call through Icon vector 29 (minimum version 44).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn new_disk_object(base: *mut Library, kind: u32) -> *mut c_void {
+        type Function = unsafe extern "C" fn(u32, *mut Library) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 29)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(kind, base) }
+    }
+}
+
+/// Raw calls through the Intuition vector table: 17 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
 pub mod intuition {
     use super::*;
 
@@ -355,6 +1004,151 @@ pub mod intuition {
         let function: Function = unsafe { mem::transmute(vector(base, 12)) };
         // SAFETY: the caller owns the raw native contract.
         unsafe { function(window, base) }
+    }
+
+    /// Raw `LockPubScreen` call through Intuition vector 85 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn lock_pub_screen(base: *mut Library, name: *const c_char) -> *mut c_void {
+        type Function = unsafe extern "C" fn(*const c_char, *mut Library) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 85)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(name, base) }
+    }
+
+    /// Raw `UnlockPubScreen` call through Intuition vector 86 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn unlock_pub_screen(base: *mut Library, name: *mut u8, screen: *mut c_void) {
+        type Function = unsafe extern "C" fn(*mut u8, *mut c_void, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 86)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(name, screen, base) }
+    }
+
+    /// Raw `ActivateWindow` call through Intuition vector 75 (minimum version 33).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn activate_window(base: *mut Library, window: *mut Window) {
+        type Function = unsafe extern "C" fn(*mut Window, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 75)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, base) }
+    }
+
+    /// Raw `WindowToFront` call through Intuition vector 52 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn window_to_front(base: *mut Library, window: *mut Window) {
+        type Function = unsafe extern "C" fn(*mut Window, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 52)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, base) }
+    }
+
+    /// Raw `WindowToBack` call through Intuition vector 51 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn window_to_back(base: *mut Library, window: *mut Window) {
+        type Function = unsafe extern "C" fn(*mut Window, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 51)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, base) }
+    }
+
+    /// Raw `SetWindowTitles` call through Intuition vector 46 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn set_window_titles(
+        base: *mut Library,
+        window: *mut Window,
+        window_title: *const c_char,
+        screen_title: *const c_char,
+    ) {
+        type Function =
+            unsafe extern "C" fn(*mut Window, *const c_char, *const c_char, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 46)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, window_title, screen_title, base) }
+    }
+
+    /// Raw `BeginRefresh` call through Intuition vector 59 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn begin_refresh(base: *mut Library, window: *mut Window) {
+        type Function = unsafe extern "C" fn(*mut Window, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 59)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, base) }
+    }
+
+    /// Raw `EndRefresh` call through Intuition vector 61 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn end_refresh(base: *mut Library, window: *mut Window, complete: BOOL) {
+        type Function = unsafe extern "C" fn(*mut Window, BOOL, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 61)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, complete, base) }
+    }
+
+    /// Raw `MoveWindow` call through Intuition vector 28 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn move_window(base: *mut Library, window: *mut Window, dx: i32, dy: i32) {
+        type Function = unsafe extern "C" fn(*mut Window, i32, i32, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 28)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, dx, dy, base) }
+    }
+
+    /// Raw `SizeWindow` call through Intuition vector 48 (minimum version 0).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn size_window(base: *mut Library, window: *mut Window, dx: i32, dy: i32) {
+        type Function = unsafe extern "C" fn(*mut Window, i32, i32, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 48)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, dx, dy, base) }
+    }
+
+    /// Raw `ChangeWindowBox` call through Intuition vector 81 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn change_window_box(
+        base: *mut Library,
+        window: *mut Window,
+        left: i32,
+        top: i32,
+        width: i32,
+        height: i32,
+    ) {
+        type Function = unsafe extern "C" fn(*mut Window, i32, i32, i32, i32, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 81)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(window, left, top, width, height, base) }
     }
 
     /// Raw `NewObjectA` call through Intuition vector 106 (minimum version 36).
@@ -421,6 +1215,172 @@ pub mod intuition {
     }
 }
 
+/// Raw calls through the Locale vector table: 7 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
+pub mod locale {
+    use super::*;
+
+    /// Raw `OpenLocale` call through Locale vector 26 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn open_locale(base: *mut Library, name: *const c_char) -> *mut c_void {
+        type Function = unsafe extern "C" fn(*const c_char, *mut Library) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 26)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(name, base) }
+    }
+
+    /// Raw `CloseLocale` call through Locale vector 7 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn close_locale(base: *mut Library, locale: *mut c_void) {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 7)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(locale, base) }
+    }
+
+    /// Raw `OpenCatalogA` call through Locale vector 25 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn open_catalog_a(
+        base: *mut Library,
+        locale: *const c_void,
+        name: *const c_char,
+        tags: *const TagItem,
+    ) -> *mut c_void {
+        type Function = unsafe extern "C" fn(
+            *const c_void,
+            *const c_char,
+            *const TagItem,
+            *mut Library,
+        ) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 25)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(locale, name, tags, base) }
+    }
+
+    /// Raw `CloseCatalog` call through Locale vector 6 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn close_catalog(base: *mut Library, catalog: *mut c_void) {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 6)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(catalog, base) }
+    }
+
+    /// Raw `GetCatalogStr` call through Locale vector 12 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_catalog_str(
+        base: *mut Library,
+        catalog: *const c_void,
+        string_num: u32,
+        default_string: *const c_char,
+    ) -> *const c_char {
+        type Function =
+            unsafe extern "C" fn(*const c_void, u32, *const c_char, *mut Library) -> *const c_char;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 12)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(catalog, string_num, default_string, base) }
+    }
+
+    /// Raw `FormatDate` call through Locale vector 10 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn format_date(
+        base: *mut Library,
+        locale: *const c_void,
+        format_string: *const c_char,
+        date: *const c_void,
+        hook: *const Hook,
+    ) {
+        type Function = unsafe extern "C" fn(
+            *const c_void,
+            *const c_char,
+            *const c_void,
+            *const Hook,
+            *mut Library,
+        );
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 10)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(locale, format_string, date, hook, base) }
+    }
+
+    /// Raw `GetLocaleStr` call through Locale vector 13 (minimum version 39).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_locale_str(
+        base: *mut Library,
+        locale: *const c_void,
+        string_num: u32,
+    ) -> *const c_char {
+        type Function = unsafe extern "C" fn(*const c_void, u32, *mut Library) -> *const c_char;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 13)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(locale, string_num, base) }
+    }
+}
+
+/// Raw calls through the Timer vector table: 3 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
+pub mod timer {
+    use super::*;
+
+    /// Raw `ReadEClock` call through Timer vector 10 (minimum version 41).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn read_eclock(base: *mut Library, dest: *mut EClockVal) -> u32 {
+        type Function = unsafe extern "C" fn(*mut EClockVal, *mut Library) -> u32;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 10)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(dest, base) }
+    }
+
+    /// Raw `GetSysTime` call through Timer vector 11 (minimum version 41).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_sys_time(base: *mut Library, dest: *mut TimeVal) {
+        type Function = unsafe extern "C" fn(*mut TimeVal, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 11)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(dest, base) }
+    }
+
+    /// Raw `GetUpTime` call through Timer vector 12 (minimum version 41).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn get_up_time(base: *mut Library, dest: *mut TimeVal) {
+        type Function = unsafe extern "C" fn(*mut TimeVal, *mut Library);
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 12)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(dest, base) }
+    }
+}
+
+/// Raw calls through the Utility vector table: 3 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
 pub mod utility {
     use super::*;
 
@@ -467,5 +1427,173 @@ pub mod utility {
         let function: Function = unsafe { mem::transmute(vector(base, 8)) };
         // SAFETY: the caller owns the raw native contract.
         unsafe { function(items, base) }
+    }
+}
+
+/// Raw calls through the Workbench vector table: 7 functions, each an `unsafe` call
+/// whose requirements are listed under its `# Safety` heading.
+pub mod workbench {
+    use super::*;
+
+    /// Raw `AddAppWindowA` call through Workbench vector 8 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn add_app_window_a(
+        base: *mut Library,
+        id: usize,
+        userdata: usize,
+        window: *mut c_void,
+        msgport: *mut c_void,
+        taglist: *mut TagItem,
+    ) -> *mut c_void {
+        type Function = unsafe extern "C" fn(
+            usize,
+            usize,
+            *mut c_void,
+            *mut c_void,
+            *mut TagItem,
+            *mut Library,
+        ) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 8)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(id, userdata, window, msgport, taglist, base) }
+    }
+
+    /// Raw `RemoveAppWindow` call through Workbench vector 9 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn remove_app_window(base: *mut Library, app_window: *mut c_void) -> BOOL {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut Library) -> BOOL;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 9)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(app_window, base) }
+    }
+
+    /// Raw `AddAppIconA` call through Workbench vector 10 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn add_app_icon_a(
+        base: *mut Library,
+        id: usize,
+        userdata: usize,
+        text: *const c_char,
+        msgport: *mut c_void,
+        lock: BPTR,
+        diskobj: *mut c_void,
+        taglist: *mut TagItem,
+    ) -> *mut c_void {
+        type Function = unsafe extern "C" fn(
+            usize,
+            usize,
+            *const c_char,
+            *mut c_void,
+            BPTR,
+            *mut c_void,
+            *mut TagItem,
+            *mut Library,
+        ) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 10)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(id, userdata, text, msgport, lock, diskobj, taglist, base) }
+    }
+
+    /// Raw `RemoveAppIcon` call through Workbench vector 11 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn remove_app_icon(base: *mut Library, app_icon: *mut c_void) -> BOOL {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut Library) -> BOOL;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 11)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(app_icon, base) }
+    }
+
+    /// Raw `AddAppMenuItemA` call through Workbench vector 12 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn add_app_menu_item_a(
+        base: *mut Library,
+        id: usize,
+        userdata: usize,
+        text: *const c_char,
+        msgport: *mut c_void,
+        taglist: *mut TagItem,
+    ) -> *mut c_void {
+        type Function = unsafe extern "C" fn(
+            usize,
+            usize,
+            *const c_char,
+            *mut c_void,
+            *mut TagItem,
+            *mut Library,
+        ) -> *mut c_void;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 12)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(id, userdata, text, msgport, taglist, base) }
+    }
+
+    /// Raw `RemoveAppMenuItem` call through Workbench vector 13 (minimum version 36).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn remove_app_menu_item(base: *mut Library, app_menu_item: *mut c_void) -> BOOL {
+        type Function = unsafe extern "C" fn(*mut c_void, *mut Library) -> BOOL;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 13)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe { function(app_menu_item, base) }
+    }
+
+    /// Raw `SendAppWindowMessage` call through Workbench vector 26 (minimum version 45).
+    ///
+    /// # Safety
+    /// `base` and every pointer argument must satisfy the native AROS contract.
+    pub unsafe fn send_app_window_message(
+        base: *mut Library,
+        win: *mut c_void,
+        numfiles: u32,
+        files: *const *const c_char,
+        windowclass: u16,
+        mousex: i16,
+        mousey: i16,
+        seconds: u32,
+        micros: u32,
+    ) -> BOOL {
+        type Function = unsafe extern "C" fn(
+            *mut c_void,
+            u32,
+            *const *const c_char,
+            u16,
+            i16,
+            i16,
+            u32,
+            u32,
+            *mut Library,
+        ) -> BOOL;
+        // SAFETY: the vector and base-last ABI are verified against both pinned SDKs.
+        let function: Function = unsafe { mem::transmute(vector(base, 26)) };
+        // SAFETY: the caller owns the raw native contract.
+        unsafe {
+            function(
+                win,
+                numfiles,
+                files,
+                windowclass,
+                mousex,
+                mousey,
+                seconds,
+                micros,
+                base,
+            )
+        }
     }
 }

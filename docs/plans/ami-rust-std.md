@@ -288,3 +288,54 @@ milestone; the three-host matrix runs at STD-M8.
   `aros::entry!` cannot be combined with `std`; the ABI-v1 SDK ships a static
   `libpthread.a` defining the thread functions listed as missing, the ABI-v11
   SDK has no pthread library; `time_t` is 32-bit in both C libraries.
+- 2026-11-02: The maintainer decided, on the maintainer's recommendation after
+  the STD-M1 spike:
+  - STD-M5 (networking) and STD-M6 (processes) are **deferred** from the
+    first `std` release. Reason: the first release is gated on what can be
+    qualified on both baselines without a network stack in the harness, most
+    crates that need `std` need threads, time, file system and environment
+    rather than sockets or child processes, and nothing else depends on either
+    milestone, so they can be added later without rework. The completion rule
+    above is met for them by this recorded deferral.
+  - The first `std` release is its own release **after** the 0.2 release, not
+    part of it. Reason: `std` changes the target-library build and adds `std`
+    and `panic_abort` outputs to the pinned release inputs, and qualifying that
+    in the same candidate as the 0.2 three-host qualification would double the
+    risk. The version number stays the maintainer's decision at STD-M8.
+  - STD-M4 builds `std` threads, `Mutex` and `Condvar` directly on Exec
+    (`CreateNewProc`, signals and semaphores) on both ABIs, not on pthreads:
+    the ABI1 SDK ships `libpthread.a` but the ABI11 SDK ships no pthread
+    library, and a pthread route would need a change of the pinned linker
+    recipe and of a pinned baseline. This answers the open thread decision
+    for the substitute-or-change question, with one precondition: STD-M4-A1
+    must first show whether the C library allocator can be used across tasks
+    (the pool belongs to the `StdCBase` of the opener). If it cannot, threads
+    stay blocked and the finding is recorded, not worked around by changing a
+    pinned baseline.
+  - Order of work: milestone M10 of the 0.2 plan first, then STD-M2 (which
+    includes the abort, `exit` and panic hang found in the spike), STD-M3 and
+    STD-M4. The STD-M1 patch becomes the STD-M1 deliverable once the maintainer
+    has reviewed its five policy points (`restricted_std` in `build.rs`, the
+    interim synchronisation guard, the 2^32 allocation limit, the Cargo source
+    override and the random seed).
+- 2026-11-05: The maintainer reviewed the five policy points of the STD-M1
+  spike. The patch itself is still not code-reviewed. Decisions:
+  - `restricted_std` is **not** set in `build.rs` for now, so a `std` program
+    keeps declaring `#![feature(restricted_std)]`, which marks `std` on AROS as
+    experimental. Dropping the requirement later breaks nobody, while adding it
+    later would break every user, so it is revisited when `std` is supported.
+  - The interim synchronisation guard is accepted until STD-M4, which replaces
+    it. Until then `std` objects must not be shared with tasks that the program
+    creates itself.
+  - The 2^32-byte allocation limit is accepted. The reason is an out-of-range
+    table access in the Exec TLSF allocator that `malloc` reaches for requests of
+    2^37 bytes or more (AROS-NX#124; tracked in #113). The same code is in
+    vanilla AROS and in the Deadwood tree.
+  - The `__CARGO_TESTS_ONLY_SRC_ROOT` override is accepted for the spike only.
+    STD-M7 stages a private sysroot, as the producer already does for `core` and
+    `alloc`, and the release pipeline must not depend on the variable.
+  - The weak random seed is accepted for STD-M1 only. STD-M3-A3 uses
+    `getentropy` on ABI-v1, where AROS-NX and vanilla AROS provide it. On ABI-v11
+    the Deadwood tree has nothing to call, so `std` reads `RDRAND` directly after
+    a `CPUID` check and falls back to the documented mixer. A pull request that
+    brings `getentropy` to Deadwood is tracked in #115.

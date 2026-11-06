@@ -1,5 +1,5 @@
 ---
-title: The aros crate
+title: "aros: safe application API"
 description: "Entry, context, files, streams, libraries, signals, ports and messages: the safe foundation for AROS applications."
 ---
 
@@ -73,13 +73,13 @@ bytes and an overlong payload. `File::open` accepts these modes:
 | `FileMode::CreateTruncate` | Create or replace a file. |
 | `FileMode::ReadWrite` | Open or create a read/write file. |
 
-`File` provides `read`, `write`, `read_exact`, `write_all`, and consuming
-`close`. Single reads and writes may make partial progress; the `*_exact` and
+`File` provides `read`, `write`, `read_exact`, `write_all`, `seek` (with
+`SeekFrom`), `position`, `len` and consuming `close`. Single reads and writes may make partial progress; the `*_exact` and
 `*_all` variants continue until complete or return an error. `Stdout` and
 `Stderr` offer `write` and `write_all` on borrowed DOS process handles; neither
 closes its underlying handle.
 
-## Libraries, signals, and local messages
+## Libraries, signals and local messages
 
 | Item | Use |
 | --- | --- |
@@ -119,7 +119,77 @@ between the two ABIs, never leaves the native bridge. Two request shapes exist:
 standard (`IOStdReq`, with up to 64 KiB of data) and timer (`timerequest`). A
 device error is reported in the `IoOutcome`, not as an `Err`.
 
-## Worked examples
+## Directories, variables and arguments
+
+| Item | Use |
+| --- | --- |
+| `Dir::open(context, path)` | Opens a directory; it is an `Iterator` of `Result<Entry, Error>`, or call `next_entry`. |
+| `Entry` | Name (bytes), `is_dir`, `is_file`, `size`, `protection`, `modified`, raw `entry_type`. |
+| `metadata(context, path)` | The `Entry` of one path. |
+| `create_dir`, `delete`, `rename` | Create a directory, delete a file or empty directory, rename or move within a volume. |
+| `current_dir`, `set_current_dir` | Read or change the task's current directory; the change is undone when the program ends. |
+| `var`, `set_var`, `delete_var` with `VarScope` | Local (per process) and global (`ENV:`) variables, `Any` looking at local ones first. |
+| `Template::parse(spec)` and `Template::read(args)` | Match the program's arguments against a `ReadArgs` template; see below. |
+
+Names and values are byte strings. The protection bits follow DOS: the low
+four (delete, execute, write and read) are set when the action is *denied*, and
+the `FIBB_HOLD` bit exists only on ABI-v1.
+Every lock the bridge takes is released, also for a `Dir` that is forgotten, and
+a changed current directory is restored when the program ends. A variable value
+is at most 4096 bytes and cannot contain a NUL byte; a value that does not fit
+the buffer of `var` is a native error (`ERROR_BUFFER_OVERFLOW`, 303) rather than
+a truncated string.
+
+### Argument templates
+
+`Template` follows `ReadArgs`: `FROM/A/M,TO/K,ALL/S,COUNT/N` has a required
+list of values, a keyword-only value, a switch and a number. The modifiers are
+`/A` required, `/K` keyword required, `/S` switch, `/T` toggle (parsed like a
+switch), `/N` number, `/M` any number of values and `/F` the rest of the line.
+Keywords match ignoring case and may have an alias, `QUIET=Q/S`. A keyword is
+written `KEY value` or `KEY=value`, and every `=` separates arguments as in
+`ReadArgs`. A `/M` item leaves the last arguments to the required items after
+it, and a keyword before a `/M` item gives it exactly one value.
+
+The parser is checked against the real dos.library `ReadArgs` on both ABIs: the
+qualification fixture runs 62 argument lists through both and requires the same
+result. It differs in documented ways. A `/N` value outside `i32` is an error
+(`ReadArgs` wraps it around). Quoting is gone once the C start-up has split the
+arguments, so an argument that contains `=` cannot be kept whole; read it from
+`Context::args` instead. The prompting `?` form is not supported. A `/F` item's
+rest of the line is read back with `Values::write_line`.
+
+## Large files
+
+Sizes and positions are 64-bit in the API, but what the system can deliver
+depends on the ABI and the volume.
+
+| Case | Entry size | `File::len`, `position`, `seek` |
+| --- | --- | --- |
+| ABI-v1 with `dos64.library` (the qualified image has it) | 64-bit; `size_is_exact()` is true | 64-bit. A volume whose handler lacks 64-bit support can still refuse a position above 2 GiB; observed with FAT: `ERROR_OBJECT_TOO_LARGE` (207). |
+| ABI-v11 (the pinned Deadwood tree has no `dos64`), or ABI-v1 without the library | The 32-bit value read as unsigned; `size_is_exact()` is false at or above 2 GiB | A size, position or offset that does not fit the 32-bit calls is `ErrorKind::Limit` instead of a wrapped value. |
+
+`Entry::size_is_exact` is conservative. On a FAT volume the pinned handler
+reports a 3 GiB file correctly through the 32-bit path (as an unsigned value, up
+to 4 GiB minus one), but `size_is_exact` is still false there because the
+32-bit path cannot tell a correct large value from a capped one. Observed
+on the qualified images, in QEMU, with a FAT32 volume holding a 3 GiB file:
+
+| Call | ABI-v1 | ABI-v11 |
+| --- | --- | --- |
+| `metadata` size | 3,221,225,472, exact | 3,221,225,472, not exact |
+| `File::len` | 3,221,225,472 | `Limit` |
+| `seek(End(0))`, `position` | 3,221,225,472 | `Limit` |
+| `seek(Start(3 GiB - 4))` | `ERROR_OBJECT_TOO_LARGE` (the handler is 32-bit) | `Limit` |
+
+Writing above 2 GiB needs a volume whose handler is 64-bit, which among the
+pinned handlers is PFS3. A PFS3 partition crashes the pinned ABI-v1 image while
+it boots (every RDB image with a PFS3 partition, formatted or not, did; a FAT
+partition and an FFS partition did not; the cause is a handler that calls libc
+before its library base is set, [AROS-NX issue 121](https://github.com/metaneutrons/AROS-NX/issues/121)),
+so writes above 2 GiB are not verified.
+
+## Examples
 
 The examples below are complete functions. Each takes the `Context` your entry function receives and returns an `aros::Error` on failure, so `?` works throughout. Every one of them is compiled for both targets by the repository's example check.
 
@@ -145,6 +215,52 @@ fn copy_to_stdout(context: &Context, path: &[u8]) -> Result<(), Error> {
 ```
 
 `File::read` may return fewer bytes than the buffer holds, so the loop continues until it returns zero. `write_all` retries short writes. The explicit `close` reports a native close error; dropping the file would have closed it silently.
+
+### List a directory
+
+```rust
+use aros::{BytePath, Context, Dir, Error, Stdout, Template};
+
+fn decimal(mut number: u64, buffer: &mut [u8; 20]) -> &[u8] {
+    let mut at = buffer.len();
+    loop {
+        at -= 1;
+        buffer[at] = b'0' + (number % 10) as u8;
+        number /= 10;
+        if number == 0 {
+            return &buffer[at..];
+        }
+    }
+}
+
+fn list(context: &Context) -> Result<(), Error> {
+    // DIR is the directory to list, ALL also prints sizes.
+    let Ok(template) = Template::parse(b"DIR,ALL/S") else {
+        return Ok(());
+    };
+    let Ok(values) = template.read(context.args().skip(1)) else {
+        return Ok(());
+    };
+    let path = BytePath::new(values.text(0).unwrap_or(b"RAM:"))?;
+    let mut out = Stdout::new(context)?;
+    for entry in Dir::open(context, &path)? {
+        let entry = entry?;
+        out.write_all(entry.name())?;
+        if entry.is_dir() {
+            out.write_all(b"/")?;
+        } else if values.switch(1) {
+            out.write_all(b" ")?;
+            out.write_all(decimal(entry.size(), &mut [0u8; 20]))?;
+        }
+        out.write_all(b"\n")?;
+    }
+    Ok(())
+}
+```
+
+Opening can fail with a native error such as `ERROR_OBJECT_NOT_FOUND` (205) or,
+for a file, `ERROR_OBJECT_WRONG_TYPE` (212); the `Dir` handle releases its lock
+when it is dropped.
 
 ### Classify a failure
 

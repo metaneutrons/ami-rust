@@ -3,7 +3,7 @@ title: Troubleshooting
 description: Causes and fixes for the build and start-up problems you are most likely to meet with ami-rust.
 ---
 
-Find your symptom by its message. Build problems come first, then problems on the AROS system. Each build message below was reproduced against the 0.1.0 toolchain.
+Find your symptom by its message. Build problems come first, then problems on the AROS system. Each build message below was reproduced against the 0.2.0 toolchain.
 
 ## Build problems
 
@@ -15,16 +15,16 @@ AROS native bridge: Refusal { message: "RUSTC_WRAPPER conflicts with the pinned 
 
 **Cause.** A compiler wrapper is active. The build refuses wrappers because one can replace the pinned compiler. A wrapper is often set once in `~/.cargo/config.toml` (`[build] rustc-wrapper = "…"`), so it can surprise you in a project that never mentions it. `RUSTC_WORKSPACE_WRAPPER` is treated the same way.
 
-- **The caching wrapper `sccache`** is accepted by revisions after 0.1.0: it only caches the output of the compiler Cargo selected, and the checks on the compiler, Cargo and linker still apply. The 0.1.0 tag refuses it too, so with that revision either disable it as below or move your `rev` to a later revision.
+- **The caching wrapper `sccache`** is accepted by release 0.2.0 and later: it only caches the output of the compiler Cargo selected, and the checks on the compiler, Cargo and linker still apply. The 0.1.0 tag refuses it too, so with that revision either disable it as below or move your `rev` to a later revision.
 - **Any other wrapper** is refused by every revision. Disable it as below.
 
-Revisions after 0.1.0 also print this explanation, with the fix, next to the refusal. The 0.1.0 tag shows only the message above.
+Release 0.2.0 and later also print this explanation, with the fix, next to the refusal. The 0.1.0 tag shows only the message above.
 
 **Fix.** Disable the wrapper for this build, in whichever way suits you:
 
 ```sh
 # one command
-CARGO_BUILD_RUSTC_WRAPPER= cargo +0.1.0 build --target x86_64-unknown-aros-abi11 --release
+CARGO_BUILD_RUSTC_WRAPPER= cargo +0.2.0 build --target x86_64-unknown-aros-abi11 --release
 ```
 
 ```toml
@@ -51,11 +51,11 @@ error: failed to run `rustc` to learn about target-specific information
 
 **Cause.** Cargo ran with a stable toolchain, not the ami-rust one.
 
-**Fix.** Select the toolchain explicitly with `cargo +0.1.0 …`, or pin it for the project with a `rust-toolchain.toml`:
+**Fix.** Select the toolchain explicitly with `cargo +0.2.0 …`, or pin it for the project with a `rust-toolchain.toml`:
 
 ```toml
 [toolchain]
-channel = "0.1.0"
+channel = "0.2.0"
 ```
 
 ### `RUST_TARGET_PATH must be unset or empty for the selected toolchain`
@@ -71,8 +71,8 @@ channel = "0.1.0"
 **Fix.** Fetch once, then build offline:
 
 ```sh
-cargo +0.1.0 fetch --locked
-cargo +0.1.0 build --target x86_64-unknown-aros-abi11 --release --locked --offline
+cargo +0.2.0 fetch --locked
+cargo +0.2.0 build --target x86_64-unknown-aros-abi11 --release --locked --offline
 ```
 
 ### `no global memory allocator found but one is required`
@@ -83,7 +83,7 @@ cargo +0.1.0 build --target x86_64-unknown-aros-abi11 --release --locked --offli
 
 ### `can't find crate for 'std'`
 
-**Cause.** The code, or a dependency, does not declare `#![no_std]`. 0.1.0 supports `no_std` plus `alloc`, not full `std`.
+**Cause.** The code, or a dependency, does not declare `#![no_std]`. 0.2.0 supports `no_std` plus `alloc`, not full `std`.
 
 **Fix.** Declare `#![no_std]` in your crates, and choose dependencies that support `no_std`. Many crates do so behind a feature such as `default-features = false`.
 

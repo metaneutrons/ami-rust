@@ -118,13 +118,13 @@
       "role": "native-vendor-manifest",
       "path": "release/native-cargo-vendor-inputs.json",
       "bytes": 14950,
-      "sha256": "37f3d12b1a6d8d4f889c55114d07bfb1b1dc6dc3d80a33607d208e23fcb17e1d"
+      "sha256": "ca4c6e3df209091127382ec142808e4677bcddcf15e6f15bc73458cc64beeb93"
     },
     {
       "role": "root-Cargo-lock",
       "path": "Cargo.lock",
-      "bytes": 10978,
-      "sha256": "02f61cc56fb56caf1b03c2e900f14e829e938fd2e365c747203a7b664152fffd"
+      "bytes": 11815,
+      "sha256": "bf640933a916b2dacb1f6ff26866bede4655c8f0927dda007468164d881fe9f9"
     },
     {
       "role": "tooling-Cargo-lock",

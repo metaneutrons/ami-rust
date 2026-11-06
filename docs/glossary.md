@@ -53,6 +53,6 @@ description: Definitions of the AROS, MUI and ami-rust terms used in this docume
 
 **Task** — An AROS unit of execution. Handles in ami-rust belong to the task that created them (they are *task-affine*) and are neither `Send` nor `Sync`.
 
-**Toolchain** — The versioned rustup toolchain, `0.1.0`: compiler, Cargo, target libraries, C SDK, collector and `aros-link`.
+**Toolchain** — The versioned rustup toolchain, `0.2.0`: compiler, Cargo, target libraries, C SDK, collector and `aros-link`.
 
 **TCG** — QEMU's Tiny Code Generator, its software CPU emulation. The release was qualified with single-threaded TCG.

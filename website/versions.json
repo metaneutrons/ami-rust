@@ -5,5 +5,12 @@
       "ref": "release/0.1",
       "reason": "The documentation site was added after the 0.1.0 release, so the v0.1.0 tag has no site sources."
     }
+  ],
+  "corrections": [
+    {
+      "version": "0.2.0",
+      "ref": "release/0.2",
+      "reason": "Page titles and statements left over from 0.1 were corrected after the release (crate guides, architecture, targets and programming-model pages); the branch changes documentation files only."
+    }
   ]
 }

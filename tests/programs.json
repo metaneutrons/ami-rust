@@ -1,0 +1,238 @@
+{
+  "schema": "ami-rust-test-programs-v1",
+  "description": "Every test program of the repository, and how a release shows that it still works. tools/check-orphans.mjs refuses a program that is not listed here, a listed program that does not exist, and a release whose native evidence does not cover everything listed. tools/native-matrix.mjs produces the evidence.",
+  "fixture": {
+    "path": "tests/qualification",
+    "modes": [
+      {
+        "name": "abi",
+        "arguments": "abi {ABI}"
+      },
+      {
+        "name": "alloc"
+      },
+      {
+        "name": "args"
+      },
+      {
+        "name": "asl"
+      },
+      {
+        "name": "asl-forgotten"
+      },
+      {
+        "name": "callbacks"
+      },
+      {
+        "name": "calibrate"
+      },
+      {
+        "name": "churn"
+      },
+      {
+        "name": "cleanup"
+      },
+      {
+        "name": "cwd-check"
+      },
+      {
+        "name": "devices"
+      },
+      {
+        "name": "devices-forgotten"
+      },
+      {
+        "name": "env"
+      },
+      {
+        "name": "files"
+      },
+      {
+        "name": "file-protected"
+      },
+      {
+        "name": "fs"
+      },
+      {
+        "name": "fs-forgotten"
+      },
+      {
+        "name": "graphics"
+      },
+      {
+        "name": "graphics-forgotten"
+      },
+      {
+        "name": "icon"
+      },
+      {
+        "name": "icon-forgotten"
+      },
+      {
+        "name": "libraries"
+      },
+      {
+        "name": "locale",
+        "catalog": true
+      },
+      {
+        "name": "locale-bounded",
+        "catalog": true
+      },
+      {
+        "name": "locale-forgotten",
+        "catalog": true
+      },
+      {
+        "name": "memory-large"
+      },
+      {
+        "name": "ports"
+      },
+      {
+        "name": "positions"
+      },
+      {
+        "name": "probes"
+      },
+      {
+        "name": "registry"
+      },
+      {
+        "name": "stderr"
+      },
+      {
+        "name": "timer"
+      },
+      {
+        "name": "timer-forgotten"
+      },
+      {
+        "name": "window"
+      },
+      {
+        "name": "window-forgotten"
+      },
+      {
+        "name": "workbench"
+      },
+      {
+        "name": "workbench-forgotten"
+      },
+      {
+        "name": "big",
+        "arguments": "big RAM:",
+        "abis": [
+          "abi11"
+        ]
+      }
+    ]
+  },
+  "applications": [
+    {
+      "path": "examples/minimal",
+      "expected_return_code": 0
+    },
+    {
+      "path": "examples/sha256sum",
+      "expected_return_code": 10,
+      "note": "Started without an argument it prints its usage and returns 10."
+    },
+    {
+      "path": "examples/mui-hello",
+      "expected_return_code": null,
+      "note": "A window that stays open until it is closed; the result is the rendered window, recorded as the SHA-256 of the screendump."
+    },
+    {
+      "path": "tests/m1-runtime",
+      "expected_return_code": 0
+    },
+    {
+      "path": "tests/dependencies",
+      "expected_return_code": 0,
+      "note": "serde, serde_json and ed25519-dalek running on AROS."
+    },
+    {
+      "path": "tests/m4-safe-runtime",
+      "expected_return_code": 0
+    },
+    {
+      "path": "tests/m5-gallery",
+      "expected_return_code": 0
+    },
+    {
+      "path": "tests/m6-interactions",
+      "expected_return_code": 0
+    }
+  ],
+  "in_development": [],
+  "compile_fail": {
+    "path": "tests/compile-fail",
+    "target": "x86_64-unknown-aros-abi1",
+    "fixtures": [
+      {
+        "bin": "positive-safe",
+        "expected": null
+      },
+      {
+        "bin": "use-after-close",
+        "expected": "E0382"
+      },
+      {
+        "bin": "context-exit",
+        "expected": "lifetime may not live long enough"
+      },
+      {
+        "bin": "clone-file",
+        "expected": "E0277"
+      },
+      {
+        "bin": "send-file",
+        "expected": "E0277"
+      },
+      {
+        "bin": "sync-file",
+        "expected": "E0277"
+      },
+      {
+        "bin": "borrowed-callback-escape",
+        "expected": "lifetime may not live long enough"
+      },
+      {
+        "bin": "target-std",
+        "expected": "E0463"
+      }
+    ]
+  },
+  "host_checks": [
+    {
+      "name": "mui-layout",
+      "script": "tools/check-mui-layout.mjs",
+      "arguments": [
+        "{work}",
+        "--toolchain",
+        "{toolchain}",
+        "--abi1-source",
+        "{abi1-source}",
+        "--abi11-source",
+        "{abi11-source}",
+        "--abi11-sdk",
+        "{abi11-sdk}"
+      ],
+      "description": "The layout constants of aros-sys and aros-mui-sys against the C compiler, for both ABIs."
+    },
+    {
+      "name": "doc-examples",
+      "script": "tools/check-doc-examples.mjs",
+      "arguments": [
+        "{work}",
+        "{toolchain}"
+      ],
+      "description": "The Rustdoc examples and the programs in the guides compile for both targets."
+    }
+  ],
+  "evidence": {
+    "file": "docs/evidence/native-<version>.json",
+    "produced_by": "tools/native-matrix.mjs"
+  }
+}

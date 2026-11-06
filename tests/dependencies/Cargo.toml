@@ -12,8 +12,8 @@ name = "ami-rust-dependencies"
 path = "src/main.rs"
 
 [dependencies]
-aros = { version = "=0.1.0", path = "../../crates/aros", features = ["alloc"] }
-aros-sys = { version = "=0.1.0", path = "../../crates/aros-sys" }
+aros = { version = "=0.2.0", path = "../../crates/aros", features = ["alloc"] }
+aros-sys = { version = "=0.2.0", path = "../../crates/aros-sys" }
 serde = { version = "=1.0.228", default-features = false, features = ["alloc", "derive"] }
 serde_json = { version = "=1.0.145", default-features = false, features = ["alloc"] }
 ed25519-dalek = { version = "=2.2.0", default-features = false, features = ["alloc"] }

@@ -4,7 +4,19 @@
 #include <stdint.h>
 #include <stddef.h>
 typedef struct { int32_t kind; int64_t native; } SdkError;
-typedef struct { size_t blocks, backing_charge, peak_charge, files, libraries, ports, signals, messages, refusals, devices, requests; } SdkStats;
+typedef struct { size_t blocks, backing_charge, peak_charge, files, libraries, ports, signals, messages, refusals, devices, requests, directories, rastports, bitmaps, windows, pubscreens, aslrequests, locales, catalogs, icons, wbports, wbobjects; } SdkStats;
+/* Window geometry as the bridge reads it from struct Window. */
+typedef struct { int32_t left, top, width, height, border_left, border_top, border_right, border_bottom, mouse_x, mouse_y, screen_width, screen_height; uint32_t signal_mask; void *rastport; } SdkWindowInfo;
+/* The fields of a locale the bridge reads from struct Locale. */
+typedef struct { const char *locale_name, *language_name, *preferred[10]; int32_t gmt_offset; } SdkLocaleInfo;
+/* A disk object as the bridge reads it. */
+typedef struct { int32_t kind, stack_size, x, y; const char *default_tool; const char *const *tool_types; } SdkIconInfo;
+/* One Workbench application message, decoded and replied to. */
+typedef struct { uint32_t type, class_, num_args; int32_t total_args; int16_t mouse_x, mouse_y; uint32_t seconds, micros; uint64_t id, user_data; } SdkAppMessage;
+/* One IDCMP message, decoded and replied to. */
+typedef struct { uint32_t class_; uint16_t code, qualifier; int16_t x, y; uint32_t seconds, micros; } SdkIntuiEvent;
+/* One directory entry; the layout is checked against the Rust declaration. */
+typedef struct { uint64_t size;uint32_t protection,name_length;int32_t entry_type,directory_type,days,minutes,ticks;uint32_t size_exact;uint8_t name[108]; } SdkEntry;
 
 /* Shared checked layout arithmetic for the native allocator and host tests. */
 #define AMI_SDK_MIN_ALLOCATION_ALIGNMENT ((size_t)8)
@@ -113,6 +125,8 @@ int sdk_message_reply(uint64_t,uint64_t,SdkError *);
 uint64_t sdk_device_open(uint64_t,const uint8_t *,uint32_t,uint32_t,SdkError *);
 int sdk_device_close(uint64_t,uint64_t,SdkError *);
 uint32_t sdk_device_signal_mask(uint64_t,uint64_t);
+void *sdk_device_base(uint64_t,uint64_t);
+size_t sdk_timer_layout(uint64_t *,size_t);
 uint64_t sdk_io_new(uint64_t,uint64_t,int32_t,size_t,SdkError *);
 int sdk_io_drop(uint64_t,uint64_t,SdkError *);
 int sdk_io_prepare(uint64_t,uint64_t,uint32_t,uint32_t,size_t,uint32_t,SdkError *);
@@ -126,6 +140,71 @@ int sdk_io_send(uint64_t,uint64_t,SdkError *);
 int sdk_io_check(uint64_t,uint64_t,SdkError *);
 int sdk_io_wait(uint64_t,uint64_t,int32_t *,SdkError *);
 int sdk_io_abort(uint64_t,uint64_t,SdkError *);
+uint64_t sdk_dir_open(uint64_t,const uint8_t *,SdkError *);
+int sdk_dir_next(uint64_t,uint64_t,SdkEntry *,SdkError *);
+int sdk_dir_close(uint64_t,uint64_t,SdkError *);
+int sdk_entry_info(uint64_t,const uint8_t *,SdkEntry *,SdkError *);
+int sdk_make_dir(uint64_t,const uint8_t *,SdkError *);
+int sdk_delete(uint64_t,const uint8_t *,SdkError *);
+int sdk_rename(uint64_t,const uint8_t *,const uint8_t *,SdkError *);
+int64_t sdk_cwd_get(uint64_t,uint8_t *,size_t,SdkError *);
+int sdk_cwd_set(uint64_t,const uint8_t *,SdkError *);
+int64_t sdk_var_get(uint64_t,const uint8_t *,uint8_t *,size_t,int32_t,SdkError *);
+int sdk_var_set(uint64_t,const uint8_t *,const uint8_t *,size_t,int32_t,SdkError *);
+int sdk_var_delete(uint64_t,const uint8_t *,int32_t,SdkError *);
+int sdk_file_seek(uint64_t,uint64_t,int32_t,int64_t,uint64_t *,SdkError *);
+int sdk_file_position(uint64_t,uint64_t,uint64_t *,SdkError *);
+int sdk_file_size(uint64_t,uint64_t,uint64_t *,SdkError *);
+uint64_t sdk_gfx_rastport_new(uint64_t,SdkError *);
+void *sdk_gfx_rastport_ptr(uint64_t,uint64_t);
+int sdk_gfx_rastport_set_bitmap(uint64_t,uint64_t,void *,SdkError *);
+int sdk_gfx_area_prepare(uint64_t,uint64_t,int32_t,int32_t,int32_t,SdkError *);
+void *sdk_gfx_area_ptr(uint64_t,uint64_t,int32_t);
+size_t sdk_gfx_area_size(uint64_t,uint64_t,int32_t);
+int sdk_gfx_area_attach(uint64_t,uint64_t,SdkError *);
+int sdk_gfx_rastport_drop(uint64_t,uint64_t,SdkError *);
+uint64_t sdk_gfx_bitmap_register(uint64_t,void *,void *,SdkError *);
+int sdk_gfx_bitmap_release(uint64_t,uint64_t,SdkError *);
+uint64_t sdk_intui_title_new(uint64_t,const uint8_t *,size_t,SdkError *);
+const char *sdk_intui_title_ptr(uint64_t,uint64_t);
+int sdk_intui_window_set_title(uint64_t,uint64_t,const uint8_t *,size_t,SdkError *);
+int sdk_intui_window_attach(uint64_t,uint64_t,void *,void *,SdkError *);
+int sdk_intui_window_cancel(uint64_t,uint64_t,SdkError *);
+int sdk_intui_window_close(uint64_t,uint64_t,SdkError *);
+int sdk_intui_window_info(uint64_t,uint64_t,SdkWindowInfo *,SdkError *);
+int sdk_intui_next_event(uint64_t,uint64_t,SdkIntuiEvent *,SdkError *);
+uint64_t sdk_intui_screen_register(uint64_t,void *,void *,SdkError *);
+int sdk_intui_screen_size(uint64_t,uint64_t,int32_t *,int32_t *,SdkError *);
+int sdk_intui_screen_release(uint64_t,uint64_t,SdkError *);
+size_t sdk_intui_layout(uint64_t *,size_t);
+uint64_t sdk_asl_register(uint64_t,void *,void *,SdkError *);
+int sdk_asl_release(uint64_t,uint64_t,SdkError *);
+int sdk_asl_count(uint64_t,uint64_t,int32_t *,SdkError *);
+int sdk_asl_path(uint64_t,uint64_t,int32_t,uint8_t *,size_t,size_t *,SdkError *);
+size_t sdk_asl_layout(uint64_t *,size_t);
+uint64_t sdk_locale_register(uint64_t,int32_t,void *,void *,SdkError *);
+int sdk_locale_release(uint64_t,uint64_t,SdkError *);
+int sdk_locale_info(uint64_t,uint64_t,SdkLocaleInfo *,SdkError *);
+size_t sdk_locale_layout(uint64_t *,size_t);
+uint64_t sdk_icon_register(uint64_t,void *,void *,SdkError *);
+int sdk_icon_info(uint64_t,uint64_t,SdkIconInfo *,SdkError *);
+int sdk_icon_set_default_tool(uint64_t,uint64_t,const uint8_t *,size_t,SdkError *);
+int sdk_icon_set_tool_types(uint64_t,uint64_t,const uint8_t *const *,const size_t *,size_t,SdkError *);
+int sdk_icon_set_stack(uint64_t,uint64_t,int32_t,SdkError *);
+int sdk_icon_release(uint64_t,uint64_t,SdkError *);
+uint64_t sdk_wb_port_new(uint64_t,SdkError *);
+void *sdk_wb_port_ptr(uint64_t,uint64_t);
+uint32_t sdk_wb_port_mask(uint64_t,uint64_t);
+int sdk_wb_port_pending(uint64_t,uint64_t);
+int sdk_wb_port_next(uint64_t,uint64_t,SdkAppMessage *,SdkError *);
+int sdk_wb_path(uint64_t,uint64_t,int32_t,uint8_t *,size_t,size_t *,SdkError *);
+int sdk_wb_port_drop(uint64_t,uint64_t,SdkError *);
+uint64_t sdk_wb_object_new(uint64_t,int32_t,uint64_t,const uint8_t *,size_t,SdkError *);
+const char *sdk_wb_object_text(uint64_t,uint64_t);
+int sdk_wb_object_attach(uint64_t,uint64_t,void *,void *,SdkError *);
+int sdk_wb_object_cancel(uint64_t,uint64_t,SdkError *);
+int sdk_wb_object_remove(uint64_t,uint64_t,SdkError *);
+size_t sdk_wb_layout(uint64_t *,size_t);
 int sdk_callback(uint64_t,uint64_t (*)(void *,uint64_t),void *,uint64_t,uint64_t *,SdkError *);
 /* Independent C oracle: count then values; no raw Rust structs enter OS calls. */
 size_t sdk_layout(uint64_t *,size_t);

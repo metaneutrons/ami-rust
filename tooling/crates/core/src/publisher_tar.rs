@@ -82,7 +82,7 @@ pub fn verify_publisher_sdk_tar<'a>(
         // Header::from_byte_slice requires exactly one checked 512-byte block.
         let header = Header::from_byte_slice(raw_header);
         verify_header_checksum(raw_header)?;
-        // Python validates numeric syntax even for ownership/timestamp/device
+        // The original reader validates numeric syntax even for ownership/timestamp/device
         // metadata that installation deliberately does not preserve.
         for range in [100..108, 108..116, 116..124, 136..148, 329..337, 337..345] {
             tarfile_number(&raw_header[range])?;
@@ -97,7 +97,7 @@ pub fn verify_publisher_sdk_tar<'a>(
 
         match entry_type {
             EntryType::GNULongName => {
-                // Python processes nested long-name records recursively, then
+                // The original reader processes nested long-name records recursively, then
                 // applies the outermost (first) name last. Only that effective
                 // path needs the portable-path check.
                 if pending_long_name.is_none() {
@@ -107,7 +107,7 @@ pub fn verify_publisher_sdk_tar<'a>(
             EntryType::GNULongLink => {
                 // The publisher profile rejects link members. A long-link
                 // record preceding a regular file has no effect on its path,
-                // bytes, or installed mode. Python tarfile recognizes it
+                // bytes, or installed mode. The original reader recognizes it
                 // without GNU magic; the outermost record wins. Its target has
                 // no effect on accepted regular files.
                 pending_long_link = true;
@@ -118,7 +118,7 @@ pub fn verify_publisher_sdk_tar<'a>(
                         "SDK TAR PAX extended headers are not accepted",
                     ));
                 }
-                // Python tarfile stops PAX parsing at a leading NUL. Such a
+                // The original reader stops PAX parsing at a leading NUL. Such a
                 // nonempty body still produces an empty pax_headers mapping.
             }
             EntryType::Regular => {
@@ -384,8 +384,8 @@ fn tarfile_number(field: &[u8]) -> Result<i128> {
         return Ok(value);
     }
 
-    // Match tarfile.nti for non-base-256 fields: stop at NUL, trim whitespace,
-    // and parse the Python-style signed octal integer (including separators).
+    // Match the original reader for non-base-256 fields: stop at NUL, trim whitespace,
+    // and parse the signed octal integer it accepted (including separators).
     let end = field
         .iter()
         .position(|byte| *byte == 0)
@@ -395,7 +395,7 @@ fn tarfile_number(field: &[u8]) -> Result<i128> {
     }
     let text = std::str::from_utf8(&field[..end])
         .map_err(|_| Refusal::new("invalid SDK TAR member mode encoding"))?
-        // Python decodes strict ASCII before str.strip(); its ASCII whitespace
+        // The original reader decodes strict ASCII before trimming; its ASCII whitespace
         // includes vertical tab and the four information separators as well.
         .trim_matches(|character: char| matches!(character as u32, 9..=13 | 28..=32));
     if text.is_empty() {
@@ -408,7 +408,7 @@ fn tarfile_number(field: &[u8]) -> Result<i128> {
     };
     if digits.starts_with(b"0o") || digits.starts_with(b"0O") {
         digits = &digits[2..];
-        // Python int(text, 8) allows one separator immediately after 0o.
+        // The original octal parser allows one separator immediately after 0o.
         if digits.starts_with(b"_") {
             digits = &digits[1..];
         }

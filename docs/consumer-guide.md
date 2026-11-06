@@ -1,5 +1,5 @@
 ---
-title: Crates and consumer guide
+title: Choosing and using the crates
 description: Which ami-rust crates to depend on, how to add them to a project, and complete minimal programs.
 ---
 
@@ -16,28 +16,55 @@ The Cargo **target** selects the AROS ABI, and your source is the same for both.
 
 | Crate | Use it for | Safe boundary |
 | --- | --- | --- |
-| `aros` | Application entry, task-local context, Exec-backed allocation, files, streams, libraries, signals, local ports and messages | The default application crate |
-| `aros-mui` | Typed MUI objects, ownership scopes, attributes, notifications, callbacks, requesters and the application loop | The preferred MUI crate |
-| `aros-sys` | A raw AROS declaration or library vector call that `aros` does not cover yet | Unsafe: you own every pointer, library base and lifetime |
-| `aros-mui-sys` | A raw MUI vector, class, tag or message that `aros-mui` does not model safely | Unsafe: you own the complete native contract |
-| `aros-native-build` | A build dependency. Your `build.rs` calls `aros_native_build::prepare`; your application code never uses it. | Not an application API |
+| [`aros`](/api/aros/) | Application entry, task-local context, Exec-backed allocation, files, streams, libraries, signals, local ports and messages | The default application crate |
+| [`aros-mui`](/api/aros-mui/) | Typed MUI objects, ownership scopes, attributes, notifications, callbacks, requesters and the application loop | The preferred MUI crate |
+| [`aros-timer`](/api/aros-timer/) | Time and timers: the monotonic clock, calendar and up time, sleeping and signalled alarms (new in 0.2.0) | Safe, built on `aros` |
+| [`aros-graphics`](/api/aros-graphics/) | Off-screen bitmaps and drawing: pens, lines, rectangles, ellipses, polygons, text, pixels and blits (new in 0.2.0) | Safe, built on `aros` |
+| [`aros-intuition`](/api/aros-intuition/) | Windows on a public screen with typed events (close, keys, mouse, refresh, resize) and drawing through `aros-graphics` (new in 0.2.0) | Safe, built on `aros` and `aros-graphics` |
+| [`aros-asl`](/api/aros-asl/) | The file requester: open, save and drawer selection, multi-selection, returning owned paths (new in 0.2.0) | Safe, built on `aros` and `aros-intuition` |
+| [`aros-locale`](/api/aros-locale/) | Message catalogs with built-in default strings, the user's locale and date formatting (new in 0.2.0) | Safe, built on `aros` |
+| [`aros-icon`](/api/aros-icon/) | Icons (`.info` files): type, default tool, tool types, stack size, and tool value matching (new in 0.2.0) | Safe, built on `aros` |
+| [`aros-workbench`](/api/aros-workbench/) | A window that accepts dropped icons, an icon on the desktop and a Tools menu item, with message receipt (new in 0.2.0) | Safe, built on `aros`, `aros-icon` and `aros-intuition` |
+| [`aros-sys`](/api/aros-sys/) | A raw AROS declaration or library vector call that `aros` does not cover yet | Unsafe: you own every pointer, library base and lifetime |
+| [`aros-mui-sys`](/api/aros-mui-sys/) | A raw MUI vector, class, tag or message that `aros-mui` does not model safely | Unsafe: you own the complete native contract |
+| [`aros-native-build`](/api/aros-native-build/) | A build dependency. Your `build.rs` calls `aros_native_build::prepare`; your application code never uses it. | Not an application API |
+| [`aros-elf`](/api/aros-elf/) | A host library that audits AROS ELF objects and shortens their section names; `aros-native-build` and the maintainer tools use it. | Not an application API |
 
-`aros-elf` and the tools in the repository are internal; see [architecture](/architecture/).
+The other tools in the repository are internal; see [architecture](/architecture/).
 
 Start with `aros`, add `aros-mui` for a graphical interface, and reach for a `-sys` crate only when you can document the raw pointer, tag, vector and lifetime contract that prevents a safe wrapper. For the concepts behind the safe crates, read the [programming model](/api/).
 
 ## Depend on the crates
 
-The crates are delivered through Git and are intentionally not on crates.io. Pin a release by its tag:
+The crates are not on crates.io yet; that publication is planned once their names and public APIs have stabilised. Until then they come from Git or from the ami-rust registry. Pin a release by its tag:
 
 ```toml
 [dependencies]
-aros = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0", features = ["alloc"] }
-aros-mui = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
+aros = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.2.0", features = ["alloc"] }
+aros-mui = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.2.0" }
 
 [build-dependencies]
-aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
+aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.2.0" }
 ```
+
+Alternatively, `crates.metaneutrons.cc` is a read-only Cargo registry that holds the `aros-*` library crates and the build tooling (`aros-native-build`, `aros-elf`) of each release, starting with 0.2.0. Add it once to `.cargo/config.toml` and depend on the crates by version:
+
+```toml
+# .cargo/config.toml
+[registries.metaneutrons]
+index = "sparse+https://crates.metaneutrons.cc/"
+```
+
+```toml
+# Cargo.toml
+[dependencies]
+aros = { version = "0.2", registry = "metaneutrons" }
+
+[build-dependencies]
+aros-native-build = { version = "=0.2.0", registry = "metaneutrons" }
+```
+
+`aros-native-build` is pinned to the toolchain release it was packaged with, so depend on it with `=` and the version of the toolchain you installed. Registry and Git dependencies mix freely.
 
 Release tags are immutable, and `Cargo.lock` records the exact commit that the tag pointed to when you resolved, so commit it. Use the tag of the release you installed the toolchain for. See [releases and versions](/releases/) for how this documentation relates to each release.
 
@@ -52,10 +79,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-aros = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0", features = ["alloc"] }
+aros = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.2.0", features = ["alloc"] }
 
 [build-dependencies]
-aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.1.0" }
+aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.2.0" }
 ```
 
 `build.rs` compiles the native bridge that the SDK needs, inside Cargo's own output directory:
@@ -88,7 +115,7 @@ aros::entry!(application);
 
 `entry!` defines the native entry symbol and a panic handler, so use it exactly once in the final application crate. Use `entry!(application, alloc)` when your program needs the global allocator.
 
-Add the [Cargo configuration](/quickstart-toolchain/#configure-cargo), build with `cargo +0.1.0 build --target x86_64-unknown-aros-abi11 --release`, and [run it on AROS](/run-on-aros/).
+Add the [Cargo configuration](/quickstart-toolchain/#configure-cargo), build with `cargo +0.2.0 build --target x86_64-unknown-aros-abi11 --release`, and [run it on AROS](/run-on-aros/).
 
 ## A graphical program
 
@@ -159,4 +186,4 @@ The Cargo configuration, the toolchain and the `--locked --offline` workflow are
 
 ## Scope and compatibility
 
-0.1.0 supports `no_std` plus `alloc`, not full `std`. Its native evidence covers the qualified QEMU profiles for ABI-v1 and ABI-v11. It does not establish support for a different CPU, physical hardware, arbitrary crates, threads, networking or an AROS-hosted Rust compiler. See the [compatibility boundary](/compatibility/) and the [API reference](/reference/) for the exact limits.
+0.2.0 supports `no_std` plus `alloc`, not full `std`. Its native evidence covers the qualified QEMU profiles for ABI-v1 and ABI-v11. It does not establish support for a different CPU, physical hardware, arbitrary crates, threads, networking or an AROS-hosted Rust compiler. See the [compatibility boundary](/compatibility/) and the [API reference](/reference/) for the exact limits.

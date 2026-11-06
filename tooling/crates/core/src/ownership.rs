@@ -133,8 +133,8 @@ fn validate_install_target_path(path: &Path) -> Result<(PathBuf, Directory, OsSt
     Ok((path.to_path_buf(), parent, name))
 }
 
-/// Validate a fresh external receipt-pin file. Its path is normalized like
-/// Python `os.path.abspath`, and it must be disjoint from both the installation
+/// Validate a fresh external receipt-pin file. Its path is normalized
+/// lexically, as the original reference implementation did, and it must be disjoint from both the installation
 /// prefix and the verified release bundle.
 pub fn receipt_pin(path: &Path, prefix: &Path, bundle: &Path) -> Result<FreshTarget> {
     if path.as_os_str().is_empty() {

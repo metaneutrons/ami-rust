@@ -36,7 +36,7 @@ bash "$source_root/tools/bootstrap-host-rust.sh" "$work/bootstrap" "$host_triple
 
 git -C "$source_root" archive --format=tar HEAD \
   Cargo.toml Cargo.lock crates examples/minimal examples/sha256sum \
-  tests/qualification tests/dependencies native tooling/crates/aros-elf \
+  tests/qualification tests/dependencies tooling/crates/aros-elf \
   tooling/crates/aros-native-build | tar -xf - -C "$work/source"
 node "$source_root/website/scripts/prepare-rustdoc-source.mjs" "$work/source"
 
@@ -75,9 +75,9 @@ generate_profile() {
     RUSTC="$rustc" RUSTDOC="$rustdoc" RUSTC_BOOTSTRAP=1 \
     RUSTDOCFLAGS="-Z unstable-options --output-format json -Aexplicit_builtin_cfgs_in_flags --cfg target_os=\"aros\" --cfg target_abi=\"$profile\" --cfg target_arch=\"x86_64\"" \
     LC_ALL=C TZ=UTC SOURCE_DATE_EPOCH=1791936000 \
-    "$cargo" doc --manifest-path "$work/source/Cargo.toml" --locked --offline --no-deps -p aros -p aros-mui
+    "$cargo" doc --manifest-path "$work/source/Cargo.toml" --locked --offline --no-deps -p aros -p aros-mui -p aros-timer -p aros-graphics -p aros-intuition -p aros-asl -p aros-locale -p aros-icon -p aros-workbench
 
-  [[ -s "$target_dir/doc/aros.json" && -s "$target_dir/doc/aros_mui.json" ]] || \
+  [[ -s "$target_dir/doc/aros.json" && -s "$target_dir/doc/aros_mui.json" && -s "$target_dir/doc/aros_timer.json" && -s "$target_dir/doc/aros_graphics.json" && -s "$target_dir/doc/aros_intuition.json" && -s "$target_dir/doc/aros_asl.json" && -s "$target_dir/doc/aros_locale.json" && -s "$target_dir/doc/aros_icon.json" && -s "$target_dir/doc/aros_workbench.json" ]] || \
     fail "$profile rustdoc JSON output is incomplete"
 }
 
@@ -88,9 +88,9 @@ generate_profile abi11
 # when the ABI restrictions stated in the crate docs disagree with the builds.
 node "$source_root/website/scripts/generate-rust-api.mjs" \
   "$output" "$revision" \
-  "$work/api-target-abi1/doc/aros.json" "$work/api-target-abi1/doc/aros_mui.json" \
-  "$work/api-target-abi11/doc/aros.json" "$work/api-target-abi11/doc/aros_mui.json"
+  "$work/api-target-abi1/doc/aros.json" "$work/api-target-abi1/doc/aros_mui.json" "$work/api-target-abi1/doc/aros_timer.json" "$work/api-target-abi1/doc/aros_graphics.json" "$work/api-target-abi1/doc/aros_intuition.json" "$work/api-target-abi1/doc/aros_asl.json" "$work/api-target-abi1/doc/aros_locale.json" "$work/api-target-abi1/doc/aros_icon.json" "$work/api-target-abi1/doc/aros_workbench.json" \
+  "$work/api-target-abi11/doc/aros.json" "$work/api-target-abi11/doc/aros_mui.json" "$work/api-target-abi11/doc/aros_timer.json" "$work/api-target-abi11/doc/aros_graphics.json" "$work/api-target-abi11/doc/aros_intuition.json" "$work/api-target-abi11/doc/aros_asl.json" "$work/api-target-abi11/doc/aros_locale.json" "$work/api-target-abi11/doc/aros_icon.json" "$work/api-target-abi11/doc/aros_workbench.json"
 
 [[ -s "$output/index.md" && -s "$output/sidebar.json" && -s "$output/abi-differences.md" && \
-   -s "$output/aros/index.md" && -s "$output/aros_mui/index.md" ]] || \
+   -s "$output/aros/index.md" && -s "$output/aros_mui/index.md" && -s "$output/aros_timer/index.md" && -s "$output/aros_graphics/index.md" && -s "$output/aros_intuition/index.md" && -s "$output/aros_asl/index.md" && -s "$output/aros_locale/index.md" && -s "$output/aros_icon/index.md" && -s "$output/aros_workbench/index.md" ]] || \
   fail 'Astro API reference is incomplete'

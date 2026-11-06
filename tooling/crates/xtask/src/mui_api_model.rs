@@ -22,8 +22,8 @@ const SAFE_METHODS: &str = "crates/aros-mui/src/methods.rs";
 const SAFE_VALUES: &str = "crates/aros-mui/src/values.rs";
 const SAFE_MANIFEST: &str = "bindings/mui/safe-api.json";
 const SAFE_DOCUMENTATION: &str = "docs/mui-safe-api.md";
-const C_ORACLE_ABI1: &str = "tests/m3-runtime/native/generated_abi1.c";
-const C_ORACLE_ABI11: &str = "tests/m3-runtime/native/generated_abi11.c";
+const C_LAYOUT_ABI1: &str = "bindings/mui/layout-abi1.c";
+const C_LAYOUT_ABI11: &str = "bindings/mui/layout-abi11.c";
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -325,8 +325,8 @@ fn run_inner(
     let provenance_bytes = json_bytes(&provenance)?;
     let raw_abi1 = generate_raw_bindings(&model, "abi1")?;
     let raw_abi11 = generate_raw_bindings(&model, "abi11")?;
-    let c_oracle_abi1 = generate_c_oracle(&model, "abi1")?;
-    let c_oracle_abi11 = generate_c_oracle(&model, "abi11")?;
+    let c_layout_abi1 = generate_c_layout(&model, "abi1")?;
+    let c_layout_abi11 = generate_c_layout(&model, "abi11")?;
     let safe = super::mui_safe_codegen::generate(&model_bytes, &safe_override_bytes)?;
     emit(&options.repository.join(MODEL), &model_bytes, check)?;
     emit(
@@ -345,13 +345,13 @@ fn run_inner(
         check,
     )?;
     emit(
-        &options.repository.join(C_ORACLE_ABI1),
-        c_oracle_abi1.as_bytes(),
+        &options.repository.join(C_LAYOUT_ABI1),
+        c_layout_abi1.as_bytes(),
         check,
     )?;
     emit(
-        &options.repository.join(C_ORACLE_ABI11),
-        c_oracle_abi11.as_bytes(),
+        &options.repository.join(C_LAYOUT_ABI11),
+        c_layout_abi11.as_bytes(),
         check,
     )?;
     emit(
@@ -492,7 +492,18 @@ fn generate_raw_bindings(model: &ApiModel, abi: &str) -> std::result::Result<Str
             } else {
                 rust_type
             };
-            output.push_str(&format!("    pub {name}: {rust_type},\n"));
+            let declaration = field.declaration.trim().trim_end_matches(';').trim();
+            if declaration.contains('`') || declaration.contains('\n') {
+                return Err(format!(
+                    "{}:{}: the declaration of `{name}` cannot be quoted in a documentation comment",
+                    message.source.path, field.line
+                ));
+            }
+            output.push_str(&format!(
+                "    /// Field `{name}`, declared as `{declaration}` at `{}:{}`.\n\
+                 \x20   pub {name}: {rust_type},\n",
+                message.source.path, field.line
+            ));
         }
         output.push_str("}\n\n");
     }
@@ -501,7 +512,7 @@ fn generate_raw_bindings(model: &ApiModel, abi: &str) -> std::result::Result<Str
         .map(|message| 2 + message.fields.len())
         .sum::<usize>();
     output.push_str(&format!(
-        "/// Number of C layout values used by the M3 qualification oracle.\n\
+        "/// Number of C layout values that `tools/check-mui-layout.mjs` compares with the C compiler.\n\
          #[doc(hidden)]\n\
          pub const MUI_LAYOUT_VALUE_COUNT: usize = {layout_count};\n\n\
          #[doc(hidden)]\n\
@@ -531,7 +542,7 @@ fn generate_raw_bindings(model: &ApiModel, abi: &str) -> std::result::Result<Str
     Ok(output)
 }
 
-fn generate_c_oracle(model: &ApiModel, abi: &str) -> std::result::Result<String, String> {
+fn generate_c_layout(model: &ApiModel, abi: &str) -> std::result::Result<String, String> {
     let messages: Vec<_> = model
         .message_structures
         .iter()

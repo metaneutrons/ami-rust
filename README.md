@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/metaneutrons/ami-rust/actions/workflows/ci.yml"><img src="https://github.com/metaneutrons/ami-rust/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
-  <a href="https://github.com/metaneutrons/ami-rust/releases/tag/v0.1.0"><img src="https://img.shields.io/badge/version-0.1.0-ff825e?style=flat-square" alt="Version 0.1.0"></a>
+  <a href="https://github.com/metaneutrons/ami-rust/releases/tag/v0.2.0"><img src="https://img.shields.io/badge/version-0.2.0-ff825e?style=flat-square" alt="Version 0.2.0"></a>
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-7c8cf8?style=flat-square" alt="License: MIT OR Apache-2.0"></a>
   <a href="docs/compatibility.md"><img src="https://img.shields.io/badge/target-AROS%20x86--64%20ABI--v1%20%2B%20ABI--v11-398f4f?style=flat-square" alt="Target: AROS x86-64 ABI-v1 and ABI-v11"></a>
   <a href="docs/api.md"><img src="https://img.shields.io/badge/Rust-no__std%20%2B%20alloc-91b8d6?style=flat-square" alt="Rust: no_std plus alloc"></a>
@@ -39,10 +39,11 @@ selects the ABI; application source does not select it through a Cargo feature.
 
 ## Status
 
-ami-rust 0.1.0 is the initial qualified release. The exact candidate passed the
+ami-rust 0.2.0 is a qualified release. The exact candidate passed the
 protected three-host, dual-target and native AROS qualification. Authenticated
 GitHub Release archives and the immutable rustup catalog are the supported
-installation routes. APT, Homebrew, AUR and crates.io are not 0.1.0 channels.
+installation routes. The libraries are also published to the ami-rust Cargo
+registry (see below). APT, Homebrew, AUR and crates.io are not 0.2.0 channels.
 
 Qualified development hosts:
 
@@ -74,25 +75,71 @@ Resolve and commit a project's `Cargo.lock` once. Thereafter both targets build
 offline with ordinary Cargo:
 
 ```sh
-toolchain=0.1.0
+toolchain=0.2.0
 cargo +"$toolchain" fetch --locked
 cargo +"$toolchain" build --target x86_64-unknown-aros-abi1 --release --locked --offline
 cargo +"$toolchain" build --target x86_64-unknown-aros-abi11 --release --locked --offline
 ```
 
-The libraries are normal Cargo dependencies. They remain Git-delivered until
-their names and public APIs are stable enough for an intentional crates.io
-publication. The public base set is:
+The libraries are normal Cargo dependencies. They are not on crates.io yet:
+that publication is planned once their names and public APIs have stabilised.
+Until then there are two ways to get them.
+
+**From the Git tag** (works for every release):
+
+```toml
+[dependencies]
+aros = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.2.0" }
+
+[build-dependencies]
+aros-native-build = { git = "https://github.com/metaneutrons/ami-rust", tag = "v0.2.0" }
+```
+
+**From the ami-rust registry**, `crates.metaneutrons.cc`, a read-only Cargo
+registry that the release workflow fills with the `aros-*` library crates and
+the build tooling (`aros-native-build`, `aros-elf`) of each release, starting with 0.2.0. Published versions
+never change. Add the registry once to `.cargo/config.toml`:
+
+```toml
+[registries.metaneutrons]
+index = "sparse+https://crates.metaneutrons.cc/"
+```
+
+and depend on the crates by version:
+
+```toml
+[dependencies]
+aros = { version = "0.2", registry = "metaneutrons" }
+aros-mui = { version = "0.2", registry = "metaneutrons" }
+
+[build-dependencies]
+aros-native-build = { version = "=0.2.0", registry = "metaneutrons" }
+```
+
+`aros-native-build`, the build dependency of every application, is pinned to the
+toolchain release it was packaged with, so depend on it with `=` and the version
+of the toolchain you installed. Registry and Git dependencies mix freely. The
+registry and the tag deliver the same sources: the registry archives are
+`cargo package` output of the tagged commit, built offline with the pinned Rust.
+
+The public base set is:
 
 - `aros` for entry, allocation and the safe core API;
 - `aros-sys` for raw AROS ABI declarations;
 - `aros-mui` for task-affine MUI ownership;
 - `aros-mui-sys` for raw MUI vector calls.
 
+`aros-timer` (time and timers on `timer.device`), `aros-graphics` (bitmaps
+and drawing on `graphics.library`), `aros-intuition` (windows and events on
+`intuition.library`), `aros-asl` (file requesters on `asl.library`) and
+`aros-locale` (catalogs and dates on `locale.library`), `aros-icon` (icons
+and tool types on `icon.library`) and `aros-workbench` (application windows,
+icons and menu items on `workbench.library`) are new in 0.2.0.
+
 The focused `aros-elf` and `aros-native-build` crates are maintainer and build
 support, not application API crates.
 
-See the [consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/), the
+See the [crates guide](https://ami-rust.metaneutrons.cc/consumer-guide/), the
 [programming model](https://ami-rust.metaneutrons.cc/api/), the
 [API reference](https://ami-rust.metaneutrons.cc/reference/), the
 [MUI hello-world example](https://ami-rust.metaneutrons.cc/mui-hello/), and the
@@ -125,7 +172,10 @@ signing, AROS execution, and publication remain protected workflow stages.
 | --- | --- |
 | `crates/` | Public AROS and Amiga libraries |
 | `examples/` | Native AROS example applications |
-| `native/` | Startup and runtime support |
+| `tests/` | Test programs: the qualification fixture, native applications and compile-fail fixtures, listed in `tests/programs.json` |
+| `tools/` | Maintainer scripts and the checks CI runs |
+| `bindings/` | Generated API models, including the MUI model and its C layout files |
+| `docs/`, `website/` | The documentation and its site |
 | `targets/` | Rust target specification |
 | `tooling/` | Rust-only producer and qualification libraries |
 | `release/` | Pinned inputs, contracts, notices, and source obligations |
@@ -138,7 +188,7 @@ The documentation site is <https://ami-rust.metaneutrons.cc/>.
 - [Install and build](https://ami-rust.metaneutrons.cc/quickstart-toolchain/)
 - [Run on AROS](https://ami-rust.metaneutrons.cc/run-on-aros/)
 - [Targets and ABIs](https://ami-rust.metaneutrons.cc/targets-and-abis/)
-- [Crates and consumer guide](https://ami-rust.metaneutrons.cc/consumer-guide/)
+- [Choosing and using the crates](https://ami-rust.metaneutrons.cc/consumer-guide/)
 - [Programming model](https://ami-rust.metaneutrons.cc/api/)
 - [Rust API reference](https://ami-rust.metaneutrons.cc/reference/)
 - [Compatibility boundary](https://ami-rust.metaneutrons.cc/compatibility/)

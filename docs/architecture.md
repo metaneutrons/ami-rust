@@ -10,6 +10,7 @@ ami-rust has four layers. Applications use the top one; the lower layers exist s
         │
    ┌────┴─────────────┐
    │ aros   aros-mui  │   safe, task-affine APIs                 (you use these)
+   │ + seven others   │   (timer, graphics, intuition, asl, ...)
    ├──────────────────┤
    │ aros-sys         │   raw declarations and library calls,    (unsafe, escape hatch)
    │ aros-mui-sys     │   one generated backend per ABI
@@ -27,25 +28,32 @@ ami-rust has four layers. Applications use the top one; the lower layers exist s
 | --- | --- |
 | [`aros`](/api/aros/) | Entry point, `Context`, allocator, files, streams, libraries, signals, ports, messages. The safe core. |
 | [`aros-mui`](/api/aros-mui/) | Typed, scope-owned MUI objects. Built on `aros` and `aros-mui-sys`. |
-| `aros-sys` | Raw, allocation-free declarations and calls for the exec, dos, utility and intuition libraries, plus the bridge's C interface. |
-| `aros-mui-sys` | Raw MUI: every public class ID, attribute, method, value, enum value and `MUIP_*` message in the pinned headers, and the reviewed muimaster vector calls. |
+| [`aros-timer`](/api/aros-timer/) | Time and timers on `timer.device`. Built on `aros` and the raw timer calls in `aros-sys`. |
+| [`aros-graphics`](/api/aros-graphics/) | Off-screen bitmaps and drawing on `graphics.library`. Built on `aros` and the raw graphics calls in `aros-sys`. |
+| [`aros-intuition`](/api/aros-intuition/) | Windows, public screens and typed IDCMP events on `intuition.library`. Built on `aros`, `aros-graphics` and the raw Intuition calls in `aros-sys`. |
+| [`aros-asl`](/api/aros-asl/) | File requesters on `asl.library` that return owned paths. Built on `aros`, `aros-intuition` and the raw asl calls in `aros-sys`. |
+| [`aros-locale`](/api/aros-locale/) | Message catalogs with built-in default strings and date formatting on `locale.library`. Built on `aros` and the raw locale calls in `aros-sys`. |
+| [`aros-icon`](/api/aros-icon/) | Disk objects, tool types and tool value matching on `icon.library`. Built on `aros` and the raw icon calls in `aros-sys`. |
+| [`aros-workbench`](/api/aros-workbench/) | Application windows, icons and menu items with message receipt on `workbench.library`. Built on `aros`, `aros-icon`, `aros-intuition` and the raw Workbench calls in `aros-sys`. |
+| [`aros-sys`](/api/aros-sys/) | Raw, allocation-free declarations and calls for the exec, dos, utility, intuition, timer, graphics, asl, locale, icon and workbench libraries, plus the bridge's C interface. |
+| [`aros-mui-sys`](/api/aros-mui-sys/) | Raw MUI: every public class ID, attribute, method, value, enum value and `MUIP_*` message in the pinned headers, and the reviewed muimaster vector calls. |
 
 Every safe type is built on the raw crates, and none of them exposes a raw pointer except through an `unsafe` item. The raw crates choose their library-call backend from the Cargo target, which is how the two [ABIs](/targets-and-abis/) are kept out of the safe API.
 
 ## The native bridge
 
-The bridge is a small C library (about 550 lines of production source). It owns the registries that enforce the [resource limits](/api/aros/#errors-and-bounds), the owner-task check, resource cleanup after the entry function returns, and the startup checks described in [Run on AROS](/run-on-aros/). It is compiled for the selected ABI during each build by [`aros-native-build`](/build-system/), using the toolchain's pinned C SDK, so it always matches the system headers the program targets.
+The bridge is a small C library (about 2,000 lines of production source). It owns the registries that enforce the [resource limits](/api/aros/#errors-and-bounds), the owner-task check, resource cleanup after the entry function returns, and the startup checks described in [Run on AROS](/run-on-aros/). It is compiled for the selected ABI during each build by [`aros-native-build`](/build-system/), using the toolchain's pinned C SDK, so it always matches the system headers the program targets.
 
 ## Build and tooling crates
 
 | Crate | Audience | Role |
 | --- | --- | --- |
-| [`aros-native-build`](/build-system/) | Build dependency | `prepare()` for `build.rs` and the `aros-link` target linker. |
-| `aros-elf` | Internal | Shared host library for validating AROS ELF output and compacting section names. `aros-link` uses it to audit the executable before Cargo sees it. It does not run a compiler or linker. |
+| [`aros-native-build`](/api/aros-native-build/) | Build dependency | `prepare()` for `build.rs` and the `aros-link` target linker. See also [build system](/build-system/). |
+| [`aros-elf`](/api/aros-elf/) | Build tooling | Shared host library for validating AROS ELF output and compacting section names. `aros-link` uses it to audit the executable before Cargo sees it. It does not run a compiler or linker. |
 | `aros-api-gen` | Maintainers | Generates the committed `aros-sys` backends from a reviewed allowlist (`bindings/aros-api.json`) and two complete SDKs, verifying every function and vector against both. |
 | `ami-rust-core`, `ami-rust-xtask` | Maintainers | Producing, qualifying, signing and publishing the SDK, and the MUI generator. Not a public CLI or Cargo plugin. |
 
-`aros-elf`, `aros-api-gen` and the maintainer tools are not application APIs and are not published. Applications use `aros-native-build` only through `build.rs`.
+`aros-native-build` and `aros-elf` are published to the ami-rust registry with the other crates, but they are not application APIs; `aros-api-gen` and the maintainer tools are not published. Applications use `aros-native-build` only through `build.rs`.
 
 ## Generated code
 

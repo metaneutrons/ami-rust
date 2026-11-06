@@ -2,7 +2,7 @@
 //!
 //! The reference thresholds in the returned report are measurements only. They
 //! intentionally do not reject a valid object that exceeds those thresholds.
-//! Malformed-input handling is stricter than the Python reference for gABI-
+//! Malformed-input handling is stricter than the original reference auditor for gABI-
 //! forbidden multiple symbol tables and overlapping file-backed sections;
 //! these checks do not change valid-object reports. Refusal reports for
 //! malformed strong-symbol tables use fixed-size, first-error diagnostics.
@@ -220,7 +220,7 @@ pub fn audit(bytes: &[u8], variant: &str, path: &str) -> Result<Value> {
     let names = bytes
         .get(names_range)
         .ok_or_else(|| Refusal::new("bad section name table bounds"))?;
-    // Validate every file-backed section, as the Python reference does before
+    // Validate every file-backed section, as the original reference auditor does before
     // considering allocation flags or section types.
     for section in &sections {
         let _ = section_data(bytes, section)?;

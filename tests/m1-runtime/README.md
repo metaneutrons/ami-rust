@@ -1,9 +1,8 @@
-# M1 dual-ABI runtime application
+# Runtime application
 
-This private static library supplies the identical Rust application body used
-to qualify the canonical x86-64 ABI1 and ABI11 targets. It covers allocator,
-DOS file I/O, library open/close, a minimal MUI window-object lifecycle, and
-clean application exit. The native bridge and final AROS ELF are supplied by
-the pinned target-specific SDK during M1 qualification.
+This private application is the identical Rust body that runs on both ABIs. It covers
+allocator, DOS file I/O, library open and close, a minimal MUI window-object
+lifecycle, and clean application exit.
 
 This package is release-internal evidence, not a public crate or test harness.
+Build and run it with `node tools/native-matrix.mjs`, which does so for both ABIs with an installed toolchain and records the result in the release evidence (`docs/evidence/native-<version>.json`). It is listed in `tests/programs.json`.

@@ -12,7 +12,7 @@ Pin the toolchain for the project so that rust-analyzer, Cargo and rustc agree. 
 ```toml
 # rust-toolchain.toml
 [toolchain]
-channel = "0.1.0"
+channel = "0.2.0"
 ```
 
 With that file in place the editor needs no further toolchain setting.
@@ -45,9 +45,9 @@ Other editors take the same three keys, in their own rust-analyzer configuration
 
 If you build for both targets, switch the setting to the one you are working on.
 
-## Compiler wrappers and clippy
+## Compiler wrappers and Clippy
 
-- **`sccache`.** A user-wide `sccache` wrapper is fine with revisions after 0.1.0. The 0.1.0 tag refuses it and the editor shows the build-script error. See [Troubleshooting](/troubleshooting/#rustc_wrapper-conflicts-with-the-pinned-compiler-selection).
+- **`sccache`.** A user-wide `sccache` wrapper is fine with 0.2.0 and later. The 0.1.0 tag refuses it and the editor shows the build-script error. See [Troubleshooting](/troubleshooting/#rustc_wrapper-conflicts-with-the-pinned-compiler-selection).
 - **clippy.** The AROS toolchain ships no clippy, so `check.command = "clippy"` does not work for AROS targets. Keep the default, `check`.
 
 ## If the editor shows errors Cargo does not

@@ -14,6 +14,20 @@
 
 extern crate alloc;
 
+mod m2;
+mod m3;
+mod m4;
+mod m5;
+mod m6;
+mod m7;
+mod m8;
+mod m9;
+#[cfg(not(all(target_os = "aros", target_abi = "abi11")))]
+#[path = "probe/x86_64_abi1.rs"]
+mod probe;
+#[cfg(all(target_os = "aros", target_abi = "abi11"))]
+#[path = "probe/x86_64_abi11.rs"]
+mod probe;
 mod stderr;
 
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
@@ -92,6 +106,17 @@ fn same_resources(a: SdkStats, b: SdkStats) -> bool {
         && a.messages == b.messages
         && a.devices == b.devices
         && a.requests == b.requests
+        && a.directories == b.directories
+        && a.rastports == b.rastports
+        && a.bitmaps == b.bitmaps
+        && a.windows == b.windows
+        && a.pubscreens == b.pubscreens
+        && a.aslrequests == b.aslrequests
+        && a.locales == b.locales
+        && a.catalogs == b.catalogs
+        && a.icons == b.icons
+        && a.wbports == b.wbports
+        && a.wbobjects == b.wbobjects
 }
 
 fn one_refusal_since(context: &Context, before: SdkStats) -> bool {
@@ -2484,6 +2509,202 @@ fn application(context: &Context) -> AppStatus {
                 success(context, b"qualification-device-forgotten", 2)
             } else {
                 fatal(context, 26)
+            }
+        }
+        Some("fs") => {
+            if m2::fs_cases(context) {
+                success(context, b"qualification-fs-cases", 8)
+            } else {
+                fatal(context, 27)
+            }
+        }
+        Some("fs-forgotten") => {
+            if m2::fs_forgotten_cases(context) {
+                success(context, b"qualification-fs-forgotten", 2)
+            } else {
+                fatal(context, 28)
+            }
+        }
+        Some("cwd-check") => {
+            if m2::cwd_check(context) {
+                success(context, b"qualification-cwd-check", 1)
+            } else {
+                fatal(context, 29)
+            }
+        }
+        Some("env") => {
+            if m2::env_cases(context) {
+                success(context, b"qualification-env-cases", 6)
+            } else {
+                fatal(context, 30)
+            }
+        }
+        Some("args") => {
+            if m2::args_cases(context) {
+                success(context, b"qualification-args-cases", 1)
+            } else {
+                fatal(context, 31)
+            }
+        }
+        Some("timer") => {
+            if m3::cases(context) {
+                success(context, b"qualification-timer-cases", 9)
+            } else {
+                fatal(context, 32)
+            }
+        }
+        Some("timer-measure") => {
+            if m3::measure(context) {
+                success(context, b"qualification-timer-measure", 2)
+            } else {
+                fatal(context, 33)
+            }
+        }
+        Some("timer-forgotten") => {
+            if m3::forgotten(context) {
+                success(context, b"qualification-timer-forgotten", 1)
+            } else {
+                fatal(context, 34)
+            }
+        }
+        Some("positions") => {
+            if m2::positions(context) {
+                success(context, b"qualification-positions", 1)
+            } else {
+                fatal(context, 35)
+            }
+        }
+        Some("big") => {
+            if m2::big(context) {
+                success(context, b"qualification-big", 1)
+            } else {
+                fatal(context, 36)
+            }
+        }
+        Some("info") => {
+            if m2::info(context) {
+                success(context, b"qualification-info", 1)
+            } else {
+                fatal(context, 37)
+            }
+        }
+        Some("probes") => {
+            if m4::cases(context) {
+                success(context, b"qualification-probes", 6)
+            } else {
+                fatal(context, 38)
+            }
+        }
+        Some("graphics") => {
+            if m5::cases(context) {
+                success(context, b"qualification-graphics", 7)
+            } else {
+                fatal(context, 39)
+            }
+        }
+        Some("graphics-forgotten") => {
+            if m5::forgotten(context) {
+                success(context, b"qualification-graphics-forgotten", 3)
+            } else {
+                fatal(context, 40)
+            }
+        }
+        Some("avail") => {
+            if m5::available(context) {
+                success(context, b"qualification-avail", 1)
+            } else {
+                fatal(context, 41)
+            }
+        }
+        Some("graphics-dump") => {
+            if m5::dump(context) {
+                success(context, b"qualification-graphics-dump", 1)
+            } else {
+                fatal(context, 42)
+            }
+        }
+        Some("window") => {
+            if m6::cases(context) {
+                success(context, b"qualification-window", 9)
+            } else {
+                fatal(context, 43)
+            }
+        }
+        Some("window-forgotten") => {
+            if m6::forgotten(context) {
+                success(context, b"qualification-window-forgotten", 3)
+            } else {
+                fatal(context, 44)
+            }
+        }
+        Some("window-hold") => {
+            if m6::hold(context) {
+                success(context, b"qualification-window-hold", 1)
+            } else {
+                fatal(context, 45)
+            }
+        }
+        Some("asl") => {
+            if m7::cases(context) {
+                success(context, b"qualification-asl", 9)
+            } else {
+                fatal(context, 46)
+            }
+        }
+        Some("asl-forgotten") => {
+            if m7::forgotten(context) {
+                success(context, b"qualification-asl-forgotten", 3)
+            } else {
+                fatal(context, 47)
+            }
+        }
+        Some("locale") => {
+            if m8::cases(context) {
+                success(context, b"qualification-locale", 9)
+            } else {
+                fatal(context, 49)
+            }
+        }
+        Some("locale-bounded") => {
+            if m8::bounded(context) {
+                success(context, b"qualification-locale-bounded", 3)
+            } else {
+                fatal(context, 50)
+            }
+        }
+        Some("locale-forgotten") => {
+            if m8::forgotten(context) {
+                success(context, b"qualification-locale-forgotten", 3)
+            } else {
+                fatal(context, 51)
+            }
+        }
+        Some("icon") => {
+            if m9::icons(context) {
+                success(context, b"qualification-icon", 9)
+            } else {
+                fatal(context, 52)
+            }
+        }
+        Some("icon-forgotten") => {
+            if m9::icon_forgotten(context) {
+                success(context, b"qualification-icon-forgotten", 3)
+            } else {
+                fatal(context, 53)
+            }
+        }
+        Some("workbench") => {
+            if m9::workbench(context) {
+                success(context, b"qualification-workbench", 9)
+            } else {
+                fatal(context, 54)
+            }
+        }
+        Some("workbench-forgotten") => {
+            if m9::forgotten(context) {
+                success(context, b"qualification-workbench-forgotten", 3)
+            } else {
+                fatal(context, 55)
             }
         }
         Some("registry") => {

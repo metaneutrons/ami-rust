@@ -5,7 +5,7 @@
 //! copy of its data, so the device never sees a Rust pointer and the
 //! per-ABI layout of timer requests stays inside the native bridge.
 
-use core::{marker::PhantomData, mem};
+use core::{ffi::c_void, marker::PhantomData, mem};
 
 #[cfg(doc)]
 use super::ErrorKind;
@@ -107,6 +107,25 @@ impl<'ctx> Device<'ctx> {
     /// [`Request::wait`] to identify and reclaim it.
     pub fn signal_mask(&self) -> u32 {
         unsafe { sys::sdk_device_signal_mask(self.context.key(), self.token) }
+    }
+
+    /// Returns the device base for raw library-style calls such as the timer
+    /// functions, or `None` if the native registry no longer recognizes this
+    /// device.
+    ///
+    /// The pointer stays valid only while this handle is open and must be
+    /// used only by the task that owns it.
+    ///
+    /// # Safety
+    ///
+    /// The pointer is for the generated raw bindings of the library this
+    /// device implements, called with their native contracts. Using it for
+    /// another device's API, after [`close`](Self::close) or from another
+    /// task is undefined behaviour.
+    pub unsafe fn raw_base(&self) -> Option<*mut c_void> {
+        // SAFETY: the native registry validates context, task and token.
+        let base = unsafe { sys::sdk_device_base(self.context.key(), self.token) };
+        (!base.is_null()).then_some(base)
     }
 
     /// Closes the device and releases its reply port.

@@ -13,8 +13,15 @@ name = "ami-rust-qualification"
 path = "src/main.rs"
 
 [dependencies]
-aros = { version = "=0.1.0", path = "../../crates/aros", features = ["alloc"] }
-aros-sys = { version = "=0.1.0", path = "../../crates/aros-sys" }
+aros = { version = "=0.2.0", path = "../../crates/aros", features = ["alloc"] }
+aros-sys = { version = "=0.2.0", path = "../../crates/aros-sys" }
+aros-timer = { version = "=0.2.0", path = "../../crates/aros-timer" }
+aros-graphics = { version = "=0.2.0", path = "../../crates/aros-graphics" }
+aros-intuition = { version = "=0.2.0", path = "../../crates/aros-intuition" }
+aros-asl = { version = "=0.2.0", path = "../../crates/aros-asl" }
+aros-locale = { version = "=0.2.0", path = "../../crates/aros-locale" }
+aros-icon = { version = "=0.2.0", path = "../../crates/aros-icon" }
+aros-workbench = { version = "=0.2.0", path = "../../crates/aros-workbench" }
 
 [build-dependencies]
 aros-native-build = { version = "=0.2.0", path = "../../tooling/crates/aros-native-build" }

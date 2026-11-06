@@ -10,11 +10,11 @@
 //! borrowed `RawValue` prepass preserves its original JSON bytes; a temporary
 //! validation copy replaces only producer integer tokens with zero so the
 //! shared `serde_json::Value` parser can still check duplicates, depth and the
-//! outer schema. Python's former 4,300-digit integer limit is enforced locally
+//! outer schema. The former 4,300-digit integer limit of the reference parser is enforced locally
 //! for producer integers. Float tokens and all other fields retain the shared
 //! parser's normal numeric behavior. In particular, an overflowing float such
 //! as `1e400` is refused as non-finite, a deliberate tightening relative to
-//! Python's default `json.loads` float handling.
+//! the reference parser's default float handling.
 
 use serde_json::Value;
 use serde_json::value::RawValue;
@@ -38,7 +38,7 @@ const SDK_TOTAL_LIMIT: u64 = 16 * 1024 * 1024;
 const INVENTORY_COUNT_LIMIT: usize = 1_000;
 const NATIVE_ASSET_COUNT_LIMIT: usize = 512;
 const RELEASE_VERSION_MAX_BYTES: usize = 64;
-const PYTHON_MAX_INTEGER_DIGITS: usize = 4_300;
+const LEGACY_MAX_INTEGER_DIGITS: usize = 4_300;
 
 /// A file pin from either legacy release inventory.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -48,7 +48,7 @@ pub struct ReleaseFile {
     pub sha256: Sha256,
 }
 
-/// Python-runtime digests embedded by the legacy release schema.
+/// Interpreter digests embedded by the legacy release schema.
 ///
 /// These are parsed metadata only: this type does not locate or execute those
 /// interpreters. The Rust release-v2 schema replaces them with native launchers.
@@ -343,7 +343,7 @@ fn check_prepass_depth(raw: &[u8]) -> Result<()> {
 /// Build a validation-only document copy. Producer integer tokens become a
 /// small valid integer, while producer strings and floating-point tokens are
 /// copied exactly. Exact `-0` integer tokens elsewhere become `0` because
-/// Python's JSON parser treats them as integer zero; `-0.0` and `-0e0` remain
+/// the legacy JSON parser treats them as integer zero; `-0.0` and `-0e0` remain
 /// floats and are refused by the typed inventory parser. Returned producer
 /// data always comes from the original borrowed RawValue, never from this copy.
 fn producer_validation_copy(raw: &[u8], producer: &RawValue) -> Result<Vec<u8>> {
@@ -426,9 +426,9 @@ fn producer_validation_copy(raw: &[u8], producer: &RawValue) -> Result<Vec<u8>> 
             let in_producer = token_start >= start && position <= end;
             if in_producer && is_integer {
                 let digit_count = token.iter().filter(|byte| byte.is_ascii_digit()).count();
-                if digit_count > PYTHON_MAX_INTEGER_DIGITS {
+                if digit_count > LEGACY_MAX_INTEGER_DIGITS {
                     return Err(Refusal::new(
-                        "producer integer exceeds Python's 4,300 digit limit",
+                        "producer integer exceeds the legacy 4,300 digit limit",
                     ));
                 }
                 copy.push(b'0');
@@ -464,15 +464,15 @@ fn parse_digest(value: Option<&Value>, label: &str) -> Result<Sha256> {
 }
 
 fn parse_host_interpreters(value: Option<&Value>) -> Result<HostInterpreterDigests> {
-    let hosts = value
-        .and_then(Value::as_object)
-        .ok_or_else(|| Refusal::new("release must pin Python hashes for both supported hosts"))?;
+    let hosts = value.and_then(Value::as_object).ok_or_else(|| {
+        Refusal::new("release must pin interpreter hashes for both supported hosts")
+    })?;
     if hosts.len() != 2
         || !hosts.contains_key("linux-x86_64")
         || !hosts.contains_key("macos-aarch64")
     {
         return Err(Refusal::new(
-            "release must pin Python hashes for both supported hosts",
+            "release must pin interpreter hashes for both supported hosts",
         ));
     }
     let linux_x86_64 = parse_host_interpreter(hosts.get("linux-x86_64"), "linux-x86_64")?;
@@ -551,7 +551,7 @@ fn parse_host_interpreter(value: Option<&Value>, host: &str) -> Result<Sha256> {
             "invalid host_interpreters entry: {host}"
         )));
     }
-    parse_digest(entry.get("sha256"), &format!("{host} Python SHA-256"))
+    parse_digest(entry.get("sha256"), &format!("{host} interpreter SHA-256"))
 }
 
 fn parse_inventory(

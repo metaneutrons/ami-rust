@@ -14,8 +14,8 @@ import { buildMuiRelations } from './rustdoc/relations.mjs';
 
 const REPOSITORY = 'https://github.com/metaneutrons/ami-rust';
 const [outputArgument, revision, ...inputs] = process.argv.slice(2);
-if (!outputArgument || !/^[0-9a-f]{40}$/.test(revision || '') || inputs.length !== 4) {
-  throw new Error('usage: generate-rust-api.mjs OUTPUT_DIR 40_HEX_REVISION ABI1_AROS ABI1_AROS_MUI ABI11_AROS ABI11_AROS_MUI');
+if (!outputArgument || !/^[0-9a-f]{40}$/.test(revision || '') || inputs.length !== 18) {
+  throw new Error('usage: generate-rust-api.mjs OUTPUT_DIR 40_HEX_REVISION ABI1_AROS ABI1_AROS_MUI ABI1_AROS_TIMER ABI1_AROS_GRAPHICS ABI1_AROS_INTUITION ABI1_AROS_ASL ABI1_AROS_LOCALE ABI1_AROS_ICON ABI1_AROS_WORKBENCH ABI11_AROS ABI11_AROS_MUI ABI11_AROS_TIMER ABI11_AROS_GRAPHICS ABI11_AROS_INTUITION ABI11_AROS_ASL ABI11_AROS_LOCALE ABI11_AROS_ICON ABI11_AROS_WORKBENCH');
 }
 
 const outputRoot = path.resolve(outputArgument);
@@ -24,17 +24,17 @@ if (path.basename(outputRoot) !== 'reference' || outputRoot === path.parse(outpu
 }
 
 const crates = [];
-for (const [abi, files] of [['abi1', inputs.slice(0, 2)], ['abi11', inputs.slice(2)]]) {
+for (const [abi, files] of [['abi1', inputs.slice(0, 9)], ['abi11', inputs.slice(9)]]) {
   const names = new Set();
   for (const file of files) {
     const crate = loadCrate(JSON.parse(await readFile(file, 'utf8')), abi);
-    if (!['aros', 'aros_mui'].includes(crate.crateName) || names.has(crate.crateName)) {
-      throw new Error(`expected one aros and one aros_mui document per ABI, found ${crate.crateName}`);
+    if (!['aros', 'aros_mui', 'aros_timer', 'aros_graphics', 'aros_intuition', 'aros_asl', 'aros_locale', 'aros_icon', 'aros_workbench'].includes(crate.crateName) || names.has(crate.crateName)) {
+      throw new Error(`expected one aros, one aros_mui, one aros_timer, one aros_graphics, one aros_intuition, one aros_asl, one aros_locale, one aros_icon and one aros_workbench document per ABI, found ${crate.crateName}`);
     }
     names.add(crate.crateName);
     crates.push(crate);
   }
-  if (names.size !== 2) throw new Error(`${abi}: expected both aros and aros_mui`);
+  if (names.size !== 9) throw new Error(`${abi}: expected aros, aros_mui, aros_timer, aros_graphics, aros_intuition, aros_asl, aros_locale, aros_icon and aros_workbench`);
 }
 
 const registry = buildRegistry(crates);

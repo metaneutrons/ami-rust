@@ -7,5 +7,6 @@ event loop, a menu hierarchy, and the regular custom-class lifecycle through
 `aros-mui`.
 
 The application contains no raw MUI call, tag list, native pointer, or unsafe
-block. M6 results remain recorded in `docs/m6-qualification.md`; final M7
-results belong to the exact release-candidate qualification record.
+block.
+
+Build and run it with `node tools/native-matrix.mjs`, which does so for both ABIs with an installed toolchain and records the result in the release evidence (`docs/evidence/native-<version>.json`). It is listed in `tests/programs.json`.

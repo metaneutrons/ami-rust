@@ -1,0 +1,21 @@
+[package]
+name = "aros-workbench"
+version.workspace = true
+edition.workspace = true
+publish = ["metaneutrons"]
+description = "Task-affine workbench.library application windows, icons and menu items with message receipt for the selected AROS ABI profile."
+repository = "https://github.com/metaneutrons/ami-rust"
+license.workspace = true
+readme = "README.md"
+
+[dependencies]
+aros = { version = "=0.2.0", path = "../aros", default-features = false }
+aros-icon = { version = "=0.2.0", path = "../aros-icon" }
+aros-intuition = { version = "=0.2.0", path = "../aros-intuition" }
+aros-sys = { version = "=0.2.0", path = "../aros-sys" }
+
+[lints.rust]
+missing_docs = "deny"
+
+[lints.rustdoc]
+broken_intra_doc_links = "deny"

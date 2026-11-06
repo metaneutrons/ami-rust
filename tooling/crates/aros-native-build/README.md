@@ -1,9 +1,10 @@
 # aros-native-build
 
 Internal build helper for ordinary Cargo application builds targeting the pinned
-x86-64 AROS ABI-v1 and ABI-v11 baselines. It remains unpublished (`publish = false`). The
-initial ami-rust release distributes it as part of the pinned toolchain rather
-than through crates.io.
+x86-64 AROS ABI-v1 and ABI-v11 baselines. It is delivered with the pinned toolchain and through the ami-rust Cargo registry
+at `crates.metaneutrons.cc`, and is not on crates.io. The crate carries its own copy of the target specifications and the ABI-v11 SDK profile (`data/`),
+so a registry archive builds on its own; a test keeps the copies identical to
+the files the release contract pins.
 
 The library compiles the existing native bridge from an application's additive
 `build.rs`; the focused `aros-link` executable handles rustc's target-linker

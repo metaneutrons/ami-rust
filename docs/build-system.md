@@ -35,7 +35,7 @@ fn main() {
 
 ### What `prepare` refuses
 
-A refusal ends the build with a message of the form `AROS native bridge: Refusal { message: "…" }`. Revisions after 0.1.0 also print the cause and the usual fix on standard error just before it. Each refusal has a cause and a remedy; the [troubleshooting](/troubleshooting/) page shows how to fix the common ones.
+A refusal ends the build with a message of the form `AROS native bridge: Refusal { message: "…" }`. Release 0.2.0 and later also print the cause and the usual fix on standard error just before it. Each refusal has a cause and a remedy; the [troubleshooting](/troubleshooting/) page shows how to fix the common ones.
 
 | Message | Cause |
 | --- | --- |
@@ -44,7 +44,7 @@ A refusal ends the build with a message of the form `AROS native bridge: Refusal
 | `RUST_TARGET_PATH must be unset or empty for the selected toolchain` | `RUST_TARGET_PATH` is set. The toolchain supplies its own target specification. |
 | `AROS target flags must not override the selected sysroot or target` | `--sysroot` or `--target` appears in your rustflags. |
 | `AROS target flags must not override Cargo's selected target linker` | `-C linker=…` or `-C linker-flavor=…` appears in your rustflags. |
-| `RUSTC_WRAPPER conflicts with the pinned compiler selection` | A compiler wrapper is configured, through the environment or through `build.rustc-wrapper` in a Cargo configuration file. `RUSTC_WORKSPACE_WRAPPER` is treated the same way. Revisions after 0.1.0 accept the caching wrapper `sccache` and refuse every other wrapper; the 0.1.0 tag refuses all of them. |
+| `RUSTC_WRAPPER conflicts with the pinned compiler selection` | A compiler wrapper is configured, through the environment or through `build.rustc-wrapper` in a Cargo configuration file. `RUSTC_WORKSPACE_WRAPPER` is treated the same way. Release 0.2.0 and later accept the caching wrapper `sccache` and refuse every other wrapper; the 0.1.0 tag refuses all of them. |
 | `Cargo must explicitly select this toolchain's aros-link` | The target's `linker` setting is missing or points elsewhere. |
 | `build must use the toolchain's paired Cargo` | The Cargo that launched the build is not the one shipped with the selected toolchain. |
 | `selected compiler or target specification is missing` | The toolchain installation is incomplete. |
@@ -53,7 +53,7 @@ These checks establish that the compiler, Cargo, linker and target specification
 
 ### Compiler wrappers
 
-Cargo can run `rustc` through a wrapper, configured by `RUSTC_WRAPPER` or `RUSTC_WORKSPACE_WRAPPER` in the environment, or by `build.rustc-wrapper` and `build.rustc-workspace-wrapper` in a Cargo configuration file. Revisions after 0.1.0 accept exactly one kind: the caching wrapper `sccache`. It stores and replays the output of the compiler Cargo selected, and `RUSTC` still names the pinned compiler, so every check above still runs against it.
+Cargo can run `rustc` through a wrapper, configured by `RUSTC_WRAPPER` or `RUSTC_WORKSPACE_WRAPPER` in the environment, or by `build.rustc-wrapper` and `build.rustc-workspace-wrapper` in a Cargo configuration file. Release 0.2.0 and later accept exactly one kind: the caching wrapper `sccache`. It stores and replays the output of the compiler Cargo selected, and `RUSTC` still names the pinned compiler, so every check above still runs against it.
 
 The wrapper is recognised by the name of its executable. That is consistent with the rest of these checks, which establish input consistency and are not a sandbox: an executable that is called `sccache` is accepted. Any other wrapper is refused, because it could substitute the compiler. That includes `clippy-driver`. It is a compiler driver of its own, and the AROS toolchain does not ship clippy, so `cargo clippy` is not available for AROS targets.
 
@@ -69,6 +69,6 @@ Cargo invokes `aros-link` because your `.cargo/config.toml` names it as the targ
 
 If any step fails, `aros-link` prints `aros-link: <reason>` and returns a non-zero status, so Cargo never sees a half-validated executable. The executable's ELF type is reported as relocatable by tools such as `file`. That is how AROS executables are linked, not an error.
 
-## Why the guards matter
+## Why the checks matter
 
 AROS programs call libraries through vector tables whose calling convention differs between the two [ABIs](/targets-and-abis/). If the compiler, C SDK or linker came from a different toolchain, the result could build cleanly and then misbehave on the target. Refusing at build time is cheaper than debugging it on a guest.

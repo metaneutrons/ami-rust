@@ -1,8 +1,18 @@
 {
   "schema": "ami-rust-aros-api-provenance-v1",
   "generator": "0.1.0",
-  "manifest_sha256": "a83baf925cbe55594021796022f4b260e07345d63e7c933cb6a1759ad3c83eed",
+  "manifest_sha256": "7a81ec5883f7b6a17647bb94f572cc1bb6118b71321a038c020eee5a806ab3c0",
   "inputs": [
+    {
+      "abi": "abi1",
+      "path": "clib/asl_protos.h",
+      "sha256": "54f90b488c1c69337ede45f03922e6c9e6beb83fe76ab80e4a6fbc5374fa9eee"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/asl.h",
+      "sha256": "009c0eab995ba308c32b0d14c2cbb6c253b78920bbdbf233131d38e1213993e7"
+    },
     {
       "abi": "abi1",
       "path": "clib/dos_protos.h",
@@ -25,6 +35,26 @@
     },
     {
       "abi": "abi1",
+      "path": "clib/graphics_protos.h",
+      "sha256": "d6cf761236d26200f2fc9004813d418ffbecd47e59d4dd50ee81f7155d2596c7"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/graphics.h",
+      "sha256": "24ebb7989c43acaa6f0a58dbcda846344dbaf2ad4dfae5c07d776bfa41c95f67"
+    },
+    {
+      "abi": "abi1",
+      "path": "clib/icon_protos.h",
+      "sha256": "6a4faf0ab027a2ebe8f6882d01695aad0c4d84e084c8bb69f7af018109ac0caa"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/icon.h",
+      "sha256": "563f6958aa01e4e3624ce850a2a4d9aeaa303828d67a5197f18f7f509b555225"
+    },
+    {
+      "abi": "abi1",
       "path": "clib/intuition_protos.h",
       "sha256": "6c0d00908b77ad07348f17326c5a1e72a13889f87b8c14e27b54bb98e4e6cb15"
     },
@@ -32,6 +62,16 @@
       "abi": "abi1",
       "path": "defines/intuition.h",
       "sha256": "37c713a7751ca84b1f7a709d4be236e3dfcc89993285e3f2f7136e9aad9dc364"
+    },
+    {
+      "abi": "abi1",
+      "path": "clib/locale_protos.h",
+      "sha256": "de4b446df52f0fb42dcc09106b385d1e2c4f2dedc1d9cf676b3b1f79af259f53"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/locale.h",
+      "sha256": "8bac2a13bc2e74e9f82005d2ba546b051903048b94958b9b85961c0b8620ad94"
     },
     {
       "abi": "abi1",
@@ -45,6 +85,16 @@
     },
     {
       "abi": "abi1",
+      "path": "clib/timer_protos.h",
+      "sha256": "ac42eb70304ea1e346a713f5841d0cee6de0018d79cc521ffbb385650356c24a"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/timer.h",
+      "sha256": "1ea4e3c6a6266dced868ac376abaced23b339f4f85d58fa6d7c060541f1a332e"
+    },
+    {
+      "abi": "abi1",
       "path": "clib/utility_protos.h",
       "sha256": "606be3b1d19916980ee10fc60bee8281799c2c09a869f0b03ea2309e6e57782f"
     },
@@ -52,6 +102,26 @@
       "abi": "abi1",
       "path": "defines/utility.h",
       "sha256": "bab081e9fa30e55254d719cdc812ed00e0575778bc3feadaf76714416bcecab4"
+    },
+    {
+      "abi": "abi1",
+      "path": "clib/workbench_protos.h",
+      "sha256": "0e0d26fc95a00e97881405a72dc67cd868acd24d7c84f35f7b3725006cdb2c38"
+    },
+    {
+      "abi": "abi1",
+      "path": "defines/workbench.h",
+      "sha256": "5cf88b13140fb87e58832ee2ae69ad52d3d15fb556fbccf51120f927452f0f2c"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/asl_protos.h",
+      "sha256": "9d44a80570bb8508616afe6c3a5bc73dd7de094a09dcccb122a1a9c0278961c2"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/asl.h",
+      "sha256": "1e0971821b3ad3e913e79862b7a165e3aa072e7281c6df3577bd067903ee02e1"
     },
     {
       "abi": "abi11",
@@ -75,6 +145,26 @@
     },
     {
       "abi": "abi11",
+      "path": "clib/graphics_protos.h",
+      "sha256": "c105353422349c2d3a4c92086cea2a11aa34a8d4ff0cb469c109c110031d5314"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/graphics.h",
+      "sha256": "8d992d693a8e8fce2501e2c7f050e0700ee890cc3a2fb4ef8a1d926c162555fa"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/icon_protos.h",
+      "sha256": "4e52c1b768e4d3143707633db5291e047a1f6449f6c389ba1e51bfe1822cffc3"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/icon.h",
+      "sha256": "dc64099d7dcca95fe3cba0e391263254d2668769fe49bd066bcbd3ab7f103ddb"
+    },
+    {
+      "abi": "abi11",
       "path": "clib/intuition_protos.h",
       "sha256": "08a1bbabf11af89b93542faa8a060a16c32bf0e4c98167d303964f751de7f618"
     },
@@ -82,6 +172,16 @@
       "abi": "abi11",
       "path": "defines/intuition.h",
       "sha256": "34f36270b9a2b8c6f3372ece8661481995645e18aa303837dca4daf25626541d"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/locale_protos.h",
+      "sha256": "d98f3ac9010aa3439225ce82a7112fb541e313802a92fa79538aa47675ec299b"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/locale.h",
+      "sha256": "f3729338bbaef628430806157048ec6cae3ddcf5904f51f2b17d209a902ff0c2"
     },
     {
       "abi": "abi11",
@@ -95,6 +195,16 @@
     },
     {
       "abi": "abi11",
+      "path": "clib/timer_protos.h",
+      "sha256": "398480e4034aa9a6500e8ddaad1370952e789154ba4ca0601218538a259b101e"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/timer.h",
+      "sha256": "f012d5964f50e6eed7f5d34b3911ab1768804ec0e823742bd2db8d702fd0290f"
+    },
+    {
+      "abi": "abi11",
       "path": "clib/utility_protos.h",
       "sha256": "815d64187568f2a921ec18495221481aab104d88e598cd79a0ee123936751acb"
     },
@@ -102,6 +212,16 @@
       "abi": "abi11",
       "path": "defines/utility.h",
       "sha256": "c404bd062f3172c0e6598894d5658aaf502a34849e8b018687ecbf8e7198a291"
+    },
+    {
+      "abi": "abi11",
+      "path": "clib/workbench_protos.h",
+      "sha256": "a85f5b70ad6e8d6d93e504b1803db8ebc80bcd7d808b2778a38f1de736a38425"
+    },
+    {
+      "abi": "abi11",
+      "path": "defines/workbench.h",
+      "sha256": "7c490e97b747a3ba80084c9f2d718d867e7cdcb7439dc93a3461b442f095cea5"
     }
   ]
 }

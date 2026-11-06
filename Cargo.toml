@@ -1,11 +1,10 @@
 [workspace]
 resolver = "3"
-members = ["crates/aros", "crates/aros-sys", "crates/aros-mui-sys", "crates/aros-mui", "examples/minimal", "examples/sha256sum", "tests/qualification", "tests/dependencies"]
+members = ["crates/aros", "crates/aros-sys", "crates/aros-mui-sys", "crates/aros-mui", "crates/aros-timer", "crates/aros-graphics", "crates/aros-intuition", "crates/aros-asl", "crates/aros-locale", "crates/aros-icon", "crates/aros-workbench", "examples/minimal", "examples/sha256sum", "tests/qualification", "tests/dependencies"]
 exclude = ["examples/mui-hello"]
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
-publish = false
 license = "MIT OR Apache-2.0"
 [profile.release]
 opt-level = 2
