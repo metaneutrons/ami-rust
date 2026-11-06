@@ -15,7 +15,7 @@ the last section lists what was not.
 
 | Criterion | Result |
 | --- | --- |
-| A1: reviewed, digest-pinned patch set for the five subsystems | Done as a spike: `host/std-aros/std-aros.patch`, SHA-256 `3fb882d1…732`, bound by `host/std-aros/source.json`. 408 lines, 12 files, 283 lines added and 5 removed in `library/std`; three new files (alloc 78, io error 127, random 54 lines). Review of the content is still to be done. |
+| A1: reviewed, digest-pinned patch set for the five subsystems | Done as a spike (the figures are those at the end of STD-M1; the patch has grown since, see [STD-M2 findings](std-m2-findings.md)): `host/std-aros/std-aros.patch`, SHA-256 `3fb882d1…732`, bound by `host/std-aros/source.json`. 408 lines, 12 files, 283 lines added and 5 removed in `library/std`; three new files (alloc 78, io error 127, random 54 lines). Review of the content is still to be done. |
 | A2: `-Zbuild-std=std,panic_abort` for both targets, offline, pinned sources only | Met. A patched copy of the pinned `rust-src` builds for `x86_64-unknown-aros-abi1` and `x86_64-unknown-aros-abi11` with an empty `CARGO_HOME`, the vendor directory of `rust-src` as the only crate source, `--offline --locked`; about 9 s per target. The pinned inventories of all three hosts list the same digest for every file the patch changes. |
 | A3: native probe linked against the AROS C library calls an allocation and a write on both ABIs; linking decision recorded | Met. `examples/std-probe` runs to status 0 on both qualified images (below). The linking decision is under "Linking". |
 | A4: only that `std` compiles, links and a trivial call runs | Met, and nothing more is claimed. |

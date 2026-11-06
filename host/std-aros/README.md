@@ -8,15 +8,20 @@ a unified diff against the `rust-src` component, applied from
 the patch digest and the before and after digest of every changed file. Apply
 the patch to a copy of `rust-src`; never edit the installed component.
 
-The patch touches only `library/std`. It implements the five subsystems that
-have no fallback for an unknown OS on the AROS C library, and leaves every
-other subsystem on the `unsupported` fallback:
+The patch touches only `library/std`. It implements the subsystems that have no
+fallback for an unknown OS on the AROS C library, and the ones that STD-M2
+needs for a program to start, stop and talk to its user, and leaves every other
+subsystem on the `unsupported` fallback:
 
 | Subsystem | Selection |
 | --- | --- |
 | `sys/alloc` | New `aros.rs` on `malloc`, `calloc`, `realloc`, `free` and `posix_memalign` |
 | `sys/io/error` | New `aros.rs`: `errno` through the C library accessor, NetBSD errno table, `strerror` |
 | `sys/random` | New `aros.rs`: weak clock and address mixing, no `getrandom` |
+| `sys/pal` | New `aros`: `abort_internal` enters the native fatal path (`sdk_fatal`), which ends the program with return code 20; this also covers every panic under `panic = "abort"` |
+| `sys/exit` | `process::exit` releases what the program holds (`sdk_end`) and then leaves with the code it was given (`_Exit`) |
+| `sys/stdio` | New `aros.rs`: standard input, output and error on the file descriptors 0, 1 and 2 |
+| `sys/env` | New `aros.rs`: `var`, `set_var` and `remove_var` on the DOS variables through the C library; `vars()` is always empty |
 | `sys/sync` | The existing `no_threads` implementations; their build guard no longer rejects AROS |
 | `sys/thread_local` | The existing `no_threads` storage; guard and selection list gain AROS |
 | `build.rs` | Unchanged on purpose: AROS stays an unknown platform, so every crate that uses `std` declares `#![feature(restricted_std)]` |
@@ -30,7 +35,7 @@ set -eu
 repo=$(pwd -P)
 work=$(mktemp -d)
 cp -R "$(rustc +0.2.0 --print sysroot)/lib/rustlib/src/rust" "$work/rust"
-echo "3fb882d18fc5a487192c6e77eaf24e0baba125a92203a08231a27a431e6d4732  host/std-aros/std-aros.patch" | shasum -a 256 -c
+echo "dbeda87b5dbb57b0cdd7b8ba388524a64862bc0733c09bba9573caee558e90b6  host/std-aros/std-aros.patch" | shasum -a 256 -c
 patch -p1 -d "$work/rust" < host/std-aros/std-aros.patch
 ```
 

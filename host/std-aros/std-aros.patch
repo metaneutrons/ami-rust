@@ -97,6 +97,138 @@ index 66a2c3b..3fc2383 100644
      target_os = "hermit" => {
          mod hermit;
          use hermit as imp;
+diff --git a/library/std/src/sys/env/aros.rs b/library/std/src/sys/env/aros.rs
+new file mode 100644
+index 0000000..e7673d9
+--- /dev/null
++++ b/library/std/src/sys/env/aros.rs
+@@ -0,0 +1,77 @@
++//! Environment variables of an AROS program are DOS variables. The C library
++//! reads them with `GetVar`, and `setenv` writes them as variables that are
++//! local to the process.
++
++use crate::ffi::{CStr, OsStr, OsString, c_char, c_int};
++use crate::io;
++use crate::sys::helpers::run_with_cstr;
++
++pub use super::common::Env;
++
++mod c {
++    use crate::ffi::{c_char, c_int};
++
++    unsafe extern "C" {
++        pub fn getenv(name: *const c_char) -> *const c_char;
++        pub fn setenv(name: *const c_char, value: *const c_char, overwrite: c_int) -> c_int;
++        pub fn unsetenv(name: *const c_char) -> c_int;
++    }
++}
++
++/// `EINVAL` in the numbering of the AROS C library (NetBSD's).
++const EINVAL: i32 = 22;
++
++/// The C library has no way to list DOS variables, so the environment of a
++/// program always looks empty to `env::vars`. `env::var` still finds a named
++/// variable.
++pub fn env() -> Env {
++    Env::new(Vec::new())
++}
++
++fn invalid(name: &OsStr) -> bool {
++    let bytes = name.as_encoded_bytes();
++    bytes.is_empty() || bytes.contains(&b'=')
++}
++
++pub fn getenv(k: &OsStr) -> Option<OsString> {
++    // A name with a nul byte, or with an equals sign, cannot be set, so its
++    // value is always `None` as well.
++    run_with_cstr(k.as_encoded_bytes(), &|k| {
++        // SAFETY: `k` is a valid C string. The C library caches the value per
++        // name, so it is copied out at once.
++        let v: *const c_char = unsafe { c::getenv(k.as_ptr()) };
++        if v.is_null() {
++            Ok(None)
++        } else {
++            let bytes = unsafe { CStr::from_ptr(v) }.to_bytes().to_vec();
++            // SAFETY: the bytes come from a variable value of this platform.
++            Ok(Some(unsafe { OsString::from_encoded_bytes_unchecked(bytes) }))
++        }
++    })
++    .ok()
++    .flatten()
++}
++
++pub unsafe fn setenv(k: &OsStr, v: &OsStr) -> io::Result<()> {
++    if invalid(k) {
++        return Err(io::Error::from_raw_os_error(EINVAL));
++    }
++    run_with_cstr(k.as_encoded_bytes(), &|k| {
++        run_with_cstr(v.as_encoded_bytes(), &|v| {
++            // SAFETY: both are valid C strings.
++            let result: c_int = unsafe { c::setenv(k.as_ptr(), v.as_ptr(), 1) };
++            if result == 0 { Ok(()) } else { Err(io::Error::last_os_error()) }
++        })
++    })
++}
++
++pub unsafe fn unsetenv(n: &OsStr) -> io::Result<()> {
++    if invalid(n) {
++        return Err(io::Error::from_raw_os_error(EINVAL));
++    }
++    run_with_cstr(n.as_encoded_bytes(), &|n| {
++        // SAFETY: `n` is a valid C string.
++        let result: c_int = unsafe { c::unsetenv(n.as_ptr()) };
++        if result == 0 { Ok(()) } else { Err(io::Error::last_os_error()) }
++    })
++}
+diff --git a/library/std/src/sys/env/mod.rs b/library/std/src/sys/env/mod.rs
+index 8985651..0f01cd0 100644
+--- a/library/std/src/sys/env/mod.rs
++++ b/library/std/src/sys/env/mod.rs
+@@ -4,6 +4,7 @@
+ 
+ #[cfg(any(
+     target_family = "unix",
++    target_os = "aros",
+     target_os = "hermit",
+     target_os = "motor",
+     all(target_vendor = "fortanix", target_env = "sgx"),
+@@ -47,6 +48,10 @@ cfg_select! {
+         mod wasi;
+         pub use wasi::*;
+     }
++    target_os = "aros" => {
++        mod aros;
++        pub use aros::*;
++    }
+     target_os = "xous" => {
+         mod xous;
+         pub use xous::*;
+diff --git a/library/std/src/sys/exit.rs b/library/std/src/sys/exit.rs
+index b9ebe2d..07c5324 100644
+--- a/library/std/src/sys/exit.rs
++++ b/library/std/src/sys/exit.rs
+@@ -143,6 +143,21 @@ pub fn exit(code: i32) -> ! {
+                 }
+             }
+         }
++        target_os = "aros" => {
++            use crate::ffi::c_int;
++
++            unsafe extern "C" {
++                fn sdk_end() -> c_int;
++                fn _Exit(status: c_int) -> !;
++            }
++
++            // Release what the program still holds first, as the native start-up
++            // does when `main` returns, then leave with the code the program chose.
++            // The AROS return code is the exit code as it is. If the release failed
++            // the program ends with 20, which is what the start-up reports then.
++            let closed = unsafe { sdk_end() };
++            unsafe { _Exit(if closed != 0 { 20 } else { code as c_int }) }
++        }
+         target_os = "windows" => unsafe { crate::sys::pal::c::ExitProcess(code as u32) },
+         target_os = "xous" => crate::os::xous::ffi::exit(code as u32),
+         _ => {
 diff --git a/library/std/src/sys/io/error/aros.rs b/library/std/src/sys/io/error/aros.rs
 new file mode 100644
 index 0000000..00469fe
@@ -243,6 +375,66 @@ index a56030f..d706282 100644
      target_os = "hermit" => {
          mod hermit;
          pub use hermit::*;
+diff --git a/library/std/src/sys/pal/aros/mod.rs b/library/std/src/sys/pal/aros/mod.rs
+new file mode 100644
+index 0000000..82fb023
+--- /dev/null
++++ b/library/std/src/sys/pal/aros/mod.rs
+@@ -0,0 +1,39 @@
++//! The platform layer for AROS: the AROS C library and the native bridge that
++//! the toolchain links into every program.
++
++#![deny(unsafe_op_in_unsafe_fn)]
++
++use crate::io as std_io;
++
++unsafe extern "C" {
++    /// The native fatal path of the bridge. It records a diagnostic, releases
++    /// what the program still holds and ends the process with return code 20.
++    /// It never returns, so no "Software Failure" requester can appear.
++    fn sdk_fatal(reason: u64) -> !;
++}
++
++/// The reason that the native diagnostic ("ami-rust fatal 2") records when
++/// `std` aborts, which includes every panic under `panic = "abort"`.
++const FATAL_STD_ABORT: u64 = 2;
++
++// SAFETY: must be called only once during runtime initialization.
++// NOTE: this is not guaranteed to run, for example when Rust code is called externally.
++pub unsafe fn init(_argc: isize, _argv: *const *const u8, _sigpipe: u8) {}
++
++// SAFETY: must be called only once during runtime cleanup.
++// NOTE: this is not guaranteed to run, for example when the program aborts.
++pub unsafe fn cleanup() {}
++
++pub fn unsupported<T>() -> std_io::Result<T> {
++    Err(unsupported_err())
++}
++
++pub fn unsupported_err() -> std_io::Error {
++    std_io::Error::UNSUPPORTED_PLATFORM
++}
++
++pub fn abort_internal() -> ! {
++    // SAFETY: the symbol is defined by the native bridge that every program of
++    // this target links; the call never returns.
++    unsafe { sdk_fatal(FATAL_STD_ABORT) }
++}
+diff --git a/library/std/src/sys/pal/mod.rs b/library/std/src/sys/pal/mod.rs
+index 88d9d42..ed2f54c 100644
+--- a/library/std/src/sys/pal/mod.rs
++++ b/library/std/src/sys/pal/mod.rs
+@@ -60,6 +60,10 @@ cfg_select! {
+         mod zkvm;
+         pub use self::zkvm::*;
+     }
++    target_os = "aros" => {
++        mod aros;
++        pub use self::aros::*;
++    }
+     _ => {
+         mod unsupported;
+         pub use self::unsupported::*;
 diff --git a/library/std/src/sys/random/aros.rs b/library/std/src/sys/random/aros.rs
 new file mode 100644
 index 0000000..9ad499e
@@ -318,6 +510,122 @@ index bc3dd50..2e71bbf 100644
      target_os = "emscripten" => {
          mod getentropy;
          pub use getentropy::fill_bytes;
+diff --git a/library/std/src/sys/stdio/aros.rs b/library/std/src/sys/stdio/aros.rs
+new file mode 100644
+index 0000000..1e176be
+--- /dev/null
++++ b/library/std/src/sys/stdio/aros.rs
+@@ -0,0 +1,95 @@
++//! Standard input, output and error on the file descriptors 0, 1 and 2 of the
++//! AROS C library, which map to the DOS streams of the process.
++
++use crate::ffi::{c_int, c_void};
++use crate::io;
++
++pub struct Stdin;
++pub struct Stdout;
++pub struct Stderr;
++
++unsafe extern "C" {
++    fn read(fd: c_int, buffer: *mut c_void, count: usize) -> isize;
++    fn write(fd: c_int, buffer: *const c_void, count: usize) -> isize;
++}
++
++const STDIN_FILENO: c_int = 0;
++const STDOUT_FILENO: c_int = 1;
++const STDERR_FILENO: c_int = 2;
++
++/// `EBADF` in the numbering of the AROS C library (NetBSD's).
++const EBADF: i32 = 9;
++
++/// The largest single transfer. DOS takes a signed 32-bit length, so a larger
++/// buffer is transferred in several calls by the callers' own loops.
++const MAX_TRANSFER: usize = 1 << 30;
++
++fn read_fd(fd: c_int, buf: &mut [u8]) -> io::Result<usize> {
++    let count = buf.len().min(MAX_TRANSFER);
++    // SAFETY: `buf` is valid for `count` bytes.
++    let n = unsafe { read(fd, buf.as_mut_ptr().cast(), count) };
++    if n < 0 { Err(io::Error::last_os_error()) } else { Ok(n as usize) }
++}
++
++fn write_fd(fd: c_int, buf: &[u8]) -> io::Result<usize> {
++    let count = buf.len().min(MAX_TRANSFER);
++    // SAFETY: `buf` is valid for `count` bytes.
++    let n = unsafe { write(fd, buf.as_ptr().cast(), count) };
++    if n < 0 { Err(io::Error::last_os_error()) } else { Ok(n as usize) }
++}
++
++impl Stdin {
++    pub const fn new() -> Stdin {
++        Stdin
++    }
++}
++
++impl io::Read for Stdin {
++    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
++        read_fd(STDIN_FILENO, buf)
++    }
++}
++
++impl Stdout {
++    pub const fn new() -> Stdout {
++        Stdout
++    }
++}
++
++impl io::Write for Stdout {
++    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
++        write_fd(STDOUT_FILENO, buf)
++    }
++
++    #[inline]
++    fn flush(&mut self) -> io::Result<()> {
++        Ok(())
++    }
++}
++
++impl Stderr {
++    pub const fn new() -> Stderr {
++        Stderr
++    }
++}
++
++impl io::Write for Stderr {
++    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
++        write_fd(STDERR_FILENO, buf)
++    }
++
++    #[inline]
++    fn flush(&mut self) -> io::Result<()> {
++        Ok(())
++    }
++}
++
++pub fn is_ebadf(err: &io::Error) -> bool {
++    err.raw_os_error() == Some(EBADF)
++}
++
++pub const STDIN_BUF_SIZE: usize = crate::sys::io::DEFAULT_BUF_SIZE;
++
++pub fn panic_output() -> Option<impl io::Write> {
++    Some(Stderr::new())
++}
+diff --git a/library/std/src/sys/stdio/mod.rs b/library/std/src/sys/stdio/mod.rs
+index 86d0f3f..1e41a6b 100644
+--- a/library/std/src/sys/stdio/mod.rs
++++ b/library/std/src/sys/stdio/mod.rs
+@@ -37,6 +37,10 @@ cfg_select! {
+         mod vexos;
+         pub use vexos::*;
+     }
++    target_os = "aros" => {
++        mod aros;
++        pub use aros::*;
++    }
+     target_os = "xous" => {
+         mod xous;
+         pub use xous::*;
 diff --git a/library/std/src/sys/sync/condvar/no_threads.rs b/library/std/src/sys/sync/condvar/no_threads.rs
 index 9dbba49..70a0508 100644
 --- a/library/std/src/sys/sync/condvar/no_threads.rs

@@ -170,6 +170,11 @@
       "path": "examples/std-probe",
       "issue": "#66",
       "reason": "Needs the patched standard library of host/std-aros, which the native matrix cannot prepare yet (STD-M7)."
+    },
+    {
+      "path": "examples/std-runtime",
+      "issue": "#67",
+      "reason": "Needs the patched standard library of host/std-aros, which the native matrix cannot prepare yet (STD-M7)."
     }
   ],
   "compile_fail": {
