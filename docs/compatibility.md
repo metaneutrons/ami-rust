@@ -30,7 +30,7 @@ Native host build scripts and procedural macros need the normal native prerequis
 - an AROS-hosted Rust compiler, Cargo or rustup;
 - compatibility with arbitrary third-party crates. Crates that need `std`, or that assume an operating system API ami-rust does not provide, will not build.
 
-Each of these needs its own target support and release documentation. See the [platform roadmap](/platform-roadmap/).
+Each of these needs its own target support and release documentation. See the [platform roadmap](/platform-roadmap/). The roadmap also says how far the work on `std` has come; it is not part of 0.2.
 
 ## What the limits mean for applications
 

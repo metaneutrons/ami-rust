@@ -83,7 +83,7 @@ cargo +0.2.0 build --target x86_64-unknown-aros-abi11 --release --locked --offli
 
 ### `can't find crate for 'std'`
 
-**Cause.** Your code, or a dependency, does not declare `#![no_std]`. Release 0.2.0 supports `no_std` plus `alloc`, not the full `std`.
+**Cause.** Your code, or a dependency, does not declare `#![no_std]`. Release 0.2.0 supports `no_std` plus `alloc`, not the full `std`, which is [in development](/platform-roadmap/#rust-std) for a later release.
 
 **Fix.** Declare `#![no_std]` in your own crates, and choose dependencies that support `no_std`. Many crates support it once you turn off their default features (`default-features = false`), and some have a `no_std` or `alloc` feature to turn on.
 
