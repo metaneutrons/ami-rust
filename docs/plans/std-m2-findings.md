@@ -13,14 +13,15 @@ sections list what was not, and what is still to be decided.
 
 ## Status
 
-First slice. `exit`, `abort`, panic and allocation failure no longer hang the
-program, and standard input and output, standard error and the environment work.
-The start-up ownership decision (STD-M2-A1) and `std::env::args` are not done.
+All four criteria are met on both ABIs, with the limits listed at the end. `exit`,
+`abort`, panic and allocation failure no longer hang the program, a program with an
+ordinary `fn main` starts, and arguments, standard input and output, standard error
+and the environment work. The maintainer accepted the start-up design on 2026-11-06.
 
 | Criterion | State |
 | --- | --- |
-| A1: start-up ownership; `fn main` and `aros::entry!` both work | **Open.** A mechanism is verified at the compiler level (below); the decision is the maintainer's. |
-| A2: `stdin`, `stdout`, `stderr`, `env::var`, `set_var`, `process::exit` on both ABIs | Met, except `env::args` (needs A1) and `env::vars()`, which is always empty. |
+| A1: start-up ownership; `fn main` and `aros::entry!` both work | Met. Decision and evidence below. |
+| A2: `stdin`, `stdout`, `stderr`, `env::args`, `env::var`, `set_var`, `process::exit` on both ABIs | Met. `env::vars()` is always empty (the C library cannot list DOS variables). |
 | A3: a panic aborts through the fatal path, message on standard error, non-zero status | Met on both ABIs: return code 20, the message on standard error, no requester. |
 | A4: `Vec`, `String`, `HashMap`, `format!`; allocation failure as documented | Met: an infallible allocation that fails prints the message and ends with code 20; `try_reserve` returns an error. |
 
@@ -83,38 +84,56 @@ ABIs, and the stack variants listed below were run in addition.
 - Reading standard input blocks when the console has no input. That is the
   expected behaviour of a console, not a hang of the runtime.
 
-## STD-M2-A1: start-up ownership (not decided)
+## STD-M2-A1: start-up ownership (decided 2026-11-06)
 
-Today every program that links the toolchain gets the native C `main`. It runs
-`sdk_begin`, calls `rust_sdk_main` (supplied by Rust), runs `sdk_end` and maps the
-result to 0, 10 or 20. A normal `fn main` crate makes rustc emit its own symbol
-`main`, which would collide with it.
+Every program that links the toolchain gets the native C `main`. It runs
+`sdk_begin`, calls `rust_sdk_main`, runs `sdk_end` and maps the result to 0, 10 or
+20. A normal `fn main` crate makes rustc emit its own symbol `main`, which would
+collide with it.
 
-**Verified mechanism.** The nightly supports the target option `entry-name`. With
-`"entry-name": "ami_rust_entry"` in a copy of the ABI-v1 target specification, rustc
-emitted `ami_rust_entry` for a `fn main` crate where the stock specification emits
-`main`. That checked only the symbol, with `--emit=obj`; a program was not linked and
-run this way.
+**Decision.** The native `main` stays the only owner of the task.
 
-**Proposed design** (for the maintainer to decide):
+- The nightly supports the target option `entry-name`. Both pinned target
+  specifications set it to `ami_rust_entry`, so rustc generates that name for a
+  `fn main` crate instead of `main`. A `#![no_main]` program with `aros::entry!` is
+  unchanged.
+- The patched `std` defines `rust_sdk_main`. It calls the renamed entry with the
+  `__argc` and `__argv` that the C start-up stored, so `env::args` works and the
+  one claim of the `aros` context stays free for the program.
+- **Exit status.** `Ok` is 0 and an error returned from `main` is 10. A panic, an
+  abort and a failed infallible allocation are 20. `process::exit(n)` and
+  `ExitCode::from(n)` give `n` as it is, except that 1 is reported as 10 (it is
+  what an error returned from `main` gives, and `ExitCode::FAILURE`). The native
+  contract that only 0, 10 and 20 may be returned stays, so any other code leaves
+  through `process::exit`.
+- **`aros::Context`** is usable from a `std` program on the main task, through the
+  one claim that `aros::dispatch` makes.
+- **Mixing.** `fn main` and `aros::entry!` in one crate do not compile (`E0152`,
+  duplicate lang item `panic_impl`: both define the panic handler). A crate with
+  `entry!` is a `no_std` program. Using `aros` as a library from a `fn main` program
+  is fine.
 
-1. Keep the native `main` as the only owner of the task. Set `entry-name` in both
-   pinned target specifications. A program with `fn main` then gets a renamed entry;
-   a `#![no_main]` program with `aros::entry!` is unchanged.
-2. The patched `std` supplies `rust_sdk_main`: it calls the renamed entry with the
-   program's `argc` and `argv` (so `env::args` works), and returns the exit status.
-3. Exit status of `fn main`: `Ok` is 0 and an error is 10 (`AppStatus::Error`);
-   `process::exit(n)` passes `n` as it is, as verified above; a panic or abort is 20.
-4. `aros::Context` stays usable from a `std` program on the main task, through the
-   one claim that `aros::dispatch` makes today. Mixing `fn main` with `aros::entry!`
-   in one crate is a compile error (both define the panic handler); using `aros`
-   as a library from a `fn main` program is fine.
+The alternative, a `std` runtime that calls `sdk_begin` itself with the native
+`main` as a weak symbol, was not taken: it would move ownership into `std` and
+change the pinned C bridge.
 
-**Consequences.** It changes the pinned target specifications and their pins in
-`aros-native-build`, so it belongs to the `std` release (a new toolchain), as the plan
-already says. It changes no C source. The alternative, a `std` runtime that calls
-`sdk_begin` itself and turns the native `main` into a weak symbol, would move
-ownership into `std` and change the pinned C bridge.
+**What it changes.** The two target specifications (one line each), their digests
+and byte sizes in `release/rust-production-contract.json`, the pins in
+`aros-native-build`, and four digests that depend on them in the Rust sources of
+`aros-native-build` and `xtask`. No C source changes. The frozen-contract check and
+all tests of the two crates pass. The specification changes the bytes of an input
+that the release pipeline pins, so the authenticated target-library build and the
+qualification have to run again with it before a release; whether the pinned
+library digests stay the same was not checked here.
+
+**Verified.** With a local copy of the `0.2.0` toolchain that has the new
+specifications and an `aros-link` built from this tree, `examples/std-runtime` and
+`examples/std-probe` are ordinary `fn main` programs. They build and link, the
+final ELF has one `main` (the native one), `ami_rust_entry` and `rust_sdk_main`, and
+all 18 modes of `std-runtime` give the results in its README on both ABIs: 0 for
+success, 10 for `Err`, 7 for `ExitCode::from(7)`, 20 for a panic, 3 for
+`process::exit(3)`; `env::args` returns the program name and the arguments whole;
+`aros::dispatch` from `fn main` gives a working context.
 
 ## Not verified
 
@@ -122,6 +141,6 @@ ownership into `std` and change the pinned C bridge.
 - Interactive standard input from the console, and very large writes.
 - `env::vars()` (always empty), and `set_var` visibility in child processes (STD-M6).
 - Behaviour with more than one task (STD-M4).
-- A `fn main` program, `env::args` and the entry rename (A1).
+- The authenticated target-library build with the changed specifications (see A1).
 - The tests run by hand with the recipe in the README; the native matrix cannot
   build the patched `std` yet (STD-M7).
