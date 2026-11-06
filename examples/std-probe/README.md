@@ -21,8 +21,10 @@ for target in x86_64-unknown-aros-abi1 x86_64-unknown-aros-abi11; do
   env CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
     __CARGO_TESTS_ONLY_SRC_ROOT="$work/rust/library" \
     CARGO_TARGET_DIR="$work/probe-target" \
-    cargo +0.1.0 build --release --target "$target" --offline --locked
+    cargo +0.2.0 build --release --target "$target" --offline --locked
 done
 ```
+
+The program starts with `#![feature(restricted_std)]`, as every crate that uses this `std` must: the patch does not mark AROS as a supported platform, which keeps `std` on AROS visibly experimental. Without the attribute the build fails with a message that names it.
 
 A passing run writes `std-probe: all checks passed` and returns status 0.

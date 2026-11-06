@@ -1,4 +1,7 @@
 #![no_main]
+// std on AROS is experimental: the patched std does not mark AROS as a supported platform,
+// so every program that uses it opts in to restricted_std.
+#![feature(restricted_std)]
 
 use aros::{AppStatus, Context};
 use std::alloc::{Layout, alloc, dealloc};

@@ -13,7 +13,7 @@ name = "std-probe"
 path = "src/main.rs"
 
 [dependencies]
-aros = { version = "=0.1.0", path = "../../crates/aros", default-features = false }
+aros = { version = "=0.2.0", path = "../../crates/aros", default-features = false }
 
 [build-dependencies]
 aros-native-build = { version = "=0.2.0", path = "../../tooling/crates/aros-native-build" }

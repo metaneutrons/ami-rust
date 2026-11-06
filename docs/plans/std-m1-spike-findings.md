@@ -15,7 +15,7 @@ the last section lists what was not.
 
 | Criterion | Result |
 | --- | --- |
-| A1: reviewed, digest-pinned patch set for the five subsystems | Done as a spike: `host/std-aros/std-aros.patch`, SHA-256 `70c4875b…ad5`, bound by `host/std-aros/source.json`. 420 lines, 13 files, 284 lines added and 5 removed in `library/std`; three new files (alloc 78, io error 127, random 54 lines). Review of the content is still to be done. |
+| A1: reviewed, digest-pinned patch set for the five subsystems | Done as a spike: `host/std-aros/std-aros.patch`, SHA-256 `3fb882d1…732`, bound by `host/std-aros/source.json`. 408 lines, 12 files, 283 lines added and 5 removed in `library/std`; three new files (alloc 78, io error 127, random 54 lines). Review of the content is still to be done. |
 | A2: `-Zbuild-std=std,panic_abort` for both targets, offline, pinned sources only | Met. A patched copy of the pinned `rust-src` builds for `x86_64-unknown-aros-abi1` and `x86_64-unknown-aros-abi11` with an empty `CARGO_HOME`, the vendor directory of `rust-src` as the only crate source, `--offline --locked`; about 9 s per target. The pinned inventories of all three hosts list the same digest for every file the patch changes. |
 | A3: native probe linked against the AROS C library calls an allocation and a write on both ABIs; linking decision recorded | Met. `examples/std-probe` runs to status 0 on both qualified images (below). The linking decision is under "Linking". |
 | A4: only that `std` compiles, links and a trivial call runs | Met, and nothing more is claimed. |
@@ -86,11 +86,13 @@ a fresh `CARGO_TARGET_DIR` when verifying the patch.
   documented as such; there is no `getrandom` or `getentropy` dependency. The
   `timespec` it declares (32-bit `time_t`, 64-bit `long`) was checked by the
   probe against the real C library on both ABIs.
-- **`build.rs`**: AROS is added to the platforms without special
-  requirements. Without it every user crate needs
-  `#![feature(restricted_std)]`, which Cargo applies to all JSON targets.
-  This is a policy choice that the maintainer may reverse; it changes
-  nothing else.
+- **`build.rs`**: not changed. The first version of the patch added AROS to the
+  platforms without special requirements, so that no crate needed
+  `#![feature(restricted_std)]`. The maintainer decided on 2026-11-05 against
+  that (see "Maintainer decisions"), so AROS stays an unknown platform and every
+  crate that uses `std` declares the feature itself. Without it the build fails
+  with `use of unstable library feature restricted_std` and a hint that names
+  the attribute.
 
 Everything else (stdio, args, env, fs, time, thread, net, process, `pal`)
 falls through to `unsupported`; the compile does not need more. At run time
@@ -192,7 +194,7 @@ installed SDKs and the sources say more:
 3. **Soundness of the no-thread cut** depends on `thread::spawn` being
    unsupported and on users not sharing `std` objects across tasks they
    create. It is removed in STD-M4.
-4. **Patch maintenance** matches the plan: 13 files, of which 10 are small
+4. **Patch maintenance** matches the plan: 12 files, of which 9 are small
    edits to selection lists and guards that depend on the layout of
    `library/std/src/sys` at this nightly.
 5. **`__CARGO_TESTS_ONLY_SRC_ROOT` is not a supported interface**; it can
@@ -200,6 +202,36 @@ installed SDKs and the sources say more:
 6. **LLVM elides unused allocations**: a first probe that allocated and freed
    without using the pointer reported success for every size. Tests of the
    allocator must `black_box` the pointer.
+
+## Maintainer decisions (2026-11-05)
+
+The maintainer reviewed the five policy points of the spike. The patch itself
+has not been code-reviewed.
+
+| Point | Decision |
+| --- | --- |
+| `restricted_std` in `build.rs` | **Not set.** `std` on AROS stays visibly experimental. Dropping the requirement later breaks nobody; adding it later would break every user. The patch no longer touches `build.rs`, and `examples/std-probe` declares the feature. |
+| Interim synchronisation guard | Accepted until STD-M4 replaces it. Until then `std` objects must not be shared with tasks that the program creates itself. |
+| 2^32 allocation limit | Accepted. The cause is an out-of-range table access in the Exec TLSF allocator that `malloc` reaches for requests of 2^37 bytes or more: AROS-NX#124, tracked in #113. The same code is in vanilla AROS and in the Deadwood tree. |
+| `__CARGO_TESTS_ONLY_SRC_ROOT` | Accepted for the spike only. STD-M7 stages a private sysroot, and the release pipeline must not depend on the variable. |
+| Weak random seed | Accepted for STD-M1 only. STD-M3-A3 uses `getentropy` on ABI-v1, where AROS-NX and vanilla AROS provide it (working on the qualified image: three boots, three different values). ABI-v11 has nothing to call, so there `std` reads `RDRAND` directly after a `CPUID` check and falls back to the mixer. Bringing `getentropy` to the Deadwood tree by a pull request is tracked in #115. The qualification CPU model (`qemu64-v1`) has no `RDRAND`, so the `RDRAND` path needs a second run with another model. |
+
+## Re-verification with toolchain 0.2.0 (2026-11-06)
+
+After the merge of `main` into the spike branch, with the released `0.2.0`
+toolchain (its `rust-src` is identical to that of `0.1.0`, so the patch and
+its digests are unchanged by the toolchain):
+
+- The README recipe was run as written: the digest check passes, the patch
+  applies, and the library-only build succeeds for both targets.
+- The patched files hit the digests in `source.json` on a pristine copy of
+  `rust-src`, and `library/std/build.rs` is byte for byte the stock file.
+- `examples/std-probe` now pins `aros` to `=0.2.0` (it still said `=0.1.0`;
+  the orphan check found it). It builds for both targets and passes natively
+  on both qualified images: all 12 checks `ok`, status 0.
+- Counter-probe: with the patched `std` and without
+  `#![feature(restricted_std)]` in the probe, the build fails with
+  `E0658` and names the attribute.
 
 ## Open decisions after this spike
 

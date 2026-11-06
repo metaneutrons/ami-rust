@@ -1,7 +1,8 @@
 # `std` for AROS patch set (spike)
 
 `std-aros.patch` adds a `target_os = "aros"` selection to the Rust standard
-library of the pinned toolchain (`nightly-2026-09-18`, toolchain `0.1.0`). It is
+library of the pinned toolchain (`nightly-2026-09-18`, toolchains `0.1.0` and
+`0.2.0`, which ship the identical `rust-src`). It is
 a unified diff against the `rust-src` component, applied from
 `lib/rustlib/src/rust` with `-p1`. `source.json` binds the base inventory pins,
 the patch digest and the before and after digest of every changed file. Apply
@@ -18,18 +19,18 @@ other subsystem on the `unsupported` fallback:
 | `sys/random` | New `aros.rs`: weak clock and address mixing, no `getrandom` |
 | `sys/sync` | The existing `no_threads` implementations; their build guard no longer rejects AROS |
 | `sys/thread_local` | The existing `no_threads` storage; guard and selection list gain AROS |
-| `build.rs` | AROS is a known platform, so `std` needs no `restricted_std` |
+| `build.rs` | Unchanged on purpose: AROS stays an unknown platform, so every crate that uses `std` declares `#![feature(restricted_std)]` |
 
 ## Reproduce
 
-Run from the repository root with the `0.1.0` toolchain installed.
+Run from the repository root with the `0.2.0` toolchain installed.
 
 ```sh
 set -eu
 repo=$(pwd -P)
 work=$(mktemp -d)
-cp -R "$(rustc +0.1.0 --print sysroot)/lib/rustlib/src/rust" "$work/rust"
-echo "70c4875bddb841556f349ce8482552652529ea6fad0e21c15c2f142e9ff5fad5  host/std-aros/std-aros.patch" | shasum -a 256 -c
+cp -R "$(rustc +0.2.0 --print sysroot)/lib/rustlib/src/rust" "$work/rust"
+echo "3fb882d18fc5a487192c6e77eaf24e0baba125a92203a08231a27a431e6d4732  host/std-aros/std-aros.patch" | shasum -a 256 -c
 patch -p1 -d "$work/rust" < host/std-aros/std-aros.patch
 ```
 
@@ -44,15 +45,15 @@ printf '[source.crates-io]\nreplace-with = "vendor"\n[source.vendor]\ndirectory 
 cd "$work/probe"
 mkdir src .cargo
 printf '[package]\nname = "std-probe"\nversion = "0.0.0"\nedition = "2024"\n[workspace]\n' > Cargo.toml
-printf 'pub fn hello(n: u32) -> String {\n    let mut map = std::collections::HashMap::new();\n    map.insert("answer", n);\n    format!("{map:?}")\n}\n' > src/lib.rs
+printf '#![feature(restricted_std)]\npub fn hello(n: u32) -> String {\n    let mut map = std::collections::HashMap::new();\n    map.insert("answer", n);\n    format!("{map:?}")\n}\n' > src/lib.rs
 printf '[unstable]\nbuild-std = ["std", "panic_abort"]\nbuild-std-features = ["compiler-builtins-mem"]\n' > .cargo/config.toml
-CARGO_HOME="$work/cargo-home" cargo +0.1.0 generate-lockfile --offline
+CARGO_HOME="$work/cargo-home" cargo +0.2.0 generate-lockfile --offline
 for target in x86_64-unknown-aros-abi1 x86_64-unknown-aros-abi11; do
   env CARGO_HOME="$work/cargo-home" CARGO_TARGET_DIR="$work/target" \
     CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
     __CARGO_TESTS_ONLY_SRC_ROOT="$work/rust/library" \
     RUSTFLAGS=-Zunstable-options \
-    cargo +0.1.0 build --lib --release --target "$target" --offline --locked
+    cargo +0.2.0 build --lib --release --target "$target" --offline --locked
 done
 ```
 
