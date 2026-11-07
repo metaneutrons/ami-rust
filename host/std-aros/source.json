@@ -13,11 +13,26 @@
   },
   "patch": {
     "repository_path": "host/std-aros/std-aros.patch",
-    "sha256": "3bac3e1a4df0c87d232b300fb7dda6094e711242fc0986bfb924889f6acc142d",
+    "sha256": "10a4c7740b72b88af308d0068bae174fd337f944d986a9b7da2fff6934ee2ea7",
     "strip": 1,
     "apply_in": "lib/rustlib/src/rust"
   },
   "changed_files": [
+    {
+      "path": "library/std/src/os/aros/fs.rs",
+      "before_sha256": null,
+      "after_sha256": "c0c5f37fc3b422cd8e46a5e6d3b2a9fe08ae09f62d711ef4c4695cc8dbc6cc77"
+    },
+    {
+      "path": "library/std/src/os/aros/mod.rs",
+      "before_sha256": null,
+      "after_sha256": "c025ffc0041eee49ce20406d8fc961ab6c4ac3ed43b3fda8182c505e30bfc550"
+    },
+    {
+      "path": "library/std/src/os/mod.rs",
+      "before_sha256": "cb29e8073290ba65979e7c7722d1eec3b96889e34f93a15c97b852f749576ee8",
+      "after_sha256": "3d20e977ac6acc165880eb869a6309243abba6b7fc839a0d9586317bbd9e5683"
+    },
     {
       "path": "library/std/src/sys/alloc/aros.rs",
       "before_sha256": null,
@@ -81,7 +96,7 @@
     {
       "path": "library/std/src/sys/pal/aros/mod.rs",
       "before_sha256": null,
-      "after_sha256": "32ae5b6bc7776365adcc50750b15a12576e040cf937837f49dd4c92055c57e62"
+      "after_sha256": "8ec4e36da69a354a848982032c5f2bba073664ab2a5d7f3f0b556bc6717d7de1"
     },
     {
       "path": "library/std/src/sys/pal/mod.rs",

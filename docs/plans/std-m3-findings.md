@@ -63,11 +63,13 @@ ABIs, every boot on the first attempt.
   DOS requesters that wait for a person on a missing volume, access modes that are not enforced,
   append that does not follow a seek, a seek past the end that extends the file at once (and by the
   wrong amount on ABI-v11), and `unlink` of an open file reporting "not found" on ABI-v1.
-- **Requesters.** `std` switches requesters off only around the calls that resolve a path and
-  restores the setting afterwards. It does so through a bridge function, `sdk_proc_window_set`,
-  because `std` must not call Exec itself: the Exec link library defines strong `open` and
-  `close`, which replace the C library's weak ones on ABI-v1 and are a duplicate-symbol link error
-  on ABI-v11. This policy is open for the maintainer's confirmation.
+- **Requesters.** By default `std` switches DOS requesters off, only around the calls that resolve a path,
+  and restores the setting afterwards. The maintainer decided on 2026-11-07 (ami-rust#124) that a program can
+  change this at any time: `std::os::aros::fs::{requesters, set_requesters, with_requesters}`, behind the
+  unstable feature `aros_ext`, for the whole program. That requesters really come back when turned on was
+  checked on a screen dump on both ABIs. `std` sets the window pointer through a bridge function,
+  `sdk_proc_window_set`, because it must not call Exec itself: the Exec link library defines strong `open` and
+  `close`, which replace the C library's weak ones on ABI-v1 and are a duplicate-symbol link error on ABI-v11.
 - **Errors.** A DOS error with no C equivalent reaches `std` as `1000 + code`. These now map to
   kinds and texts.
 - **Facts about the C library:** `off_t` is 64 bits on both ABIs; the `open` flags are the same in

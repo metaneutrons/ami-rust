@@ -1,3 +1,89 @@
+diff --git a/library/std/src/os/aros/fs.rs b/library/std/src/os/aros/fs.rs
+new file mode 100644
+index 0000000..1bab84d
+--- /dev/null
++++ b/library/std/src/os/aros/fs.rs
+@@ -0,0 +1,56 @@
++//! AROS-specific behaviour of `std::fs`.
++
++#![unstable(feature = "aros_ext", issue = "none")]
++
++use crate::sys;
++
++/// Whether `std::fs` leaves DOS requesters on.
++///
++/// A path on a volume that is not there makes DOS open a "Please insert volume X in any drive"
++/// requester and wait for a person. By default `std` switches requesters off around every call
++/// that resolves a path, so that such a call fails with `ErrorKind::NotFound` at once and a
++/// program that was started from a script never waits. This returns `false` in that case.
++///
++/// The setting belongs to the whole program, not to one task.
++#[unstable(feature = "aros_ext", issue = "none")]
++pub fn requesters() -> bool {
++    sys::requesters_enabled()
++}
++
++/// Sets whether `std::fs` leaves DOS requesters on, from now on and until it is changed again.
++///
++/// With `true`, a call on a missing volume opens the requester and waits for a person, as a
++/// program written for DOS does. With `false` (the default) it fails at once. The change applies
++/// to calls that start after it, from every task of the program.
++///
++/// # Examples
++///
++/// ```ignore (only on AROS)
++/// #![feature(aros_ext)]
++/// use std::os::aros::fs::set_requesters;
++///
++/// set_requesters(true);
++/// let file = std::fs::File::open("DF0:data"); // may ask the user to insert the disk
++/// set_requesters(false);
++/// ```
++#[unstable(feature = "aros_ext", issue = "none")]
++pub fn set_requesters(enabled: bool) {
++    sys::set_requesters_enabled(enabled);
++}
++
++/// Runs `f` with requesters on, and restores the previous setting afterwards, also when `f`
++/// panics.
++///
++/// Other tasks of the program see the setting while `f` runs, because it belongs to the whole
++/// program.
++#[unstable(feature = "aros_ext", issue = "none")]
++pub fn with_requesters<T>(f: impl FnOnce() -> T) -> T {
++    struct Restore(bool);
++    impl Drop for Restore {
++        fn drop(&mut self) {
++            sys::set_requesters_enabled(self.0);
++        }
++    }
++    let _restore = Restore(sys::set_requesters_enabled(true));
++    f()
++}
+diff --git a/library/std/src/os/aros/mod.rs b/library/std/src/os/aros/mod.rs
+new file mode 100644
+index 0000000..cc1ba1d
+--- /dev/null
++++ b/library/std/src/os/aros/mod.rs
+@@ -0,0 +1,5 @@
++//! AROS-specific extensions to `std`.
++
++#![unstable(feature = "aros_ext", issue = "none")]
++
++pub mod fs;
+diff --git a/library/std/src/os/mod.rs b/library/std/src/os/mod.rs
+index 8068f92..24992e8 100644
+--- a/library/std/src/os/mod.rs
++++ b/library/std/src/os/mod.rs
+@@ -85,6 +85,8 @@ mod net;
+ 
+ #[cfg(target_os = "aix")]
+ pub mod aix;
++#[cfg(target_os = "aros")]
++pub mod aros;
+ #[cfg(target_os = "android")]
+ pub mod android;
+ #[cfg(target_os = "cygwin")]
 diff --git a/library/std/src/sys/alloc/aros.rs b/library/std/src/sys/alloc/aros.rs
 new file mode 100644
 index 0000000..f83b37b
@@ -1380,16 +1466,17 @@ index b9c48e3..19abee6 100644
  pub use error::{decode_error_kind, errno, format_error, is_interrupted};
 diff --git a/library/std/src/sys/pal/aros/mod.rs b/library/std/src/sys/pal/aros/mod.rs
 new file mode 100644
-index 0000000..7abcbda
+index 0000000..48a5288
 --- /dev/null
 +++ b/library/std/src/sys/pal/aros/mod.rs
-@@ -0,0 +1,103 @@
+@@ -0,0 +1,123 @@
 +//! The platform layer for AROS: the AROS C library and the native bridge that
 +//! the toolchain links into every program.
 +
 +#![deny(unsafe_op_in_unsafe_fn)]
 +
 +use crate::io as std_io;
++use crate::sync::atomic::{AtomicBool, Ordering};
 +
 +unsafe extern "C" {
 +    /// The native fatal path of the bridge. It records a diagnostic, releases
@@ -1403,7 +1490,21 @@ index 0000000..7abcbda
 +    fn ami_rust_entry(argc: isize, argv: *const *const u8) -> isize;
 +}
 +
-+/// Runs `f` with DOS requesters switched off for this process.
++/// Whether `std` leaves DOS requesters on during path calls. Off by default; a program changes it
++/// through `std::os::aros::fs`, at any time.
++static REQUESTERS: AtomicBool = AtomicBool::new(false);
++
++pub fn requesters_enabled() -> bool {
++    REQUESTERS.load(Ordering::Relaxed)
++}
++
++/// Sets the flag and returns the previous value.
++pub fn set_requesters_enabled(enabled: bool) -> bool {
++    REQUESTERS.swap(enabled, Ordering::Relaxed)
++}
++
++/// Runs `f` with DOS requesters switched off for this process, unless the program has asked for
++/// them with `std::os::aros::fs::set_requesters`.
 +///
 +/// A path on a volume that is not there makes DOS open a "Please insert volume X in any
 +/// drive" requester and wait for a person, so a program started from a script never
@@ -1426,6 +1527,11 @@ index 0000000..7abcbda
 +            // SAFETY: the bridge only stores the pointer in the calling process.
 +            unsafe { sdk_proc_window_set(self.0) };
 +        }
++    }
++
++    // The program wants requesters: leave the window pointer as it is.
++    if requesters_enabled() {
++        return f();
 +    }
 +
 +    // SAFETY: as above; -1 is the documented value that disables requesters.
