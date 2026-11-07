@@ -152,6 +152,15 @@ __attribute__((noinline))
 #endif
 static struct Task *current_task(void) {return FindTask(NULL);}
 static int owner_is_current(void) {return owner && current_task()==owner;}
+/* Sets the window pointer of the calling process and returns the previous one. With (APTR)-1 DOS
+   fails a call on a volume that is not there instead of opening a "Please insert volume X"
+   requester and waiting for a person. A task that is not a DOS process has no window pointer, so
+   it is left alone and the argument is returned. Used by std around its path calls. */
+void *sdk_proc_window_set(void *window) {
+ struct Process *me=(struct Process *)current_task();
+ if(!me || me->pr_Task.tc_Node.ln_Type!=NT_PROCESS)return window;
+ APTR previous=me->pr_WindowPtr;me->pr_WindowPtr=window;return previous;
+}
 static int own(uint64_t key,SdkError *e) {
  clear_error(e);
  if (!active || closing || key!=context_key || !owner_is_current()) return refuse(e,4,0);
