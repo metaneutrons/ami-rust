@@ -73,9 +73,7 @@ ABIs, every boot on the first attempt.
 - **Facts about the C library:** `off_t` is 64 bits on both ABIs; the `open` flags are the same in
   both SDKs, except that `O_CLOEXEC`, `O_DIRECTORY` and `O_NOFOLLOW` are only defined on ABI-v1; a
   name component of 108 characters or more is `InvalidInput`; the shell cannot redirect standard error.
-- **Reported upstream:** nothing yet. Candidates, each needing the maintainer's go: the strong
-  `open`/`close` in `libexec.a`, the seek past the end, and `unlink` of an open file (AROS-NX), and the
-  wrong seek amount on ABI-v11 (Deadwood).
+- **Reported upstream** (AROS-NX): the strong `open` and `close` in `libexec.a` (AROS-NX#129), the seek past the end (AROS-NX#130) and `unlink` of an open file (AROS-NX#131). The wrong seek amount on ABI-v11 is in Deadwood's tree and is not reported there; that needs the maintainer's go.
 
 ## A3: random
 
