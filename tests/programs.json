@@ -180,6 +180,11 @@
       "path": "examples/std-tasks",
       "issue": "#69",
       "reason": "Needs the patched standard library of host/std-aros and a toolchain with the new entry name, which the native matrix cannot prepare yet (STD-M7)."
+    },
+    {
+      "path": "examples/std-time",
+      "issue": "#68",
+      "reason": "Needs the patched standard library of host/std-aros and a toolchain with the new entry name, which the native matrix cannot prepare yet (STD-M7)."
     }
   ],
   "compile_fail": {

@@ -774,6 +774,77 @@ index efa2629..27b3587 100644
  compile_error!("Using no_threads implementation on a target with threads");
  
  pub struct RwLock {
+diff --git a/library/std/src/sys/thread/aros.rs b/library/std/src/sys/thread/aros.rs
+new file mode 100644
+index 0000000..3b97fd6
+--- /dev/null
++++ b/library/std/src/sys/thread/aros.rs
+@@ -0,0 +1,44 @@
++//! Sleeping on AROS, without threads: `nanosleep` of the C library, which waits on
++//! timer.device. Everything else about threads stays on the `unsupported` fallback.
++
++use crate::time::Duration;
++
++/// `EINTR` in the numbering of the AROS C library (NetBSD's).
++const EINTR: i32 = 4;
++
++/// The C `struct timespec` of AROS: a 32-bit `time_t` and a 64-bit `long`.
++#[repr(C)]
++struct CTimespec {
++    tv_sec: i32,
++    tv_nsec: i64,
++}
++
++unsafe extern "C" {
++    fn nanosleep(request: *const CTimespec, remaining: *mut CTimespec) -> i32;
++}
++
++pub fn sleep(dur: Duration) {
++    let mut remaining = dur;
++    while !remaining.is_zero() {
++        // `time_t` is 32 bits, so a longer sleep is made of several calls.
++        let secs = remaining.as_secs().min(i32::MAX as u64);
++        let nanos = if remaining.as_secs() > secs { 0 } else { remaining.subsec_nanos() };
++        let request = CTimespec { tv_sec: secs as i32, tv_nsec: nanos as i64 };
++        let mut left = CTimespec { tv_sec: 0, tv_nsec: 0 };
++        // SAFETY: both point to valid `timespec` values.
++        let result = unsafe { nanosleep(&request, &mut left) };
++        let asked = Duration::new(secs, nanos);
++        if result == 0 {
++            remaining -= asked;
++        } else if crate::io::Error::last_os_error().raw_os_error() == Some(EINTR) {
++            // Interrupted, for example by a break: sleep for what is left.
++            let unslept = Duration::new(
++                left.tv_sec.max(0) as u64,
++                (left.tv_nsec.clamp(0, 999_999_999)) as u32,
++            );
++            remaining = (remaining - asked) + unslept.min(asked);
++        } else {
++            break;
++        }
++    }
++}
+diff --git a/library/std/src/sys/thread/mod.rs b/library/std/src/sys/thread/mod.rs
+index dfbfc2b..da88cc2 100644
+--- a/library/std/src/sys/thread/mod.rs
++++ b/library/std/src/sys/thread/mod.rs
+@@ -41,6 +41,16 @@ cfg_select! {
+         mod unsupported;
+         pub use unsupported::{available_parallelism, current_os_id, set_name};
+     }
++    target_os = "aros" => {
++        mod aros;
++        pub use aros::sleep;
++        #[expect(dead_code)]
++        mod unsupported;
++        pub use unsupported::{
++            DEFAULT_MIN_STACK_SIZE, Thread, available_parallelism, current_os_id, set_name,
++            yield_now,
++        };
++    }
+     target_os = "uefi" => {
+         mod uefi;
+         pub use uefi::{available_parallelism, sleep};
 diff --git a/library/std/src/sys/thread_local/mod.rs b/library/std/src/sys/thread_local/mod.rs
 index 809ef5c..829778c 100644
 --- a/library/std/src/sys/thread_local/mod.rs
@@ -808,3 +879,181 @@ index 9f4e771..4ce9610 100644
  compile_error!("Using no_threads implementation on a target with threads");
  
  #[doc(hidden)]
+diff --git a/library/std/src/sys/time/aros.rs b/library/std/src/sys/time/aros.rs
+new file mode 100644
+index 0000000..9a24605
+--- /dev/null
++++ b/library/std/src/sys/time/aros.rs
+@@ -0,0 +1,159 @@
++//! Time on AROS, from the clocks of the C library.
++//!
++//! `clock_gettime` returns a `timespec` whose `tv_sec` is a 32-bit `time_t` on both
++//! ABIs. The clocks underneath are unsigned 32-bit counters: the real-time clock
++//! counts seconds since 1978 and the C library adds the offset to 1970 and the
++//! time zone of the locale, and `CLOCK_MONOTONIC` is the uptime. A `tv_sec` that
++//! looks negative therefore means a time after 2038, not a time before 1970
++//! (the clock of AROS cannot be before 1978), so it is read as unsigned. That
++//! extends the range of `SystemTime::now` from 2038 to 2106.
++
++use crate::fmt;
++use crate::io;
++use crate::time::Duration;
++
++const NSEC_PER_SEC: u32 = 1_000_000_000;
++
++/// `CLOCK_MONOTONIC` and `CLOCK_REALTIME` in the C library of AROS.
++const CLOCK_MONOTONIC: i32 = 0;
++const CLOCK_REALTIME: i32 = 2;
++
++/// The C `struct timespec` of AROS: a 32-bit `time_t` and a 64-bit `long`.
++#[repr(C)]
++struct CTimespec {
++    tv_sec: i32,
++    tv_nsec: i64,
++}
++
++unsafe extern "C" {
++    fn clock_gettime(clock: i32, tp: *mut CTimespec) -> i32;
++}
++
++/// A point in time as seconds and nanoseconds, with `tv_nsec` below a second.
++#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
++struct Timespec {
++    tv_sec: i64,
++    tv_nsec: u32,
++}
++
++impl Timespec {
++    const MAX: Timespec = Timespec { tv_sec: i64::MAX, tv_nsec: NSEC_PER_SEC - 1 };
++    const MIN: Timespec = Timespec { tv_sec: i64::MIN, tv_nsec: 0 };
++
++    const fn zero() -> Timespec {
++        Timespec { tv_sec: 0, tv_nsec: 0 }
++    }
++
++    fn now(clock: i32) -> Timespec {
++        let mut tp = CTimespec { tv_sec: 0, tv_nsec: 0 };
++        // SAFETY: `tp` is a valid, writable `timespec` of the C library.
++        let result = unsafe { clock_gettime(clock, &mut tp) };
++        if result != 0 {
++            // Neither clock can fail once timer.device is open, which the C library
++            // does on first use. A failure means there is no time source at all.
++            panic!("clock_gettime failed: {}", io::Error::last_os_error());
++        }
++        // Reinterpret as unsigned; see the module documentation.
++        let secs = tp.tv_sec as u32 as i64;
++        // The C library gives microseconds times 1000, so this is below a second.
++        let nsec = (tp.tv_nsec as u64).min((NSEC_PER_SEC - 1) as u64) as u32;
++        Timespec { tv_sec: secs, tv_nsec: nsec }
++    }
++
++    fn sub_timespec(&self, other: &Timespec) -> Result<Duration, Duration> {
++        if self >= other {
++            let (secs, nsec) = if self.tv_nsec >= other.tv_nsec {
++                ((self.tv_sec - other.tv_sec) as u64, self.tv_nsec - other.tv_nsec)
++            } else {
++                (
++                    (self.tv_sec - other.tv_sec - 1) as u64,
++                    self.tv_nsec + NSEC_PER_SEC - other.tv_nsec,
++                )
++            };
++            Ok(Duration::new(secs, nsec))
++        } else {
++            match other.sub_timespec(self) {
++                Ok(duration) => Err(duration),
++                Err(_) => unreachable!(),
++            }
++        }
++    }
++
++    fn checked_add_duration(&self, other: &Duration) -> Option<Timespec> {
++        let mut secs = self.tv_sec.checked_add_unsigned(other.as_secs())?;
++        let mut nsec = other.subsec_nanos() + self.tv_nsec;
++        if nsec >= NSEC_PER_SEC {
++            nsec -= NSEC_PER_SEC;
++            secs = secs.checked_add(1)?;
++        }
++        Some(Timespec { tv_sec: secs, tv_nsec: nsec })
++    }
++
++    fn checked_sub_duration(&self, other: &Duration) -> Option<Timespec> {
++        let mut secs = self.tv_sec.checked_sub_unsigned(other.as_secs())?;
++        let mut nsec = self.tv_nsec as i32 - other.subsec_nanos() as i32;
++        if nsec < 0 {
++            nsec += NSEC_PER_SEC as i32;
++            secs = secs.checked_sub(1)?;
++        }
++        Some(Timespec { tv_sec: secs, tv_nsec: nsec as u32 })
++    }
++}
++
++impl fmt::Debug for Timespec {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_struct("Timespec").field("tv_sec", &self.tv_sec).field("tv_nsec", &self.tv_nsec).finish()
++    }
++}
++
++#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
++pub struct Instant {
++    t: Timespec,
++}
++
++#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
++pub struct SystemTime {
++    t: Timespec,
++}
++
++pub const UNIX_EPOCH: SystemTime = SystemTime { t: Timespec::zero() };
++
++impl Instant {
++    pub fn now() -> Instant {
++        Instant { t: Timespec::now(CLOCK_MONOTONIC) }
++    }
++
++    pub fn checked_sub_instant(&self, other: &Instant) -> Option<Duration> {
++        self.t.sub_timespec(&other.t).ok()
++    }
++
++    pub fn checked_add_duration(&self, other: &Duration) -> Option<Instant> {
++        Some(Instant { t: self.t.checked_add_duration(other)? })
++    }
++
++    pub fn checked_sub_duration(&self, other: &Duration) -> Option<Instant> {
++        Some(Instant { t: self.t.checked_sub_duration(other)? })
++    }
++}
++
++impl SystemTime {
++    pub const MAX: SystemTime = SystemTime { t: Timespec::MAX };
++
++    pub const MIN: SystemTime = SystemTime { t: Timespec::MIN };
++
++    pub fn now() -> SystemTime {
++        SystemTime { t: Timespec::now(CLOCK_REALTIME) }
++    }
++
++    pub fn sub_time(&self, other: &SystemTime) -> Result<Duration, Duration> {
++        self.t.sub_timespec(&other.t)
++    }
++
++    pub fn checked_add_duration(&self, other: &Duration) -> Option<SystemTime> {
++        Some(SystemTime { t: self.t.checked_add_duration(other)? })
++    }
++
++    pub fn checked_sub_duration(&self, other: &Duration) -> Option<SystemTime> {
++        Some(SystemTime { t: self.t.checked_sub_duration(other)? })
++    }
++}
+diff --git a/library/std/src/sys/time/mod.rs b/library/std/src/sys/time/mod.rs
+index 179c968..dbc17a7 100644
+--- a/library/std/src/sys/time/mod.rs
++++ b/library/std/src/sys/time/mod.rs
+@@ -1,4 +1,8 @@
+ cfg_select! {
++    target_os = "aros" => {
++        mod aros;
++        use aros as imp;
++    }
+     target_os = "motor" => {
+         use moto_rt::time as imp;
+     }
