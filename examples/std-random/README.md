@@ -59,8 +59,9 @@ the qualification) and `Haswell` with it.
   four different `RandomState` hashes.
 - The statistics do not measure unpredictability. That the weak generator passes them is why the
   quality statement above rests on how it is built, not on these numbers.
-- The runs on `Haswell` used a private copy of the QEMU runner with a `-cpu` option; the
-  maintainer's runner always uses `qemu64-v1`.
+- The runs on `Haswell` used the runner option `--cpu Haswell`. Without it the runner uses
+  `qemu64-v1`, the qualified profile, which has no `RDRAND`, so a qualification run exercises
+  the fallback unless it is repeated with a CPU that has the instruction.
 
 ## Not verified
 

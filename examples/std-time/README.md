@@ -51,8 +51,9 @@ Observed on the pinned ABI-v1 and ABI-v11 images, identical on both unless state
 | `future`, clock set to 2107-06-01 | 41,362,307 and 41,362,313: the value wrapped, as the range above says (4,336,329,600 - 2^32 = 41,362,304) |
 | `raw`, clock set to 2040-01-01 | the C library returns -2,085,978,494 and -2,085,978,492, which is why `std` has to read the value as unsigned |
 
-The runs with another date need a runner that can set the clock of the virtual machine;
-with QEMU that is `-rtc base=2040-01-01T00:00:00,clock=vm`.
+The runs with another date used the runner option `--rtc base=2040-01-01T00:00:00,clock=vm`,
+which sets the clock of the virtual machine (QEMU's `-rtc`). Without it the guest uses the host
+clock in UTC.
 
 ## Not verified
 
