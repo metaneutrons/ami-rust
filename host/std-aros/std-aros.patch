@@ -531,16 +531,39 @@ index 88d9d42..ed2f54c 100644
          pub use self::unsupported::*;
 diff --git a/library/std/src/sys/random/aros.rs b/library/std/src/sys/random/aros.rs
 new file mode 100644
-index 0000000..9ad499e
+index 0000000..c5a0963
 --- /dev/null
 +++ b/library/std/src/sys/random/aros.rs
-@@ -0,0 +1,54 @@
-+//! Weak entropy for `HashMap` seeding. The AROS C library has no `getrandom`
-+//! or `getentropy`, so the generator mixes the clocks and two addresses. It is
-+//! not suitable for cryptography.
+@@ -0,0 +1,144 @@
++//! Randomness for `HashMap` seeding and `std::random`.
++//!
++//! - **ABI-v1** calls `getentropy` of the C library. It is backed by
++//!   `entropy.resource`, a ChaCha20 generator that is reseeded on every call from a
++//!   software collector and, where the CPU has them, `RDRAND` and `RDSEED`. It
++//!   delivers at most 256 bytes per call. If it fails, the weak generator below is
++//!   used.
++//! - **ABI-v11** has nothing to call: its C library has no `getentropy`, no
++//!   `getrandom` and no `entropy.resource`. The weak generator below is used, and
++//!   when the CPU has `RDRAND` (checked with `CPUID`) its output is mixed into the
++//!   result with XOR, so a faulty hardware generator cannot make the result weaker
++//!   than the weak generator alone.
++//!
++//! The weak generator mixes the two clocks, a stack address, a heap address and a
++//! counter through SplitMix64. It is not suitable for cryptography.
 +
 +use crate::ffi::c_int;
-+use crate::sync::atomic::{AtomicU64, Ordering};
++use crate::sync::atomic::{AtomicU8, AtomicU64, Ordering};
++
++/// Which source the last call used: 0 none yet, 1 the weak generator only, 2 the weak
++/// generator mixed with `RDRAND`, 3 `getentropy`. It exists so that a test can
++/// observe the path that was taken; nothing in `std` reads it.
++#[unsafe(no_mangle)]
++pub static __ami_rust_random_source: AtomicU8 = AtomicU8::new(0);
++
++const SOURCE_WEAK: u8 = 1;
++const SOURCE_RDRAND: u8 = 2;
++#[cfg(target_abi = "abi1")]
++const SOURCE_GETENTROPY: u8 = 3;
 +
 +// `time_t` is a 32-bit integer in the AROS C library and `long` is 64-bit.
 +#[repr(C)]
@@ -555,6 +578,8 @@ index 0000000..9ad499e
 +
 +unsafe extern "C" {
 +    fn clock_gettime(clock: c_int, tp: *mut Timespec) -> c_int;
++    #[cfg(target_abi = "abi1")]
++    fn getentropy(buffer: *mut u8, length: usize) -> c_int;
 +}
 +
 +static COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -576,7 +601,7 @@ index 0000000..9ad499e
 +    z ^ (z >> 31)
 +}
 +
-+pub fn fill_bytes(bytes: &mut [u8]) {
++fn weak_fill(bytes: &mut [u8]) {
 +    let stack = 0u8;
 +    let heap = Box::new(0u8);
 +    let mut state = clock_bits(CLOCK_MONOTONIC)
@@ -588,6 +613,71 @@ index 0000000..9ad499e
 +        let word = splitmix64(&mut state).to_ne_bytes();
 +        chunk.copy_from_slice(&word[..chunk.len()]);
 +    }
++}
++
++/// Fills the buffer from `getentropy`, 256 bytes at a time. False if it failed.
++#[cfg(target_abi = "abi1")]
++fn getentropy_fill(bytes: &mut [u8]) -> bool {
++    for chunk in bytes.chunks_mut(256) {
++        // SAFETY: `chunk` is valid for `chunk.len()` bytes.
++        if unsafe { getentropy(chunk.as_mut_ptr(), chunk.len()) } != 0 {
++            return false;
++        }
++    }
++    true
++}
++
++/// XORs `RDRAND` output into the buffer if the CPU has the instruction. Returns
++/// whether it did, for all of the buffer.
++#[cfg(target_arch = "x86_64")]
++fn rdrand_xor(bytes: &mut [u8]) -> bool {
++    use crate::arch::x86_64::__cpuid;
++
++    // CPUID leaf 1, ECX bit 30 is RDRAND. Leaf 1 exists on every x86-64 CPU.
++    #[allow(unused_unsafe)]
++    let has_rdrand = unsafe { __cpuid(1) }.ecx & (1 << 30) != 0;
++    if !has_rdrand {
++        return false;
++    }
++    // SAFETY: the CPU has `RDRAND`, which was just checked.
++    unsafe { rdrand_xor_unchecked(bytes) }
++}
++
++#[cfg(target_arch = "x86_64")]
++#[target_feature(enable = "rdrand")]
++unsafe fn rdrand_xor_unchecked(bytes: &mut [u8]) -> bool {
++    use crate::arch::x86_64::_rdrand64_step;
++
++    for chunk in bytes.chunks_mut(8) {
++        let mut value = 0u64;
++        let mut delivered = false;
++        // Intel recommends retrying a failed `RDRAND` up to ten times.
++        for _ in 0..10 {
++            #[allow(unused_unsafe)]
++            if unsafe { _rdrand64_step(&mut value) } == 1 {
++                delivered = true;
++                break;
++            }
++        }
++        if !delivered {
++            return false;
++        }
++        for (byte, random) in chunk.iter_mut().zip(value.to_ne_bytes()) {
++            *byte ^= random;
++        }
++    }
++    true
++}
++
++pub fn fill_bytes(bytes: &mut [u8]) {
++    #[cfg(target_abi = "abi1")]
++    if getentropy_fill(bytes) {
++        __ami_rust_random_source.store(SOURCE_GETENTROPY, Ordering::Relaxed);
++        return;
++    }
++    weak_fill(bytes);
++    let source = if rdrand_xor(bytes) { SOURCE_RDRAND } else { SOURCE_WEAK };
++    __ami_rust_random_source.store(source, Ordering::Relaxed);
 +}
 diff --git a/library/std/src/sys/random/mod.rs b/library/std/src/sys/random/mod.rs
 index bc3dd50..2e71bbf 100644
