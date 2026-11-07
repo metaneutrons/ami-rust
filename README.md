@@ -33,8 +33,9 @@ macOS / Linux host
 ```
 
 The initial targets are deliberately narrow: **PC x86-64 AROS ABI-v1 and
-ABI-v11** with `no_std` and `alloc`. Full `std`, additional AROS architectures,
-and native AROS-hosted rustc/Cargo/rustup are future work. The target name
+ABI-v11** with `no_std` and `alloc`. Full `std` is in development for a later release,
+and additional AROS architectures and native AROS-hosted rustc/Cargo/rustup are
+future work. The target name
 selects the ABI; application source does not select it through a Cargo feature.
 
 ## Status
@@ -44,6 +45,12 @@ protected three-host, dual-target and native AROS qualification. Authenticated
 GitHub Release archives and the immutable rustup catalog are the supported
 installation routes. The libraries are also published to the ami-rust Cargo
 registry (see below). APT, Homebrew, AUR and crates.io are not 0.2.0 channels.
+
+The development branch also carries early, experimental work on Rust `std`: a
+program with an ordinary `fn main`, standard streams, arguments and the environment
+run on both ABIs. It is not part of 0.2.0; the
+[platform roadmap](https://ami-rust.metaneutrons.cc/platform-roadmap/#rust-std)
+says what works and what does not.
 
 Qualified development hosts:
 
