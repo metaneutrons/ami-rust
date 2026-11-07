@@ -16,12 +16,12 @@ subsystem on the `unsupported` fallback:
 | Subsystem | Selection |
 | --- | --- |
 | `sys/alloc` | New `aros.rs` on `malloc`, `calloc`, `realloc`, `free` and `posix_memalign` |
-| `sys/io/error` | New `aros.rs`: `errno` through the C library accessor, NetBSD errno table, `strerror`; and the DOS errors that the C library reports as `1000 + code` get their own kinds and texts |
+| `sys/io/error` | New `aros.rs`: `errno` and `set_errno` through the C library accessor, NetBSD errno table, `strerror`; and the DOS errors that the C library reports as `1000 + code` get their own kinds and texts |
 | `sys/random` | New `aros.rs`: `getentropy` on ABI-v1; on ABI-v11 (which has none) the weak clock and address mixing with `RDRAND` mixed in when the CPU has it. It also exports `__ami_rust_random_source`, which a test reads to see which source was used |
 | `sys/pal` | New `aros`: `abort_internal` enters the native fatal path (`sdk_fatal`), which ends the program with return code 20; this also covers every panic under `panic = "abort"`. It also defines `rust_sdk_main`, which the native `main` calls and which runs the entry of a `fn main` program (see `examples/std-runtime/README.md`). It also has `without_requesters`, which switches DOS requesters off around path calls through the bridge function `sdk_proc_window_set` |
-| `sys/time` | New `aros.rs`: `Instant` on `CLOCK_MONOTONIC` and `SystemTime` on `CLOCK_REALTIME`, with the 32-bit `time_t` read as unsigned so that `SystemTime` is correct until 2106 |
+| `sys/time` | New `aros.rs`: `Instant` on `CLOCK_MONOTONIC` and `SystemTime` on `CLOCK_REALTIME`, with the 32-bit `time_t` read as unsigned so that `SystemTime` is correct until 2106; the same reading is used for file dates |
 | `sys/thread` | New `aros.rs`: `thread::sleep` on `nanosleep`; everything else about threads stays unsupported |
-| `sys/fs` | New `aros.rs`: `File` and `OpenOptions` on the descriptors of the C library (open, read, write, seek, truncate, duplicate, sync) and `remove_file`; everything else in `std::fs` stays unsupported. Works around five behaviours of the C library, see `examples/std-fs/README.md` |
+| `sys/fs` | New `aros.rs`: `File` and `OpenOptions` on the descriptors of the C library (open, read, write, seek, truncate, duplicate, sync), metadata (`stat64`, `lstat64`, `fstat64`), permissions (read-only through `chmod`), `read_dir`, `create_dir`, `remove_dir`, `remove_file`, and `copy`, `exists` and `remove_dir_all` from the common code. Rename, canonicalize, links, locks and file times stay unsupported. Works around the behaviours of the C library listed in `examples/std-fs/README.md` |
 | `sys/args` | New `aros.rs`: `env::args` from the `__argc` and `__argv` that the C start-up stores |
 | `sys/exit` | `process::exit` releases what the program holds (`sdk_end`) and then leaves with the code it was given (`_Exit`) |
 | `sys/stdio` | New `aros.rs`: standard input, output and error on the file descriptors 0, 1 and 2 |
@@ -39,7 +39,7 @@ set -eu
 repo=$(pwd -P)
 work=$(mktemp -d)
 cp -R "$(rustc +0.2.0 --print sysroot)/lib/rustlib/src/rust" "$work/rust"
-echo "3253dab543447a5ac7b762d2b6c51ff7d1e24b8f4aa6852e171622d48a571e56  host/std-aros/std-aros.patch" | shasum -a 256 -c
+echo "3bac3e1a4df0c87d232b300fb7dda6094e711242fc0986bfb924889f6acc142d  host/std-aros/std-aros.patch" | shasum -a 256 -c
 patch -p1 -d "$work/rust" < host/std-aros/std-aros.patch
 ```
 

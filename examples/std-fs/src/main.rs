@@ -1,6 +1,7 @@
-//! Files in `std` on AROS: open, read, write, seek, truncate, duplicate, unlink, the errors, and the
-//! behaviours of the C library that `std` has to work around. One behaviour per run; the expected
-//! results are in README.md. The files are made in `RAM:ami-rust-m1/`, which the run must create.
+//! The file system in `std` on AROS: files (open, read, write, seek, truncate, duplicate), metadata and
+//! file dates, permissions, directories, `copy`, the errors, and the behaviours of the C library that
+//! `std` has to work around. One behaviour per run; the expected results are in README.md. The files
+//! are made in `RAM:ami-rust-m1/`, which the run must create.
 
 #![feature(restricted_std)]
 use std::ffi::OsString;
@@ -27,6 +28,7 @@ impl T {
 }
 fn p(name: &str) -> String { format!("{BASE}{name}") }
 fn pattern(n: usize, seed: u8) -> Vec<u8> { (0..n).map(|i| (i as u8).wrapping_mul(31).wrapping_add(seed).wrapping_add((i >> 8) as u8)).collect() }
+fn rm_all(name: &str) { let _ = fs::remove_dir_all(p(name)); }
 fn clean(names: &[&str]) { for n in names { let _ = fs::remove_file(p(n)); } }
 
 fn main() -> ExitCode {
@@ -177,13 +179,13 @@ fn main() -> ExitCode {
         "unsupported" => {
             clean(&["n"]);
             let f = File::create(p("n")).unwrap();
-            t.kind("metadata", f.metadata(), ErrorKind::Unsupported);
-            t.kind("fs::metadata", fs::metadata(p("n")), ErrorKind::Unsupported);
             t.kind("lock", f.lock(), ErrorKind::Unsupported);
-            t.kind("read_dir", fs::read_dir(BASE), ErrorKind::Unsupported);
-            t.kind("create_dir", fs::create_dir(p("newdir")), ErrorKind::Unsupported);
+            t.kind("set_modified", f.set_modified(std::time::SystemTime::now()), ErrorKind::Unsupported);
             t.kind("rename", fs::rename(p("n"), p("n2")), ErrorKind::Unsupported);
             t.kind("canonicalize", fs::canonicalize(p("n")), ErrorKind::Unsupported);
+            t.kind("read_link", fs::read_link(p("n")), ErrorKind::Unsupported);
+            t.kind("hard_link", fs::hard_link(p("n"), p("n2")), ErrorKind::Unsupported);
+            drop(f);
             clean(&["n"]);
         }
         "errors" => {
@@ -203,6 +205,12 @@ fn main() -> ExitCode {
             let r = fs::write("NATIVERUN:ami-ro-probe", b"x");
             t.check("a write to a read-only volume is refused with a kind", r.as_ref().is_err_and(|e| matches!(e.kind(), ErrorKind::ReadOnlyFilesystem | ErrorKind::PermissionDenied)), format!("{:?}", r.as_ref().map_err(|e| (e.kind(), e.raw_os_error()))));
             t.check("the message of a DOS error is readable", { let m = format!("{}", r.unwrap_err()); !m.contains("Unknown") && m.contains("DOS error") }, String::new());
+            let ro_kinds = |r: io::Result<()>| r.as_ref().is_err_and(|e| matches!(e.kind(), ErrorKind::ReadOnlyFilesystem | ErrorKind::PermissionDenied));
+            let r = fs::create_dir("NATIVERUN:ami-ro-dir");
+            t.check("create_dir on a read-only volume is refused with a kind", ro_kinds(r.as_ref().map(|_| ()).map_err(|e| io::Error::from(e.kind()))), format!("{:?}", r.map_err(|e| (e.kind(), e.raw_os_error()))));
+            let r = fs::remove_file("NATIVERUN:prog");
+            t.check("remove_file on a read-only volume is refused with a kind", ro_kinds(r.as_ref().map(|_| ()).map_err(|e| io::Error::from(e.kind()))), format!("{:?}", r.map_err(|e| (e.kind(), e.raw_os_error()))));
+            t.check("the delivery volume can be listed and examined", fs::read_dir("NATIVERUN:").is_ok_and(|d| d.filter_map(Result::ok).any(|e| e.file_name() == "prog" && e.metadata().is_ok_and(|m| m.is_file()))), String::new());
             clean(&["e"]);
         }
         "requesters" => {
@@ -286,6 +294,220 @@ fn main() -> ExitCode {
             t.check("append writes at the end, not at the remembered position", fs::read(p("sw")).unwrap().len() == 2002, String::new());
             clean(&["sw"]);
         }
+        "meta" => {
+            clean(&["m1", "m2"]);
+            fs::write(p("m1"), vec![7u8; 1234]).unwrap();
+            let m = fs::metadata(p("m1")).unwrap();
+            t.check("file length", m.len() == 1234, format!("{}", m.len()));
+            t.check("file type", m.is_file() && !m.is_dir() && !m.file_type().is_symlink(), String::new());
+            t.check("a new file is not read-only", !m.permissions().readonly(), format!("{:?}", m.permissions()));
+            t.check("Debug of Metadata", !format!("{m:?}").is_empty(), String::new());
+            t.check("created is unsupported (DOS has one date)", m.created().is_err_and(|e| e.kind() == ErrorKind::Unsupported), String::new());
+            t.check("accessed works", m.accessed().is_ok(), String::new());
+            let s = fs::symlink_metadata(p("m1")).unwrap();
+            t.check("symlink_metadata of a file", s.len() == 1234 && s.is_file(), String::new());
+            let d = fs::metadata(BASE).unwrap();
+            t.check("directory", d.is_dir() && !d.is_file(), String::new());
+            t.check("directory without the trailing slash", fs::metadata(BASE.trim_end_matches('/')).is_ok_and(|m| m.is_dir()), String::new());
+            t.check("volume root", fs::metadata("RAM:").is_ok_and(|m| m.is_dir()), String::new());
+            t.kind("missing file", fs::metadata(p("nonexist")), ErrorKind::NotFound);
+            t.kind("missing volume", fs::metadata("NOSUCHVOLUME:x"), ErrorKind::NotFound);
+            t.kind("missing directory", fs::metadata(p("nodir/x")), ErrorKind::NotFound);
+            // Unix says NotADirectory here; the C library reports "object not found".
+            t.kind("path through a file", fs::metadata(p("m1/x")), ErrorKind::NotFound);
+            // DOS takes an empty path for the current directory; std refuses it as Unix does.
+            t.kind("empty path: metadata", fs::metadata(""), ErrorKind::NotFound);
+            t.kind("empty path: open", File::open(""), ErrorKind::NotFound);
+            t.kind("empty path: read_dir", fs::read_dir(""), ErrorKind::NotFound);
+            t.kind("empty path: create_dir", fs::create_dir(""), ErrorKind::NotFound);
+            t.kind("empty path: remove_file", fs::remove_file(""), ErrorKind::NotFound);
+            t.kind("empty path: remove_dir", fs::remove_dir(""), ErrorKind::NotFound);
+            t.check("exists", fs::exists(p("m1")).ok() == Some(true) && fs::exists(BASE).ok() == Some(true) && fs::exists(p("nonexist")).ok() == Some(false) && fs::exists("NOSUCHVOLUME:x").ok() == Some(false), String::new());
+            let mut f = OpenOptions::new().read(true).write(true).create(true).open(p("m2")).unwrap();
+            f.write_all(b"abcdefgh").unwrap();
+            t.check("File::metadata sees what was written", f.metadata().is_ok_and(|m| m.len() == 8 && m.is_file()), String::new());
+            t.check("fs::metadata of a file that is open for writing", fs::metadata(p("m2")).is_ok_and(|m| m.len() == 8), String::new());
+            t.check("File::metadata after set_len", f.set_len(3).is_ok() && f.metadata().is_ok_and(|m| m.len() == 3), String::new());
+            drop(f);
+            let nil = File::create("NIL:").and_then(|f| f.metadata());
+            println!("INFO metadata of NIL: {:?}", nil.map(|m| (m.len(), m.is_file())).map_err(|e| (e.kind(), e.raw_os_error(), e.to_string())));
+            clean(&["m1", "m2"]);
+        }
+        "times" => {
+            use std::time::{Duration, SystemTime, UNIX_EPOCH};
+            clean(&["tm"]);
+            let diff = |a: SystemTime, b: SystemTime| -> i64 {
+                match a.duration_since(b) {
+                    Ok(d) => d.as_secs() as i64,
+                    Err(e) => -(e.duration().as_secs() as i64),
+                }
+            };
+            fs::write(p("tm"), b"1").unwrap();
+            let now = SystemTime::now();
+            let m = fs::metadata(p("tm")).unwrap();
+            let t1 = m.modified().unwrap();
+            let secs = t1.duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+            println!("INFO the file's date is {secs} s after 1970, year {}; SystemTime::now is {} s later", 1970 + secs / 31_556_952, diff(now, t1));
+            t.check("modified is the time of the write", (-2..=2).contains(&diff(now, t1)), format!("{} s", diff(now, t1)));
+            t.check("accessed is the same date", m.accessed().ok() == Some(t1), String::new());
+            t.check("whole seconds", t1.duration_since(UNIX_EPOCH).is_ok_and(|d| d.subsec_nanos() == 0), String::new());
+            std::thread::sleep(Duration::from_millis(2100));
+            fs::write(p("tm"), b"22").unwrap();
+            let t2 = fs::metadata(p("tm")).unwrap().modified().unwrap();
+            t.check("a later write gives a later date", t2 > t1 && diff(t2, t1) <= 4, format!("{} s", diff(t2, t1)));
+            let dir = fs::metadata(BASE).unwrap().modified();
+            t.check("a directory has a date", dir.is_ok(), String::new());
+            let old = fs::metadata("NATIVERUN:prog").and_then(|m| m.modified());
+            println!("INFO date of NATIVERUN:prog (the delivery volume): {:?}", old.map(|t| t.duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)).map_err(|e| e.kind()));
+            clean(&["tm"]);
+        }
+        "dirs" => {
+            rm_all("dd"); clean(&["df"]);
+            t.check("create_dir", fs::create_dir(p("dd")).is_ok(), String::new());
+            t.check("it is a directory", fs::metadata(p("dd")).is_ok_and(|m| m.is_dir()), String::new());
+            t.kind("create_dir again", fs::create_dir(p("dd")), ErrorKind::AlreadyExists);
+            t.kind("create_dir with a missing parent", fs::create_dir(p("nodir/sub")), ErrorKind::NotFound);
+            fs::write(p("df"), b"x").unwrap();
+            t.kind("create_dir over a file", fs::create_dir(p("df")), ErrorKind::AlreadyExists);
+            t.check("create_dir_all", fs::create_dir_all(p("dd/a/b/c")).is_ok() && fs::metadata(p("dd/a/b/c")).is_ok_and(|m| m.is_dir()), String::new());
+            t.check("create_dir_all again", fs::create_dir_all(p("dd/a/b/c")).is_ok(), String::new());
+            t.check("create_dir_all with a trailing slash", fs::create_dir_all(p("dd/s/t/")).is_ok() && fs::metadata(p("dd/s/t")).is_ok_and(|m| m.is_dir()), String::new());
+            let through = fs::create_dir_all(p("df/x/y"));
+            println!("INFO create_dir_all through a file: {:?}", through.as_ref().map_err(|e| (e.kind(), e.raw_os_error())));
+            t.check("create_dir_all through a file fails", through.is_err(), String::new());
+            t.check("remove_dir on an empty directory", fs::remove_dir(p("dd/a/b/c")).is_ok() && fs::metadata(p("dd/a/b/c")).is_err(), String::new());
+            // ABI-v1 reports no error at all for this (errno 0); std reports it as not empty.
+            t.kind("remove_dir on a directory that is not empty", fs::remove_dir(p("dd/a")), ErrorKind::DirectoryNotEmpty);
+            t.check("... which is still there", fs::metadata(p("dd/a/b")).is_ok_and(|m| m.is_dir()), String::new());
+            // The C library of ABI-v1 does not set an error for this, so an earlier failure shows through.
+            let _ = fs::create_dir(p("dd/a"));
+            t.kind("... also when the last failed call was another one", fs::remove_dir(p("dd/a")), ErrorKind::DirectoryNotEmpty);
+            let _ = fs::metadata(p("nonexist"));
+            t.kind("... and after a failed lookup", fs::remove_dir(p("dd/a")), ErrorKind::DirectoryNotEmpty);
+            t.kind("remove_dir on a missing directory", fs::remove_dir(p("dd/zz")), ErrorKind::NotFound);
+            // The C library deletes a file with rmdir and a directory with unlink; std refuses both.
+            t.kind("remove_dir on a file", fs::remove_dir(p("df")), ErrorKind::NotADirectory);
+            t.check("... the file is still there", fs::metadata(p("df")).is_ok_and(|m| m.is_file()), String::new());
+            t.kind("remove_file on a directory", fs::remove_file(p("dd/a/b")), ErrorKind::IsADirectory);
+            t.check("... the directory is still there", fs::metadata(p("dd/a/b")).is_ok_and(|m| m.is_dir()), String::new());
+            t.check("remove_dir of the emptied directories", fs::remove_dir(p("dd/a/b")).is_ok() && fs::remove_dir(p("dd/a")).is_ok(), String::new());
+            rm_all("dd"); clean(&["df"]);
+        }
+        "readdir" => {
+            rm_all("rd"); rm_all("many");
+            fs::create_dir_all(p("rd/sub")).unwrap();
+            fs::create_dir(p("rd/empty")).unwrap();
+            fs::write(p("rd/f1"), b"1").unwrap();
+            fs::write(p("rd/sub/f2"), b"22").unwrap();
+            fs::write(p("rd/with space"), b"333").unwrap();
+            let mut got: Vec<(String, bool, bool, u64)> = fs::read_dir(p("rd")).unwrap().map(|e| {
+                let e = e.unwrap();
+                let ft = e.file_type().unwrap();
+                (e.file_name().to_string_lossy().into_owned(), ft.is_dir(), ft.is_file(), e.metadata().unwrap().len())
+            }).collect();
+            got.sort();
+            let want = vec![("empty".to_string(), true, false, 0), ("f1".to_string(), false, true, 1), ("sub".to_string(), true, false, 0), ("with space".to_string(), false, true, 3)];
+            t.check("entries, types and sizes", got == want, format!("{got:?}"));
+            let mut paths: Vec<String> = fs::read_dir(p("rd")).unwrap().map(|e| e.unwrap().path().to_string_lossy().into_owned()).collect();
+            paths.sort();
+            t.check("entry paths", paths == ["RAM:ami-rust-m1/rd/empty", "RAM:ami-rust-m1/rd/f1", "RAM:ami-rust-m1/rd/sub", "RAM:ami-rust-m1/rd/with space"], format!("{paths:?}"));
+            let slash: Vec<String> = fs::read_dir(p("rd/")).unwrap().map(|e| e.unwrap().path().to_string_lossy().into_owned()).collect();
+            t.check("entry paths of a path with a trailing slash have no double slash", slash.iter().all(|s| !s.contains("//")), format!("{slash:?}"));
+            t.check("no . or ..", got.iter().all(|e| e.0 != "." && e.0 != ".."), String::new());
+            t.check("an entry outlives its ReadDir", { let e = fs::read_dir(p("rd")).unwrap().next().unwrap().unwrap(); e.metadata().is_ok() && e.path().to_string_lossy().starts_with("RAM:ami-rust-m1/rd/") }, String::new());
+            t.check("an empty directory has no entries", fs::read_dir(p("rd/empty")).unwrap().count() == 0, String::new());
+            t.check("a directory can be listed twice", fs::read_dir(p("rd")).unwrap().count() == 4 && fs::read_dir(p("rd")).unwrap().count() == 4, String::new());
+            t.check("Debug of ReadDir", format!("{:?}", fs::read_dir(p("rd")).unwrap()).contains("rd"), String::new());
+            t.kind("read_dir of a file", fs::read_dir(p("rd/f1")), ErrorKind::NotADirectory);
+            t.kind("read_dir of a missing directory", fs::read_dir(p("nonexist")), ErrorKind::NotFound);
+            t.kind("read_dir of a missing volume", fs::read_dir("NOSUCHVOLUME:"), ErrorKind::NotFound);
+            let root: Vec<_> = fs::read_dir("RAM:").unwrap().map(|e| e.unwrap()).collect();
+            t.check("RAM: lists entries", !root.is_empty(), String::new());
+            // Path::join would give "RAM:/T", which is the parent of the volume.
+            t.check("paths below a volume name have no slash after the colon", root.iter().all(|e| { let s = e.path().to_string_lossy().into_owned(); s.starts_with("RAM:") && !s.starts_with("RAM:/") }), String::new());
+            t.check("the entries of RAM: can be examined", root.iter().all(|e| e.metadata().is_ok()), String::new());
+            fs::create_dir(p("many")).unwrap();
+            let long = "x".repeat(107);
+            for i in 0..300 { fs::write(p(&format!("many/file-{i:03}")), b"x").unwrap(); }
+            fs::write(p(&format!("many/{long}")), b"x").unwrap();
+            let mut names: Vec<String> = fs::read_dir(p("many")).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+            let total = names.len();
+            names.sort(); names.dedup();
+            t.check("301 entries, all different", total == 301 && names.len() == 301, format!("{total} entries, {} different", names.len()));
+            t.check("a 107-character name is listed whole", names.iter().any(|n| *n == long), String::new());
+            let mut removed = 0;
+            for e in fs::read_dir(p("many")).unwrap() { if fs::remove_file(e.unwrap().path()).is_ok() { removed += 1; } }
+            t.check("deleting while listing removes every entry", removed == 301 && fs::read_dir(p("many")).unwrap().count() == 0, format!("{removed} removed"));
+            for _ in 0..300 { let mut r = fs::read_dir(p("rd")).unwrap(); let _ = r.next(); }
+            t.check("300 listings dropped after one entry, and listing still works", fs::read_dir(p("rd")).unwrap().count() == 4, String::new());
+            rm_all("rd"); rm_all("many");
+        }
+        "perm" => {
+            clean(&["pm"]);
+            fs::write(p("pm"), b"data").unwrap();
+            let mut perm = fs::metadata(p("pm")).unwrap().permissions();
+            t.check("a new file is writable", !perm.readonly(), String::new());
+            perm.set_readonly(true);
+            t.check("set_permissions read-only", fs::set_permissions(p("pm"), perm.clone()).is_ok(), String::new());
+            t.check("read-only afterwards", fs::metadata(p("pm")).unwrap().permissions().readonly(), String::new());
+            let w = fs::write(p("pm"), b"x");
+            t.check("writing to a read-only file is refused", w.as_ref().is_err_and(|e| e.kind() == ErrorKind::PermissionDenied), format!("{:?}", w.map_err(|e| (e.kind(), e.raw_os_error()))));
+            t.check("and the content is unchanged", fs::read(p("pm")).unwrap() == b"data", String::new());
+            t.check("reading is allowed", File::open(p("pm")).is_ok(), String::new());
+            t.check("appending is refused", OpenOptions::new().append(true).open(p("pm")).and_then(|mut f| f.write_all(b"y")).is_err(), String::new());
+            // DOS keeps the right to delete apart from the right to write.
+            let mut copy = perm.clone();
+            copy.set_readonly(false);
+            t.check("set_permissions writable", fs::set_permissions(p("pm"), copy).is_ok() && !fs::metadata(p("pm")).unwrap().permissions().readonly(), String::new());
+            t.check("writing works again", fs::write(p("pm"), b"z").is_ok(), String::new());
+            {
+                let f = File::open(p("pm")).unwrap();
+                let mut pr = f.metadata().unwrap().permissions();
+                pr.set_readonly(true);
+                t.check("File::set_permissions", f.set_permissions(pr).is_ok(), String::new());
+            }
+            t.check("... visible through the path", fs::metadata(p("pm")).unwrap().permissions().readonly(), String::new());
+            t.check("a read-only file can be deleted (DOS has a separate delete right)", fs::remove_file(p("pm")).is_ok(), String::new());
+            t.kind("set_permissions on a missing file", fs::set_permissions(p("nonexist"), perm), ErrorKind::NotFound);
+            clean(&["pm"]);
+        }
+        "copy" => {
+            clean(&["c1", "c2", "c3", "c4", "c5"]);
+            let data = pattern(70_000, 9);
+            fs::write(p("c1"), &data).unwrap();
+            t.check("copy returns the length", fs::copy(p("c1"), p("c2")).ok() == Some(70_000), String::new());
+            t.check("the copy has the content", fs::read(p("c2")).unwrap() == data, String::new());
+            fs::write(p("c3"), vec![1u8; 100_000]).unwrap();
+            t.check("copy over a longer file", fs::copy(p("c1"), p("c3")).is_ok() && fs::read(p("c3")).unwrap() == data, String::new());
+            fs::write(p("c1"), b"").unwrap();
+            t.check("copy of an empty file", fs::copy(p("c1"), p("c4")).ok() == Some(0) && fs::read(p("c4")).unwrap().is_empty(), String::new());
+            fs::write(p("c1"), b"ro").unwrap();
+            let mut perm = fs::metadata(p("c1")).unwrap().permissions();
+            perm.set_readonly(true);
+            fs::set_permissions(p("c1"), perm).unwrap();
+            t.check("the permissions are copied", fs::copy(p("c1"), p("c5")).is_ok() && fs::metadata(p("c5")).unwrap().permissions().readonly(), String::new());
+            t.kind("copy of a directory", fs::copy(BASE, p("c6")), ErrorKind::InvalidInput);
+            t.kind("copy of a missing file", fs::copy(p("nonexist"), p("c6")), ErrorKind::NotFound);
+            t.check("a failed copy leaves no file", fs::metadata(p("c6")).is_err(), String::new());
+            clean(&["c1", "c2", "c3", "c4", "c5"]);
+        }
+        "removeall" => {
+            rm_all("ra"); clean(&["raf"]);
+            fs::create_dir_all(p("ra/a/b")).unwrap();
+            fs::create_dir_all(p("ra/c")).unwrap();
+            for i in 0..60 {
+                fs::write(p(&format!("ra/f{i}")), b"x").unwrap();
+                fs::write(p(&format!("ra/a/g{i}")), b"x").unwrap();
+                fs::write(p(&format!("ra/a/b/h{i}")), b"x").unwrap();
+            }
+            t.check("remove_dir_all of a tree of 180 files", fs::remove_dir_all(p("ra")).is_ok(), String::new());
+            t.check("it is gone", fs::metadata(p("ra")).is_err(), String::new());
+            t.kind("remove_dir_all of a missing directory", fs::remove_dir_all(p("ra")), ErrorKind::NotFound);
+            fs::write(p("raf"), b"1").unwrap();
+            t.kind("remove_dir_all of a file", fs::remove_dir_all(p("raf")), ErrorKind::NotADirectory);
+            t.check("the file is still there", fs::metadata(p("raf")).is_ok_and(|m| m.is_file()), String::new());
+            clean(&["raf"]);
+        }
         "paths" => {
             clean(&["with space", "two.dots.txt", "n"]);
             t.check("name with a space", fs::write(p("with space"), b"1").is_ok() && fs::read(p("with space")).is_ok(), String::new());
@@ -312,7 +534,7 @@ fn main() -> ExitCode {
             println!("INFO a DOS variable as a file (ENV:): {:?}", env.map_err(|e| e.kind()));
             clean(&["with space", "two.dots.txt"]);
         }
-        _ => println!("modes: rw large seek open trunc dup unlink sync unsupported paths errors requesters seekprobe seekro seekwrite"),
+        _ => println!("modes: rw large seek open trunc dup unlink sync unsupported paths errors requesters seekprobe seekro seekwrite meta times dirs readdir perm copy removeall"),
     }
     println!("RESULT fs summary {} of {} checks passed", t.total - t.failed, t.total);
     if t.failed == 0 { ExitCode::SUCCESS } else { ExitCode::from(3) }

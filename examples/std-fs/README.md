@@ -1,7 +1,9 @@
 # std-fs
 
-Native test of files in `std` on AROS: open, read, write, seek, truncate, duplicate and
-remove, the error kinds, and the behaviours of the C library that `std` has to work around.
+Native test of the file system in `std` on AROS: files (open, read, write, seek, truncate,
+duplicate), metadata and file dates, permissions, directories (`read_dir`, `create_dir`,
+`remove_dir`), `copy`, the error kinds, and the behaviours of the C library that `std` has to
+work around.
 One behaviour per run, chosen by the first argument. Like the other `std` programs it is not
 a workspace member: it needs the patched `std` of `host/std-aros/` and a toolchain with the
 new target specifications and the bridge of this tree (see `examples/std-runtime/README.md`
@@ -14,15 +16,24 @@ relative-path check.
 
 ## What is implemented, and what is not
 
-Implemented in this slice: `File::open`, `File::create`, `OpenOptions` (read, write, append,
-truncate, create, create_new), `read`, `write`, `seek`, `stream_position`, `set_len`,
-`sync_all`, `sync_data`, `try_clone` and `fs::remove_file`, with everything built on them
-(`fs::read`, `fs::write`, `read_to_string`, `BufReader`, `BufWriter`).
+Implemented: `File::open`, `File::create`, `OpenOptions` (read, write, append, truncate,
+create, create_new), `read`, `write`, `seek`, `stream_position`, `set_len`, `sync_all`,
+`sync_data`, `try_clone`, `fs::remove_file`; and, in the second slice, `fs::metadata`,
+`symlink_metadata`, `File::metadata`, `Permissions` (read-only), `fs::set_permissions` and
+`File::set_permissions`, `fs::read_dir`, `fs::create_dir` and `create_dir_all`, `fs::remove_dir`,
+`fs::remove_dir_all`, `fs::copy` and `fs::exists`, with everything built on them.
 
 Everything else in `std::fs` returns `ErrorKind::Unsupported`, which the `unsupported` mode
-checks: `metadata` (also `File::metadata`), `File::lock` and `try_lock`, `read_dir`,
-`create_dir`, `rename`, `canonicalize`, `set_permissions`, `set_times`. The next slices
-implement metadata, directories, `rename` and `std::path`.
+checks: `File::lock` and `try_lock`, `File::set_modified` and `set_times`, `rename`,
+`canonicalize`, `read_link`, `hard_link` and symbolic links. The next slice implements `rename`,
+`canonicalize`, file times and `std::path` (AROS path syntax).
+
+What the file metadata contains: the size, the type (file or directory; there is no `symlink`
+without symbolic links), the read-only flag, and one date. DOS keeps one date per object, so
+`modified()` and `accessed()` return the same value with a resolution of one second, and
+`created()` is `Unsupported`. The date is already converted from the DOS epoch (1978) by the C
+library, so `std` does not convert it: a file written now is within a second of `SystemTime::now`,
+also with the clock set to 2040 and 2100 (`times` mode with a changed clock).
 
 ## Behaviours of the C library that `std` works around
 
@@ -49,7 +60,25 @@ Each was found by this test, and each has a check that fails without the workaro
    from `remove_file` as "already gone" would leave the file behind, so `std` reports a file that
    can still be opened as busy.
 
-Also: the C library reports a DOS error that has no C equivalent as 1000 plus the code, so a full
+6. **Wrong kind of object.** The C library's `rmdir` is `DeleteFile`, so `rmdir` of a **file**
+   deletes the file, and `unlink` of an **empty directory** deletes the directory (both measured
+   on both ABIs, AROS-NX#132). `std` examines the path first and refuses with `NotADirectory` or
+   `IsADirectory`; between the check and the delete there is a race.
+7. **`rmdir` of a directory that is not empty.** On ABI-v1 it fails without setting an error, so
+   `errno` is whatever an earlier failed call left: 0, "not found" or "exists" (AROS-NX#133).
+   ABI-v11 reports "directory not empty". `std` lists the directory after a failed `rmdir` and
+   reports `DirectoryNotEmpty` if it has an entry, whatever `errno` says.
+8. **Empty path.** DOS takes `""` for the current directory, so `metadata("")` and `read_dir("")`
+   succeeded. `std` refuses an empty path with `NotFound`, as Unix does.
+9. **`Path::join` after a volume name.** `RAM:` joined with a name is `RAM:/name`, which on AROS is
+   the parent of the volume. The entries of `read_dir` build their path without a slash after a
+   colon. The path functions of `std` themselves are the next slice.
+10. **`struct stat`.** On ABI-v1 the plain `stat` has a 32-bit `st_ino`, which moves `st_mode` and
+    `st_size`; the 64-bit `stat64` has the same layout on both ABIs, so `std` uses `stat64`,
+    `lstat64`, `fstat64` and `readdir64`, with the layout checked at compile time.
+
+Also: a failure that leaves `errno` at 0 (`fstat` of `NIL:` does, AROS-NX#134) is reported as "the C
+library failed without an error code" and not as "Success". The C library reports a DOS error that has no C equivalent as 1000 plus the code, so a full
 disk, a write-protected file or a seek error reached `std` as `Uncategorized` with no text.
 `std` now maps these to kinds (`ReadOnlyFilesystem`, `PermissionDenied`, `StorageFull`,
 `DirectoryNotEmpty`, ...) and gives them a text, for example "file is write protected (DOS error
@@ -57,7 +86,7 @@ disk, a write-protected file or a seek error reached `std` as `Uncategorized` wi
 
 ## Modes and results
 
-All 15 modes pass on both ABIs: 104 checks on each, every boot on the first attempt.
+All 22 modes pass on both ABIs: 199 checks on each, every boot on the first attempt.
 
 | Mode | Checks | What it covers |
 | --- | --- | --- |
@@ -72,17 +101,28 @@ All 15 modes pass on both ABIs: 104 checks on each, every boot on the first atte
 | `dup` | 2 | `try_clone` shares the position and survives the original |
 | `unlink` | 6 | `remove_file`, missing files, a file that is open |
 | `sync` | 3 | `flush`, `sync_all`, `sync_data` |
-| `unsupported` | 7 | the calls above return `Unsupported` |
+| `unsupported` | 6 | the calls above return `Unsupported` |
 | `paths` | 5 | names with spaces and dots, `NIL:`, a file at the root of a volume, a relative path |
-| `errors` | 2 | a write to the read-only volume gives a kind and a readable message |
+| `errors` | 5 | a write, `create_dir` and `remove_file` on the read-only volume give a kind and a readable message; the volume can be listed and examined |
 | `requesters` | 2 | the window pointer of the process is the same after the calls as before |
+| `meta` | 24 | length, type, permissions, `Debug`, a directory, a volume root, missing file, volume and directory, a path through a file, the empty path in six calls, `exists`, a file that is open for writing |
+| `times` | 5 | the date of a new file is the time of the write, accessed equals modified, whole seconds, a later write gives a later date; also run with the clock at 2040 and 2100 |
+| `dirs` | 20 | `create_dir` and `create_dir_all` (existing, missing parent, over a file, trailing slash), `remove_dir` (empty, not empty after three kinds of earlier failure, missing, a file), `remove_file` on a directory |
+| `readdir` | 18 | entries with types and sizes, paths, no `.` or `..`, an entry that outlives its `ReadDir`, an empty directory, `RAM:`, 301 entries, deleting while listing, 300 listings dropped early |
+| `perm` | 13 | read-only on and off, through the path and through the handle; writing and appending to a read-only file are refused; it can still be deleted |
+| `copy` | 8 | 70,000 bytes, over a longer file, an empty file, permissions are copied, a directory and a missing file |
+| `removeall` | 5 | `remove_dir_all` of a tree of 180 files, a missing directory, a file |
 
 Observed facts that the checks do not assert (they print `INFO`):
 
 - A name component of up to 107 characters works; 108 or more is `InvalidInput`, on both ABIs
   (on `RAM:`).
 - A byte above 127 in a name passes through unchanged.
-- A path that goes through a file is `NotFound`, not `NotADirectory`.
+- A path that goes through a file is `NotFound`, not `NotADirectory` (`meta` asserts this, so a
+  change in the C library is noticed), and `create_dir_all` through a file fails with
+  `AlreadyExists`.
+- `File::create("NIL:").metadata()` fails (see above).
+- The date of a file on the delivery volume is the date of the image.
 - Opening a directory for writing, or a volume root, is `IsADirectory`. Opening a directory for
   reading succeeds, as on Unix; reading from it was not tested.
 - `ENV:name` of a variable that does not exist is `NotFound`.
@@ -94,6 +134,8 @@ Observed facts that the checks do not assert (they print `INFO`):
 | `open` flags `O_CLOEXEC`, `O_DIRECTORY`, `O_NOFOLLOW` | defined | marked "not implemented" in the SDK header; `std` uses none of them |
 | Seek past the end in the C library | extends the file, position right | extends the file, position wrong; worked around, same result as ABI-v1 |
 | `unlink` of an open file | "not found" (worked around) | "busy" |
+| `rmdir` of a directory that is not empty | no error set, stale `errno` (worked around) | "directory not empty" |
+| `struct stat` and `struct dirent` | plain `stat` has a 32-bit `st_ino` and a 1025-byte `d_name`; the 64-bit forms are the same as ABI-v11's | one layout; `fdopendir` is missing (not used) |
 
 ## Not verified
 
@@ -103,3 +145,6 @@ Observed facts that the checks do not assert (they print `INFO`):
 - Behaviour with more than one task, and file locking (`Unsupported`).
 - Whether the requesters stay off if a call is interrupted by a break.
 - Reading from a directory that was opened as a file.
+- Symbolic links (no way to create one yet), a file or directory on a volume other than `RAM:` and the
+  delivery volume, and names with characters above 127 in `read_dir`.
+- Time zones other than UTC. The C library adds the zone's offset to file dates as it does to the clock.
