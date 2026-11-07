@@ -19,7 +19,7 @@ Delivered in slices, each its own pull request.
 | --- | --- |
 | A1: `Instant`, `SystemTime` (AROS epoch converted and tested), `thread::sleep` without threads | Met, see below. |
 | A2: `std::fs` and `std::path` | Not started. |
-| A3: `HashMap` seeding with the best available entropy, quality documented | Not started. The decision is recorded in the plan: `getentropy` on ABI-v1, `RDRAND` after a `CPUID` check with the mixer as fallback on ABI-v11 (#115). |
+| A3: `HashMap` seeding with the best available entropy, quality documented | Met, see below. |
 | A4: ABI differences declared | Open until A2 and A3 are done. |
 
 ## A1: time and sleep
@@ -45,6 +45,29 @@ has the table of results. All of it was verified on both ABIs.
 - **Arithmetic** of `SystemTime` and `Instant` (carry and borrow of nanoseconds, times before
   the epoch, overflow and underflow) is the same as on Unix; 11 checks pass.
 
+## A3: random
+
+The test program is `examples/std-random` (listed as in development under #68); its README has
+the sources, the quality statement and the table of results.
+
+- **ABI-v1** uses `getentropy` (`entropy.resource`, a ChaCha20 generator reseeded on every call
+  from a software collector and `RDRAND` where present, at most 256 bytes per call).
+- **ABI-v11** has nothing to call. It uses the weak generator of the spike and, when the CPU has
+  `RDRAND` (checked with `CPUID`), mixes the instruction's output in with XOR, so a faulty
+  hardware generator cannot make the result weaker than the weak generator alone. This follows the
+  maintainer's decision of 2026-11-05; `getentropy` for the Deadwood tree is tracked in #115.
+- **Which path ran** is observable: `std` exports `__ami_rust_random_source`. On `qemu64-v1`
+  (no `RDRAND`) ABI-v1 reports `getentropy` and ABI-v11 the weak generator only; on `Haswell` ABI-v1
+  still reports `getentropy` and ABI-v11 reports the weak generator mixed with `RDRAND`.
+- **Statistics** of 64 KiB through `std::random` pass in all four cases, and a self-test shows that
+  the same statistics reject zeros, a counter, a biased stream and a repeating pattern. They do not
+  measure unpredictability, and the weak generator passes them; its weakness is that the seed is
+  predictable to someone who knows the boot time and memory layout.
+- **Across boots** (four each) the seeds and the `RandomState` hashes differ in every configuration.
+- The `RDRAND` path needed a CPU model that has the instruction. A private copy of the runner with a
+  `-cpu` option was used; the maintainer's runner always uses `qemu64-v1`, so a qualification
+  run with the current runner exercises the fallback, not `RDRAND`.
+
 ## Facts that matter later
 
 - The QEMU runner of the maintainer cannot set the virtual machine's clock. A private copy of
@@ -52,9 +75,11 @@ has the table of results. All of it was verified on both ABIs.
   runner was not changed. Without such an option the qualification run cannot repeat these
   tests.
 - `CLOCK_MONOTONIC` is 0 and `CLOCK_REALTIME` is 2 on AROS, the reverse of Linux.
+- The sporadic ABI-v1 boot fault of AROS-NX#122 showed up three times in about 70 ABI-v1 boots during the random runs, each time before the program started (no output from it, the page fault in the serial log). A rerun passed every time.
 
 ## Not verified
 
 - Time zones other than UTC, and a system whose real-time clock has never been set.
+- Random: the fallback when `getentropy` fails, the quality of `entropy.resource`'s software collector, a CPU whose `RDRAND` fails, and more than one task.
 - Sleeping from several tasks, and `nanosleep` under load.
 - Linux hosts and the authenticated pipeline.

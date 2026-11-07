@@ -17,7 +17,7 @@ subsystem on the `unsupported` fallback:
 | --- | --- |
 | `sys/alloc` | New `aros.rs` on `malloc`, `calloc`, `realloc`, `free` and `posix_memalign` |
 | `sys/io/error` | New `aros.rs`: `errno` through the C library accessor, NetBSD errno table, `strerror` |
-| `sys/random` | New `aros.rs`: weak clock and address mixing, no `getrandom` |
+| `sys/random` | New `aros.rs`: `getentropy` on ABI-v1; on ABI-v11 (which has none) the weak clock and address mixing with `RDRAND` mixed in when the CPU has it. It also exports `__ami_rust_random_source`, which a test reads to see which source was used |
 | `sys/pal` | New `aros`: `abort_internal` enters the native fatal path (`sdk_fatal`), which ends the program with return code 20; this also covers every panic under `panic = "abort"`. It also defines `rust_sdk_main`, which the native `main` calls and which runs the entry of a `fn main` program (see `examples/std-runtime/README.md`) |
 | `sys/time` | New `aros.rs`: `Instant` on `CLOCK_MONOTONIC` and `SystemTime` on `CLOCK_REALTIME`, with the 32-bit `time_t` read as unsigned so that `SystemTime` is correct until 2106 |
 | `sys/thread` | New `aros.rs`: `thread::sleep` on `nanosleep`; everything else about threads stays unsupported |
@@ -38,7 +38,7 @@ set -eu
 repo=$(pwd -P)
 work=$(mktemp -d)
 cp -R "$(rustc +0.2.0 --print sysroot)/lib/rustlib/src/rust" "$work/rust"
-echo "54749c1f882a21f296d9748acf558cdd8d8eb6ba2409dfef7d657e698a9c58e2  host/std-aros/std-aros.patch" | shasum -a 256 -c
+echo "049cd8d9609bb35d931d5da61ff2ff25a747dfcd9bbcb20ef8908c88b2c79508  host/std-aros/std-aros.patch" | shasum -a 256 -c
 patch -p1 -d "$work/rust" < host/std-aros/std-aros.patch
 ```
 

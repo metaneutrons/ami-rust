@@ -47,7 +47,9 @@ The results are the same on ABI-v1 and ABI-v11.
 | Arguments and environment | `env::args`, and `env::var`, `set_var` and `remove_var` on the DOS variables of the process. `env::vars` is always empty, because the C library cannot list them. |
 | Standard streams | Standard input, output and error. |
 | Memory | `Vec`, `String`, `HashMap` and `format!`. A single allocation of more than 4 GiB fails, because the AROS allocator misbehaves for such requests. |
-| Not yet | Time, the file system, threads (`thread::spawn` returns an error, and the synchronisation types are for one task), networking and processes. Random numbers are weak, so `HashMap` is not hardened against crafted keys. |
+| Time | `Instant`, `SystemTime` and `thread::sleep`. `SystemTime` is correct until 7 February 2106, where the C library's clock wraps. |
+| Random numbers | `HashMap` seeds and `std::random`. ABI-v1 uses the system's entropy source. ABI-v11 has none yet: it mixes a weak generator with the CPU's `RDRAND` instruction where there is one, and is weak without it, so `HashMap` there is not hardened against crafted keys. Not suitable for cryptography on either ABI. |
+| Not yet | The file system, threads (`thread::spawn` returns an error, and the synchronisation types are for one task), networking and processes. |
 
 A program that uses `std` declares `#![feature(restricted_std)]`, which keeps `std`
 on AROS visibly experimental. It also needs a locally prepared toolchain, because the
