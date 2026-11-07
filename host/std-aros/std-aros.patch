@@ -290,12 +290,656 @@ index b9ebe2d..07c5324 100644
          target_os = "windows" => unsafe { crate::sys::pal::c::ExitProcess(code as u32) },
          target_os = "xous" => crate::os::xous::ffi::exit(code as u32),
          _ => {
+diff --git a/library/std/src/sys/fs/aros.rs b/library/std/src/sys/fs/aros.rs
+new file mode 100644
+index 0000000..a5987f2
+--- /dev/null
++++ b/library/std/src/sys/fs/aros.rs
+@@ -0,0 +1,623 @@
++//! The file system of AROS through the C library (descriptors, `open`, `read`, `write`, `lseek`).
++//!
++//! Everything that is not implemented here is the `unsupported` fallback and returns
++//! `ErrorKind::Unsupported`; the list is in `docs/plans/std-m3-findings.md`.
++
++use crate::ffi::{OsString, c_int};
++use crate::sync::Arc;
++use crate::sync::atomic::{AtomicU64, Ordering};
++use crate::fmt;
++use crate::fs::TryLockError;
++use crate::hash::{Hash, Hasher};
++use crate::io::{self, BorrowedCursor, IoSlice, IoSliceMut, SeekFrom};
++use crate::path::{Path, PathBuf};
++pub use crate::sys::fs::common::Dir;
++use crate::sys::helpers::run_path_with_cstr;
++use crate::sys::pal::without_requesters;
++use crate::sys::time::SystemTime;
++use crate::sys::unsupported;
++
++pub struct File {
++    fd: c_int,
++    readable: bool,
++    writable: bool,
++    append: bool,
++    /// The position of a seek past the end of the file, or `NO_POSITION`. See `File::seek`. It is
++    /// shared with the duplicates of the handle, as the position of the descriptor is.
++    beyond_end: Arc<AtomicU64>,
++}
++
++/// No seek past the end is remembered.
++const NO_POSITION: u64 = u64::MAX;
++
++pub struct FileAttr(!);
++
++pub struct ReadDir(!);
++
++pub struct DirEntry(!);
++
++#[derive(Clone, Debug)]
++pub struct OpenOptions {
++    read: bool,
++    write: bool,
++    append: bool,
++    truncate: bool,
++    create: bool,
++    create_new: bool,
++}
++
++#[derive(Copy, Clone, Debug, Default)]
++pub struct FileTimes {}
++
++pub struct FilePermissions(!);
++
++pub struct FileType(!);
++
++#[derive(Debug)]
++pub struct DirBuilder {}
++
++impl FileAttr {
++    pub fn size(&self) -> u64 {
++        self.0
++    }
++
++    pub fn perm(&self) -> FilePermissions {
++        self.0
++    }
++
++    pub fn file_type(&self) -> FileType {
++        self.0
++    }
++
++    pub fn modified(&self) -> io::Result<SystemTime> {
++        self.0
++    }
++
++    pub fn accessed(&self) -> io::Result<SystemTime> {
++        self.0
++    }
++
++    pub fn created(&self) -> io::Result<SystemTime> {
++        self.0
++    }
++}
++
++impl Clone for FileAttr {
++    fn clone(&self) -> FileAttr {
++        self.0
++    }
++}
++
++impl FilePermissions {
++    pub fn readonly(&self) -> bool {
++        self.0
++    }
++
++    pub fn set_readonly(&mut self, _readonly: bool) {
++        self.0
++    }
++}
++
++impl Clone for FilePermissions {
++    fn clone(&self) -> FilePermissions {
++        self.0
++    }
++}
++
++impl PartialEq for FilePermissions {
++    fn eq(&self, _other: &FilePermissions) -> bool {
++        self.0
++    }
++}
++
++impl Eq for FilePermissions {}
++
++impl fmt::Debug for FilePermissions {
++    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        self.0
++    }
++}
++
++impl FileTimes {
++    pub fn set_accessed(&mut self, _t: SystemTime) {}
++    pub fn set_modified(&mut self, _t: SystemTime) {}
++}
++
++impl FileType {
++    pub fn is_dir(&self) -> bool {
++        self.0
++    }
++
++    pub fn is_file(&self) -> bool {
++        self.0
++    }
++
++    pub fn is_symlink(&self) -> bool {
++        self.0
++    }
++}
++
++impl Clone for FileType {
++    fn clone(&self) -> FileType {
++        self.0
++    }
++}
++
++impl Copy for FileType {}
++
++impl PartialEq for FileType {
++    fn eq(&self, _other: &FileType) -> bool {
++        self.0
++    }
++}
++
++impl Eq for FileType {}
++
++impl Hash for FileType {
++    fn hash<H: Hasher>(&self, _h: &mut H) {
++        self.0
++    }
++}
++
++impl fmt::Debug for FileType {
++    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        self.0
++    }
++}
++
++impl fmt::Debug for ReadDir {
++    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        self.0
++    }
++}
++
++impl Iterator for ReadDir {
++    type Item = io::Result<DirEntry>;
++
++    fn next(&mut self) -> Option<io::Result<DirEntry>> {
++        self.0
++    }
++}
++
++impl DirEntry {
++    pub fn path(&self) -> PathBuf {
++        self.0
++    }
++
++    pub fn file_name(&self) -> OsString {
++        self.0
++    }
++
++    pub fn metadata(&self) -> io::Result<FileAttr> {
++        self.0
++    }
++
++    pub fn file_type(&self) -> io::Result<FileType> {
++        self.0
++    }
++}
++
++/// The `open` flags of the AROS C library. They differ from Linux, and are the same in both
++/// SDKs for the ones used here.
++mod flag {
++    use crate::ffi::c_int;
++    pub const O_RDONLY: c_int = 0x0001;
++    pub const O_WRONLY: c_int = 0x0002;
++    pub const O_RDWR: c_int = O_RDONLY | O_WRONLY;
++    pub const O_CREAT: c_int = 0x0040;
++    pub const O_EXCL: c_int = 0x0080;
++    pub const O_TRUNC: c_int = 0x0200;
++    pub const O_APPEND: c_int = 0x0400;
++}
++
++const SEEK_SET: c_int = 0;
++const SEEK_CUR: c_int = 1;
++const SEEK_END: c_int = 2;
++
++/// `EINVAL` and `EBADF` in the numbering of the AROS C library (NetBSD's).
++const EINVAL: i32 = 22;
++const EBADF: i32 = 9;
++/// `EBUSY` in the same numbering.
++const EBUSY: i32 = 16;
++
++/// DOS takes a signed 32-bit length, so one call never moves more than this.
++const IO_LIMIT: usize = 1 << 30;
++
++mod c {
++    use crate::ffi::{c_char, c_int, c_void};
++
++    unsafe extern "C" {
++        pub fn open(path: *const c_char, flags: c_int, ...) -> c_int;
++        pub fn close(fd: c_int) -> c_int;
++        pub fn read(fd: c_int, buf: *mut c_void, count: usize) -> isize;
++        pub fn write(fd: c_int, buf: *const c_void, count: usize) -> isize;
++        pub fn lseek(fd: c_int, offset: i64, whence: c_int) -> i64;
++        pub fn ftruncate(fd: c_int, length: i64) -> c_int;
++        pub fn fsync(fd: c_int) -> c_int;
++        pub fn dup(fd: c_int) -> c_int;
++        pub fn unlink(path: *const c_char) -> c_int;
++    }
++}
++
++/// A result of a C call that is -1 on failure, as an `io::Result`.
++fn cvt<T: PartialEq + Default + Copy>(value: T, failure: T) -> io::Result<T> {
++    if value == failure { Err(io::Error::last_os_error()) } else { Ok(value) }
++}
++
++impl OpenOptions {
++    pub fn new() -> OpenOptions {
++        OpenOptions { read: false, write: false, append: false, truncate: false, create: false, create_new: false }
++    }
++
++    pub fn read(&mut self, read: bool) {
++        self.read = read;
++    }
++    pub fn write(&mut self, write: bool) {
++        self.write = write;
++    }
++    pub fn append(&mut self, append: bool) {
++        self.append = append;
++    }
++    pub fn truncate(&mut self, truncate: bool) {
++        self.truncate = truncate;
++    }
++    pub fn create(&mut self, create: bool) {
++        self.create = create;
++    }
++    pub fn create_new(&mut self, create_new: bool) {
++        self.create_new = create_new;
++    }
++
++    fn access_mode(&self) -> io::Result<c_int> {
++        match (self.read, self.write, self.append) {
++            (true, false, false) => Ok(flag::O_RDONLY),
++            (false, true, false) => Ok(flag::O_WRONLY),
++            (true, true, false) => Ok(flag::O_RDWR),
++            (false, _, true) => Ok(flag::O_WRONLY | flag::O_APPEND),
++            (true, _, true) => Ok(flag::O_RDWR | flag::O_APPEND),
++            (false, false, false) => Err(io::Error::from_raw_os_error(EINVAL)),
++        }
++    }
++
++    fn creation_mode(&self) -> io::Result<c_int> {
++        match (self.write, self.append) {
++            (true, false) => {}
++            (false, false) => {
++                if self.truncate || self.create || self.create_new {
++                    return Err(io::Error::from_raw_os_error(EINVAL));
++                }
++            }
++            (_, true) => {
++                if self.truncate && !self.create_new {
++                    return Err(io::Error::from_raw_os_error(EINVAL));
++                }
++            }
++        }
++        Ok(match (self.create, self.truncate, self.create_new) {
++            (false, false, false) => 0,
++            (true, false, false) => flag::O_CREAT,
++            (false, true, false) => flag::O_TRUNC,
++            (true, true, false) => flag::O_CREAT | flag::O_TRUNC,
++            (_, _, true) => flag::O_CREAT | flag::O_EXCL,
++        })
++    }
++}
++
++impl File {
++    pub fn open(path: &Path, opts: &OpenOptions) -> io::Result<File> {
++        let flags = opts.access_mode()? | opts.creation_mode()?;
++        run_path_with_cstr(path, &|path| {
++            // SAFETY: `path` is a valid C string. The mode is only used when the file is created.
++            let fd = without_requesters(|| unsafe { c::open(path.as_ptr(), flags, 0o666 as c_int) });
++            cvt(fd, -1).map(|fd| File {
++                fd,
++                readable: opts.read,
++                writable: opts.write || opts.append,
++                append: opts.append,
++                beyond_end: Arc::new(AtomicU64::new(NO_POSITION)),
++            })
++        })
++    }
++
++    pub fn file_attr(&self) -> io::Result<FileAttr> {
++        unsupported()
++    }
++
++    pub fn fsync(&self) -> io::Result<()> {
++        // SAFETY: `fd` is open for as long as `self` exists.
++        cvt(unsafe { c::fsync(self.fd) }, -1).map(drop)
++    }
++
++    pub fn datasync(&self) -> io::Result<()> {
++        // The C library has no `fdatasync`; `fsync` does at least what it asks for.
++        self.fsync()
++    }
++
++    pub fn lock(&self) -> io::Result<()> {
++        unsupported()
++    }
++
++    pub fn lock_shared(&self) -> io::Result<()> {
++        unsupported()
++    }
++
++    pub fn try_lock(&self) -> Result<(), TryLockError> {
++        Err(TryLockError::Error(io::Error::UNSUPPORTED_PLATFORM))
++    }
++
++    pub fn try_lock_shared(&self) -> Result<(), TryLockError> {
++        Err(TryLockError::Error(io::Error::UNSUPPORTED_PLATFORM))
++    }
++
++    pub fn unlock(&self) -> io::Result<()> {
++        unsupported()
++    }
++
++    pub fn truncate(&self, size: u64) -> io::Result<()> {
++        let size = i64::try_from(size).map_err(|_| io::Error::from_raw_os_error(EINVAL))?;
++        // SAFETY: `fd` is open for as long as `self` exists.
++        cvt(unsafe { c::ftruncate(self.fd, size) }, -1).map(drop)
++    }
++
++    pub fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
++        // DOS does not enforce the access mode of a handle, so it is enforced here.
++        if !self.readable {
++            return Err(io::Error::from_raw_os_error(EBADF));
++        }
++        // After a seek past the end there is nothing to read.
++        if self.beyond_end.load(Ordering::Relaxed) != NO_POSITION {
++            return Ok(0);
++        }
++        let count = buf.len().min(IO_LIMIT);
++        // SAFETY: `buf` is valid for `count` bytes.
++        let n = unsafe { c::read(self.fd, buf.as_mut_ptr().cast(), count) };
++        cvt(n, -1).map(|n| n as usize)
++    }
++
++    pub fn read_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
++        crate::io::default_read_vectored(|b| self.read(b), bufs)
++    }
++
++    pub fn is_read_vectored(&self) -> bool {
++        false
++    }
++
++    pub fn read_buf(&self, cursor: BorrowedCursor<'_, u8>) -> io::Result<()> {
++        crate::io::default_read_buf(|buf| self.read(buf), cursor)
++    }
++
++    pub fn write(&self, buf: &[u8]) -> io::Result<usize> {
++        if !self.writable {
++            return Err(io::Error::from_raw_os_error(EBADF));
++        }
++        if self.append {
++            // The C library only moves to the end when the file is opened, so a handle that
++            // was moved with `seek` would overwrite. Append means that every write goes to the end.
++            self.beyond_end.store(NO_POSITION, Ordering::Relaxed);
++            self.lseek(0, SEEK_END)?;
++        } else {
++            self.materialise_position()?;
++        }
++        let count = buf.len().min(IO_LIMIT);
++        // SAFETY: `buf` is valid for `count` bytes.
++        let n = unsafe { c::write(self.fd, buf.as_ptr().cast(), count) };
++        cvt(n, -1).map(|n| n as usize)
++    }
++
++    pub fn write_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
++        crate::io::default_write_vectored(|b| self.write(b), bufs)
++    }
++
++    pub fn is_write_vectored(&self) -> bool {
++        false
++    }
++
++    pub fn flush(&self) -> io::Result<()> {
++        Ok(())
++    }
++
++    fn lseek(&self, offset: i64, whence: c_int) -> io::Result<u64> {
++        // SAFETY: `fd` is open for as long as `self` exists.
++        cvt(unsafe { c::lseek(self.fd, offset, whence) }, -1).map(|position| position as u64)
++    }
++
++    /// The position of the handle, which after a seek past the end is the remembered one.
++    fn position(&self) -> io::Result<u64> {
++        match self.beyond_end.load(Ordering::Relaxed) {
++            NO_POSITION => self.lseek(0, SEEK_CUR),
++            position => Ok(position),
++        }
++    }
++
++    /// Makes a remembered position real before a write: the file is extended with zeros up to
++    /// it, as a write after a seek past the end does on other systems.
++    fn materialise_position(&self) -> io::Result<()> {
++        let position = self.beyond_end.load(Ordering::Relaxed);
++        if position == NO_POSITION {
++            return Ok(());
++        }
++        let size = self.lseek(0, SEEK_END)?;
++        if position > size {
++            // SAFETY: `fd` is open for as long as `self` exists.
++            cvt(unsafe { c::ftruncate(self.fd, position as i64) }, -1)?;
++        }
++        self.lseek(position as i64, SEEK_SET)?;
++        self.beyond_end.store(NO_POSITION, Ordering::Relaxed);
++        Ok(())
++    }
++
++    /// Seeks. A seek past the end of the file is **not** passed to the C library. For a seek past
++    /// the end the C library extends the file at once, even for a handle that can only read, so a
++    /// read-only seek would change the file, and on ABI-v11 it extends by the wrong amount
++    /// (position plus file size). The position is remembered instead, reads there return 0, and
++    /// the next write extends the file with zeros. Seeks inside the file, and from the end to
++    /// before it, are correct in the C library on both ABIs and go straight to it.
++    pub fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
++        let invalid = || io::Error::from_raw_os_error(EINVAL);
++        let target = match pos {
++            SeekFrom::End(offset) if offset <= 0 => {
++                let position = self.lseek(offset, SEEK_END)?;
++                self.beyond_end.store(NO_POSITION, Ordering::Relaxed);
++                return Ok(position);
++            }
++            SeekFrom::End(offset) => {
++                self.lseek(0, SEEK_END)?.checked_add(offset as u64).ok_or_else(invalid)?
++            }
++            SeekFrom::Start(offset) => offset,
++            SeekFrom::Current(0) => return self.position(),
++            SeekFrom::Current(offset) => {
++                self.position()?.checked_add_signed(offset).ok_or_else(invalid)?
++            }
++        };
++        if target > i64::MAX as u64 {
++            return Err(invalid());
++        }
++        let size = self.lseek(0, SEEK_END)?;
++        if target <= size {
++            self.beyond_end.store(NO_POSITION, Ordering::Relaxed);
++            self.lseek(target as i64, SEEK_SET)
++        } else {
++            self.beyond_end.store(target, Ordering::Relaxed);
++            Ok(target)
++        }
++    }
++
++    pub fn size(&self) -> Option<io::Result<u64>> {
++        // Not known without `fstat`; callers then grow their buffers as they read.
++        None
++    }
++
++    pub fn tell(&self) -> io::Result<u64> {
++        self.position()
++    }
++
++    pub fn duplicate(&self) -> io::Result<File> {
++        // SAFETY: `fd` is open for as long as `self` exists.
++        cvt(unsafe { c::dup(self.fd) }, -1).map(|fd| File {
++            fd,
++            readable: self.readable,
++            writable: self.writable,
++            append: self.append,
++            beyond_end: Arc::clone(&self.beyond_end),
++        })
++    }
++
++    pub fn set_permissions(&self, _perm: FilePermissions) -> io::Result<()> {
++        unsupported()
++    }
++
++    pub fn set_times(&self, _times: FileTimes) -> io::Result<()> {
++        unsupported()
++    }
++}
++
++impl Drop for File {
++    fn drop(&mut self) {
++        // SAFETY: `fd` was opened by this `File` and is closed only here. An error from `close`
++        // cannot be reported from a destructor.
++        unsafe { c::close(self.fd) };
++    }
++}
++
++impl DirBuilder {
++    pub fn new() -> DirBuilder {
++        DirBuilder {}
++    }
++
++    pub fn mkdir(&self, _p: &Path) -> io::Result<()> {
++        unsupported()
++    }
++}
++
++impl fmt::Debug for File {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_struct("File").field("fd", &self.fd).finish()
++    }
++}
++
++pub fn readdir(_p: &Path) -> io::Result<ReadDir> {
++    unsupported()
++}
++
++pub fn unlink(p: &Path) -> io::Result<()> {
++    run_path_with_cstr(p, &|p| {
++        // SAFETY: `p` is a valid C string.
++        let result = without_requesters(|| unsafe { c::unlink(p.as_ptr()) });
++        if result != -1 {
++            return Ok(());
++        }
++        let error = io::Error::last_os_error();
++        // On ABI-v1 deleting a file that is open fails with "object not found", although the
++        // file is there. Code that treats `NotFound` from `remove_file` as "already gone" would
++        // then leave the file behind, so a file that can still be opened is reported as busy.
++        if error.kind() == io::ErrorKind::NotFound {
++            let still_there = without_requesters(|| unsafe { c::open(p.as_ptr(), flag::O_RDONLY) });
++            if still_there != -1 {
++                // SAFETY: the descriptor was just opened here.
++                unsafe { c::close(still_there) };
++                return Err(io::Error::from_raw_os_error(EBUSY));
++            }
++        }
++        Err(error)
++    })
++}
++
++pub fn rename(_old: &Path, _new: &Path) -> io::Result<()> {
++    unsupported()
++}
++
++pub fn set_perm(_p: &Path, perm: FilePermissions) -> io::Result<()> {
++    match perm.0 {}
++}
++
++pub fn set_perm_nofollow(_p: &Path, perm: FilePermissions) -> io::Result<()> {
++    match perm.0 {}
++}
++
++pub fn set_times(_p: &Path, _times: FileTimes) -> io::Result<()> {
++    unsupported()
++}
++
++pub fn set_times_nofollow(_p: &Path, _times: FileTimes) -> io::Result<()> {
++    unsupported()
++}
++
++pub fn rmdir(_p: &Path) -> io::Result<()> {
++    unsupported()
++}
++
++pub fn remove_dir_all(_path: &Path) -> io::Result<()> {
++    unsupported()
++}
++
++pub fn exists(_path: &Path) -> io::Result<bool> {
++    unsupported()
++}
++
++pub fn readlink(_p: &Path) -> io::Result<PathBuf> {
++    unsupported()
++}
++
++pub fn symlink(_original: &Path, _link: &Path) -> io::Result<()> {
++    unsupported()
++}
++
++pub fn link(_src: &Path, _dst: &Path) -> io::Result<()> {
++    unsupported()
++}
++
++pub fn stat(_p: &Path) -> io::Result<FileAttr> {
++    unsupported()
++}
++
++pub fn lstat(_p: &Path) -> io::Result<FileAttr> {
++    unsupported()
++}
++
++pub fn canonicalize(_p: &Path) -> io::Result<PathBuf> {
++    unsupported()
++}
++
++pub fn copy(_from: &Path, _to: &Path) -> io::Result<u64> {
++    unsupported()
++}
+diff --git a/library/std/src/sys/fs/mod.rs b/library/std/src/sys/fs/mod.rs
+index b2666eb..d77d8f0 100644
+--- a/library/std/src/sys/fs/mod.rs
++++ b/library/std/src/sys/fs/mod.rs
+@@ -27,6 +27,10 @@ cfg_select! {
+ 
+         use crate::sys::path::with_native_path;
+     }
++    target_os = "aros" => {
++        mod aros;
++        use aros as imp;
++    }
+     target_os = "hermit" => {
+         mod hermit;
+         use hermit as imp;
 diff --git a/library/std/src/sys/io/error/aros.rs b/library/std/src/sys/io/error/aros.rs
 new file mode 100644
-index 0000000..00469fe
+index 0000000..b133f25
 --- /dev/null
 +++ b/library/std/src/sys/io/error/aros.rs
-@@ -0,0 +1,127 @@
+@@ -0,0 +1,197 @@
 +use crate::ffi::{CStr, c_char, c_int};
 +use crate::io::ErrorKind;
 +use crate::{fmt, io};
@@ -367,8 +1011,71 @@ index 0000000..00469fe
 +    errno == code::EINTR
 +}
 +
++/// The C library turns a DOS error that has no C equivalent into `MAX_ERRNO + code`
++/// (`MAX_ERRNO` is 1000), so a full disk or a write-protected file reaches `std` as 1223 or
++/// 1221, not as an errno.
++const MAX_ERRNO: i32 = 1000;
++
++/// The kind of a DOS error code (`ERROR_*` in `dos/dos.h`).
++fn decode_dos_error_kind(code: i32) -> io::ErrorKind {
++    use ErrorKind::*;
++    match code {
++        103 => OutOfMemory,
++        202 => ResourceBusy,
++        203 => AlreadyExists,
++        204 | 205 | 218 | 226 => NotFound,
++        207 => FileTooLarge,
++        209 | 236 => Unsupported,
++        210 | 212 | 219 => InvalidInput,
++        214 => ReadOnlyFilesystem,
++        215 => CrossesDevices,
++        216 => DirectoryNotEmpty,
++        217 => FilesystemLoop,
++        221 => StorageFull,
++        222 | 223 | 224 => PermissionDenied,
++        _ => Uncategorized,
++    }
++}
++
++/// The text of the DOS errors that `decode_dos_error_kind` knows.
++fn dos_error_text(code: i32) -> Option<&'static str> {
++    Some(match code {
++        103 => "not enough memory",
++        202 => "object in use",
++        203 => "object already exists",
++        204 => "directory not found",
++        205 => "object not found",
++        207 => "object too large",
++        209 => "packet request type unknown",
++        210 => "invalid component name",
++        211 => "invalid lock",
++        212 => "object is of the wrong type",
++        213 => "disk not validated",
++        214 => "disk is write-protected",
++        215 => "rename across devices attempted",
++        216 => "directory not empty",
++        217 => "too many levels",
++        218 => "device is not mounted",
++        219 => "seek error",
++        220 => "comment is too long",
++        221 => "disk is full",
++        222 => "object is protected from deletion",
++        223 => "file is write protected",
++        224 => "file is read protected",
++        225 => "not a valid DOS disk",
++        226 => "no disk in drive",
++        232 => "no more entries in directory",
++        233 => "object is a soft link",
++        236 => "not implemented",
++        _ => return None,
++    })
++}
++
 +pub fn decode_error_kind(errno: i32) -> io::ErrorKind {
 +    use ErrorKind::*;
++    if errno > MAX_ERRNO {
++        return decode_dos_error_kind(errno - MAX_ERRNO);
++    }
 +    match errno {
 +        code::E2BIG => ArgumentListTooLong,
 +        code::EADDRINUSE => AddrInUse,
@@ -417,6 +1124,13 @@ index 0000000..00469fe
 +// `strerror` is used. Its buffer is not thread safe, which is acceptable
 +// while `std` runs on a single task.
 +pub fn format_error(errno: i32, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++    if errno > MAX_ERRNO {
++        let code = errno - MAX_ERRNO;
++        return match dos_error_text(code) {
++            Some(text) => write!(f, "{text} (DOS error {code})"),
++            None => write!(f, "DOS error {code}"),
++        };
++    }
 +    let text = unsafe { strerror(errno as c_int) };
 +    if text.is_null() {
 +        return f.write_str("unknown error");
@@ -438,10 +1152,10 @@ index a56030f..d706282 100644
          pub use hermit::*;
 diff --git a/library/std/src/sys/pal/aros/mod.rs b/library/std/src/sys/pal/aros/mod.rs
 new file mode 100644
-index 0000000..d3dbf07
+index 0000000..7abcbda
 --- /dev/null
 +++ b/library/std/src/sys/pal/aros/mod.rs
-@@ -0,0 +1,72 @@
+@@ -0,0 +1,103 @@
 +//! The platform layer for AROS: the AROS C library and the native bridge that
 +//! the toolchain links into every program.
 +
@@ -459,6 +1173,37 @@ index 0000000..d3dbf07
 +    /// specifications of AROS rename it from `main`, which is the symbol of the
 +    /// native bridge, to this name (the target option `entry-name`).
 +    fn ami_rust_entry(argc: isize, argv: *const *const u8) -> isize;
++}
++
++/// Runs `f` with DOS requesters switched off for this process.
++///
++/// A path on a volume that is not there makes DOS open a "Please insert volume X in any
++/// drive" requester and wait for a person, so a program started from a script never
++/// returns. With the window pointer of the process set to -1, DOS fails the call with an
++/// error instead. The previous value is restored afterwards, also on a panic, so a program
++/// that wants requesters keeps them everywhere else.
++///
++/// The window pointer is set by the native bridge, which is built against the headers of each
++/// ABI. `std` must not look for the process itself: the Exec stubs of the SDK define `open`
++/// and `close`, which would replace those of the C library.
++pub fn without_requesters<T>(f: impl FnOnce() -> T) -> T {
++    unsafe extern "C" {
++        /// Sets the window pointer of the calling process and returns the previous one.
++        fn sdk_proc_window_set(window: *mut crate::ffi::c_void) -> *mut crate::ffi::c_void;
++    }
++
++    struct Restore(*mut crate::ffi::c_void);
++    impl Drop for Restore {
++        fn drop(&mut self) {
++            // SAFETY: the bridge only stores the pointer in the calling process.
++            unsafe { sdk_proc_window_set(self.0) };
++        }
++    }
++
++    // SAFETY: as above; -1 is the documented value that disables requesters.
++    let previous = unsafe { sdk_proc_window_set(usize::MAX as *mut crate::ffi::c_void) };
++    let _restore = Restore(previous);
++    f()
 +}
 +
 +/// The reason that the native diagnostic ("ami-rust fatal 2") records when

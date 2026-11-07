@@ -18,7 +18,7 @@ Delivered in slices, each its own pull request.
 | Criterion | State |
 | --- | --- |
 | A1: `Instant`, `SystemTime` (AROS epoch converted and tested), `thread::sleep` without threads | Met, see below. |
-| A2: `std::fs` and `std::path` | Not started. |
+| A2: `std::fs` and `std::path` | In progress. Slice 1 (open, read, write, seek, truncate, duplicate, remove) is met, see below. Metadata, directories, `rename` and `std::path` are open. |
 | A3: `HashMap` seeding with the best available entropy, quality documented | Met, see below. |
 | A4: ABI differences declared | Open until A2 and A3 are done. |
 
@@ -44,6 +44,36 @@ has the table of results. All of it was verified on both ABIs.
   about a millisecond. `nanosleep` is what makes a `std` program usable that only waits.
 - **Arithmetic** of `SystemTime` and `Instant` (carry and borrow of nanoseconds, times before
   the epoch, overflow and underflow) is the same as on Unix; 11 checks pass.
+
+## A2, slice 1: files
+
+The test program is `examples/std-fs` (listed as in development under #68); its README has the
+workarounds, the table of results and the ABI differences. All 15 modes (104 checks) pass on both
+ABIs, every boot on the first attempt.
+
+- **Implemented:** `File::open`, `File::create`, `OpenOptions`, `read`, `write`, `seek`,
+  `stream_position`, `set_len`, `sync_all`, `sync_data`, `try_clone`, `fs::remove_file`, and what is
+  built on them (`fs::read`, `fs::write`, `BufReader`, `BufWriter`), through the C library's
+  descriptors.
+- **Still `Unsupported`** (the unsupported fallback, one check each in the `unsupported` mode):
+  `metadata`, `File::lock` and `try_lock`, `read_dir`, `create_dir`, `rename`, `canonicalize`,
+  `set_permissions`, `set_times`. Slices 2 and 3 replace the first three groups and `rename`;
+  locking stays unsupported.
+- **Five behaviours of the C library are worked around** (details in the program's README):
+  DOS requesters that wait for a person on a missing volume, access modes that are not enforced,
+  append that does not follow a seek, a seek past the end that extends the file at once (and by the
+  wrong amount on ABI-v11), and `unlink` of an open file reporting "not found" on ABI-v1.
+- **Requesters.** `std` switches requesters off only around the calls that resolve a path and
+  restores the setting afterwards. It does so through a bridge function, `sdk_proc_window_set`,
+  because `std` must not call Exec itself: the Exec link library defines strong `open` and
+  `close`, which replace the C library's weak ones on ABI-v1 and are a duplicate-symbol link error
+  on ABI-v11. This policy is open for the maintainer's confirmation.
+- **Errors.** A DOS error with no C equivalent reaches `std` as `1000 + code`. These now map to
+  kinds and texts.
+- **Facts about the C library:** `off_t` is 64 bits on both ABIs; the `open` flags are the same in
+  both SDKs, except that `O_CLOEXEC`, `O_DIRECTORY` and `O_NOFOLLOW` are only defined on ABI-v1; a
+  name component of 108 characters or more is `InvalidInput`; the shell cannot redirect standard error.
+- **Reported upstream** (AROS-NX): the strong `open` and `close` in `libexec.a` (AROS-NX#129), the seek past the end (AROS-NX#130) and `unlink` of an open file (AROS-NX#131). The wrong seek amount on ABI-v11 is in Deadwood's tree and is not reported there; that needs the maintainer's go.
 
 ## A3: random
 

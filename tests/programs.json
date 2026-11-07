@@ -190,6 +190,11 @@
       "path": "examples/std-random",
       "issue": "#68",
       "reason": "Needs the patched standard library of host/std-aros and a toolchain with the new entry name, which the native matrix cannot prepare yet (STD-M7)."
+    },
+    {
+      "path": "examples/std-fs",
+      "issue": "#68",
+      "reason": "Needs the patched standard library of host/std-aros and a toolchain with the new entry name, which the native matrix cannot prepare yet (STD-M7)."
     }
   ],
   "compile_fail": {
