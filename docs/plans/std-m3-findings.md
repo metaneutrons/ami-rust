@@ -18,7 +18,7 @@ Delivered in slices, each its own pull request.
 | Criterion | State |
 | --- | --- |
 | A1: `Instant`, `SystemTime` (AROS epoch converted and tested), `thread::sleep` without threads | Met, see below. |
-| A2: `std::fs` and `std::path` | In progress. Slice 1 (open, read, write, seek, truncate, duplicate, remove) is met, see below. Metadata, directories, `rename` and `std::path` are open. |
+| A2: `std::fs` and `std::path` | In progress. Slice 1 (files) and slice 2 (metadata, permissions, directories, `copy`) are met, see below. `rename`, `canonicalize`, file times, links and `std::path` are open. |
 | A3: `HashMap` seeding with the best available entropy, quality documented | Met, see below. |
 | A4: ABI differences declared | Open until A2 and A3 are done. |
 
@@ -45,7 +45,7 @@ has the table of results. All of it was verified on both ABIs.
 - **Arithmetic** of `SystemTime` and `Instant` (carry and borrow of nanoseconds, times before
   the epoch, overflow and underflow) is the same as on Unix; 11 checks pass.
 
-## A2, slice 1: files
+## A2, slice 1: files (merged)
 
 The test program is `examples/std-fs` (listed as in development under #68); its README has the
 workarounds, the table of results and the ABI differences. All 15 modes (104 checks) pass on both
@@ -74,6 +74,34 @@ ABIs, every boot on the first attempt.
   both SDKs, except that `O_CLOEXEC`, `O_DIRECTORY` and `O_NOFOLLOW` are only defined on ABI-v1; a
   name component of 108 characters or more is `InvalidInput`; the shell cannot redirect standard error.
 - **Reported upstream** (AROS-NX): the strong `open` and `close` in `libexec.a` (AROS-NX#129), the seek past the end (AROS-NX#130) and `unlink` of an open file (AROS-NX#131). The wrong seek amount on ABI-v11 is in Deadwood's tree and is not reported there; that needs the maintainer's go.
+
+## A2, slice 2: metadata, permissions and directories
+
+The test program is the same, `examples/std-fs`; it now has 22 modes and 199 checks, all passing on both
+ABIs, every boot first try. What moved from slice 3 into this one: `create_dir` and `remove_dir`,
+because directories cannot be tested without making them.
+
+- **Implemented:** `metadata`, `symlink_metadata`, `File::metadata`, `Permissions` (read-only), `set_permissions`,
+  `read_dir`, `create_dir`, `create_dir_all`, `remove_dir`, `remove_dir_all`, `copy` and `exists`. The last
+  three come from the common code of `std`, which is built on the others.
+- **Still `Unsupported`:** `rename`, `canonicalize`, `read_link`, `hard_link`, symbolic links, `File::lock`,
+  `File::set_modified` and `set_times`. Slice 3.
+- **File dates need no conversion in `std`.** The DOS date (days, minutes and ticks since 1978) is converted by
+  the C library, with the offset to 1970 and the time zone, exactly as for the clock: a file written now is within
+  a second of `SystemTime::now`. `std` reads `tv_sec` as unsigned, as for `SystemTime`, so the dates are right
+  until 2106; tested with the clock at 2040 and 2100. Resolution is one second. There is one date per object, so
+  `modified` and `accessed` are the same and `created` is `Unsupported`.
+- **Layout:** the plain `struct stat` differs between the ABIs (32-bit `st_ino` on ABI-v1). The 64-bit functions
+  (`stat64`, `lstat64`, `fstat64`, `readdir64`) have the same layout on both, which a compile-time check in `std`
+  holds to.
+- **Workarounds** (the first is new in this slice; all are in the program's README): `rmdir` deletes files and
+  `unlink` deletes empty directories (AROS-NX#132); `rmdir` of a non-empty directory sets no error on ABI-v1
+  (AROS-NX#133); an empty path is the current directory in DOS and `NotFound` in `std`; `DirEntry::path` does not
+  put a slash after a volume name; a failure with `errno` 0 is no longer reported as "Success" (AROS-NX#134).
+- **Not the Unix result, and asserted so that a change is noticed:** a path through a file is `NotFound` (Unix:
+  `NotADirectory`), and `create_dir_all` through a file fails with `AlreadyExists`.
+- **DOS permissions:** read-only maps to the write bit, which the C library derives from the DOS protection flags.
+  A read-only file can still be deleted, because DOS has a separate delete right.
 
 ## A3: random
 

@@ -292,16 +292,19 @@ index b9ebe2d..07c5324 100644
          _ => {
 diff --git a/library/std/src/sys/fs/aros.rs b/library/std/src/sys/fs/aros.rs
 new file mode 100644
-index 0000000..a5987f2
+index 0000000..a8d4ed0
 --- /dev/null
 +++ b/library/std/src/sys/fs/aros.rs
-@@ -0,0 +1,623 @@
+@@ -0,0 +1,833 @@
 +//! The file system of AROS through the C library (descriptors, `open`, `read`, `write`, `lseek`).
++//!
++//! Metadata and directories use the 64-bit entry points (`stat64`, `readdir64`), because the plain
++//! `struct stat` of ABI-v1 is laid out differently from that of ABI-v11 and the 64-bit one is not.
 +//!
 +//! Everything that is not implemented here is the `unsupported` fallback and returns
 +//! `ErrorKind::Unsupported`; the list is in `docs/plans/std-m3-findings.md`.
 +
-+use crate::ffi::{OsString, c_int};
++use crate::ffi::{CStr, OsString, c_char, c_int};
 +use crate::sync::Arc;
 +use crate::sync::atomic::{AtomicU64, Ordering};
 +use crate::fmt;
@@ -309,8 +312,9 @@ index 0000000..a5987f2
 +use crate::hash::{Hash, Hasher};
 +use crate::io::{self, BorrowedCursor, IoSlice, IoSliceMut, SeekFrom};
 +use crate::path::{Path, PathBuf};
-+pub use crate::sys::fs::common::Dir;
++pub use crate::sys::fs::common::{Dir, copy, exists, remove_dir_all};
 +use crate::sys::helpers::run_path_with_cstr;
++use crate::sys::io::{errno, set_errno};
 +use crate::sys::pal::without_requesters;
 +use crate::sys::time::SystemTime;
 +use crate::sys::unsupported;
@@ -328,11 +332,104 @@ index 0000000..a5987f2
 +/// No seek past the end is remembered.
 +const NO_POSITION: u64 = u64::MAX;
 +
-+pub struct FileAttr(!);
++/// The `struct timespec` of the C library: a 32-bit `time_t` and a 64-bit `long`.
++#[repr(C)]
++#[derive(Clone, Copy)]
++struct CTimespec {
++    tv_sec: i32,
++    tv_nsec: i64,
++}
 +
-+pub struct ReadDir(!);
++/// `struct stat64`. It is laid out the same on both ABIs (the offsets were taken from the C SDK of
++/// each), which the plain `struct stat` is not: on ABI-v1 its `st_ino` is 32 bits wide and moves
++/// `st_mode` and `st_size`. The fields that `std` does not use are only there to place the others.
++#[repr(C)]
++#[derive(Clone, Copy)]
++struct Stat {
++    st_dev: u64,
++    st_ino: u64,
++    st_mode: u16,
++    st_nlink: u16,
++    st_uid: u32,
++    st_gid: u32,
++    st_pad: u32,
++    st_rdev: u64,
++    st_size: i64,
++    st_atim: CTimespec,
++    st_mtim: CTimespec,
++    st_ctim: CTimespec,
++    st_blksize: i64,
++    st_blocks: i64,
++    st_flags: u64,
++    st_gen: u64,
++}
 +
-+pub struct DirEntry(!);
++const _: () = {
++    assert!(crate::mem::size_of::<Stat>() == 128);
++    assert!(crate::mem::offset_of!(Stat, st_mode) == 16);
++    assert!(crate::mem::offset_of!(Stat, st_size) == 40);
++    assert!(crate::mem::offset_of!(Stat, st_atim) == 48);
++    assert!(crate::mem::offset_of!(Stat, st_mtim) == 64);
++};
++
++/// `struct dirent64`, identical on both ABIs.
++#[repr(C)]
++struct Dirent {
++    d_ino: u64,
++    d_off: i64,
++    d_reclen: u16,
++    d_type: u8,
++    d_name: [c_char; 256],
++}
++
++const _: () = {
++    assert!(crate::mem::offset_of!(Dirent, d_type) == 18);
++    assert!(crate::mem::offset_of!(Dirent, d_name) == 19);
++};
++
++/// The file type bits of `st_mode` and the values of `d_type`.
++const S_IFMT: u32 = 0o170000;
++const S_IFDIR: u32 = 0o040000;
++const S_IFREG: u32 = 0o100000;
++const S_IFLNK: u32 = 0o120000;
++const DT_DIR: u8 = 4;
++const DT_REG: u8 = 8;
++const DT_LNK: u8 = 10;
++
++#[derive(Clone)]
++pub struct FileAttr {
++    stat: Stat,
++}
++
++struct DirStream(*mut c::DIR);
++
++// SAFETY: the stream is only read through `&mut ReadDir`; the entries that share it only read the
++// path of the directory.
++unsafe impl Send for DirStream {}
++unsafe impl Sync for DirStream {}
++
++impl Drop for DirStream {
++    fn drop(&mut self) {
++        // SAFETY: the stream was opened by `readdir` and is closed only here.
++        unsafe { c::closedir(self.0) };
++    }
++}
++
++struct InnerReadDir {
++    stream: DirStream,
++    root: PathBuf,
++}
++
++pub struct ReadDir {
++    inner: Arc<InnerReadDir>,
++    end_of_stream: bool,
++}
++
++pub struct DirEntry {
++    dir: Arc<InnerReadDir>,
++    name: Vec<u8>,
++    d_type: u8,
++}
 +
 +#[derive(Clone, Debug)]
 +pub struct OpenOptions {
@@ -347,72 +444,69 @@ index 0000000..a5987f2
 +#[derive(Copy, Clone, Debug, Default)]
 +pub struct FileTimes {}
 +
-+pub struct FilePermissions(!);
++#[derive(Clone, PartialEq, Eq)]
++pub struct FilePermissions {
++    mode: u32,
++}
 +
-+pub struct FileType(!);
++#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
++pub struct FileType {
++    mode: u32,
++}
 +
 +#[derive(Debug)]
 +pub struct DirBuilder {}
 +
 +impl FileAttr {
 +    pub fn size(&self) -> u64 {
-+        self.0
++        self.stat.st_size as u64
 +    }
 +
 +    pub fn perm(&self) -> FilePermissions {
-+        self.0
++        FilePermissions { mode: u32::from(self.stat.st_mode) & 0o7777 }
 +    }
 +
 +    pub fn file_type(&self) -> FileType {
-+        self.0
++        FileType { mode: u32::from(self.stat.st_mode) & S_IFMT }
 +    }
 +
++    /// DOS keeps one date per file; the C library reports it as all three times, so
++    /// `modified` and `accessed` are the same, and the resolution is one second.
 +    pub fn modified(&self) -> io::Result<SystemTime> {
-+        self.0
++        let t = self.stat.st_mtim;
++        Ok(SystemTime::from_c_seconds(t.tv_sec, t.tv_nsec))
 +    }
 +
 +    pub fn accessed(&self) -> io::Result<SystemTime> {
-+        self.0
++        let t = self.stat.st_atim;
++        Ok(SystemTime::from_c_seconds(t.tv_sec, t.tv_nsec))
 +    }
 +
++    /// DOS has no creation date.
 +    pub fn created(&self) -> io::Result<SystemTime> {
-+        self.0
-+    }
-+}
-+
-+impl Clone for FileAttr {
-+    fn clone(&self) -> FileAttr {
-+        self.0
++        unsupported()
 +    }
 +}
 +
 +impl FilePermissions {
++    /// A file is read-only when it has no write bit. The C library derives the bits from the DOS
++    /// protection flags, where "write" is low-active.
 +    pub fn readonly(&self) -> bool {
-+        self.0
++        self.mode & 0o222 == 0
 +    }
 +
-+    pub fn set_readonly(&mut self, _readonly: bool) {
-+        self.0
-+    }
-+}
-+
-+impl Clone for FilePermissions {
-+    fn clone(&self) -> FilePermissions {
-+        self.0
++    pub fn set_readonly(&mut self, readonly: bool) {
++        if readonly {
++            self.mode &= !0o222;
++        } else {
++            self.mode |= 0o222;
++        }
 +    }
 +}
-+
-+impl PartialEq for FilePermissions {
-+    fn eq(&self, _other: &FilePermissions) -> bool {
-+        self.0
-+    }
-+}
-+
-+impl Eq for FilePermissions {}
 +
 +impl fmt::Debug for FilePermissions {
-+    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
-+        self.0
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_struct("FilePermissions").field("mode", &format_args!("{:#o}", self.mode)).finish()
 +    }
 +}
 +
@@ -423,49 +517,21 @@ index 0000000..a5987f2
 +
 +impl FileType {
 +    pub fn is_dir(&self) -> bool {
-+        self.0
++        self.mode == S_IFDIR
 +    }
 +
 +    pub fn is_file(&self) -> bool {
-+        self.0
++        self.mode == S_IFREG
 +    }
 +
 +    pub fn is_symlink(&self) -> bool {
-+        self.0
-+    }
-+}
-+
-+impl Clone for FileType {
-+    fn clone(&self) -> FileType {
-+        self.0
-+    }
-+}
-+
-+impl Copy for FileType {}
-+
-+impl PartialEq for FileType {
-+    fn eq(&self, _other: &FileType) -> bool {
-+        self.0
-+    }
-+}
-+
-+impl Eq for FileType {}
-+
-+impl Hash for FileType {
-+    fn hash<H: Hasher>(&self, _h: &mut H) {
-+        self.0
-+    }
-+}
-+
-+impl fmt::Debug for FileType {
-+    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
-+        self.0
++        self.mode == S_IFLNK
 +    }
 +}
 +
 +impl fmt::Debug for ReadDir {
-+    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
-+        self.0
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_tuple("ReadDir").field(&self.inner.root).finish()
 +    }
 +}
 +
@@ -473,25 +539,64 @@ index 0000000..a5987f2
 +    type Item = io::Result<DirEntry>;
 +
 +    fn next(&mut self) -> Option<io::Result<DirEntry>> {
-+        self.0
++        if self.end_of_stream {
++            return None;
++        }
++        loop {
++            // `readdir64` returns null both at the end and on an error, and only sets `errno` for
++            // the error.
++            set_errno(0);
++            // SAFETY: the stream is open for as long as `self.inner` exists.
++            let entry = unsafe { c::readdir64(self.inner.stream.0) };
++            if entry.is_null() {
++                self.end_of_stream = true;
++                return match errno() {
++                    0 => None,
++                    error => Some(Err(io::Error::from_raw_os_error(error))),
++                };
++            }
++            // SAFETY: a non-null entry is valid until the next call, and its name is a C string.
++            let (name, d_type) = unsafe {
++                (CStr::from_ptr((*entry).d_name.as_ptr()).to_bytes().to_vec(), (*entry).d_type)
++            };
++            // The C library lists `.` and `..` when it emulates Unix paths.
++            if name == b"." || name == b".." {
++                continue;
++            }
++            return Some(Ok(DirEntry { dir: Arc::clone(&self.inner), name, d_type }));
++        }
 +    }
 +}
 +
 +impl DirEntry {
 +    pub fn path(&self) -> PathBuf {
-+        self.0
++        // `Path::join` would put a "/" after a volume name ("RAM:/x"), which means the parent
++        // of the volume on AROS. A name goes directly after "\":" or "/".
++        let mut path = self.dir.root.as_os_str().as_encoded_bytes().to_vec();
++        if !matches!(path.last(), None | Some(b':') | Some(b'/')) {
++            path.push(b'/');
++        }
++        path.extend_from_slice(&self.name);
++        // SAFETY: the bytes are those of a path and of a name that DOS gave, joined by an ASCII byte.
++        PathBuf::from(unsafe { OsString::from_encoded_bytes_unchecked(path) })
 +    }
 +
 +    pub fn file_name(&self) -> OsString {
-+        self.0
++        // SAFETY: the bytes are the name that DOS gave, as `std` stores every path.
++        unsafe { OsString::from_encoded_bytes_unchecked(self.name.clone()) }
 +    }
 +
 +    pub fn metadata(&self) -> io::Result<FileAttr> {
-+        self.0
++        lstat(&self.path())
 +    }
 +
 +    pub fn file_type(&self) -> io::Result<FileType> {
-+        self.0
++        match self.d_type {
++            DT_DIR => Ok(FileType { mode: S_IFDIR }),
++            DT_REG => Ok(FileType { mode: S_IFREG }),
++            DT_LNK => Ok(FileType { mode: S_IFLNK }),
++            _ => lstat(&self.path()).map(|attr| attr.file_type()),
++        }
 +    }
 +}
 +
@@ -515,8 +620,12 @@ index 0000000..a5987f2
 +/// `EINVAL` and `EBADF` in the numbering of the AROS C library (NetBSD's).
 +const EINVAL: i32 = 22;
 +const EBADF: i32 = 9;
-+/// `EBUSY` in the same numbering.
++/// `ENOENT`, `EBUSY`, `ENOTDIR`, `EISDIR` and `ENOTEMPTY` in the same numbering.
++const ENOENT: i32 = 2;
++const ENOTEMPTY: i32 = 66;
 +const EBUSY: i32 = 16;
++const ENOTDIR: i32 = 20;
++const EISDIR: i32 = 21;
 +
 +/// DOS takes a signed 32-bit length, so one call never moves more than this.
 +const IO_LIMIT: usize = 1 << 30;
@@ -534,12 +643,48 @@ index 0000000..a5987f2
 +        pub fn fsync(fd: c_int) -> c_int;
 +        pub fn dup(fd: c_int) -> c_int;
 +        pub fn unlink(path: *const c_char) -> c_int;
++        pub fn stat64(path: *const c_char, buf: *mut super::Stat) -> c_int;
++        pub fn lstat64(path: *const c_char, buf: *mut super::Stat) -> c_int;
++        pub fn fstat64(fd: c_int, buf: *mut super::Stat) -> c_int;
++        pub fn chmod(path: *const c_char, mode: c_int) -> c_int;
++        pub fn fchmod(fd: c_int, mode: c_int) -> c_int;
++        pub fn mkdir(path: *const c_char, mode: c_int) -> c_int;
++        pub fn rmdir(path: *const c_char) -> c_int;
++        pub fn opendir(path: *const c_char) -> *mut DIR;
++        pub fn readdir64(dir: *mut DIR) -> *mut super::Dirent;
++        pub fn closedir(dir: *mut DIR) -> c_int;
++    }
++
++    /// The opaque `DIR` of the C library.
++    #[repr(C)]
++    pub struct DIR {
++        _private: [u8; 0],
++    }
++}
++
++/// Runs `f` with the path as a C string. An empty path is `NotFound`, as on Unix: DOS would take it
++/// for the current directory.
++fn with_path<T>(path: &Path, f: &dyn Fn(&CStr) -> io::Result<T>) -> io::Result<T> {
++    if path.as_os_str().is_empty() {
++        return Err(io::Error::from_raw_os_error(ENOENT));
++    }
++    run_path_with_cstr(path, f)
++}
++
++/// The error of the C call that just failed. Some failures of the C library leave `errno` as an
++/// earlier call set it, which can be 0; that would read "Success", so it is reported as it is.
++fn last_error() -> io::Error {
++    let error = io::Error::from_raw_os_error(errno());
++    if error.raw_os_error() == Some(0) {
++        io::const_error!(io::ErrorKind::Other, "the C library failed without an error code")
++    } else {
++        error
 +    }
 +}
 +
 +/// A result of a C call that is -1 on failure, as an `io::Result`.
 +fn cvt<T: PartialEq + Default + Copy>(value: T, failure: T) -> io::Result<T> {
-+    if value == failure { Err(io::Error::last_os_error()) } else { Ok(value) }
++    if value == failure { Err(last_error()) } else { Ok(value) }
 +}
 +
 +impl OpenOptions {
@@ -604,7 +749,7 @@ index 0000000..a5987f2
 +impl File {
 +    pub fn open(path: &Path, opts: &OpenOptions) -> io::Result<File> {
 +        let flags = opts.access_mode()? | opts.creation_mode()?;
-+        run_path_with_cstr(path, &|path| {
++        with_path(path, &|path| {
 +            // SAFETY: `path` is a valid C string. The mode is only used when the file is created.
 +            let fd = without_requesters(|| unsafe { c::open(path.as_ptr(), flags, 0o666 as c_int) });
 +            cvt(fd, -1).map(|fd| File {
@@ -618,7 +763,11 @@ index 0000000..a5987f2
 +    }
 +
 +    pub fn file_attr(&self) -> io::Result<FileAttr> {
-+        unsupported()
++        let mut stat = crate::mem::MaybeUninit::<Stat>::zeroed();
++        // SAFETY: \`fd\` is open for as long as \`self\` exists, and \`stat\` is writable.
++        cvt(unsafe { c::fstat64(self.fd, stat.as_mut_ptr()) }, -1)?;
++        // SAFETY: zeroed, and then written by the C library; every field is an integer.
++        Ok(FileAttr { stat: unsafe { stat.assume_init() } })
 +    }
 +
 +    pub fn fsync(&self) -> io::Result<()> {
@@ -781,8 +930,7 @@ index 0000000..a5987f2
 +    }
 +
 +    pub fn size(&self) -> Option<io::Result<u64>> {
-+        // Not known without `fstat`; callers then grow their buffers as they read.
-+        None
++        Some(self.file_attr().map(|attr| attr.size()))
 +    }
 +
 +    pub fn tell(&self) -> io::Result<u64> {
@@ -800,8 +948,9 @@ index 0000000..a5987f2
 +        })
 +    }
 +
-+    pub fn set_permissions(&self, _perm: FilePermissions) -> io::Result<()> {
-+        unsupported()
++    pub fn set_permissions(&self, perm: FilePermissions) -> io::Result<()> {
++        // SAFETY: `fd` is open for as long as `self` exists.
++        cvt(unsafe { c::fchmod(self.fd, perm.mode as c_int) }, -1).map(drop)
 +    }
 +
 +    pub fn set_times(&self, _times: FileTimes) -> io::Result<()> {
@@ -822,8 +971,11 @@ index 0000000..a5987f2
 +        DirBuilder {}
 +    }
 +
-+    pub fn mkdir(&self, _p: &Path) -> io::Result<()> {
-+        unsupported()
++    pub fn mkdir(&self, p: &Path) -> io::Result<()> {
++        with_path(p, &|p| {
++            // SAFETY: `p` is a valid C string.
++            cvt(without_requesters(|| unsafe { c::mkdir(p.as_ptr(), 0o777) }), -1).map(drop)
++        })
 +    }
 +}
 +
@@ -833,18 +985,34 @@ index 0000000..a5987f2
 +    }
 +}
 +
-+pub fn readdir(_p: &Path) -> io::Result<ReadDir> {
-+    unsupported()
++pub fn readdir(p: &Path) -> io::Result<ReadDir> {
++    with_path(p, &|path| {
++        // SAFETY: `path` is a valid C string.
++        let stream = without_requesters(|| unsafe { c::opendir(path.as_ptr()) });
++        if stream.is_null() {
++            return Err(last_error());
++        }
++        Ok(ReadDir {
++            inner: Arc::new(InnerReadDir { stream: DirStream(stream), root: p.to_path_buf() }),
++            end_of_stream: false,
++        })
++    })
 +}
 +
 +pub fn unlink(p: &Path) -> io::Result<()> {
-+    run_path_with_cstr(p, &|p| {
++    with_path(p, &|p| {
++        // The C library's `unlink` is `DeleteFile`, which also deletes an empty directory.
++        if let Ok(attr) = stat_with(p, c::lstat64) {
++            if attr.file_type().is_dir() {
++                return Err(io::Error::from_raw_os_error(EISDIR));
++            }
++        }
 +        // SAFETY: `p` is a valid C string.
 +        let result = without_requesters(|| unsafe { c::unlink(p.as_ptr()) });
 +        if result != -1 {
 +            return Ok(());
 +        }
-+        let error = io::Error::last_os_error();
++        let error = last_error();
 +        // On ABI-v1 deleting a file that is open fails with "object not found", although the
 +        // file is there. Code that treats `NotFound` from `remove_file` as "already gone" would
 +        // then leave the file behind, so a file that can still be opened is reported as busy.
@@ -864,12 +1032,15 @@ index 0000000..a5987f2
 +    unsupported()
 +}
 +
-+pub fn set_perm(_p: &Path, perm: FilePermissions) -> io::Result<()> {
-+    match perm.0 {}
++pub fn set_perm(p: &Path, perm: FilePermissions) -> io::Result<()> {
++    with_path(p, &|p| {
++        // SAFETY: `p` is a valid C string.
++        cvt(without_requesters(|| unsafe { c::chmod(p.as_ptr(), perm.mode as c_int) }), -1).map(drop)
++    })
 +}
 +
-+pub fn set_perm_nofollow(_p: &Path, perm: FilePermissions) -> io::Result<()> {
-+    match perm.0 {}
++pub fn set_perm_nofollow(_p: &Path, _perm: FilePermissions) -> io::Result<()> {
++    unsupported()
 +}
 +
 +pub fn set_times(_p: &Path, _times: FileTimes) -> io::Result<()> {
@@ -880,16 +1051,47 @@ index 0000000..a5987f2
 +    unsupported()
 +}
 +
-+pub fn rmdir(_p: &Path) -> io::Result<()> {
-+    unsupported()
++fn has_entries(path: &CStr) -> bool {
++    // SAFETY: `path` is a valid C string.
++    let stream = without_requesters(|| unsafe { c::opendir(path.as_ptr()) });
++    if stream.is_null() {
++        return false;
++    }
++    let stream = DirStream(stream);
++    loop {
++        // SAFETY: the stream is open until `stream` is dropped.
++        let entry = unsafe { c::readdir64(stream.0) };
++        if entry.is_null() {
++            return false;
++        }
++        // SAFETY: a non-null entry has a C string for a name.
++        let name = unsafe { CStr::from_ptr((*entry).d_name.as_ptr()) }.to_bytes();
++        if name != b"." && name != b".." {
++            return true;
++        }
++    }
 +}
 +
-+pub fn remove_dir_all(_path: &Path) -> io::Result<()> {
-+    unsupported()
-+}
-+
-+pub fn exists(_path: &Path) -> io::Result<bool> {
-+    unsupported()
++pub fn rmdir(p: &Path) -> io::Result<()> {
++    with_path(p, &|p| {
++        // The C library's `rmdir` is `DeleteFile`, which would delete a file.
++        let attr = stat_with(p, c::lstat64)?;
++        if !attr.file_type().is_dir() {
++            return Err(io::Error::from_raw_os_error(ENOTDIR));
++        }
++        // SAFETY: `p` is a valid C string.
++        if without_requesters(|| unsafe { c::rmdir(p.as_ptr()) }) != -1 {
++            return Ok(());
++        }
++        let error = last_error();
++        // Deleting a directory that is not empty fails on ABI-v1 without setting an error, so `errno`
++        // is whatever an earlier call left (0, or "not found"). A directory that has an entry is
++        // therefore reported as not empty, whatever `errno` says.
++        if has_entries(p) {
++            return Err(io::Error::from_raw_os_error(ENOTEMPTY));
++        }
++        Err(error)
++    })
 +}
 +
 +pub fn readlink(_p: &Path) -> io::Result<PathBuf> {
@@ -904,21 +1106,29 @@ index 0000000..a5987f2
 +    unsupported()
 +}
 +
-+pub fn stat(_p: &Path) -> io::Result<FileAttr> {
-+    unsupported()
++fn stat_with(
++    path: &CStr,
++    call: unsafe extern "C" fn(*const c_char, *mut Stat) -> c_int,
++) -> io::Result<FileAttr> {
++    let mut stat = crate::mem::MaybeUninit::<Stat>::zeroed();
++    // SAFETY: `path` is a valid C string and `stat` is writable.
++    cvt(without_requesters(|| unsafe { call(path.as_ptr(), stat.as_mut_ptr()) }), -1)?;
++    // SAFETY: zeroed, and then written by the C library; every field is an integer.
++    Ok(FileAttr { stat: unsafe { stat.assume_init() } })
 +}
 +
-+pub fn lstat(_p: &Path) -> io::Result<FileAttr> {
-+    unsupported()
++pub fn stat(p: &Path) -> io::Result<FileAttr> {
++    with_path(p, &|p| stat_with(p, c::stat64))
++}
++
++pub fn lstat(p: &Path) -> io::Result<FileAttr> {
++    with_path(p, &|p| stat_with(p, c::lstat64))
 +}
 +
 +pub fn canonicalize(_p: &Path) -> io::Result<PathBuf> {
 +    unsupported()
 +}
 +
-+pub fn copy(_from: &Path, _to: &Path) -> io::Result<u64> {
-+    unsupported()
-+}
 diff --git a/library/std/src/sys/fs/mod.rs b/library/std/src/sys/fs/mod.rs
 index b2666eb..d77d8f0 100644
 --- a/library/std/src/sys/fs/mod.rs
@@ -936,10 +1146,10 @@ index b2666eb..d77d8f0 100644
          use hermit as imp;
 diff --git a/library/std/src/sys/io/error/aros.rs b/library/std/src/sys/io/error/aros.rs
 new file mode 100644
-index 0000000..b133f25
+index 0000000..fb31bbe
 --- /dev/null
 +++ b/library/std/src/sys/io/error/aros.rs
-@@ -0,0 +1,197 @@
+@@ -0,0 +1,203 @@
 +use crate::ffi::{CStr, c_char, c_int};
 +use crate::io::ErrorKind;
 +use crate::{fmt, io};
@@ -1004,6 +1214,12 @@ index 0000000..b133f25
 +#[inline]
 +pub fn errno() -> i32 {
 +    unsafe { *errno_location() as i32 }
++}
++
++#[inline]
++pub fn set_errno(value: i32) {
++    // SAFETY: the accessor returns the address of the `errno` of the C library.
++    unsafe { *errno_location() = value as c_int };
 +}
 +
 +#[inline]
@@ -1150,6 +1366,18 @@ index a56030f..d706282 100644
      target_os = "hermit" => {
          mod hermit;
          pub use hermit::*;
+diff --git a/library/std/src/sys/io/mod.rs b/library/std/src/sys/io/mod.rs
+index b9c48e3..19abee6 100644
+--- a/library/std/src/sys/io/mod.rs
++++ b/library/std/src/sys/io/mod.rs
+@@ -49,6 +49,7 @@ pub use error::errno_location;
+         ))
+     ),
+     target_os = "wasi",
++    target_os = "aros",
+ ))]
+ pub use error::set_errno;
+ pub use error::{decode_error_kind, errno, format_error, is_interrupted};
 diff --git a/library/std/src/sys/pal/aros/mod.rs b/library/std/src/sys/pal/aros/mod.rs
 new file mode 100644
 index 0000000..7abcbda
@@ -1716,10 +1944,10 @@ index 9f4e771..4ce9610 100644
  #[doc(hidden)]
 diff --git a/library/std/src/sys/time/aros.rs b/library/std/src/sys/time/aros.rs
 new file mode 100644
-index 0000000..9a24605
+index 0000000..b1a7558
 --- /dev/null
 +++ b/library/std/src/sys/time/aros.rs
-@@ -0,0 +1,159 @@
+@@ -0,0 +1,166 @@
 +//! Time on AROS, from the clocks of the C library.
 +//!
 +//! `clock_gettime` returns a `timespec` whose `tv_sec` is a 32-bit `time_t` on both
@@ -1865,6 +2093,13 @@ index 0000000..9a24605
 +
 +    pub fn now() -> SystemTime {
 +        SystemTime { t: Timespec::now(CLOCK_REALTIME) }
++    }
++
++    /// A time from the fields of a C `timespec` (file times). `tv_sec` is read as unsigned, as
++    /// in `SystemTime::now`, so file dates are correct until 2106.
++    pub(crate) fn from_c_seconds(tv_sec: i32, tv_nsec: i64) -> SystemTime {
++        let nsec = (tv_nsec as u64).min((NSEC_PER_SEC - 1) as u64) as u32;
++        SystemTime { t: Timespec { tv_sec: tv_sec as u32 as i64, tv_nsec: nsec } }
 +    }
 +
 +    pub fn sub_time(&self, other: &SystemTime) -> Result<Duration, Duration> {

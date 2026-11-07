@@ -48,9 +48,9 @@ The results are the same on ABI-v1 and ABI-v11.
 | Standard streams | Standard input, output and error. |
 | Memory | `Vec`, `String`, `HashMap` and `format!`. A single allocation of more than 4 GiB fails, because the AROS allocator misbehaves for such requests. |
 | Time | `Instant`, `SystemTime` and `thread::sleep`. `SystemTime` is correct until 7 February 2106, where the C library's clock wraps. |
-| Files | Open, create, read, write, seek, truncate, duplicate and remove files, with `fs::read`, `fs::write`, `BufReader` and `BufWriter`. DOS requesters are switched off around path calls, so a missing volume is an error and not a wait for a person. Volumes other than `RAM:` and files above 2 GiB were not tested. |
+| Files and directories | Open, create, read, write, seek, truncate, duplicate and remove files; file metadata (size, type, one date with a resolution of one second, read-only); `read_dir`, `create_dir`, `create_dir_all`, `remove_dir`, `remove_dir_all`, `copy` and `exists`. DOS requesters are switched off around path calls, so a missing volume is an error and not a wait for a person. An empty path is an error, as on Unix. `Path` still follows Unix rules: `Path::new("RAM:").join("x")` is `RAM:/x`, which on AROS is not the same path as `RAM:x`, so build a path below a volume name with `format!`. The names that `read_dir` returns are correct. Volumes other than `RAM:` and files above 2 GiB were not tested. |
 | Random numbers | `HashMap` seeds and `std::random`. ABI-v1 uses the system's entropy source. ABI-v11 has none yet: it mixes a weak generator with the CPU's `RDRAND` instruction where there is one, and is weak without it, so `HashMap` there is not hardened against crafted keys. Not suitable for cryptography on either ABI. |
-| Not yet | File metadata, directories, `rename` and `std::path`, threads (`thread::spawn` returns an error, and the synchronisation types are for one task), networking and processes. |
+| Not yet | `rename`, `canonicalize`, symbolic links, file locks and setting file times, `std::path` for AROS paths, threads (`thread::spawn` returns an error, and the synchronisation types are for one task), networking and processes. |
 
 A program that uses `std` declares `#![feature(restricted_std)]`, which keeps `std`
 on AROS visibly experimental. It also needs a locally prepared toolchain, because the

@@ -13,7 +13,7 @@
   },
   "patch": {
     "repository_path": "host/std-aros/std-aros.patch",
-    "sha256": "3253dab543447a5ac7b762d2b6c51ff7d1e24b8f4aa6852e171622d48a571e56",
+    "sha256": "3bac3e1a4df0c87d232b300fb7dda6094e711242fc0986bfb924889f6acc142d",
     "strip": 1,
     "apply_in": "lib/rustlib/src/rust"
   },
@@ -56,7 +56,7 @@
     {
       "path": "library/std/src/sys/fs/aros.rs",
       "before_sha256": null,
-      "after_sha256": "892b23617877eab14f9432a882739c15e6bfebdcc20096af56495c740fca4367"
+      "after_sha256": "d6f0e2f667e2333ccb65862b2be17db18e75a6476c1bcaebf8b29c00a6a54538"
     },
     {
       "path": "library/std/src/sys/fs/mod.rs",
@@ -66,12 +66,17 @@
     {
       "path": "library/std/src/sys/io/error/aros.rs",
       "before_sha256": null,
-      "after_sha256": "6250da481ede75dd7933f13ba94b1567b9ec6dd6d57ea6ed7d1401c2568c508e"
+      "after_sha256": "0115ff8d4c229fe135e644f3d79adeefd36ad5f77b1d8fdb53c9f5a0e76ae309"
     },
     {
       "path": "library/std/src/sys/io/error/mod.rs",
       "before_sha256": "51d30b4298f3bdba90b02936a7b4bc9891266fe8248675fe300222e24ae915e6",
       "after_sha256": "ef9991f7f963587d4df788d6e2dc138a21f7c43506b84fba5b3f6ce1aa211fa1"
+    },
+    {
+      "path": "library/std/src/sys/io/mod.rs",
+      "before_sha256": "a48fe98f5e49eeecd2c31b5a3846c025750ce93a077a00581c1602e69cbd0cec",
+      "after_sha256": "7c2d3e2463db8441703862be11c0aed4a1646c854f7827657bb3600ba246c84a"
     },
     {
       "path": "library/std/src/sys/pal/aros/mod.rs",
@@ -146,7 +151,7 @@
     {
       "path": "library/std/src/sys/time/aros.rs",
       "before_sha256": null,
-      "after_sha256": "c27645fff482621502aa2ad86261a0e79927a489876baa3eff26d7b4b2865022"
+      "after_sha256": "99892677778c65211b05452be3ca0a2e58162b3e60581b90ac0a7ad5c2dec2d2"
     },
     {
       "path": "library/std/src/sys/time/mod.rs",
