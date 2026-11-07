@@ -64,16 +64,16 @@ the sources, the quality statement and the table of results.
   measure unpredictability, and the weak generator passes them; its weakness is that the seed is
   predictable to someone who knows the boot time and memory layout.
 - **Across boots** (four each) the seeds and the `RandomState` hashes differ in every configuration.
-- The `RDRAND` path needed a CPU model that has the instruction. A private copy of the runner with a
-  `-cpu` option was used; the maintainer's runner always uses `qemu64-v1`, so a qualification
-  run with the current runner exercises the fallback, not `RDRAND`.
+- The `RDRAND` path needs a CPU model that has the instruction: the runner option `--cpu Haswell`
+  (added to the runner on 2026-11-07; the default stays `qemu64-v1`, the qualified profile, which has
+  no `RDRAND`). A qualification run with the default exercises the fallback, not `RDRAND`, so the
+  matrix of the `std` release needs a run with a CPU that has it.
 
 ## Facts that matter later
 
-- The QEMU runner of the maintainer cannot set the virtual machine's clock. A private copy of
-  the runner with one added option was used for the dates beyond 2038; the maintainer's
-  runner was not changed. Without such an option the qualification run cannot repeat these
-  tests.
+- The dates beyond 2038 need the runner option `--rtc base=...,clock=vm` (added to the runner on
+  2026-11-07; without it the guest uses the host clock). Both options are recorded in the run's
+  `qemu-command.json`, and a result obtained with either is not a qualification result.
 - `CLOCK_MONOTONIC` is 0 and `CLOCK_REALTIME` is 2 on AROS, the reverse of Linux.
 - The sporadic ABI-v1 boot fault of AROS-NX#122 showed up three times in about 70 ABI-v1 boots during the random runs, each time before the program started (no output from it, the page fault in the serial log). A rerun passed every time.
 
