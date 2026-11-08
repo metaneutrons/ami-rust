@@ -204,5 +204,5 @@ Observed facts that the checks do not assert (they print `INFO`):
   delivery volume, and names with characters above 127 in `read_dir`.
 - Time zones other than UTC. The C library adds the zone's offset to file dates as it does to the clock;
   by its source, `utimes` does not subtract it, so a date set in another zone would read back shifted
-  (AROS-NX#137).
+  (from reading the source; not reproduced and not reported).
 - `rename` to a second writable volume (only the read-only delivery volume was available).

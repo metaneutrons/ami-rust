@@ -144,7 +144,7 @@ The test program is `examples/std-fs`, now 25 modes and 278 checks, all passing 
 - **File dates:** `utimes` is exact from 1978 to 2106 on both ABIs, also for directories and open files. DOS sets the
   date of a written file to "now" when it is closed, so `std` sets a date given through a writing handle again after
   the last duplicate is closed, unless the file was written after it. By the source, `utimes` does not undo the
-  time-zone offset that `stat` adds (AROS-NX#137); only UTC was tested.
+  time-zone offset that `stat` adds; that is from reading the code, not tested (only UTC could be run), and not reported.
 - **`File::set_times`** has no `futimes` to use: the file keeps its absolute path from `open`. That stays valid,
   because DOS does not delete an open file; it could be renamed while open.
 
