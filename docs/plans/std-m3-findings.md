@@ -13,6 +13,8 @@ the pinned ABI-v1 and ABI-v11 images.
 
 ## Status
 
+STD-M3 is complete: all four criteria are met and every slice is merged (#120, #121, #123, #125, #126, #127, #128). Its test programs stay in development under STD-M7 (#72), which builds them in the native matrix.
+
 Delivered in slices, each its own pull request.
 
 | Criterion | State |
@@ -24,7 +26,7 @@ Delivered in slices, each its own pull request.
 
 ## A1: time and sleep
 
-The test program is `examples/std-time` (listed as in development under #68); its README
+The test program is `examples/std-time` (listed as in development under #72, STD-M7); its README
 has the table of results. All of it was verified on both ABIs.
 
 - **The epoch.** The plan expected that the AROS epoch (1 January 1978) had to be converted.
@@ -47,7 +49,7 @@ has the table of results. All of it was verified on both ABIs.
 
 ## A2, slice 1: files (merged)
 
-The test program is `examples/std-fs` (listed as in development under #68); its README has the
+The test program is `examples/std-fs` (listed as in development under #72, STD-M7); its README has the
 workarounds, the table of results and the ABI differences. All 15 modes (104 checks) pass on both
 ABIs, every boot on the first attempt.
 
@@ -107,7 +109,7 @@ because directories cannot be tested without making them.
 
 ## A2, slice 3a: paths and the current directory (merged)
 
-The test program is `examples/std-path` (listed as in development under #68): 8 modes, 154 checks, all passing on
+The test program is `examples/std-path` (listed as in development under #72, STD-M7): 8 modes, 154 checks, all passing on
 both ABIs. Slice 3 was split: `rename`, `canonicalize` and file times are slice 3b, because `rename` in the C library
 deletes the destination before it renames and needs its own care.
 
@@ -127,7 +129,7 @@ deletes the destination before it renames and needs its own care.
 - **Also:** `temp_dir()` is `T:`; `split_paths` and `join_paths` use `;`; `home_dir()` is `None`; `current_exe()` is
   `Unsupported`. `DirEntry::path` now uses `Path::join`.
 
-## A2, slice 3b: rename, canonicalize and file dates
+## A2, slice 3b: rename, canonicalize and file dates (merged)
 
 The test program is `examples/std-fs`, now 25 modes and 278 checks, all passing on both ABIs.
 
@@ -152,7 +154,7 @@ With this slice STD-M3 meets A1 to A4.
 
 ## A3: random
 
-The test program is `examples/std-random` (listed as in development under #68); its README has
+The test program is `examples/std-random` (listed as in development under #72, STD-M7); its README has
 the sources, the quality statement and the table of results.
 
 - **ABI-v1** uses `getentropy` (`entropy.resource`, a ChaCha20 generator reseeded on every call

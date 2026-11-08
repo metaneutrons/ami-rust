@@ -6,7 +6,7 @@ output, and whether the seeds of a `HashMap` differ from boot to boot. It goes t
 behaviour per run, chosen by the first argument. Like the other `std` programs it is not
 a workspace member: it needs the patched `std` of `host/std-aros/` and a toolchain with the new
 target specifications (see `examples/std-runtime/README.md`). It is listed as in development
-under #68 because the native matrix cannot build it yet.
+under #72 (STD-M7) because the native matrix cannot build it yet.
 
 ## Where the randomness comes from
 
