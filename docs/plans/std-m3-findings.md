@@ -18,7 +18,7 @@ Delivered in slices, each its own pull request.
 | Criterion | State |
 | --- | --- |
 | A1: `Instant`, `SystemTime` (AROS epoch converted and tested), `thread::sleep` without threads | Met, see below. |
-| A2: `std::fs` and `std::path` | In progress. Slice 1 (files) and slice 2 (metadata, permissions, directories, `copy`) are met, see below. `rename`, `canonicalize`, file times, links and `std::path` are open. |
+| A2: `std::fs` and `std::path` | In progress. Slice 1 (files), slice 2 (metadata, permissions, directories, `copy`) and slice 3a (`std::path`, current directory, `.` and `..`) are met, see below. Slice 3b (`rename`, `canonicalize`, file times) is open. |
 | A3: `HashMap` seeding with the best available entropy, quality documented | Met, see below. |
 | A4: ABI differences declared | Open until A2 and A3 are done. |
 
@@ -77,7 +77,7 @@ ABIs, every boot on the first attempt.
   name component of 108 characters or more is `InvalidInput`; the shell cannot redirect standard error.
 - **Reported upstream** (AROS-NX): the strong `open` and `close` in `libexec.a` (AROS-NX#129), the seek past the end (AROS-NX#130) and `unlink` of an open file (AROS-NX#131). The wrong seek amount on ABI-v11 is in Deadwood's tree and is not reported there; that needs the maintainer's go.
 
-## A2, slice 2: metadata, permissions and directories
+## A2, slice 2: metadata, permissions and directories (merged)
 
 The test program is the same, `examples/std-fs`; it now has 22 modes and 199 checks, all passing on both
 ABIs, every boot first try. What moved from slice 3 into this one: `create_dir` and `remove_dir`,
@@ -104,6 +104,28 @@ because directories cannot be tested without making them.
   `NotADirectory`), and `create_dir_all` through a file fails with `AlreadyExists`.
 - **DOS permissions:** read-only maps to the write bit, which the C library derives from the DOS protection flags.
   A read-only file can still be deleted, because DOS has a separate delete right.
+
+## A2, slice 3a: paths and the current directory
+
+The test program is `examples/std-path` (listed as in development under #68): 8 modes, 154 checks, all passing on
+both ABIs. Slice 3 was split: `rename`, `canonicalize` and file times are slice 3b, because `rename` in the C library
+deletes the destination before it renames and needs its own care.
+
+- **The volume is the prefix.** `std` reports `RAM:` as `Prefix::DeviceNS("RAM:")`, and a path with a volume is absolute.
+  Two lines in `path.rs`, under `cfg!(target_os = "aros")`, make the prefix exactly the volume name and let it be followed
+  directly by the path, as a Windows drive is. That fixes `Path::new("RAM:").join("x")`, which was `RAM:/x` (the parent of
+  the volume in DOS), and gives `parent`, `file_name`, `ancestors`, `strip_prefix` and `pop` the AROS meaning. No new
+  public type was needed.
+- **`.` and `..` do not exist in DOS**, on either ABI: `RAM:x/.`, `RAM:x/..`, `./file` and `../file` are all "not found".
+  Rust code uses them constantly, so `std` resolves them lexically before every path call (`to_dos_path`): a leading `..`
+  becomes the DOS parent `/`, `..` at a volume root stays at the root. A path without them passes unchanged. Lexical means
+  that `missing/../file` finds `file`, which Unix would refuse.
+- **What stays DOS:** a leading `/` is the parent and `:x` is the root of the current volume; `path::absolute` resolves both.
+  Two slashes in a row collapse in `Path`, as on Unix, where DOS would read them as the parent.
+- **The current directory** is the volume's real name: after `CD RAM:x`, `current_dir()` is `RAM Disk:x`. `set_current_dir`
+  refuses a file (DOS would lock it and make it the current directory) and a missing volume fails at once.
+- **Also:** `temp_dir()` is `T:`; `split_paths` and `join_paths` use `;`; `home_dir()` is `None`; `current_exe()` is
+  `Unsupported`. `DirEntry::path` now uses `Path::join`.
 
 ## A3: random
 

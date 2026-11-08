@@ -13,7 +13,7 @@
   },
   "patch": {
     "repository_path": "host/std-aros/std-aros.patch",
-    "sha256": "10a4c7740b72b88af308d0068bae174fd337f944d986a9b7da2fff6934ee2ea7",
+    "sha256": "e2d1ca2fa2dc507bf43c2b877906f998951c5d87d3bd3a1b7094e93cae01600a",
     "strip": 1,
     "apply_in": "lib/rustlib/src/rust"
   },
@@ -32,6 +32,11 @@
       "path": "library/std/src/os/mod.rs",
       "before_sha256": "cb29e8073290ba65979e7c7722d1eec3b96889e34f93a15c97b852f749576ee8",
       "after_sha256": "3d20e977ac6acc165880eb869a6309243abba6b7fc839a0d9586317bbd9e5683"
+    },
+    {
+      "path": "library/std/src/path.rs",
+      "before_sha256": "e45b219349df99723b665cbaac58c11492afa58eec707ea01eabf24569ce1489",
+      "after_sha256": "e23066026914b54ea8d2010582b68c3c61bf45a765158d8c12ea66bb81d576c8"
     },
     {
       "path": "library/std/src/sys/alloc/aros.rs",
@@ -71,7 +76,7 @@
     {
       "path": "library/std/src/sys/fs/aros.rs",
       "before_sha256": null,
-      "after_sha256": "d6f0e2f667e2333ccb65862b2be17db18e75a6476c1bcaebf8b29c00a6a54538"
+      "after_sha256": "d9f79a16fec4f668293e94e64f397ae610d68bf5b0200f72efc6a00094a26dcd"
     },
     {
       "path": "library/std/src/sys/fs/mod.rs",
@@ -102,6 +107,26 @@
       "path": "library/std/src/sys/pal/mod.rs",
       "before_sha256": "251dee50eff49b81ae5283ffd9871635dc63c316e0156a0f6f69672657ddbec3",
       "after_sha256": "1ecaef1b805b562815010f7afd0204ec581855ad0a9f90f853af7cbfeb818729"
+    },
+    {
+      "path": "library/std/src/sys/path/aros.rs",
+      "before_sha256": null,
+      "after_sha256": "4b6ca9ee6672728bcc0a44dd702caf80c77119da4e1c3053aff0580a9b5e6d22"
+    },
+    {
+      "path": "library/std/src/sys/path/mod.rs",
+      "before_sha256": "fa0ba10212457cf7f4601254a0d4aef627d01a4552edb4c61ac55b596a4e7760",
+      "after_sha256": "7a547e075a28bd196b9d7f66e83e8c0ac1e2e27bef22fc9e5b5e61c7330f653b"
+    },
+    {
+      "path": "library/std/src/sys/paths/aros.rs",
+      "before_sha256": null,
+      "after_sha256": "d4907791ebdf5adb54730da4d5ecbbfeace3228ce1d8877381110fbb81d837a5"
+    },
+    {
+      "path": "library/std/src/sys/paths/mod.rs",
+      "before_sha256": "7f190fe3416ec62ef5959b8c053a10a2683c17f45430d3d7e1c735a7e442332b",
+      "after_sha256": "44623eea52d4dd366849d7579d57b78512b3d4927acd410ee0708ef6dfff431c"
     },
     {
       "path": "library/std/src/sys/random/aros.rs",

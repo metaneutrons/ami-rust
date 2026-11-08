@@ -84,6 +84,30 @@ index 8068f92..24992e8 100644
  #[cfg(target_os = "android")]
  pub mod android;
  #[cfg(target_os = "cygwin")]
+diff --git a/library/std/src/path.rs b/library/std/src/path.rs
+index fe72ad4..8d9e190 100644
+--- a/library/std/src/path.rs
++++ b/library/std/src/path.rs
+@@ -210,6 +210,8 @@ impl<'a> Prefix<'a> {
+             }
+             VerbatimDisk(_) => 6,
+             UNC(x, y) => 2 + os_str_len(x) + if os_str_len(y) > 0 { 1 + os_str_len(y) } else { 0 },
++            // On AROS the prefix of `RAM:T/x` is the volume with its colon, `RAM:`, and nothing is added.
++            DeviceNS(x) if cfg!(target_os = "aros") => os_str_len(x),
+             DeviceNS(x) => 4 + os_str_len(x),
+             Disk(_) => 2,
+         }
+@@ -240,7 +242,9 @@ impl<'a> Prefix<'a> {
+ 
+     #[inline]
+     fn is_drive(&self) -> bool {
+-        matches!(*self, Prefix::Disk(_))
++        // An AROS volume (`RAM:`) is followed directly by the path, like `C:` on Windows, and
++        // `std` reports it as `DeviceNS`.
++        matches!(*self, Prefix::Disk(_)) || (cfg!(target_os = "aros") && matches!(*self, Prefix::DeviceNS(_)))
+     }
+ 
+     #[inline]
 diff --git a/library/std/src/sys/alloc/aros.rs b/library/std/src/sys/alloc/aros.rs
 new file mode 100644
 index 0000000..f83b37b
@@ -378,10 +402,10 @@ index b9ebe2d..07c5324 100644
          _ => {
 diff --git a/library/std/src/sys/fs/aros.rs b/library/std/src/sys/fs/aros.rs
 new file mode 100644
-index 0000000..a8d4ed0
+index 0000000..579e30d
 --- /dev/null
 +++ b/library/std/src/sys/fs/aros.rs
-@@ -0,0 +1,833 @@
+@@ -0,0 +1,826 @@
 +//! The file system of AROS through the C library (descriptors, `open`, `read`, `write`, `lseek`).
 +//!
 +//! Metadata and directories use the 64-bit entry points (`stat64`, `readdir64`), because the plain
@@ -656,15 +680,8 @@ index 0000000..a8d4ed0
 +
 +impl DirEntry {
 +    pub fn path(&self) -> PathBuf {
-+        // `Path::join` would put a "/" after a volume name ("RAM:/x"), which means the parent
-+        // of the volume on AROS. A name goes directly after "\":" or "/".
-+        let mut path = self.dir.root.as_os_str().as_encoded_bytes().to_vec();
-+        if !matches!(path.last(), None | Some(b':') | Some(b'/')) {
-+            path.push(b'/');
-+        }
-+        path.extend_from_slice(&self.name);
-+        // SAFETY: the bytes are those of a path and of a name that DOS gave, joined by an ASCII byte.
-+        PathBuf::from(unsafe { OsString::from_encoded_bytes_unchecked(path) })
++        // `Path::join` knows that a name goes directly after a volume (`RAM:` and `x` give `RAM:x`).
++        self.dir.root.join(self.file_name())
 +    }
 +
 +    pub fn file_name(&self) -> OsString {
@@ -754,7 +771,7 @@ index 0000000..a8d4ed0
 +    if path.as_os_str().is_empty() {
 +        return Err(io::Error::from_raw_os_error(ENOENT));
 +    }
-+    run_path_with_cstr(path, f)
++    run_path_with_cstr(&crate::sys::path::to_dos_path(path), f)
 +}
 +
 +/// The error of the C call that just failed. Some failures of the C library leave `errno` as an
@@ -1608,6 +1625,311 @@ index 88d9d42..ed2f54c 100644
      _ => {
          mod unsupported;
          pub use self::unsupported::*;
+diff --git a/library/std/src/sys/path/aros.rs b/library/std/src/sys/path/aros.rs
+new file mode 100644
+index 0000000..9fb2cd7
+--- /dev/null
++++ b/library/std/src/sys/path/aros.rs
+@@ -0,0 +1,127 @@
++//! Paths on AROS: `volume:dir/dir/name`.
++//!
++//! A path starts with the name of a volume or an assign and a colon (`RAM:`, `SYS:`, `T:`) or is
++//! relative to the current directory. `/` separates the names, and DOS also reads a leading `/` as "the
++//! parent directory" and `:` alone as "the root of the current volume".
++//!
++//! `std` reports the volume with its colon as the prefix of the path, in the form of
++//! `Prefix::DeviceNS` (`Path::new("RAM:T/x").components()` starts with `Prefix(RAM:)`), and like the
++//! drive of Windows (`C:`) it is followed directly by the path: `Path::new("RAM:").join("x")` is
++//! `RAM:x`. A path with a volume is absolute. What `std` does not model: DOS reads two slashes in a
++//! row as "up one directory", `Path` collapses them as on Unix.
++
++use crate::borrow::Cow;
++use crate::ffi::{OsStr, OsString};
++use crate::path::{Component, Path, PathBuf, Prefix};
++use crate::{env, io};
++
++path_separator_bytes!(b'/');
++
++#[inline]
++pub const fn is_verbatim_sep(b: u8) -> bool {
++    is_sep_byte(b)
++}
++
++/// The volume of a path: the text up to the first colon, if no slash comes before it.
++pub fn parse_prefix(path: &OsStr) -> Option<Prefix<'_>> {
++    let bytes = path.as_encoded_bytes();
++    let end = bytes.iter().position(|&b| b == b':' || b == b'/')?;
++    if bytes[end] == b':' && end > 0 {
++        // SAFETY: cut after an ASCII byte of a valid encoding.
++        Some(Prefix::DeviceNS(unsafe { OsStr::from_encoded_bytes_unchecked(&bytes[..=end]) }))
++    } else {
++        None
++    }
++}
++
++pub const HAS_PREFIXES: bool = true;
++
++/// The path as DOS reads it. DOS knows neither `.` nor `..` (a name of that kind is "not found"; the
++/// parent directory is a leading `/`), and Rust programs use both all the time, so `std` resolves them
++/// before a path goes to the C library: `.` and empty names are dropped, `..` removes the name before
++/// it, and a `..` with nothing before it in a relative path becomes a leading `/` (the parent in DOS). At
++/// the root of a volume `..` stays at the root. This is lexical, as in `path::absolute`: it does not
++/// look at the file system, so a link or a name that does not exist is not noticed. A leading
++/// slash is the user's own DOS "parent" and stays. A path with none of these is passed unchanged.
++pub(crate) fn to_dos_path(path: &Path) -> Cow<'_, Path> {
++    let bytes = path.as_os_str().as_encoded_bytes();
++    let volume = match parse_prefix(path.as_os_str()) {
++        Some(Prefix::DeviceNS(v)) => v.as_encoded_bytes().len(),
++        _ => 0,
++    };
++    let leading = if volume == 0 { bytes.iter().take_while(|&&b| b == b'/').count() } else { 0 };
++    let rest = &bytes[volume + leading..];
++    // A single trailing slash is fine; an empty name anywhere else, `.` and `..` are not.
++    let trimmed = rest.strip_suffix(b"/").unwrap_or(rest);
++    let plain = trimmed.is_empty()
++        || trimmed.split(|&b| b == b'/').all(|part| !part.is_empty() && part != b"." && part != b"..");
++    if plain {
++        return Cow::Borrowed(path);
++    }
++    let mut names: Vec<&[u8]> = Vec::new();
++    let mut parents = leading;
++    for part in rest.split(|&b| b == b'/') {
++        match part {
++            b"" | b"." => {}
++            b".." => {
++                if names.pop().is_none() && volume == 0 {
++                    parents += 1;
++                }
++            }
++            name => names.push(name),
++        }
++    }
++    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
++    out.extend_from_slice(&bytes[..volume]);
++    out.resize(volume + parents, b'/');
++    for (i, name) in names.iter().enumerate() {
++        if i > 0 {
++            out.push(b'/');
++        }
++        out.extend_from_slice(name);
++    }
++    // SAFETY: pieces of a valid encoding joined by an ASCII byte.
++    Cow::Owned(PathBuf::from(unsafe { OsString::from_encoded_bytes_unchecked(out) }))
++}
++
++/// A path that names its volume.
++pub(crate) fn is_absolute(path: &Path) -> bool {
++    path.prefix().is_some()
++}
++
++/// Makes a path absolute without asking the file system.
++///
++/// A relative path goes below the current directory. DOS also knows paths that start with a colon (the
++/// root of the current volume) and with slashes (one parent directory for each); both are resolved
++/// here. `.` is dropped and `..` is kept, a trailing slash is not.
++pub(crate) fn absolute(path: &Path) -> io::Result<PathBuf> {
++    let bytes = path.as_os_str().as_encoded_bytes();
++    if bytes.is_empty() {
++        return Err(io::const_error!(io::ErrorKind::InvalidInput, "cannot make an empty path absolute"));
++    }
++    let mut base = PathBuf::new();
++    let mut rest = path;
++    let owned;
++    if !is_absolute(path) {
++        let cwd = env::current_dir()?;
++        if bytes[0] == b':' {
++            // The root of the current volume.
++            if let Some(Component::Prefix(volume)) = cwd.components().next() {
++                base.push(volume.as_os_str());
++            }
++            // SAFETY: cut after an ASCII byte of a valid encoding.
++            owned = PathBuf::from(unsafe { OsStr::from_encoded_bytes_unchecked(&bytes[1..]) });
++            rest = &owned;
++        } else {
++            let parents = bytes.iter().take_while(|&&b| b == b'/').count();
++            base = cwd;
++            for _ in 0..parents {
++                if let Some(parent) = base.parent() {
++                    base = parent.to_path_buf();
++                }
++            }
++        }
++    }
++    base.extend(rest.components().filter(|c| !matches!(c, Component::RootDir | Component::CurDir)));
++    Ok(base)
++}
+diff --git a/library/std/src/sys/path/mod.rs b/library/std/src/sys/path/mod.rs
+index bbb7577..47ff73b 100644
+--- a/library/std/src/sys/path/mod.rs
++++ b/library/std/src/sys/path/mod.rs
+@@ -35,6 +35,10 @@ cfg_select! {
+         mod uefi;
+         pub use uefi::*;
+     }
++    target_os = "aros" => {
++        mod aros;
++        pub use aros::*;
++    }
+     target_os = "cygwin" => {
+         mod cygwin;
+         mod windows_prefix;
+diff --git a/library/std/src/sys/paths/aros.rs b/library/std/src/sys/paths/aros.rs
+new file mode 100644
+index 0000000..cf1a09b
+--- /dev/null
++++ b/library/std/src/sys/paths/aros.rs
+@@ -0,0 +1,136 @@
++//! The current directory, the temporary directory and path lists on AROS.
++
++use crate::ffi::{CStr, OsStr, OsString, c_char, c_int};
++use crate::path::{self, PathBuf};
++use crate::sys::helpers::run_path_with_cstr;
++use crate::sys::io::errno;
++use crate::sys::pal::without_requesters;
++use crate::{fmt, io, slice};
++
++/// The separator of a list of paths. A colon is part of a volume name here, so it is the semicolon.
++const PATH_SEPARATOR: u8 = b';';
++
++/// `ERANGE`, `ENOENT` and `ENOTDIR` in the numbering of the C library.
++const ERANGE: i32 = 34;
++const ENOENT: i32 = 2;
++const ENOTDIR: i32 = 20;
++
++mod c {
++    use crate::ffi::{c_char, c_int};
++
++    unsafe extern "C" {
++        pub fn getcwd(buf: *mut c_char, size: usize) -> *mut c_char;
++        pub fn chdir(path: *const c_char) -> c_int;
++    }
++}
++
++/// The error of the C call that just failed; `errno` can be 0 (see `sys::fs`).
++fn last_error() -> io::Error {
++    match errno() {
++        0 => io::const_error!(io::ErrorKind::Other, "the C library failed without an error code"),
++        error => io::Error::from_raw_os_error(error),
++    }
++}
++
++pub fn getcwd() -> io::Result<PathBuf> {
++    let mut buf: Vec<u8> = Vec::with_capacity(512);
++    loop {
++        // SAFETY: the buffer has `capacity` writable bytes.
++        let ptr = unsafe { c::getcwd(buf.as_mut_ptr().cast::<c_char>(), buf.capacity()) };
++        if !ptr.is_null() {
++            // SAFETY: the C library wrote a C string into the buffer.
++            let len = unsafe { CStr::from_ptr(buf.as_ptr().cast::<c_char>()) }.to_bytes().len();
++            // SAFETY: `len` bytes were initialised by the call.
++            unsafe { buf.set_len(len) };
++            buf.shrink_to_fit();
++            // SAFETY: the name is what DOS gave, as `std` stores every path.
++            return Ok(PathBuf::from(unsafe { OsString::from_encoded_bytes_unchecked(buf) }));
++        }
++        if errno() != ERANGE {
++            return Err(last_error());
++        }
++        // Require more space than the current capacity.
++        let cap = buf.capacity();
++        buf.reserve(cap * 2);
++    }
++}
++
++pub fn chdir(p: &path::Path) -> io::Result<()> {
++    if p.as_os_str().is_empty() {
++        return Err(io::Error::from_raw_os_error(ENOENT));
++    }
++    // DOS locks a file as willingly as a directory, and the current directory would then be a file.
++    if !crate::sys::fs::metadata(p)?.file_type().is_dir() {
++        return Err(io::Error::from_raw_os_error(ENOTDIR));
++    }
++    let result = run_path_with_cstr(&crate::sys::path::to_dos_path(p), &|p| {
++        // SAFETY: `p` is a valid C string.
++        Ok(without_requesters(|| unsafe { c::chdir(p.as_ptr()) }))
++    })?;
++    if result == 0 { Ok(()) } else { Err(last_error()) }
++}
++
++pub struct SplitPaths<'a> {
++    parts: slice::Split<'a, u8, fn(&u8) -> bool>,
++}
++
++pub fn split_paths(unparsed: &OsStr) -> SplitPaths<'_> {
++    fn is_separator(&b: &u8) -> bool {
++        b == PATH_SEPARATOR
++    }
++    SplitPaths { parts: unparsed.as_encoded_bytes().split(is_separator as fn(&u8) -> bool) }
++}
++
++impl<'a> Iterator for SplitPaths<'a> {
++    type Item = PathBuf;
++
++    fn next(&mut self) -> Option<PathBuf> {
++        // SAFETY: split at an ASCII byte of a valid encoding.
++        self.parts.next().map(|part| PathBuf::from(unsafe { OsStr::from_encoded_bytes_unchecked(part) }))
++    }
++}
++
++#[derive(Debug)]
++pub struct JoinPathsError;
++
++pub fn join_paths<I, T>(paths: I) -> Result<OsString, JoinPathsError>
++where
++    I: Iterator<Item = T>,
++    T: AsRef<OsStr>,
++{
++    let mut joined = Vec::new();
++    for (i, path) in paths.enumerate() {
++        let path = path.as_ref().as_encoded_bytes();
++        if i > 0 {
++            joined.push(PATH_SEPARATOR)
++        }
++        if path.contains(&PATH_SEPARATOR) {
++            return Err(JoinPathsError);
++        }
++        joined.extend_from_slice(path);
++    }
++    // SAFETY: pieces of valid encodings joined by an ASCII byte.
++    Ok(unsafe { OsString::from_encoded_bytes_unchecked(joined) })
++}
++
++impl fmt::Display for JoinPathsError {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        write!(f, "path segment contains separator `{}`", char::from(PATH_SEPARATOR))
++    }
++}
++
++impl crate::error::Error for JoinPathsError {}
++
++/// The program's own path is not available through the C library.
++pub fn current_exe() -> io::Result<PathBuf> {
++    crate::sys::pal::unsupported()
++}
++
++/// `T:` is the assign that AROS uses for temporary files.
++pub fn temp_dir() -> PathBuf {
++    PathBuf::from("T:")
++}
++
++pub fn home_dir() -> Option<PathBuf> {
++    None
++}
+diff --git a/library/std/src/sys/paths/mod.rs b/library/std/src/sys/paths/mod.rs
+index 69c814e..2c18cd1 100644
+--- a/library/std/src/sys/paths/mod.rs
++++ b/library/std/src/sys/paths/mod.rs
+@@ -33,6 +33,10 @@ cfg_select! {
+             };
+         }
+     }
++    target_os = "aros" => {
++        mod aros;
++        use aros as imp;
++    }
+     target_os = "uefi" => {
+         mod uefi;
+         use uefi as imp;
 diff --git a/library/std/src/sys/random/aros.rs b/library/std/src/sys/random/aros.rs
 new file mode 100644
 index 0000000..c5a0963
