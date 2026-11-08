@@ -270,17 +270,21 @@ index c8011a6..6aeaded 100644
          pub use motor::*;
 diff --git a/library/std/src/sys/env/aros.rs b/library/std/src/sys/env/aros.rs
 new file mode 100644
-index 0000000..e7673d9
+index 0000000..0ffb722
 --- /dev/null
 +++ b/library/std/src/sys/env/aros.rs
-@@ -0,0 +1,77 @@
+@@ -0,0 +1,84 @@
 +//! Environment variables of an AROS program are DOS variables. The C library
 +//! reads them with `GetVar`, and `setenv` writes them as variables that are
-+//! local to the process.
++//! local to the process. Each DOS process has its own local variables, so a
++//! thread sees the variables of its parent as they were when it started, and its own
++//! changes; no other thread sees them. Calls are made under the C-library lock: `getenv`
++//! returns a buffer of the C library that the next call can reuse.
 +
 +use crate::ffi::{CStr, OsStr, OsString, c_char, c_int};
 +use crate::io;
 +use crate::sys::helpers::run_with_cstr;
++use crate::sys::pal::ClibLock;
 +
 +pub use super::common::Env;
 +
@@ -312,6 +316,7 @@ index 0000000..e7673d9
 +pub fn getenv(k: &OsStr) -> Option<OsString> {
 +    // A name with a nul byte, or with an equals sign, cannot be set, so its
 +    // value is always `None` as well.
++    let _clib = ClibLock::new();
 +    run_with_cstr(k.as_encoded_bytes(), &|k| {
 +        // SAFETY: `k` is a valid C string. The C library caches the value per
 +        // name, so it is copied out at once.
@@ -332,6 +337,7 @@ index 0000000..e7673d9
 +    if invalid(k) {
 +        return Err(io::Error::from_raw_os_error(EINVAL));
 +    }
++    let _clib = ClibLock::new();
 +    run_with_cstr(k.as_encoded_bytes(), &|k| {
 +        run_with_cstr(v.as_encoded_bytes(), &|v| {
 +            // SAFETY: both are valid C strings.
@@ -345,6 +351,7 @@ index 0000000..e7673d9
 +    if invalid(n) {
 +        return Err(io::Error::from_raw_os_error(EINVAL));
 +    }
++    let _clib = ClibLock::new();
 +    run_with_cstr(n.as_encoded_bytes(), &|n| {
 +        // SAFETY: `n` is a valid C string.
 +        let result: c_int = unsafe { c::unsetenv(n.as_ptr()) };
@@ -375,10 +382,10 @@ index 8985651..0f01cd0 100644
          mod xous;
          pub use xous::*;
 diff --git a/library/std/src/sys/exit.rs b/library/std/src/sys/exit.rs
-index b9ebe2d..07c5324 100644
+index b9ebe2d..072ed55 100644
 --- a/library/std/src/sys/exit.rs
 +++ b/library/std/src/sys/exit.rs
-@@ -143,6 +143,21 @@ pub fn exit(code: i32) -> ! {
+@@ -143,6 +143,26 @@ pub fn exit(code: i32) -> ! {
                  }
              }
          }
@@ -387,8 +394,13 @@ index b9ebe2d..07c5324 100644
 +
 +            unsafe extern "C" {
 +                fn sdk_end() -> c_int;
++                fn sdk_thread_exit(code: c_int) -> c_int;
 +                fn _Exit(status: c_int) -> !;
 +            }
++
++            // In a thread: record the code for the program and end the thread (no return). The
++            // main task ends the program at its next safe point.
++            unsafe { sdk_thread_exit(code as c_int) };
 +
 +            // Release what the program still holds first, as the native start-up
 +            // does when `main` returns, then leave with the code the program chose.
@@ -402,10 +414,10 @@ index b9ebe2d..07c5324 100644
          _ => {
 diff --git a/library/std/src/sys/fs/aros.rs b/library/std/src/sys/fs/aros.rs
 new file mode 100644
-index 0000000..c818f6f
+index 0000000..b4deed0
 --- /dev/null
 +++ b/library/std/src/sys/fs/aros.rs
-@@ -0,0 +1,1049 @@
+@@ -0,0 +1,1060 @@
 +//! The file system of AROS through the C library (descriptors, `open`, `read`, `write`, `lseek`).
 +//!
 +//! Metadata and directories use the 64-bit entry points (`stat64`, `readdir64`), because the plain
@@ -425,7 +437,7 @@ index 0000000..c818f6f
 +pub use crate::sys::fs::common::{Dir, copy, exists, remove_dir_all};
 +use crate::sys::helpers::run_path_with_cstr;
 +use crate::sys::io::{errno, set_errno};
-+use crate::sys::pal::without_requesters;
++use crate::sys::pal::{ClibLock, without_requesters};
 +use crate::sys::time::SystemTime;
 +use crate::sys::unsupported;
 +
@@ -666,6 +678,7 @@ index 0000000..c818f6f
 +        if self.end_of_stream {
 +            return None;
 +        }
++        let _clib = ClibLock::new();
 +        loop {
 +            // `readdir64` returns null both at the end and on an error, and only sets `errno` for
 +            // the error.
@@ -788,6 +801,7 @@ index 0000000..c818f6f
 +    if path.as_os_str().is_empty() {
 +        return Err(io::Error::from_raw_os_error(ENOENT));
 +    }
++    let _clib = ClibLock::new();
 +    run_path_with_cstr(&crate::sys::path::to_dos_path(path), f)
 +}
 +
@@ -886,6 +900,7 @@ index 0000000..c818f6f
 +    }
 +
 +    pub fn file_attr(&self) -> io::Result<FileAttr> {
++        let _clib = ClibLock::new();
 +        let mut stat = crate::mem::MaybeUninit::<Stat>::zeroed();
 +        // SAFETY: `fd` is open for as long as `self` exists, and `stat` is writable.
 +        cvt(unsafe { c::fstat64(self.fd, stat.as_mut_ptr()) }, -1)?;
@@ -894,6 +909,7 @@ index 0000000..c818f6f
 +    }
 +
 +    pub fn fsync(&self) -> io::Result<()> {
++        let _clib = ClibLock::new();
 +        // SAFETY: `fd` is open for as long as `self` exists.
 +        cvt(unsafe { c::fsync(self.fd) }, -1).map(drop)
 +    }
@@ -924,6 +940,7 @@ index 0000000..c818f6f
 +    }
 +
 +    pub fn truncate(&self, size: u64) -> io::Result<()> {
++        let _clib = ClibLock::new();
 +        self.pending_date.store(0, Ordering::Relaxed);
 +        let size = i64::try_from(size).map_err(|_| io::Error::from_raw_os_error(EINVAL))?;
 +        // SAFETY: `fd` is open for as long as `self` exists.
@@ -989,6 +1006,7 @@ index 0000000..c818f6f
 +    }
 +
 +    fn lseek(&self, offset: i64, whence: c_int) -> io::Result<u64> {
++        let _clib = ClibLock::new();
 +        // SAFETY: `fd` is open for as long as `self` exists.
 +        cvt(unsafe { c::lseek(self.fd, offset, whence) }, -1).map(|position| position as u64)
 +    }
@@ -1004,6 +1022,7 @@ index 0000000..c818f6f
 +    /// Makes a remembered position real before a write: the file is extended with zeros up to
 +    /// it, as a write after a seek past the end does on other systems.
 +    fn materialise_position(&self) -> io::Result<()> {
++        let _clib = ClibLock::new();
 +        let position = self.beyond_end.load(Ordering::Relaxed);
 +        if position == NO_POSITION {
 +            return Ok(());
@@ -1063,6 +1082,7 @@ index 0000000..c818f6f
 +    }
 +
 +    pub fn duplicate(&self) -> io::Result<File> {
++        let _clib = ClibLock::new();
 +        // SAFETY: `fd` is open for as long as `self` exists.
 +        cvt(unsafe { c::dup(self.fd) }, -1).map(|fd| File {
 +            fd,
@@ -1076,6 +1096,7 @@ index 0000000..c818f6f
 +    }
 +
 +    pub fn set_permissions(&self, perm: FilePermissions) -> io::Result<()> {
++        let _clib = ClibLock::new();
 +        // SAFETY: `fd` is open for as long as `self` exists.
 +        cvt(unsafe { c::fchmod(self.fd, perm.mode as c_int) }, -1).map(drop)
 +    }
@@ -1178,6 +1199,7 @@ index 0000000..c818f6f
 +/// itself. ABI-v1 sets no error for a failed rename and ABI-v11 sets a wrong one for some, so the
 +/// cause is found from the state of the file system.
 +fn c_rename(old: &Path, new: &Path) -> io::Result<()> {
++    let _clib = ClibLock::new();
 +    let result = with_path(old, &|o| {
 +        with_path(new, &|n| {
 +            // SAFETY: both are valid C strings.
@@ -1233,6 +1255,7 @@ index 0000000..c818f6f
 +/// the destination is first moved aside to a temporary name, then the source takes its name, and then
 +/// the old destination is deleted; if the second step fails, the destination gets its name back.
 +pub fn rename(old: &Path, new: &Path) -> io::Result<()> {
++    let _clib = ClibLock::new();
 +    let old_attr = lstat(old)?;
 +    let new_attr = match lstat(new) {
 +        Ok(attr) => attr,
@@ -1706,10 +1729,10 @@ index b9c48e3..19abee6 100644
  pub use error::{decode_error_kind, errno, format_error, is_interrupted};
 diff --git a/library/std/src/sys/pal/aros/mod.rs b/library/std/src/sys/pal/aros/mod.rs
 new file mode 100644
-index 0000000..48a5288
+index 0000000..ac1ccf5
 --- /dev/null
 +++ b/library/std/src/sys/pal/aros/mod.rs
-@@ -0,0 +1,123 @@
+@@ -0,0 +1,162 @@
 +//! The platform layer for AROS: the AROS C library and the native bridge that
 +//! the toolchain links into every program.
 +
@@ -1728,6 +1751,45 @@ index 0000000..48a5288
 +    /// specifications of AROS rename it from `main`, which is the symbol of the
 +    /// native bridge, to this name (the target option `entry-name`).
 +    fn ami_rust_entry(argc: isize, argv: *const *const u8) -> isize;
++}
++
++unsafe extern "C" {
++    fn sdk_thread_poll() -> crate::ffi::c_int;
++    fn sdk_clib_lock() -> crate::ffi::c_int;
++    fn sdk_clib_unlock(token: crate::ffi::c_int);
++}
++
++/// A safe point. When the program is ending, a thread ends here (the call does not return), and the
++/// main task ends the program with the code that a thread asked for. The end goes straight to the
++/// native exit: `rt::cleanup` would take the lock of standard output, which an ended thread can
++/// still hold.
++pub fn safe_point() {
++    // SAFETY: no precondition.
++    let code = unsafe { sdk_thread_poll() };
++    if code >= 0 {
++        crate::sys::exit::exit(code);
++    }
++}
++
++/// Holds the lock under which `std` calls the C library and reads `errno`, once a second thread
++/// exists. The C library has one `errno` for all tasks of a program, and a call can set it and then
++/// wait; measured, the error of another task's call was read otherwise. Reads and writes of
++/// descriptors are made without it, because they can wait for a person (the console).
++pub struct ClibLock(crate::ffi::c_int);
++
++impl ClibLock {
++    pub fn new() -> ClibLock {
++        safe_point();
++        // SAFETY: no precondition; paired with the unlock in `drop`.
++        ClibLock(unsafe { sdk_clib_lock() })
++    }
++}
++
++impl Drop for ClibLock {
++    fn drop(&mut self) {
++        // SAFETY: the token of `new`.
++        unsafe { sdk_clib_unlock(self.0) };
++    }
 +}
 +
 +/// Whether `std` leaves DOS requesters on during path calls. Off by default; a program changes it
@@ -1998,17 +2060,17 @@ index bbb7577..47ff73b 100644
          mod windows_prefix;
 diff --git a/library/std/src/sys/paths/aros.rs b/library/std/src/sys/paths/aros.rs
 new file mode 100644
-index 0000000..cf1a09b
+index 0000000..d6b7990
 --- /dev/null
 +++ b/library/std/src/sys/paths/aros.rs
-@@ -0,0 +1,136 @@
+@@ -0,0 +1,138 @@
 +//! The current directory, the temporary directory and path lists on AROS.
 +
 +use crate::ffi::{CStr, OsStr, OsString, c_char, c_int};
 +use crate::path::{self, PathBuf};
 +use crate::sys::helpers::run_path_with_cstr;
 +use crate::sys::io::errno;
-+use crate::sys::pal::without_requesters;
++use crate::sys::pal::{ClibLock, without_requesters};
 +use crate::{fmt, io, slice};
 +
 +/// The separator of a list of paths. A colon is part of a volume name here, so it is the semicolon.
@@ -2037,6 +2099,7 @@ index 0000000..cf1a09b
 +}
 +
 +pub fn getcwd() -> io::Result<PathBuf> {
++    let _clib = ClibLock::new();
 +    let mut buf: Vec<u8> = Vec::with_capacity(512);
 +    loop {
 +        // SAFETY: the buffer has `capacity` writable bytes.
@@ -2067,6 +2130,7 @@ index 0000000..cf1a09b
 +    if !crate::sys::fs::metadata(p)?.file_type().is_dir() {
 +        return Err(io::Error::from_raw_os_error(ENOTDIR));
 +    }
++    let _clib = ClibLock::new();
 +    let result = run_path_with_cstr(&crate::sys::path::to_dos_path(p), &|p| {
 +        // SAFETY: `p` is a valid C string.
 +        Ok(without_requesters(|| unsafe { c::chdir(p.as_ptr()) }))
@@ -2434,6 +2498,18 @@ index 86d0f3f..1e41a6b 100644
      target_os = "xous" => {
          mod xous;
          pub use xous::*;
+diff --git a/library/std/src/sys/sync/condvar/mod.rs b/library/std/src/sys/sync/condvar/mod.rs
+index 615781e..f26e594 100644
+--- a/library/std/src/sys/sync/condvar/mod.rs
++++ b/library/std/src/sys/sync/condvar/mod.rs
+@@ -10,6 +10,7 @@ cfg_select! {
+         target_os = "fuchsia",
+         all(target_family = "wasm", target_feature = "atomics"),
+         target_os = "hermit",
++        target_os = "aros",
+         all(target_os = "wasi", target_env = "p3"),
+     ) => {
+         mod futex;
 diff --git a/library/std/src/sys/sync/condvar/no_threads.rs b/library/std/src/sys/sync/condvar/no_threads.rs
 index 9dbba49..70a0508 100644
 --- a/library/std/src/sys/sync/condvar/no_threads.rs
@@ -2448,6 +2524,85 @@ index 9dbba49..70a0508 100644
  compile_error!("Using no_threads implementation on a target with threads");
  
  pub struct Condvar {}
+diff --git a/library/std/src/sys/sync/futex/aros.rs b/library/std/src/sys/sync/futex/aros.rs
+new file mode 100644
+index 0000000..dfc72f1
+--- /dev/null
++++ b/library/std/src/sys/sync/futex/aros.rs
+@@ -0,0 +1,46 @@
++//! A futex on AROS, made by the native bridge from Exec signals (`sdk_futex_wait`, `sdk_futex_wake`).
++//! Every wait is also a safe point: when the program is ending, a thread ends there and the main task
++//! ends the program (see `sys::pal::aros::safe_point`).
++
++use crate::sync::atomic::Atomic;
++use crate::time::Duration;
++
++/// An atomic for use as a futex that is at least 32-bits but may be larger
++pub type Futex = Atomic<Primitive>;
++/// Must be the underlying type of Futex
++pub type Primitive = u32;
++
++/// An atomic for use as a futex that is at least 8-bits but may be larger.
++pub type SmallFutex = Atomic<SmallPrimitive>;
++/// Must be the underlying type of SmallFutex
++pub type SmallPrimitive = u32;
++
++unsafe extern "C" {
++    fn sdk_futex_wait(address: *mut u32, expected: u32, timeout_us: i64) -> i32;
++    fn sdk_futex_wake(address: *mut u32, count: i32) -> i32;
++}
++
++/// Waits while `futex` holds `expected`. Returns `false` on a timeout; a return can be spurious.
++pub fn futex_wait(futex: &Atomic<u32>, expected: u32, timeout: Option<Duration>) -> bool {
++    crate::sys::pal::safe_point();
++    let timeout_us = match timeout {
++        None => -1,
++        Some(d) => i64::try_from(d.as_micros()).unwrap_or(i64::MAX),
++    };
++    // SAFETY: the address is that of a live atomic for the whole call.
++    let timed_out = unsafe { sdk_futex_wait(futex.as_ptr(), expected, timeout_us) } != 0;
++    crate::sys::pal::safe_point();
++    !timed_out
++}
++
++#[inline]
++pub fn futex_wake(futex: &Atomic<u32>) -> bool {
++    // SAFETY: the address is only compared, never dereferenced, by the bridge.
++    unsafe { sdk_futex_wake(futex.as_ptr(), 1) > 0 }
++}
++
++#[inline]
++pub fn futex_wake_all(futex: &Atomic<u32>) {
++    // SAFETY: as above.
++    unsafe { sdk_futex_wake(futex.as_ptr(), i32::MAX) };
++}
+diff --git a/library/std/src/sys/sync/futex/mod.rs b/library/std/src/sys/sync/futex/mod.rs
+index 0edb46c..975ba98 100644
+--- a/library/std/src/sys/sync/futex/mod.rs
++++ b/library/std/src/sys/sync/futex/mod.rs
+@@ -19,6 +19,10 @@ cfg_select! {
+         mod hermit;
+         pub use hermit::*;
+     }
++    target_os = "aros" => {
++        mod aros;
++        pub use aros::*;
++    }
+     // The wasi-libc based futex is new enough that it's not present in older
+     // wasi-libc builds. For now that means it's only required on wasip3 (which
+     // requires a newer wasi-libc anyway). In the future this'll probably switch to
+diff --git a/library/std/src/sys/sync/mutex/mod.rs b/library/std/src/sys/sync/mutex/mod.rs
+index 895ab9c..89cf2d9 100644
+--- a/library/std/src/sys/sync/mutex/mod.rs
++++ b/library/std/src/sys/sync/mutex/mod.rs
+@@ -9,6 +9,7 @@ cfg_select! {
+         target_os = "dragonfly",
+         all(target_family = "wasm", target_feature = "atomics"),
+         target_os = "hermit",
++        target_os = "aros",
+         all(target_os = "wasi", target_env = "p3"),
+     ) => {
+         mod futex;
 diff --git a/library/std/src/sys/sync/mutex/no_threads.rs b/library/std/src/sys/sync/mutex/no_threads.rs
 index a87c274..2a51145 100644
 --- a/library/std/src/sys/sync/mutex/no_threads.rs
@@ -2461,6 +2616,18 @@ index a87c274..2a51145 100644
  compile_error!("Using no_threads implementation on a target with threads");
  
  pub struct Mutex {
+diff --git a/library/std/src/sys/sync/once/mod.rs b/library/std/src/sys/sync/once/mod.rs
+index eee7edf..252c8f0 100644
+--- a/library/std/src/sys/sync/once/mod.rs
++++ b/library/std/src/sys/sync/once/mod.rs
+@@ -19,6 +19,7 @@ cfg_select! {
+         target_os = "dragonfly",
+         target_os = "fuchsia",
+         target_os = "hermit",
++        target_os = "aros",
+         all(target_os = "wasi", target_env = "p3"),
+     ) => {
+         mod futex;
 diff --git a/library/std/src/sys/sync/once/no_threads.rs b/library/std/src/sys/sync/once/no_threads.rs
 index 31c9aed..1b09636 100644
 --- a/library/std/src/sys/sync/once/no_threads.rs
@@ -2475,6 +2642,18 @@ index 31c9aed..1b09636 100644
  compile_error!("Using no_threads implementation on a target with threads");
  
  pub struct Once {
+diff --git a/library/std/src/sys/sync/rwlock/mod.rs b/library/std/src/sys/sync/rwlock/mod.rs
+index 9991f29..79734c1 100644
+--- a/library/std/src/sys/sync/rwlock/mod.rs
++++ b/library/std/src/sys/sync/rwlock/mod.rs
+@@ -9,6 +9,7 @@ cfg_select! {
+         target_os = "fuchsia",
+         all(target_family = "wasm", target_feature = "atomics"),
+         target_os = "hermit",
++        target_os = "aros",
+         target_os = "motor",
+         all(target_os = "wasi", target_env = "p3"),
+     ) => {
 diff --git a/library/std/src/sys/sync/rwlock/no_threads.rs b/library/std/src/sys/sync/rwlock/no_threads.rs
 index efa2629..27b3587 100644
 --- a/library/std/src/sys/sync/rwlock/no_threads.rs
@@ -2488,16 +2667,131 @@ index efa2629..27b3587 100644
  compile_error!("Using no_threads implementation on a target with threads");
  
  pub struct RwLock {
+diff --git a/library/std/src/sys/sync/thread_parking/mod.rs b/library/std/src/sys/sync/thread_parking/mod.rs
+index f1385ef..e3005b2 100644
+--- a/library/std/src/sys/sync/thread_parking/mod.rs
++++ b/library/std/src/sys/sync/thread_parking/mod.rs
+@@ -10,6 +10,7 @@ cfg_select! {
+         target_os = "fuchsia",
+         target_os = "motor",
+         target_os = "hermit",
++        target_os = "aros",
+         all(target_os = "wasi", target_env = "p3"),
+     ) => {
+         mod futex;
 diff --git a/library/std/src/sys/thread/aros.rs b/library/std/src/sys/thread/aros.rs
 new file mode 100644
-index 0000000..3b97fd6
+index 0000000..2cbee63
 --- /dev/null
 +++ b/library/std/src/sys/thread/aros.rs
-@@ -0,0 +1,44 @@
-+//! Sleeping on AROS, without threads: `nanosleep` of the C library, which waits on
-+//! timer.device. Everything else about threads stays on the `unsupported` fallback.
+@@ -0,0 +1,148 @@
++//! Threads on AROS. A thread is a DOS process, started and ended by the native bridge
++//! (`sdk_thread_spawn`, `sdk_thread_join`); see `sdk.c` for how a program ends while threads run.
++//! Sleeping is `nanosleep` of the C library, which waits on timer.device.
++//!
++//! Differences from Unix, because every DOS process has its own: the current directory
++//! (`env::set_current_dir`) and the local DOS variables (`env::set_var`) of a thread are its own; a new
++//! thread starts with copies of its parent's.
 +
++use crate::ffi::{CStr, c_char, c_int, c_void};
++use crate::io;
++use crate::num::NonZero;
++use crate::thread::ThreadInit;
 +use crate::time::Duration;
++
++/// The stack of a thread when the program asks for none. DOS processes usually get far less; Rust
++/// code needs more. `RUST_MIN_STACK` and `Builder::stack_size` choose another.
++pub const DEFAULT_MIN_STACK_SIZE: usize = 256 * 1024;
++
++unsafe extern "C" {
++    fn sdk_thread_spawn(
++        entry: extern "C" fn(*mut c_void),
++        arg: *mut c_void,
++        stack: usize,
++        name: *const c_char,
++    ) -> *mut c_void;
++    fn sdk_thread_join(handle: *mut c_void) -> c_int;
++    fn sdk_thread_detach(handle: *mut c_void);
++    fn sdk_thread_yield();
++    fn sdk_task_id() -> usize;
++}
++
++pub struct Thread {
++    handle: *mut c_void,
++}
++
++// SAFETY: the handle is a record of the bridge that any task may join or detach.
++unsafe impl Send for Thread {}
++unsafe impl Sync for Thread {}
++
++impl Thread {
++    pub unsafe fn new(stack: usize, init: Box<ThreadInit>) -> io::Result<Thread> {
++        // The name of the DOS process; DOS copies it.
++        let name: Vec<u8> = match init.handle.cname() {
++            Some(name) => name.to_bytes_with_nul().to_vec(),
++            None => b"rust thread\0".to_vec(),
++        };
++        let data = Box::into_raw(init);
++        // SAFETY: `thread_start` takes ownership of `data` when the process starts.
++        let handle = unsafe {
++            sdk_thread_spawn(thread_start, data.cast(), stack, name.as_ptr().cast())
++        };
++        if handle.is_null() {
++            // The process was not made, so `data` was not consumed.
++            drop(unsafe { Box::from_raw(data) });
++            return Err(io::const_error!(io::ErrorKind::Uncategorized, "unable to create a DOS process for the thread"));
++        }
++        return Ok(Thread { handle });
++
++        extern "C" fn thread_start(data: *mut c_void) {
++            // SAFETY: the box that `new` leaked.
++            let init = unsafe { Box::from_raw(data.cast::<ThreadInit>()) };
++            let rust_start = init.init();
++            rust_start();
++            // SAFETY: the thread's own values, at its end.
++            unsafe { crate::sys::thread_local::key::run_dtors() };
++            crate::rt::thread_cleanup();
++        }
++    }
++
++    pub fn join(self) {
++        let handle = self.handle;
++        crate::mem::forget(self);
++        // SAFETY: the handle has not been joined or detached.
++        while unsafe { sdk_thread_join(handle) } != 0 {
++            // The program is ending: a thread ends here, the main task ends the program.
++            crate::sys::pal::safe_point();
++            unreachable!("a safe point returned while the program is ending");
++        }
++    }
++}
++
++impl Drop for Thread {
++    fn drop(&mut self) {
++        // SAFETY: a handle that was not joined.
++        unsafe { sdk_thread_detach(self.handle) };
++    }
++}
++
++pub fn available_parallelism() -> io::Result<NonZero<usize>> {
++    // The AROS images run on one CPU.
++    Ok(NonZero::new(1).unwrap())
++}
++
++pub fn current_os_id() -> Option<u64> {
++    // SAFETY: no precondition. The address of the task, unique while it lives.
++    Some(unsafe { sdk_task_id() } as u64)
++}
++
++pub fn yield_now() {
++    // SAFETY: no precondition.
++    unsafe { sdk_thread_yield() };
++    crate::sys::pal::safe_point();
++}
++
++pub fn set_name(_name: &CStr) {
++    // The name is given to the DOS process when it is made (`Thread::new`).
++}
 +
 +/// `EINTR` in the numbering of the AROS C library (NetBSD's).
 +const EINTR: i32 = 4;
@@ -2537,48 +2831,174 @@ index 0000000..3b97fd6
 +            break;
 +        }
 +    }
++    crate::sys::pal::safe_point();
 +}
 diff --git a/library/std/src/sys/thread/mod.rs b/library/std/src/sys/thread/mod.rs
-index dfbfc2b..da88cc2 100644
+index dfbfc2b..8c08976 100644
 --- a/library/std/src/sys/thread/mod.rs
 +++ b/library/std/src/sys/thread/mod.rs
-@@ -41,6 +41,16 @@ cfg_select! {
+@@ -41,6 +41,13 @@ cfg_select! {
          mod unsupported;
          pub use unsupported::{available_parallelism, current_os_id, set_name};
      }
 +    target_os = "aros" => {
 +        mod aros;
-+        pub use aros::sleep;
-+        #[expect(dead_code)]
-+        mod unsupported;
-+        pub use unsupported::{
-+            DEFAULT_MIN_STACK_SIZE, Thread, available_parallelism, current_os_id, set_name,
++        pub use aros::{
++            DEFAULT_MIN_STACK_SIZE, Thread, available_parallelism, current_os_id, set_name, sleep,
 +            yield_now,
 +        };
 +    }
      target_os = "uefi" => {
          mod uefi;
          pub use uefi::{available_parallelism, sleep};
+diff --git a/library/std/src/sys/thread_local/key/aros.rs b/library/std/src/sys/thread_local/key/aros.rs
+new file mode 100644
+index 0000000..d7ea314
+--- /dev/null
++++ b/library/std/src/sys/thread_local/key/aros.rs
+@@ -0,0 +1,103 @@
++//! Thread-local keys on AROS: task storage slots, through the native bridge (in task.resource on
++//! ABI-v1, in exec.library 51 on ABI-v11). A new task starts with every slot at 0.
++//!
++//! AROS runs no destructors for a slot, so they are kept in a list here and `run_dtors` calls them
++//! when a thread that `std` started ends, as on Xous. The main task's values are not destroyed.
++
++use crate::alloc::System;
++use crate::mem::ManuallyDrop;
++use crate::ptr;
++use crate::sync::atomic::Ordering::{Acquire, Release};
++use crate::sync::atomic::{Atomic, AtomicPtr};
++
++pub type Key = usize;
++pub type Dtor = unsafe extern "C" fn(*mut u8);
++
++unsafe extern "C" {
++    fn sdk_tls_alloc() -> crate::ffi::c_long;
++    fn sdk_tls_set(slot: crate::ffi::c_long, value: usize) -> crate::ffi::c_int;
++    fn sdk_tls_get(slot: crate::ffi::c_long) -> usize;
++}
++
++struct Node {
++    dtor: Dtor,
++    key: Key,
++    next: *mut Node,
++}
++
++static DTORS: Atomic<*mut Node> = AtomicPtr::new(ptr::null_mut());
++
++pub fn create(dtor: Option<Dtor>) -> Key {
++    // SAFETY: no precondition.
++    let slot = unsafe { sdk_tls_alloc() };
++    if slot <= 0 {
++        rtabort!("no task storage slot for a thread-local key");
++    }
++    let key = slot as Key;
++    if let Some(dtor) = dtor {
++        // SAFETY: the key was just created.
++        unsafe { register_dtor(key, dtor) };
++    }
++    key
++}
++
++#[inline]
++pub unsafe fn set(key: Key, value: *mut u8) {
++    // SAFETY: the key is a slot that `create` allocated.
++    if unsafe { sdk_tls_set(key as crate::ffi::c_long, value.expose_provenance()) } == 0 {
++        rtabort!("a thread-local value could not be stored");
++    }
++}
++
++#[inline]
++pub unsafe fn get(key: Key) -> *mut u8 {
++    // SAFETY: as above.
++    ptr::with_exposed_provenance_mut(unsafe { sdk_tls_get(key as crate::ffi::c_long) })
++}
++
++pub unsafe fn destroy(_key: Key) {
++    // Only reached when `LazyKey` loses the race to make its key. The slot is kept: its destructor
++    // is already registered, and AROS would give a freed slot to the next key, which would then run
++    // the wrong destructor. One slot per lost race is lost.
++}
++
++unsafe fn register_dtor(key: Key, dtor: Dtor) {
++    // The System allocator, so that a global allocator that uses thread-locals is not entered.
++    let mut node = ManuallyDrop::new(Box::new_in(Node { key, dtor, next: ptr::null_mut() }, System));
++    let mut head = DTORS.load(Acquire);
++    loop {
++        node.next = head;
++        match DTORS.compare_exchange(head, &mut **node, Release, Acquire) {
++            Ok(_) => return,
++            Err(current) => head = current,
++        }
++    }
++}
++
++/// Runs the destructors of this thread's values, five rounds at most, as on Windows: a destructor
++/// can set another thread-local.
++pub unsafe fn run_dtors() {
++    let mut any_run = true;
++    for _ in 0..5 {
++        if !any_run {
++            break;
++        }
++        any_run = false;
++        let mut current = DTORS.load(Acquire);
++        while !current.is_null() {
++            // SAFETY: nodes are never freed.
++            let (key, dtor, next) = unsafe { ((*current).key, (*current).dtor, (*current).next) };
++            // SAFETY: the key is valid.
++            let value = unsafe { get(key) };
++            if !value.is_null() {
++                // SAFETY: as above; the value belongs to this thread.
++                unsafe {
++                    set(key, ptr::null_mut());
++                    dtor(value);
++                }
++                any_run = true;
++            }
++            current = next;
++        }
++    }
++}
 diff --git a/library/std/src/sys/thread_local/mod.rs b/library/std/src/sys/thread_local/mod.rs
-index 809ef5c..829778c 100644
+index 809ef5c..5259eca 100644
 --- a/library/std/src/sys/thread_local/mod.rs
 +++ b/library/std/src/sys/thread_local/mod.rs
-@@ -40,6 +40,7 @@ cfg_select! {
-         target_os = "zkvm",
-         target_os = "trusty",
-         target_os = "vexos",
-+        target_os = "aros",
-     ) => {
-         mod no_threads;
-         pub use no_threads::{EagerStorage, LazyStorage, thread_local_inner};
-@@ -111,6 +112,7 @@ pub(crate) mod guard {
+@@ -111,7 +111,7 @@ pub(crate) mod guard {
              target_os = "zkvm",
              target_os = "trusty",
              target_os = "vexos",
-+            target_os = "aros",
-         ) => {
+-        ) => {
++            ) => {
              pub(crate) fn enable() {
                  // FIXME: Right now there is no concept of "thread exit" on
+                 // wasm, but this is likely going to show up at some point in
+@@ -126,7 +126,7 @@ pub(crate) mod guard {
+                 use crate::rt::thread_cleanup;
+             }
+         }
+-        any(target_os = "hermit", target_os = "xous") => {
++        any(target_os = "hermit", target_os = "xous", target_os = "aros") => {
+             // `std` is the only runtime, so it just calls the destructor functions
+             // itself when the time comes.
+             pub(crate) fn enable() {}
+@@ -191,6 +191,16 @@ pub(crate) mod key {
+             pub(super) use xous::{Key, get, set};
+             use xous::{create, destroy};
+         }
++        target_os = "aros" => {
++            mod racy;
++            #[cfg(test)]
++            mod tests;
++            mod aros;
++            pub(super) use racy::LazyKey;
++            pub(crate) use aros::run_dtors;
++            pub(super) use aros::{Key, get, set};
++            use aros::{create, destroy};
++        }
+         target_os = "motor" => {
+             mod racy;
+             #[cfg(test)]
 diff --git a/library/std/src/sys/thread_local/no_threads.rs b/library/std/src/sys/thread_local/no_threads.rs
 index 9f4e771..4ce9610 100644
 --- a/library/std/src/sys/thread_local/no_threads.rs

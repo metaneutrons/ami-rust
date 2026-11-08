@@ -18,20 +18,20 @@ subsystem on the `unsupported` fallback:
 | `sys/alloc` | New `aros.rs` on `malloc`, `calloc`, `realloc`, `free` and `posix_memalign` |
 | `sys/io/error` | New `aros.rs`: `errno` and `set_errno` through the C library accessor, NetBSD errno table, `strerror`; and the DOS errors that the C library reports as `1000 + code` get their own kinds and texts |
 | `sys/random` | New `aros.rs`: `getentropy` on ABI-v1; on ABI-v11 (which has none) the weak clock and address mixing with `RDRAND` mixed in when the CPU has it. It also exports `__ami_rust_random_source`, which a test reads to see which source was used |
-| `sys/pal` | New `aros`: `abort_internal` enters the native fatal path (`sdk_fatal`), which ends the program with return code 20; this also covers every panic under `panic = "abort"`. It also defines `rust_sdk_main`, which the native `main` calls and which runs the entry of a `fn main` program (see `examples/std-runtime/README.md`). It also has `without_requesters`, which switches DOS requesters off around path calls through the bridge function `sdk_proc_window_set`. Whether it does so is a flag that a program sets through `std::os::aros::fs` |
+| `sys/pal` | New `aros`: `abort_internal` enters the native fatal path (`sdk_fatal`), which ends the program with return code 20; this also covers every panic under `panic = "abort"`. It also defines `rust_sdk_main`, which the native `main` calls and which runs the entry of a `fn main` program (see `examples/std-runtime/README.md`). It also has `without_requesters`, which switches DOS requesters off around path calls through the bridge function `sdk_proc_window_set`. Whether it does so is a flag that a program sets through `std::os::aros::fs`. Also `safe_point` (a thread ends there, the main task ends the program, when the program is ending) and `ClibLock`, under which `std` calls the C library and reads `errno` once a thread exists |
 | `os/aros` | New `std::os::aros::fs`, behind the unstable feature `aros_ext`: `requesters`, `set_requesters` and `with_requesters`, which let a program turn DOS requesters back on for `std::fs`, at any time |
 | `sys/time` | New `aros.rs`: `Instant` on `CLOCK_MONOTONIC` and `SystemTime` on `CLOCK_REALTIME`, with the 32-bit `time_t` read as unsigned so that `SystemTime` is correct until 2106; the same reading is used for file dates |
-| `sys/thread` | New `aros.rs`: `thread::sleep` on `nanosleep`; everything else about threads stays unsupported |
+| `sys/thread` | New `aros.rs`: threads as DOS processes through the bridge (`sdk_thread_spawn`, `sdk_thread_join`, detach), `yield_now`, a default stack of 256 KiB, `available_parallelism` of 1, and `thread::sleep` on `nanosleep`; every wait is a safe point (see `sys/pal`) |
 | `sys/fs` | New `aros.rs`: `File` and `OpenOptions` on the descriptors of the C library (open, read, write, seek, truncate, duplicate, sync), metadata (`stat64`, `lstat64`, `fstat64`), permissions (read-only through `chmod`), setting the date (`utimes`), `read_dir`, `create_dir`, `remove_dir`, `remove_file`, `rename` (never with an existing destination in the C library), `canonicalize` (through the bridge function `sdk_path_name`), and `copy`, `exists` and `remove_dir_all` from the common code. Links and locks stay unsupported. Works around the behaviours of the C library listed in `examples/std-fs/README.md` |
 | `sys/path` | New `aros.rs`: the volume with its colon is the prefix of a path (`Prefix::DeviceNS`), a path with a volume is absolute, `path::absolute` resolves a leading `:` and leading slashes; and `to_dos_path`, which resolves `.` and `..` before a path goes to the C library |
 | `sys/paths` | New `aros.rs`: `getcwd` and `chdir` (refuses a file), `temp_dir` is `T:`, path lists separated by `;`, `home_dir` is `None`, `current_exe` unsupported |
 | `path.rs` | Two lines under `cfg!(target_os = "aros")`: the length of a `DeviceNS` prefix is the volume name itself, and it is followed directly by the path like a Windows drive, so `join` adds no slash after `RAM:` |
 | `sys/args` | New `aros.rs`: `env::args` from the `__argc` and `__argv` that the C start-up stores |
-| `sys/exit` | `process::exit` releases what the program holds (`sdk_end`) and then leaves with the code it was given (`_Exit`) |
+| `sys/exit` | `process::exit` releases what the program holds (`sdk_end`) and then leaves with the code it was given (`_Exit`); in a thread it records the code and ends the thread (`sdk_thread_exit`) |
 | `sys/stdio` | New `aros.rs`: standard input, output and error on the file descriptors 0, 1 and 2 |
-| `sys/env` | New `aros.rs`: `var`, `set_var` and `remove_var` on the DOS variables through the C library; `vars()` is always empty |
-| `sys/sync` | The existing `no_threads` implementations; their build guard no longer rejects AROS |
-| `sys/thread_local` | The existing `no_threads` storage; guard and selection list gain AROS |
+| `sys/env` | New `aros.rs`: `var`, `set_var` and `remove_var` on the DOS variables through the C library; `vars()` is always empty; the calls are made under `ClibLock` |
+| `sys/sync` | AROS uses the futex implementations of `Mutex`, `Condvar`, `RwLock`, `Once` and the thread parker, on a new `futex/aros.rs` that calls the bridge's futex on Exec signals |
+| `sys/thread_local` | Key-based thread-locals (`os`) on a new `key/aros.rs` over task storage slots; destructors run when a thread ends, as on Xous |
 | `build.rs` | Unchanged on purpose: AROS stays an unknown platform, so every crate that uses `std` declares `#![feature(restricted_std)]` |
 
 ## Reproduce
@@ -43,7 +43,7 @@ set -eu
 repo=$(pwd -P)
 work=$(mktemp -d)
 cp -R "$(rustc +0.2.0 --print sysroot)/lib/rustlib/src/rust" "$work/rust"
-echo "d8551c85b9244a690b1a68a950a425bcb5aef237445aa9e6e5603912837c9cf0  host/std-aros/std-aros.patch" | shasum -a 256 -c
+echo "500bfa962925baa4005a2058b3529203e0c4ca307e39d1f502591a2ec9f2b623  host/std-aros/std-aros.patch" | shasum -a 256 -c
 patch -p1 -d "$work/rust" < host/std-aros/std-aros.patch
 ```
 

@@ -349,3 +349,24 @@ milestone; the three-host matrix runs at STD-M8.
   claim of `aros::dispatch`; `fn main` and `aros::entry!` in one crate do not
   compile. This changes the pinned target specifications, so it ships with the
   `std` release and the pinned release inputs are qualified again with it.
+- 2026-11-08: The maintainer decided the STD-M4 design, on the maintainer's
+  recommendation after measurements on both ABIs (recorded in
+  `docs/plans/std-m4-findings.md`):
+  - `errno`: the C library keeps one `errno` for all tasks of a program, and a
+    call can set it and then wait (ABI-v1's `open()` frees memory to a pool
+    afterwards), so `Forbid()` does not protect it. `std` reads it under a lock
+    of the program, taken only once a second thread exists. Reads and writes of
+    descriptors and sleeping stay outside the lock; an error from a failed
+    descriptor read or write in a threaded program may carry another thread's
+    code, which is documented.
+  - The program ends only after all of its threads: a thread that runs on
+    after its program has been unloaded runs freed code (measured: a page fault
+    on ABI-v1). Threads end at their next safe point when the program ends.
+  - `Mutex`, `Condvar`, `RwLock`, `Once` and parking use the futex
+    implementations of `std` on a futex emulated with Exec signals.
+  - A thread's `process::exit` or panic records the exit code and ends the
+    thread; the main task ends the program at its next call into `std`
+    (option 1). Interrupting the main task with an Exec exception was rejected
+    because it can strike inside a DOS call.
+  - STD-M4-A2 (a substitute for each missing pthread function) no longer
+    applies: `std` does not use pthreads.

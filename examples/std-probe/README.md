@@ -9,7 +9,7 @@ It is an ordinary `fn main` program that enters its application function through
 entry that rustc generates; `examples/std-runtime/README.md` explains the start-up
 and how to build with such a toolchain. `aros::entry!` cannot be used here because
 it installs a `#[panic_handler]`, which `std` already provides. The probe uses `std` for `Vec`, `format!`, `HashMap`, an
-over-aligned allocation, `io::Error`, a thread-local, `Once` and `Mutex`, and
+over-aligned allocation, `io::Error`, a thread-local, `Once` and `Mutex`, a thread, and
 writes its results through a hand-declared C `write`.
 
 Build with the local toolchain `NAME` described in `examples/std-runtime/README.md`, and

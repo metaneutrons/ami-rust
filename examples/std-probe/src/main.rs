@@ -165,8 +165,8 @@ fn application(_context: &Context) -> AppStatus {
     ONCE.call_once(|| *LOCK.lock().unwrap() += 1);
     check("once-mutex", *LOCK.lock().unwrap() == 1, &mut failures);
 
-    let spawned = std::thread::Builder::new().spawn(|| ());
-    check("thread-unsupported", spawned.is_err(), &mut failures);
+    let spawned = std::thread::Builder::new().spawn(|| 40 + 2);
+    check("thread", spawned.ok().and_then(|h| h.join().ok()) == Some(42), &mut failures);
 
     if failures == 0 {
         say("std-probe: all checks passed\n");

@@ -174,6 +174,323 @@ long sdk_path_name(const char *path,char *buf,size_t size) {
  UnLock(lock);
  return named?0:(error?error:ERROR_LINE_TOO_LONG);
 }
+
+/* ---- Threads for std ----
+   A std thread is a DOS process made by sdk_thread_spawn. Its record is on thread_list from the spawn
+   until the process has ended. The process starts in thread_trampoline, which calls the Rust entry
+   and, when that returns or the thread is ended early (sdk_thread_exit, sdk_fatal, sdk_thread_poll),
+   finishes under Forbid(): the program can only be unloaded after the last of its code has run.
+
+   Ending the program while threads run would leave them running code that is unloaded (measured:
+   a page fault on ABI-v1). So the program ends only after every thread has: exit_requested is set,
+   every task of the program gets THREAD_KICK, and the threads end at their next safe point (a wait in
+   sdk_futex_wait or sdk_thread_join, or a call of sdk_thread_poll). A thread that never reaches one
+   keeps the program waiting. A thread that calls process::exit or panics records its code here and
+   ends; the main task ends the program at its next safe point. */
+#include <dos/dostags.h>
+#ifndef AMI_RUST_ABI11
+#include <proto/task.h>
+APTR TaskResBase;
+#endif
+/* Every program links this file, so nothing here may raise the library versions that a program
+   requires, which the rest of this file states (exec.library 36). The code uses no call that needs
+   more, with one exception: the task storage of ABI-v11 (exec.library 51) is called through its
+   library vectors, which state no version, after a version check at run time (task_storage_ready). */
+
+struct sdk_thread {
+ struct MinNode node;
+ struct Task *task;
+ void (*entry)(void *);
+ void *arg;
+ struct Task *joiner;
+ ULONG joinmask;
+ int done,refs;
+ jmp_buf end;
+};
+struct futex_waiter {
+ struct MinNode node;
+ volatile uint32_t *address;
+ struct Task *task;
+ ULONG mask;
+ volatile int woken;
+};
+#define THREAD_KICK SIGBREAKF_CTRL_F
+static struct MinList thread_list,futex_list;
+static struct Task *clib_owner;
+static int clib_depth;
+static struct MinList clib_waiters;
+static int threads_ready;
+static volatile int threads_started,threads_live,exit_requested,main_waiting;
+static volatile int thread_exit_code=-1;
+
+/* Under Forbid(). */
+static void threads_init(void) {
+ if(threads_ready)return;
+ NEWLIST((struct List *)&thread_list);NEWLIST((struct List *)&futex_list);NEWLIST((struct List *)&clib_waiters);
+ threads_ready=1;
+}
+/* Under Forbid(). */
+static struct sdk_thread *thread_self(void) {
+ struct Task *me=FindTask(NULL);
+ if(!threads_ready)return NULL;
+ for(struct MinNode *n=thread_list.mlh_Head;n->mln_Succ;n=n->mln_Succ)
+  if(((struct sdk_thread *)n)->task==me)return (struct sdk_thread *)n;
+ return NULL;
+}
+/* Under Forbid(): wake every task of the program from its waits in this bridge. */
+static void threads_kick_all(void) {
+ if(owner)Signal(owner,THREAD_KICK);
+ for(struct MinNode *n=thread_list.mlh_Head;n->mln_Succ;n=n->mln_Succ){
+  struct sdk_thread *t=(struct sdk_thread *)n;if(t->task)Signal(t->task,THREAD_KICK);
+ }
+}
+static void threads_request_exit(int code) {
+ Forbid();
+ if(thread_exit_code<0)thread_exit_code=code;
+ exit_requested=1;threads_kick_all();
+ Permit();
+}
+static void thread_trampoline(void) {
+ struct Task *me=FindTask(NULL);
+ struct sdk_thread *t=(struct sdk_thread *)me->tc_UserData;
+ Forbid();t->task=me;Permit();
+ if(!setjmp(t->end))t->entry(t->arg);
+ Forbid();
+ t->done=1;
+ if(t->joiner)Signal(t->joiner,t->joinmask);
+ Remove((struct Node *)&t->node);
+ threads_live--;
+ if(main_waiting && owner)Signal(owner,THREAD_KICK);
+ if(--t->refs==0)FreeVec(t);
+ /* Returning ends the process; Forbid() lasts until it is gone. */
+}
+/* Starts entry(arg) in a new DOS process with the given stack. Returns a handle for join or detach,
+   or NULL. */
+void *sdk_thread_spawn(void (*entry)(void *),void *arg,size_t stack,const char *name) {
+ struct sdk_thread *t=(struct sdk_thread *)AllocVec(sizeof(*t),MEMF_PUBLIC|MEMF_CLEAR);
+ if(!t)return NULL;
+ t->entry=entry;t->arg=arg;t->refs=2;
+ Forbid();threads_init();AddTail((struct List *)&thread_list,(struct Node *)&t->node);threads_live++;threads_started=1;Permit();
+ if(stack<16384)stack=16384;
+ struct TagItem tags[]={
+  {NP_Entry,(IPTR)thread_trampoline},{NP_StackSize,(IPTR)stack},
+  {NP_Name,(IPTR)(name && *name?name:"rust thread")},{NP_UserData,(IPTR)t},{TAG_DONE,0}};
+ if(!CreateNewProc(tags)){
+  Forbid();Remove((struct Node *)&t->node);threads_live--;Permit();
+  FreeVec(t);return NULL;
+ }
+ return t;
+}
+/* Waits until the thread has ended and releases the handle. Returns 0, or 1 when the wait was ended
+   because the program is ending; then the thread may still run and the caller must call
+   sdk_thread_poll. */
+int sdk_thread_join(void *handle) {
+ struct sdk_thread *t=(struct sdk_thread *)handle;
+ BYTE signal=AllocSignal(-1);ULONG mask=signal>=0?1UL<<signal:0;
+ int interrupted=0;
+ Forbid();
+ t->joiner=FindTask(NULL);t->joinmask=mask;
+ while(!t->done){
+  if(exit_requested){interrupted=1;break;}
+  if(mask)Wait(mask|THREAD_KICK);else{Permit();Delay(1);Forbid();}
+ }
+ t->joiner=NULL;
+ if(--t->refs==0)FreeVec(t);
+ Permit();
+ if(signal>=0)FreeSignal(signal);
+ return interrupted;
+}
+void sdk_thread_detach(void *handle) {
+ struct sdk_thread *t=(struct sdk_thread *)handle;
+ Forbid();if(--t->refs==0)FreeVec(t);Permit();
+}
+/* A safe point. When the program is ending, a thread ends here (it does not return) and the main
+   task gets the exit code that a thread asked for (or -1). Otherwise -1. */
+int sdk_thread_poll(void) {
+ if(!exit_requested)return -1;
+ Forbid();struct sdk_thread *t=thread_self();int code=thread_exit_code;Permit();
+ if(t)longjmp(t->end,1);
+ return code;
+}
+/* process::exit from a thread: records the code and ends the thread. Returns 0 in the main task
+   (and in a task that std did not start), which then ends the program itself. */
+int sdk_thread_exit(int code) {
+ Forbid();struct sdk_thread *t=thread_self();Permit();
+ if(!t)return 0;
+ threads_request_exit(code);
+ longjmp(t->end,1);
+}
+/* Ends every thread (at its next safe point) and waits for them; the main task, at its end. */
+static void threads_end_all(void) {
+ if(!threads_started)return;
+ Forbid();
+ exit_requested=1;threads_kick_all();
+ while(threads_live>0){main_waiting=1;Wait(THREAD_KICK);}
+ main_waiting=0;
+ Permit();
+ SetSignal(0,THREAD_KICK);
+}
+/* Exec has no yield. Measured on both ABIs with two threads taking turns:
+   - SetTaskPri() to the same or a lower priority and back (what AROS's own sched_yield does): the
+     other thread ran before 2 of 4000 turns;
+   - Delay(0): 4000 of 4000, but a timer tick (about 10 ms) per call;
+   - this: 4000 of 4000 at about 3 microseconds per call. It marks the time slice as over and a switch
+     as pending, and Permit() then runs the scheduler, as AROS's pthread code does on classic AmigaOS.
+     SysFlags and AttnResched are documented as private in exec/execbase.h of both SDKs. */
+void sdk_thread_yield(void) {Forbid();SysBase->SysFlags|=SFF_QuantumOver;SysBase->AttnResched|=ARF_AttnSwitch;Permit();}
+uintptr_t sdk_task_id(void) {return (uintptr_t)FindTask(NULL);}
+
+/* The C library keeps one errno for all tasks of a program, and a call can set it and then wait
+   (ABI-v1's open() frees memory to a pool after setting it), so std reads it under this lock once a
+   second thread exists. Returns a token for sdk_clib_unlock. */
+/* A waiter for the lock; it is given the lock by the task that releases it, in the order of arrival.
+   A lock that the releasing task could take back at once would starve the others: a signal does not
+   make a task of the same priority run, and the holder keeps the CPU (measured). */
+struct clib_waiter {
+ struct MinNode node;
+ struct Task *task;
+ ULONG mask;
+};
+int sdk_clib_lock(void) {
+ if(!threads_started)return 0;
+ struct Task *me=FindTask(NULL);
+ Forbid();
+ if(!clib_owner || clib_owner==me){clib_owner=me;clib_depth++;Permit();return 1;}
+ BYTE signal=AllocSignal(-1);
+ struct clib_waiter w;w.task=me;w.mask=signal>=0?1UL<<signal:0;
+ AddTail((struct List *)&clib_waiters,(struct Node *)&w.node);
+ while(clib_owner!=me){
+  if(w.mask)Wait(w.mask);else{Permit();Delay(1);Forbid();}
+ }
+ clib_depth=1;
+ Permit();
+ if(signal>=0)FreeSignal(signal);
+ return 1;
+}
+void sdk_clib_unlock(int token) {
+ if(!token)return;
+ Forbid();
+ if(--clib_depth==0){
+  struct clib_waiter *next=(struct clib_waiter *)RemHead((struct List *)&clib_waiters);
+  clib_owner=next?next->task:NULL;
+  if(next && next->mask)Signal(next->task,next->mask);
+ }
+ Permit();
+}
+
+/* A futex on Exec signals: wait while *address == expected, until sdk_futex_wake, the timeout
+   (microseconds; negative is none) or a THREAD_KICK. Returns 1 for a timeout, 0 otherwise; a return
+   can be spurious, as a futex's can. */
+int sdk_futex_wait(volatile uint32_t *address,uint32_t expected,int64_t timeout_us) {
+ BYTE signal=AllocSignal(-1);
+ if(signal<0){Delay(1);return 0;}
+ struct MsgPort *port=NULL;struct timerequest *timer=NULL;int timer_open=0;
+ if(timeout_us>=0){
+  port=CreateMsgPort();
+  if(port)timer=(struct timerequest *)CreateIORequest(port,sizeof(*timer));
+  if(timer && !OpenDevice((CONST_STRPTR)TIMERNAME,UNIT_MICROHZ,(struct IORequest *)timer,0))timer_open=1;
+ }
+ struct futex_waiter w;w.address=address;w.task=FindTask(NULL);w.mask=1UL<<signal;w.woken=0;
+ int timed_out=0;
+ Forbid();threads_init();
+ if(*address==expected && !exit_requested && (timeout_us<0 || timer_open)){
+  AddTail((struct List *)&futex_list,(struct Node *)&w.node);
+  ULONG wait=w.mask|THREAD_KICK;
+  if(timer_open){
+   uint64_t us=(uint64_t)timeout_us;
+   if(us>(uint64_t)0xffffffffULL*1000000ULL)us=(uint64_t)0xffffffffULL*1000000ULL;
+   timer->tr_node.io_Command=TR_ADDREQUEST;timer->tr_time.tv_secs=(ULONG)(us/1000000);timer->tr_time.tv_micro=(ULONG)(us%1000000);
+   SendIO((struct IORequest *)timer);wait|=1UL<<port->mp_SigBit;
+  }
+  for(;;){
+   ULONG got=Wait(wait);
+   if(w.woken || (got&THREAD_KICK))break;
+   if(timer_open && CheckIO((struct IORequest *)timer)){timed_out=1;break;}
+  }
+  if(!w.woken)Remove((struct Node *)&w.node);
+ }
+ else if(timeout_us>=0 && !timer_open && *address==expected){Permit();Delay(1);Forbid();timed_out=1;}
+ Permit();
+ if(timer_open){
+  if(!CheckIO((struct IORequest *)timer))AbortIO((struct IORequest *)timer);
+  WaitIO((struct IORequest *)timer);CloseDevice((struct IORequest *)timer);
+ }
+ if(timer)DeleteIORequest((struct IORequest *)timer);
+ if(port)DeleteMsgPort(port);
+ FreeSignal(signal);
+ return timed_out && !w.woken;
+}
+/* Wakes up to count waiters on address; returns how many. */
+int sdk_futex_wake(volatile uint32_t *address,int count) {
+ int woken=0;
+ Forbid();threads_init();
+ struct MinNode *n=futex_list.mlh_Head;
+ while(n->mln_Succ && woken<count){
+  struct MinNode *next=n->mln_Succ;struct futex_waiter *w=(struct futex_waiter *)n;
+  if(w->address==address){Remove((struct Node *)n);w->woken=1;Signal(w->task,w->mask);woken++;}
+  n=next;
+ }
+ Permit();
+ return woken;
+}
+
+/* Task storage slots for std's thread-local keys: in task.resource on ABI-v1, in exec.library
+   (version 51) on ABI-v11. A new process starts with every slot at 0. */
+#ifndef AMI_RUST_ABI11
+static int task_storage_ready(void) {
+ if(!TaskResBase)TaskResBase=OpenResource((CONST_STRPTR)"task.resource");
+ return TaskResBase!=NULL;
+}
+#define TS_ALLOC() AllocTaskStorageSlot()
+#define TS_FREE(slot) FreeTaskStorageSlot(slot)
+#define TS_SET(slot,value) SetTaskStorageSlot((slot),(value))
+#define TS_GET(slot) GetTaskStorageSlot(slot)
+#else
+static int task_storage_ready(void) {return SysBase->LibNode.lib_Version>=51;}
+/* The vectors of exec.library 51 (defines/exec.h of the SDK), without the version marker. */
+#define TS_ALLOC() AROS_LC0(LONG,AllocTaskStorageSlot,struct ExecBase *,SysBase,180,Exec)
+#define TS_FREE(slot) AROS_LC1NR(VOID,FreeTaskStorageSlot,AROS_LCA(LONG,(slot),D0),struct ExecBase *,SysBase,181,Exec)
+#define TS_SET(slot,value) AROS_LC2(BOOL,SetTaskStorageSlot,AROS_LCA(LONG,(slot),D0),AROS_LCA(IPTR,(value),D1),struct ExecBase *,SysBase,184,Exec)
+#define TS_GET(slot) AROS_LC1(IPTR,GetTaskStorageSlot,AROS_LCA(LONG,(slot),D0),struct ExecBase *,SysBase,185,Exec)
+#endif
+/* The slots this program has allocated. A slot is a number for the whole system, so they are freed
+   when the program ends (tls_release_all); measured, about five slots were left per run otherwise. */
+static long *tls_slots;
+static int tls_count,tls_capacity;
+long sdk_tls_alloc(void) {
+ if(!task_storage_ready())return 0;
+ if(tls_count==tls_capacity){
+  int capacity=tls_capacity?tls_capacity*2:32;
+  long *bigger=(long *)AllocVec(capacity*sizeof(long),MEMF_ANY);
+  if(!bigger)return 0;
+  Forbid();
+  for(int i=0;i<tls_count;i++)bigger[i]=tls_slots[i];
+  long *old=tls_slots;tls_slots=bigger;tls_capacity=capacity;
+  Permit();
+  if(old)FreeVec(old);
+ }
+ long slot=TS_ALLOC();
+ if(slot>0){Forbid();tls_slots[tls_count++]=slot;Permit();}
+ return slot;
+}
+void sdk_tls_free(long slot) {
+ if(!task_storage_ready())return;
+ Forbid();
+ for(int i=0;i<tls_count;i++)if(tls_slots[i]==slot){tls_slots[i]=tls_slots[--tls_count];break;}
+ Permit();
+ TS_FREE(slot);
+}
+/* At the end of the program, after its threads: the program runs in the shell's process, which keeps
+   its slot values after the program has ended. A later program that gets the same slot would read
+   this program's value in that process, so the value is cleared before the slot is freed. */
+static void tls_release_all(void) {
+ if(!tls_count || !task_storage_ready())return;
+ for(int i=0;i<tls_count;i++){TS_SET(tls_slots[i],0);TS_FREE(tls_slots[i]);}
+ tls_count=0;
+}
+int sdk_tls_set(long slot,uintptr_t value) {return task_storage_ready()?TS_SET(slot,(IPTR)value):0;}
+uintptr_t sdk_tls_get(long slot) {return task_storage_ready()?(uintptr_t)TS_GET(slot):0;}
+
 static int own(uint64_t key,SdkError *e) {
  clear_error(e);
  if (!active || closing || key!=context_key || !owner_is_current()) return refuse(e,4,0);
@@ -1444,9 +1761,21 @@ static int cleanup_remaining(void) {
 }
 int sdk_end(void) {
  if(!active || closing || !owner_is_current())return 20;
+ threads_end_all();
+ tls_release_all();
  return cleanup_remaining();
 }
 _Noreturn void sdk_fatal(uint64_t reason) {
+ /* In a std thread: record the abort for the program and end the thread; the main task ends the
+    program at its next safe point. */
+ if(!owner_is_current()){
+  Forbid();struct sdk_thread *t=thread_self();Permit();
+  if(t){
+   static const uint8_t text[]="ami-rust fatal in a thread\n";
+   for(size_t i=0;i<sizeof(text)-1;i++)RawPutChar(text[i]);
+   (void)reason;threads_request_exit(20);longjmp(t->end,1);
+  }
+ }
  if(closing){
   fatal_started=1;
   /* Fixed secondary record, inside the existing diagnostic window. It cannot
@@ -1463,7 +1792,7 @@ _Noreturn void sdk_fatal(uint64_t reason) {
   /* The original formatter frame is abandoned by this nonreturning path. */
   ami_sdk_diagnostic_depth=0;
  }
- if(active && owner_is_current()){int result=cleanup_remaining();(void)result;}
+ if(active && owner_is_current()){threads_end_all();tls_release_all();int result=cleanup_remaining();(void)result;}
  /* Pinned _Exit skips user exit hooks and goes to native startup teardown. */
  _Exit(20);
 }
@@ -1546,5 +1875,8 @@ int main(int argc,char **argv) {
  result=rust_sdk_main();int closed=sdk_end();
 
  if(closed || fatal_started)return 20;
+ /* A thread that asked to end the program (process::exit, or a panic: 20) gives the code when the
+    main task itself ended normally. */
+ if(result==0 && thread_exit_code>=0)return thread_exit_code;
  return result==0||result==10||result==20?result:20;
 }
