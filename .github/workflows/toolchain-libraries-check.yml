@@ -148,6 +148,24 @@ jobs:
           done
           exit "$status"
 
+      - name: Gather the rlibs for the cross-host comparison
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          for abi in abi1 abi11; do
+            mkdir -p "$RUNNER_TEMP/rlibs/$abi"
+            cp "$RUNNER_TEMP/lib-producer-work/bare-output-x86_64-unknown-aros-$abi/libraries/"*.rlib "$RUNNER_TEMP/rlibs/$abi/" || true
+          done
+
+      - name: Retain the rlibs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rlibs-${{ matrix.host.key }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/rlibs/
+          if-no-files-found: ignore
+
       - name: Retain the proposed pin files
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
