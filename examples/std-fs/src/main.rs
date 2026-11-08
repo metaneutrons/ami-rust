@@ -3,9 +3,10 @@
 //! `std` has to work around. One behaviour per run; the expected results are in README.md. The files
 //! are made in `RAM:ami-rust-m1/`, which the run must create.
 
-#![feature(restricted_std)]
+#![feature(restricted_std, aros_ext)]
 use std::ffi::OsString;
 use std::fs::{self, File, OpenOptions};
+use std::os::aros::fs::{requesters, set_requesters, with_requesters};
 use std::io::{self, BufRead, BufReader, BufWriter, ErrorKind, Read, Seek, SeekFrom, Write};
 use std::path::Path;
 use std::process::ExitCode;
@@ -225,6 +226,36 @@ fn main() -> ExitCode {
             let after = read();
             t.check("window pointer restored", after == before, format!("{before:#x} then {after:#x}"));
             t.check("window pointer is not -1 outside the calls", after != usize::MAX, String::new());
+            // The setting is the program's, and can be changed at any time.
+            t.check("requesters are off by default", !requesters(), String::new());
+            set_requesters(true);
+            t.check("set_requesters(true)", requesters(), String::new());
+            let before = read();
+            t.check("a call that succeeds works with requesters on", fs::metadata(BASE).is_ok() && File::open(p("not-there")).is_err(), String::new());
+            t.check("and leaves the window pointer alone", read() == before, String::new());
+            set_requesters(false);
+            t.check("set_requesters(false)", !requesters(), String::new());
+            t.check("with_requesters turns them on inside the closure", with_requesters(|| requesters()), String::new());
+            t.check("and restores them off", !requesters(), String::new());
+            set_requesters(true);
+            with_requesters(|| ());
+            t.check("with_requesters keeps them on when they were on", requesters(), String::new());
+            set_requesters(false);
+            for i in 0..1000 { set_requesters(i % 2 == 0); }
+            t.check("1000 changes in a row end in the last value", !requesters(), String::new());
+            let started = std::time::Instant::now();
+            t.kind("a missing volume fails at once after the setting was turned on and off", File::open("NOSUCHVOLUME:a"), ErrorKind::NotFound);
+            t.check("... without waiting", started.elapsed() < std::time::Duration::from_secs(5), String::new());
+        }
+        "requesterson" => {
+            // EXPECTED TO WAIT FOR A PERSON: with requesters on, DOS opens "Please insert volume
+            // NOSUCHVOLUME in any drive" and this run does not end by itself. It is run by hand
+            // with a short timeout and a screen dump; see README.md.
+            println!("RESULT fs requesterson requesters are turned on; the next call is expected to wait for a person");
+            set_requesters(true);
+            let r = File::open("NOSUCHVOLUME:a");
+            // Only reached if somebody answered the requester.
+            println!("RESULT fs requesterson the call returned: {:?}", r.map(|_| ()).map_err(|e| e.kind()));
         }
         "seekprobe" => {
             // Seeks past the end of a 1000-byte file: the position is exactly what POSIX says, and the
@@ -534,7 +565,7 @@ fn main() -> ExitCode {
             println!("INFO a DOS variable as a file (ENV:): {:?}", env.map_err(|e| e.kind()));
             clean(&["with space", "two.dots.txt"]);
         }
-        _ => println!("modes: rw large seek open trunc dup unlink sync unsupported paths errors requesters seekprobe seekro seekwrite meta times dirs readdir perm copy removeall"),
+        _ => println!("modes: rw large seek open trunc dup unlink sync unsupported paths errors requesters seekprobe seekro seekwrite requesterson meta times dirs readdir perm copy removeall"),
     }
     println!("RESULT fs summary {} of {} checks passed", t.total - t.failed, t.total);
     if t.failed == 0 { ExitCode::SUCCESS } else { ExitCode::from(3) }

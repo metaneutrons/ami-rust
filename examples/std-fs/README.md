@@ -41,9 +41,9 @@ Each was found by this test, and each has a check that fails without the workaro
 
 1. **DOS requesters.** A path on a volume that is not there opens "Please insert volume X in
    any drive" and waits for a person, so a program started from a script never returns (seen on
-   a screendump). `std` switches requesters off around calls that resolve a path, through the
-   bridge function `sdk_proc_window_set`, and restores the setting afterwards. The failure is then
-   `NotFound`, at once.
+   a screendump). By default `std` switches requesters off around calls that resolve a path, through
+   the bridge function `sdk_proc_window_set`, and restores the setting afterwards. The failure is then
+   `NotFound`, at once. A program can change this at any time, see "Requesters" below.
 2. **Access modes.** The C library accepted a write on a handle opened for reading and a read on
    one opened for writing. `std` refuses both with `EBADF`.
 3. **Append.** A write on a handle opened for append after a `seek` did not go to the end. `std`
@@ -84,9 +84,30 @@ disk, a write-protected file or a seek error reached `std` as `Uncategorized` wi
 `DirectoryNotEmpty`, ...) and gives them a text, for example "file is write protected (DOS error
 223)".
 
+## Requesters
+
+The default is off, because a library that blocks a script is worse than one that cannot ask for a
+disk. A program that wants the DOS behaviour uses `std::os::aros::fs`, which needs
+`#![feature(aros_ext)]` next to `restricted_std`:
+
+- `requesters() -> bool` tells whether they are on.
+- `set_requesters(bool)` turns them on or off from now on, at any time.
+- `with_requesters(f)` turns them on while `f` runs and restores the previous setting afterwards.
+
+The setting belongs to the whole program, not to a task: a call from another task that starts while
+`f` runs sees requesters on. With requesters on, the requester that DOS opens has "Retry" and
+"Cancel"; "Cancel" makes the call fail with `NotFound` as usual.
+
+The `requesters` mode checks the state (default off, on, off, the scoped form restores what it found,
+1,000 changes in a row, no residue that would make a later call wait). That the requester really comes back
+cannot be checked by a run that ends by itself: the `requesterson` mode turns requesters on and opens a
+missing volume, and is **expected to wait for a person**. It was run by hand with a timeout on both ABIs, and the
+screen dump shows the DOS requester "Please insert volume "NOSUCHVOLUME" in any drive" with Retry and
+Cancel. A matrix run must treat that mode as an expected timeout.
+
 ## Modes and results
 
-All 22 modes pass on both ABIs: 199 checks on each, every boot on the first attempt.
+All 22 modes pass on both ABIs, with 210 checks on each (the 23rd mode, `requesterson`, waits by design), every boot on the first attempt.
 
 | Mode | Checks | What it covers |
 | --- | --- | --- |
@@ -104,7 +125,8 @@ All 22 modes pass on both ABIs: 199 checks on each, every boot on the first atte
 | `unsupported` | 6 | the calls above return `Unsupported` |
 | `paths` | 5 | names with spaces and dots, `NIL:`, a file at the root of a volume, a relative path |
 | `errors` | 5 | a write, `create_dir` and `remove_file` on the read-only volume give a kind and a readable message; the volume can be listed and examined |
-| `requesters` | 2 | the window pointer of the process is the same after the calls as before |
+| `requesters` | 13 | the window pointer of the process is the same after the calls as before; the setting `std::os::aros::fs`: default, on, off, scoped, 1,000 changes, no residue |
+| `requesterson` | - | requesters on, then a missing volume: expected to wait for a person, run by hand (see above) |
 | `meta` | 24 | length, type, permissions, `Debug`, a directory, a volume root, missing file, volume and directory, a path through a file, the empty path in six calls, `exists`, a file that is open for writing |
 | `times` | 5 | the date of a new file is the time of the write, accessed equals modified, whole seconds, a later write gives a later date; also run with the clock at 2040 and 2100 |
 | `dirs` | 20 | `create_dir` and `create_dir_all` (existing, missing parent, over a file, trailing slash), `remove_dir` (empty, not empty after three kinds of earlier failure, missing, a file), `remove_file` on a directory |
@@ -143,7 +165,7 @@ Observed facts that the checks do not assert (they print `INFO`):
   provisioned (AROS-NX#121). The offsets of `std` are 64-bit; on ABI-v11 `Limit` for such offsets
   was not exercised here.
 - Behaviour with more than one task, and file locking (`Unsupported`).
-- Whether the requesters stay off if a call is interrupted by a break.
+- Whether the requesters stay off if a call is interrupted by a break, and what several tasks that change the setting at once see.
 - Reading from a directory that was opened as a file.
 - Symbolic links (no way to create one yet), a file or directory on a volume other than `RAM:` and the
   delivery volume, and names with characters above 127 in `read_dir`.
