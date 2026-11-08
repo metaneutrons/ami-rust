@@ -27,7 +27,7 @@ use std::{
 
 const REQUEST_SCHEMA: &str = "ami-rust-native-prefix-compose-request-v1";
 const EXPECTED_CORE_NATIVE_PREFIX_SHA256: &str =
-    "08cc524a7642bdbc845297d61f731fe76e3496bba91f7899c4fe3f611dd9c54b";
+    "6f2f08d62192fc6ea1a72dd7dca4ce7eb43d967f8075b46ebe02002fef0a132a";
 const EXPECTED_INPUTS_RS_SHA256: &str =
     "a000e589287ecb104152cb3c84427eefeef01ada1abee0bcd3246c488e5cc747";
 const EXPECTED_PUBLIC_VIEW_RS_SHA256: &str =
@@ -43,9 +43,9 @@ const EXPECTED_NATIVE_BUILD_BUILD_RS_SHA256: &str =
 const EXPECTED_NATIVE_BUILD_LINK_RS_SHA256: &str =
     "af9ef38cc5095086a2efe66ed92aef8ee01ba684e562cbe1c425e8ddfbbb7c03";
 const ABI1_TARGET_LIBRARIES_SHA256: &str =
-    "19070437e2231d971aa1edd4221daa069f0b66ed780e70eeb71ffc14cf015c91";
+    "f36e9392f982d67bfc8c6baa3435a482a9346ce271976b5f1dda8c708a1da570";
 const ABI11_TARGET_LIBRARIES_SHA256: &str =
-    "ec6556d33c6adfc2c094ca37dad61f66bd0881ead331d5c884033d4b41ed4f67";
+    "6d470af1faa57921eb60820200b5ea521b71cda7c9873eabd2ebc0161658f7f4";
 const LINUX_X64_ABI1_TARGET_LIBRARIES_SHA256: &str =
     "21dcb704b18c6df0a68f71521048bdd492126615a7403f960e79e09025251046";
 const LINUX_X64_ABI11_TARGET_LIBRARIES_SHA256: &str =
@@ -520,10 +520,11 @@ pub(super) fn compose_candidate_with_target_profiles(
             input.name == "x86_64-unknown-aros-abi1" && declared_target == "x86_64-aros";
         if text(&library_pin, "schema")? != "aros-target-library-candidate-v1"
             || (declared_target != input.name && !transitional_abi1_profile)
-            || libraries.files.len() != 6
+            || libraries.files.len()
+                != 2 * ami_rust_core::native_prefix::TARGET_LIBRARY_CRATES.len()
         {
             return Err(Refusal::new(
-                "target-library candidate must contain exactly three reviewed rlib/rmeta pairs for its target",
+                "target-library candidate must contain exactly the reviewed rlib/rmeta pairs of every crate of the target library set for its target",
             ));
         }
         let (pin_raw, spec_raw, spec_sha256) = match input.name {

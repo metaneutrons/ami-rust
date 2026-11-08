@@ -479,7 +479,8 @@ fn assemble(mut arguments: impl Iterator<Item = OsString>) -> Result<()> {
                 }
             }
             host_metadata.sort();
-            if host_rlibs.len() != 6 || host_metadata.len() != 6 {
+            let expected_count = 2 * ami_rust_core::native_prefix::TARGET_LIBRARY_CRATES.len();
+            if host_rlibs.len() != expected_count || host_metadata.len() != expected_count {
                 return Err(Refusal::new(format!(
                     "producer target payload lacks the dual-ABI rlib/rmeta set: {host}"
                 )));

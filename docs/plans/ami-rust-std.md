@@ -370,3 +370,18 @@ milestone; the three-host matrix runs at STD-M8.
     because it can strike inside a DOS call.
   - STD-M4-A2 (a substitute for each missing pthread function) no longer
     applies: `std` does not use pthreads.
+- 2026-11-08: STD-M7 design, decided on the maintainer's go after the measurements in
+  `docs/plans/std-m7-findings.md`:
+  - **Where the patch is applied.** The toolchain producer applies `host/std-aros/std-aros.patch` to its
+    private copy of the pinned `rust-src`, in process (no external `patch`, no fuzz), and every file must match the
+    before and after digests of `host/std-aros/source.json`. The patch and the source record are inputs of the
+    production contract (`std-aros-patch`, `std-aros-source`), and the producer's record names every changed file.
+  - **The shipped `rust-src` stays unpatched.** It is the pinned upstream component. Once `std` is prebuilt, nobody
+    needs to build it; a user who passes `-Zbuild-std` anyway gets upstream's `std`, which has no AROS support.
+  - **What is built and shipped.** `-Zbuild-std=std,panic_abort` with the producer's existing flags, and the 14
+    crates that belong in a sysroot (`core`, `alloc`, `compiler_builtins`, `std`, `panic_abort`, `panic_unwind`,
+    `unwind`, `hashbrown`, `libc`, `cfg_if`, `rustc_demangle`, `std_detect` and the two `rustc_std_workspace_*`
+    crates). `proc_macro` and `rustc_literal_escaper` are built by the same invocation and not shipped.
+  - **Pins stay per host and per ABI** (six files), and a pin file comes from a build, never from a hand edit. A
+    workflow builds the libraries on the three hosts for every change that can alter them, compares them with the
+    pins and uploads the file to commit when they differ.

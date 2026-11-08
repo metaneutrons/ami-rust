@@ -6,6 +6,7 @@
 //! its relative target.json alias is created only inside the fresh subset.
 //! This does not admit a host or qualify an SDK.
 
+use crate::std_patch;
 use ami_rust_core::{
     Refusal, Result,
     bare_target_record_validation::{self, InnerCommandSummary},
@@ -14,6 +15,7 @@ use ami_rust_core::{
     files::{read_regular_bounded, validate_relative_inventory_path},
     inventory::{FileIdentity, InventoryLimits, LinkIdentity, verify_complete},
     json::{JsonProfile, parse_json, parse_json_value},
+    native_prefix::TARGET_LIBRARY_CRATES,
     ownership,
     qualification_command::{self, CommandBudgets, CommandRequest},
     workspace_accounting::{self, ScanLimits},
@@ -62,6 +64,9 @@ const LLVM_OBJCOPY_VERSION: &str = "LLVM version 23.1.1";
 const CARGO_LOCK_BYTES: &[u8] =
     b"version = 4\n\n[[package]]\nname = \"bare-target-library-probe\"\nversion = \"0.1.0\"\n";
 const CARGO_LOCK_SHA256: &str = "969184047306a3a38adfd54e6f4bc77afa3de91713ffd3b3e407789ea69d3708";
+const STD_PATCH_ROOT: &str = "lib/rustlib/src/rust";
+const STD_PATCH_MAX_BYTES: usize = 4 * 1024 * 1024;
+const STD_SOURCE_MAX_BYTES: usize = 1024 * 1024;
 const COMMAND_SECONDS: u64 = 1_200;
 const RSS_BYTES: u64 = 4 * 1024 * 1024 * 1024;
 const EMBEDDED_PARENT_RSS_BYTES: u64 = 2 * 1024 * 1024 * 1024;
@@ -206,6 +211,8 @@ pub(super) struct BareTargetRequest {
     pub(super) native_cargo: PathBuf,
     pub(super) target_pin: PathBuf,
     pub(super) target_spec: PathBuf,
+    pub(super) std_patch: PathBuf,
+    pub(super) std_source: PathBuf,
     pub(super) work: PathBuf,
     pub(super) output: PathBuf,
 }
@@ -224,6 +231,10 @@ pub(super) fn produce(request: BareTargetRequest) -> Result<()> {
         request.target_pin.into_os_string(),
         OsString::from("--target-spec"),
         request.target_spec.into_os_string(),
+        OsString::from("--std-patch"),
+        request.std_patch.into_os_string(),
+        OsString::from("--std-source"),
+        request.std_source.into_os_string(),
         OsString::from("--work"),
         request.work.into_os_string(),
         OsString::from("--output"),
@@ -327,7 +338,7 @@ fn rewrite_rustc_metadata(
     let Some(crate_name) = argument_value("--crate-name")? else {
         return Ok(arguments);
     };
-    if !matches!(crate_name, "core" | "alloc" | "compiler_builtins") {
+    if !TARGET_LIBRARY_CRATES.contains(&crate_name) {
         return Ok(arguments);
     }
 
@@ -387,6 +398,8 @@ fn run_with_parent_rss_limit(
             "--native-cargo",
             "--target-pin",
             "--target-spec",
+            "--std-patch",
+            "--std-source",
             "--work",
             "--output",
         ]
@@ -404,7 +417,7 @@ fn run_with_parent_rss_limit(
             ));
         }
     }
-    if options.len() != 8 {
+    if options.len() != 10 {
         return Err(usage());
     }
     let host_name = take(&mut options, "--host")?
@@ -418,6 +431,8 @@ fn run_with_parent_rss_limit(
     let cargo_path = existing_regular(PathBuf::from(take(&mut options, "--native-cargo")?))?;
     let target_pin_path = existing_regular(PathBuf::from(take(&mut options, "--target-pin")?))?;
     let target_spec_path = existing_regular(PathBuf::from(take(&mut options, "--target-spec")?))?;
+    let std_patch_path = existing_regular(PathBuf::from(take(&mut options, "--std-patch")?))?;
+    let std_source_path = existing_regular(PathBuf::from(take(&mut options, "--std-source")?))?;
     let work = fresh_directory_path(PathBuf::from(take(&mut options, "--work")?))?;
     let output = fresh_directory_path(PathBuf::from(take(&mut options, "--output")?))?;
     if !options.is_empty() {
@@ -509,6 +524,19 @@ fn run_with_parent_rss_limit(
 
     let stage = work.join("toolchain");
     install_rust_components(&inputs, &work, &output, &stage)?;
+    let std_patch_bytes = read_bounded_regular(&std_patch_path, STD_PATCH_MAX_BYTES)?;
+    let std_source_bytes = read_bounded_regular(&std_source_path, STD_SOURCE_MAX_BYTES)?;
+    let patched_std_files = std_patch::apply(
+        &std_patch_bytes,
+        &std_source_bytes,
+        &stage.join(STD_PATCH_ROOT),
+        &format!("{STD_PATCH_ROOT}/"),
+    )?;
+    write_new(&output.join("inputs/std-aros.patch"), &std_patch_bytes)?;
+    write_new(
+        &output.join("inputs/std-aros-source.json"),
+        &std_source_bytes,
+    )?;
     copy_input(
         &inputs.cargo_path,
         &stage.join("bin/cargo"),
@@ -532,6 +560,25 @@ fn run_with_parent_rss_limit(
     }
 
     let mut final_files = inputs.scoped.files.clone();
+    for patched in &patched_std_files {
+        match final_files.iter_mut().find(|row| row.path == patched.path) {
+            Some(row) if !patched.created => {
+                row.bytes = patched.bytes;
+                row.sha256 = patched.sha256.clone();
+            }
+            None if patched.created => final_files.push(FileIdentity {
+                path: patched.path.clone(),
+                bytes: patched.bytes,
+                sha256: patched.sha256.clone(),
+                mode: Some(patched.mode),
+            }),
+            _ => {
+                return Err(Refusal::new(
+                    "std patch creates a file that the pinned source has, or changes one that it lacks",
+                ));
+            }
+        }
+    }
     final_files.push(inputs.cargo_identity.clone());
     final_files.push(inputs.target_spec_identity.clone());
     let mut final_links = vec![LinkIdentity {
@@ -548,6 +595,12 @@ fn run_with_parent_rss_limit(
         "schema": "ami-rust-bare-target-scoped-component-inventory-v2",
         "input_profile_sha256": inputs.profile_sha256,
         "selected_rust_component_files": &inputs.scoped.files,
+        "std_patch": {
+            "patch_sha256": sha256_bytes(&std_patch_bytes),
+            "source_record_sha256": sha256_bytes(&std_source_bytes),
+            "applied_in": STD_PATCH_ROOT,
+            "files": patched_std_files.iter().map(|file| json!({"path": file.path, "bytes": file.bytes, "sha256": file.sha256, "mode": file.mode, "created": file.created})).collect::<Vec<_>>()
+        },
         "excluded_installer_admin_rows": &inputs.scoped.installer_admin_files,
         "excluded_official_cargo_rows": &inputs.scoped.cargo_files,
         "excluded_composed_host_linker_alias": &inputs.scoped.host_linker_alias,
@@ -628,8 +681,12 @@ fn run_with_parent_rss_limit(
     let helper_sha256 = sha256_file(&helper)?;
     let rustc_metadata = sha256_bytes(
         format!(
-            "ami-rust-bare-target-v1\0{}\0{}\0{}\0{}",
-            RUST_COMMIT, inputs.target.pin_sha256, inputs.target.spec_sha256, LIBRARY_LOCK_SHA256,
+            "ami-rust-bare-target-v2\0{}\0{}\0{}\0{}\0{}",
+            RUST_COMMIT,
+            inputs.target.pin_sha256,
+            inputs.target.spec_sha256,
+            LIBRARY_LOCK_SHA256,
+            sha256_bytes(&std_patch_bytes),
         )
         .as_bytes(),
     );
@@ -767,7 +824,7 @@ fn run_with_parent_rss_limit(
         &stage.join("bin/cargo"),
         &[
             OsString::from("-Zjson-target-spec"),
-            OsString::from("-Zbuild-std=core,alloc"),
+            OsString::from("-Zbuild-std=std,panic_abort"),
             OsString::from("-Zbuild-std-features=compiler-builtins-mem"),
             OsString::from("build"),
             OsString::from("--manifest-path"),
@@ -860,7 +917,7 @@ fn run_with_parent_rss_limit(
     let report = json!({
         "schema": "ami-rust-bare-target-library-producer-v1",
         "status": "PRODUCED_BARE_TARGET_LIBRARIES_NOT_L1_OR_RC_QUALIFICATION",
-        "scope": format!("source-built {} core, alloc, and compiler_builtins rlibs from pinned rustc/rust-std/rust-src components", inputs.target.name),
+        "scope": format!("source-built {} rlibs of core, alloc, compiler_builtins, std, panic_abort and the crates that std depends on, from pinned rustc/rust-std components and the pinned rust-src with the std for AROS patch applied", inputs.target.name),
         "host": host.name,
         "rustc_commit": RUST_COMMIT,
         "target": inputs.target.name,
@@ -913,12 +970,12 @@ fn run_with_parent_rss_limit(
         })),
         "recipe": {
             "target": inputs.target.name,
-            "build_flags": ["-Zjson-target-spec", "-Zbuild-std=core,alloc", "-Zbuild-std-features=compiler-builtins-mem", "build", format!("--target={}", inputs.target.name), "--release", "--locked", "--offline", "--lib", "-j2", "-vv", "--message-format=json-render-diagnostics"],
+            "build_flags": ["-Zjson-target-spec", "-Zbuild-std=std,panic_abort", "-Zbuild-std-features=compiler-builtins-mem", "build", format!("--target={}", inputs.target.name), "--release", "--locked", "--offline", "--lib", "-j2", "-vv", "--message-format=json-render-diagnostics"],
             "rustflags": flags,
             "rustc_metadata": {
                 "value": rustc_metadata,
-                "derivation": "sha256(ami-rust-bare-target-v1, rustc commit, target pin, target specification, Rust library lock)",
-                "scope": "Cargo metadata argument for source-built core, alloc, and compiler_builtins only",
+                "derivation": "sha256(ami-rust-bare-target-v2, rustc commit, target pin, target specification, Rust library lock, std patch)",
+                "scope": "Cargo metadata argument for every source-built crate of the target library set only",
                 "wrapper_sha256": helper_sha256,
                 "compiler_outputs_mutated_after_rustc": false
             },
@@ -1901,7 +1958,7 @@ fn collect_libraries(
     cargo_stdout: &str,
     output: &Path,
 ) -> Result<Vec<Value>> {
-    let crates = ["core", "alloc", "compiler_builtins"];
+    let crates = TARGET_LIBRARY_CRATES;
     let target_release = fs::canonicalize(work.join("target").join(&target.name).join("release"))?;
     let mut artifacts: BTreeMap<&str, Vec<PathBuf>> =
         crates.iter().map(|name| (*name, Vec::new())).collect();
@@ -1941,7 +1998,12 @@ fn collect_libraries(
             let Some(name) = candidate.file_name().and_then(OsStr::to_str) else {
                 continue;
             };
-            if name.starts_with(&prefix) && (name.ends_with(".rlib") || name.ends_with(".rmeta")) {
+            if name.starts_with(&prefix)
+                && (name.ends_with(".rlib") || name.ends_with(".rmeta"))
+                // A crate such as `cfg_if` may also be built for the host, for a build script.
+                && fs::canonicalize(&candidate)
+                    .is_ok_and(|resolved| resolved.starts_with(&target_release))
+            {
                 matches.push(candidate);
             }
         }
@@ -2188,7 +2250,7 @@ fn take(options: &mut BTreeMap<OsString, OsString>, name: &str) -> Result<OsStri
 
 fn usage() -> Refusal {
     Refusal::new(
-        "usage: ami-rust-xtask bare-target-libraries --host {macos-aarch64|linux-x86_64|linux-aarch64} --rust-profile JSON --host-rust SYSROOT --native-cargo FILE --target-pin JSON --target-spec JSON --work FRESH_DIR --output FRESH_DIR",
+        "usage: ami-rust-xtask bare-target-libraries --host {macos-aarch64|linux-x86_64|linux-aarch64} --rust-profile JSON --host-rust SYSROOT --native-cargo FILE --target-pin JSON --target-spec JSON --std-patch PATCH --std-source JSON --work FRESH_DIR --output FRESH_DIR",
     )
 }
 
@@ -2202,10 +2264,10 @@ mod tests {
         MACOS_LLVM_ALIAS_TARGET, MACOS_LLVM_SOURCE_BYTES, MACOS_LLVM_SOURCE_PATH,
         MACOS_LLVM_SOURCE_SHA256, ProfileRows, SOURCE_PROFILE_TARGET_ALIAS,
         SOURCE_PROFILE_TARGET_ALIAS_PATH, SOURCE_PROFILE_TARGET_SPEC_BYTES,
-        SOURCE_PROFILE_TARGET_SPEC_PATH, SOURCE_PROFILE_TARGET_SPEC_SHA256, TargetDefinition,
-        collect_libraries, create_linux_llvm_runtime_alias, is_installer_admin_path,
-        is_official_cargo_path, pinned_program_digests, require_digest, rewrite_rustc_metadata,
-        select_component_inventory, select_linux_llvm_runtime_alias,
+        SOURCE_PROFILE_TARGET_SPEC_PATH, SOURCE_PROFILE_TARGET_SPEC_SHA256, TARGET_LIBRARY_CRATES,
+        TargetDefinition, collect_libraries, create_linux_llvm_runtime_alias,
+        is_installer_admin_path, is_official_cargo_path, pinned_program_digests, require_digest,
+        rewrite_rustc_metadata, select_component_inventory, select_linux_llvm_runtime_alias,
         select_macos_llvm_runtime_alias, validate_bound_command_record,
         validate_caller_bound_inner_commands, validate_linux_llvm_runtime_alias,
         validate_macos_llvm_runtime_alias,
@@ -2336,6 +2398,39 @@ mod tests {
             host_arguments
         );
 
+        // The same rewrite covers every crate of the target library set, `std` included...
+        for crate_name in TARGET_LIBRARY_CRATES {
+            let arguments = [
+                "--crate-name",
+                crate_name,
+                "--target",
+                target,
+                "-C",
+                "metadata=host-bound",
+            ]
+            .map(OsString::from)
+            .to_vec();
+            let rewritten = rewrite_rustc_metadata(arguments, target, &metadata)
+                .expect("every crate of the set is rewritten");
+            assert_eq!(rewritten[5], OsString::from(format!("metadata={metadata}")));
+        }
+        // ...and nothing outside it: `proc_macro` is built by the same invocation, never shipped.
+        let outside = [
+            "--crate-name",
+            "proc_macro",
+            "--target",
+            target,
+            "-C",
+            "metadata=host-bound",
+        ]
+        .map(OsString::from)
+        .to_vec();
+        assert_eq!(
+            rewrite_rustc_metadata(outside.clone(), target, &metadata)
+                .expect("a crate outside the set passes through"),
+            outside
+        );
+
         let missing_metadata = ["--crate-name", "core", "--target", target]
             .map(OsString::from)
             .to_vec();
@@ -2355,47 +2450,55 @@ mod tests {
         let libraries = output_root.join("libraries");
         fs::create_dir_all(&deps).expect("create deps fixture");
         fs::create_dir_all(&libraries).expect("create library output");
-        let pairs = [
-            (
-                "core",
-                [
-                    "libcore-0123456789abcdef.rlib",
-                    "libcore-0123456789abcdef.rmeta",
-                ],
-            ),
-            (
-                "alloc",
-                [
-                    "liballoc-1123456789abcdef.rlib",
-                    "liballoc-1123456789abcdef.rmeta",
-                ],
-            ),
-            (
-                "compiler_builtins",
-                [
-                    "libcompiler_builtins-2123456789abcdef.rlib",
-                    "libcompiler_builtins-2123456789abcdef.rmeta",
-                ],
-            ),
-        ];
-        for (_, names) in pairs {
+        let pairs = TARGET_LIBRARY_CRATES
+            .iter()
+            .enumerate()
+            .map(|(index, crate_name)| {
+                let stem = format!("lib{crate_name}-{index:x}123456789abcdef");
+                (
+                    *crate_name,
+                    [format!("{stem}.rlib"), format!("{stem}.rmeta")],
+                )
+            })
+            .collect::<Vec<_>>();
+        for (_, names) in &pairs {
             for name in names {
                 fs::write(deps.join(name), b"target artifact fixture")
                     .expect("write target artifact fixture");
             }
         }
-        let stdout = pairs
+        // A crate that is also built for the host, for a build script, reports a second
+        // artifact outside the target output; it must not be mistaken for a second pair.
+        let host_deps = work.join("target/release/deps");
+        fs::create_dir_all(&host_deps).expect("create host deps fixture");
+        let host_names = [
+            "libcfg_if-ffffffffffffffff.rlib",
+            "libcfg_if-ffffffffffffffff.rmeta",
+        ];
+        for name in host_names {
+            fs::write(host_deps.join(name), b"host artifact fixture")
+                .expect("write host artifact fixture");
+        }
+        let mut stdout = pairs
             .iter()
             .map(|(crate_name, names)| {
                 serde_json::to_string(&json!({
                     "reason": "compiler-artifact",
                     "target": {"name": crate_name},
-                    "filenames": names.map(|name| deps.join(name))
+                    "filenames": names.iter().map(|name| deps.join(name)).collect::<Vec<_>>()
                 }))
                 .expect("serialize Cargo artifact fixture")
             })
-            .collect::<Vec<_>>()
-            .join("\n");
+            .collect::<Vec<_>>();
+        stdout.push(
+            serde_json::to_string(&json!({
+                "reason": "compiler-artifact",
+                "target": {"name": "cfg_if"},
+                "filenames": host_names.map(|name| host_deps.join(name))
+            }))
+            .expect("serialize host artifact fixture"),
+        );
+        let stdout = stdout.join("\n");
         let target = TargetDefinition {
             name: target_name.to_owned(),
             source_date_epoch: 1_791_936_000,
@@ -2408,17 +2511,18 @@ mod tests {
             spec_profile_path: String::new(),
         };
         let rows = collect_libraries(&work, &output_root, &target, &stdout, &libraries)
-            .expect("retain exactly three rlib/rmeta pairs");
+            .expect("retain exactly one rlib/rmeta pair of every crate of the target library set");
         let names = pairs
             .into_iter()
             .flat_map(|(_, names)| names)
             .collect::<Vec<_>>();
-        assert_eq!(rows.len(), 6);
-        for (row, name) in rows.iter().zip(names) {
-            assert_eq!(row["path"].as_str(), Some(name));
-            assert_eq!(row["source_filename"].as_str(), Some(name));
+        assert_eq!(rows.len(), 2 * TARGET_LIBRARY_CRATES.len());
+        for (row, name) in rows.iter().zip(&names) {
+            assert_eq!(row["path"].as_str(), Some(name.as_str()));
+            assert_eq!(row["source_filename"].as_str(), Some(name.as_str()));
             assert!(libraries.join(name).is_file());
         }
+        assert!(!libraries.join(host_names[0]).exists());
     }
 
     #[test]
