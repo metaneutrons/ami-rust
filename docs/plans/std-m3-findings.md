@@ -18,9 +18,9 @@ Delivered in slices, each its own pull request.
 | Criterion | State |
 | --- | --- |
 | A1: `Instant`, `SystemTime` (AROS epoch converted and tested), `thread::sleep` without threads | Met, see below. |
-| A2: `std::fs` and `std::path` | In progress. Slice 1 (files), slice 2 (metadata, permissions, directories, `copy`) and slice 3a (`std::path`, current directory, `.` and `..`) are met, see below. Slice 3b (`rename`, `canonicalize`, file times) is open. |
+| A2: `std::fs` and `std::path` | Met: files, metadata, directories, create, remove and rename on `RAM:`, and AROS paths in `std::path`, see slices 1 to 3b below. Unsupported and listed (C2): locks, links, `set_times_nofollow`, setting only the access time, `current_exe`. |
 | A3: `HashMap` seeding with the best available entropy, quality documented | Met, see below. |
-| A4: ABI differences declared | Open until A2 and A3 are done. |
+| A4: ABI differences declared | Met: each test program's README has an "ABI differences" section, and the differences are listed in each slice below. Every result that `std` gives is the same on both ABIs; the differences are in the C library underneath and are worked around. |
 
 ## A1: time and sleep
 
@@ -105,7 +105,7 @@ because directories cannot be tested without making them.
 - **DOS permissions:** read-only maps to the write bit, which the C library derives from the DOS protection flags.
   A read-only file can still be deleted, because DOS has a separate delete right.
 
-## A2, slice 3a: paths and the current directory
+## A2, slice 3a: paths and the current directory (merged)
 
 The test program is `examples/std-path` (listed as in development under #68): 8 modes, 154 checks, all passing on
 both ABIs. Slice 3 was split: `rename`, `canonicalize` and file times are slice 3b, because `rename` in the C library
@@ -126,6 +126,29 @@ deletes the destination before it renames and needs its own care.
   refuses a file (DOS would lock it and make it the current directory) and a missing volume fails at once.
 - **Also:** `temp_dir()` is `T:`; `split_paths` and `join_paths` use `;`; `home_dir()` is `None`; `current_exe()` is
   `Unsupported`. `DirEntry::path` now uses `Path::join`.
+
+## A2, slice 3b: rename, canonicalize and file dates
+
+The test program is `examples/std-fs`, now 25 modes and 278 checks, all passing on both ABIs.
+
+- **`rename` in the C library deletes the destination before it renames.** On a volume that ignores case that
+  destroyed data in four cases, on both ABIs: a file renamed to itself, a change of case only (`a` to `A`), a file
+  over an empty directory, a directory over a file (AROS-NX#135). `std` calls it only for a destination that does not exist, and
+  replaces an existing one by moving it aside, renaming, and deleting it, undoing the steps on a failure. ABI-v1
+  sets no `errno` for any failed rename; ABI-v11 sets wrong ones for some. The cause is found from the file system.
+- **DOS renames a file that is open** (source or destination) but does not delete one, so replacing an open
+  destination fails as busy, with nothing changed.
+- **`realpath` fails for every path** (`open(".")`, and DOS has no `.`; AROS-NX#136). `canonicalize` uses a new bridge function,
+  `sdk_path_name` (`Lock`, `NameFromLock`), because `std` must not call DOS itself. The `no_std` programs still
+  return 0 with the changed bridge.
+- **File dates:** `utimes` is exact from 1978 to 2106 on both ABIs, also for directories and open files. DOS sets the
+  date of a written file to "now" when it is closed, so `std` sets a date given through a writing handle again after
+  the last duplicate is closed, unless the file was written after it. By the source, `utimes` does not undo the
+  time-zone offset that `stat` adds; that is from reading the code, not tested (only UTC could be run), and not reported.
+- **`File::set_times`** has no `futimes` to use: the file keeps its absolute path from `open`. That stays valid,
+  because DOS does not delete an open file; it could be renamed while open.
+
+With this slice STD-M3 meets A1 to A4.
 
 ## A3: random
 

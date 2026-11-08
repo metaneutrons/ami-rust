@@ -91,6 +91,7 @@ int sdk_begin(int argc, char **argv);
 int sdk_end(void);
 uint64_t sdk_context(void);
 void *sdk_proc_window_set(void *);
+long sdk_path_name(const char *,char *,size_t);
 uint64_t sdk_claim_context(void);
 uintptr_t sdk_do_method_a(void *,void *);
 uintptr_t sdk_do_super_method_a(void *,void *,void *);
