@@ -79,7 +79,19 @@ the pinned inputs of the contract on this macOS host:
   (`no_std`) builds for both ABIs with the same toolchain.
 - The 12 unit-test failures seen with an unpinned Rust do not occur with the pinned one; with it the workspace tests pass.
 
-Not done in this slice: the Linux x86-64 and Linux ARM64 pins (the workflow "Target library check" builds them and uploads
-the proposal; until they are committed the pins of those two hosts still describe three crates and that workflow fails
-for them), the `.cargo/config.toml` of the `std` examples (they still ask for `build-std`), the rustup path, the guides (A3)
-and the bump procedure exercised on a newer nightly (A4).
+## Result on the three hosts (A1)
+
+The workflow "Target library check" built the libraries on macOS ARM64, Linux x86-64 and Linux ARM64 from the pinned
+inputs and compared them with the committed pins of each host and ABI (28 files each): all three pass. The macOS pins that
+came from the local build (above) are byte for byte what the CI macOS build gives, so a local build and a CI build agree
+on that host. The Linux pins were written from the proposal that the workflow uploads, not by hand.
+
+Across hosts, all 28 files per ABI have the same size on the three hosts, and 26 have different names and bytes, as
+before (Cargo's host-bound disambiguators). The rule that the release pipeline applies across hosts (R1: every native
+object and symbol index identical, only `lib.rmeta` and the Cargo disambiguators in member names may differ) was run on the
+`rlib` files of the three hosts with the pipeline's own comparison code: all 14 crates of both ABIs pass, 56 pairwise
+comparisons (a throwaway harness; the same code runs in the protected qualification workflow).
+
+Not done in this slice: the `.cargo/config.toml` of the `std` examples (they still ask for `build-std`), the rustup path
+and the direct archive of the three hosts as a candidate (the protected qualification workflow, which only the maintainer
+dispatches), the guides (A3) and the bump procedure exercised on a newer nightly (A4).
