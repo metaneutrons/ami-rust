@@ -101,10 +101,18 @@ Both were investigated after the first version of this PR; the first is not caus
 - **A page fault in `Avail FLUSH` on ABI-v1 (#132).** After many runs of programs that start threads, with `Avail FLUSH`
   between batches: `join` 1 of 2 boots, `bigstack` 1 of 3, `scope` 2 of 3, `spawn` 1 of 3, a longer sequence with 1000
   threads 2 of 3; the same sequences with a program that starts no thread 0 of 5 boots. `detached` and `named` 0 of 3 each, and
-  1000-thread batches with a flush after each, with a plain `Avail`, or all flushes at the end 0 of 3 each. So threads are needed,
-  one thread per run is enough, and the samples are too small to separate the cases further. The module at the faulting
-  address is not known (no symbols in the kernel log). A suspicion, not tested: a thread's trampoline returns with
-  `Forbid()` still held and relies on the process exit to clear it.
+  1000-thread batches with a flush after each, with a plain `Avail`, or all flushes at the end 0 of 3 each.
+  **Narrowed further:** the fault does not need the thread code of `std`. A scratch program that makes 16 plain DOS
+  processes per run with `CreateNewProc` (no `std` thread, no bridge trampoline, no task storage) and lets each call
+  `malloc` and `free` faulted in 4 of 14 boots (same sequence: 40 runs, `Avail FLUSH` after every ten). The same
+  program with processes that call nothing: 0 of 9. Processes that call `getenv`, `write` or
+  `std::thread::current`: 0 of 3 each (too few to say). So the trigger is a second process that calls the C library, in a
+  program that also leaks the `posixc` open count (#131); the earlier suspicion about the trampoline and `Forbid()` is
+  dropped. The faulting `IP`s lie near `stdcio.library` and `posixc.library`; at a fault, `posixc.library` showed
+  open count 0 while `stdc.library` and `stdcio.library` stayed open (one more open per run), so the flush expunges
+  `posixc` and not the other two. That is read from `LibList` output, not shown to be the cause. Not tested: whether
+  holding `posixc.library` open prevents the fault, and a plain C program with the same structure (no working link
+  of one yet). Nothing is reported upstream, because the cause is not attributed.
 
 ## A later improvement, read from source and not tested
 

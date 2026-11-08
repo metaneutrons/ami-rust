@@ -89,7 +89,7 @@ See "Open findings" in `docs/plans/std-m4-findings.md`:
 - 123 bytes per thread that ABI-v1 does not return (about 7 on ABI-v11), and the 168 KB per run of every
   program that references the POSIX layer on ABI-v1, which is not from threads (#131).
 - A page fault in `Avail FLUSH` on ABI-v1 after repeated runs of programs that start threads, in one to
-  two of three boots; the same loop without threads did not fault in five boots (#132).
+  two of three boots; the same loop without threads did not fault in five boots (#132). It also happens with plain DOS processes that call `malloc`, with no thread code of `std` (4 of 14 boots).
 
 ## Not verified
 
