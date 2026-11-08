@@ -29,7 +29,7 @@ const REQUEST_SCHEMA: &str = "ami-rust-native-prefix-compose-request-v1";
 const EXPECTED_CORE_NATIVE_PREFIX_SHA256: &str =
     "6f2f08d62192fc6ea1a72dd7dca4ce7eb43d967f8075b46ebe02002fef0a132a";
 const EXPECTED_INPUTS_RS_SHA256: &str =
-    "a000e589287ecb104152cb3c84427eefeef01ada1abee0bcd3246c488e5cc747";
+    "8f1f7cf8cfa0147b55e7f1e945a8aae3f3800475c1cd43797c2ad27ff46c8b73";
 const EXPECTED_PUBLIC_VIEW_RS_SHA256: &str =
     "55be582de0171e3a867e6e829d5245ace2788db9481c014f4bf7beae821223bc";
 const EXPECTED_PUBLIC_VIEW_POLICY_SHA256: &str =
