@@ -48,7 +48,7 @@ registry (see below). APT, Homebrew, AUR and crates.io are not 0.2.0 channels.
 
 The development branch also carries early, experimental work on Rust `std`: a
 program with an ordinary `fn main`, standard streams, arguments and the environment
-run on both ABIs, as do time, `thread::sleep`, random numbers, files and directories. It is not part of 0.2.0; the
+run on both ABIs, as do time, `thread::sleep`, random numbers, files, directories and AROS paths. It is not part of 0.2.0; the
 [platform roadmap](https://ami-rust.metaneutrons.cc/platform-roadmap/#rust-std)
 says what works and what does not.
 

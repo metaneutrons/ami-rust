@@ -25,8 +25,8 @@ create, create_new), `read`, `write`, `seek`, `stream_position`, `set_len`, `syn
 
 Everything else in `std::fs` returns `ErrorKind::Unsupported`, which the `unsupported` mode
 checks: `File::lock` and `try_lock`, `File::set_modified` and `set_times`, `rename`,
-`canonicalize`, `read_link`, `hard_link` and symbolic links. The next slice implements `rename`,
-`canonicalize`, file times and `std::path` (AROS path syntax).
+`canonicalize`, `read_link`, `hard_link` and symbolic links. Paths (`volume:dir/name`, `.` and `..`, the current directory) are
+tested by `examples/std-path`. The next slice implements `rename`, `canonicalize` and file times.
 
 What the file metadata contains: the size, the type (file or directory; there is no `symlink`
 without symbolic links), the read-only flag, and one date. DOS keeps one date per object, so
@@ -70,9 +70,8 @@ Each was found by this test, and each has a check that fails without the workaro
    reports `DirectoryNotEmpty` if it has an entry, whatever `errno` says.
 8. **Empty path.** DOS takes `""` for the current directory, so `metadata("")` and `read_dir("")`
    succeeded. `std` refuses an empty path with `NotFound`, as Unix does.
-9. **`Path::join` after a volume name.** `RAM:` joined with a name is `RAM:/name`, which on AROS is
-   the parent of the volume. The entries of `read_dir` build their path without a slash after a
-   colon. The path functions of `std` themselves are the next slice.
+9. **`Path::join` after a volume name** gave `RAM:/name`, the parent of the volume. Fixed in `std::path`
+   itself, see `examples/std-path/README.md`; the entries of `read_dir` now use `Path::join`.
 10. **`struct stat`.** On ABI-v1 the plain `stat` has a 32-bit `st_ino`, which moves `st_mode` and
     `st_size`; the 64-bit `stat64` has the same layout on both ABIs, so `std` uses `stat64`,
     `lstat64`, `fstat64` and `readdir64`, with the layout checked at compile time.

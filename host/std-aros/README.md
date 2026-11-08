@@ -23,6 +23,9 @@ subsystem on the `unsupported` fallback:
 | `sys/time` | New `aros.rs`: `Instant` on `CLOCK_MONOTONIC` and `SystemTime` on `CLOCK_REALTIME`, with the 32-bit `time_t` read as unsigned so that `SystemTime` is correct until 2106; the same reading is used for file dates |
 | `sys/thread` | New `aros.rs`: `thread::sleep` on `nanosleep`; everything else about threads stays unsupported |
 | `sys/fs` | New `aros.rs`: `File` and `OpenOptions` on the descriptors of the C library (open, read, write, seek, truncate, duplicate, sync), metadata (`stat64`, `lstat64`, `fstat64`), permissions (read-only through `chmod`), `read_dir`, `create_dir`, `remove_dir`, `remove_file`, and `copy`, `exists` and `remove_dir_all` from the common code. Rename, canonicalize, links, locks and file times stay unsupported. Works around the behaviours of the C library listed in `examples/std-fs/README.md` |
+| `sys/path` | New `aros.rs`: the volume with its colon is the prefix of a path (`Prefix::DeviceNS`), a path with a volume is absolute, `path::absolute` resolves a leading `:` and leading slashes; and `to_dos_path`, which resolves `.` and `..` before a path goes to the C library |
+| `sys/paths` | New `aros.rs`: `getcwd` and `chdir` (refuses a file), `temp_dir` is `T:`, path lists separated by `;`, `home_dir` is `None`, `current_exe` unsupported |
+| `path.rs` | Two lines under `cfg!(target_os = "aros")`: the length of a `DeviceNS` prefix is the volume name itself, and it is followed directly by the path like a Windows drive, so `join` adds no slash after `RAM:` |
 | `sys/args` | New `aros.rs`: `env::args` from the `__argc` and `__argv` that the C start-up stores |
 | `sys/exit` | `process::exit` releases what the program holds (`sdk_end`) and then leaves with the code it was given (`_Exit`) |
 | `sys/stdio` | New `aros.rs`: standard input, output and error on the file descriptors 0, 1 and 2 |
@@ -40,7 +43,7 @@ set -eu
 repo=$(pwd -P)
 work=$(mktemp -d)
 cp -R "$(rustc +0.2.0 --print sysroot)/lib/rustlib/src/rust" "$work/rust"
-echo "10a4c7740b72b88af308d0068bae174fd337f944d986a9b7da2fff6934ee2ea7  host/std-aros/std-aros.patch" | shasum -a 256 -c
+echo "e2d1ca2fa2dc507bf43c2b877906f998951c5d87d3bd3a1b7094e93cae01600a  host/std-aros/std-aros.patch" | shasum -a 256 -c
 patch -p1 -d "$work/rust" < host/std-aros/std-aros.patch
 ```
 
