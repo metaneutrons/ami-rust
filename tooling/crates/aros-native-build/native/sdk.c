@@ -161,6 +161,19 @@ void *sdk_proc_window_set(void *window) {
  if(!me || me->pr_Task.tc_Node.ln_Type!=NT_PROCESS)return window;
  APTR previous=me->pr_WindowPtr;me->pr_WindowPtr=window;return previous;
 }
+/* Writes the full name of the object at path to buf (size bytes), as DOS gives it: assigns and the
+   current directory resolved, the volume by its name ("RAM Disk:T" for "T:"). An empty path is the
+   current directory. Returns 0, or the DOS error code; ERROR_LINE_TOO_LONG when buf is too small, and
+   ERROR_OBJECT_IN_USE for a file that is locked exclusively (open for writing). Used by std's
+   canonicalize, because realpath() of the C library fails for every path. */
+long sdk_path_name(const char *path,char *buf,size_t size) {
+ if(!path || !buf || size==0 || size>0x7fffffff)return ERROR_BAD_NUMBER;
+ BPTR lock=Lock((CONST_STRPTR)path,SHARED_LOCK);
+ if(!lock){SIPTR error=IoErr();return error?error:ERROR_OBJECT_NOT_FOUND;}
+ BOOL named=NameFromLock(lock,(STRPTR)buf,(LONG)size);SIPTR error=named?0:IoErr();
+ UnLock(lock);
+ return named?0:(error?error:ERROR_LINE_TOO_LONG);
+}
 static int own(uint64_t key,SdkError *e) {
  clear_error(e);
  if (!active || closing || key!=context_key || !owner_is_current()) return refuse(e,4,0);

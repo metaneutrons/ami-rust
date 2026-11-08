@@ -402,10 +402,10 @@ index b9ebe2d..07c5324 100644
          _ => {
 diff --git a/library/std/src/sys/fs/aros.rs b/library/std/src/sys/fs/aros.rs
 new file mode 100644
-index 0000000..579e30d
+index 0000000..c818f6f
 --- /dev/null
 +++ b/library/std/src/sys/fs/aros.rs
-@@ -0,0 +1,826 @@
+@@ -0,0 +1,1049 @@
 +//! The file system of AROS through the C library (descriptors, `open`, `read`, `write`, `lseek`).
 +//!
 +//! Metadata and directories use the 64-bit entry points (`stat64`, `readdir64`), because the plain
@@ -437,6 +437,13 @@ index 0000000..579e30d
 +    /// The position of a seek past the end of the file, or `NO_POSITION`. See `File::seek`. It is
 +    /// shared with the duplicates of the handle, as the position of the descriptor is.
 +    beyond_end: Arc<AtomicU64>,
++    /// The absolute path that the file was opened with, for `set_times`: the C library has no
++    /// `futimes`. DOS refuses to rename or delete a file that is open, so it stays valid.
++    path: Option<Arc<PathBuf>>,
++    /// A modification time set through a handle that can write, as seconds since 1970, or 0. DOS sets
++    /// the date of a written file to "now" when it is closed, so the date is set again after the last
++    /// duplicate is closed. A write after `set_times` cancels it, as it changes the date on Unix too.
++    pending_date: Arc<AtomicU64>,
 +}
 +
 +/// No seek past the end is remembered.
@@ -552,7 +559,10 @@ index 0000000..579e30d
 +}
 +
 +#[derive(Copy, Clone, Debug, Default)]
-+pub struct FileTimes {}
++pub struct FileTimes {
++    accessed: Option<SystemTime>,
++    modified: Option<SystemTime>,
++}
 +
 +#[derive(Clone, PartialEq, Eq)]
 +pub struct FilePermissions {
@@ -621,8 +631,12 @@ index 0000000..579e30d
 +}
 +
 +impl FileTimes {
-+    pub fn set_accessed(&mut self, _t: SystemTime) {}
-+    pub fn set_modified(&mut self, _t: SystemTime) {}
++    pub fn set_accessed(&mut self, t: SystemTime) {
++        self.accessed = Some(t);
++    }
++    pub fn set_modified(&mut self, t: SystemTime) {
++        self.modified = Some(t);
++    }
 +}
 +
 +impl FileType {
@@ -726,6 +740,7 @@ index 0000000..579e30d
 +/// `ENOENT`, `EBUSY`, `ENOTDIR`, `EISDIR` and `ENOTEMPTY` in the same numbering.
 +const ENOENT: i32 = 2;
 +const ENOTEMPTY: i32 = 66;
++const EXDEV: i32 = 18;
 +const EBUSY: i32 = 16;
 +const ENOTDIR: i32 = 20;
 +const EISDIR: i32 = 21;
@@ -756,6 +771,8 @@ index 0000000..579e30d
 +        pub fn opendir(path: *const c_char) -> *mut DIR;
 +        pub fn readdir64(dir: *mut DIR) -> *mut super::Dirent;
 +        pub fn closedir(dir: *mut DIR) -> c_int;
++        pub fn rename(old: *const c_char, new: *const c_char) -> c_int;
++        pub fn utimes(path: *const c_char, times: *const [i32; 2]) -> c_int;
 +    }
 +
 +    /// The opaque `DIR` of the C library.
@@ -852,6 +869,7 @@ index 0000000..579e30d
 +impl File {
 +    pub fn open(path: &Path, opts: &OpenOptions) -> io::Result<File> {
 +        let flags = opts.access_mode()? | opts.creation_mode()?;
++        let path_for_times = path;
 +        with_path(path, &|path| {
 +            // SAFETY: `path` is a valid C string. The mode is only used when the file is created.
 +            let fd = without_requesters(|| unsafe { c::open(path.as_ptr(), flags, 0o666 as c_int) });
@@ -861,13 +879,15 @@ index 0000000..579e30d
 +                writable: opts.write || opts.append,
 +                append: opts.append,
 +                beyond_end: Arc::new(AtomicU64::new(NO_POSITION)),
++                path: crate::sys::path::absolute(path_for_times).ok().map(Arc::new),
++                pending_date: Arc::new(AtomicU64::new(0)),
 +            })
 +        })
 +    }
 +
 +    pub fn file_attr(&self) -> io::Result<FileAttr> {
 +        let mut stat = crate::mem::MaybeUninit::<Stat>::zeroed();
-+        // SAFETY: \`fd\` is open for as long as \`self\` exists, and \`stat\` is writable.
++        // SAFETY: `fd` is open for as long as `self` exists, and `stat` is writable.
 +        cvt(unsafe { c::fstat64(self.fd, stat.as_mut_ptr()) }, -1)?;
 +        // SAFETY: zeroed, and then written by the C library; every field is an integer.
 +        Ok(FileAttr { stat: unsafe { stat.assume_init() } })
@@ -904,6 +924,7 @@ index 0000000..579e30d
 +    }
 +
 +    pub fn truncate(&self, size: u64) -> io::Result<()> {
++        self.pending_date.store(0, Ordering::Relaxed);
 +        let size = i64::try_from(size).map_err(|_| io::Error::from_raw_os_error(EINVAL))?;
 +        // SAFETY: `fd` is open for as long as `self` exists.
 +        cvt(unsafe { c::ftruncate(self.fd, size) }, -1).map(drop)
@@ -940,6 +961,7 @@ index 0000000..579e30d
 +        if !self.writable {
 +            return Err(io::Error::from_raw_os_error(EBADF));
 +        }
++        self.pending_date.store(0, Ordering::Relaxed);
 +        if self.append {
 +            // The C library only moves to the end when the file is opened, so a handle that
 +            // was moved with `seek` would overwrite. Append means that every write goes to the end.
@@ -1048,6 +1070,8 @@ index 0000000..579e30d
 +            writable: self.writable,
 +            append: self.append,
 +            beyond_end: Arc::clone(&self.beyond_end),
++            path: self.path.clone(),
++            pending_date: Arc::clone(&self.pending_date),
 +        })
 +    }
 +
@@ -1056,8 +1080,17 @@ index 0000000..579e30d
 +        cvt(unsafe { c::fchmod(self.fd, perm.mode as c_int) }, -1).map(drop)
 +    }
 +
-+    pub fn set_times(&self, _times: FileTimes) -> io::Result<()> {
-+        unsupported()
++    pub fn set_times(&self, times: FileTimes) -> io::Result<()> {
++        let Some(path) = &self.path else {
++            return Err(io::const_error!(io::ErrorKind::Other, "the path of the file is not known"));
++        };
++        set_times(path, times)?;
++        if self.writable {
++            if let Some(modified) = times.modified {
++                self.pending_date.store(modified.unix_seconds() as u64, Ordering::Relaxed);
++            }
++        }
++        Ok(())
 +    }
 +}
 +
@@ -1066,6 +1099,15 @@ index 0000000..579e30d
 +        // SAFETY: `fd` was opened by this `File` and is closed only here. An error from `close`
 +        // cannot be reported from a destructor.
 +        unsafe { c::close(self.fd) };
++        // The last handle of a file whose date was set: DOS has just set it to "now".
++        let pending = self.pending_date.load(Ordering::Relaxed);
++        if pending != 0 && Arc::strong_count(&self.pending_date) == 1 {
++            if let Some(path) = &self.path {
++                let mut times = FileTimes::default();
++                times.set_modified(SystemTime::from_c_seconds(pending as u32 as i32, 0));
++                let _ = set_times(path, times);
++            }
++        }
 +    }
 +}
 +
@@ -1131,8 +1173,121 @@ index 0000000..579e30d
 +    })
 +}
 +
-+pub fn rename(_old: &Path, _new: &Path) -> io::Result<()> {
-+    unsupported()
++/// `rename` of the C library, which is only called for a destination that does not exist: for one that
++/// exists it deletes the destination first, and on a volume that ignores case that can be the source
++/// itself. ABI-v1 sets no error for a failed rename and ABI-v11 sets a wrong one for some, so the
++/// cause is found from the state of the file system.
++fn c_rename(old: &Path, new: &Path) -> io::Result<()> {
++    let result = with_path(old, &|o| {
++        with_path(new, &|n| {
++            // SAFETY: both are valid C strings.
++            Ok(without_requesters(|| unsafe { c::rename(o.as_ptr(), n.as_ptr()) }))
++        })
++    })?;
++    if result == 0 {
++        return Ok(());
++    }
++    let code = errno();
++    if lstat(old).is_err() {
++        return Err(io::Error::from_raw_os_error(ENOENT));
++    }
++    let new_dos = crate::sys::path::to_dos_path(new).into_owned();
++    let parent = new_dos.parent().filter(|p| !p.as_os_str().is_empty());
++    if let Some(parent) = parent {
++        if lstat(parent).is_err() {
++            return Err(io::Error::from_raw_os_error(ENOENT));
++        }
++    }
++    let here = Path::new("");
++    let (Ok(from), Ok(to)) = (dos_name(old), dos_name(parent.unwrap_or(here))) else { return Err(error_from(code)) };
++    if from.components().next() != to.components().next() {
++        return Err(io::Error::from_raw_os_error(EXDEV));
++    }
++    if to.starts_with(&from) {
++        return Err(io::Error::from_raw_os_error(EINVAL));
++    }
++    Err(error_from(code))
++}
++
++fn error_from(code: i32) -> io::Error {
++    if code == 0 { io::const_error!(io::ErrorKind::Other, "the C library failed without an error code") } else { io::Error::from_raw_os_error(code) }
++}
++
++/// A name that does not exist yet, in the directory of `path`.
++fn name_beside(path: &Path) -> io::Result<PathBuf> {
++    static COUNTER: crate::sync::atomic::AtomicU32 = crate::sync::atomic::AtomicU32::new(0);
++    let dos = crate::sys::path::to_dos_path(path).into_owned();
++    let dir = dos.parent().map(Path::to_path_buf).unwrap_or_default();
++    for _ in 0..1000 {
++        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
++        let candidate = dir.join(format!(".ami-rust-rename-{n}"));
++        match lstat(&candidate) {
++            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(candidate),
++            _ => {}
++        }
++    }
++    Err(io::const_error!(io::ErrorKind::AlreadyExists, "no free temporary name for the rename"))
++}
++
++/// Renames without ever letting the C library delete the destination. For a destination that exists,
++/// the destination is first moved aside to a temporary name, then the source takes its name, and then
++/// the old destination is deleted; if the second step fails, the destination gets its name back.
++pub fn rename(old: &Path, new: &Path) -> io::Result<()> {
++    let old_attr = lstat(old)?;
++    let new_attr = match lstat(new) {
++        Ok(attr) => attr,
++        Err(e) if e.kind() == io::ErrorKind::NotFound => return c_rename(old, new),
++        Err(e) => return Err(e),
++    };
++    // The same object, also under a name that differs in case only. The C library would delete it.
++    if let (Ok(a), Ok(b)) = (dos_name(old), dos_name(new)) {
++        if a == b {
++            let old_dos = crate::sys::path::to_dos_path(old).into_owned();
++            let new_dos = crate::sys::path::to_dos_path(new).into_owned();
++            if old_dos.file_name() == new_dos.file_name() {
++                return Ok(());
++            }
++            let aside = name_beside(new)?;
++            c_rename(old, &aside)?;
++            return c_rename(&aside, new).inspect_err(|_| {
++                let _ = c_rename(&aside, old);
++            });
++        }
++    }
++    match (old_attr.file_type().is_dir(), new_attr.file_type().is_dir()) {
++        (true, false) => return Err(io::Error::from_raw_os_error(ENOTDIR)),
++        (false, true) => return Err(io::Error::from_raw_os_error(EISDIR)),
++        (true, true) => {
++            if with_path(new, &|n| Ok(has_entries(n)))? {
++                return Err(io::Error::from_raw_os_error(ENOTEMPTY));
++            }
++        }
++        (false, false) => {}
++    }
++    let aside = name_beside(new)?;
++    c_rename(new, &aside)?;
++    if let Err(e) = c_rename(old, new) {
++        let _ = c_rename(&aside, new);
++        return Err(e);
++    }
++    // The old destination. DOS renames a file that is open but does not delete it; then both renames
++    // are undone, so that nothing is left under the temporary name.
++    let deleted = with_path(&aside, &|a| {
++        // SAFETY: `a` is a valid C string.
++        Ok(without_requesters(|| unsafe { c::unlink(a.as_ptr()) }))
++    })?;
++    if deleted != 0 {
++        // The file exists (it was just renamed), so "not found", which ABI-v1 reports for an open file,
++        // and no error at all mean that it is in use.
++        let error = match errno() {
++            0 | ENOENT => io::Error::from_raw_os_error(EBUSY),
++            code => io::Error::from_raw_os_error(code),
++        };
++        let _ = c_rename(new, old);
++        let _ = c_rename(&aside, new);
++        return Err(error);
++    }
++    Ok(())
 +}
 +
 +pub fn set_perm(p: &Path, perm: FilePermissions) -> io::Result<()> {
@@ -1146,8 +1301,31 @@ index 0000000..579e30d
 +    unsupported()
 +}
 +
-+pub fn set_times(_p: &Path, _times: FileTimes) -> io::Result<()> {
-+    unsupported()
++/// The first second that a DOS date can hold: 1 January 1978.
++const DOS_EPOCH: i64 = 252_460_800;
++
++/// Sets the date of a file or directory. DOS keeps one date, so only the modification time can be
++/// set, to a whole second from 1978 to 2106.
++pub fn set_times(p: &Path, times: FileTimes) -> io::Result<()> {
++    let Some(modified) = times.modified else {
++        return match times.accessed {
++            Some(_) => Err(io::const_error!(
++                io::ErrorKind::Unsupported,
++                "DOS keeps one date per file; set the modification time",
++            )),
++            None => Ok(()),
++        };
++    };
++    let seconds = modified.unix_seconds();
++    if !(DOS_EPOCH..=u32::MAX as i64).contains(&seconds) {
++        return Err(io::const_error!(io::ErrorKind::InvalidInput, "a DOS date is between 1978 and 2106"));
++    }
++    // `struct timeval`: a 32-bit `time_t` and 32-bit microseconds; the C library reads the second one.
++    let tv = [[seconds as u32 as i32, 0i32]; 2];
++    with_path(p, &|p| {
++        // SAFETY: `p` is a valid C string, `tv` two timevals.
++        cvt(without_requesters(|| unsafe { c::utimes(p.as_ptr(), tv.as_ptr()) }), -1).map(drop)
++    })
 +}
 +
 +pub fn set_times_nofollow(_p: &Path, _times: FileTimes) -> io::Result<()> {
@@ -1228,8 +1406,53 @@ index 0000000..579e30d
 +    with_path(p, &|p| stat_with(p, c::lstat64))
 +}
 +
-+pub fn canonicalize(_p: &Path) -> io::Result<PathBuf> {
-+    unsupported()
++/// The full name of a path from DOS: the volume by its name, assigns and the current directory resolved.
++/// The path is given in DOS form; empty is the current directory.
++fn dos_name(p: &Path) -> io::Result<PathBuf> {
++    unsafe extern "C" {
++        /// Writes the full name of the object at `path` and returns 0, or a DOS error code.
++        fn sdk_path_name(path: *const c_char, buf: *mut c_char, size: usize) -> crate::ffi::c_long;
++    }
++    let dos = crate::sys::path::to_dos_path(p).into_owned();
++    run_path_with_cstr(&dos, &|path| {
++        let mut size = 256;
++        loop {
++            let mut buf = vec![0u8; size];
++            // SAFETY: `path` is a C string and `buf` has `size` bytes.
++            let code = without_requesters(|| unsafe { sdk_path_name(path.as_ptr(), buf.as_mut_ptr().cast(), size) });
++            match code {
++                0 => {
++                    let len = buf.iter().position(|&b| b == 0).unwrap_or(size);
++                    buf.truncate(len);
++                    // SAFETY: the name that DOS gave, as `std` stores every path.
++                    return Ok(PathBuf::from(unsafe { OsString::from_encoded_bytes_unchecked(buf) }));
++                }
++                // ERROR_LINE_TOO_LONG
++                120 if size < 1 << 20 => size *= 4,
++                // ERROR_OBJECT_NOT_FOUND, ERROR_DEVICE_NOT_MOUNTED, ERROR_DIR_NOT_FOUND
++                205 | 218 | 204 => return Err(io::Error::from_raw_os_error(ENOENT)),
++                code => return Err(io::Error::from_raw_os_error(1000 + code as i32)),
++            }
++        }
++    })
++}
++
++/// The C library's `realpath` fails for every path (it starts with `open(".")`, and DOS has no `.`),
++/// so DOS is asked for the name instead. A file that is open for writing cannot be locked; its name is
++/// that of its directory and its own name.
++pub fn canonicalize(p: &Path) -> io::Result<PathBuf> {
++    if p.as_os_str().is_empty() {
++        return Err(io::Error::from_raw_os_error(ENOENT));
++    }
++    match dos_name(p) {
++        Err(e) if e.raw_os_error() == Some(1000 + 202) => {
++            let dos = crate::sys::path::to_dos_path(p).into_owned();
++            let name = dos.file_name().ok_or(e)?.to_owned();
++            let dir = dos.parent().map(Path::to_path_buf).unwrap_or_default();
++            Ok(dos_name(&dir)?.join(name))
++        }
++        result => result,
++    }
 +}
 +
 diff --git a/library/std/src/sys/fs/mod.rs b/library/std/src/sys/fs/mod.rs
@@ -2372,10 +2595,10 @@ index 9f4e771..4ce9610 100644
  #[doc(hidden)]
 diff --git a/library/std/src/sys/time/aros.rs b/library/std/src/sys/time/aros.rs
 new file mode 100644
-index 0000000..b1a7558
+index 0000000..85987ff
 --- /dev/null
 +++ b/library/std/src/sys/time/aros.rs
-@@ -0,0 +1,166 @@
+@@ -0,0 +1,171 @@
 +//! Time on AROS, from the clocks of the C library.
 +//!
 +//! `clock_gettime` returns a `timespec` whose `tv_sec` is a 32-bit `time_t` on both
@@ -2525,6 +2748,11 @@ index 0000000..b1a7558
 +
 +    /// A time from the fields of a C `timespec` (file times). `tv_sec` is read as unsigned, as
 +    /// in `SystemTime::now`, so file dates are correct until 2106.
++    /// Whole seconds since 1970, rounded down.
++    pub(crate) fn unix_seconds(&self) -> i64 {
++        self.t.tv_sec
++    }
++
 +    pub(crate) fn from_c_seconds(tv_sec: i32, tv_nsec: i64) -> SystemTime {
 +        let nsec = (tv_nsec as u64).min((NSEC_PER_SEC - 1) as u64) as u32;
 +        SystemTime { t: Timespec { tv_sec: tv_sec as u32 as i64, tv_nsec: nsec } }

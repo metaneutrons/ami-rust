@@ -20,6 +20,11 @@ impl T {
         if !ok { self.failed += 1; }
         println!("RESULT fs {name} {}{}", if ok { "ok" } else { "FAIL" }, if detail.is_empty() { String::new() } else { format!(" ({detail})") });
     }
+    fn is_eq<V: PartialEq + std::fmt::Debug>(&mut self, name: &str, got: V, want: V) {
+        let ok = got == want;
+        let detail = if ok { String::new() } else { format!("got {got:?}, wanted {want:?}") };
+        self.check(name, ok, detail);
+    }
     fn kind(&mut self, name: &str, r: io::Result<impl Sized>, want: ErrorKind) {
         match r {
             Ok(_) => self.check(name, false, format!("succeeded, wanted {want:?}")),
@@ -181,11 +186,10 @@ fn main() -> ExitCode {
             clean(&["n"]);
             let f = File::create(p("n")).unwrap();
             t.kind("lock", f.lock(), ErrorKind::Unsupported);
-            t.kind("set_modified", f.set_modified(std::time::SystemTime::now()), ErrorKind::Unsupported);
-            t.kind("rename", fs::rename(p("n"), p("n2")), ErrorKind::Unsupported);
-            t.kind("canonicalize", fs::canonicalize(p("n")), ErrorKind::Unsupported);
             t.kind("read_link", fs::read_link(p("n")), ErrorKind::Unsupported);
             t.kind("hard_link", fs::hard_link(p("n"), p("n2")), ErrorKind::Unsupported);
+            t.kind("current_exe", std::env::current_exe(), ErrorKind::Unsupported);
+            t.kind("setting only the access time (DOS has one date)", fs::set_times(p("n"), fs::FileTimes::new().set_accessed(std::time::SystemTime::now())), ErrorKind::Unsupported);
             drop(f);
             clean(&["n"]);
         }
@@ -539,6 +543,163 @@ fn main() -> ExitCode {
             t.check("the file is still there", fs::metadata(p("raf")).is_ok_and(|m| m.is_file()), String::new());
             clean(&["raf"]);
         }
+        "rename" => {
+            rm_all("rn");
+            fs::create_dir(p("rn")).unwrap();
+            let q = |n: &str| p(&format!("rn/{n}"));
+            let content = |n: &str| fs::read(q(n)).ok().map(|v| String::from_utf8_lossy(&v).into_owned());
+            let listing = || { let mut v: Vec<String> = fs::read_dir(p("rn")).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect(); v.sort(); v };
+            fs::write(q("a"), "A").unwrap();
+            t.check("a file to a new name", fs::rename(q("a"), q("b")).is_ok() && content("b").as_deref() == Some("A") && content("a").is_none(), String::new());
+            fs::write(q("c"), "C").unwrap();
+            t.check("a file over a file replaces it", fs::rename(q("b"), q("c")).is_ok() && content("c").as_deref() == Some("A") && listing() == ["c"], format!("{:?}", listing()));
+            // The C library deletes a file that is renamed to itself.
+            t.check("a file to itself is kept", fs::rename(q("c"), q("c")).is_ok() && content("c").as_deref() == Some("A"), format!("{:?}", listing()));
+            t.check("a file to itself through dots is kept", fs::rename(q("c"), p("rn/./c")).is_ok() && content("c").as_deref() == Some("A"), String::new());
+            // ... and one that is renamed to a name that differs in case only.
+            t.check("a change of case only", fs::rename(q("c"), q("C")).is_ok() && listing() == ["C"] && fs::read(q("C")).is_ok_and(|v| v == b"A"), format!("{:?}", listing()));
+            t.check("and back", fs::rename(q("C"), q("c")).is_ok() && listing() == ["c"], format!("{:?}", listing()));
+            fs::create_dir(q("d")).unwrap();
+            // The C library replaces an empty directory with the file, and a file with a directory.
+            t.kind("a file over a directory", fs::rename(q("c"), q("d")), ErrorKind::IsADirectory);
+            t.check("... both are kept", content("c").as_deref() == Some("A") && fs::metadata(q("d")).is_ok_and(|m| m.is_dir()), String::new());
+            t.kind("a directory over a file", fs::rename(q("d"), q("c")), ErrorKind::NotADirectory);
+            t.check("... both are kept", content("c").as_deref() == Some("A") && fs::metadata(q("d")).is_ok_and(|m| m.is_dir()), String::new());
+            fs::write(q("d/inner"), "I").unwrap();
+            fs::create_dir(q("e")).unwrap();
+            t.check("a directory over an empty directory replaces it", fs::rename(q("d"), q("e")).is_ok() && content("e/inner").as_deref() == Some("I") && fs::metadata(q("d")).is_err(), format!("{:?}", listing()));
+            fs::create_dir(q("f")).unwrap();
+            t.kind("a directory over a directory that is not empty", fs::rename(q("f"), q("e")), ErrorKind::DirectoryNotEmpty);
+            t.check("... both are kept", content("e/inner").as_deref() == Some("I") && fs::metadata(q("f")).is_ok_and(|m| m.is_dir()), String::new());
+            t.check("a directory to a new name, with its content", fs::rename(q("e"), q("g")).is_ok() && content("g/inner").as_deref() == Some("I"), String::new());
+            t.check("a file into a directory under a new name", fs::rename(q("c"), q("g/moved")).is_ok() && content("g/moved").as_deref() == Some("A"), String::new());
+            t.kind("a directory into itself", fs::rename(q("g"), q("g/sub")), ErrorKind::InvalidInput);
+            t.kind("a missing source", fs::rename(q("nope"), q("x")), ErrorKind::NotFound);
+            fs::write(q("keep"), "K").unwrap();
+            t.kind("a missing source over a file", fs::rename(q("nope"), q("keep")), ErrorKind::NotFound);
+            t.check("... which is kept", content("keep").as_deref() == Some("K"), String::new());
+            t.kind("into a missing directory", fs::rename(q("keep"), q("nodir/x")), ErrorKind::NotFound);
+            t.check("... and the source is kept", content("keep").as_deref() == Some("K"), String::new());
+            t.kind("to another volume (read-only here)", fs::rename(q("keep"), "NATIVERUN:x"), ErrorKind::CrossesDevices);
+            t.check("... the source is kept", content("keep").as_deref() == Some("K"), String::new());
+            let over_other = fs::rename(q("keep"), "NATIVERUN:prog");
+            t.check("to another volume over a file there fails", over_other.is_err() && content("keep").as_deref() == Some("K") && fs::metadata("NATIVERUN:prog").is_ok(), format!("{:?}", over_other.map_err(|e| (e.kind(), e.raw_os_error()))));
+            t.check("to an assign on the same volume (T:)", fs::rename(q("keep"), "T:ami-rust-rename").is_ok() && fs::read("T:ami-rust-rename").is_ok_and(|v| v == b"K"), String::new());
+            t.check("and back", fs::rename("T:ami-rust-rename", q("keep")).is_ok(), String::new());
+            fs::write(q("dest"), "D").unwrap();
+            {
+                let _held = File::open(q("dest")).unwrap();
+                let r = fs::rename(q("keep"), q("dest"));
+                // DOS renames an open file but cannot delete it; std undoes the renames.
+                t.check("over a destination that is open fails as busy", r.as_ref().is_err_and(|e| e.kind() == ErrorKind::ResourceBusy), format!("{:?}", r.as_ref().map_err(|e| (e.kind(), e.raw_os_error()))));
+                t.check("... and both are kept", content("keep").as_deref() == Some("K") && content("dest").as_deref() == Some("D"), String::new());
+            }
+            {
+                // DOS renames a file that is open.
+                let _held = File::open(q("keep")).unwrap();
+                let r = fs::rename(q("keep"), q("dest"));
+                t.check("a source that is open can replace a file", r.is_ok() && content("dest").as_deref() == Some("K") && content("keep").is_none(), format!("{:?}", r.as_ref().map_err(|e| (e.kind(), e.raw_os_error()))));
+                let r2 = fs::rename(q("dest"), q("fresh"));
+                t.check("and can take a new name", r2.is_ok() && content("fresh").as_deref() == Some("K"), format!("{:?}", r2.as_ref().map_err(|e| (e.kind(), e.raw_os_error()))));
+            }
+            t.check("no temporary name is left behind", listing().iter().all(|n| !n.starts_with(".ami-rust-rename")), format!("{:?}", listing()));
+            rm_all("rn");
+        }
+        "canon" => {
+            rm_all("cn");
+            fs::create_dir_all(p("cn/d")).unwrap();
+            fs::write(p("cn/f"), "F").unwrap();
+            let c = |x: &str| fs::canonicalize(x).map(|p| p.to_string_lossy().into_owned()).map_err(|e| e.kind());
+            let vol = match std::env::current_dir().unwrap().components().next() { Some(std::path::Component::Prefix(v)) => v.as_os_str().to_string_lossy().into_owned(), _ => String::new() };
+            t.is_eq("a file", c(&p("cn/f")), Ok(format!("{vol}ami-rust-m1/cn/f")));
+            t.is_eq("a directory", c(&p("cn/d")), Ok(format!("{vol}ami-rust-m1/cn/d")));
+            t.is_eq("the volume", c("RAM:"), Ok(vol.clone()));
+            t.is_eq("an assign (T:)", c("T:"), Ok(format!("{vol}T")));
+            t.is_eq("a file below an assign", { fs::write("T:ami-canon", "x").unwrap(); let r = c("T:ami-canon"); let _ = fs::remove_file("T:ami-canon"); r }, Ok(format!("{vol}T/ami-canon")));
+            t.is_eq("a relative path", c("cn/f"), Ok(format!("{vol}ami-rust-m1/cn/f")));
+            t.is_eq("dots", c("./cn/d/../f"), Ok(format!("{vol}ami-rust-m1/cn/f")));
+            t.is_eq("other case is the stored case", c(&p("CN/F")), Ok(format!("{vol}ami-rust-m1/cn/f")));
+            t.is_eq("a missing file", c(&p("cn/nope")), Err(ErrorKind::NotFound));
+            t.is_eq("a missing volume", c("NOSUCHVOLUME:x"), Err(ErrorKind::NotFound));
+            t.is_eq("an empty path", c(""), Err(ErrorKind::NotFound));
+            // NATIVERUN: is the name of the delivery volume itself, not an assign.
+            t.is_eq("the delivery volume", c("NATIVERUN:prog"), Ok("NATIVERUN:prog".to_string()));
+            {
+                let _w = OpenOptions::new().write(true).open(p("cn/f")).unwrap();
+                t.is_eq("a file that is open for writing", c(&p("cn/f")), Ok(format!("{vol}ami-rust-m1/cn/f")));
+            }
+            t.check("the result works", fs::canonicalize(p("cn/f")).and_then(fs::read).is_ok_and(|v| v == b"F"), String::new());
+            t.check("and is absolute", fs::canonicalize("cn").is_ok_and(|p| p.is_absolute()), String::new());
+            rm_all("cn");
+        }
+        "settimes" => {
+            use std::time::{Duration, SystemTime, UNIX_EPOCH};
+            clean(&["st"]); rm_all("std");
+            fs::write(p("st"), "x").unwrap();
+            let secs = |n: &str| fs::metadata(n).and_then(|m| m.modified()).map(|t| t.duration_since(UNIX_EPOCH).unwrap().as_secs());
+            let at = |s: u64| UNIX_EPOCH + Duration::from_secs(s);
+            for (name, s) in [("2001-01-03", 978_480_000u64), ("1978-01-01 (the first DOS second)", 252_460_800), ("2038-01-19 03:14:08 (past the 32-bit time_t)", 2_147_483_648), ("2100-03-01", 4_107_542_400), ("2106-02-07 06:28:15 (the last)", 4_294_967_295)] {
+                let r = fs::set_times(p("st"), fs::FileTimes::new().set_modified(at(s)));
+                t.check(&format!("set_modified {name}"), r.is_ok() && secs(&p("st")).ok() == Some(s), format!("{:?} -> {:?}", r.map_err(|e| e.kind()), secs(&p("st"))));
+            }
+            t.check("a fraction of a second is dropped", fs::set_times(p("st"), fs::FileTimes::new().set_modified(at(978_480_000) + Duration::from_millis(999))).is_ok() && secs(&p("st")).ok() == Some(978_480_000), String::new());
+            t.kind("1977 is refused", fs::set_times(p("st"), fs::FileTimes::new().set_modified(at(252_460_799))), ErrorKind::InvalidInput);
+            t.kind("1970 is refused", fs::set_times(p("st"), fs::FileTimes::new().set_modified(UNIX_EPOCH)), ErrorKind::InvalidInput);
+            t.kind("after 2106 is refused", fs::set_times(p("st"), fs::FileTimes::new().set_modified(at(4_294_967_296))), ErrorKind::InvalidInput);
+            t.check("... and the date is unchanged", secs(&p("st")).ok() == Some(978_480_000), String::new());
+            t.check("access and modification time together", fs::set_times(p("st"), fs::FileTimes::new().set_accessed(at(1_000_000_000)).set_modified(at(1_000_000_000))).is_ok() && secs(&p("st")).ok() == Some(1_000_000_000), String::new());
+            t.check("no time at all changes nothing", fs::set_times(p("st"), fs::FileTimes::new()).is_ok() && secs(&p("st")).ok() == Some(1_000_000_000), String::new());
+            fs::create_dir(p("std")).unwrap();
+            t.check("a directory", fs::set_times(p("std"), fs::FileTimes::new().set_modified(at(978_480_000))).is_ok() && secs(&p("std")).ok() == Some(978_480_000), String::new());
+            t.kind("a missing file", fs::set_times(p("nope"), fs::FileTimes::new().set_modified(at(978_480_000))), ErrorKind::NotFound);
+            {
+                let f = File::open(p("st")).unwrap();
+                t.check("File::set_modified", f.set_modified(at(1_100_000_000)).is_ok() && secs(&p("st")).ok() == Some(1_100_000_000), format!("{:?}", secs(&p("st"))));
+            }
+            std::env::set_current_dir(BASE).unwrap();
+            {
+                let f = File::open("st").unwrap();
+                std::env::set_current_dir("RAM:").unwrap();
+                t.check("File::set_modified after a change of directory (opened by a relative path)", f.set_modified(at(1_200_000_000)).is_ok() && secs(&p("st")).ok() == Some(1_200_000_000), String::new());
+                std::env::set_current_dir(BASE).unwrap();
+            }
+            {
+                let mut w = OpenOptions::new().write(true).open(p("st")).unwrap();
+                w.write_all(b"more").unwrap();
+                t.check("File::set_modified on a file open for writing", w.set_modified(at(1_300_000_000)).is_ok(), String::new());
+                drop(w);
+                let after = secs(&p("st")).ok();
+                println!("INFO the date after closing the written file: {after:?} (set 1300000000)");
+                t.check("... the date survives closing it", after == Some(1_300_000_000), format!("{after:?}"));
+            }
+            {
+                let mut w = OpenOptions::new().write(true).open(p("st")).unwrap();
+                w.set_modified(at(1_310_000_000)).unwrap();
+                w.write_all(b"later").unwrap();
+                drop(w);
+                let after = secs(&p("st")).ok().unwrap_or(0);
+                let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+                t.check("a write after set_modified gives the time of the write, as on Unix", after + 5 >= now, format!("{after} vs now {now}"));
+            }
+            {
+                let w = OpenOptions::new().write(true).open(p("st")).unwrap();
+                let w2 = w.try_clone().unwrap();
+                w.set_modified(at(1_320_000_000)).unwrap();
+                drop(w);
+                t.check("while a duplicate is open the date is the set one", secs(&p("st")).ok() == Some(1_320_000_000), String::new());
+                drop(w2);
+                t.check("and after the last duplicate is closed too", secs(&p("st")).ok() == Some(1_320_000_000), format!("{:?}", secs(&p("st"))));
+            }
+            {
+                let f = File::open(p("st")).unwrap();
+                let g = f.try_clone().unwrap();
+                drop(f);
+                t.check("a clone knows the path too", g.set_modified(at(1_400_000_000)).is_ok() && secs(&p("st")).ok() == Some(1_400_000_000), String::new());
+            }
+            let now = SystemTime::now();
+            t.check("set_modified(now)", fs::set_times(p("st"), fs::FileTimes::new().set_modified(now)).is_ok() && secs(&p("st")).ok() == Some(now.duration_since(UNIX_EPOCH).unwrap().as_secs()), String::new());
+            clean(&["st"]); rm_all("std");
+        }
         "paths" => {
             clean(&["with space", "two.dots.txt", "n"]);
             t.check("name with a space", fs::write(p("with space"), b"1").is_ok() && fs::read(p("with space")).is_ok(), String::new());
@@ -565,7 +726,7 @@ fn main() -> ExitCode {
             println!("INFO a DOS variable as a file (ENV:): {:?}", env.map_err(|e| e.kind()));
             clean(&["with space", "two.dots.txt"]);
         }
-        _ => println!("modes: rw large seek open trunc dup unlink sync unsupported paths errors requesters seekprobe seekro seekwrite requesterson meta times dirs readdir perm copy removeall"),
+        _ => println!("modes: rw large seek open trunc dup unlink sync unsupported paths errors requesters seekprobe seekro seekwrite requesterson meta times dirs readdir perm copy removeall rename canon settimes"),
     }
     println!("RESULT fs summary {} of {} checks passed", t.total - t.failed, t.total);
     if t.failed == 0 { ExitCode::SUCCESS } else { ExitCode::from(3) }
