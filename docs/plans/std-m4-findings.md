@@ -17,7 +17,7 @@ Findings of STD-M4, measured on the pinned ABI-v1 and ABI-v11 images with probe 
 | A1: the C library is thread-safe enough (allocator, stdio, `errno`), by test | Met with a decision: allocator and raw stdio are, `errno` is not and is read under a lock (below). |
 | A2: a substitute for each missing pthread function | Does not apply: `std` builds on Exec, not pthreads (decision of 2026-11-08). |
 | A3: `thread::spawn`, `join`, `park`, `yield_now`, stack size, `thread_local!`, `Mutex`, `Condvar`, `RwLock`, `Once`, `mpsc` on both ABIs, with a documented limit | Met in the first slice (`examples/std-threads`, 43 checks on each ABI). Limit: at least 1000 threads at once with the default 256 KiB stack. |
-| A4: a thread panic aborts the program, no thread or key leaks across exit, task ownership documented | Partly met: the panic ends the program (code 20, at the main task's next safe point), slots are no longer left behind, threads end before the program. Open: memory that ABI-v1 does not get back (see "Open findings"). |
+| A4: a thread panic aborts the program, no thread or key leaks across exit, task ownership documented | Partly met: the panic ends the program (code 20, at the main task's next safe point), slots are no longer left behind, threads end before the program. Open: 123 bytes per thread that ABI-v1 does not get back, and a page fault on ABI-v1 after repeated thread runs (#132); the 168 KB per run (#131) is not from threads. |
 
 ## What was measured before the design
 
@@ -84,17 +84,35 @@ Probes with real DOS processes (`CreateNewProc`) and temporary bridge functions,
 
 ## Open findings
 
-- **Memory on ABI-v1, before this work.** With the bridge of `main` (no thread code), ABI-v1 has less free
-  memory after every program run: about 32 KB for a `no_std` program and about 204 KB for a `std` program
-  (`Avail FLUSH TOTAL`, six runs each). ABI-v11 loses nothing. Not yet reproduced with a plain C program, so
-  not reported.
-- **Memory per thread.** On ABI-v1 a run of 1000 threads costs about 300 KB more than a run without threads
-  (three batches of three runs: 888, 890 and 889 KB); ABI-v11 about 30 to 90 KB. Not yet explained; the
-  bridge frees its records, and task.resource frees a task's slots when the task is removed (read).
-- **A page fault on ABI-v1 in `Avail FLUSH`.** After `slots`, `tls` twice, `spawn` and nine runs of the
-  1000-thread mode, the third `Avail FLUSH` faulted in two of three boots (null read, two different
-  addresses outside the program; logs `20261108-132152-abi1-56553` and `20261108-132406-abi1-58556`). Nine
-  runs of the 1000-thread mode alone, then `Avail FLUSH`, did not fault in two boots. Cause unknown.
+Both were investigated after the first version of this PR; the first is not caused by threads.
+
+- **ABI-v1 loses 168 KB of memory per run of every program that references the POSIX layer (#131).** Measured as the
+  slope between 8, 16 and 32 runs after warm-up runs (the first numbers of this document, 32 KB and 204 KB per run,
+  were warm-up noise and are withdrawn). An empty `std` `main` loses 167.8 KB per run, also with the `std` runtime
+  not started, with `exit` first, or with a thread started and joined; a `no_std` program loses nothing per run unless it
+  references one POSIX function (`posix_memalign`, `clock_gettime`, `getentropy`, `open` each do it, never called);
+  the plain C library (`malloc`, `getenv`) does not. ABI-v11 loses nothing. It is on `main` too, so it is not from this
+  work. Stock programs that reference `PosixCBase` (`hostname`, `logger`, `nslookup`, `ifconfig`) lose nothing; whether the
+  fault is in `posixc.library` or in our start-up is not known, and a plain C program to decide it could not be made to
+  run (the hand-made link crashed at start-up).
+- **Per thread** (against the same program without threads, slope between 4 and 12 runs): ABI-v1 123 bytes per thread
+  (1000 threads cost 291 KB per run, none 168 KB), ABI-v11 about 7 bytes per thread (7.2 KB per run for 1000).
+  Not explained. The bridge frees its records, and `task.resource` frees a task's storage when the task is removed (read).
+- **A page fault in `Avail FLUSH` on ABI-v1 (#132).** After many runs of programs that start threads, with `Avail FLUSH`
+  between batches: `join` 1 of 2 boots, `bigstack` 1 of 3, `scope` 2 of 3, `spawn` 1 of 3, a longer sequence with 1000
+  threads 2 of 3; the same sequences with a program that starts no thread 0 of 5 boots. `detached` and `named` 0 of 3 each, and
+  1000-thread batches with a flush after each, with a plain `Avail`, or all flushes at the end 0 of 3 each. So threads are needed,
+  one thread per run is enough, and the samples are too small to separate the cases further. The module at the faulting
+  address is not known (no symbols in the kernel log). A suspicion, not tested: a thread's trampoline returns with
+  `Forbid()` still held and relies on the process exit to clear it.
+
+## A later improvement, read from source and not tested
+
+The AROS-NX tree gives `posixc.library` a per-task base kept in task storage (`compiler/crt/posixc/posixc.conf` has
+`pertaskbase`; `__threadhook.c`), which includes its own `errno`, for programs linked with the rel variants of
+the libraries. `std` links the absolute ones, whose `errno` is one variable. Linking the rel variants, and making each
+thread open `posixc.library` as the pthread hook does, might give every thread its own `errno` and make the lock
+unnecessary. That changes the pinned link recipe and was not tried.
 
 ## Not verified
 

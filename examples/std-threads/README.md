@@ -71,22 +71,25 @@ pause after them, to show that nothing is left running:
 
 `slots` prints the number of the next free task storage slot. Run before and after other programs in one
 boot, it stays the same (10 on ABI-v1, 3 on ABI-v11); before the bridge freed its slots it grew by about
-five per run.
+five per run. It is also the program without threads that the memory figures are compared with.
 
 ## ABI differences
 
 | | ABI-v1 | ABI-v11 |
 | --- | --- | --- |
 | Task storage | `task.resource` | exec.library 51, called after a version check |
-| Free memory after many runs | less after every program run, also without threads and on `main`; see the findings | unchanged without threads |
+| Memory not returned per run | 168 KB for every program that references the POSIX layer, also without threads (#131); 123 bytes per thread | none without threads; about 7 bytes per thread |
 
 Every check gives the same result on both ABIs.
 
 ## Open findings
 
-See "Open findings" in `docs/plans/std-m4-findings.md`: memory that ABI-v1 does not get back (partly
-already on `main`), and a page fault in `Avail FLUSH` on ABI-v1 after a long sequence of runs, in two of
-three boots, cause unknown.
+See "Open findings" in `docs/plans/std-m4-findings.md`:
+
+- 123 bytes per thread that ABI-v1 does not return (about 7 on ABI-v11), and the 168 KB per run of every
+  program that references the POSIX layer on ABI-v1, which is not from threads (#131).
+- A page fault in `Avail FLUSH` on ABI-v1 after repeated runs of programs that start threads, in one to
+  two of three boots; the same loop without threads did not fault in five boots (#132).
 
 ## Not verified
 
