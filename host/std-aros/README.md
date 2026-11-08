@@ -74,8 +74,7 @@ done
 directory. The pinned pipeline stages a private sysroot instead and does not
 need it.
 
-To run the native probe, point the same variable at the patched library and
-build `examples/std-probe` (see `docs/plans/std-m1-spike-findings.md`).
+To run the native probe, build `examples/std-probe` with a toolchain that ships `std`, or with the patched library as `examples/std-runtime/README.md` describes.
 
 ## How the toolchain uses it
 

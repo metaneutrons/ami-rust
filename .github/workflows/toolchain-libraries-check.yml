@@ -12,9 +12,11 @@ on:
   pull_request:
     paths:
       - .github/workflows/toolchain-libraries-check.yml
+      - examples/std-*/**
       - host/std-aros/**
       - release/rust-production-contract.json
       - targets/*.json
+      - tools/build-std-examples.sh
       - tools/check-target-libraries.mjs
       - tooling/crates/aros-native-build/native/**
       - tooling/crates/aros-native-build/pins/**
@@ -130,6 +132,19 @@ jobs:
             > "$RUNNER_TEMP/lib-producer-request.json"
           "$RUNNER_TEMP/lib-maintainer/target/release/ami-rust-xtask" \
             toolchain-producer --request "$RUNNER_TEMP/lib-producer-request.json" > /dev/null
+
+      - name: Install the produced toolchain and build std programs with plain cargo
+        env:
+          HOST_KEY: ${{ matrix.host.key }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(<version.txt)"
+          prefix="$RUNNER_TEMP/lib-installed"
+          mkdir -m 700 "$prefix"
+          tar -xJf "$RUNNER_TEMP/lib-producer-output/artifacts/ami-rust-$version-$HOST_KEY.tar.xz" -C "$prefix"
+          bash tools/build-std-examples.sh "$prefix/libexec/ami-rust/$version" \
+            "$RUNNER_TEMP/lib-std-work" "$RUNNER_TEMP/lib-std-out"
 
       - name: Compare the built libraries with the pins of this host
         id: compare
