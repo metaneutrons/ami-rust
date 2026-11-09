@@ -32,6 +32,7 @@ subsystem on the `unsupported` fallback:
 | `sys/env` | New `aros.rs`: `var`, `set_var` and `remove_var` on the DOS variables through the C library; `vars()` is always empty; the calls are made under `ClibLock` |
 | `sys/sync` | AROS uses the futex implementations of `Mutex`, `Condvar`, `RwLock`, `Once` and the thread parker, on a new `futex/aros.rs` that calls the bridge's futex on Exec signals |
 | `sys/thread_local` | Key-based thread-locals (`os`) on a new `key/aros.rs` over task storage slots; destructors run when a thread ends, as on Xous |
+| `sys/process` | New `aros.rs`: `Command` over the bridge function `sdk_proc_run`, which loads the program with `LoadSeg` and starts it with `CreateNewProc` (the arguments in `NP_Arguments`, no shell), waits until the process has gone and returns its return code through `NP_ExitCode`. Each child is run by a thread of `std`, which sets the child's current directory and DOS variables first. `Stdio::piped()` is a file in `T:`; `kill` and `env_clear` are `Unsupported` |
 | `build.rs` | Unchanged on purpose: AROS stays an unknown platform, so every crate that uses `std` declares `#![feature(restricted_std)]` |
 
 ## Reproduce
@@ -43,7 +44,7 @@ set -eu
 repo=$(pwd -P)
 work=$(mktemp -d)
 cp -R "$(rustc +0.2.0 --print sysroot)/lib/rustlib/src/rust" "$work/rust"
-echo "500bfa962925baa4005a2058b3529203e0c4ca307e39d1f502591a2ec9f2b623  host/std-aros/std-aros.patch" | shasum -a 256 -c
+echo "f8f5770ee7510a7782d3237e6dab9bafa4c0c2fe286eb8afa34498a8d4a7b8e7  host/std-aros/std-aros.patch" | shasum -a 256 -c
 patch -p1 -d "$work/rust" < host/std-aros/std-aros.patch
 ```
 

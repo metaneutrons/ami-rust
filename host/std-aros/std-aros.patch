@@ -2217,6 +2217,891 @@ index 69c814e..2c18cd1 100644
      target_os = "uefi" => {
          mod uefi;
          use uefi as imp;
+diff --git a/library/std/src/sys/process/aros.rs b/library/std/src/sys/process/aros.rs
+new file mode 100644
+index 0000000..b1b8e38
+--- /dev/null
++++ b/library/std/src/sys/process/aros.rs
+@@ -0,0 +1,864 @@
++//! Child programs on AROS: `process::Command` over `LoadSeg` and `CreateNewProc`.
++//!
++//! A command runs as a DOS process of its own. `spawn` makes a thread of `std` for it (a DOS process too),
++//! which sets its current directory and its local variables and then calls the bridge function
++//! `sdk_proc_run`: that loads the program, starts it with `CreateNewProc` (the arguments in `NP_Arguments`,
++//! no shell), waits until the process has gone and returns its return code. `Process` is the state that the
++//! thread and the parent share.
++//!
++//! What this gives, and what it does not:
++//!
++//! - `program` is looked for as it is and, when it has no volume, in `C:`. The command path of the shell
++//!   is not searched. A program that is not found is `NotFound` from `spawn`.
++//! - The arguments are quoted in the way that the C start-up of AROS reads them (see `quote`). No shell
++//!   reads the line, so an argument cannot add a redirection or a second command, and a quote or a
++//!   semicolon in an argument is text.
++//! - The standard streams are those of the parent unless the command says otherwise.
++//! - `current_dir` is the directory the child starts in. `env` sets and removes DOS variables for the
++//!   child only, as the local variables of its process; `env_clear` is `Unsupported`.
++//! - `Stdio::piped()` is a file in `T:`: what the child writes can be read when it has ended (a read
++//!   waits for that), and what is written to the child's input is given to it when the input is closed,
++//!   which is when it starts. There is no pipe that both sides use at once.
++//! - The exit status is the return code of the program (0, 5 warn, 10 error, 20 fail, or what it returns).
++//!   There are no signals: `kill` is `Unsupported` while the child runs.
++//! - A `File` is not accepted as a standard stream of a child (DOS cannot be given a descriptor of the C
++//!   library); that is `Unsupported`.
++
++use super::env::{CommandEnv, CommandEnvs, CommandResolvedEnvs};
++pub use crate::ffi::OsString as EnvKey;
++use crate::ffi::{CString, OsStr, OsString};
++use crate::io::{self, BorrowedCursor, IoSlice, IoSliceMut, Write};
++use crate::num::NonZero;
++use crate::path::{Path, PathBuf};
++use crate::process::StdioPipes;
++use crate::sync::atomic::{AtomicU32, Ordering};
++use crate::sync::{Arc, Condvar, Mutex};
++use crate::sys::fs::File;
++use crate::{fmt, fs};
++
++unsafe extern "C" {
++    /// Stores the standard input, output and error handles of the calling process.
++    fn sdk_proc_streams(input: *mut usize, output: *mut usize, error: *mut usize);
++    /// Loads `program`, starts it with `arguments` as a process of its own and waits for it; stores its
++    /// return code. Returns 0 or a DOS error code. A stream is a file name, or the handle when the name is
++    /// `NULL`.
++    fn sdk_proc_run(
++        program: *const crate::ffi::c_char,
++        arguments: *const crate::ffi::c_char,
++        input: *const crate::ffi::c_char,
++        output: *const crate::ffi::c_char,
++        error: *const crate::ffi::c_char,
++        input_handle: usize,
++        output_handle: usize,
++        error_handle: usize,
++        rc: *mut i32,
++    ) -> crate::ffi::c_long;
++    fn sdk_task_id() -> usize;
++}
++
++static NEXT_ID: AtomicU32 = AtomicU32::new(1);
++static NEXT_FILE: AtomicU32 = AtomicU32::new(0);
++
++////////////////////////////////////////////////////////////////////////////////
++// Command
++////////////////////////////////////////////////////////////////////////////////
++
++pub struct Command {
++    program: OsString,
++    args: Vec<OsString>,
++    env: CommandEnv,
++
++    cwd: Option<OsString>,
++    stdin: Option<Stdio>,
++    stdout: Option<Stdio>,
++    stderr: Option<Stdio>,
++}
++
++#[derive(Debug)]
++pub enum Stdio {
++    Inherit,
++    Null,
++    MakePipe,
++    ParentStdout,
++    ParentStderr,
++    #[allow(dead_code)] // This variant exists only for the Debug impl
++    InheritFile(File),
++    /// The captured output of another child, which this child reads as its input.
++    Captured(Arc<Shared>, Arc<TempFile>),
++}
++
++/// A file in `T:` that is removed when the last reference goes.
++#[derive(Debug)]
++pub struct TempFile {
++    path: String,
++}
++
++impl TempFile {
++    fn create() -> io::Result<(Arc<TempFile>, fs::File)> {
++        loop {
++            let n = NEXT_FILE.fetch_add(1, Ordering::Relaxed);
++            let path = format!("T:ami-rust-proc-{:x}-{n}", unsafe { sdk_task_id() });
++            match fs::OpenOptions::new().write(true).create_new(true).open(&path) {
++                Ok(file) => return Ok((Arc::new(TempFile { path }), file)),
++                Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
++                Err(e) => return Err(e),
++            }
++        }
++    }
++}
++
++impl Drop for TempFile {
++    fn drop(&mut self) {
++        let _ = fs::remove_file(&self.path);
++    }
++}
++
++impl Command {
++    pub fn new(program: &OsStr) -> Command {
++        Command {
++            program: program.to_owned(),
++            args: vec![program.to_owned()],
++            env: Default::default(),
++            cwd: None,
++            stdin: None,
++            stdout: None,
++            stderr: None,
++        }
++    }
++
++    pub fn arg(&mut self, arg: &OsStr) {
++        self.args.push(arg.to_owned());
++    }
++
++    pub fn env_mut(&mut self) -> &mut CommandEnv {
++        &mut self.env
++    }
++
++    pub fn cwd(&mut self, dir: &OsStr) {
++        self.cwd = Some(dir.to_owned());
++    }
++
++    pub fn stdin(&mut self, stdin: Stdio) {
++        self.stdin = Some(stdin);
++    }
++
++    pub fn stdout(&mut self, stdout: Stdio) {
++        self.stdout = Some(stdout);
++    }
++
++    pub fn stderr(&mut self, stderr: Stdio) {
++        self.stderr = Some(stderr);
++    }
++
++    pub fn get_program(&self) -> &OsStr {
++        &self.program
++    }
++
++    pub fn get_args(&self) -> CommandArgs<'_> {
++        let mut iter = self.args.iter();
++        iter.next();
++        CommandArgs { iter }
++    }
++
++    pub fn get_envs(&self) -> CommandEnvs<'_> {
++        self.env.iter()
++    }
++
++    pub fn get_env_clear(&self) -> bool {
++        self.env.does_clear()
++    }
++
++    pub fn get_resolved_envs(&self) -> CommandResolvedEnvs {
++        CommandResolvedEnvs::new(self.env.capture())
++    }
++
++    pub fn get_current_dir(&self) -> Option<&Path> {
++        self.cwd.as_ref().map(|cs| Path::new(cs))
++    }
++
++    pub fn spawn(&mut self, default: Stdio, needs_stdin: bool) -> io::Result<(Process, StdioPipes)> {
++        if self.env.does_clear() {
++            return Err(io::const_error!(io::ErrorKind::Unsupported, "a child cannot start with an empty environment on AROS"));
++        }
++        let program = self.resolve()?;
++        let program = CString::new(program.as_encoded_bytes()).map_err(|_| io::const_error!(io::ErrorKind::InvalidInput, "a program name has a nul byte"))?;
++        // The program gets the arguments as one string that ends with a line feed, in the quoting of DOS.
++        let mut arguments = Vec::new();
++        for arg in &self.args[1..] {
++            if !arguments.is_empty() {
++                arguments.push(b' ');
++            }
++            quote(arg.as_encoded_bytes(), &mut arguments)?;
++        }
++        arguments.push(b'\n');
++        let arguments = CString::new(arguments).map_err(|_| io::const_error!(io::ErrorKind::InvalidInput, "an argument has a nul byte"))?;
++        if let Some(dir) = &self.cwd {
++            if !fs::metadata(dir)?.is_dir() {
++                return Err(io::const_error!(io::ErrorKind::NotADirectory, "the directory of the child is not a directory"));
++            }
++        }
++        let env: Vec<(OsString, Option<OsString>)> = self.env.iter().map(|(k, v)| (k.to_owned(), v.map(|v| v.to_owned()))).collect();
++
++        let default_in = if needs_stdin { default_clone(&default) } else { Stdio::Null };
++        let stdin = self.stdin.take().unwrap_or(default_in);
++        let stdout = self.stdout.take().unwrap_or_else(|| default_clone(&default));
++        let stderr = self.stderr.take().unwrap_or_else(|| default_clone(&default));
++
++        let shared = Arc::new(Shared::new());
++        let mut pipes = StdioPipes { stdin: None, stdout: None, stderr: None };
++        let mut after = None;
++
++        // The handles of the parent that a stream without a name of its own uses.
++        let (mut parent_in, mut parent_out, mut parent_err) = (0usize, 0usize, 0usize);
++        // SAFETY: stores three handles.
++        unsafe { sdk_proc_streams(&mut parent_in, &mut parent_out, &mut parent_err) };
++
++        let (in_name, in_handle) = match stdin {
++            Stdio::Inherit | Stdio::ParentStdout | Stdio::ParentStderr => (None, parent_in),
++            Stdio::Null => (Some("NIL:".to_string()), 0),
++            Stdio::MakePipe => {
++                let (temp, file) = TempFile::create()?;
++                let name = temp.path.clone();
++                // The file stays until the child has ended, whatever happens to the pipe.
++                shared.keep(temp.clone());
++                pipes.stdin = Some(ChildPipe::input(shared.clone(), temp, file));
++                (Some(name), 0)
++            }
++            Stdio::Captured(source, temp) => {
++                after = Some(source);
++                let name = temp.path.clone();
++                shared.keep(temp);
++                (Some(name), 0)
++            }
++            Stdio::InheritFile(_) => return Err(io::Error::UNSUPPORTED_PLATFORM),
++        };
++        let (out_name, out_handle, out_temp) = output_stream(stdout, parent_out, parent_out, parent_err)?;
++        let (err_name, err_handle, err_temp) = output_stream(stderr, parent_err, parent_out, parent_err)?;
++        if let Some(temp) = out_temp {
++            pipes.stdout = Some(ChildPipe::output(shared.clone(), temp));
++        }
++        if let Some(temp) = err_temp {
++            pipes.stderr = Some(ChildPipe::output(shared.clone(), temp));
++        }
++
++        let launch = Launch {
++            program,
++            arguments,
++            cwd: self.cwd.clone(),
++            env,
++            stdin: in_name,
++            stdout: out_name,
++            stderr: err_name,
++            handles: [in_handle, out_handle, err_handle],
++            after,
++        };
++        *shared.launch.lock().unwrap() = Some(launch);
++        // A child whose input is a pipe starts when that is closed; every other child starts now.
++        if pipes.stdin.is_none() {
++            shared.start()?;
++        }
++        Ok((Process { shared, status: None }, pipes))
++    }
++
++    /// Where the program is: as given, or in `C:` when it names no volume. This is the lookup of the
++    /// parent; the command path of the shell is not searched.
++    fn resolve(&self) -> io::Result<OsString> {
++        let program = Path::new(&self.program);
++        let name = self.program.as_encoded_bytes();
++        let has_volume = name.contains(&b':');
++        let mut candidates: Vec<PathBuf> = Vec::new();
++        match (&self.cwd, has_volume) {
++            (Some(dir), false) => candidates.push(Path::new(dir).join(program)),
++            _ => candidates.push(program.to_path_buf()),
++        }
++        if !has_volume && !name.contains(&b'/') {
++            let mut c = OsString::from("C:");
++            c.push(&self.program);
++            candidates.push(PathBuf::from(c));
++        }
++        // A candidate that cannot be examined for another reason than that it is not there (a file that is
++        // in use, say) is not "not found": that error is returned when no other candidate is.
++        let mut other: Option<io::Error> = None;
++        for candidate in candidates {
++            match fs::metadata(&candidate) {
++                Ok(m) if m.is_file() => {
++                    // A program found in the directory of `cwd` is passed as it was found: the child
++                    // starts in that directory and finds it by the name that was given.
++                    return Ok(if self.cwd.is_some() && !has_volume && !candidate.starts_with("C:") { self.program.clone() } else { candidate.into_os_string() });
++                }
++                Ok(_) => {}
++                Err(e) if e.kind() == io::ErrorKind::NotFound => {}
++                Err(e) => other = Some(e),
++            }
++        }
++        if let Some(e) = other {
++            return Err(e);
++        }
++        Err(io::const_error!(io::ErrorKind::NotFound, "the program was not found"))
++    }
++}
++
++fn default_clone(default: &Stdio) -> Stdio {
++    match default {
++        Stdio::Inherit => Stdio::Inherit,
++        Stdio::Null => Stdio::Null,
++        Stdio::MakePipe => Stdio::MakePipe,
++        Stdio::ParentStdout => Stdio::ParentStdout,
++        Stdio::ParentStderr => Stdio::ParentStderr,
++        _ => Stdio::Inherit,
++    }
++}
++
++/// Where one output stream of the child goes: the name of a file (or none), the handle of the parent that
++/// it uses when it has no name, and the file to read it from when it is a pipe. `own` is the handle of
++/// the parent's stream of the same kind, `stdout` and `stderr` those of the parent's two streams.
++fn output_stream(stdio: Stdio, own: usize, stdout: usize, stderr: usize) -> io::Result<(Option<String>, usize, Option<Arc<TempFile>>)> {
++    Ok(match stdio {
++        Stdio::Inherit => (None, own, None),
++        Stdio::Null => (Some("NIL:".to_string()), 0, None),
++        Stdio::MakePipe => {
++            let (temp, file) = TempFile::create()?;
++            drop(file);
++            (Some(temp.path.clone()), 0, Some(temp))
++        }
++        Stdio::ParentStdout => (None, stdout, None),
++        Stdio::ParentStderr => (None, stderr, None),
++        Stdio::InheritFile(_) | Stdio::Captured(..) => return Err(io::Error::UNSUPPORTED_PLATFORM),
++    })
++}
++
++/// Quotes one word of the argument string in the way that the C start-up of AROS reads it (the quoting of
++/// DOS). A word of plain characters is left as it is; any other is put in double quotes, with `*` (the
++/// escape of DOS) before a `*` and a `"`, and a line feed or carriage return written `*N` and `*R`.
++fn quote(word: &[u8], out: &mut Vec<u8>) -> io::Result<()> {
++    if word.contains(&0) {
++        return Err(io::const_error!(io::ErrorKind::InvalidInput, "a command line has a nul byte"));
++    }
++    let plain = !word.is_empty() && word.iter().all(|b| b.is_ascii_alphanumeric() || b"_-./:+=,@%".contains(b));
++    if plain {
++        out.extend_from_slice(word);
++        return Ok(());
++    }
++    out.push(b'"');
++    for &b in word {
++        match b {
++            b'*' => out.extend_from_slice(b"**"),
++            b'"' => out.extend_from_slice(b"*\""),
++            b'\n' => out.extend_from_slice(b"*N"),
++            b'\r' => out.extend_from_slice(b"*R"),
++            _ => out.push(b),
++        }
++    }
++    out.push(b'"');
++    Ok(())
++}
++
++pub fn output(cmd: &mut Command) -> io::Result<(ExitStatus, Vec<u8>, Vec<u8>)> {
++    let (mut process, mut pipes) = cmd.spawn(Stdio::MakePipe, false)?;
++    drop(pipes.stdin.take());
++    let status = process.wait()?;
++    let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
++    if let Some(out) = pipes.stdout.take() {
++        out.read_to_end(&mut stdout)?;
++    }
++    if let Some(err) = pipes.stderr.take() {
++        err.read_to_end(&mut stderr)?;
++    }
++    Ok((status, stdout, stderr))
++}
++
++impl From<ChildPipe> for Stdio {
++    fn from(pipe: ChildPipe) -> Stdio {
++        match &pipe.kind {
++            PipeKind::Output { shared, file, .. } => Stdio::Captured(shared.clone(), file.clone()),
++            // The input of another child: nothing to read from it.
++            PipeKind::Input { .. } => Stdio::Null,
++        }
++    }
++}
++
++/// The pipe of `io::pipe()`, which AROS does not have, so there is no value of it.
++impl From<crate::sys::pipe::Pipe> for Stdio {
++    fn from(pipe: crate::sys::pipe::Pipe) -> Stdio {
++        pipe.diverge()
++    }
++}
++
++impl From<io::Stdout> for Stdio {
++    fn from(_: io::Stdout) -> Stdio {
++        Stdio::ParentStdout
++    }
++}
++
++impl From<io::Stderr> for Stdio {
++    fn from(_: io::Stderr) -> Stdio {
++        Stdio::ParentStderr
++    }
++}
++
++impl From<File> for Stdio {
++    fn from(file: File) -> Stdio {
++        Stdio::InheritFile(file)
++    }
++}
++
++impl fmt::Debug for Command {
++    // show all attributes
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        if f.alternate() {
++            let mut debug_command = f.debug_struct("Command");
++            debug_command.field("program", &self.program).field("args", &self.args);
++            if !self.env.is_unchanged() {
++                debug_command.field("env", &self.env);
++            }
++
++            if self.cwd.is_some() {
++                debug_command.field("cwd", &self.cwd);
++            }
++
++            if self.stdin.is_some() {
++                debug_command.field("stdin", &self.stdin);
++            }
++            if self.stdout.is_some() {
++                debug_command.field("stdout", &self.stdout);
++            }
++            if self.stderr.is_some() {
++                debug_command.field("stderr", &self.stderr);
++            }
++
++            debug_command.finish()
++        } else {
++            if let Some(ref cwd) = self.cwd {
++                write!(f, "cd {cwd:?} && ")?;
++            }
++            if self.env.does_clear() {
++                write!(f, "env -i ")?;
++                // Altered env vars will be printed next, that should exactly work as expected.
++            } else {
++                // Removed env vars need the command to be wrapped in `env`.
++                let mut any_removed = false;
++                for (key, value_opt) in self.get_envs() {
++                    if value_opt.is_none() {
++                        if !any_removed {
++                            write!(f, "env ")?;
++                            any_removed = true;
++                        }
++                        write!(f, "-u {} ", key.to_string_lossy())?;
++                    }
++                }
++            }
++            // Altered env vars can just be added in front of the program.
++            for (key, value_opt) in self.get_envs() {
++                if let Some(value) = value_opt {
++                    write!(f, "{}={value:?} ", key.to_string_lossy())?;
++                }
++            }
++            if self.program != self.args[0] {
++                write!(f, "[{:?}] ", self.program)?;
++            }
++            write!(f, "{:?}", self.args[0])?;
++
++            for arg in &self.args[1..] {
++                write!(f, " {:?}", arg)?;
++            }
++            Ok(())
++        }
++    }
++}
++
++
++////////////////////////////////////////////////////////////////////////////////
++// The child and the state it shares with its parent
++////////////////////////////////////////////////////////////////////////////////
++
++/// What the process of the child does when it starts.
++struct Launch {
++    program: CString,
++    arguments: CString,
++    cwd: Option<OsString>,
++    env: Vec<(OsString, Option<OsString>)>,
++    stdin: Option<String>,
++    stdout: Option<String>,
++    stderr: Option<String>,
++    /// The handles of the parent, for a stream without a name.
++    handles: [usize; 3],
++    /// Another child whose output this one reads as input: it starts when that one has ended.
++    after: Option<Arc<Shared>>,
++}
++
++/// The state of a child, shared by the parent, the process that runs it and its pipes.
++pub struct Shared {
++    id: u32,
++    launch: Mutex<Option<Launch>>,
++    /// `None` while the child runs or has not started; the return code, or the DOS error that kept it
++    /// from running.
++    done: Mutex<Option<Result<i32, i32>>>,
++    ended: Condvar,
++    /// Files that the child reads, kept until it has ended.
++    keep: Mutex<Vec<Arc<TempFile>>>,
++}
++
++impl fmt::Debug for Shared {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_struct("Shared").field("id", &self.id).finish_non_exhaustive()
++    }
++}
++
++impl Shared {
++    fn new() -> Shared {
++        Shared {
++            id: NEXT_ID.fetch_add(1, Ordering::Relaxed),
++            launch: Mutex::new(None),
++            done: Mutex::new(None),
++            ended: Condvar::new(),
++            keep: Mutex::new(Vec::new()),
++        }
++    }
++
++    fn keep(&self, file: Arc<TempFile>) {
++        self.keep.lock().unwrap().push(file);
++    }
++
++    /// Starts the process of the child, once.
++    fn start(self: &Arc<Shared>) -> io::Result<()> {
++        let Some(launch) = self.launch.lock().unwrap().take() else { return Ok(()) };
++        let shared = self.clone();
++        let spawned = crate::thread::Builder::new().name("std-process".to_string()).spawn(move || {
++            let result = run(launch);
++            *shared.done.lock().unwrap() = Some(result);
++            shared.ended.notify_all();
++        });
++        match spawned {
++            Ok(handle) => {
++                drop(handle);
++                Ok(())
++            }
++            Err(e) => Err(e),
++        }
++    }
++
++    fn finished(&self) -> Option<Result<i32, i32>> {
++        *self.done.lock().unwrap()
++    }
++
++    fn wait(self: &Arc<Shared>) -> Result<i32, i32> {
++        let mut done = self.done.lock().unwrap();
++        loop {
++            if let Some(result) = *done {
++                return result;
++            }
++            done = self.ended.wait(done).unwrap();
++        }
++    }
++}
++
++/// The body of the process that runs a child: its own directory and variables, then the command.
++fn run(launch: Launch) -> Result<i32, i32> {
++    if let Some(source) = &launch.after {
++        let _ = source.wait();
++    }
++    if let Some(dir) = &launch.cwd {
++        crate::sys::paths::chdir(Path::new(dir)).map_err(|e| e.raw_os_error().unwrap_or(1000))?;
++    }
++    for (name, value) in &launch.env {
++        // SAFETY: these are the variables of this process alone (see sys/env).
++        let _ = match value {
++            Some(value) => unsafe { crate::sys::env::setenv(name, value) },
++            None => unsafe { crate::sys::env::unsetenv(name) },
++        };
++    }
++    let name = |s: &Option<String>| s.as_ref().and_then(|s| CString::new(s.as_bytes()).ok());
++    let (input, output, error) = (name(&launch.stdin), name(&launch.stdout), name(&launch.stderr));
++    let pointer = |c: &Option<CString>| c.as_ref().map_or(crate::ptr::null(), |c| c.as_ptr());
++    let mut rc = 0i32;
++    // SAFETY: the strings are C strings that live until the call returns.
++    let code = unsafe {
++        sdk_proc_run(
++            launch.program.as_ptr(),
++            launch.arguments.as_ptr(),
++            pointer(&input),
++            pointer(&output),
++            pointer(&error),
++            launch.handles[0],
++            launch.handles[1],
++            launch.handles[2],
++            &mut rc,
++        )
++    };
++    drop(launch);
++    if code == 0 { Ok(rc) } else { Err(1000 + code as i32) }
++}
++
++pub struct Process {
++    shared: Arc<Shared>,
++    status: Option<ExitStatus>,
++}
++
++fn status_of(result: Result<i32, i32>) -> io::Result<ExitStatus> {
++    match result {
++        Ok(code) => Ok(ExitStatus(code)),
++        Err(os) => Err(io::Error::from_raw_os_error(os)),
++    }
++}
++
++impl Process {
++    /// A number for the child that is unique in this program; DOS has no process ids for it.
++    pub fn id(&self) -> u32 {
++        self.shared.id
++    }
++
++    pub fn kill(&mut self) -> io::Result<()> {
++        if self.status.is_some() || self.shared.finished().is_some() {
++            Ok(())
++        } else {
++            Err(io::Error::UNSUPPORTED_PLATFORM)
++        }
++    }
++
++    pub fn wait(&mut self) -> io::Result<ExitStatus> {
++        if let Some(status) = self.status {
++            return Ok(status);
++        }
++        self.shared.start()?;
++        let status = status_of(self.shared.wait())?;
++        self.status = Some(status);
++        Ok(status)
++    }
++
++    pub fn try_wait(&mut self) -> io::Result<Option<ExitStatus>> {
++        if let Some(status) = self.status {
++            return Ok(Some(status));
++        }
++        match self.shared.finished() {
++            None => Ok(None),
++            Some(result) => {
++                let status = status_of(result)?;
++                self.status = Some(status);
++                Ok(Some(status))
++            }
++        }
++    }
++}
++
++////////////////////////////////////////////////////////////////////////////////
++// The pipes of a child: files in T:
++////////////////////////////////////////////////////////////////////////////////
++
++pub struct ChildPipe {
++    kind: PipeKind,
++}
++
++enum PipeKind {
++    /// What the child writes. A read waits until it has ended, then reads the file.
++    Output { shared: Arc<Shared>, file: Arc<TempFile>, data: Mutex<Option<(Vec<u8>, usize)>> },
++    /// What the child reads. The child starts when this is dropped.
++    Input { shared: Arc<Shared>, file: Mutex<Option<fs::File>>, _temp: Arc<TempFile> },
++}
++
++impl ChildPipe {
++    fn input(shared: Arc<Shared>, temp: Arc<TempFile>, file: fs::File) -> ChildPipe {
++        ChildPipe { kind: PipeKind::Input { shared, file: Mutex::new(Some(file)), _temp: temp } }
++    }
++
++    fn output(shared: Arc<Shared>, file: Arc<TempFile>) -> ChildPipe {
++        ChildPipe { kind: PipeKind::Output { shared, file, data: Mutex::new(None) } }
++    }
++
++    /// Copies what is left of the child's output into `buf` after waiting for the child to end.
++    fn fill(&self, take: &mut dyn FnMut(&[u8]) -> usize) -> io::Result<usize> {
++        match &self.kind {
++            PipeKind::Output { shared, file, data } => {
++                let mut data = data.lock().unwrap();
++                if data.is_none() {
++                    // The child may not have started (its input is still open); it is a deadlock of the
++                    // program, as with a pipe, so the read waits.
++                    let _ = shared.wait();
++                    *data = Some((fs::read(&file.path)?, 0));
++                }
++                let (bytes, position) = data.as_mut().unwrap();
++                let taken = take(&bytes[*position..]);
++                *position += taken;
++                Ok(taken)
++            }
++            PipeKind::Input { .. } => Err(io::const_error!(io::ErrorKind::Unsupported, "the input of a child cannot be read")),
++        }
++    }
++
++    pub fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
++        self.fill(&mut |rest| {
++            let n = rest.len().min(buf.len());
++            buf[..n].copy_from_slice(&rest[..n]);
++            n
++        })
++    }
++
++    pub fn read_buf(&self, mut cursor: BorrowedCursor<'_, u8>) -> io::Result<()> {
++        self.fill(&mut |rest| {
++            let n = rest.len().min(cursor.capacity());
++            cursor.append(&rest[..n]);
++            n
++        })
++        .map(|_| ())
++    }
++
++    pub fn read_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
++        let mut total = 0;
++        for buf in bufs {
++            let n = self.read(buf)?;
++            total += n;
++            if n < buf.len() {
++                break;
++            }
++        }
++        Ok(total)
++    }
++
++    pub fn is_read_vectored(&self) -> bool {
++        false
++    }
++
++    pub fn read_to_end(&self, buf: &mut Vec<u8>) -> io::Result<usize> {
++        self.fill(&mut |rest| {
++            buf.extend_from_slice(rest);
++            rest.len()
++        })
++    }
++
++    pub fn write(&self, buf: &[u8]) -> io::Result<usize> {
++        match &self.kind {
++            PipeKind::Input { file, .. } => match file.lock().unwrap().as_mut() {
++                Some(file) => file.write(buf),
++                None => Err(io::const_error!(io::ErrorKind::BrokenPipe, "the input of the child is closed")),
++            },
++            PipeKind::Output { .. } => Err(io::const_error!(io::ErrorKind::Unsupported, "the output of a child cannot be written")),
++        }
++    }
++
++    pub fn write_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
++        match bufs.iter().find(|b| !b.is_empty()) {
++            Some(buf) => self.write(buf),
++            None => Ok(0),
++        }
++    }
++
++    pub fn is_write_vectored(&self) -> bool {
++        false
++    }
++}
++
++impl Drop for ChildPipe {
++    fn drop(&mut self) {
++        if let PipeKind::Input { shared, file, .. } = &self.kind {
++            // The input is complete: close the file, then let the child start.
++            drop(file.lock().unwrap().take());
++            let _ = shared.start();
++        }
++    }
++}
++
++impl fmt::Debug for ChildPipe {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_struct("ChildPipe").finish_non_exhaustive()
++    }
++}
++
++pub fn read_output(out: ChildPipe, stdout: &mut Vec<u8>, err: ChildPipe, stderr: &mut Vec<u8>) -> io::Result<()> {
++    out.read_to_end(stdout)?;
++    err.read_to_end(stderr)?;
++    Ok(())
++}
++
++pub fn getpid() -> u32 {
++    // SAFETY: no arguments; the number of the calling task.
++    unsafe { sdk_task_id() as u32 }
++}
++
++////////////////////////////////////////////////////////////////////////////////
++// Exit status
++////////////////////////////////////////////////////////////////////////////////
++
++/// The return code of a command: 0 is success, 5 a warning, 10 an error and 20 a failure in the
++/// convention of DOS; a program may return any other value.
++#[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
++pub struct ExitStatus(i32);
++
++impl ExitStatus {
++    pub fn exit_ok(&self) -> Result<(), ExitStatusError> {
++        match NonZero::try_from(self.0) {
++            Ok(failure) => Err(ExitStatusError(failure)),
++            Err(_) => Ok(()),
++        }
++    }
++
++    pub fn code(&self) -> Option<i32> {
++        Some(self.0)
++    }
++}
++
++impl fmt::Display for ExitStatus {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        write!(f, "exit code: {}", self.0)
++    }
++}
++
++#[derive(PartialEq, Eq, Clone, Copy, Debug)]
++pub struct ExitStatusError(NonZero<i32>);
++
++impl Into<ExitStatus> for ExitStatusError {
++    fn into(self) -> ExitStatus {
++        ExitStatus(self.0.get())
++    }
++}
++
++impl ExitStatusError {
++    pub fn code(self) -> Option<NonZero<i32>> {
++        Some(self.0)
++    }
++}
++
++#[derive(PartialEq, Eq, Clone, Copy, Debug)]
++pub struct ExitCode(u8);
++
++impl ExitCode {
++    pub const SUCCESS: ExitCode = ExitCode(0);
++    pub const FAILURE: ExitCode = ExitCode(1);
++
++    pub fn as_i32(&self) -> i32 {
++        self.0 as i32
++    }
++}
++
++impl From<u8> for ExitCode {
++    fn from(code: u8) -> Self {
++        Self(code)
++    }
++}
++
++pub struct CommandArgs<'a> {
++    iter: crate::slice::Iter<'a, OsString>,
++}
++
++impl<'a> Iterator for CommandArgs<'a> {
++    type Item = &'a OsStr;
++    fn next(&mut self) -> Option<&'a OsStr> {
++        self.iter.next().map(|os| &**os)
++    }
++    fn size_hint(&self) -> (usize, Option<usize>) {
++        self.iter.size_hint()
++    }
++}
++
++impl<'a> ExactSizeIterator for CommandArgs<'a> {
++    fn len(&self) -> usize {
++        self.iter.len()
++    }
++    fn is_empty(&self) -> bool {
++        self.iter.is_empty()
++    }
++}
++
++impl<'a> fmt::Debug for CommandArgs<'a> {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_list().entries(self.iter.clone()).finish()
++    }
++}
+diff --git a/library/std/src/sys/process/mod.rs b/library/std/src/sys/process/mod.rs
+index e0d52a6..6ab5683 100644
+--- a/library/std/src/sys/process/mod.rs
++++ b/library/std/src/sys/process/mod.rs
+@@ -15,6 +15,10 @@ cfg_select! {
+         mod motor;
+         use motor as imp;
+     }
++    target_os = "aros" => {
++        mod aros;
++        use aros as imp;
++    }
+     _ => {
+         mod unsupported;
+         use unsupported as imp;
 diff --git a/library/std/src/sys/random/aros.rs b/library/std/src/sys/random/aros.rs
 new file mode 100644
 index 0000000..c5a0963
