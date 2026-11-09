@@ -921,6 +921,92 @@
           }
         ]
       }
+    },
+    {
+      "path": "examples/std-process",
+      "run": {
+        "stack": 131072,
+        "cwd": "RAM:ami-rust-m1",
+        "modes": [
+          {
+            "name": "basic",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT process summary 6 of 6 checks passed"
+            ]
+          },
+          {
+            "name": "exitcodes",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT process summary 10 of 10 checks passed"
+            ]
+          },
+          {
+            "name": "args",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT process summary 3 of 3 checks passed"
+            ]
+          },
+          {
+            "name": "cwd",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT process summary 5 of 5 checks passed"
+            ]
+          },
+          {
+            "name": "env",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT process summary 6 of 6 checks passed"
+            ]
+          },
+          {
+            "name": "stdio",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT process summary 8 of 8 checks passed"
+            ]
+          },
+          {
+            "name": "notfound",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT process summary 5 of 5 checks passed"
+            ]
+          },
+          {
+            "name": "wait",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT process summary 9 of 9 checks passed"
+            ]
+          },
+          {
+            "name": "concurrent",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT process summary 4 of 4 checks passed"
+            ]
+          },
+          {
+            "name": "lookup",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT process summary 5 of 5 checks passed"
+            ]
+          },
+          {
+            "name": "end-child-running",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT process the parent returns while a child runs ok"
+            ]
+          }
+        ]
+      }
     }
   ],
   "in_development": [],
