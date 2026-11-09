@@ -104,6 +104,7 @@ The results are the same on ABI-v1 and ABI-v11 except where a row says otherwise
 | Paths | `Path` knows AROS paths: the volume (`RAM:`) is the prefix, a path with one is absolute, and `Path::new("RAM:").join("x")` is `RAM:x`. `.` and `..` work in every path call although DOS knows neither; `std` resolves them by the name alone, without looking at the file system. `env::current_dir` and `set_current_dir`; `current_dir` reports the volume name (`RAM Disk:`), not the assign. `env::temp_dir()` is `T:`, path lists use `;`. Two slashes in a row are one, as on Unix; DOS reads them as the parent directory. |
 | Random numbers | `HashMap` seeds and `std::random`. ABI-v1 uses the system's entropy source. ABI-v11 has none yet: it mixes a weak generator with the CPU's `RDRAND` instruction where there is one, and is weak without it, so `HashMap` there is not hardened against crafted keys. Not suitable for cryptography on either ABI. |
 | Threads | `thread::spawn`, `join`, `thread::scope`, `Mutex`, `Condvar`, `RwLock`, `Once`, `OnceLock`, `LazyLock`, `Barrier`, `park`, channels, `thread_local!` and `yield_now`; at least 1000 threads at once with the default 256 KiB stack. A thread is a DOS process, so it has its own current directory and DOS variables. A thread's `process::exit` or panic ends the program at the main task's next `std` call. An error from a failed read or write in a threaded program may carry another thread's code, because the C library keeps one `errno` for all tasks of a program. `available_parallelism` is 1. |
+| Child programs | `process::Command`: `new`, `arg`, `args`, `current_dir`, `env`, `env_remove`, `spawn`, `status` and `output`, `Child::wait`, `try_wait`, `wait_with_output` and `id`, and `ExitStatus`. A command is a DOS program, looked for as it is and, when its name has no volume, in `C:`; the command path of the shell is not searched. The arguments go to the program as they are (no shell reads them), so a quote, a semicolon or a `>` in an argument is text. The standard streams are the parent's unless the command says otherwise; `Stdio::piped()` is a file in `T:`, so what the child wrote can be read when it has ended (a read waits for that), and what is written to its input is given to it when the input is closed, which is when it starts. The exit status is the return code of the program. Each child is a process of its own, and several run at once. `Child::kill` and `env_clear` are `Unsupported` (see below), and so is a `File` as a standard stream of a child. |
 
 ## What is not supported
 
@@ -112,7 +113,8 @@ These return `ErrorKind::Unsupported` (or, for an API that cannot fail, are empt
 - symbolic and hard links, and file locks;
 - `env::current_exe`, and `env::home_dir`, which is always `None`;
 - networking (`std::net`);
-- processes (`std::process::Command`), `fork` and `exec`, and signals.
+- `fork`, `exec`, signals, `Child::kill` while the child runs, `Command::env_clear`, and a pipe that parent and child use at the same time (a `Stdio::piped()` stream is a file; see above);
+- `std::io::pipe`.
 
 Not tested, so not promised: volumes other than `RAM:` and the delivery volume, files above 2 GiB, time zones other than UTC, more than one CPU, and `RDRAND` failure cases on ABI-v11.
 
