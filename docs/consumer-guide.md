@@ -186,4 +186,4 @@ The Cargo configuration, the toolchain and the `--locked --offline` workflow are
 
 ## Scope and compatibility
 
-0.2.0 supports `no_std` plus `alloc`, not full `std`. Its native evidence covers the qualified QEMU profiles for ABI-v1 and ABI-v11. It does not establish support for a different CPU, physical hardware, arbitrary crates, threads, networking or an AROS-hosted Rust compiler. See the [compatibility boundary](/compatibility/) and the [API reference](/reference/) for the exact limits.
+The supported baseline is `no_std` plus `alloc`; a toolchain that ships `std` also has an experimental [`std`](/std/). The native evidence covers the qualified QEMU profiles for ABI-v1 and ABI-v11. It does not establish support for a different CPU, physical hardware, arbitrary crates, networking or an AROS-hosted Rust compiler. See the [compatibility boundary](/compatibility/) and the [API reference](/reference/) for the exact limits.

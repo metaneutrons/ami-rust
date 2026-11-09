@@ -12,8 +12,12 @@
 // Rust blocks in the guides are checked too. A block that invokes `entry!` is
 // built as a complete program (`#![no_main]` and `#![no_std]` are added when
 // the block omits them), and a block that starts with `use aros` and defines
-// functions is built as a module. The `build.rs` snippet in the consumer guide
-// is the build script of every crate built here. Any other Rust block is an
+// functions is built as a module. A block that declares `restricted_std` is a
+// complete `std` program and is built as its own crate in `std` mode, with the
+// profile and configuration of the `std` examples (no `build-std`); that needs a
+// toolchain that ships `std`. With one that does not, those blocks are reported as
+// skipped, and `--require-std` turns the skip into a failure. The `build.rs`
+// snippet in the consumer guide is the build script of every crate built here. Any other Rust block is an
 // unchecked fragment and fails the run: rewrite it as one of the forms above.
 //
 // Example convention for source-comment examples: the block is the body of a function that has a
@@ -22,15 +26,16 @@
 // setup, as in Rustdoc. Blocks that contain `entry!` are whole programs and
 // are covered by the example crates instead.
 //
-// usage: check-doc-examples.mjs WORK_DIR [TOOLCHAIN]    (default toolchain: 0.2.0)
+// usage: check-doc-examples.mjs [--require-std] WORK_DIR [TOOLCHAIN]    (default toolchain: 0.2.0)
 
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-const [workArgument, toolchain = '0.2.0'] = process.argv.slice(2);
+const requireStd = process.argv.includes('--require-std');
+const [workArgument, toolchain = '0.2.0'] = process.argv.slice(2).filter((argument) => argument !== '--require-std');
 if (!workArgument) {
-  console.error('usage: check-doc-examples.mjs WORK_DIR [TOOLCHAIN]');
+  console.error('usage: check-doc-examples.mjs [--require-std] WORK_DIR [TOOLCHAIN]');
   process.exit(2);
 }
 const repository = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -82,11 +87,12 @@ for (const { directory, error } of crates) {
   }
 }
 
-const guides = ['docs/consumer-guide.md', 'docs/api.md', 'docs/api/aros.md', 'docs/api/aros-mui.md', 'docs/api/aros-timer.md', 'docs/api/aros-graphics.md', 'docs/api/aros-intuition.md', 'docs/api/aros-asl.md', 'docs/api/aros-locale.md', 'docs/api/aros-icon.md', 'docs/api/aros-workbench.md'];
+const guides = ['docs/consumer-guide.md', 'docs/std.md', 'docs/api.md', 'docs/api/aros.md', 'docs/api/aros-mui.md', 'docs/api/aros-timer.md', 'docs/api/aros-graphics.md', 'docs/api/aros-intuition.md', 'docs/api/aros-asl.md', 'docs/api/aros-locale.md', 'docs/api/aros-icon.md', 'docs/api/aros-workbench.md'];
 const withAttributes = (code) => (code.includes('#![no_main]') ? code : `#![no_main]\n#![no_std]\n${code}`);
 const programs = sourcePrograms.map(({ label, code }) => ({ label, code: withAttributes(code) }));
 let buildScript = null;
 const modules = [];
+const stdPrograms = [];
 const fragments = [];
 for (const guide of guides) {
   const text = readFileSync(path.join(repository, guide), 'utf8');
@@ -95,6 +101,7 @@ for (const guide of guides) {
     const line = text.slice(0, match.index).split('\n').length + 1;
     const label = `${guide}:${line}`;
     if (code.includes('aros_native_build::prepare') && /fn main\(\)/.test(code)) buildScript = { label, code };
+    else if (code.includes('restricted_std') && /fn main\(/.test(code)) stdPrograms.push({ label, code });
     else if (code.includes('entry!')) programs.push({ label, code: withAttributes(code) });
     else if (/^use aros/m.test(code) && /\bfn \w+/.test(code) && !code.includes('entry!')) modules.push({ label, code });
     else fragments.push(label);
@@ -160,12 +167,56 @@ programs.forEach((program, number) => {
   crateDirs.push(directory);
 });
 
-console.log(`checking ${functions.length} source examples, ${modules.length} guide examples and ${programs.length} complete programs`
+const sysroot = spawnSync('rustc', [`+${toolchain}`, '--print', 'sysroot'], { encoding: 'utf8' }).stdout.trim();
+const shipsStd = ['abi1', 'abi11'].every((abi) => {
+  try {
+    return readdirSync(path.join(sysroot, 'lib/rustlib', `x86_64-unknown-aros-${abi}`, 'lib')).some((name) => /^libstd-.*\.rlib$/.test(name));
+  } catch {
+    return false;
+  }
+});
+const stdDirs = [];
+stdPrograms.forEach((program, number) => {
+  const directory = path.join(work, 'programs', `std_${number}`);
+  mkdirSync(path.join(directory, 'src'), { recursive: true });
+  mkdirSync(path.join(directory, '.cargo'), { recursive: true });
+  writeFileSync(path.join(directory, 'Cargo.toml'), `[package]
+name = "std-program-${number}"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+aros = { path = "${repository}/crates/aros", default-features = false }
+
+[build-dependencies]
+aros-native-build = { path = "${repository}/tooling/crates/aros-native-build" }
+
+[workspace]
+
+[profile.release]
+panic = "abort"
+`);
+  writeFileSync(path.join(directory, 'build.rs'), readFileSync(path.join(work, 'build.rs')));
+  writeFileSync(path.join(directory, '.cargo/config.toml'), readFileSync(path.join(work, '.cargo/config.toml')));
+  writeFileSync(path.join(directory, 'src/main.rs'), program.code);
+  stdDirs.push(directory);
+});
+if (stdPrograms.length && !shipsStd) {
+  if (requireStd) {
+    console.error(`toolchain ${toolchain} ships no std and --require-std was given`);
+    process.exit(1);
+  }
+  console.log(`SKIPPED ${stdPrograms.length} std programs: toolchain ${toolchain} ships no std for both targets (use --require-std to refuse this)`);
+}
+const builtDirs = shipsStd ? [...crateDirs, ...stdDirs] : crateDirs;
+
+console.log(`checking ${functions.length} source examples, ${stdPrograms.length} std programs, ${modules.length} guide examples and ${programs.length} complete programs`
   + ` (build script from ${buildScript.label}) with toolchain ${toolchain}`);
 let failed = false;
 for (const label of fragments) { failed = true; console.error(`unchecked Rust fragment: ${label}`); }
 for (const target of ['x86_64-unknown-aros-abi1', 'x86_64-unknown-aros-abi11']) {
-  for (const directory of crateDirs) {
+  for (const directory of builtDirs) {
     const result = spawnSync('cargo', [`+${toolchain}`, 'build', '--release', '--target', target, '--manifest-path', path.join(directory, 'Cargo.toml')], {
       encoding: 'utf8',
       cwd: directory,

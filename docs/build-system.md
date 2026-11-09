@@ -48,6 +48,9 @@ A refusal ends the build with a message of the form `AROS native bridge: Refusal
 | `Cargo must explicitly select this toolchain's aros-link` | The target's `linker` setting is missing or points elsewhere. |
 | `build must use the toolchain's paired Cargo` | The Cargo that launched the build is not the one shipped with the selected toolchain. |
 | `selected compiler or target specification is missing` | The toolchain installation is incomplete. |
+| `ABI1 target libraries has an unexpected file: …` (or `ABI11`) | The directory `lib/rustlib/<target>/lib` of the toolchain holds a file that the release did not put there. |
+| `ABI1 target libraries inventory entry is missing: …` (or `ABI11`) | A library of the release, such as `libstd`, is missing from that directory. |
+| `… input has the wrong size: …` | A library in that directory differs from the one the release pinned. |
 
 These checks establish that the compiler, Cargo, linker and target specification all belong to the same pinned toolchain. They are input-consistency checks. They are not a sandbox for arbitrary build scripts, and they do not authenticate the toolchain; for that, verify the release signatures as described in [Install and build](/quickstart-toolchain/#install-the-direct-archive).
 
@@ -56,6 +59,10 @@ These checks establish that the compiler, Cargo, linker and target specification
 Cargo can run `rustc` through a wrapper, configured by `RUSTC_WRAPPER` or `RUSTC_WORKSPACE_WRAPPER` in the environment, or by `build.rustc-wrapper` and `build.rustc-workspace-wrapper` in a Cargo configuration file. Release 0.2.0 and later accept exactly one kind: the caching wrapper `sccache`. It stores and replays the output of the compiler Cargo selected, and `RUSTC` still names the pinned compiler, so every check above still runs against it.
 
 The wrapper is recognised by the name of its executable. That is consistent with the rest of these checks, which establish input consistency and are not a sandbox: an executable that is called `sccache` is accepted. Any other wrapper is refused, because it could substitute the compiler. That includes `clippy-driver`. It is a compiler driver of its own, and the AROS toolchain does not ship clippy, so `cargo clippy` is not available for AROS targets.
+
+## Programs that use `std`
+
+A toolchain that ships `std` has the compiled standard library for both targets in the same directory as `core` and `alloc`: `std`, `panic_abort` and the crates `std` depends on, each as a library and its metadata. `prepare` checks that whole directory against the release, so a program is built against exactly the libraries that the release was qualified with, and a toolchain whose directory was changed is refused with one of the messages above. A `std` program has the same `build.rs`, the same `.cargo/config.toml` and the same refusals as any other; it needs no `build-std` setting. The source differs in `#![feature(restricted_std)]` and in having a `fn main`; see [Rust std](/std/).
 
 ## `aros-link`
 

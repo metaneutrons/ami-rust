@@ -61,6 +61,7 @@ export default defineConfig({
           label: 'Guides',
           items: [
             { label: 'Choosing and using the crates', link: '/consumer-guide/' },
+            { label: 'Rust std (experimental)', link: '/std/' },
             { label: 'Programming model', link: '/api/' },
             {
               label: 'Crates',

@@ -15,6 +15,7 @@ export const collections = {
         'targets-and-abis.md',
         'compatibility.md',
         'consumer-guide.md',
+        'std.md',
         'api.md',
         'api/aros.md',
         'api/aros-mui.md',
