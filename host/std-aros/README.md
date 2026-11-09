@@ -77,9 +77,18 @@ need it.
 To run the native probe, point the same variable at the patched library and
 build `examples/std-probe` (see `docs/plans/std-m1-spike-findings.md`).
 
+## How the toolchain uses it
+
+The toolchain producer (`toolchain-producer`, in `tooling/crates/xtask`) applies this patch to its private copy of
+the pinned `rust-src` and builds `std` and `panic_abort` with the other target libraries, for both targets. It applies
+the patch in process and refuses any file that differs from the digests in `source.json`; the patch and `source.json` are
+inputs of `release/rust-production-contract.json`. The `rust-src` component that the toolchain ships is not patched.
+Whenever the patch changes, the digests in the contract, the target library pins and the constants of
+`native_prefix_compose.rs` change with it (see "Updating the patch" in `CONTRIBUTING.md`).
+
 ## Limits
 
-`std` on this patch has no threads: `thread::spawn` returns `Unsupported` and
-the synchronisation types are the single-task implementations. Every API
-outside the five subsystems is the `unsupported` fallback and fails at run
-time, for example `Instant::now` and `std::process::exit`.
+`std` on this patch supports threads, time, the file system, paths, random numbers, the environment and arguments, and
+stdio; networking and processes are the `unsupported` fallback. The supported surface and its limits per ABI are in
+`docs/plans/std-m3-findings.md`, `docs/plans/std-m4-findings.md` and the test programs' READMEs. A crate that uses
+`std` still declares `#![feature(restricted_std)]`.

@@ -8,6 +8,7 @@
 use ami_rust_core::{
     Refusal, Result,
     digest::{is_sha256_digest, sha256_bytes, sha256_file},
+    native_prefix::TARGET_LIBRARY_CRATES,
 };
 use lzma_rust2::XzReader;
 use serde_json::{Value, json};
@@ -112,8 +113,7 @@ pub(super) fn compare(hosts: Vec<HostTargetRlibs>) -> Result<Value> {
         let expected = ["x86_64-unknown-aros-abi1", "x86_64-unknown-aros-abi11"]
             .into_iter()
             .flat_map(|target| {
-                ["alloc", "compiler_builtins", "core"]
-                    .map(|crate_name| format!("{target}/{crate_name}"))
+                TARGET_LIBRARY_CRATES.map(|crate_name| format!("{target}/{crate_name}"))
             })
             .collect::<Vec<_>>();
         if libraries.keys().cloned().collect::<Vec<_>>() != expected {
@@ -131,8 +131,7 @@ pub(super) fn compare(hosts: Vec<HostTargetRlibs>) -> Result<Value> {
         for key in ["x86_64-unknown-aros-abi1", "x86_64-unknown-aros-abi11"]
             .into_iter()
             .flat_map(|target| {
-                ["alloc", "compiler_builtins", "core"]
-                    .map(move |crate_name| format!("{target}/{crate_name}"))
+                TARGET_LIBRARY_CRATES.map(move |crate_name| format!("{target}/{crate_name}"))
             })
         {
             comparisons.push(compare_rlib(
@@ -147,7 +146,7 @@ pub(super) fn compare(hosts: Vec<HostTargetRlibs>) -> Result<Value> {
         "rule": "R1-A2_SEPARATE_HOST_METADATA_QUALIFICATION",
         "hosts": loaded.iter().map(|(host, _)| host).collect::<Vec<_>>(),
         "targets": ["x86_64-unknown-aros-abi1", "x86_64-unknown-aros-abi11"],
-        "libraries_per_host": 6,
+        "libraries_per_host": 2 * TARGET_LIBRARY_CRATES.len(),
         "pairwise_comparisons": comparisons,
         "native_object_and_symbol_index_records_equal": true,
         "allowed_host_metadata": [
@@ -720,7 +719,7 @@ fn library_filename(path: &str) -> Result<(String, String, String)> {
     let (crate_name, disambiguator) = leaf
         .rsplit_once('-')
         .ok_or_else(|| Refusal::new("target-library filename lacks a disambiguator"))?;
-    if !matches!(crate_name, "alloc" | "compiler_builtins" | "core")
+    if !TARGET_LIBRARY_CRATES.contains(&crate_name)
         || disambiguator.len() != 16
         || !disambiguator
             .bytes()

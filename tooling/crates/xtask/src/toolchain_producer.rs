@@ -164,6 +164,8 @@ fn produce(request: ProducerRequest) -> Result<()> {
                 "tooling/crates/aros-native-build/pins/{target}.json"
             )),
             target_spec: repository.join(format!("targets/{target}.json")),
+            std_patch: local(&plan, "std-aros-patch", &repository)?.1,
+            std_source: local(&plan, "std-aros-source", &repository)?.1,
             work: work.join(format!("bare-work-{target}")),
             output: bare_output.clone(),
         })?;
@@ -420,11 +422,10 @@ fn source_built_target_profile(bare_output: &Path, target: &str, host_key: &str)
     ) {
         return Err(Refusal::new("source-built target is not admitted"));
     }
-    let expected = std::collections::BTreeSet::from([
-        "alloc".to_owned(),
-        "compiler_builtins".to_owned(),
-        "core".to_owned(),
-    ]);
+    let expected = ami_rust_core::native_prefix::TARGET_LIBRARY_CRATES
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<std::collections::BTreeSet<_>>();
 
     let report_raw = read_regular_bounded(
         &bare_output.join("producer.json"),
@@ -450,7 +451,7 @@ fn source_built_target_profile(bare_output: &Path, target: &str, host_key: &str)
         .ok_or_else(|| Refusal::new("source-built target-library receipt lacks libraries"))?;
     if libraries.len() != expected.len() * 2 {
         return Err(Refusal::new(
-            "source-built target-library receipt must contain exactly three rlib/rmeta pairs",
+            "source-built target-library receipt must contain exactly the rlib/rmeta pairs of every crate of the target library set",
         ));
     }
     let library_root = bare_output.join("libraries");
@@ -537,7 +538,7 @@ fn target_library_artifact(path: &str) -> Result<(String, &'static str)> {
     let (crate_name, disambiguator) = stem
         .rsplit_once('-')
         .ok_or_else(|| Refusal::new("target-library filename lacks a disambiguator"))?;
-    if !matches!(crate_name, "core" | "alloc" | "compiler_builtins")
+    if !ami_rust_core::native_prefix::TARGET_LIBRARY_CRATES.contains(&crate_name)
         || disambiguator.len() != 16
         || !disambiguator
             .bytes()

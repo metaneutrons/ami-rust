@@ -1,0 +1,175 @@
+name: Target library check
+
+# Builds the AROS target libraries (core, alloc, compiler_builtins, std, panic_abort and the
+# crates that std depends on) with the toolchain producer on each of the three hosts and refuses
+# any difference from the pin files of that host. It needs no secret, signs nothing and publishes
+# nothing; the protected qualification workflow remains the only release path.
+#
+# When the pins of a host are not known yet, the run still uploads the file to review and commit
+# (`proposed-pins/`), so that a pin file comes from a build and never from a hand edit.
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/toolchain-libraries-check.yml
+      - host/std-aros/**
+      - release/rust-production-contract.json
+      - targets/*.json
+      - tools/check-target-libraries.mjs
+      - tooling/crates/aros-native-build/native/**
+      - tooling/crates/aros-native-build/pins/**
+      - tooling/crates/core/src/native_prefix.rs
+      - tooling/crates/xtask/src/bare_target_producer.rs
+      - tooling/crates/xtask/src/std_patch.rs
+      - tooling/crates/xtask/src/toolchain_producer.rs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: toolchain-libraries-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  libraries:
+    name: Libraries on ${{ matrix.host.key }}
+    runs-on: ${{ matrix.host.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        host:
+          - key: macos-aarch64
+            triple: aarch64-apple-darwin
+            runner: macos-26
+            pins: tooling/crates/aros-native-build/pins
+          - key: linux-x86_64
+            triple: x86_64-unknown-linux-gnu
+            runner: ubuntu-24.04
+            pins: tooling/crates/aros-native-build/pins/linux-x86_64
+          - key: linux-aarch64
+            triple: aarch64-unknown-linux-gnu
+            runner: ubuntu-24.04-arm
+            pins: tooling/crates/aros-native-build/pins/linux-aarch64
+    steps:
+      - name: Require the exact host
+        env:
+          HOST_KEY: ${{ matrix.host.key }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$HOST_KEY:$(uname -s):$(uname -m)" in
+            macos-aarch64:Darwin:arm64|linux-x86_64:Linux:x86_64|linux-aarch64:Linux:aarch64) ;;
+            *) exit 1 ;;
+          esac
+          test "$(df -Pk "$RUNNER_TEMP" | awk 'END {printf "%.0f\n", $4*1024}')" -ge 25769803776
+
+      - name: Check out the exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Build the pinned maintainer task
+        env:
+          HOST_TRIPLE: ${{ matrix.host.triple }}
+        shell: bash
+        run: bash tools/build-maintainer-task.sh "$RUNNER_TEMP/lib-maintainer" "$HOST_TRIPLE"
+
+      - name: Acquire the immutable contract inputs
+        env:
+          HOST_KEY: ${{ matrix.host.key }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          acquired="$RUNNER_TEMP/lib-acquired"
+          mkdir -m 700 "$acquired"
+          jq -r --arg host "$HOST_KEY" '
+            .inputs[] |
+            select(.hosts | index($host)) |
+            select(.source.url != null) |
+            [.role, .source.url, (.bytes|tostring), .sha256] | @tsv
+          ' release/rust-production-contract.json |
+          while IFS=$'\t' read -r role url bytes digest; do
+            case "$role" in *[!a-z0-9_-]*|'') exit 1 ;; esac
+            case "$url" in
+              https://static.rust-lang.org/*|\
+              https://github.com/metaneutrons/ami-rust/releases/download/*|\
+              https://github.com/metaneutrons/aros-toolchains/releases/download/*|\
+              https://github.com/metaneutrons/aros-tools/releases/download/*) ;;
+              *) exit 1 ;;
+            esac
+            curl --proto '=https' --proto-redir '=https' --tlsv1.2 --fail --location \
+              --retry 3 --max-time 600 --max-filesize "$bytes" --output "$acquired/$role" "$url"
+            actual_bytes="$(wc -c < "$acquired/$role" | tr -d '[:space:]')"
+            if command -v sha256sum >/dev/null; then
+              actual_digest="$(sha256sum "$acquired/$role" | awk '{print $1}')"
+            else
+              actual_digest="$(shasum -a 256 "$acquired/$role" | awk '{print $1}')"
+            fi
+            if test "$actual_bytes" != "$bytes" || test "$actual_digest" != "$digest"; then
+              echo "::error::identity mismatch for $role: expected $bytes/$digest, got $actual_bytes/$actual_digest"
+              exit 1
+            fi
+          done
+
+      - name: Produce the unsigned host toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg repository_root "$GITHUB_WORKSPACE" \
+            --arg contract "release/rust-production-contract.json" \
+            --arg acquired_inputs "$RUNNER_TEMP/lib-acquired" \
+            --arg work "$RUNNER_TEMP/lib-producer-work" \
+            --arg output "$RUNNER_TEMP/lib-producer-output" \
+            --arg version "$(<version.txt)" \
+            '{schema:"ami-rust-toolchain-producer-request-v1",$repository_root,$contract,$acquired_inputs,$work,$output,$version}' \
+            > "$RUNNER_TEMP/lib-producer-request.json"
+          "$RUNNER_TEMP/lib-maintainer/target/release/ami-rust-xtask" \
+            toolchain-producer --request "$RUNNER_TEMP/lib-producer-request.json" > /dev/null
+
+      - name: Compare the built libraries with the pins of this host
+        id: compare
+        env:
+          PINS: ${{ matrix.host.pins }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          status=0
+          mkdir -p "$RUNNER_TEMP/proposed-pins"
+          for abi in abi1 abi11; do
+            node tools/check-target-libraries.mjs \
+              --pins "$PINS/x86_64-unknown-aros-$abi-libraries.json" \
+              --libraries "$RUNNER_TEMP/lib-producer-work/bare-output-x86_64-unknown-aros-$abi/libraries" \
+              --write "$RUNNER_TEMP/proposed-pins/x86_64-unknown-aros-$abi-libraries.json" || status=1
+          done
+          exit "$status"
+
+      - name: Gather the rlibs for the cross-host comparison
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          for abi in abi1 abi11; do
+            mkdir -p "$RUNNER_TEMP/rlibs/$abi"
+            cp "$RUNNER_TEMP/lib-producer-work/bare-output-x86_64-unknown-aros-$abi/libraries/"*.rlib "$RUNNER_TEMP/rlibs/$abi/" || true
+          done
+
+      - name: Retain the rlibs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rlibs-${{ matrix.host.key }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/rlibs/
+          if-no-files-found: ignore
+
+      - name: Retain the proposed pin files
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: proposed-pins-${{ matrix.host.key }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/proposed-pins/
+          if-no-files-found: ignore

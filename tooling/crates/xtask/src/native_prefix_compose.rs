@@ -27,9 +27,9 @@ use std::{
 
 const REQUEST_SCHEMA: &str = "ami-rust-native-prefix-compose-request-v1";
 const EXPECTED_CORE_NATIVE_PREFIX_SHA256: &str =
-    "08cc524a7642bdbc845297d61f731fe76e3496bba91f7899c4fe3f611dd9c54b";
+    "6f2f08d62192fc6ea1a72dd7dca4ce7eb43d967f8075b46ebe02002fef0a132a";
 const EXPECTED_INPUTS_RS_SHA256: &str =
-    "a000e589287ecb104152cb3c84427eefeef01ada1abee0bcd3246c488e5cc747";
+    "8f1f7cf8cfa0147b55e7f1e945a8aae3f3800475c1cd43797c2ad27ff46c8b73";
 const EXPECTED_PUBLIC_VIEW_RS_SHA256: &str =
     "55be582de0171e3a867e6e829d5245ace2788db9481c014f4bf7beae821223bc";
 const EXPECTED_PUBLIC_VIEW_POLICY_SHA256: &str =
@@ -43,17 +43,17 @@ const EXPECTED_NATIVE_BUILD_BUILD_RS_SHA256: &str =
 const EXPECTED_NATIVE_BUILD_LINK_RS_SHA256: &str =
     "af9ef38cc5095086a2efe66ed92aef8ee01ba684e562cbe1c425e8ddfbbb7c03";
 const ABI1_TARGET_LIBRARIES_SHA256: &str =
-    "19070437e2231d971aa1edd4221daa069f0b66ed780e70eeb71ffc14cf015c91";
+    "f36e9392f982d67bfc8c6baa3435a482a9346ce271976b5f1dda8c708a1da570";
 const ABI11_TARGET_LIBRARIES_SHA256: &str =
-    "ec6556d33c6adfc2c094ca37dad61f66bd0881ead331d5c884033d4b41ed4f67";
+    "6d470af1faa57921eb60820200b5ea521b71cda7c9873eabd2ebc0161658f7f4";
 const LINUX_X64_ABI1_TARGET_LIBRARIES_SHA256: &str =
-    "21dcb704b18c6df0a68f71521048bdd492126615a7403f960e79e09025251046";
+    "d6ea9e13ff798bb5db1679544defcb59ac61be7971ce5842a90474899f64efdf";
 const LINUX_X64_ABI11_TARGET_LIBRARIES_SHA256: &str =
-    "e808e2541664799d2f4f299d9c988605ba1f6d6fd23c6f3410f910592951af30";
+    "861d0d4d14383f2c51cc9aeffab2c28b31b85a86de33c3a9ae835273b60adf34";
 const ARM_ABI1_TARGET_LIBRARIES_SHA256: &str =
-    "d08f304dc4cb87577cb76043eb7d38259a6b791ebe14f27f9a3c5e66a045645b";
+    "9f2b6957b1d5137ddb5f5b6b7d6ec645e0b2f984a4e1c7f5c16eb1d2a493d840";
 const ARM_ABI11_TARGET_LIBRARIES_SHA256: &str =
-    "a595e1357ad7bb3b3a9f23adc79de10d75382404f8b76f7964d1999d2041151a";
+    "f67b5de9a063822b2fa23e6526691dc97f8a3882db751b7887c8a3cb9ec27b78";
 const ABI1_TARGET_SPEC_SHA256: &str =
     "a8f8150a1b6773101ff5690046d9a31a87690d53eb191e8838160d2e1d72c7f5";
 const ABI11_TARGET_SPEC_SHA256: &str =
@@ -520,10 +520,11 @@ pub(super) fn compose_candidate_with_target_profiles(
             input.name == "x86_64-unknown-aros-abi1" && declared_target == "x86_64-aros";
         if text(&library_pin, "schema")? != "aros-target-library-candidate-v1"
             || (declared_target != input.name && !transitional_abi1_profile)
-            || libraries.files.len() != 6
+            || libraries.files.len()
+                != 2 * ami_rust_core::native_prefix::TARGET_LIBRARY_CRATES.len()
         {
             return Err(Refusal::new(
-                "target-library candidate must contain exactly three reviewed rlib/rmeta pairs for its target",
+                "target-library candidate must contain exactly the reviewed rlib/rmeta pairs of every crate of the target library set for its target",
             ));
         }
         let (pin_raw, spec_raw, spec_sha256) = match input.name {

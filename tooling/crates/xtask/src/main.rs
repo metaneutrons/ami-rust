@@ -14,6 +14,7 @@ mod native_cargo_qualification;
 mod native_prefix_compose;
 mod prepare_sigterm;
 mod qualification_command;
+mod std_patch;
 mod target_rlib_compare;
 #[cfg(test)]
 mod test_support;

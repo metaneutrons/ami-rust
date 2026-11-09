@@ -1615,7 +1615,7 @@ mod tests {
             ),
             (
                 "target libraries",
-                "d08f304dc4cb87577cb76043eb7d38259a6b791ebe14f27f9a3c5e66a045645b",
+                "9f2b6957b1d5137ddb5f5b6b7d6ec645e0b2f984a4e1c7f5c16eb1d2a493d840",
                 arm.abi1_target_libraries,
             ),
         ];
@@ -1651,7 +1651,7 @@ mod tests {
         let linux_x86 = embedded_pins_for_host("linux-x86_64").unwrap();
         assert_eq!(
             digest_text(linux_x86.abi1_target_libraries),
-            "21dcb704b18c6df0a68f71521048bdd492126615a7403f960e79e09025251046"
+            "d6ea9e13ff798bb5db1679544defcb59ac61be7971ce5842a90474899f64efdf"
         );
         assert_eq!(
             mac.rust

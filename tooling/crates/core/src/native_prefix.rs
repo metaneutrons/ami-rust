@@ -741,9 +741,11 @@ fn preflight(
             return Err(Refusal::new("native prefix repeats a target"));
         }
         validate_profile_rows(target.libraries, spec.limits)?;
-        if !target.libraries.symlinks.is_empty() || target.libraries.files.len() != 6 {
+        if !target.libraries.symlinks.is_empty()
+            || target.libraries.files.len() != 2 * TARGET_LIBRARY_CRATES.len()
+        {
             return Err(Refusal::new(
-                "target-library profile must contain the three selected rlib/rmeta pairs",
+                "target-library profile must contain the selected rlib/rmeta pairs of every crate of the target library set",
             ));
         }
         validate_target_library_names(target.libraries.files)?;
@@ -1228,48 +1230,82 @@ fn require_profile_file(profile: NativePrefixProfile<'_>, path: &str) -> Result<
     Ok(())
 }
 
+/// The crates of the target library set that every host produces for each target: the
+/// three that `no_std` programs need, and `std` with its `panic_abort` and the crates that
+/// `std` itself depends on. `proc_macro` is built by the same Cargo invocation and is not
+/// shipped, because a proc macro never runs on the target.
+pub const TARGET_LIBRARY_CRATES: [&str; 14] = [
+    "alloc",
+    "cfg_if",
+    "compiler_builtins",
+    "core",
+    "hashbrown",
+    "libc",
+    "panic_abort",
+    "panic_unwind",
+    "rustc_demangle",
+    "rustc_std_workspace_alloc",
+    "rustc_std_workspace_core",
+    "std",
+    "std_detect",
+    "unwind",
+];
+
+/// Split a target library leaf such as `libcore-0123456789abcdef.rlib` into its crate name,
+/// its hash and its kind (`rlib` or `rmeta`). The crate must be one of
+/// [`TARGET_LIBRARY_CRATES`] and the hash lower-case hexadecimal.
+pub fn parse_target_library_leaf(path: &str) -> Result<(&'static str, &str, &'static str)> {
+    if path.contains('/') || path.contains('\\') {
+        return Err(Refusal::new(
+            "target library path must be one hash-named rlib or rmeta",
+        ));
+    }
+    let (stem, kind) = if let Some(stem) = path.strip_suffix(".rlib") {
+        (stem, "rlib")
+    } else if let Some(stem) = path.strip_suffix(".rmeta") {
+        (stem, "rmeta")
+    } else {
+        return Err(Refusal::new(
+            "target library path must be one hash-named rlib or rmeta",
+        ));
+    };
+    let stem = stem
+        .strip_prefix("lib")
+        .ok_or_else(|| Refusal::new("target library filename is invalid"))?;
+    let (name, hash) = stem
+        .rsplit_once('-')
+        .ok_or_else(|| Refusal::new("target library filename lacks a hash"))?;
+    let crate_name = TARGET_LIBRARY_CRATES
+        .into_iter()
+        .find(|candidate| *candidate == name)
+        .ok_or_else(|| Refusal::new("target library profile has an unexpected crate"))?;
+    if hash.is_empty()
+        || !hash
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+    {
+        return Err(Refusal::new("target library hash name is invalid"));
+    }
+    Ok((crate_name, hash, kind))
+}
+
 fn validate_target_library_names(files: &[FileIdentity]) -> Result<()> {
     let mut artifacts = BTreeSet::new();
     for row in files {
-        if row.path.contains('/') {
-            return Err(Refusal::new(
-                "target library path must be one hash-named rlib or rmeta",
-            ));
-        }
-        let (stem, kind) = if let Some(stem) = row.path.strip_suffix(".rlib") {
-            (stem, "rlib")
-        } else if let Some(stem) = row.path.strip_suffix(".rmeta") {
-            (stem, "rmeta")
-        } else {
-            return Err(Refusal::new(
-                "target library path must be one hash-named rlib or rmeta",
-            ));
-        };
-        let crate_name = ["libcore-", "liballoc-", "libcompiler_builtins-"]
-            .into_iter()
-            .find(|prefix| stem.starts_with(prefix))
-            .ok_or_else(|| Refusal::new("target library profile has an unexpected crate"))?;
-        let hash = stem
-            .strip_prefix(crate_name)
-            .ok_or_else(|| Refusal::new("target library filename is invalid"))?;
-        if hash.is_empty()
-            || !hash
-                .bytes()
-                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
-            || !artifacts.insert((crate_name, kind))
-        {
+        let (crate_name, _, kind) = parse_target_library_leaf(&row.path)?;
+        if !artifacts.insert((crate_name, kind)) {
             return Err(Refusal::new(
                 "target library hash name is invalid or duplicated",
             ));
         }
     }
-    let expected = ["libcore-", "liballoc-", "libcompiler_builtins-"]
+    let expected = TARGET_LIBRARY_CRATES
         .into_iter()
         .flat_map(|crate_name| ["rlib", "rmeta"].map(|kind| (crate_name, kind)))
         .collect();
     if artifacts != expected {
         return Err(Refusal::new(
-            "target library profile must contain rlib/rmeta pairs for core, alloc, and compiler_builtins",
+            "target library profile must contain rlib/rmeta pairs for every crate of the target library set",
         ));
     }
     Ok(())
@@ -1825,15 +1861,64 @@ mod tests {
             let target_libraries = profile(
                 &root.join("target-libraries-source"),
                 &[
-                    ("libcore-1234567890abcdef.rlib", b"core"),
-                    ("libcore-1234567890abcdef.rmeta", b"core metadata"),
-                    ("liballoc-2234567890abcdef.rlib", b"alloc"),
-                    ("liballoc-2234567890abcdef.rmeta", b"alloc metadata"),
-                    ("libcompiler_builtins-3234567890abcdef.rlib", b"builtins"),
+                    ("liballoc-0134567890abcdef.rlib", b"alloc"),
+                    ("liballoc-0134567890abcdef.rmeta", b"alloc metadata"),
+                    ("libcfg_if-0234567890abcdef.rlib", b"cfg_if"),
+                    ("libcfg_if-0234567890abcdef.rmeta", b"cfg_if metadata"),
                     (
-                        "libcompiler_builtins-3234567890abcdef.rmeta",
-                        b"builtins metadata",
+                        "libcompiler_builtins-0334567890abcdef.rlib",
+                        b"compiler_builtins",
                     ),
+                    (
+                        "libcompiler_builtins-0334567890abcdef.rmeta",
+                        b"compiler_builtins metadata",
+                    ),
+                    ("libcore-0434567890abcdef.rlib", b"core"),
+                    ("libcore-0434567890abcdef.rmeta", b"core metadata"),
+                    ("libhashbrown-0534567890abcdef.rlib", b"hashbrown"),
+                    ("libhashbrown-0534567890abcdef.rmeta", b"hashbrown metadata"),
+                    ("liblibc-0634567890abcdef.rlib", b"libc"),
+                    ("liblibc-0634567890abcdef.rmeta", b"libc metadata"),
+                    ("libpanic_abort-0734567890abcdef.rlib", b"panic_abort"),
+                    (
+                        "libpanic_abort-0734567890abcdef.rmeta",
+                        b"panic_abort metadata",
+                    ),
+                    ("libpanic_unwind-0834567890abcdef.rlib", b"panic_unwind"),
+                    (
+                        "libpanic_unwind-0834567890abcdef.rmeta",
+                        b"panic_unwind metadata",
+                    ),
+                    ("librustc_demangle-0934567890abcdef.rlib", b"rustc_demangle"),
+                    (
+                        "librustc_demangle-0934567890abcdef.rmeta",
+                        b"rustc_demangle metadata",
+                    ),
+                    (
+                        "librustc_std_workspace_alloc-1034567890abcdef.rlib",
+                        b"rustc_std_workspace_alloc",
+                    ),
+                    (
+                        "librustc_std_workspace_alloc-1034567890abcdef.rmeta",
+                        b"rustc_std_workspace_alloc metadata",
+                    ),
+                    (
+                        "librustc_std_workspace_core-1134567890abcdef.rlib",
+                        b"rustc_std_workspace_core",
+                    ),
+                    (
+                        "librustc_std_workspace_core-1134567890abcdef.rmeta",
+                        b"rustc_std_workspace_core metadata",
+                    ),
+                    ("libstd-1234567890abcdef.rlib", b"std"),
+                    ("libstd-1234567890abcdef.rmeta", b"std metadata"),
+                    ("libstd_detect-1334567890abcdef.rlib", b"std_detect"),
+                    (
+                        "libstd_detect-1334567890abcdef.rmeta",
+                        b"std_detect metadata",
+                    ),
+                    ("libunwind-1434567890abcdef.rlib", b"unwind"),
+                    ("libunwind-1434567890abcdef.rmeta", b"unwind metadata"),
                 ],
                 &[],
             );
@@ -2457,18 +2542,18 @@ mod tests {
         let fixture = Fixture::new();
         let parent = fixture.root.join("output");
         fs::create_dir(&parent).unwrap();
-        for index in 0..65 {
+        for index in 0..161 {
             fs::write(parent.join(format!("unrelated-{index}")), b"unrelated").unwrap();
         }
-        assert_eq!(fs::read_dir(&parent).unwrap().count(), 65);
+        assert_eq!(fs::read_dir(&parent).unwrap().count(), 161);
 
         let destination = parent.join("prefix");
         let mut spec = fixture.spec(&destination);
-        spec.limits.max_tree_entries = 64;
+        spec.limits.max_tree_entries = 160;
         let receipt = assemble_native_prefix(spec, || Ok(())).unwrap();
         assert_eq!(receipt.destination, destination);
         assert!(destination.is_dir());
-        assert_eq!(fs::read_dir(&parent).unwrap().count(), 66);
+        assert_eq!(fs::read_dir(&parent).unwrap().count(), 162);
     }
 
     #[test]

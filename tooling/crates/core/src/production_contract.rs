@@ -40,6 +40,8 @@ const REQUIRED_INPUTS: &[&str] = &[
     "producer-vendor-inventory",
     "rust-channel-manifest",
     "rust-src",
+    "std-aros-patch",
+    "std-aros-source",
     "target-definition-abi1",
     "target-definition-abi11",
     "target-specification-abi1",
