@@ -6,8 +6,7 @@ duplicate), metadata and file dates, setting the date, permissions, directories 
 work around.
 One behaviour per run, chosen by the first argument. Like the other `std` programs it is not
 a workspace member: it needs a toolchain that ships `std`, built from this tree (see
-`examples/std-runtime/README.md` for the build). It is listed as in development under #72, STD-M7 because the native matrix cannot
-build it yet.
+`examples/std-runtime/README.md` for the build). The native matrix (`tools/native-matrix.mjs`) runs every mode on both ABIs; the set-up and expected result of each mode are in `tests/programs.json`.
 
 The files are made in `RAM:ami-rust-m1/`, which the run must create (`MakeDir`). The program
 starts on the read-only delivery volume, so the run also needs `CD RAM:ami-rust-m1` for the

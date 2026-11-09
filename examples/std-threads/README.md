@@ -4,8 +4,7 @@ Native test of threads in `std` on AROS: spawning and joining, `Mutex`, `Condvar
 `OnceLock`, `LazyLock`, `Barrier`, parking, channels, `thread_local!`, errors from several threads at
 once, `yield_now`, the thread limit, and every way the program can end while threads run. One
 behaviour per run, chosen by the first argument. Like the other `std` programs it is not a workspace
-member: it needs a toolchain that ships `std`, built from this tree (see `examples/std-runtime/README.md` for the build). It
-is listed as in development under #69 because the native matrix cannot build it yet.
+member: it needs a toolchain that ships `std`, built from this tree (see `examples/std-runtime/README.md` for the build). The native matrix (`tools/native-matrix.mjs`) runs every mode on both ABIs; the set-up and expected result of each mode are in `tests/programs.json`.
 
 The program must start in `RAM:ami-rust-m1/` (`MakeDir`, `CD`); the `errors` mode makes files there.
 

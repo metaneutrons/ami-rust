@@ -4,8 +4,8 @@ Native test of paths in `std` on AROS: the syntax `volume:dir/name` in `std::pat
 directory, `path::absolute`, `.` and `..`, the temporary directory and path lists. One behaviour per
 run, chosen by the first argument. Like the other `std` programs it is not a workspace member: it
 needs a toolchain that ships `std` (see
-`examples/std-runtime/README.md` for the build). It is listed as in development under #72, STD-M7 because the
-native matrix cannot build it yet.
+`examples/std-runtime/README.md` for the build). The native matrix (`tools/native-matrix.mjs`) runs every mode on both ABIs; the set-up and the expected
+result of each mode are in `tests/programs.json`.
 
 The `cwd` and `dots` modes make files in `RAM:ami-rust-m1/`, which the run must create (`MakeDir`), and
 must start there (`CD RAM:ami-rust-m1`).

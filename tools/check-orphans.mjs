@@ -211,6 +211,20 @@ const evidenceProblems = (repository, manifest, version) => {
   const applications = new Set();
   for (const abi of abis) {
     for (const application of manifest.applications) {
+      if (application.run) {
+        for (const mode of application.run.modes) {
+          if (mode.abis && !mode.abis.includes(abi)) continue;
+          applications.add(`${abi} ${application.path} ${mode.name}`);
+          const found = (evidence.applications ?? []).find((entry) => entry.abi === abi && entry.path === application.path && entry.mode === mode.name);
+          const label = `${application.path} mode ${mode.name} on ${abi}`;
+          if (!found) problems.push(`${name}: no result for ${label}`);
+          else if (found.output_matched !== true) problems.push(`${name}: ${label} did not give the expected result (${(found.problems ?? []).join("; ") || "output not matched"})`);
+          else if (mode.expect_timeout ? found.timed_out !== true : found.return_code !== mode.expected_return_code) {
+            problems.push(`${name}: ${label} returned ${found.return_code}, expected ${mode.expect_timeout ? "a timeout" : mode.expected_return_code}`);
+          }
+        }
+        continue;
+      }
       applications.add(`${abi} ${application.path}`);
       const row = (evidence.applications ?? []).find((entry) => entry.abi === abi && entry.path === application.path);
       if (!row) { problems.push(`${name}: no result for ${application.path} on ${abi}`); continue; }
@@ -224,7 +238,7 @@ const evidenceProblems = (repository, manifest, version) => {
     }
   }
   for (const row of evidence.applications ?? []) {
-    if (!applications.has(`${row.abi} ${row.path}`)) problems.push(`${name}: stale result for ${row.path} on ${row.abi}, which the manifest does not list`);
+    if (!applications.has(row.mode === undefined ? `${row.abi} ${row.path}` : `${row.abi} ${row.path} ${row.mode}`)) problems.push(`${name}: stale result for ${row.path} on ${row.abi}, which the manifest does not list`);
   }
 
   for (const { bin, expected } of manifest.compile_fail.fixtures) {

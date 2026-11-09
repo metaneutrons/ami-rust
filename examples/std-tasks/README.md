@@ -8,8 +8,7 @@ It creates real DOS processes with `CreateNewProc` and uses the C functions dire
 does not use `std::thread`, which does not exist on AROS yet. Like the other `std`
 programs it is not a workspace member: it needs a toolchain that ships `std`
 (see
-`examples/std-runtime/README.md` for the build). It is listed as in development under
-#69 because the native matrix cannot build it yet.
+`examples/std-runtime/README.md` for the build). The native matrix (`tools/native-matrix.mjs`) runs every mode on both ABIs; the set-up and expected result of each mode are in `tests/programs.json`.
 
 ## Modes
 

@@ -279,6 +279,52 @@ describe('release evidence', () => {
     assert.match(list, /examples\/window on abi11 needs a screendump/);
   });
 
+  describe('an application with modes', () => {
+    const withModes = () => {
+      const m = manifest();
+      m.applications.push({
+        path: 'examples/modes',
+        run: { stack: 131072, cwd: 'RAM:ami-rust-m1', modes: [{ name: 'one', expected_return_code: 0, expect: ['RESULT x ok'] }, { name: 'wait', expect_timeout: true }, { name: 'late', expected_return_code: 3, abis: ['abi11'] }] },
+      });
+      put('tests/programs.json', JSON.stringify(m));
+      program('examples/modes');
+      const value = evidence();
+      for (const abi of ['abi1', 'abi11']) {
+        value.applications.push({ abi, path: 'examples/modes', mode: 'one', return_code: 0, output_matched: true });
+        value.applications.push({ abi, path: 'examples/modes', mode: 'wait', return_code: null, timed_out: true, output_matched: true });
+      }
+      value.applications.push({ abi: 'abi11', path: 'examples/modes', mode: 'late', return_code: 3, output_matched: true });
+      return value;
+    };
+
+    it('is accepted when every mode has a matching result on its ABIs', () => {
+      writeEvidence(withModes());
+      assert.deepEqual(problems({ evidence: true }), []);
+    });
+
+    it('counter-probe: a missing mode, a mode whose output did not match and a wrong return code are refused', () => {
+      const value = withModes();
+      value.applications = value.applications.filter((row) => !(row.mode === 'one' && row.abi === 'abi11'));
+      value.applications.find((row) => row.mode === 'one' && row.abi === 'abi1').output_matched = false;
+      value.applications.find((row) => row.mode === 'late').return_code = 0;
+      writeEvidence(value);
+      const list = problems({ evidence: true }).join('\n');
+      assert.match(list, /no result for examples\/modes mode one on abi11/);
+      assert.match(list, /examples\/modes mode one on abi1 did not give the expected result/);
+      assert.match(list, /examples\/modes mode late on abi11 returned 0, expected 3/);
+    });
+
+    it('counter-probe: a mode that must wait but ended, and a result for a mode the manifest lacks, are refused', () => {
+      const value = withModes();
+      value.applications.find((row) => row.mode === 'wait' && row.abi === 'abi1').timed_out = false;
+      value.applications.push({ abi: 'abi1', path: 'examples/modes', mode: 'late', return_code: 3, output_matched: true });
+      writeEvidence(value);
+      const list = problems({ evidence: true }).join('\n');
+      assert.match(list, /mode wait on abi1 returned null, expected a timeout/);
+      assert.match(list, /stale result for examples\/modes on abi1/);
+    });
+  });
+
   it('counter-probe: a compile-fail fixture that builds, or is refused for another reason, is refused', () => {
     const value = evidence();
     value.compile_fail.find((row) => row.bin === 'bad').built = true;
