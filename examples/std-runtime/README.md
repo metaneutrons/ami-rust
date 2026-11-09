@@ -6,10 +6,10 @@ standard streams and the environment behave. Each run does one thing, chosen by
 the first argument.
 
 It is an ordinary `fn main` program. Like `std-probe`, it is not a workspace
-member: it needs the patched `std` of `host/std-aros/` and a toolchain whose
-target specifications rename the entry that rustc generates (see below). It is
-listed as in development under #67 because the native matrix cannot prepare
-either yet; that is STD-M7.
+member: it needs a toolchain that ships `std`, whose target specifications
+rename the entry that rustc generates (see below). It is listed as in development
+under #67 because the native matrix cannot build it with an installed toolchain of
+a release yet; that is STD-M7.
 
 ## How a `fn main` program starts
 
@@ -34,23 +34,36 @@ itself.
 
 ## Build
 
-Until the toolchain of the `std` release exists, the build needs a local toolchain
-made as `CONTRIBUTING.md` describes under "Native bridge changes", and in addition
-the two files `lib/rustlib/<target>/<target>.json` and `lib/rustlib/<target>/target.json`
-of each target replaced with `targets/<target>.json`. `aros-link` must be built
-from this tree, because it checks the specifications against its embedded pins.
-With that toolchain linked as `NAME`, and the patched library tree prepared as
-described in `host/std-aros/README.md` and called `$work/rust` there:
+With a toolchain that ships `std`, which is any toolchain that the toolchain producer of this tree
+makes (it builds `std` and `panic_abort` from `host/std-aros/` for both targets), a `std` program builds
+like any other. Link the toolchain as `NAME` (`rustup toolchain link NAME ROOT`):
 
 ```sh
 cd examples/std-runtime
 for target in x86_64-unknown-aros-abi1 x86_64-unknown-aros-abi11; do
   env CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
-    __CARGO_TESTS_ONLY_SRC_ROOT="$work/rust/library" \
     CARGO_TARGET_DIR="$work/runtime-target" \
     cargo +NAME build --release --target "$target" --offline --locked
 done
 ```
+
+There is no `build-std` in the `.cargo/config.toml` of these programs: the libraries are in the toolchain.
+Released toolchains up to and including 0.2.0 do not ship `std`; for those, and to try a change of
+`host/std-aros/std-aros.patch` before it goes through the producer, build `std` from the patched
+tree as described in `host/std-aros/README.md` (it is `$work/rust` there) by adding the flags on the command line:
+
+```sh
+env CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
+  __CARGO_TESTS_ONLY_SRC_ROOT="$work/rust/library" \
+  CARGO_TARGET_DIR="$work/runtime-target" \
+  cargo +NAME -Zbuild-std=std,panic_abort -Zbuild-std-features=compiler-builtins-mem \
+    build --release --target "$target" --offline --locked
+```
+
+For that, the toolchain `NAME` must be a local copy as `CONTRIBUTING.md` describes under "Native bridge
+changes", with the two files `lib/rustlib/<target>/<target>.json` and `lib/rustlib/<target>/target.json` of each
+target replaced with `targets/<target>.json`, and an `aros-link` built from this tree, because it checks the
+specifications against its embedded pins.
 
 ## Run
 

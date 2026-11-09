@@ -1,7 +1,3 @@
-[unstable]
-build-std = ["std", "panic_abort"]
-build-std-features = ["compiler-builtins-mem"]
-
 [target.x86_64-unknown-aros-abi1]
 linker = "aros-link"
 rustflags = ["-Zunstable-options"]

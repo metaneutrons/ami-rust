@@ -92,6 +92,23 @@ object and symbol index identical, only `lib.rmeta` and the Cargo disambiguators
 `rlib` files of the three hosts with the pipeline's own comparison code: all 14 crates of both ABIs pass, 56 pairwise
 comparisons (a throwaway harness; the same code runs in the protected qualification workflow).
 
-Not done in this slice: the `.cargo/config.toml` of the `std` examples (they still ask for `build-std`), the rustup path
-and the direct archive of the three hosts as a candidate (the protected qualification workflow, which only the maintainer
-dispatches), the guides (A3) and the bump procedure exercised on a newer nightly (A4).
+## Installation delivers `std` (A2)
+
+- **Where the libraries go.** The producer composes the toolchain from the same file list for the direct archive and for the
+  rustup components, so the 28 libraries per target are in the `rustc` component (where `core` and `alloc` already were:
+  28 files per target counted in `ami-rust-rustc-<version>-<host>.tar.xz`), and the direct archive has the same files.
+- **The examples.** The `.cargo/config.toml` of the eight `std` programs no longer asks for `build-std`; their READMEs say that
+  they need a toolchain that ships `std`, and `examples/std-runtime/README.md` keeps the way to build `std` from the patched
+  tree for released toolchains up to 0.2.0 and for trying a change of the patch.
+- **A check on each host.** `tools/build-std-examples.sh` takes an installed toolchain root, refuses it when a library of
+  `std`, `panic_abort`, `core` or `alloc` is missing for either ABI, and builds `std-path` and `std-threads` for both ABIs with
+  plain `cargo build` against the offline vendor set. The workflow "Target library check" runs it on the three hosts with the
+  direct archive that the producer made. Locally (macOS): all four builds pass, and the programs pass natively (`std-threads`
+  `spawn` 10 of 10 on ABI-v1, `std-path` `join` 16 of 16 on ABI-v11); with the released 0.2.0 toolchain, which has no `std`, the
+  script refuses (`toolchain lacks libstd for abi1`, exit 1, nothing built).
+- **Not run:** installation through rustup. The protected qualification workflow does that for `no_std` (it builds
+  `ami-rust-sha256sum` from an installed toolchain); it does not build a `std` program yet, and extending it means
+  changing an observed, hash-bound step that cannot be tried without dispatching it. Until it is, the rustup route is
+  supported by the layout argument above and not by a run.
+
+Not done: the guides (A3) and the bump procedure exercised on a newer nightly (A4).

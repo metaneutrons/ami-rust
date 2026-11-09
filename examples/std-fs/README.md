@@ -5,9 +5,8 @@ duplicate), metadata and file dates, setting the date, permissions, directories 
 `create_dir`, `remove_dir`), `rename`, `canonicalize`, `copy`, the error kinds, and the behaviours of the C library that `std` has to
 work around.
 One behaviour per run, chosen by the first argument. Like the other `std` programs it is not
-a workspace member: it needs the patched `std` of `host/std-aros/` and a toolchain with the
-new target specifications and the bridge of this tree (see `examples/std-runtime/README.md`
-for the build). It is listed as in development under #72, STD-M7 because the native matrix cannot
+a workspace member: it needs a toolchain that ships `std`, built from this tree (see
+`examples/std-runtime/README.md` for the build). It is listed as in development under #72, STD-M7 because the native matrix cannot
 build it yet.
 
 The files are made in `RAM:ami-rust-m1/`, which the run must create (`MakeDir`). The program

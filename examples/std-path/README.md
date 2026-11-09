@@ -3,7 +3,7 @@
 Native test of paths in `std` on AROS: the syntax `volume:dir/name` in `std::path`, the current
 directory, `path::absolute`, `.` and `..`, the temporary directory and path lists. One behaviour per
 run, chosen by the first argument. Like the other `std` programs it is not a workspace member: it
-needs the patched `std` of `host/std-aros/` and a toolchain with the new target specifications (see
+needs a toolchain that ships `std` (see
 `examples/std-runtime/README.md` for the build). It is listed as in development under #72, STD-M7 because the
 native matrix cannot build it yet.
 

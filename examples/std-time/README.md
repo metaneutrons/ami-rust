@@ -3,8 +3,7 @@
 Native test of time in `std` on AROS: the clock behind `Instant`, `SystemTime`,
 `thread::sleep`, and the dates beyond 2038. One behaviour per run, chosen by the
 first argument. Like the other `std` programs it is not a workspace member: it needs
-the patched `std` of `host/std-aros/` and a toolchain with the new target
-specifications (see `examples/std-runtime/README.md` for the build). It is listed as
+a toolchain that ships `std` (see `examples/std-runtime/README.md` for the build). It is listed as
 in development under #72 (STD-M7) because the native matrix cannot build it yet.
 
 ## How time works
