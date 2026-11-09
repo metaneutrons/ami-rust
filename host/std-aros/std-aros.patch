@@ -3395,20 +3395,6 @@ index 615781e..f26e594 100644
          all(target_os = "wasi", target_env = "p3"),
      ) => {
          mod futex;
-diff --git a/library/std/src/sys/sync/condvar/no_threads.rs b/library/std/src/sys/sync/condvar/no_threads.rs
-index 9dbba49..70a0508 100644
---- a/library/std/src/sys/sync/condvar/no_threads.rs
-+++ b/library/std/src/sys/sync/condvar/no_threads.rs
-@@ -2,7 +2,8 @@ use crate::sys::sync::Mutex;
- use crate::thread::sleep;
- use crate::time::Duration;
- 
--#[cfg(target_has_threads)]
-+// AROS runs `std` on one task until thread support lands.
-+#[cfg(all(target_has_threads, not(target_os = "aros")))]
- compile_error!("Using no_threads implementation on a target with threads");
- 
- pub struct Condvar {}
 diff --git a/library/std/src/sys/sync/futex/aros.rs b/library/std/src/sys/sync/futex/aros.rs
 new file mode 100644
 index 0000000..dfc72f1
@@ -3488,19 +3474,6 @@ index 895ab9c..89cf2d9 100644
          all(target_os = "wasi", target_env = "p3"),
      ) => {
          mod futex;
-diff --git a/library/std/src/sys/sync/mutex/no_threads.rs b/library/std/src/sys/sync/mutex/no_threads.rs
-index a87c274..2a51145 100644
---- a/library/std/src/sys/sync/mutex/no_threads.rs
-+++ b/library/std/src/sys/sync/mutex/no_threads.rs
-@@ -1,6 +1,7 @@
- use crate::cell::Cell;
- 
--#[cfg(target_has_threads)]
-+// AROS runs `std` on one task until thread support lands.
-+#[cfg(all(target_has_threads, not(target_os = "aros")))]
- compile_error!("Using no_threads implementation on a target with threads");
- 
- pub struct Mutex {
 diff --git a/library/std/src/sys/sync/once/mod.rs b/library/std/src/sys/sync/once/mod.rs
 index eee7edf..252c8f0 100644
 --- a/library/std/src/sys/sync/once/mod.rs
@@ -3513,20 +3486,6 @@ index eee7edf..252c8f0 100644
          all(target_os = "wasi", target_env = "p3"),
      ) => {
          mod futex;
-diff --git a/library/std/src/sys/sync/once/no_threads.rs b/library/std/src/sys/sync/once/no_threads.rs
-index 31c9aed..1b09636 100644
---- a/library/std/src/sys/sync/once/no_threads.rs
-+++ b/library/std/src/sys/sync/once/no_threads.rs
-@@ -2,7 +2,8 @@ use crate::cell::Cell;
- use crate::sync as public;
- use crate::sync::once::OnceExclusiveState;
- 
--#[cfg(target_has_threads)]
-+// AROS runs `std` on one task until thread support lands.
-+#[cfg(all(target_has_threads, not(target_os = "aros")))]
- compile_error!("Using no_threads implementation on a target with threads");
- 
- pub struct Once {
 diff --git a/library/std/src/sys/sync/rwlock/mod.rs b/library/std/src/sys/sync/rwlock/mod.rs
 index 9991f29..79734c1 100644
 --- a/library/std/src/sys/sync/rwlock/mod.rs
@@ -3539,19 +3498,6 @@ index 9991f29..79734c1 100644
          target_os = "motor",
          all(target_os = "wasi", target_env = "p3"),
      ) => {
-diff --git a/library/std/src/sys/sync/rwlock/no_threads.rs b/library/std/src/sys/sync/rwlock/no_threads.rs
-index efa2629..27b3587 100644
---- a/library/std/src/sys/sync/rwlock/no_threads.rs
-+++ b/library/std/src/sys/sync/rwlock/no_threads.rs
-@@ -1,6 +1,7 @@
- use crate::cell::Cell;
- 
--#[cfg(target_has_threads)]
-+// AROS runs `std` on one task until thread support lands.
-+#[cfg(all(target_has_threads, not(target_os = "aros")))]
- compile_error!("Using no_threads implementation on a target with threads");
- 
- pub struct RwLock {
 diff --git a/library/std/src/sys/sync/thread_parking/mod.rs b/library/std/src/sys/sync/thread_parking/mod.rs
 index f1385ef..e3005b2 100644
 --- a/library/std/src/sys/sync/thread_parking/mod.rs
@@ -3884,20 +3830,6 @@ index 809ef5c..5259eca 100644
          target_os = "motor" => {
              mod racy;
              #[cfg(test)]
-diff --git a/library/std/src/sys/thread_local/no_threads.rs b/library/std/src/sys/thread_local/no_threads.rs
-index 9f4e771..4ce9610 100644
---- a/library/std/src/sys/thread_local/no_threads.rs
-+++ b/library/std/src/sys/thread_local/no_threads.rs
-@@ -5,7 +5,8 @@ use crate::cell::{Cell, UnsafeCell};
- use crate::mem::MaybeUninit;
- use crate::ptr;
- 
--#[cfg(target_has_threads)]
-+// AROS runs `std` on one task until thread support lands.
-+#[cfg(all(target_has_threads, not(target_os = "aros")))]
- compile_error!("Using no_threads implementation on a target with threads");
- 
- #[doc(hidden)]
 diff --git a/library/std/src/sys/time/aros.rs b/library/std/src/sys/time/aros.rs
 new file mode 100644
 index 0000000..85987ff

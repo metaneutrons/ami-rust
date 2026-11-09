@@ -44,7 +44,7 @@ set -eu
 repo=$(pwd -P)
 work=$(mktemp -d)
 cp -R "$(rustc +0.2.0 --print sysroot)/lib/rustlib/src/rust" "$work/rust"
-echo "f8f5770ee7510a7782d3237e6dab9bafa4c0c2fe286eb8afa34498a8d4a7b8e7  host/std-aros/std-aros.patch" | shasum -a 256 -c
+echo "7d5873f88b6aa008c1af144197fa90db1d6bef48f31e5867a0e0c210bffc13c5  host/std-aros/std-aros.patch" | shasum -a 256 -c
 patch -p1 -d "$work/rust" < host/std-aros/std-aros.patch
 ```
 

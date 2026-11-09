@@ -13,7 +13,7 @@
   },
   "patch": {
     "repository_path": "host/std-aros/std-aros.patch",
-    "sha256": "f8f5770ee7510a7782d3237e6dab9bafa4c0c2fe286eb8afa34498a8d4a7b8e7",
+    "sha256": "7d5873f88b6aa008c1af144197fa90db1d6bef48f31e5867a0e0c210bffc13c5",
     "strip": 1,
     "apply_in": "lib/rustlib/src/rust"
   },
@@ -164,11 +164,6 @@
       "after_sha256": "bc15ef674966162269d7ad53ce5e7844dfedef12ed22277bf0c2b2ccda8f6020"
     },
     {
-      "path": "library/std/src/sys/sync/condvar/no_threads.rs",
-      "before_sha256": "6e5dad406c6dd6b3e8e410e30cf5eea3935c3a742543e513027840f497e53f83",
-      "after_sha256": "657fca8233b60fc69541e909387c09f5f1419c015ac1eec7b98b8e73eedf6259"
-    },
-    {
       "path": "library/std/src/sys/sync/futex/aros.rs",
       "before_sha256": null,
       "after_sha256": "d789db7b8c11583552bbda9a9b7aa54d578b77dc1476503352f7f8179e4a6115"
@@ -184,29 +179,14 @@
       "after_sha256": "2f6c3439f5e6a2497b20d259da31d2ba8f006d70023b4331f33c1725b56fc8d3"
     },
     {
-      "path": "library/std/src/sys/sync/mutex/no_threads.rs",
-      "before_sha256": "e1b941c34ab92fc8141f519f9486a63263fd03e6cb9360291d0f03927d9b50cc",
-      "after_sha256": "6e1aa27bb659f76332ba8b022a2280ec14427ad5033ca348841932d2c2769c61"
-    },
-    {
       "path": "library/std/src/sys/sync/once/mod.rs",
       "before_sha256": "03fa76d79a5c65651bd627ffb2ec41f00afaccd9e0f81a48fa76201e192ce670",
       "after_sha256": "59d65827b5787a9238104ce81507a1f86cccff791d9d847d2fe95dd84a66c623"
     },
     {
-      "path": "library/std/src/sys/sync/once/no_threads.rs",
-      "before_sha256": "73925d4e791860db5a9da7452395b6026940aacede23fde8bbd1fb6ee0f275ff",
-      "after_sha256": "58eb1cf0a9b79409c489f1cecbb556864bac31772a7c02ef10eb0b860cd9b1e0"
-    },
-    {
       "path": "library/std/src/sys/sync/rwlock/mod.rs",
       "before_sha256": "800959dcab669de71206b5492b81deb2765a183d323e2807daefee35fa00ae19",
       "after_sha256": "35ce169ea6c5b3e2d69ebdc8a0cc1e31c655e94c958a79d826fcd44d4b8687d9"
-    },
-    {
-      "path": "library/std/src/sys/sync/rwlock/no_threads.rs",
-      "before_sha256": "f9234cf403edb45a8cd69fe898eb31e68a5195184eadf6a4c3e2d8e35ba7006c",
-      "after_sha256": "645242fb340487d1c17906dc5a19da1f3ff72a710bd0f8449447e98d125d0db9"
     },
     {
       "path": "library/std/src/sys/sync/thread_parking/mod.rs",
@@ -232,11 +212,6 @@
       "path": "library/std/src/sys/thread_local/mod.rs",
       "before_sha256": "b8e407313093a89008fd0fbdd4805f2da8c7bb7711f0d36c03d858d6f0de5e4a",
       "after_sha256": "f6428d2018ad1fea6fc4a780f1a0951f4ac04440b40319cc1002a1e6022cab4f"
-    },
-    {
-      "path": "library/std/src/sys/thread_local/no_threads.rs",
-      "before_sha256": "03b7da5fa2ac7128a112d141846c02adf4d58e5ede273458fe224d50633ab923",
-      "after_sha256": "e4d9f6b806b465ba7869336c019d07d4ca4ee91ee67f263a7d26bf4fc630df01"
     },
     {
       "path": "library/std/src/sys/time/aros.rs",

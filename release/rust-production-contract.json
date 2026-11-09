@@ -768,7 +768,7 @@
       }
     },
     {
-      "bytes": 149263,
+      "bytes": 146437,
       "hosts": [
         "macos-aarch64",
         "linux-x86_64",
@@ -779,13 +779,13 @@
         "target-libraries"
       ],
       "role": "std-aros-patch",
-      "sha256": "f8f5770ee7510a7782d3237e6dab9bafa4c0c2fe286eb8afa34498a8d4a7b8e7",
+      "sha256": "7d5873f88b6aa008c1af144197fa90db1d6bef48f31e5867a0e0c210bffc13c5",
       "source": {
         "path": "host/std-aros/std-aros.patch"
       }
     },
     {
-      "bytes": 10977,
+      "bytes": 9698,
       "hosts": [
         "macos-aarch64",
         "linux-x86_64",
@@ -796,7 +796,7 @@
         "target-libraries"
       ],
       "role": "std-aros-source",
-      "sha256": "58b05f6729884a3efd13ac15886d999b4f9d3c192b67da3d77863a488602aa18",
+      "sha256": "bbfaa8674c43d0a02f0029d7644ac6f9c5e30f69c90cba6520dfb7629e8fca5b",
       "source": {
         "path": "host/std-aros/source.json"
       }
