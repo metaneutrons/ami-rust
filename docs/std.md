@@ -124,7 +124,7 @@ Not tested, so not promised: volumes other than `RAM:` and the delivery volume, 
 
 ## Differences from `no_std`
 
-| | `no_std` with `entry!` | `std` |
+| Aspect | `no_std` with `entry!` | `std` |
 | --- | --- | --- |
 | Entry | `aros::entry!` | `fn main` |
 | Errors | The typed errors of the `aros` crates | `std::io::Error` and the standard types |
