@@ -92,6 +92,8 @@ int sdk_end(void);
 uint64_t sdk_context(void);
 void *sdk_proc_window_set(void *);
 long sdk_path_name(const char *,char *,size_t);
+void sdk_proc_streams(uintptr_t *,uintptr_t *,uintptr_t *);
+long sdk_proc_run(const char *,const char *,const char *,const char *,const char *,uintptr_t,uintptr_t,uintptr_t,int32_t *);
 void *sdk_thread_spawn(void (*)(void *),void *,size_t,const char *);
 int sdk_thread_join(void *);
 void sdk_thread_detach(void *);
