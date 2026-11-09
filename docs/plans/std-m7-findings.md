@@ -112,3 +112,76 @@ comparisons (a throwaway harness; the same code runs in the protected qualificat
   supported by the layout argument above and not by a run.
 
 Not done: the guides (A3) and the bump procedure exercised on a newer nightly (A4).
+
+## The nightly bump, exercised once (A4)
+
+Exercised on 2026-11-09 on a branch, against `nightly-2026-11-08` (`rustc 1.102.0-nightly (f5cedb83a 2026-11-07)`),
+the newest nightly at that date, against the pinned `nightly-2026-09-18`. The `rust-src` archive was taken from
+`static.rust-lang.org` and its SHA-256 matched the `xz_hash` of that day's channel manifest. Nothing from this exercise is
+committed except this text and the procedure in `CONTRIBUTING.md`: no pin was changed and none is proposed.
+
+**What was done.** The committed patch was applied to the new `rust-src`, the result was built for both ABIs, and the patch
+was regenerated for the new base. The producer itself was not run, no pin or contract file was changed, and nothing was
+run natively. So "builds" below means that `std` and `panic_abort` compile for both targets with the new compiler.
+
+**Does the patch still apply?** No, and the producer would refuse it earlier than `git apply` does.
+
+- Of the 44 files in the patch, 13 changed upstream between the two nightlies. The strict applier in `std_patch.rs` checks the
+  `before_sha256` of each file, so it refuses all 13. `git apply` (which tolerates moved context) fails on 5 of them: the
+  `no_threads.rs` files of `condvar`, `mutex`, `once`, `rwlock` and of `thread_local`, where upstream rewrote the very line the
+  patch changes (the `compile_error!` that guards the single-threaded implementation, now with an exception for VEXos).
+- Those five edits are no longer needed. They date from STD-M1, when AROS used the single-threaded code; since STD-M4 the
+  patch selects the futex implementations and the key-based thread-locals, so the `no_threads` code is not compiled for
+  AROS. The bump was done without them (39 files instead of 44) and the libraries build. They can be removed from the patch
+  on any change of the patch; this changes the library pins, as every change of the patch does.
+
+**Does it build?** Not at first. The new `std` asks every platform for four things that are not in the patch, and the build
+stopped with five errors (E0425, E0432, E0599):
+
+| New in upstream `std` | Where | What the AROS module needs |
+| --- | --- | --- |
+| `fs::rename_noreplace` | `sys/fs` | `rename_noreplace` returning `unsupported()` |
+| `ExtraHomeDirs`, `ExtraMediaDirs` | `sys/fs` | re-export from `sys::fs::common`, as the `unsupported` module does |
+| `ReadDir::dir` | `sys/fs` | a method returning `unsupported()` |
+| `SplitPathsRef`, `split_paths_ref` | `sys/paths` | the type and a function returning `None` |
+
+After those edits (about 20 lines in `sys/fs/aros.rs` and `sys/paths/aros.rs`, copied from upstream's `unsupported`
+modules) `std` and `panic_abort` build for both ABIs with `cargo +nightly-2026-11-08 -Zbuild-std=std,panic_abort
+-Zjson-target-spec build --release --target targets/<target>.json` and `__CARGO_TESTS_ONLY_SRC_ROOT`. The regenerated patch
+(39 files, same whole-file diff form) applies to the pristine new `rust-src` and gives exactly the tree that was built.
+Whether the new `std` still behaves correctly on AROS was not tested: nothing was linked or run.
+
+**What the bump touches in the repository** (counted by `git grep`, not by running the pipeline):
+
+- The Rust pin: `release/rust-production-contract.json` (12 places: the channel name and eleven URLs, those of the channel
+  manifest, `rust-src`, and `rustc`, `rust-std` and `cargo` for each of the three hosts, each with `bytes` and `sha256`), and the four other input files
+  `release/bare-target-libraries-inputs.json`, `ci-sdk-inputs.json`, `native-cargo-consumer-inputs.json` and
+  `toolchain-source-inputs.json`, plus `tooling/fixtures/accepted-r1-inputs.json` and the fixture
+  `tooling/crates/core/tests/fixtures/contracts-v1.json`.
+- Two source files compare the channel name literally: `tooling/crates/core/src/production_contract.rs` and
+  `tooling/crates/xtask/src/cold_runtime_probe.rs`. Both are compiled into the maintainer task, so their digests are
+  pinned too (the constants of `native_prefix_compose.rs`).
+- The per-host inventories of the Rust distribution (`pins/<host>/rust.json`, `cargo.json`) and every library pin
+  (`target-libraries.json`, the per-ABI files, the six `std` pin files). That these change is expected, because the compiler
+  and the library source change; it was not checked, since they name no channel and were not regenerated.
+- `host/std-aros/source.json` (the channel, `library_lock_sha256`, the patch digest and the before and after digest of every
+  changed file) and `host/std-aros/README.md`. In this exercise the `before_sha256` of 8 files changed, because 13 files
+  changed upstream and 5 of them left the patch.
+- **The vendored dependencies of `std`.** The `library/Cargo.lock` of `rust-src` changed (SHA-256 `75848db5…` to
+  `e3007071…`): `libc` 0.2.189 to 0.2.191, and three crates that AROS does not use (two `wasi` crates and `windows-sys`).
+  `release/inputs/vendor.tar.xz` holds `libc-0.2.189`, so the target vendor archive has to be rebuilt and its `bytes` and
+  `sha256` in the contract changed. This was not in the list before and a bump that leaves it out cannot build offline.
+
+**Result for the criterion.** The procedure now covers a change of the Rust pin (see `CONTRIBUTING.md`, "Moving the Rust
+pin"). Its first step, re-applying the patch set, is exercised: it needed a patch change (5 files removed, 4 interfaces
+added), which means that a bump is a patch change as well, and the pins are regenerated by the workflow after it. The later
+steps (contract, pins, constants, vendor archive) were counted but not run, because that is a full producer run on three hosts
+and a protected-workflow dispatch, and the maintainer did not ask for a pin change.
+
+**Open points.**
+
+- The five dead `no_threads` edits are still in the committed patch. Remove them with the next change of the patch.
+- The regenerated patch for `nightly-2026-11-08` and the scratch trees are outside the repository (`/Volumes/Dev/m10-run/a4/`);
+  they are not committed because the pin is not being changed.
+- Not tested: running the new `std` on AROS, the producer with the new inputs, the target vendor archive, and any nightly
+  other than `2026-11-08`. A nightly further away may drift differently.
