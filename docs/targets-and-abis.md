@@ -40,6 +40,7 @@ The differences sit below the safe API.
 - The whole `aros-mui` crate, with the exceptions listed on the ABI differences page.
 - The other safe crates: `aros-timer`, `aros-graphics`, `aros-intuition`, `aros-asl`, `aros-locale`, `aros-icon` and `aros-workbench`.
 - Resource limits, error kinds, ownership and lifetime rules.
+- The experimental [`std`](/std/): the same surface on both ABIs, with the exceptions that its page lists (the source of random numbers, and two known issues that affect only ABI-v1).
 - The build workflow: install one toolchain, add one linker configuration, choose `--target`.
 
 ## Checking the system you have

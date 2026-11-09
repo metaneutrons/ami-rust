@@ -83,9 +83,27 @@ cargo +0.2.0 build --target x86_64-unknown-aros-abi11 --release --locked --offli
 
 ### `can't find crate for 'std'`
 
-**Cause.** Your code, or a dependency, does not declare `#![no_std]`. Release 0.2.0 supports `no_std` plus `alloc`, not the full `std`, which is [in development](/platform-roadmap/#rust-std) for a later release.
+**Cause.** Either the toolchain does not ship `std` (toolchains up to and including 0.2.0 do not), or your code or a dependency uses `std` without the rest of the setup. `std` is [experimental](/std/).
 
-**Fix.** Declare `#![no_std]` in your own crates, and choose dependencies that support `no_std`. Many crates support it once you turn off their default features (`default-features = false`), and some have a `no_std` or `alloc` feature to turn on.
+**Fix.** With a toolchain that ships `std`, follow [Rust std](/std/): declare `#![feature(restricted_std)]` and write a `fn main`. With one that does not, or when you want the supported baseline, declare `#![no_std]` in your own crates and choose dependencies that support `no_std`. Many crates support it once you turn off their default features (`default-features = false`), and some have a `no_std` or `alloc` feature to turn on.
+
+### `use of unstable library feature restricted_std` (error `E0658`)
+
+**Cause.** A `std` program lacks the attribute that marks the standard library on AROS as experimental. The message says that `std` is built for a platform it does not know how to support.
+
+**Fix.** Add `#![feature(restricted_std)]` at the top of the crate. It needs the nightly compiler that the toolchain ships.
+
+### `found duplicate lang item panic_impl` (error `E0152`)
+
+**Cause.** A program uses `aros::entry!` and `std`. `entry!` installs a panic handler, and `std` already has one.
+
+**Fix.** Choose one. A `std` program has a `fn main` and does not use `entry!`; it can still use the `aros` crates as a library (see [Rust std](/std/#using-the-aros-crates-from-a-std-program)). A `no_std` program uses `entry!` and no `std`.
+
+### A `std` program returns 10 or 20, or prints nothing
+
+**Cause.** 10 is an error returned from `main`, 20 is a panic, an abort, a failed allocation, or on ABI-v1 a stack that is not 128 KiB. A `std` program writes errors to standard error, which the AROS shell does not redirect.
+
+**Fix.** Set `Stack 131072` before starting it, and see the table of return codes under [Rust std](/std/#how-a-program-starts-and-ends).
 
 ### `unresolved import 'aros_mui::classes::Panel'` (or another MUI item)
 

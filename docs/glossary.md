@@ -41,7 +41,7 @@ description: Definitions of the AROS, MUI and ami-rust terms used in this docume
 
 **Notification** — A rule that connects a change of a readable attribute on one object to an action, such as returning an ID to the application loop, setting another attribute, or calling a hook.
 
-**`no_std`** — A Rust crate that does not link the standard library. All ami-rust crates and the applications of 0.2.0 are `no_std`. Support for `std` is [in development](/platform-roadmap/#rust-std).
+**`no_std`** — A Rust crate that does not link the standard library. All ami-rust crates and the applications of 0.2.0 are `no_std`. An experimental `std` is [in development](/std/) for a later release.
 
 **Qualified** — Built, run and recorded on the pinned inputs listed in the repository's qualification documents. "Qualified" describes what was tested, not a general promise.
 

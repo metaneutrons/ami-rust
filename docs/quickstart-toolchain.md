@@ -120,7 +120,7 @@ If a build fails with a message about `RUSTC_WRAPPER`, `RUST_TARGET_PATH` or `-Z
 ## Scope
 
 - The compiler runs on the macOS or Linux development host; the executable runs on AROS x86-64.
-- The libraries provide `no_std` and `alloc`, not full `std`, which is [in development](/platform-roadmap/#rust-std) for a later release.
+- The libraries provide `no_std` and `alloc`. A toolchain that also ships `std` builds ordinary `fn main` programs with the standard library, which is experimental: see [Rust std](/std/). Toolchains up to and including 0.2.0 do not ship it.
 - There is no `ami-rust` command-line tool and no Cargo plugin.
 - An AROS-hosted Rust compiler and other target architectures are separate [roadmap](/platform-roadmap/) items.
 
