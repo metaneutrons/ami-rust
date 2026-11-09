@@ -4,8 +4,7 @@ Native test of randomness in `std` on AROS: which source `std` uses, statistics 
 output, and whether the seeds of a `HashMap` differ from boot to boot. It goes through
 `std::random` (feature `random`), which is the same path that `HashMap` seeds from. One
 behaviour per run, chosen by the first argument. Like the other `std` programs it is not
-a workspace member: it needs a toolchain that ships `std` (see `examples/std-runtime/README.md`). It is listed as in development
-under #72 (STD-M7) because the native matrix cannot build it yet.
+a workspace member: it needs a toolchain that ships `std` (see `examples/std-runtime/README.md`). The native matrix (`tools/native-matrix.mjs`) runs every mode on both ABIs; the set-up and expected result of each mode are in `tests/programs.json`.
 
 ## Where the randomness comes from
 

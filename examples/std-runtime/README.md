@@ -7,9 +7,8 @@ the first argument.
 
 It is an ordinary `fn main` program. Like `std-probe`, it is not a workspace
 member: it needs a toolchain that ships `std`, whose target specifications
-rename the entry that rustc generates (see below). It is listed as in development
-under #67 because the native matrix cannot build it with an installed toolchain of
-a release yet; that is STD-M7.
+rename the entry that rustc generates (see below). The native matrix (`tools/native-matrix.mjs`) runs every mode on both ABIs; the set-up and expected
+result of each mode are in `tests/programs.json`.
 
 ## How a `fn main` program starts
 

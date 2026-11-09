@@ -163,50 +163,767 @@
     {
       "path": "tests/m6-interactions",
       "expected_return_code": 0
-    }
-  ],
-  "in_development": [
-    {
-      "path": "examples/std-probe",
-      "issue": "#66",
-      "reason": "Needs a toolchain that ships std, which the producer builds from host/std-aros and no release has yet; the native matrix builds with the installed toolchain of a release (STD-M7)."
-    },
-    {
-      "path": "examples/std-runtime",
-      "issue": "#67",
-      "reason": "Needs a toolchain that ships std, which the producer builds from host/std-aros and no release has yet; the native matrix builds with the installed toolchain of a release (STD-M7)."
-    },
-    {
-      "path": "examples/std-tasks",
-      "issue": "#69",
-      "reason": "Needs a toolchain that ships std, which the producer builds from host/std-aros and no release has yet; the native matrix builds with the installed toolchain of a release (STD-M7)."
-    },
-    {
-      "path": "examples/std-time",
-      "issue": "#72",
-      "reason": "Finished under STD-M3 (#68). Needs a toolchain that ships std, which the producer builds from host/std-aros and no release has yet; the native matrix builds with the installed toolchain of a release (STD-M7)."
-    },
-    {
-      "path": "examples/std-random",
-      "issue": "#72",
-      "reason": "Finished under STD-M3 (#68). Needs a toolchain that ships std, which the producer builds from host/std-aros and no release has yet; the native matrix builds with the installed toolchain of a release (STD-M7)."
-    },
-    {
-      "path": "examples/std-fs",
-      "issue": "#72",
-      "reason": "Finished under STD-M3 (#68). Needs a toolchain that ships std, which the producer builds from host/std-aros and no release has yet; the native matrix builds with the installed toolchain of a release (STD-M7)."
     },
     {
       "path": "examples/std-path",
-      "issue": "#72",
-      "reason": "Finished under STD-M3 (#68). Needs a toolchain that ships std, which the producer builds from host/std-aros and no release has yet; the native matrix builds with the installed toolchain of a release (STD-M7)."
+      "run": {
+        "stack": 131072,
+        "cwd": "RAM:ami-rust-m1",
+        "modes": [
+          {
+            "name": "components",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT path summary 18 of 18 checks passed"
+            ]
+          },
+          {
+            "name": "absolute",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT path summary 21 of 21 checks passed"
+            ]
+          },
+          {
+            "name": "parts",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT path summary 28 of 28 checks passed"
+            ]
+          },
+          {
+            "name": "join",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT path summary 16 of 16 checks passed"
+            ]
+          },
+          {
+            "name": "cwd",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT path summary 17 of 17 checks passed"
+            ]
+          },
+          {
+            "name": "make-absolute",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT path summary 16 of 16 checks passed"
+            ]
+          },
+          {
+            "name": "dots",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT path summary 30 of 30 checks passed"
+            ]
+          },
+          {
+            "name": "lists",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT path summary 8 of 8 checks passed"
+            ]
+          }
+        ]
+      }
     },
     {
       "path": "examples/std-threads",
-      "issue": "#69",
-      "reason": "Needs a toolchain that ships std, which the producer builds from host/std-aros and no release has yet; the native matrix builds with the installed toolchain of a release (STD-M7)."
+      "run": {
+        "stack": 131072,
+        "cwd": "RAM:ami-rust-m1",
+        "modes": [
+          {
+            "name": "spawn",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT threads summary 10 of 10 checks passed"
+            ]
+          },
+          {
+            "name": "mutex",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT threads summary 4 of 4 checks passed"
+            ]
+          },
+          {
+            "name": "condvar",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT threads summary 4 of 4 checks passed"
+            ]
+          },
+          {
+            "name": "rwlock",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT threads summary 3 of 3 checks passed"
+            ]
+          },
+          {
+            "name": "once",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT threads summary 3 of 3 checks passed"
+            ]
+          },
+          {
+            "name": "park",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT threads summary 3 of 3 checks passed"
+            ]
+          },
+          {
+            "name": "channel",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT threads summary 3 of 3 checks passed"
+            ]
+          },
+          {
+            "name": "tls",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT threads summary 4 of 4 checks passed"
+            ]
+          },
+          {
+            "name": "errors",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT threads summary 1 of 1 checks passed"
+            ]
+          },
+          {
+            "name": "process",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT threads summary 6 of 6 checks passed"
+            ]
+          },
+          {
+            "name": "yield",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT threads summary 1 of 1 checks passed"
+            ]
+          },
+          {
+            "name": "limit",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT threads summary 1 of 1 checks passed"
+            ]
+          },
+          {
+            "name": "slots",
+            "expected_return_code": 0,
+            "expect": [
+              "INFO next free slot"
+            ]
+          },
+          {
+            "name": "end-main-waiting",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT threads main returns while three threads wait ok"
+            ]
+          },
+          {
+            "name": "end-main-busy",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT threads the busy thread finished its work before the program ended ok"
+            ]
+          },
+          {
+            "name": "end-thread-exit",
+            "expected_return_code": 7
+          },
+          {
+            "name": "end-thread-exit-join",
+            "expected_return_code": 9
+          },
+          {
+            "name": "end-thread-panic",
+            "expected_return_code": 20
+          },
+          {
+            "name": "end-main-panic",
+            "expected_return_code": 20
+          }
+        ]
+      }
+    },
+    {
+      "path": "examples/std-tasks",
+      "run": {
+        "stack": 131072,
+        "modes": [
+          {
+            "name": "cross",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT cross ok errors=0 child_finished=true"
+            ]
+          },
+          {
+            "name": "stress",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT stress ok errors=0 children_finished=true"
+            ]
+          },
+          {
+            "name": "errno1",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT errno1 ok errors=0"
+            ]
+          },
+          {
+            "name": "errno",
+            "expected_return_code": 0,
+            "allow_fail": true,
+            "expect": [
+              "RESULT errno FAIL"
+            ]
+          },
+          {
+            "name": "errnoaddr",
+            "expected_return_code": 0,
+            "expect": [
+              "all_equal=true finished=true"
+            ]
+          },
+          {
+            "name": "stdio",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT stdio ok errors=0 children_finished=true"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "examples/std-random",
+      "run": {
+        "stack": 131072,
+        "modes": [
+          {
+            "name": "source-abi1",
+            "expected_return_code": 0,
+            "abis": [
+              "abi1"
+            ],
+            "arguments": "source",
+            "expect": [
+              "RESULT source=getentropy"
+            ]
+          },
+          {
+            "name": "source-abi11",
+            "expected_return_code": 0,
+            "abis": [
+              "abi11"
+            ],
+            "arguments": "source",
+            "expect": [
+              "RESULT source=weak generator only"
+            ]
+          },
+          {
+            "name": "stats",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT stats ones=",
+              "longest_run=",
+              "pass"
+            ]
+          },
+          {
+            "name": "selftest",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT selftest zeros rejected=true",
+              "RESULT selftest counter rejected=true",
+              "RESULT selftest biased rejected=true",
+              "RESULT selftest repeated rejected=true"
+            ]
+          },
+          {
+            "name": "sizes",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT sizes 0 ",
+              "RESULT sizes 65536 nonzero=true"
+            ]
+          },
+          {
+            "name": "hashmap",
+            "expected_return_code": 0,
+            "expect": [
+              "two_states_differ=true map_ok=true"
+            ]
+          },
+          {
+            "name": "api",
+            "expected_return_code": 0,
+            "expect": [
+              "two_u64_differ=true u8_values_seen=256 of 256"
+            ]
+          },
+          {
+            "name": "seed",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT seed"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "examples/std-time",
+      "run": {
+        "stack": 131072,
+        "modes": [
+          {
+            "name": "clock",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT clock backwards=0"
+            ]
+          },
+          {
+            "name": "sleep",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT sleep"
+            ]
+          },
+          {
+            "name": "arith",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT arith"
+            ]
+          },
+          {
+            "name": "system",
+            "expected_return_code": 0,
+            "arguments": "system {host-seconds}",
+            "expect_pattern": [
+              "^RESULT system secs_since_unix_epoch=\\d+ host=\\d+ delta=-?\\d+$"
+            ]
+          },
+          {
+            "name": "future-2040",
+            "expected_return_code": 0,
+            "arguments": "future",
+            "rtc": "base=2040-01-01T00:00:00,clock=vm",
+            "expect_pattern": [
+              "^RESULT future Ok\\(22089888\\d\\d\\)$"
+            ]
+          },
+          {
+            "name": "future-2105",
+            "expected_return_code": 0,
+            "arguments": "future",
+            "rtc": "base=2105-06-01T00:00:00,clock=vm",
+            "expect_pattern": [
+              "^RESULT future Ok\\(42732576\\d\\d\\)$"
+            ]
+          },
+          {
+            "name": "future-2107",
+            "expected_return_code": 0,
+            "arguments": "future",
+            "rtc": "base=2107-06-01T00:00:00,clock=vm",
+            "expect_pattern": [
+              "^RESULT future Ok\\(413623\\d\\d\\)$"
+            ]
+          },
+          {
+            "name": "raw-2040",
+            "expected_return_code": 0,
+            "arguments": "raw",
+            "rtc": "base=2040-01-01T00:00:00,clock=vm",
+            "expect_pattern": [
+              "tv_sec\\(signed\\)=-20859784\\d\\d"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "examples/std-fs",
+      "run": {
+        "stack": 131072,
+        "cwd": "RAM:ami-rust-m1",
+        "modes": [
+          {
+            "name": "rw",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 9 of 9 checks passed"
+            ]
+          },
+          {
+            "name": "large",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 4 of 4 checks passed"
+            ]
+          },
+          {
+            "name": "seek",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 9 of 9 checks passed"
+            ]
+          },
+          {
+            "name": "seekprobe",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 21 of 21 checks passed"
+            ]
+          },
+          {
+            "name": "seekro",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 3 of 3 checks passed"
+            ]
+          },
+          {
+            "name": "seekwrite",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 9 of 9 checks passed"
+            ]
+          },
+          {
+            "name": "open",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 18 of 18 checks passed"
+            ]
+          },
+          {
+            "name": "trunc",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 4 of 4 checks passed"
+            ]
+          },
+          {
+            "name": "dup",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 2 of 2 checks passed"
+            ]
+          },
+          {
+            "name": "unlink",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 6 of 6 checks passed"
+            ]
+          },
+          {
+            "name": "sync",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 3 of 3 checks passed"
+            ]
+          },
+          {
+            "name": "unsupported",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 5 of 5 checks passed"
+            ]
+          },
+          {
+            "name": "paths",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 5 of 5 checks passed"
+            ]
+          },
+          {
+            "name": "errors",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 5 of 5 checks passed"
+            ]
+          },
+          {
+            "name": "requesters",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 13 of 13 checks passed"
+            ]
+          },
+          {
+            "name": "meta",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 24 of 24 checks passed"
+            ]
+          },
+          {
+            "name": "times",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 5 of 5 checks passed"
+            ]
+          },
+          {
+            "name": "dirs",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 20 of 20 checks passed"
+            ]
+          },
+          {
+            "name": "readdir",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 18 of 18 checks passed"
+            ]
+          },
+          {
+            "name": "perm",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 13 of 13 checks passed"
+            ]
+          },
+          {
+            "name": "copy",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 8 of 8 checks passed"
+            ]
+          },
+          {
+            "name": "removeall",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 5 of 5 checks passed"
+            ]
+          },
+          {
+            "name": "rename",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 31 of 31 checks passed"
+            ]
+          },
+          {
+            "name": "canon",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 15 of 15 checks passed"
+            ]
+          },
+          {
+            "name": "settimes",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT fs summary 23 of 23 checks passed"
+            ]
+          },
+          {
+            "name": "times-2040",
+            "expected_return_code": 0,
+            "arguments": "times",
+            "rtc": "base=2040-01-01T00:00:00,clock=vm",
+            "expect": [
+              "RESULT fs summary 5 of 5 checks passed"
+            ]
+          },
+          {
+            "name": "times-2100",
+            "expected_return_code": 0,
+            "arguments": "times",
+            "rtc": "base=2100-01-01T00:00:00,clock=vm",
+            "expect": [
+              "RESULT fs summary 5 of 5 checks passed"
+            ]
+          },
+          {
+            "name": "requesterson",
+            "expect_timeout": true,
+            "timeout": 40
+          }
+        ]
+      }
+    },
+    {
+      "path": "examples/std-runtime",
+      "run": {
+        "stack": 131072,
+        "cwd": "RAM:ami-rust-m1",
+        "modes": [
+          {
+            "name": "none",
+            "expected_return_code": 0,
+            "expect": [
+              "returned"
+            ]
+          },
+          {
+            "name": "exit",
+            "expected_return_code": 3,
+            "expect": [
+              "flushed-by-exit"
+            ]
+          },
+          {
+            "name": "exit0",
+            "expected_return_code": 0
+          },
+          {
+            "name": "exit5",
+            "expected_return_code": 5
+          },
+          {
+            "name": "panic",
+            "expected_return_code": 20,
+            "expect": [
+              "before-panic",
+              "ami-rust fatal 2"
+            ]
+          },
+          {
+            "name": "abort",
+            "expected_return_code": 20,
+            "expect": [
+              "ami-rust fatal 2"
+            ]
+          },
+          {
+            "name": "oom",
+            "expected_return_code": 20,
+            "expect": [
+              "ami-rust fatal 2"
+            ]
+          },
+          {
+            "name": "reserve",
+            "expected_return_code": 0,
+            "expect": [
+              "try_reserve(8 GiB) is_err=true",
+              "try_reserve(64 KiB) is_ok=true"
+            ]
+          },
+          {
+            "name": "out",
+            "expected_return_code": 0,
+            "expect": [
+              "println works",
+              "print without newline",
+              "[1, 2, 3] string"
+            ]
+          },
+          {
+            "name": "stdin",
+            "expected_return_code": 0,
+            "before": [
+              "Echo \"hello\" >RAM:ami-rust-m1/in.txt"
+            ],
+            "arguments": "stdin <RAM:ami-rust-m1/in.txt",
+            "expect": [
+              "read 6 bytes",
+              "second read 0 bytes"
+            ]
+          },
+          {
+            "name": "env",
+            "expected_return_code": 0,
+            "expect": [
+              "before:",
+              "after set: Ok(\"one\")",
+              "var_os: Some(\"one\")",
+              "overwritten: Ok(\"two\")",
+              "after remove: Err(NotPresent)",
+              "invalid names: Err(NotPresent) Err(NotPresent)",
+              "vars().count() = 0"
+            ]
+          },
+          {
+            "name": "outside",
+            "expected_return_code": 0,
+            "before": [
+              "SetEnv AMI_OUTSIDE set-by-the-shell"
+            ],
+            "expect": [
+              "AMI_OUTSIDE: Ok(\"set-by-the-shell\")"
+            ]
+          },
+          {
+            "name": "args",
+            "expected_return_code": 0,
+            "arguments": "args one two=three",
+            "expect": [
+              "args().count() = 4"
+            ]
+          },
+          {
+            "name": "context",
+            "expected_return_code": 0,
+            "expect": [
+              "context: 2 arguments",
+              "dispatch returned 0"
+            ]
+          },
+          {
+            "name": "main-err",
+            "expected_return_code": 10
+          },
+          {
+            "name": "code7",
+            "expected_return_code": 7
+          },
+          {
+            "name": "code10",
+            "expected_return_code": 10
+          },
+          {
+            "name": "code20",
+            "expected_return_code": 20
+          }
+        ]
+      }
+    },
+    {
+      "path": "examples/std-probe",
+      "run": {
+        "stack": 131072,
+        "cwd": "RAM:ami-rust-m1",
+        "modes": [
+          {
+            "name": "probe",
+            "expected_return_code": 0,
+            "arguments": "",
+            "expect": [
+              "std-probe: all checks passed"
+            ]
+          }
+        ]
+      }
     }
   ],
+  "in_development": [],
   "compile_fail": {
     "path": "tests/compile-fail",
     "target": "x86_64-unknown-aros-abi1",
