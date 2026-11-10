@@ -105,6 +105,7 @@ The results are the same on ABI-v1 and ABI-v11 except where a row says otherwise
 | Random numbers | `HashMap` seeds and `std::random`. ABI-v1 uses the system's entropy source. ABI-v11 has none yet: it mixes a weak generator with the CPU's `RDRAND` instruction where there is one, and is weak without it, so `HashMap` there is not hardened against crafted keys. Not suitable for cryptography on either ABI. |
 | Threads | `thread::spawn`, `join`, `thread::scope`, `Mutex`, `Condvar`, `RwLock`, `Once`, `OnceLock`, `LazyLock`, `Barrier`, `park`, channels, `thread_local!` and `yield_now`; at least 1000 threads at once with the default 256 KiB stack. A thread is a DOS process, so it has its own current directory and DOS variables. A thread's `process::exit` or panic ends the program at the main task's next `std` call. An error from a failed read or write in a threaded program may carry another thread's code, because the C library keeps one `errno` for all tasks of a program. `available_parallelism` is 1. |
 | Child programs | `process::Command`: `new`, `arg`, `args`, `current_dir`, `env`, `env_remove`, `spawn`, `status` and `output`, `Child::wait`, `try_wait`, `wait_with_output` and `id`, and `ExitStatus`. A command is a DOS program, looked for as it is and, when its name has no volume, in `C:`; the command path of the shell is not searched. The arguments go to the program as they are (no shell reads them), so a quote, a semicolon or a `>` in an argument is text. The standard streams are the parent's unless the command says otherwise; `Stdio::piped()` is a file in `T:`, so what the child wrote can be read when it has ended (a read waits for that), and what is written to its input is given to it when the input is closed, which is when it starts. The exit status is the return code of the program. Each child is a process of its own, and several run at once. `Child::kill` and `env_clear` are `Unsupported` (see below), and so is a `File` as a standard stream of a child. |
+| Networking | `TcpStream`, `TcpListener` and `UdpSocket` over `bsdsocket.library` (read, write, `peek`, timeouts, non-blocking mode, `connect_timeout`, `shutdown`, `TCP_NODELAY`, the time to live, addresses of both ends), and name lookup of IPv4 names through the stack. Nothing starts the stack: AROSTCP must be running, and it reads its configuration from a `db` directory next to its `C` directory. The ABI-v1 image carries the program but no `db`; two files of three lines make a loopback-only stack (see `examples/std-net`). Without a running stack, every call that needs one returns `ErrorKind::Unsupported` at once with a message that says so, and nothing waits. A socket belongs to the thread that made it, because the stack's library base belongs to a task: another thread gets `Unsupported`, and a socket dropped in another thread is closed at the next socket call of the thread that made it, or when that thread ends. Name lookup reads what the stack's `netdb` names (the hosts of its files and its name servers). |
 
 ## What is not supported
 
@@ -112,11 +113,11 @@ These return `ErrorKind::Unsupported` (or, for an API that cannot fail, are empt
 
 - symbolic and hard links, and file locks;
 - `env::current_exe`, and `env::home_dir`, which is always `None`;
-- networking (`std::net`);
+- on sockets, `try_clone`, `set_linger`, `set_only_v6`, the multicast options, and the use of a socket by a thread other than the one that made it;
 - `fork`, `exec`, signals, `Child::kill` while the child runs, `Command::env_clear`, and a pipe that parent and child use at the same time (a `Stdio::piped()` stream is a file; see above);
 - `std::io::pipe`.
 
-Not tested, so not promised: volumes other than `RAM:` and the delivery volume, files above 2 GiB, time zones other than UTC, more than one CPU, and `RDRAND` failure cases on ABI-v11.
+Not tested, so not promised: traffic beyond the loopback interface, IPv6 traffic, name servers, volumes other than `RAM:` and the delivery volume, files above 2 GiB, time zones other than UTC, more than one CPU, and `RDRAND` failure cases on ABI-v11.
 
 ## Known issues
 

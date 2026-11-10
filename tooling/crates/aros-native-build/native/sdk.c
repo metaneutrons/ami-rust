@@ -310,11 +310,13 @@ static void threads_request_exit(int code) {
  exit_requested=1;threads_kick_all();
  Permit();
 }
+static void net_task_end(void);
 static void thread_trampoline(void) {
  struct Task *me=FindTask(NULL);
  struct sdk_thread *t=(struct sdk_thread *)me->tc_UserData;
  Forbid();t->task=me;Permit();
  if(!setjmp(t->end))t->entry(t->arg);
+ net_task_end();
  Forbid();
  t->done=1;
  if(t->joiner)Signal(t->joiner,t->joinmask);
@@ -399,6 +401,278 @@ static void threads_end_all(void) {
      SysFlags and AttnResched are documented as private in exec/execbase.h of both SDKs. */
 void sdk_thread_yield(void) {Forbid();SysBase->SysFlags|=SFF_QuantumOver;SysBase->AttnResched|=ARF_AttnSwitch;Permit();}
 uintptr_t sdk_task_id(void) {return (uintptr_t)FindTask(NULL);}
+
+/* Sockets: bsdsocket.library (AmiTCP-style). The ABI-v11 C SDK has no headers for it, so the calls are
+   declared here with the register assignments of the library (as in the ABI-v1 SDK) and the BSD values it
+   uses. A library base belongs to the task that opened it and so does every socket made through it, so
+   each task that uses sockets opens its own base on first use, and a socket can be used only by the task
+   that made it (sdk_net_* returns NET_FOREIGN otherwise). A task's base is closed when the task ends,
+   which closes its sockets. */
+#define NET_NO_STACK 1000
+#define NET_FOREIGN 1001
+#define NET_AF_INET 2
+#define NET_SOCK_STREAM 1
+#define NET_FIONBIO 0x8008667eUL
+#define NET_SOL_SOCKET 0xffff
+#define NET_SO_ERROR 0x1007
+#define NET_EAGAIN 35
+#define NET_EINPROGRESS 36
+#define NET_EBADF 9
+#define NET_EMFILE 24
+#define NET_ENOMEM 12
+#define NET_ETIMEDOUT 60
+#define NET_EINVAL 22
+typedef struct {uint32_t bits[8];} net_fdset;
+struct net_timeval {int32_t sec;int32_t usec;};
+struct net_hostent {char *name;char **aliases;int type;int length;char **addrs;};
+struct net_base {struct MinNode node;struct Task *task;struct Library *base;};
+struct net_sock {struct MinNode node;int64_t handle;struct Task *task;int fd;int closing;};
+static struct MinList net_bases,net_socks;
+static int net_ready;
+static int64_t net_next_handle=1;
+static int bs_socket(struct Library *b,int d,int t,int p) {
+ return ({AROS_LC3(int,socket,AROS_LCA(int,d,D0),AROS_LCA(int,t,D1),AROS_LCA(int,p,D2),struct Library *,b,5,BSDSocket);});
+}
+static int bs_bind(struct Library *b,int s,const void *a,int n) {
+ return ({AROS_LC3(int,bind,AROS_LCA(int,s,D0),AROS_LCA(const void *,a,A0),AROS_LCA(int,n,D1),struct Library *,b,6,BSDSocket);});
+}
+static int bs_listen(struct Library *b,int s,int n) {
+ return ({AROS_LC2(int,listen,AROS_LCA(int,s,D0),AROS_LCA(int,n,D1),struct Library *,b,7,BSDSocket);});
+}
+static int bs_accept(struct Library *b,int s,void *a,int *n) {
+ return ({AROS_LC3(int,accept,AROS_LCA(int,s,D0),AROS_LCA(void *,a,A0),AROS_LCA(int *,n,A1),struct Library *,b,8,BSDSocket);});
+}
+static int bs_connect(struct Library *b,int s,const void *a,int n) {
+ return ({AROS_LC3(int,connect,AROS_LCA(int,s,D0),AROS_LCA(const void *,a,A0),AROS_LCA(int,n,D1),struct Library *,b,9,BSDSocket);});
+}
+static int bs_sendto(struct Library *b,int s,const void *m,int n,int f,const void *a,int l) {
+ return ({AROS_LC6(int,sendto,AROS_LCA(int,s,D0),AROS_LCA(const void *,m,A0),AROS_LCA(int,n,D1),AROS_LCA(int,f,D2),AROS_LCA(const void *,a,A1),AROS_LCA(int,l,D3),struct Library *,b,10,BSDSocket);});
+}
+static int bs_send(struct Library *b,int s,const void *m,int n,int f) {
+ return ({AROS_LC4(int,send,AROS_LCA(int,s,D0),AROS_LCA(const void *,m,A0),AROS_LCA(int,n,D1),AROS_LCA(int,f,D2),struct Library *,b,11,BSDSocket);});
+}
+static int bs_recvfrom(struct Library *b,int s,void *m,int n,int f,void *a,int *l) {
+ return ({AROS_LC6(int,recvfrom,AROS_LCA(int,s,D0),AROS_LCA(void *,m,A0),AROS_LCA(int,n,D1),AROS_LCA(int,f,D2),AROS_LCA(void *,a,A1),AROS_LCA(int *,l,A2),struct Library *,b,12,BSDSocket);});
+}
+static int bs_recv(struct Library *b,int s,void *m,int n,int f) {
+ return ({AROS_LC4(int,recv,AROS_LCA(int,s,D0),AROS_LCA(void *,m,A0),AROS_LCA(int,n,D1),AROS_LCA(int,f,D2),struct Library *,b,13,BSDSocket);});
+}
+static int bs_shutdown(struct Library *b,int s,int how) {
+ return ({AROS_LC2(int,shutdown,AROS_LCA(int,s,D0),AROS_LCA(int,how,D1),struct Library *,b,14,BSDSocket);});
+}
+static int bs_setsockopt(struct Library *b,int s,int lv,int o,void *v,int n) {
+ return ({AROS_LC5(int,setsockopt,AROS_LCA(int,s,D0),AROS_LCA(int,lv,D1),AROS_LCA(int,o,D2),AROS_LCA(void *,v,A0),AROS_LCA(int,n,D3),struct Library *,b,15,BSDSocket);});
+}
+static int bs_getsockopt(struct Library *b,int s,int lv,int o,void *v,int *n) {
+ return ({AROS_LC5(int,getsockopt,AROS_LCA(int,s,D0),AROS_LCA(int,lv,D1),AROS_LCA(int,o,D2),AROS_LCA(void *,v,A0),AROS_LCA(int *,n,A1),struct Library *,b,16,BSDSocket);});
+}
+static int bs_getsockname(struct Library *b,int s,void *a,int *n) {
+ return ({AROS_LC3(int,getsockname,AROS_LCA(int,s,D0),AROS_LCA(void *,a,A0),AROS_LCA(int *,n,A1),struct Library *,b,17,BSDSocket);});
+}
+static int bs_getpeername(struct Library *b,int s,void *a,int *n) {
+ return ({AROS_LC3(int,getpeername,AROS_LCA(int,s,D0),AROS_LCA(void *,a,A0),AROS_LCA(int *,n,A1),struct Library *,b,18,BSDSocket);});
+}
+static int bs_ioctl(struct Library *b,int s,unsigned long r,void *v) {
+ return ({AROS_LC3(int,IoctlSocket,AROS_LCA(int,s,D0),AROS_LCA(unsigned long,r,D1),AROS_LCA(void *,v,A0),struct Library *,b,19,BSDSocket);});
+}
+static int bs_close(struct Library *b,int s) {
+ return ({AROS_LC1(int,CloseSocket,AROS_LCA(int,s,D0),struct Library *,b,20,BSDSocket);});
+}
+static int bs_select(struct Library *b,int n,net_fdset *r,net_fdset *w,net_fdset *x,struct net_timeval *t,ULONG *sigs) {
+ return ({AROS_LC6(int,WaitSelect,AROS_LCA(int,n,D0),AROS_LCA(net_fdset *,r,A0),AROS_LCA(net_fdset *,w,A1),AROS_LCA(net_fdset *,x,A2),AROS_LCA(struct net_timeval *,t,A3),AROS_LCA(ULONG *,sigs,D1),struct Library *,b,21,BSDSocket);});
+}
+static LONG bs_errno(struct Library *b) {
+ return ({AROS_LC0(LONG,Errno,struct Library *,b,27,BSDSocket);});
+}
+static struct net_hostent *bs_gethostbyname(struct Library *b,const char *name) {
+ return ({AROS_LC1(struct net_hostent *,gethostbyname,AROS_LCA(const char *,name,A0),struct Library *,b,35,BSDSocket);});
+}
+/* Under Forbid(). */
+static void net_init(void) {
+ if(net_ready)return;
+ NEWLIST((struct List *)&net_bases);NEWLIST((struct List *)&net_socks);
+ net_ready=1;
+}
+/* Closes the sockets of this task that another task dropped (a task cannot close what it did not make). */
+static void net_sweep(struct Library *b) {
+ struct Task *me=FindTask(NULL);
+ for(;;){
+  struct net_sock *s=NULL;
+  Forbid();
+  if(net_ready)for(struct MinNode *n=net_socks.mlh_Head;n->mln_Succ;n=n->mln_Succ)
+   if(((struct net_sock *)n)->task==me&&((struct net_sock *)n)->closing){s=(struct net_sock *)n;Remove((struct Node *)n);break;}
+  Permit();
+  if(!s)return;
+  bs_close(b,s->fd);FreeVec(s);
+ }
+}
+/* The calling task's base, opened on first use. *err is 0, or NET_NO_STACK when the library cannot be opened. */
+static struct Library *net_base(int *err) {
+ struct Task *me=FindTask(NULL);
+ Forbid();net_init();
+ for(struct MinNode *n=net_bases.mlh_Head;n->mln_Succ;n=n->mln_Succ)
+  if(((struct net_base *)n)->task==me){struct Library *b=((struct net_base *)n)->base;Permit();net_sweep(b);*err=0;return b;}
+ Permit();
+ struct net_base *rec=(struct net_base *)AllocVec(sizeof(*rec),MEMF_PUBLIC|MEMF_CLEAR);
+ if(!rec){*err=NET_ENOMEM;return NULL;}
+ struct Library *b=OpenLibrary((CONST_STRPTR)"bsdsocket.library",3);
+ if(!b){FreeVec(rec);*err=NET_NO_STACK;return NULL;}
+ rec->task=me;rec->base=b;
+ Forbid();AddTail((struct List *)&net_bases,(struct Node *)&rec->node);Permit();
+ *err=0;return b;
+}
+/* Called by the ending task: closes its sockets and its base. */
+static void net_task_end(void) {
+ struct Task *me=FindTask(NULL);
+ struct Library *b=NULL;struct net_base *rec=NULL;
+ Forbid();
+ if(net_ready){
+  for(struct MinNode *n=net_bases.mlh_Head;n->mln_Succ;n=n->mln_Succ)
+   if(((struct net_base *)n)->task==me){rec=(struct net_base *)n;break;}
+  if(rec){b=rec->base;Remove((struct Node *)&rec->node);}
+  for(struct MinNode *n=net_socks.mlh_Head,*next;n->mln_Succ;n=next){
+   next=n->mln_Succ;
+   if(((struct net_sock *)n)->task==me){Remove((struct Node *)n);FreeVec(n);}
+  }
+ }
+ Permit();
+ if(b)CloseLibrary(b);
+ if(rec)FreeVec(rec);
+}
+static struct net_sock *net_sock_new(int fd) {
+ struct net_sock *s=(struct net_sock *)AllocVec(sizeof(*s),MEMF_PUBLIC|MEMF_CLEAR);
+ if(!s)return NULL;
+ s->task=FindTask(NULL);s->fd=fd;
+ Forbid();net_init();s->handle=net_next_handle++;AddTail((struct List *)&net_socks,(struct Node *)&s->node);Permit();
+ return s;
+}
+/* The socket of a handle for the calling task. Returns NULL with *err set: NET_EBADF, or NET_FOREIGN when
+   another task made it. */
+static struct net_sock *net_sock_find(int64_t h,int *err) {
+ struct Task *me=FindTask(NULL);
+ struct net_sock *found=NULL;
+ Forbid();
+ if(net_ready)for(struct MinNode *n=net_socks.mlh_Head;n->mln_Succ;n=n->mln_Succ)
+  if(((struct net_sock *)n)->handle==h){found=(struct net_sock *)n;break;}
+ Permit();
+ if(!found||found->closing){*err=NET_EBADF;return NULL;}
+ if(found->task!=me){*err=NET_FOREIGN;return NULL;}
+ *err=0;return found;
+}
+/* Waits until the socket can be read or written. Returns 1 when ready, 0 on timeout, a negative errno on
+   failure. A negative timeout waits without end. */
+static int net_wait(struct Library *b,int fd,int for_write,int64_t timeout_ms) {
+ if(fd<0||fd>=256)return -NET_EMFILE;
+ net_fdset set;for(int i=0;i<8;i++)set.bits[i]=0;
+ set.bits[fd>>5]|=1UL<<(fd&31);
+ struct net_timeval tv;struct net_timeval *tp=NULL;
+ if(timeout_ms>=0){tv.sec=(int32_t)(timeout_ms/1000);tv.usec=(int32_t)((timeout_ms%1000)*1000);tp=&tv;}
+ int r=bs_select(b,fd+1,for_write?NULL:&set,for_write?&set:NULL,NULL,tp,NULL);
+ if(r<0)return -(int)bs_errno(b);
+ return r>0?1:0;
+}
+#define NET_ENTER(h,s,b) int e_=0;struct net_sock *s=net_sock_find((h),&e_);if(!s)return -e_;\
+ struct Library *b=net_base(&e_);if(!b)return -e_;
+/* 0 when sockets can be used (a stack is running), else NET_NO_STACK. */
+int sdk_net_probe(void) {int e=0;return net_base(&e)?0:e;}
+/* A new socket: its handle (greater than 0), or a negative errno. */
+int64_t sdk_net_socket(int domain,int type) {
+ int e=0;struct Library *b=net_base(&e);if(!b)return -e;
+ int fd=bs_socket(b,domain,type,0);if(fd<0)return -(int64_t)bs_errno(b);
+ struct net_sock *s=net_sock_new(fd);if(!s){bs_close(b,fd);return -NET_ENOMEM;}
+ return s->handle;
+}
+int sdk_net_close(int64_t h) {
+ struct Task *me=FindTask(NULL);struct net_sock *s=NULL;
+ Forbid();
+ if(net_ready)for(struct MinNode *n=net_socks.mlh_Head;n->mln_Succ;n=n->mln_Succ)
+  if(((struct net_sock *)n)->handle==h){s=(struct net_sock *)n;break;}
+ if(s&&s->task!=me){s->closing=1;s=NULL;}   /* made by another task: its base closes it when that task ends */
+ if(s)Remove((struct Node *)&s->node);
+ Permit();
+ if(!s)return 0;
+ int e=0;struct Library *b=net_base(&e);
+ if(b)bs_close(b,s->fd);
+ FreeVec(s);return 0;
+}
+int sdk_net_bind(int64_t h,const void *addr,int len) {NET_ENTER(h,s,b) return bs_bind(b,s->fd,addr,len)<0?-(int)bs_errno(b):0;}
+int sdk_net_listen(int64_t h,int backlog) {NET_ENTER(h,s,b) return bs_listen(b,s->fd,backlog)<0?-(int)bs_errno(b):0;}
+/* Accepts a connection: the new socket's handle, or a negative errno. */
+int64_t sdk_net_accept(int64_t h,void *addr,int *len,int64_t timeout_ms) {
+ NET_ENTER(h,s,b)
+ if(timeout_ms>=0){int w=net_wait(b,s->fd,0,timeout_ms);if(w<0)return w;if(w==0)return -NET_EAGAIN;}
+ int fd=bs_accept(b,s->fd,addr,len);if(fd<0)return -(int64_t)bs_errno(b);
+ struct net_sock *n=net_sock_new(fd);if(!n){bs_close(b,fd);return -NET_ENOMEM;}
+ return n->handle;
+}
+int sdk_net_connect(int64_t h,const void *addr,int len,int64_t timeout_ms) {
+ NET_ENTER(h,s,b)
+ if(timeout_ms<0)return bs_connect(b,s->fd,addr,len)<0?-(int)bs_errno(b):0;
+ long on=1,off=0;
+ bs_ioctl(b,s->fd,NET_FIONBIO,&on);
+ int r=bs_connect(b,s->fd,addr,len);int result=0;
+ if(r<0){
+  int err=(int)bs_errno(b);
+  if(err!=NET_EINPROGRESS)result=-err;
+  else{
+   int w=net_wait(b,s->fd,1,timeout_ms);
+   if(w<0)result=w;else if(w==0)result=-NET_ETIMEDOUT;
+   else{int so=0,sl=(int)sizeof(so);bs_getsockopt(b,s->fd,NET_SOL_SOCKET,NET_SO_ERROR,&so,&sl);result=-so;}
+  }
+ }
+ bs_ioctl(b,s->fd,NET_FIONBIO,&off);
+ return result;
+}
+/* Sends or receives, with an optional wait first (timeout_ms below 0: none). Returns a count or a negative errno. */
+int64_t sdk_net_send(int64_t h,const void *data,size_t n,int flags,int64_t timeout_ms) {
+ NET_ENTER(h,s,b)
+ if(timeout_ms>=0){int w=net_wait(b,s->fd,1,timeout_ms);if(w<0)return w;if(w==0)return -NET_EAGAIN;}
+ int r=bs_send(b,s->fd,data,(int)(n>0x7fffffffu?0x7fffffff:n),flags);
+ return r<0?-(int64_t)bs_errno(b):r;
+}
+int64_t sdk_net_recv(int64_t h,void *data,size_t n,int flags,int64_t timeout_ms) {
+ NET_ENTER(h,s,b)
+ if(timeout_ms>=0){int w=net_wait(b,s->fd,0,timeout_ms);if(w<0)return w;if(w==0)return -NET_EAGAIN;}
+ int r=bs_recv(b,s->fd,data,(int)(n>0x7fffffffu?0x7fffffff:n),flags);
+ return r<0?-(int64_t)bs_errno(b):r;
+}
+int64_t sdk_net_sendto(int64_t h,const void *data,size_t n,int flags,const void *addr,int len,int64_t timeout_ms) {
+ NET_ENTER(h,s,b)
+ if(timeout_ms>=0){int w=net_wait(b,s->fd,1,timeout_ms);if(w<0)return w;if(w==0)return -NET_EAGAIN;}
+ int r=bs_sendto(b,s->fd,data,(int)(n>0x7fffffffu?0x7fffffff:n),flags,addr,len);
+ return r<0?-(int64_t)bs_errno(b):r;
+}
+int64_t sdk_net_recvfrom(int64_t h,void *data,size_t n,int flags,void *addr,int *len,int64_t timeout_ms) {
+ NET_ENTER(h,s,b)
+ if(timeout_ms>=0){int w=net_wait(b,s->fd,0,timeout_ms);if(w<0)return w;if(w==0)return -NET_EAGAIN;}
+ int r=bs_recvfrom(b,s->fd,data,(int)(n>0x7fffffffu?0x7fffffff:n),flags,addr,len);
+ return r<0?-(int64_t)bs_errno(b):r;
+}
+int sdk_net_sockname(int64_t h,int peer,void *addr,int *len) {
+ NET_ENTER(h,s,b)
+ int r=peer?bs_getpeername(b,s->fd,addr,len):bs_getsockname(b,s->fd,addr,len);
+ return r<0?-(int)bs_errno(b):0;
+}
+int sdk_net_shutdown(int64_t h,int how) {NET_ENTER(h,s,b) return bs_shutdown(b,s->fd,how)<0?-(int)bs_errno(b):0;}
+int sdk_net_setsockopt(int64_t h,int level,int option,const void *value,int len) {
+ NET_ENTER(h,s,b) return bs_setsockopt(b,s->fd,level,option,(void *)value,len)<0?-(int)bs_errno(b):0;
+}
+int sdk_net_getsockopt(int64_t h,int level,int option,void *value,int *len) {
+ NET_ENTER(h,s,b) return bs_getsockopt(b,s->fd,level,option,value,len)<0?-(int)bs_errno(b):0;
+}
+int sdk_net_nonblocking(int64_t h,int on) {
+ NET_ENTER(h,s,b) long v=on?1:0;return bs_ioctl(b,s->fd,NET_FIONBIO,&v)<0?-(int)bs_errno(b):0;
+}
+/* Looks a host name up: stores up to `max` IPv4 addresses (4 bytes each, network order) and returns their
+   count, 0 when the name is unknown, or a negative errno. */
+int sdk_net_resolve(const char *name,uint8_t *out,int max) {
+ int e=0;struct Library *b=net_base(&e);if(!b)return -e;
+ struct net_hostent *h=bs_gethostbyname(b,name);
+ if(!h||h->type!=NET_AF_INET||h->length!=4||!h->addrs)return 0;
+ int n=0;
+ for(char **a=h->addrs;*a&&n<max;a++,n++){for(int i=0;i<4;i++)out[n*4+i]=(uint8_t)(*a)[i];}
+ return n;
+}
 
 /* The C library keeps one errno for all tasks of a program, and a call can set it and then wait
    (ABI-v1's open() frees memory to a pool after setting it), so std reads it under this lock once a
@@ -1822,6 +2096,7 @@ static int cleanup_remaining(void) {
 int sdk_end(void) {
  if(!active || closing || !owner_is_current())return 20;
  threads_end_all();
+ net_task_end();
  tls_release_all();
  return cleanup_remaining();
 }
@@ -1852,7 +2127,7 @@ _Noreturn void sdk_fatal(uint64_t reason) {
   /* The original formatter frame is abandoned by this nonreturning path. */
   ami_sdk_diagnostic_depth=0;
  }
- if(active && owner_is_current()){threads_end_all();tls_release_all();int result=cleanup_remaining();(void)result;}
+ if(active && owner_is_current()){threads_end_all();net_task_end();tls_release_all();int result=cleanup_remaining();(void)result;}
  /* Pinned _Exit skips user exit hooks and goes to native startup teardown. */
  _Exit(20);
 }

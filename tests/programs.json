@@ -1007,6 +1007,107 @@
           }
         ]
       }
+    },
+    {
+      "path": "examples/std-net",
+      "run": {
+        "stack": 131072,
+        "cwd": "RAM:ami-rust-m1",
+        "add": [
+          {
+            "from": "examples/std-net/stack/general.config",
+            "name": "stack/general.config"
+          },
+          {
+            "from": "examples/std-net/stack/netdb",
+            "name": "stack/netdb"
+          }
+        ],
+        "modes": [
+          {
+            "name": "nostack",
+            "expected_return_code": 0,
+            "expect": [
+              "RESULT net summary 6 of 6 checks passed"
+            ]
+          },
+          {
+            "name": "tcp",
+            "expected_return_code": 0,
+            "before": [
+              "MakeDir RAM:N",
+              "MakeDir RAM:N/C",
+              "Copy NATIVERUN:stack TO RAM:N/db ALL QUIET",
+              "Copy SYS:System/Network/AROSTCP/C/AROSTCP TO RAM:N/C/AROSTCP QUIET",
+              "Run >NIL: RAM:N/C/AROSTCP",
+              "WaitForPort AROSTCP"
+            ],
+            "expect": [
+              "RESULT net summary 16 of 16 checks passed"
+            ]
+          },
+          {
+            "name": "udp",
+            "expected_return_code": 0,
+            "before": [
+              "MakeDir RAM:N",
+              "MakeDir RAM:N/C",
+              "Copy NATIVERUN:stack TO RAM:N/db ALL QUIET",
+              "Copy SYS:System/Network/AROSTCP/C/AROSTCP TO RAM:N/C/AROSTCP QUIET",
+              "Run >NIL: RAM:N/C/AROSTCP",
+              "WaitForPort AROSTCP"
+            ],
+            "expect": [
+              "RESULT net summary 13 of 13 checks passed"
+            ]
+          },
+          {
+            "name": "lookup",
+            "expected_return_code": 0,
+            "before": [
+              "MakeDir RAM:N",
+              "MakeDir RAM:N/C",
+              "Copy NATIVERUN:stack TO RAM:N/db ALL QUIET",
+              "Copy SYS:System/Network/AROSTCP/C/AROSTCP TO RAM:N/C/AROSTCP QUIET",
+              "Run >NIL: RAM:N/C/AROSTCP",
+              "WaitForPort AROSTCP"
+            ],
+            "expect": [
+              "RESULT net summary 4 of 4 checks passed"
+            ]
+          },
+          {
+            "name": "threads",
+            "expected_return_code": 0,
+            "before": [
+              "MakeDir RAM:N",
+              "MakeDir RAM:N/C",
+              "Copy NATIVERUN:stack TO RAM:N/db ALL QUIET",
+              "Copy SYS:System/Network/AROSTCP/C/AROSTCP TO RAM:N/C/AROSTCP QUIET",
+              "Run >NIL: RAM:N/C/AROSTCP",
+              "WaitForPort AROSTCP"
+            ],
+            "expect": [
+              "RESULT net summary 4 of 4 checks passed"
+            ]
+          },
+          {
+            "name": "many",
+            "expected_return_code": 0,
+            "before": [
+              "MakeDir RAM:N",
+              "MakeDir RAM:N/C",
+              "Copy NATIVERUN:stack TO RAM:N/db ALL QUIET",
+              "Copy SYS:System/Network/AROSTCP/C/AROSTCP TO RAM:N/C/AROSTCP QUIET",
+              "Run >NIL: RAM:N/C/AROSTCP",
+              "WaitForPort AROSTCP"
+            ],
+            "expect": [
+              "RESULT net summary 3 of 3 checks passed"
+            ]
+          }
+        ]
+      }
     }
   ],
   "in_development": [],
