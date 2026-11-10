@@ -91,9 +91,14 @@ that the fourth and the fifth also ran on ABI-v11.
 - **Two threads that print at once garble a line.** In the `threads` mode, `println!` from two threads at once gave a
   line with the bytes of both mixed (to `NRDBG:`). `std` takes a lock for each `println!`, so the cause is below it
   (the serial handler or the stream); not looked at, and it is not about sockets.
-- **The matrix was not run by `tools/native-matrix.mjs`.** The six modes were run by hand against the same fixture with
-  the same set-up lines; the entry in `tests/programs.json`, and the new `add` list of a run block (with its unit test),
-  have not been through the tool end to end.
+- **The matrix.** `tools/native-matrix.mjs` ran `std-net` and `std-process` with a toolchain installed from the
+  direct archive of a producer run on the final commit (macOS; the first archive carried the old pins in its linker and
+  could not link, which is the usual order: pins first, then a producer run that bakes them in). 33 of 34 boots passed,
+  all 12 of `std-net`. The one that did not: `std-process concurrent` on ABI-v1, whose check "three children at once
+  in under 5 s" took 10.05 s. Repeats of that mode on ABI-v1: 4.56, 4.59 and 5.10 s (fail), then ten runs of 4.55 to 4.85 s
+  (pass); the binary of the STD-M6 state gave 3.5 to 4.5 s in six runs. On ABI-v11 it takes 2.4 to 2.8 s. So the margin of
+  the check on ABI-v1 is thin and two of about twenty runs were over it, against none of six at the earlier state; that
+  is too few to say whether this change made it worse. Nothing was changed.
 - **Not verified:** traffic beyond the loopback, IPv6 traffic, a name server, a network card, and a stack that is stopped
   after a program has used it.
 - **The set-up of a stack** is the test's own (a copy of the daemon with a `db`). Whether the images should carry a `db`
