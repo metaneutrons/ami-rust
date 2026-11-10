@@ -23,8 +23,8 @@ Native host build scripts and procedural macros need the normal native prerequis
 
 0.2 does not promise any of the following:
 
-- in `std`: networking, links, file locks, `env::current_exe`, `Child::kill` and `Command::env_clear`, which return `ErrorKind::Unsupported`; and the known issues that [Rust std](/std/#known-issues) lists;
-- networking in any form;
+- in `std`: links, file locks, `env::current_exe`, `Child::kill` and `Command::env_clear`, which return `ErrorKind::Unsupported`; and the known issues that [Rust std](/std/#known-issues) lists;
+- a network stack: `std::net` needs AROSTCP, which the project neither ships nor starts, and traffic beyond the loopback interface, IPv6 and name servers is untested;
 - physical hardware, CPUs other than the qualified profile, or emulators other than the recorded one;
 - AROS architectures other than x86-64;
 - an AROS-hosted Rust compiler, Cargo or rustup;
