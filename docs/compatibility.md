@@ -23,7 +23,7 @@ Native host build scripts and procedural macros need the normal native prerequis
 
 0.2 does not promise any of the following:
 
-- in `std`: networking, processes, links, file locks and `env::current_exe`, which return `ErrorKind::Unsupported`; and the known issues that [Rust std](/std/#known-issues) lists;
+- in `std`: networking, links, file locks, `env::current_exe`, `Child::kill` and `Command::env_clear`, which return `ErrorKind::Unsupported`; and the known issues that [Rust std](/std/#known-issues) lists;
 - networking in any form;
 - physical hardware, CPUs other than the qualified profile, or emulators other than the recorded one;
 - AROS architectures other than x86-64;

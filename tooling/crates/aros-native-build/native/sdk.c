@@ -175,6 +175,66 @@ long sdk_path_name(const char *path,char *buf,size_t size) {
  return named?0:(error?error:ERROR_LINE_TOO_LONG);
 }
 
+/* ---- Child programs for std::process ----
+   A child is a DOS process of its own: the program is loaded with LoadSeg and started with CreateNewProc
+   (NP_Seglist, with the arguments in NP_Arguments), not through a shell. A shell would read the command
+   line again: it ends a quoted word at an escaped quote (*") when it looks for a comment, so an argument
+   with a quote and a later semicolon was cut, and a redirection in an argument would be run. Without a
+   shell the program gets the argument string as it is.
+
+   sdk_proc_streams stores the Input(), Output() and ErrorOutput() handles of the calling process, which
+   a child inherits (they are valid in every process and stay open as long as the caller does).
+
+   sdk_proc_run loads the program, starts it and waits for it to end, in the calling task, and stores
+   the return code in *rc. It returns 0, or a DOS error code when the program could not be run at all.
+   program is the file name, arguments the argument string with its closing line feed. Each stream is a
+   file name (NIL: is the null device; it is opened here for input, created and truncated for output) or,
+   when the name is NULL, the handle that is given. When the output and the error name the same file they
+   share one handle. The handles that this function opens, and only those, are closed before it returns.
+   The return code comes from NP_ExitCode, which DOS calls in the child when the program has ended. The
+   function returns only when the child process has gone altogether (NP_NotifyOnDeath: DOS signals
+   SIGF_CHILD as the last thing the process does): the exit code is given earlier, while the process still
+   holds its handles and its segments, and a caller that went on at once saw the program's own file as
+   missing for about a second (ABI-v1, one run in ten). */
+#include <dos/dostags.h>
+struct proc_child {volatile LONG done;volatile LONG rc;};
+static void proc_child_exit(IPTR result,IPTR data) {
+ struct proc_child *c=(struct proc_child *)data;
+ c->rc=(LONG)result;c->done=1;
+}
+void sdk_proc_streams(uintptr_t *in,uintptr_t *out,uintptr_t *err) {
+ *in=(uintptr_t)Input();*out=(uintptr_t)Output();*err=(uintptr_t)ErrorOutput();
+}
+long sdk_proc_run(const char *program,const char *arguments,const char *in,const char *out,const char *err,
+                  uintptr_t in_h,uintptr_t out_h,uintptr_t err_h,int32_t *rc) {
+ if(!program || !arguments || !rc)return ERROR_BAD_NUMBER;
+ BPTR seg=LoadSeg((CONST_STRPTR)program);
+ if(!seg){SIPTR e=IoErr();return e?e:ERROR_OBJECT_NOT_FOUND;}
+ BPTR ih=(BPTR)in_h,oh=(BPTR)out_h,eh=(BPTR)err_h;
+ BOOL io=FALSE,oo=FALSE,eo=FALSE;
+ long error=0;
+ if(in){ih=Open((CONST_STRPTR)in,MODE_OLDFILE);io=ih!=BNULL;if(!ih)error=IoErr();}
+ if(!error && out){oh=Open((CONST_STRPTR)out,MODE_NEWFILE);oo=oh!=BNULL;if(!oh)error=IoErr();}
+ if(!error){
+  if(err && out && strcmp(err,out)==0)eh=oh;
+  else if(err){eh=Open((CONST_STRPTR)err,MODE_NEWFILE);eo=eh!=BNULL;if(!eh)error=IoErr();}
+ }
+ if(!error){
+  struct proc_child child={0,0};
+  struct Process *p=CreateNewProcTags(NP_Seglist,(IPTR)seg,NP_FreeSeglist,TRUE,NP_Name,(IPTR)program,
+   NP_Arguments,(IPTR)arguments,NP_Input,(IPTR)ih,NP_Output,(IPTR)oh,NP_Error,(IPTR)eh,
+   NP_CloseInput,FALSE,NP_CloseOutput,FALSE,NP_CloseError,FALSE,NP_StackSize,131072,NP_Cli,TRUE,
+   NP_NotifyOnDeath,TRUE,NP_ExitCode,(IPTR)proc_child_exit,NP_ExitData,(IPTR)&child,TAG_DONE);
+  if(!p){error=IoErr();if(!error)error=ERROR_NO_FREE_STORE;UnLoadSeg(seg);seg=BNULL;}
+  else{Wait(SIGF_CHILD);*rc=child.done?(int32_t)child.rc:20;seg=BNULL;}
+ }
+ if(seg)UnLoadSeg(seg);
+ if(io)Close(ih);
+ if(oo)Close(oh);
+ if(eo)Close(eh);
+ return error;
+}
+
 /* ---- Threads for std ----
    A std thread is a DOS process made by sdk_thread_spawn. Its record is on thread_list from the spawn
    until the process has ended. The process starts in thread_trampoline, which calls the Rust entry
