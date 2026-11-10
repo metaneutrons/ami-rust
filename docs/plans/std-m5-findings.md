@@ -84,13 +84,18 @@ that the fourth and the fifth also ran on ABI-v11.
 
 ## Open
 
-- **A slow transfer on ABI-v11 with two connections at once.** With two or more pairs of threads at once, one transfer
-  takes about 5.1 s on ABI-v11 (four of four runs); the answer of the server to the first byte is late, `connect` took
-  2 ms. A pair alone takes 10 ms, and ABI-v1 takes 13 ms for four pairs. Whether this is in the stack of ABI-v11 or in
-  how the bridge waits is not known; it was not reduced to a program that does not use `std`, and nothing was filed.
-- **Two threads that print at once garble a line.** In the `threads` mode, `println!` from two threads at once gave a
-  line with the bytes of both mixed (to `NRDBG:`). `std` takes a lock for each `println!`, so the cause is below it
-  (the serial handler or the stream); not looked at, and it is not about sockets.
+- **A late byte on ABI-v11 with two connections at once.** With two or more pairs of threads at once, one transfer
+  takes about 5.1 s on ABI-v11 (every run); a pair alone takes 10 ms, and ABI-v1 takes 13 to 17 ms for four pairs. Timed
+  step by step in the server thread of the slow pair: `accept` returned after 1.9 ms, and the one byte that the client had
+  sent right after `connect` was read after 5.09 s (the reply went out at once). The bridge does nothing between
+  `send` and `recv` but the call, so the byte was late inside the stack; a segment that is lost and sent again after
+  about 5 s would look like this, but that was not seen. It was not reduced to a program without `std` (a plain C
+  program could not be linked here without the steps of `aros-link`), and nothing was filed.
+- **A line printed after a long one is garbled or lost.** `println!` of a line of about 100 characters, followed by
+  another line, gave a second line with the end of the first mixed into it, or no second line, in the serial output of
+  `NRDBG:`. It happened with one thread printing, so it is not about threads (an earlier reading of this note was
+  wrong); lines of up to about 60 characters came through. The cause is below `std` (the handler or the serial
+  stream) and was not looked at; `examples/std-net` keeps its `INFO` lines short because of it.
 - **The matrix.** `tools/native-matrix.mjs` ran `std-net` and `std-process` with a toolchain installed from the
   direct archive of a producer run on the final commit (macOS; the first archive carried the old pins in its linker and
   could not link, which is the usual order: pins first, then a producer run that bakes them in). 33 of 34 boots passed,

@@ -40,14 +40,15 @@ each pair.
 ## Differences between the ABIs
 
 Every check gives the same result on ABI-v1 and ABI-v11. One difference of time: with two or more pairs at once on
-ABI-v11, one transfer takes about 5.1 s (a pair alone takes 10 ms); ABI-v1 takes 13 ms for four. The time is in the
-answer of the server to the first byte, not in `connect`. The cause is not known (see Not verified).
+ABI-v11, one transfer takes about 5.1 s (a pair alone takes 10 ms); ABI-v1 takes 13 to 17 ms for four. The time is in the
+first byte that the client sends: the server accepted after 2 ms and read it after 5.1 s. The cause is not known (see
+Not verified).
 
 ## Not verified
 
 - Traffic beyond the loopback interface, IPv6 traffic, a name server, and the behaviour of a stack that has a network
   card.
-- The 5.1 s above: whether it is in the stack of ABI-v11 or in how the bridge waits is not known; it was not reduced to
-  a program that does not use `std`.
+- The 5.1 s above: the byte is late inside the stack (the bridge only calls `send` and `recv`), but this was not reduced
+  to a program that does not use `std`.
 - A socket used by two threads in turn: refused by design, not worked around.
 - `std::net` while the stack is stopped after the program has used it.

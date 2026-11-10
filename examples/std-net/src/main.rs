@@ -186,12 +186,17 @@ fn threads(t: &mut T, workers_wanted: u8) {
                 // the server thread makes its own listener: a socket is used by the thread that made it
                 let (tx, rx) = mpsc::channel();
                 let server = thread::spawn(move || {
+                    let s0 = Instant::now();
                     let listener = TcpListener::bind(loopback(0)).unwrap();
                     tx.send(listener.local_addr().unwrap()).unwrap();
+                    let listening = s0.elapsed();
                     let (mut s, _) = listener.accept().unwrap();
+                    let accepted = s0.elapsed();
                     let mut b = [0u8; 1];
                     s.read_exact(&mut b).unwrap();
+                    let read = s0.elapsed();
                     s.write_all(&[b[0] + 1]).unwrap();
+                    (listening, accepted, read, s0.elapsed())
                 });
                 let started = Instant::now();
                 let addr = rx.recv().unwrap();
@@ -201,15 +206,20 @@ fn threads(t: &mut T, workers_wanted: u8) {
                 c.write_all(&[n]).unwrap();
                 let mut b = [0u8; 1];
                 c.read_exact(&mut b).unwrap();
-                server.join().unwrap();
-                (b[0], got_addr, connected, started.elapsed())
+                let answered = started.elapsed();
+                let sv = server.join().unwrap();
+                (b[0], got_addr, connected, started.elapsed(), answered, sv)
             })
         })
         .collect();
     let mut results = Vec::new();
     for (n, w) in workers.into_iter().enumerate() {
-        let (value, got_addr, connected, done) = w.join().unwrap();
-        println!("INFO worker {n}: address {got_addr:?}, connected {connected:?}, done {done:?}, joined at {:?}", start.elapsed());
+        let (value, got_addr, connected, done, answered, sv) = w.join().unwrap();
+        println!("INFO w{n} client: addr {got_addr:?} conn {connected:?}");
+        println!("INFO w{n} client: answered {answered:?} done {done:?}");
+        println!("INFO w{n} server: accept {:?}", sv.1);
+        println!("INFO w{n} server: listen {:?}", sv.0);
+        println!("INFO w{n} server: read {:?} written {:?}", sv.2, sv.3);
         results.push(value);
     }
     t.is("pairs", results, (1..=workers_wanted).collect::<Vec<u8>>());
