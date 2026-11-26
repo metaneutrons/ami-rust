@@ -46,3 +46,29 @@ of a platform (the new nightly asks for more than the pinned one, see the A4 fin
 2. STD-M5 second, with the ABI-v1 stack as the open problem. The decision that is not mine: if a stack cannot be made to run on the
    pinned ABI-v1 image, whether A3 is met on ABI-v11 only, with the reason recorded, or whether the ABI-v1 image is changed.
 3. One change of `host/std-aros/std-aros.patch` for both, so the six library pins and the digest constants are regenerated once.
+
+## STD-M5: the ABI-v1 stack runs once its configuration is there (2026-11-10)
+
+The maintainer decided on 2026-11-10 to change what the ABI-v1 image offers so that a stack can run there. The cause turned out
+to be missing configuration, not a fault of the stack, and the qualified image (`aros-nx-abiv1-qualified.iso`) does not have to
+change.
+
+- **What was wrong.** `AROSTCP` reads its configuration from `<directory of the program>/../db`, not from an assign (read in
+  `workbench/network/stacks/AROSTCP/bsdsocket/kern/amiga_main.c` of the AROS-NX tree; that tree is not touched). The ABI-v1
+  image has `System/Network/AROSTCP/C/AROSTCP` and `dhclient` only: no `db/` and no `S/`. Without `db/` the daemon is alive
+  (it shows in `Status FULL`) but never opens its port `AROSTCP`, and `ifconfig` does not return. The earlier attempt with a
+  hand-made `db` in `RAM:` and `Assign AROSTCP:` failed for that reason: the assign is not used, and the check
+  `Version bsdsocket.library` ran a `Version` command that is not on the image, so its "object not found" said nothing about the library.
+- **What works.** The daemon copied to `RAM:N/C/AROSTCP` with the configuration of the ABI-v11 image in `RAM:N/db`
+  (`Run RAM:N/C/AROSTCP`, wait, `WaitForPort AROSTCP` returns 0, `ifconfig -a` shows `lo0` with `127.0.0.1` and `::1`).
+  Without a network card, as the runner starts the guest.
+- **Smallest set found.** Eleven files of `db/`: `general.config`, `interfaces`, `netdb`, `netdb-myhost`, `protocols`,
+  `services`, `hosts`, `networks`, `inet.access`, `passwd`, `group`, `static-routes`. Without `netdb-myhost` the port does not
+  appear (the same set without it, and a set of five files, both failed); a set of six with it failed too, so the
+  remaining files are needed as a group, not checked one by one. With `OPENGUI=NO` and `GUI PANEL=NONE` in `general.config`.
+  The same files make the stack start on ABI-v11 from a copy in `RAM:`. The files were taken from the ABI-v11 image (AROS
+  Public License); a delivery of them as test fixtures needs their licence recorded.
+- **Not yet done.** The stack is not started by a program yet, and no socket call was made; A3 (loopback test on both ABIs)
+  is open. Which side delivers the files (the matrix, as files of the delivery medium with `before` lines, or the runner's
+  cached boot image) is not decided. Boots of the ABI-v1 image fault now and then before the script starts (1 in about 15
+  runs here, a page fault in user mode at `CR2=0x10`, before any script line); a run that shows it is repeated.
