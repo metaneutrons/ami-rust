@@ -97,6 +97,18 @@ export const bootScript = ({ abi, stack, cwd, lines }) => {
   return `${[...stackLine, 'MakeDir RAM:ami-rust-m1', ...(cwd ? [`CD ${cwd}`] : []), ...lines].join('\n')}\n`;
 };
 
+// The files a run puts on the delivery volume besides the program: `add` lists `{ from, name }`, `from` a path
+// below this repository and `name` the name on the volume. Returns the `--add` arguments of the runner. A path that
+// is absolute, climbs out with `..` or contains `=` is refused.
+export const addArguments = (add = [], root = repository) => add.map(({ from, name }) => {
+  for (const [what, value] of [['from', from], ['name', name]]) {
+    if (typeof value !== 'string' || !value || path.isAbsolute(value) || value.split('/').includes('..') || value.includes('=')) {
+      throw new Error(`add: ${what} is not a plain relative path: ${value}`);
+    }
+  }
+  return `${path.join(root, from)}=${name}`;
+});
+
 // What the guest printed between NR-BEGIN and NR-END, without control characters.
 export const guestOutput = (serial) => {
   const begin = serial.lastIndexOf('NR-BEGIN');
@@ -181,7 +193,7 @@ const runFixture = (context) => {
 // (`stack`, `cwd`, `rtc`) is the block's, a mode may name its own `rtc`. A mode passes when
 // its return code is `expected_return_code`, its output has every string of `expect`, matches
 // every regular expression of `expect_pattern` and has no RESULT line that says FAIL (unless
-// `allow_fail`). `before` lists shell lines that run first, `{host-seconds}` in `arguments` is the
+// `allow_fail`). `add` of the block lists extra files for the delivery volume (see `addArguments`). `before` lists shell lines that run first, `{host-seconds}` in `arguments` is the
 // host's Unix time. A mode with `expect_timeout` passes when the boot ran into its timeout (a
 // mode that waits for a person by design).
 export const modeRows = (context, application, abi, binary) => {
@@ -189,7 +201,7 @@ export const modeRows = (context, application, abi, binary) => {
   return run.modes.filter((mode) => !mode.abis || mode.abis.includes(abi)).map((mode) => {
     const marker = `MODE-${mode.name}-RC`;
     const result = boot(context, {
-      abi, binary, marker, stack: run.stack, cwd: run.cwd, rtc: mode.rtc ?? run.rtc,
+      abi, binary, marker, stack: run.stack, cwd: run.cwd, rtc: mode.rtc ?? run.rtc, add: addArguments(run.add),
       timeout: mode.timeout ?? run.timeout,
       lines: [...(mode.before ?? []), `NATIVERUN:prog ${(mode.arguments ?? mode.name).replace('{host-seconds}', () => String(Math.floor(Date.now() / 1000)))} >NRDBG:`, `Echo "${marker}=$RC" >NRDBG:`],
     });

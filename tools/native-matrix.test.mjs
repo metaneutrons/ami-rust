@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { bootScript, guestOutput, outputProblems, resolveArguments } from './native-matrix.mjs';
+import { addArguments, bootScript, guestOutput, outputProblems, resolveArguments } from './native-matrix.mjs';
 
 describe('resolveArguments', () => {
   const values = { work: '/w/check', toolchain: '0.2.0', 'abi1-source': '/src/nx' };
@@ -71,5 +71,24 @@ describe('outputProblems with patterns', () => {
   it('accepts an output that matches, and reports a pattern that does not', () => {
     assert.deepEqual(outputProblems('RESULT system secs=1790000000 delta=3\n', { pattern: ['delta=-?\\d+$'] }), []);
     assert.deepEqual(outputProblems('RESULT system secs=1 delta=x\n', { pattern: ['delta=-?\\d+$'] }), ['no match: /delta=-?\\d+$/']);
+  });
+});
+
+describe('addArguments', () => {
+  it('maps a file below the repository to the FILE=NAME form of the runner', () => {
+    assert.deepEqual(addArguments([{ from: 'examples/x/a.txt', name: 'stack/a.txt' }], '/repo'), ['/repo/examples/x/a.txt=stack/a.txt']);
+    assert.deepEqual(addArguments(undefined, '/repo'), []);
+  });
+  it('refuses a path that is absolute, climbs out, has no name or contains an equals sign', () => {
+    for (const entry of [
+      { from: '/etc/passwd', name: 'a' },
+      { from: '../outside', name: 'a' },
+      { from: 'examples/x/../../../y', name: 'a' },
+      { from: 'examples/x/a', name: '/abs' },
+      { from: 'examples/x/a', name: '../up' },
+      { from: 'examples/x/a', name: '' },
+      { from: 'examples/x/a=b', name: 'a' },
+      { from: 'examples/x/a' },
+    ]) assert.throws(() => addArguments([entry], '/repo'), /add:/, JSON.stringify(entry));
   });
 });

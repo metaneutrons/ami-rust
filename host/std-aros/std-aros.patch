@@ -1727,6 +1727,648 @@ index b9c48e3..19abee6 100644
  ))]
  pub use error::set_errno;
  pub use error::{decode_error_kind, errno, format_error, is_interrupted};
+diff --git a/library/std/src/sys/net/connection/aros.rs b/library/std/src/sys/net/connection/aros.rs
+new file mode 100644
+index 0000000..9662215
+--- /dev/null
++++ b/library/std/src/sys/net/connection/aros.rs
+@@ -0,0 +1,621 @@
++//! Sockets on AROS: `bsdsocket.library`, through the functions `sdk_net_*` of the native bridge.
++//!
++//! The library is not part of the C library, and a socket belongs to the task (DOS process) whose library base
++//! made it. The bridge opens a base for each task that uses sockets, on first use, and closes it when the task
++//! ends, so a socket can be used only by the thread that made it: another thread gets an `Unsupported` error.
++//! When no network stack is running, the first call returns an `Unsupported` error and nothing waits.
++
++use super::each_addr;
++use crate::ffi::{CString, c_int, c_void};
++use crate::fmt;
++use crate::io::{self, BorrowedCursor, IoSlice, IoSliceMut};
++use crate::net::{Ipv4Addr, Ipv6Addr, Shutdown, SocketAddr, SocketAddrV4, SocketAddrV6, ToSocketAddrs};
++use crate::sync::atomic::{AtomicI64, Ordering};
++use crate::time::Duration;
++
++unsafe extern "C" {
++    fn sdk_net_socket(domain: c_int, kind: c_int) -> i64;
++    fn sdk_net_close(handle: i64) -> c_int;
++    fn sdk_net_bind(handle: i64, addr: *const c_void, len: c_int) -> c_int;
++    fn sdk_net_listen(handle: i64, backlog: c_int) -> c_int;
++    fn sdk_net_accept(handle: i64, addr: *mut c_void, len: *mut c_int, timeout_ms: i64) -> i64;
++    fn sdk_net_connect(handle: i64, addr: *const c_void, len: c_int, timeout_ms: i64) -> c_int;
++    fn sdk_net_send(handle: i64, data: *const u8, len: usize, flags: c_int, timeout_ms: i64) -> i64;
++    fn sdk_net_recv(handle: i64, data: *mut u8, len: usize, flags: c_int, timeout_ms: i64) -> i64;
++    fn sdk_net_sendto(handle: i64, data: *const u8, len: usize, flags: c_int, addr: *const c_void, alen: c_int, timeout_ms: i64) -> i64;
++    fn sdk_net_recvfrom(handle: i64, data: *mut u8, len: usize, flags: c_int, addr: *mut c_void, alen: *mut c_int, timeout_ms: i64) -> i64;
++    fn sdk_net_sockname(handle: i64, peer: c_int, addr: *mut c_void, len: *mut c_int) -> c_int;
++    fn sdk_net_shutdown(handle: i64, how: c_int) -> c_int;
++    fn sdk_net_setsockopt(handle: i64, level: c_int, option: c_int, value: *const c_void, len: c_int) -> c_int;
++    fn sdk_net_getsockopt(handle: i64, level: c_int, option: c_int, value: *mut c_void, len: *mut c_int) -> c_int;
++    fn sdk_net_nonblocking(handle: i64, on: c_int) -> c_int;
++    fn sdk_net_resolve(name: *const crate::ffi::c_char, out: *mut u8, max: c_int) -> c_int;
++}
++
++const NO_STACK: i64 = 1000;
++const FOREIGN: i64 = 1001;
++const AF_INET: c_int = 2;
++const AF_INET6: c_int = 28;
++const SOCK_STREAM: c_int = 1;
++const SOCK_DGRAM: c_int = 2;
++const MSG_PEEK: c_int = 2;
++const SOL_SOCKET: c_int = 0xffff;
++const SO_REUSEADDR: c_int = 0x0004;
++const SO_KEEPALIVE: c_int = 0x0008;
++const SO_BROADCAST: c_int = 0x0020;
++const SO_ERROR: c_int = 0x1007;
++const IPPROTO_IP: c_int = 0;
++const IPPROTO_TCP: c_int = 6;
++const IP_TTL: c_int = 4;
++const TCP_NODELAY: c_int = 1;
++
++/// A negative result of the bridge is `-errno`, or one of two codes of the bridge itself.
++fn error(code: i64) -> io::Error {
++    match code {
++        NO_STACK => io::const_error!(
++            io::ErrorKind::Unsupported,
++            "no network stack: bsdsocket.library cannot be opened (AROSTCP is not installed or not running)"
++        ),
++        FOREIGN => io::const_error!(
++            io::ErrorKind::Unsupported,
++            "a socket can be used only by the thread that made it"
++        ),
++        code => io::Error::from_raw_os_error(code as i32),
++    }
++}
++
++fn cvt(result: i64) -> io::Result<i64> {
++    if result >= 0 { Ok(result) } else { Err(error(-result)) }
++}
++
++fn cvt_unit(result: c_int) -> io::Result<()> {
++    cvt(result as i64).map(drop)
++}
++
++/// A socket address in the layout of the BSD stack: a length byte, the family, the port.
++struct RawAddr {
++    bytes: [u8; 28],
++    len: c_int,
++}
++
++fn encode(addr: &SocketAddr) -> RawAddr {
++    let mut bytes = [0u8; 28];
++    match addr {
++        SocketAddr::V4(a) => {
++            bytes[0] = 16;
++            bytes[1] = AF_INET as u8;
++            bytes[2..4].copy_from_slice(&a.port().to_be_bytes());
++            bytes[4..8].copy_from_slice(&a.ip().octets());
++            RawAddr { bytes, len: 16 }
++        }
++        SocketAddr::V6(a) => {
++            bytes[0] = 28;
++            bytes[1] = AF_INET6 as u8;
++            bytes[2..4].copy_from_slice(&a.port().to_be_bytes());
++            bytes[4..8].copy_from_slice(&a.flowinfo().to_be_bytes());
++            bytes[8..24].copy_from_slice(&a.ip().octets());
++            bytes[24..28].copy_from_slice(&a.scope_id().to_ne_bytes());
++            RawAddr { bytes, len: 28 }
++        }
++    }
++}
++
++fn decode(bytes: &[u8; 28], len: c_int) -> io::Result<SocketAddr> {
++    let port = u16::from_be_bytes([bytes[2], bytes[3]]);
++    match bytes[1] as c_int {
++        AF_INET if len >= 8 => {
++            Ok(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(bytes[4], bytes[5], bytes[6], bytes[7]), port)))
++        }
++        AF_INET6 if len >= 24 => {
++            let mut ip = [0u8; 16];
++            ip.copy_from_slice(&bytes[8..24]);
++            let flow = u32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
++            let scope = u32::from_ne_bytes([bytes[24], bytes[25], bytes[26], bytes[27]]);
++            Ok(SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::from(ip), port, flow, scope)))
++        }
++        _ => Err(io::const_error!(io::ErrorKind::InvalidInput, "the stack returned an address of an unknown family")),
++    }
++}
++
++fn timeout_ms(timeout: &AtomicI64) -> i64 {
++    timeout.load(Ordering::Relaxed)
++}
++
++fn to_ms(timeout: Option<Duration>) -> i64 {
++    match timeout {
++        None => -1,
++        Some(d) => d.as_millis().clamp(1, i64::MAX as u128) as i64,
++    }
++}
++
++fn from_ms(ms: i64) -> Option<Duration> {
++    if ms < 0 { None } else { Some(Duration::from_millis(ms as u64)) }
++}
++
++struct Socket(i64);
++
++impl Socket {
++    fn new(addr: &SocketAddr, kind: c_int) -> io::Result<Socket> {
++        let domain = if addr.is_ipv4() { AF_INET } else { AF_INET6 };
++        // SAFETY: plain integers.
++        cvt(unsafe { sdk_net_socket(domain, kind) }).map(Socket)
++    }
++
++    fn bind(&self, addr: &SocketAddr) -> io::Result<()> {
++        let raw = encode(addr);
++        // SAFETY: `raw` holds `len` valid bytes.
++        cvt_unit(unsafe { sdk_net_bind(self.0, raw.bytes.as_ptr().cast(), raw.len) })
++    }
++
++    fn name(&self, peer: bool) -> io::Result<SocketAddr> {
++        let mut bytes = [0u8; 28];
++        let mut len = 28 as c_int;
++        // SAFETY: the buffer has the length that is passed.
++        cvt_unit(unsafe { sdk_net_sockname(self.0, peer as c_int, bytes.as_mut_ptr().cast(), &mut len) })?;
++        decode(&bytes, len)
++    }
++
++    fn set_option<T>(&self, level: c_int, option: c_int, value: T) -> io::Result<()> {
++        // SAFETY: `value` is a plain integer of the size that is passed.
++        cvt_unit(unsafe { sdk_net_setsockopt(self.0, level, option, (&raw const value).cast(), size_of::<T>() as c_int) })
++    }
++
++    fn option<T: Copy + Default>(&self, level: c_int, option: c_int) -> io::Result<T> {
++        let mut value = T::default();
++        let mut len = size_of::<T>() as c_int;
++        // SAFETY: `value` has the length that is passed.
++        cvt_unit(unsafe { sdk_net_getsockopt(self.0, level, option, (&raw mut value).cast(), &mut len) })?;
++        Ok(value)
++    }
++
++    fn take_error(&self) -> io::Result<Option<io::Error>> {
++        let code: c_int = self.option(SOL_SOCKET, SO_ERROR)?;
++        Ok(if code == 0 { None } else { Some(io::Error::from_raw_os_error(code)) })
++    }
++
++    fn set_nonblocking(&self, on: bool) -> io::Result<()> {
++        // SAFETY: plain integers.
++        cvt_unit(unsafe { sdk_net_nonblocking(self.0, on as c_int) })
++    }
++
++    fn shutdown(&self, how: Shutdown) -> io::Result<()> {
++        let how = match how {
++            Shutdown::Read => 0,
++            Shutdown::Write => 1,
++            Shutdown::Both => 2,
++        };
++        // SAFETY: plain integers.
++        cvt_unit(unsafe { sdk_net_shutdown(self.0, how) })
++    }
++
++    fn recv(&self, buf: &mut [u8], flags: c_int, timeout: &AtomicI64) -> io::Result<usize> {
++        // SAFETY: the buffer is valid for its length.
++        cvt(unsafe { sdk_net_recv(self.0, buf.as_mut_ptr(), buf.len(), flags, timeout_ms(timeout)) }).map(|n| n as usize)
++    }
++
++    fn send(&self, buf: &[u8], timeout: &AtomicI64) -> io::Result<usize> {
++        // SAFETY: the buffer is valid for its length.
++        cvt(unsafe { sdk_net_send(self.0, buf.as_ptr(), buf.len(), 0, timeout_ms(timeout)) }).map(|n| n as usize)
++    }
++}
++
++impl Drop for Socket {
++    fn drop(&mut self) {
++        // SAFETY: a plain integer; a socket of another task is closed when that task ends.
++        let _ = unsafe { sdk_net_close(self.0) };
++    }
++}
++
++pub struct TcpStream {
++    socket: Socket,
++    read_timeout: AtomicI64,
++    write_timeout: AtomicI64,
++}
++
++impl TcpStream {
++    fn from_socket(socket: Socket) -> TcpStream {
++        TcpStream { socket, read_timeout: AtomicI64::new(-1), write_timeout: AtomicI64::new(-1) }
++    }
++
++    fn open(addr: &SocketAddr, timeout: i64) -> io::Result<TcpStream> {
++        let socket = Socket::new(addr, SOCK_STREAM)?;
++        let raw = encode(addr);
++        // SAFETY: `raw` holds `len` valid bytes.
++        cvt_unit(unsafe { sdk_net_connect(socket.0, raw.bytes.as_ptr().cast(), raw.len, timeout) })?;
++        Ok(TcpStream::from_socket(socket))
++    }
++
++    pub fn connect<A: ToSocketAddrs>(addr: A) -> io::Result<TcpStream> {
++        each_addr(addr, |a| TcpStream::open(a, -1))
++    }
++
++    pub fn connect_timeout(addr: &SocketAddr, timeout: Duration) -> io::Result<TcpStream> {
++        TcpStream::open(addr, to_ms(Some(timeout)))
++    }
++
++    pub fn set_read_timeout(&self, timeout: Option<Duration>) -> io::Result<()> {
++        self.read_timeout.store(to_ms(timeout), Ordering::Relaxed);
++        Ok(())
++    }
++
++    pub fn set_write_timeout(&self, timeout: Option<Duration>) -> io::Result<()> {
++        self.write_timeout.store(to_ms(timeout), Ordering::Relaxed);
++        Ok(())
++    }
++
++    pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
++        Ok(from_ms(self.read_timeout.load(Ordering::Relaxed)))
++    }
++
++    pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
++        Ok(from_ms(self.write_timeout.load(Ordering::Relaxed)))
++    }
++
++    pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
++        self.socket.recv(buf, MSG_PEEK, &self.read_timeout)
++    }
++
++    pub fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
++        self.socket.recv(buf, 0, &self.read_timeout)
++    }
++
++    pub fn read_buf(&self, cursor: BorrowedCursor<'_, u8>) -> io::Result<()> {
++        crate::io::default_read_buf(|buf| self.read(buf), cursor)
++    }
++
++    pub fn read_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
++        crate::io::default_read_vectored(|b| self.read(b), bufs)
++    }
++
++    pub fn is_read_vectored(&self) -> bool {
++        false
++    }
++
++    pub fn write(&self, buf: &[u8]) -> io::Result<usize> {
++        self.socket.send(buf, &self.write_timeout)
++    }
++
++    pub fn write_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
++        crate::io::default_write_vectored(|b| self.write(b), bufs)
++    }
++
++    pub fn is_write_vectored(&self) -> bool {
++        false
++    }
++
++    pub fn peer_addr(&self) -> io::Result<SocketAddr> {
++        self.socket.name(true)
++    }
++
++    pub fn socket_addr(&self) -> io::Result<SocketAddr> {
++        self.socket.name(false)
++    }
++
++    pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
++        self.socket.shutdown(how)
++    }
++
++    pub fn duplicate(&self) -> io::Result<TcpStream> {
++        Err(io::const_error!(io::ErrorKind::Unsupported, "a socket cannot be duplicated on this platform"))
++    }
++
++    pub fn set_linger(&self, _: Option<Duration>) -> io::Result<()> {
++        Err(io::Error::UNSUPPORTED_PLATFORM)
++    }
++
++    pub fn linger(&self) -> io::Result<Option<Duration>> {
++        Err(io::Error::UNSUPPORTED_PLATFORM)
++    }
++
++    pub fn set_keepalive(&self, on: bool) -> io::Result<()> {
++        self.socket.set_option(SOL_SOCKET, SO_KEEPALIVE, on as c_int)
++    }
++
++    pub fn keepalive(&self) -> io::Result<bool> {
++        Ok(self.socket.option::<c_int>(SOL_SOCKET, SO_KEEPALIVE)? != 0)
++    }
++
++    pub fn set_nodelay(&self, on: bool) -> io::Result<()> {
++        self.socket.set_option(IPPROTO_TCP, TCP_NODELAY, on as c_int)
++    }
++
++    pub fn nodelay(&self) -> io::Result<bool> {
++        Ok(self.socket.option::<c_int>(IPPROTO_TCP, TCP_NODELAY)? != 0)
++    }
++
++    pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
++        self.socket.set_option(IPPROTO_IP, IP_TTL, ttl as c_int)
++    }
++
++    pub fn ttl(&self) -> io::Result<u32> {
++        Ok(self.socket.option::<c_int>(IPPROTO_IP, IP_TTL)? as u32)
++    }
++
++    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
++        self.socket.take_error()
++    }
++
++    pub fn set_nonblocking(&self, on: bool) -> io::Result<()> {
++        self.socket.set_nonblocking(on)
++    }
++}
++
++impl fmt::Debug for TcpStream {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        let mut d = f.debug_struct("TcpStream");
++        if let Ok(addr) = self.socket_addr() {
++            d.field("addr", &addr);
++        }
++        if let Ok(peer) = self.peer_addr() {
++            d.field("peer", &peer);
++        }
++        d.finish_non_exhaustive()
++    }
++}
++
++pub struct TcpListener {
++    socket: Socket,
++}
++
++impl TcpListener {
++    pub fn bind<A: ToSocketAddrs>(addr: A) -> io::Result<TcpListener> {
++        each_addr(addr, |a| {
++            let socket = Socket::new(a, SOCK_STREAM)?;
++            socket.set_option(SOL_SOCKET, SO_REUSEADDR, 1 as c_int)?;
++            socket.bind(a)?;
++            // SAFETY: plain integers.
++            cvt_unit(unsafe { sdk_net_listen(socket.0, 128) })?;
++            Ok(TcpListener { socket })
++        })
++    }
++
++    pub fn socket_addr(&self) -> io::Result<SocketAddr> {
++        self.socket.name(false)
++    }
++
++    pub fn accept(&self) -> io::Result<(TcpStream, SocketAddr)> {
++        let mut bytes = [0u8; 28];
++        let mut len = 28 as c_int;
++        // SAFETY: the buffer has the length that is passed.
++        let handle = cvt(unsafe { sdk_net_accept(self.socket.0, bytes.as_mut_ptr().cast(), &mut len, -1) })?;
++        let stream = TcpStream::from_socket(Socket(handle));
++        let addr = decode(&bytes, len)?;
++        Ok((stream, addr))
++    }
++
++    pub fn duplicate(&self) -> io::Result<TcpListener> {
++        Err(io::const_error!(io::ErrorKind::Unsupported, "a socket cannot be duplicated on this platform"))
++    }
++
++    pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
++        self.socket.set_option(IPPROTO_IP, IP_TTL, ttl as c_int)
++    }
++
++    pub fn ttl(&self) -> io::Result<u32> {
++        Ok(self.socket.option::<c_int>(IPPROTO_IP, IP_TTL)? as u32)
++    }
++
++    pub fn set_only_v6(&self, _: bool) -> io::Result<()> {
++        Err(io::Error::UNSUPPORTED_PLATFORM)
++    }
++
++    pub fn only_v6(&self) -> io::Result<bool> {
++        Err(io::Error::UNSUPPORTED_PLATFORM)
++    }
++
++    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
++        self.socket.take_error()
++    }
++
++    pub fn set_nonblocking(&self, on: bool) -> io::Result<()> {
++        self.socket.set_nonblocking(on)
++    }
++}
++
++impl fmt::Debug for TcpListener {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        let mut d = f.debug_struct("TcpListener");
++        if let Ok(addr) = self.socket_addr() {
++            d.field("addr", &addr);
++        }
++        d.finish_non_exhaustive()
++    }
++}
++
++pub struct UdpSocket {
++    socket: Socket,
++    read_timeout: AtomicI64,
++    write_timeout: AtomicI64,
++}
++
++fn unsupported_option<T>() -> io::Result<T> {
++    Err(io::const_error!(io::ErrorKind::Unsupported, "this socket option is not supported on this platform"))
++}
++
++impl UdpSocket {
++    pub fn bind<A: ToSocketAddrs>(addr: A) -> io::Result<UdpSocket> {
++        each_addr(addr, |a| {
++            let socket = Socket::new(a, SOCK_DGRAM)?;
++            socket.bind(a)?;
++            Ok(UdpSocket { socket, read_timeout: AtomicI64::new(-1), write_timeout: AtomicI64::new(-1) })
++        })
++    }
++
++    pub fn peer_addr(&self) -> io::Result<SocketAddr> {
++        self.socket.name(true)
++    }
++
++    pub fn socket_addr(&self) -> io::Result<SocketAddr> {
++        self.socket.name(false)
++    }
++
++    fn receive_from(&self, buf: &mut [u8], flags: c_int) -> io::Result<(usize, SocketAddr)> {
++        let mut bytes = [0u8; 28];
++        let mut len = 28 as c_int;
++        // SAFETY: the buffers are valid for the lengths that are passed.
++        let n = cvt(unsafe {
++            sdk_net_recvfrom(self.socket.0, buf.as_mut_ptr(), buf.len(), flags, bytes.as_mut_ptr().cast(), &mut len, timeout_ms(&self.read_timeout))
++        })? as usize;
++        Ok((n, decode(&bytes, len)?))
++    }
++
++    pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
++        self.receive_from(buf, 0)
++    }
++
++    pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
++        self.receive_from(buf, MSG_PEEK)
++    }
++
++    pub fn send_to(&self, buf: &[u8], addr: &SocketAddr) -> io::Result<usize> {
++        let raw = encode(addr);
++        // SAFETY: the buffers are valid for the lengths that are passed.
++        cvt(unsafe {
++            sdk_net_sendto(self.socket.0, buf.as_ptr(), buf.len(), 0, raw.bytes.as_ptr().cast(), raw.len, timeout_ms(&self.write_timeout))
++        })
++        .map(|n| n as usize)
++    }
++
++    pub fn duplicate(&self) -> io::Result<UdpSocket> {
++        Err(io::const_error!(io::ErrorKind::Unsupported, "a socket cannot be duplicated on this platform"))
++    }
++
++    pub fn set_read_timeout(&self, timeout: Option<Duration>) -> io::Result<()> {
++        self.read_timeout.store(to_ms(timeout), Ordering::Relaxed);
++        Ok(())
++    }
++
++    pub fn set_write_timeout(&self, timeout: Option<Duration>) -> io::Result<()> {
++        self.write_timeout.store(to_ms(timeout), Ordering::Relaxed);
++        Ok(())
++    }
++
++    pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
++        Ok(from_ms(self.read_timeout.load(Ordering::Relaxed)))
++    }
++
++    pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
++        Ok(from_ms(self.write_timeout.load(Ordering::Relaxed)))
++    }
++
++    pub fn set_broadcast(&self, on: bool) -> io::Result<()> {
++        self.socket.set_option(SOL_SOCKET, SO_BROADCAST, on as c_int)
++    }
++
++    pub fn broadcast(&self) -> io::Result<bool> {
++        Ok(self.socket.option::<c_int>(SOL_SOCKET, SO_BROADCAST)? != 0)
++    }
++
++    pub fn set_multicast_loop_v4(&self, _: bool) -> io::Result<()> {
++        unsupported_option()
++    }
++
++    pub fn multicast_loop_v4(&self) -> io::Result<bool> {
++        unsupported_option()
++    }
++
++    pub fn set_multicast_ttl_v4(&self, _: u32) -> io::Result<()> {
++        unsupported_option()
++    }
++
++    pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
++        unsupported_option()
++    }
++
++    pub fn set_multicast_loop_v6(&self, _: bool) -> io::Result<()> {
++        unsupported_option()
++    }
++
++    pub fn multicast_loop_v6(&self) -> io::Result<bool> {
++        unsupported_option()
++    }
++
++    pub fn join_multicast_v4(&self, _: &Ipv4Addr, _: &Ipv4Addr) -> io::Result<()> {
++        unsupported_option()
++    }
++
++    pub fn join_multicast_v6(&self, _: &Ipv6Addr, _: u32) -> io::Result<()> {
++        unsupported_option()
++    }
++
++    pub fn leave_multicast_v4(&self, _: &Ipv4Addr, _: &Ipv4Addr) -> io::Result<()> {
++        unsupported_option()
++    }
++
++    pub fn leave_multicast_v6(&self, _: &Ipv6Addr, _: u32) -> io::Result<()> {
++        unsupported_option()
++    }
++
++    pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
++        self.socket.set_option(IPPROTO_IP, IP_TTL, ttl as c_int)
++    }
++
++    pub fn ttl(&self) -> io::Result<u32> {
++        Ok(self.socket.option::<c_int>(IPPROTO_IP, IP_TTL)? as u32)
++    }
++
++    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
++        self.socket.take_error()
++    }
++
++    pub fn set_nonblocking(&self, on: bool) -> io::Result<()> {
++        self.socket.set_nonblocking(on)
++    }
++
++    pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
++        self.socket.recv(buf, 0, &self.read_timeout)
++    }
++
++    pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
++        self.socket.recv(buf, MSG_PEEK, &self.read_timeout)
++    }
++
++    pub fn send(&self, buf: &[u8]) -> io::Result<usize> {
++        self.socket.send(buf, &self.write_timeout)
++    }
++
++    pub fn connect<A: ToSocketAddrs>(&self, addr: A) -> io::Result<()> {
++        each_addr(addr, |a| {
++            let raw = encode(a);
++            // SAFETY: `raw` holds `len` valid bytes.
++            cvt_unit(unsafe { sdk_net_connect(self.socket.0, raw.bytes.as_ptr().cast(), raw.len, -1) })
++        })
++    }
++}
++
++impl fmt::Debug for UdpSocket {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        let mut d = f.debug_struct("UdpSocket");
++        if let Ok(addr) = self.socket_addr() {
++            d.field("addr", &addr);
++        }
++        d.finish_non_exhaustive()
++    }
++}
++
++pub struct LookupHost {
++    addresses: crate::vec::IntoIter<SocketAddr>,
++}
++
++impl Iterator for LookupHost {
++    type Item = SocketAddr;
++    fn next(&mut self) -> Option<SocketAddr> {
++        self.addresses.next()
++    }
++}
++
++/// Resolves a name through the stack's `gethostbyname`: IPv4 addresses only, from the hosts file and the name
++/// servers of `netdb-myhost`. Numeric addresses are handled by the caller before this is reached.
++pub fn lookup_host(host: &str, port: u16) -> io::Result<LookupHost> {
++    let name = CString::new(host).map_err(|_| io::const_error!(io::ErrorKind::InvalidInput, "a host name has a nul byte"))?;
++    let mut out = [0u8; 4 * 16];
++    // SAFETY: the buffer has room for the 16 addresses that are asked for.
++    let count = cvt(unsafe { sdk_net_resolve(name.as_ptr(), out.as_mut_ptr(), 16) } as i64)? as usize;
++    if count == 0 {
++        return Err(io::const_error!(io::ErrorKind::NotFound, "failed to look the host name up"));
++    }
++    let addresses: crate::vec::Vec<SocketAddr> = (0..count)
++        .map(|i| SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(out[i * 4], out[i * 4 + 1], out[i * 4 + 2], out[i * 4 + 3]), port)))
++        .collect();
++    Ok(LookupHost { addresses: addresses.into_iter() })
++}
+diff --git a/library/std/src/sys/net/connection/mod.rs b/library/std/src/sys/net/connection/mod.rs
+index 49a0f47..1dd5926 100644
+--- a/library/std/src/sys/net/connection/mod.rs
++++ b/library/std/src/sys/net/connection/mod.rs
+@@ -29,6 +29,10 @@ cfg_select! {
+         mod uefi;
+         pub use uefi::*;
+     }
++    target_os = "aros" => {
++        mod aros;
++        pub use aros::*;
++    }
+     _ => {
+         mod unsupported;
+         pub use unsupported::*;
 diff --git a/library/std/src/sys/pal/aros/mod.rs b/library/std/src/sys/pal/aros/mod.rs
 new file mode 100644
 index 0000000..ac1ccf5

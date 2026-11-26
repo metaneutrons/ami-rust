@@ -1,0 +1,2 @@
+; the stack runs with the loopback interface only
+HOST 127.0.0.1 localhost

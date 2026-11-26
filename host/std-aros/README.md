@@ -33,6 +33,7 @@ subsystem on the `unsupported` fallback:
 | `sys/sync` | AROS uses the futex implementations of `Mutex`, `Condvar`, `RwLock`, `Once` and the thread parker, on a new `futex/aros.rs` that calls the bridge's futex on Exec signals |
 | `sys/thread_local` | Key-based thread-locals (`os`) on a new `key/aros.rs` over task storage slots; destructors run when a thread ends, as on Xous |
 | `sys/process` | New `aros.rs`: `Command` over the bridge function `sdk_proc_run`, which loads the program with `LoadSeg` and starts it with `CreateNewProc` (the arguments in `NP_Arguments`, no shell), waits until the process has gone and returns its return code through `NP_ExitCode`. Each child is run by a thread of `std`, which sets the child's current directory and DOS variables first. `Stdio::piped()` is a file in `T:`; `kill` and `env_clear` are `Unsupported` |
+| `sys/net` | New `connection/aros.rs`: `TcpStream`, `TcpListener`, `UdpSocket` and name lookup on `bsdsocket.library` through the bridge functions `sdk_net_*`. The bridge opens a library base for each task that uses sockets, on first use, and closes it when the task ends, so a socket can be used only by the thread that made it (another thread gets `Unsupported`). Timeouts and `connect_timeout` are waits with `WaitSelect`. Without a running stack the first call returns `Unsupported` and nothing waits. `try_clone`, `set_linger`, `set_only_v6` and the multicast options are `Unsupported` |
 | `build.rs` | Unchanged on purpose: AROS stays an unknown platform, so every crate that uses `std` declares `#![feature(restricted_std)]` |
 
 ## Reproduce
@@ -44,7 +45,7 @@ set -eu
 repo=$(pwd -P)
 work=$(mktemp -d)
 cp -R "$(rustc +0.2.0 --print sysroot)/lib/rustlib/src/rust" "$work/rust"
-echo "7d5873f88b6aa008c1af144197fa90db1d6bef48f31e5867a0e0c210bffc13c5  host/std-aros/std-aros.patch" | shasum -a 256 -c
+echo "5abc3192873cf991872573485dfe94a2139431d7f16dad175557ea3c48296593  host/std-aros/std-aros.patch" | shasum -a 256 -c
 patch -p1 -d "$work/rust" < host/std-aros/std-aros.patch
 ```
 
